@@ -334,11 +334,11 @@ using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;
 
 } // anonymous namespace
 
-FunctionImporter::AddDefinitionStatus
-FunctionImporter::addDefinition(ImportMapTy &ImportList, StringRef FromModule,
-                                GlobalValue::GUID GUID) {
+FunctionImporter::ImportMapTy::AddDefinitionStatus
+FunctionImporter::ImportMapTy::addDefinition(StringRef FromModule,
+                                             GlobalValue::GUID GUID) {
   auto [It, Inserted] =
-      ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Definition);
+      ImportMap[FromModule].try_emplace(GUID, GlobalValueSummary::Definition);
   if (Inserted)
     return AddDefinitionStatus::Inserted;
   if (It->second == GlobalValueSummary::Definition)
@@ -347,10 +347,9 @@ FunctionImporter::addDefinition(ImportMapTy &ImportList, StringRef FromModule,
   return AddDefinitionStatus::ChangedToDefinition;
 }
 
-void FunctionImporter::maybeAddDeclaration(ImportMapTy &ImportList,
-                                           StringRef FromModule,
-                                           GlobalValue::GUID GUID) {
-  ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Declaration);
+void FunctionImporter::ImportMapTy::maybeAddDeclaration(
+    StringRef FromModule, GlobalValue::GUID GUID) {
+  ImportMap[FromModule].try_emplace(GUID, GlobalValueSummary::Declaration);
 }
 
 /// Import globals referenced by a function or other globals that are being
@@ -411,9 +410,8 @@ class GlobalsImporter final {
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.
         // Otherwise, definition should take precedence over declaration.
-        if (FunctionImporter::addDefinition(
-                ImportList, RefSummary->modulePath(), VI.getGUID()) !=
-            FunctionImporter::AddDefinitionStatus::Inserted)
+        if (ImportList.addDefinition(RefSummary->modulePath(), VI.getGUID()) !=
+            FunctionImporter::ImportMapTy::AddDefinitionStatus::Inserted)
           break;
 
         // Only update stat and exports if we haven't already imported this
@@ -600,8 +598,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
                         << ExportingModule << " : "
                         << Function::getGUID(VI.name()) << "\n");
-      FunctionImporter::addDefinition(ImportList, ExportingModule,
-                                      VI.getGUID());
+      ImportList.addDefinition(ExportingModule, VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
         (*ExportLists)[ExportingModule].insert(VI);
@@ -899,8 +896,7 @@ static void computeImportForFunction(
 
           // Note `ExportLists` only keeps track of exports due to imported
           // definitions.
-          FunctionImporter::maybeAddDeclaration(ImportList, DeclSourceModule,
-                                                VI.getGUID());
+          ImportList.maybeAddDeclaration(DeclSourceModule, VI.getGUID());
         }
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also
@@ -949,9 +945,8 @@ static void computeImportForFunction(
 
       // Try emplace the definition entry, and update stats based on insertion
       // status.
-      if (FunctionImporter::addDefinition(ImportList, ExportModulePath,
-                                          VI.getGUID()) !=
-          FunctionImporter::AddDefinitionStatus::NoChange) {
+      if (ImportList.addDefinition(ExportModulePath, VI.getGUID()) !=
+          FunctionImporter::ImportMapTy::AddDefinitionStatus::NoChange) {
         NumImportedFunctionsThinLink++;
         if (IsHotCallsite)
           NumImportedHotFunctionsThinLink++;
@@ -1084,7 +1079,7 @@ numGlobalVarSummaries(const ModuleSummaryIndex &Index,
 // the number of defined function summaries as output parameter.
 static unsigned
 numGlobalVarSummaries(const ModuleSummaryIndex &Index,
-                      FunctionImporter::FunctionsToImportTy &ImportMap,
+                      const FunctionImporter::FunctionsToImportTy &ImportMap,
                       unsigned &DefinedFS) {
   unsigned NumGVS = 0;
   DefinedFS = 0;
@@ -1105,9 +1100,9 @@ static bool checkVariableImport(
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   DenseSet<GlobalValue::GUID> FlattenedImports;
 
-  for (auto &ImportPerModule : ImportLists)
-    for (auto &ExportPerModule : ImportPerModule.second)
-      for (auto &[GUID, Type] : ExportPerModule.second)
+  for (const auto &ImportPerModule : ImportLists)
+    for (const auto &ExportPerModule : ImportPerModule.second.getImportMap())
+      for (const auto &[GUID, Type] : ExportPerModule.second)
         FlattenedImports.insert(GUID);
 
   // Checks that all GUIDs of read/writeonly vars we see in export lists
@@ -1217,9 +1212,10 @@ void llvm::ComputeCrossModuleImport(
     unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
     LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
                       << Exports.size() - NumGVS << " functions and " << NumGVS
-                      << " vars. Imports from " << ModuleImports.second.size()
+                      << " vars. Imports from "
+                      << ModuleImports.second.getImportMap().size()
                       << " modules.\n");
-    for (auto &Src : ModuleImports.second) {
+    for (const auto &Src : ModuleImports.second.getImportMap()) {
       auto SrcModName = Src.first;
       unsigned DefinedFS = 0;
       unsigned NumGVSPerMod =
@@ -1240,8 +1236,8 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
                                     StringRef ModulePath,
                                     FunctionImporter::ImportMapTy &ImportList) {
   LLVM_DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
-                    << ImportList.size() << " modules.\n");
-  for (auto &Src : ImportList) {
+                    << ImportList.getImportMap().size() << " modules.\n");
+  for (const auto &Src : ImportList.getImportMap()) {
     auto SrcModName = Src.first;
     unsigned DefinedFS = 0;
     unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second, DefinedFS);
@@ -1306,8 +1302,7 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
     if (Summary->modulePath() == ModulePath)
       continue;
     // Add an entry to provoke importing by thinBackend.
-    FunctionImporter::addGUID(ImportList, Summary->modulePath(), GUID,
-                              Summary->importType());
+    ImportList.addGUID(Summary->modulePath(), GUID, Summary->importType());
   }
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
@@ -1496,7 +1491,7 @@ void llvm::gatherImportedSummariesForModule(
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
   // Include summaries for imports.
-  for (const auto &ILI : ImportList) {
+  for (const auto &ILI : ImportList.getImportMap()) {
     auto &SummariesForIndex = ModuleToSummariesForIndex[std::string(ILI.first)];
 
     const auto &DefinedGVSummaries =
@@ -1777,7 +1772,7 @@ Expected<bool> FunctionImporter::importFunctions(
   IRMover Mover(DestModule);
   // Do the actual import of functions now, one Module at a time
   std::set<StringRef> ModuleNameOrderedList;
-  for (const auto &FunctionsToImportPerModule : ImportList) {
+  for (const auto &FunctionsToImportPerModule : ImportList.getImportMap()) {
     ModuleNameOrderedList.insert(FunctionsToImportPerModule.first);
   }
 
@@ -1792,8 +1787,9 @@ Expected<bool> FunctionImporter::importFunctions(
 
   for (const auto &Name : ModuleNameOrderedList) {
     // Get the module for the import
-    const auto &FunctionsToImportPerModule = ImportList.find(Name);
-    assert(FunctionsToImportPerModule != ImportList.end());
+    const auto &FunctionsToImportPerModule =
+        ImportList.getImportMap().find(Name);
+    assert(FunctionsToImportPerModule != ImportList.getImportMap().end());
     Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(Name);
     if (!SrcModuleOrErr)
       return SrcModuleOrErr.takeError();

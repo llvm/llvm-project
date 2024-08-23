@@ -726,8 +726,7 @@ bool lto::initImportList(const Module &M,
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
       // Add an entry to provoke importing by thinBackend.
-      FunctionImporter::addGUID(ImportList, Summary->modulePath(), GUID,
-                                Summary->importType());
+      ImportList.addGUID(Summary->modulePath(), GUID, Summary->importType());
     }
   }
   return true;
