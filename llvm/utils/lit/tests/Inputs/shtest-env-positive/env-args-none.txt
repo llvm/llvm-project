@@ -1,3 +1,5 @@
+## Tests the env command's ability to handle setting, unsetting, and mixing environment variables.
+
 ## Check default environment.
 # RUN: env | FileCheck -check-prefix=NO-ARGS %s
 #

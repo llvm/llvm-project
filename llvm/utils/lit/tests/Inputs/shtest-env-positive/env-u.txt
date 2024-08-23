@@ -1,12 +1,14 @@
-# Check and make sure preset environment variable were set in lit.cfg
+## Tests env command for preset variables and handling single/multiple unsets.
+
+## Check and make sure preset environment variable were set in lit.cfg.
 #
 # RUN: env | FileCheck --check-prefix=CHECK-ENV-PRESET %s
 #
-# Check single unset of environment variable
+## Check single unset of environment variable.
 #
 # RUN: env -u FOO | FileCheck --check-prefix=CHECK-ENV-UNSET-1 %s
 #
-# Check multiple unsets of environment variables
+## Check multiple unsets of environment variables.
 #
 # RUN: env -u FOO -u BAR | FileCheck --check-prefix=CHECK-ENV-UNSET-MULTIPLE %s
 
