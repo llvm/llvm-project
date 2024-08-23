@@ -90,14 +90,14 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
   SmallVector<StringRef, 8> Attrs;
   AttrStr.split(Attrs, ";");
 
-  // Drop Priority syntax.
+  // Only consider the arch string.
   StringRef ArchStr;
   for (auto &Attr : Attrs) {
     if (Attr.starts_with("arch="))
       ArchStr = Attr;
   }
 
-  // Extract features string.s
+  // Extract features string.
   SmallVector<StringRef, 8> Features;
   ArchStr.consume_front("arch=");
   ArchStr.split(Features, ",");
