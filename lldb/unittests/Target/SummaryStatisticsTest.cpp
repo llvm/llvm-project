@@ -13,10 +13,9 @@ using Duration = std::chrono::duration<double>;
 
 class DummySummaryImpl : public lldb_private::TypeSummaryImpl {
 public:
-  DummySummaryImpl(Duration sleepTime)
+  DummySummaryImpl()
       : TypeSummaryImpl(TypeSummaryImpl::Kind::eSummaryString,
-                        TypeSummaryImpl::Flags()),
-        m_sleepTime(sleepTime) {}
+                        TypeSummaryImpl::Flags()) {}
 
   std::string GetName() override { return "DummySummary"; }
 
@@ -28,23 +27,18 @@ public:
                     const TypeSummaryOptions &options) override {
     return false;
   }
-
-  void FakeFormat() { std::this_thread::sleep_for(m_sleepTime); }
-
-private:
-  Duration m_sleepTime;
 };
 
 TEST(MultithreadFormatting, Multithread) {
   SummaryStatisticsCache statistics_cache;
-  DummySummaryImpl summary(Duration(1));
+  DummySummaryImpl summary;
   std::vector<std::thread> threads;
   for (int i = 0; i < 10; ++i) {
     threads.emplace_back(std::thread([&statistics_cache, &summary]() {
       auto sp = statistics_cache.GetSummaryStatisticsForProvider(summary);
       {
         SummaryStatistics::SummaryInvocation invocation(sp);
-        summary.FakeFormat();
+        std::this_thread::sleep_for(Duration(1));
       }
     }));
   }
