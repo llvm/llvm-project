@@ -61,14 +61,14 @@ namespace PR21933 {
     }
   };
   template<typename T>
-  struct Y : T { 
+  struct Y : T {
     static void StaticFun() {
       using T::member; // expected-error 2{{class member}} expected-note {{use a reference instead}}
       (void)member;
     }
   };
 
-  void f() { 
+  void f() {
     X<A>::StaticFun(); // expected-note {{instantiation of}}
     X<B>::StaticFun(); // expected-note {{instantiation of}}
     X<C>::StaticFun();
