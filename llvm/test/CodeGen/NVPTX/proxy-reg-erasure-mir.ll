@@ -7,6 +7,9 @@
 ; Check ProxyRegErasure pass MIR manipulation.
 
 declare <4 x i32> @callee_vec_i32()
+declare void @use_vec_i32(<4 x i32>)
+
+; MIR: check_vec_i32
 define  <4 x i32> @check_vec_i32() {
   ; MIR: body:
   ; MIR-DAG: Callseq_Start {{[0-9]+}}, {{[0-9]+}}
@@ -22,4 +25,20 @@ define  <4 x i32> @check_vec_i32() {
 
   %ret = call <4 x i32> @callee_vec_i32()
   ret <4 x i32> %ret
+}
+
+; MIR: check_chained_proxy
+define void @check_chained_proxy(i8 %0) {
+  ; MIR: body:
+  ; MIR-BEFORE: %0:int32regs = ProxyRegI32 killed %4
+  %broadcast.splatinsert = insertelement <4 x i8> poison, i8 %0, i64 0
+  %broadcast.splat = shufflevector <4 x i8> %broadcast.splatinsert, <4 x i8> poison, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  ; MIR-BEFORE: %5:int32regs = ProxyRegI32 %0
+  ; MIR-BEFORE: SRLi32ri %5,
+  ; MIR-AFTER: SRLi32ri %4,
+  store <4 x i8> %broadcast.splat, ptr poison, align 1
+  br label %vector.body
 }
