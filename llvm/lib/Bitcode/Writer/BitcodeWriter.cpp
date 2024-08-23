@@ -4628,7 +4628,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
-  std::set<GlobalValue::GUID> DefOrUseGUIDs;
+  DenseSet<GlobalValue::GUID> DefOrUseGUIDs;
   forEachSummary([&](GVInfo I, bool IsAliasee) {
     GlobalValueSummary *S = I.second;
     assert(S);
@@ -4777,7 +4777,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   if (!Index.cfiFunctionDefs().empty()) {
     for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.count(
+      if (DefOrUseGUIDs.contains(
               GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
         NameVals.push_back(StrtabBuilder.add(S));
         NameVals.push_back(S.size());
@@ -4791,7 +4791,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   if (!Index.cfiFunctionDecls().empty()) {
     for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.count(
+      if (DefOrUseGUIDs.contains(
               GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
         NameVals.push_back(StrtabBuilder.add(S));
         NameVals.push_back(S.size());
