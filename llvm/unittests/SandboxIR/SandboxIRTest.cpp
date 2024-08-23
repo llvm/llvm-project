@@ -1957,6 +1957,71 @@ bb:
 #endif // NDEBUG
 }
 
+TEST_F(SandboxIRTest, CatchReturnInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %catch] unwind to caller
+catch:
+  %catchpad = catchpad within %cs [ptr @foo]
+  catchret from %catchpad to label %continue
+continue:
+  ret void
+catch2:
+  %catchpad2 = catchpad within %cs [ptr @foo]
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCatch = getBasicBlockByName(LLVMF, "catch");
+  auto LLVMIt = LLVMCatch->begin();
+  [[maybe_unused]] auto *LLVMCP = cast<llvm::CatchPadInst>(&*LLVMIt++);
+  auto *LLVMCR = cast<llvm::CatchReturnInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Catch = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCatch));
+  auto *Catch2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "catch2")));
+  auto It = Catch->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CatchPadInst>(&*It++);
+  auto *CR = cast<sandboxir::CatchReturnInst>(&*It++);
+  auto *CP2 = cast<sandboxir::CatchPadInst>(&*Catch2->begin());
+
+  // Check getCatchPad().
+  EXPECT_EQ(CR->getCatchPad(), Ctx.getValue(LLVMCR->getCatchPad()));
+  // Check setCatchPad().
+  auto *OrigCP = CR->getCatchPad();
+  auto *NewCP = CP2;
+  EXPECT_NE(NewCP, OrigCP);
+  CR->setCatchPad(NewCP);
+  EXPECT_EQ(CR->getCatchPad(), NewCP);
+  CR->setCatchPad(OrigCP);
+  EXPECT_EQ(CR->getCatchPad(), OrigCP);
+  // Check getSuccessor().
+  EXPECT_EQ(CR->getSuccessor(), Ctx.getValue(LLVMCR->getSuccessor()));
+  // Check setSuccessor().
+  auto *OrigSucc = CR->getSuccessor();
+  auto *NewSucc = Catch;
+  EXPECT_NE(NewSucc, OrigSucc);
+  CR->setSuccessor(NewSucc);
+  EXPECT_EQ(CR->getSuccessor(), NewSucc);
+  CR->setSuccessor(OrigSucc);
+  EXPECT_EQ(CR->getSuccessor(), OrigSucc);
+  // Check getNumSuccessors().
+  EXPECT_EQ(CR->getNumSuccessors(), LLVMCR->getNumSuccessors());
+  // Check getCatchSwitchParentPad().
+  EXPECT_EQ(CR->getCatchSwitchParentPad(),
+            Ctx.getValue(LLVMCR->getCatchSwitchParentPad()));
+  // Check create().
+  auto *CRI =
+      cast<sandboxir::CatchReturnInst>(sandboxir::CatchReturnInst::create(
+          CP, Catch, CP->getIterator(), Catch, Ctx));
+  EXPECT_EQ(CRI->getNextNode(), CP);
+  EXPECT_EQ(CRI->getCatchPad(), CP);
+  EXPECT_EQ(CRI->getSuccessor(), Catch);
+}
+
 TEST_F(SandboxIRTest, GetElementPtrInstruction) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
