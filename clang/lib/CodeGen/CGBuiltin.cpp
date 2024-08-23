@@ -3759,6 +3759,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Result = EmitScalarExpr(UnaryOperator::Create(
               Ctx, New, UO_AddrOf, Ctx.getPointerType(CountTy), VK_LValue,
               OK_Ordinary, SourceLocation(), false, FPOptionsOverride()));
+        } else {
+          llvm::report_fatal_error("Cannot find the counted_by 'count' field");
         }
       }
     }
