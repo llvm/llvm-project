@@ -452,7 +452,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
           CME && shouldTrackImplicitObjectArg(CME))
         VisitGSLPointerArg(Callee, ObjectArg,
-                        !Callee->getReturnType()->isReferenceType());
+                           !Callee->getReturnType()->isReferenceType());
     }
   }
 
@@ -821,7 +821,8 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   }
 
   if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init))
-    return visitFunctionCallArguments(Path, Init, Visit, EnableLifetimeWarnings);
+    return visitFunctionCallArguments(Path, Init, Visit,
+                                      EnableLifetimeWarnings);
 
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {
