@@ -262,7 +262,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // therefore be ignored.
   Region *slotPtrRegion = slot.ptr.getParentRegion();
   auto slotPtrRegionOp =
-      llvm::dyn_cast<RegionKindInterface>(slotPtrRegion->getParentOp());
+     dyn_cast<RegionKindInterface>(slotPtrRegion->getParentOp());
   if (slotPtrRegionOp &&
       slotPtrRegionOp.getRegionKind(slotPtrRegion->getRegionNumber()) ==
           RegionKind::Graph)
