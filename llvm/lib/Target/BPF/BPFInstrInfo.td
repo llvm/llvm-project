@@ -677,9 +677,7 @@ let isBranch = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1 in {
 }
 
 // Jump and link
-let isCall=1, hasDelaySlot=0, Uses = [R11],
-    // Potentially clobbered registers
-    Defs = [R0, R1, R2, R3, R4, R5] in {
+let isCall=1, hasDelaySlot=0, Uses = [R11] in {
   def JAL  : CALL<"call">;
   def JALX  : CALLX<"callx">;
 }
@@ -789,12 +787,12 @@ let Predicates = [BPFNoALU32] in {
 }
 
 // Atomic XADD for BPFNoALU32
-class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+class XADD<BPFWidthModifer SizeOp, string OpcodeStr>
     : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
                  (outs GPR:$dst),
                  (ins MEMri:$addr, GPR:$val),
                  "lock *("#OpcodeStr#" *)($addr) += $val",
-                 [(set GPR:$dst, (OpNode ADDRri:$addr, GPR:$val))]> {
+                 []> {
   bits<4> dst;
   bits<20> addr;
 
@@ -803,12 +801,6 @@ class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
   let Inst{47-32} = addr{15-0}; // offset
   let Inst{7-4} = BPF_ADD.Value;
   let BPFClass = BPF_STX;
-}
-
-let Constraints = "$dst = $val" in {
-  let Predicates = [BPFNoALU32] in {
-    def XADDW : XADD<BPF_W, "u32", atomic_load_add_i32>;
-  }
 }
 
 // Atomic add, and, or, xor
@@ -893,6 +885,13 @@ class XFALU32<BPFWidthModifer SizeOp, BPFArithOp Opc, string OpcodeStr,
   let Inst{7-4} = Opc.Value;
   let Inst{3-0} = BPF_FETCH.Value;
   let BPFClass = BPF_STX;
+}
+
+let Constraints = "$dst = $val" in {
+  let Predicates = [BPFNoALU32] in {
+    def XADDW : XADD<BPF_W, "u32">;
+    def XFADDW : XFALU64<BPF_W, BPF_ADD, "u32", "add", atomic_load_add_i32>;
+  }
 }
 
 let Constraints = "$dst = $val" in {

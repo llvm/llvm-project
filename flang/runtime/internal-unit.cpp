@@ -80,6 +80,7 @@ RT_API_ATTRS bool InternalDescriptorUnit<DIR>::Emit(
 template <Direction DIR>
 RT_API_ATTRS std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
     const char *&p, IoErrorHandler &handler) {
+  p = nullptr;
   if constexpr (DIR == Direction::Output) {
     handler.Crash("InternalDescriptorUnit<Direction::Output>::"
                   "GetNextInputBytes() called");
@@ -96,6 +97,28 @@ RT_API_ATTRS std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
       return *recordLength - positionInRecord;
     }
   }
+}
+
+template <Direction DIR>
+RT_API_ATTRS std::size_t InternalDescriptorUnit<DIR>::ViewBytesInRecord(
+    const char *&p, bool forward) const {
+  p = nullptr;
+  auto recl{recordLength.value_or(positionInRecord)};
+  const char *record{CurrentRecord()};
+  if (forward) {
+    if (positionInRecord < recl) {
+      if (record) {
+        p = &record[positionInRecord];
+      }
+      return recl - positionInRecord;
+    }
+  } else {
+    if (record && positionInRecord <= recl) {
+      p = &record[positionInRecord];
+    }
+    return positionInRecord - leftTabLimit.value_or(0);
+  }
+  return 0;
 }
 
 template <Direction DIR>

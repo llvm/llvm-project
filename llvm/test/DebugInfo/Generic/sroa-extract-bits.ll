@@ -127,14 +127,14 @@ define i8 @test6(i32 %arg1, i8 %arg2) {
 ; CHECK-SAME: i32 [[ARG1:%.*]], i8 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[ARG1]] to i8
-; CHECK-NEXT:      #dbg_value(i8 undef, [[META2]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META2]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG1]], 8
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_2_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:      #dbg_value(i16 undef, [[META9]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 16), [[META7]])
+; CHECK-NEXT:      #dbg_value(i16 poison, [[META9]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 16), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_21_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG1]], 24
 ; CHECK-NEXT:    [[PTR_SROA_21_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_21_0_EXTRACT_SHIFT]] to i8
-; CHECK-NEXT:      #dbg_value(i8 undef, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
-; CHECK-NEXT:      #dbg_value(i8 undef, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
 ; CHECK-NEXT:    ret i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]]
 ;
 entry:

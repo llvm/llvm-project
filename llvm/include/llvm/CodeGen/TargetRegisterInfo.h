@@ -630,6 +630,12 @@ public:
     return false;
   }
 
+  /// Returns true if RC is a class/subclass of general purpose register.
+  virtual bool
+  isGeneralPurposeRegisterClass(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).

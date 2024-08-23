@@ -1269,13 +1269,12 @@ void Sema::ActOnPragmaFPContract(SourceLocation Loc,
     NewFPFeatures.setAllowFPContractWithinStatement();
     break;
   case LangOptions::FPM_Fast:
+  case LangOptions::FPM_FastHonorPragmas:
     NewFPFeatures.setAllowFPContractAcrossStatement();
     break;
   case LangOptions::FPM_Off:
     NewFPFeatures.setDisallowFPContract();
     break;
-  case LangOptions::FPM_FastHonorPragmas:
-    llvm_unreachable("Should not happen");
   }
   FpPragmaStack.Act(Loc, Sema::PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());

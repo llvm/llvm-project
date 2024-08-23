@@ -905,8 +905,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
 
     // We need to broadcast the value who was the lowest active lane (the first
-    // lane) to all other lanes in the wavefront. We use an intrinsic for this,
-    // but have to handle 64-bit broadcasts with two calls to this intrinsic.
+    // lane) to all other lanes in the wavefront.
     Value *BroadcastI = nullptr;
     BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
 

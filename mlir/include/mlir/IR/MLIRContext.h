@@ -133,7 +133,7 @@ public:
   Dialect *getOrLoadDialect(StringRef name);
 
   /// Return true if we allow to create operation for unregistered dialects.
-  bool allowsUnregisteredDialects();
+  [[nodiscard]] bool allowsUnregisteredDialects();
 
   /// Enables creating operations in unregistered dialects.
   /// This option is **heavily discouraged**: it is convenient during testing

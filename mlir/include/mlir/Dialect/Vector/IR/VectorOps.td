@@ -286,7 +286,7 @@ def Vector_MultiDimReductionOp :
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVector:$source,
                    AnyType:$acc,
-                   I64ArrayAttr:$reduction_dims)>,
+                   DenseI64ArrayAttr:$reduction_dims)>,
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
@@ -325,8 +325,8 @@ def Vector_MultiDimReductionOp :
 
     SmallVector<bool> getReductionMask() {
       SmallVector<bool> res(getSourceVectorType().getRank(), false);
-      for (auto ia : getReductionDims().getAsRange<IntegerAttr>())
-        res[ia.getInt()] = true;
+      for (int64_t dim : getReductionDims())
+        res[dim] = true;
       return res;
     }
     static SmallVector<bool> getReductionMask(
@@ -367,6 +367,8 @@ def Vector_BroadcastOp :
                                s_1     x .. x s_j x .. x s_k
                <duplication>         <potential stretch>
        ```
+       * in addition, any scalable unit dimension, `[1]`, must match exactly.
+
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal
     dimension of 1. These rules imply that any scalar broadcast (k=0) to any
@@ -421,7 +423,7 @@ def Vector_ShuffleOp :
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
      Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
-                    I64ArrayAttr:$mask)>,
+                    DenseI64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
   let description = [{
@@ -459,11 +461,7 @@ def Vector_ShuffleOp :
                : vector<f32>, vector<f32>           ; yields vector<2xf32>
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayRef<int64_t>")>
-  ];
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
@@ -475,7 +473,10 @@ def Vector_ShuffleOp :
       return ::llvm::cast<VectorType>(getVector().getType());
     }
   }];
+
   let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
+
+  let hasFolder = 1;
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
@@ -1176,122 +1177,6 @@ def Vector_OuterProductOp :
     }
   }];
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-}
-
-// TODO: Add transformation which decomposes ReshapeOp into an optimized
-// sequence of vector rotate/shuffle/select operations.
-def Vector_ReshapeOp :
-  Vector_Op<"reshape", [AttrSizedOperandSegments, Pure]>,
-    Arguments<(ins AnyVector:$vector, Variadic<Index>:$input_shape,
-               Variadic<Index>:$output_shape,
-               I64ArrayAttr:$fixed_vector_sizes)>,
-    Results<(outs AnyVector:$result)> {
-  let summary = "vector reshape operation";
-  let description = [{
-    Reshapes its vector operand from 'input_shape' to 'output_shape' maintaining
-    fixed vector dimension 'fixed_vector_sizes' on the innermost vector
-    dimensions.
-
-    The parameters 'input_shape' and 'output_shape' represent valid data shapes
-    across fixed vector shapes. For example, if a vector has a valid data
-    shape [6] with fixed vector size [8], then the valid data elements are
-    assumed to be stored at the beginning of the vector with the remaining
-    vector elements undefined.
-
-    In the examples below, valid data elements are represented by an alphabetic
-    character, and undefined data elements are represented by '-'.
-
-    Example
-
-      vector<1x8xf32> with valid data shape [6], fixed vector sizes [8]
-
-                input: [a, b, c, d, e, f]
-
-           layout map: (d0) -> (d0 floordiv 8, d0 mod 8)
-
-        vector layout: [a, b, c, d, e, f, -, -]
-
-    Example
-
-      vector<2x8xf32> with valid data shape [10], fixed vector sizes [8]
-
-                input: [a, b, c, d, e, f, g, h, i, j]
-
-           layout map: (d0) -> (d0 floordiv 8, d0 mod 8)
-
-        vector layout: [[a, b, c, d, e, f, g, h],
-                        [i, j, -, -, -, -, -, -]]
-
-    Example
-
-      vector<2x2x2x3xf32> with valid data shape [3, 5], fixed vector sizes
-      [2, 3]
-
-                input: [[a, b, c, d, e],
-                        [f, g, h, i, j],
-                        [k, l, m, n, o]]
-
-           layout map: (d0, d1) -> (d0 floordiv 3, d1 floordiv 5,
-                                    d0 mod 3, d1 mod 5)
-
-        vector layout: [[[[a, b, c],
-                          [f, g, h]]
-                         [[d, e, -],
-                          [i, j, -]]],
-                        [[[k, l, m],
-                          [-, -, -]]
-                         [[n, o, -],
-                          [-, -, -]]]]
-
-    Example
-
-      %1 = vector.reshape %0, [%c3, %c6], [%c2, %c9], [4]
-        : vector<3x2x4xf32> to vector<2x3x4xf32>
-
-             input: [[a, b, c, d, e, f],
-                     [g, h, i, j, k, l],
-                     [m, n, o, p, q, r]]
-
-        layout map: (d0, d1) -> (d0, d1 floordiv 4, d1 mod 4)
-
-
-      Input vector:  [[[a, b, c, d],
-                       [e, f, -, -]],
-                      [[g, h, i, j],
-                       [k, l, -, -]],
-                      [[m, n, o, p],
-                       [q, r, -, -]]]
-
-      Output vector:  [[[a, b, c, d],
-                        [e, f, g, h],
-                        [i, -, -, -]],
-                       [[j, k, l, m],
-                        [n, o, p, q],
-                        [r, -, -, -]]]
-  }];
-
-  let extraClassDeclaration = [{
-    VectorType getInputVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
-    }
-    VectorType getOutputVectorType() {
-      return ::llvm::cast<VectorType>(getResult().getType());
-    }
-
-    /// Returns as integer value the number of input shape operands.
-    int64_t getNumInputShapeSizes() { return getInputShape().size(); }
-
-    /// Returns as integer value the number of output shape operands.
-    int64_t getNumOutputShapeSizes() { return getOutputShape().size(); }
-
-    void getFixedVectorSizes(SmallVectorImpl<int64_t> &results);
-  }];
-
-  let assemblyFormat = [{
-    $vector `,` `[` $input_shape `]` `,` `[` $output_shape `]` `,`
-    $fixed_vector_sizes attr-dict `:` type($vector) `to` type($result)
-  }];
   let hasVerifier = 1;
 }
 
@@ -2443,7 +2328,7 @@ def Vector_TypeCastOp :
 
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [Pure]>,
-    Arguments<(ins I64ArrayAttr:$mask_dim_sizes)>,
+    Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
   let description = [{
@@ -2478,6 +2363,11 @@ def Vector_ConstantMaskOp :
             3 | 0    0    0
     ```
   }];
+
+  let builders = [
+    // Build with mixed static/dynamic operands.
+    OpBuilder<(ins "VectorType":$type, "ConstantMaskKind":$kind)>
+  ];
 
   let extraClassDeclaration = [{
     /// Return the result type of this op.
@@ -2798,13 +2688,13 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
                     TCresVTEtIsSameAsOpBase<0, 1>>]>,
       Arguments<(
         // TODO: tighten vector element types that make sense.
-        ins VectorOfRankAndType<[1],
+        ins FixedVectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$lhs,
-            VectorOfRankAndType<[1],
+            FixedVectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$rhs,
             I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_columns)>,
       Results<(
-        outs VectorOfRankAndType<[1],
+        outs FixedVectorOfRankAndType<[1],
                [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)>
 {
   let summary = "Vector matrix multiplication op that operates on flattened 1-D"
@@ -2822,7 +2712,9 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
     <rhs_columns> and multiplies them. The result matrix is returned embedded in
     the result vector.
 
-    Also see:
+    Note, the corresponding LLVM intrinsic, `@llvm.matrix.multiply.*`, does not
+    support scalable vectors. Hence, this Op is only available for fixed-width
+    vectors. Also see:
 
     http://llvm.org/docs/LangRef.html#llvm-matrix-multiply-intrinsic
 

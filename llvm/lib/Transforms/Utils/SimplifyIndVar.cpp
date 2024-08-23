@@ -167,8 +167,8 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
       D = ConstantInt::get(UseInst->getContext(),
                            APInt::getOneBitSet(BitWidth, D->getZExtValue()));
     }
-    const auto *LHS = SE->getSCEV(IVSrc);
-    const auto *RHS = SE->getSCEV(D);
+    const SCEV *LHS = SE->getSCEV(IVSrc);
+    const SCEV *RHS = SE->getSCEV(D);
     FoldedExpr = SE->getUDivExpr(LHS, RHS);
     // We might have 'exact' flag set at this point which will no longer be
     // correct after we make the replacement.
@@ -297,8 +297,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
 
 bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
   // Get the SCEVs for the ICmp operands.
-  auto *N = SE->getSCEV(SDiv->getOperand(0));
-  auto *D = SE->getSCEV(SDiv->getOperand(1));
+  const SCEV *N = SE->getSCEV(SDiv->getOperand(0));
+  const SCEV *D = SE->getSCEV(SDiv->getOperand(1));
 
   // Simplify unnecessary loops away.
   const Loop *L = LI->getLoopFor(SDiv->getParent());
@@ -397,7 +397,7 @@ void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem,
     }
 
     auto *T = Rem->getType();
-    const auto *NLessOne = SE->getMinusSCEV(N, SE->getOne(T));
+    const SCEV *NLessOne = SE->getMinusSCEV(N, SE->getOne(T));
     if (SE->isKnownPredicate(LT, NLessOne, D)) {
       replaceRemWithNumeratorOrZero(Rem);
       return;

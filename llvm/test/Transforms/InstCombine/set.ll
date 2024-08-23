@@ -135,7 +135,7 @@ define i1 @test12(i1 %A) {
 define i1 @test13(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp uge i1 %A, %B
@@ -145,7 +145,7 @@ define i1 @test13(i1 %A, i1 %B) {
 define <2 x i1> @test13vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test13vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[B:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %C = icmp uge <2 x i1> %A, %B

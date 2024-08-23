@@ -115,6 +115,10 @@ public:
   // Grid Value for the GPU target
   std::optional<omp::GV> GridValue;
 
+  /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
+  /// false`), this contains the list of offloading triples associated, if any.
+  SmallVector<Triple> TargetTriples;
+
   OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                         bool OpenMPOffloadMandatory,
@@ -196,6 +200,9 @@ private:
 /// Data structure to contain the information needed to uniquely identify
 /// a target entry.
 struct TargetRegionEntryInfo {
+  /// The prefix used for kernel names.
+  static constexpr const char *KernelNamePrefix = "__omp_offloading_";
+
   std::string ParentName;
   unsigned DeviceID;
   unsigned FileID;
@@ -2180,24 +2187,26 @@ public:
   /// kernel args vector.
   struct TargetKernelArgs {
     /// Number of arguments passed to the runtime library.
-    unsigned NumTargetItems;
+    unsigned NumTargetItems = 0;
     /// Arguments passed to the runtime library
     TargetDataRTArgs RTArgs;
     /// The number of iterations
-    Value *NumIterations;
+    Value *NumIterations = nullptr;
     /// The number of teams.
-    Value *NumTeams;
+    ArrayRef<Value *> NumTeams;
     /// The number of threads.
-    Value *NumThreads;
+    ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem;
+    Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
-    bool HasNoWait;
+    bool HasNoWait = false;
 
-    /// Constructor for TargetKernelArgs
+    // Constructors for TargetKernelArgs.
+    TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
-                     Value *NumIterations, Value *NumTeams, Value *NumThreads,
-                     Value *DynCGGroupMem, bool HasNoWait)
+                     Value *NumIterations, ArrayRef<Value *> NumTeams,
+                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
+                     bool HasNoWait)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
@@ -2831,6 +2840,7 @@ public:
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
+  /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
   /// function should be emitted.
   /// \param EntryInfo The entry information about the function.
@@ -2843,16 +2853,16 @@ public:
   /// instructions for passed in target arguments where neccessary
   /// \param Dependencies A vector of DependData objects that carry
   // dependency information as passed in the depend clause
-  InsertPointTy createTarget(const LocationDescription &Loc,
-                             OpenMPIRBuilder::InsertPointTy AllocaIP,
-                             OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                             TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
-                             int32_t NumThreads,
-                             SmallVectorImpl<Value *> &Inputs,
-                             GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-                             SmallVector<DependData> Dependencies = {});
+  InsertPointTy
+  createTarget(const LocationDescription &Loc, bool IsOffloadEntry,
+               OpenMPIRBuilder::InsertPointTy AllocaIP,
+               OpenMPIRBuilder::InsertPointTy CodeGenIP,
+               TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
+               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
+               GenMapInfoCallbackTy GenMapInfoCB,
+               TargetBodyGenCallbackTy BodyGenCB,
+               TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+               SmallVector<DependData> Dependencies = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

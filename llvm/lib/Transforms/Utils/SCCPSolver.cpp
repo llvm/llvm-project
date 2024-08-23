@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueLattice.h"
@@ -418,7 +419,7 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   DenseMap<Function *, std::unique_ptr<PredicateInfo>> FnPredicateInfo;
 
-  DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
+  DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
   LLVMContext &Ctx;
 
@@ -828,10 +829,6 @@ public:
   Constant *getConstant(const ValueLatticeElement &LV, Type *Ty) const;
 
   Constant *getConstantOrNull(Value *V) const;
-
-  SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
-    return TrackingIncomingArguments;
-  }
 
   void setLatticeValueForSpecializationArguments(Function *F,
                                        const SmallVectorImpl<ArgInfo> &Args);
@@ -1503,7 +1500,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     Value *V2 = SCCPSolver::isConstant(V2State)
                     ? getConstant(V2State, I.getOperand(1)->getType())
                     : I.getOperand(1);
-    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
+    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
       // Conservatively assume that the result may be based on operands that may
@@ -2155,10 +2152,6 @@ Constant *SCCPSolver::getConstant(const ValueLatticeElement &LV,
 
 Constant *SCCPSolver::getConstantOrNull(Value *V) const {
   return Visitor->getConstantOrNull(V);
-}
-
-SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
-  return Visitor->getArgumentTrackedFunctions();
 }
 
 void SCCPSolver::setLatticeValueForSpecializationArguments(Function *F,
