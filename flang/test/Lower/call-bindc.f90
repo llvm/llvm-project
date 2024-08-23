@@ -18,4 +18,4 @@ program main
 end
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK: fir.call %{{.*}}(%{{.*}}) fastmath<contract> {is_bind_c} : (i32) -> !fir.complex<4>
+! CHECK: fir.call %{{.*}}(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> !fir.complex<4>
