@@ -11904,9 +11904,9 @@ struct AAUnderlyingObjectsImpl
   ChangeStatus updateImpl(Attributor &A) override {
     auto &Ptr = getAssociatedValue();
 
+    bool UsedAssumedInformation = false;
     auto DoUpdate = [&](SmallSetVector<Value *, 8> &UnderlyingObjects,
                         AA::ValueScope Scope) {
-      bool UsedAssumedInformation = false;
       SmallPtrSet<Value *, 8> SeenObjects;
       SmallVector<AA::ValueAndContext> Values;
 
@@ -11920,31 +11920,43 @@ struct AAUnderlyingObjectsImpl
         auto &VAC = Values[I];
         auto *Obj = VAC.getValue();
         Value *UO = getUnderlyingObject(Obj);
-        if (UO && UO != VAC.getValue() && SeenObjects.insert(UO).second) {
+        if (!SeenObjects.insert(UO ? UO : Obj).second)
+          continue;
+        if (UO && UO != Obj) {
+          if (isa<AllocaInst>(UO) || isa<GlobalValue>(UO)) {
+            Changed |= UnderlyingObjects.insert(UO);
+            continue;
+          }
+
           const auto *OtherAA = A.getAAFor<AAUnderlyingObjects>(
               *this, IRPosition::value(*UO), DepClassTy::OPTIONAL);
-          auto Pred = [&Values](Value &V) {
-            Values.emplace_back(V, nullptr);
+          auto Pred = [&](Value &V) {
+            if (&V == UO)
+              Changed |= UnderlyingObjects.insert(UO);
+            else
+              Values.emplace_back(V, nullptr);
             return true;
           };
 
           if (!OtherAA || !OtherAA->forallUnderlyingObjects(Pred, Scope))
             llvm_unreachable(
                 "The forall call should not return false at this position");
-
+          UsedAssumedInformation |= !OtherAA->getState().isAtFixpoint();
           continue;
         }
 
         if (isa<SelectInst>(Obj)) {
-          Changed |= handleIndirect(A, *Obj, UnderlyingObjects, Scope);
+          Changed |= handleIndirect(A, *Obj, UnderlyingObjects, Scope,
+                                    UsedAssumedInformation);
           continue;
         }
         if (auto *PHI = dyn_cast<PHINode>(Obj)) {
           // Explicitly look through PHIs as we do not care about dynamically
           // uniqueness.
           for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
-            Changed |= handleIndirect(A, *PHI->getIncomingValue(u),
-                                      UnderlyingObjects, Scope);
+            Changed |=
+                handleIndirect(A, *PHI->getIncomingValue(u), UnderlyingObjects,
+                               Scope, UsedAssumedInformation);
           }
           continue;
         }
@@ -11958,7 +11970,8 @@ struct AAUnderlyingObjectsImpl
     bool Changed = false;
     Changed |= DoUpdate(IntraAssumedUnderlyingObjects, AA::Intraprocedural);
     Changed |= DoUpdate(InterAssumedUnderlyingObjects, AA::Interprocedural);
-
+    if (!UsedAssumedInformation)
+      indicateOptimisticFixpoint();
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -11983,7 +11996,7 @@ private:
   /// as a phi node or a select instruction.
   bool handleIndirect(Attributor &A, Value &V,
                       SmallSetVector<Value *, 8> &UnderlyingObjects,
-                      AA::ValueScope Scope) {
+                      AA::ValueScope Scope, bool &UsedAssumedInformation) {
     bool Changed = false;
     const auto *AA = A.getAAFor<AAUnderlyingObjects>(
         *this, IRPosition::value(V), DepClassTy::OPTIONAL);
@@ -11994,6 +12007,7 @@ private:
     if (!AA || !AA->forallUnderlyingObjects(Pred, Scope))
       llvm_unreachable(
           "The forall call should not return false at this position");
+    UsedAssumedInformation |= !AA->getState().isAtFixpoint();
     return Changed;
   }
 
@@ -12320,7 +12334,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     bool CBIsVoid = CB->getType()->isVoidTy();
     BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
-    SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
+    SmallVector<Value *> CSArgs(CB->args());
 
     // If we know all callees and there are none, the call site is (effectively)
     // dead (or UB).

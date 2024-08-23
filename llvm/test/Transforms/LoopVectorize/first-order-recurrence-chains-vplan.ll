@@ -154,7 +154,7 @@ exit:
 ; FOR (for.y) should be moved which is not currently supported.
 define i32 @test_chained_first_order_recurrences_4(ptr %base) {
 ; CHECK-LABEL: 'test_chained_first_order_recurrences_4'
-; CHECK: No VPlan could be built for
+; CHECK: No VPlans built.
 
 entry:
   br label %loop

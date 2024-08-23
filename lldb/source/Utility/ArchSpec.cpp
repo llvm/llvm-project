@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
@@ -461,9 +462,10 @@ static const ArchDefinition g_coff_arch_def = {
 };
 
 static const ArchDefinitionEntry g_xcoff_arch_entries[] = {
-    {ArchSpec::eCore_ppc_generic, llvm::XCOFF::TCPU_COM, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu},
-    {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}
-};
+    {ArchSpec::eCore_ppc_generic, llvm::XCOFF::TCPU_COM, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu},
+    {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64,
+     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}};
 
 static const ArchDefinition g_xcoff_arch_def = {
     eArchTypeXCOFF,

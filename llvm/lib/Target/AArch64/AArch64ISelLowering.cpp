@@ -2055,6 +2055,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   bool PreferSVE = !PreferNEON && Subtarget->isSVEAvailable();
 
   // Lower fixed length vector operations to scalable equivalents.
+  setOperationAction(ISD::ABDS, VT, Default);
+  setOperationAction(ISD::ABDU, VT, Default);
   setOperationAction(ISD::ABS, VT, Default);
   setOperationAction(ISD::ADD, VT, Default);
   setOperationAction(ISD::AND, VT, Default);
@@ -16149,6 +16151,10 @@ static bool isSplatShuffle(Value *V) {
 /// or upper half of the vector elements.
 static bool areExtractShuffleVectors(Value *Op1, Value *Op2,
                                      bool AllowSplat = false) {
+  // Scalable types can't be extract shuffle vectors.
+  if (Op1->getType()->isScalableTy() || Op2->getType()->isScalableTy())
+    return false;
+
   auto areTypesHalfed = [](Value *FullV, Value *HalfV) {
     auto *FullTy = FullV->getType();
     auto *HalfTy = HalfV->getType();

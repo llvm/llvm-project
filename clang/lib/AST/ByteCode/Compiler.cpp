@@ -214,7 +214,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
                                                QualType(FromMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     return this->emitGetMemberPtrBasePop(DerivedOffset, CE);
@@ -229,14 +229,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
                                                QualType(ToMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     return this->emitGetMemberPtrBasePop(-DerivedOffset, CE);
   }
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
@@ -265,7 +265,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     unsigned DerivedOffset =
@@ -885,12 +885,21 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   if (!LT || !RT)
     return false;
 
+  // Visit the given pointer expression and optionally convert to a PT_Ptr.
+  auto visitAsPointer = [&](const Expr *E, PrimType T) -> bool {
+    if (!this->visit(E))
+      return false;
+    if (T != PT_Ptr)
+      return this->emitDecayPtr(T, PT_Ptr, E);
+    return true;
+  };
+
   if (LHS->getType()->isPointerType() && RHS->getType()->isPointerType()) {
     if (Op != BO_Sub)
       return false;
 
     assert(E->getType()->isIntegerType());
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
     return this->emitSubPtr(classifyPrim(E->getType()), E);
@@ -898,21 +907,38 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   PrimType OffsetType;
   if (LHS->getType()->isIntegerType()) {
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT))
+      return false;
+    if (!this->visit(LHS))
       return false;
     OffsetType = *LT;
   } else if (RHS->getType()->isIntegerType()) {
-    if (!visit(LHS) || !visit(RHS))
+    if (!visitAsPointer(LHS, *LT))
+      return false;
+    if (!this->visit(RHS))
       return false;
     OffsetType = *RT;
   } else {
     return false;
   }
 
-  if (Op == BO_Add)
-    return this->emitAddOffset(OffsetType, E);
-  else if (Op == BO_Sub)
-    return this->emitSubOffset(OffsetType, E);
+  // Do the operation and optionally transform to
+  // result pointer type.
+  if (Op == BO_Add) {
+    if (!this->emitAddOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  } else if (Op == BO_Sub) {
+    if (!this->emitSubOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  }
 
   return false;
 }
@@ -1318,15 +1344,6 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
-
-  QualType QT = E->getType();
-
-  if (const auto *AT = QT->getAs<AtomicType>())
-    QT = AT->getValueType();
-
-  if (QT->isVoidType())
-    return this->emitInvalid(E);
-
   // Handle discarding first.
   if (DiscardResult) {
     for (const Expr *Init : Inits) {
@@ -1335,6 +1352,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     }
     return true;
   }
+
+  QualType QT = E->getType();
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
+  if (QT->isVoidType())
+    return this->emitInvalid(E);
 
   // Primitive values.
   if (std::optional<PrimType> T = classify(QT)) {
@@ -2325,6 +2349,9 @@ bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   const Expr *Init = E->getInitializer();
+  if (DiscardResult)
+    return this->discard(Init);
+
   if (Initializing) {
     // We already have a value, just initialize that.
     return this->visitInitializer(Init) && this->emitFinishInit(E);
@@ -2378,9 +2405,6 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
       if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
         return false;
     }
-
-    if (DiscardResult)
-      return this->emitPopPtr(E);
     return true;
   }
 
@@ -2556,7 +2580,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (T->isArrayType()) {
@@ -3251,12 +3275,9 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   if (E->getType().isNull())
     return false;
 
-  if (E->getType()->isVoidType())
-    return this->discard(E);
-
   // Create local variable to hold the return value.
-  if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !classify(E->getType())) {
+  if (!E->getType()->isVoidType() && !E->isGLValue() &&
+      !E->getType()->isAnyComplexType() && !classify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -5150,7 +5171,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult || E->getType()->isVoidType())
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x

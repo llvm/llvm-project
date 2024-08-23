@@ -588,7 +588,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   if (cie->augmentation[0] == 'z') {
     uint32_t aug_data_len = (uint32_t)m_cfi_data.GetULEB128(&offset);
     if (aug_data_len != 0 && cie->lsda_addr_encoding != DW_EH_PE_omit) {
-        lldb::offset_t saved_offset = offset;
+      lldb::offset_t saved_offset = offset;
       lsda_data_file_address =
           GetGNUEHPointer(m_cfi_data, &offset, cie->lsda_addr_encoding,
                           pc_rel_addr, text_addr, data_addr);
