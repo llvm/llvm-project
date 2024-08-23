@@ -35,7 +35,9 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec CType = HeaderSpec<
       "ctype.h",
       [], // Macros
-      [], // Types
+      [
+          LocaleT
+      ], // Types
       [], // Enumerations
       [
           FunctionSpec<
@@ -107,6 +109,76 @@ def StdC : StandardSpec<"stdc"> {
               "toupper",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "isalnum_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isalpha_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isblank_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "iscntrl_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isdigit_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isgraph_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "islower_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isprint_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "ispunct_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isspace_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isupper_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isxdigit_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "tolower_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "toupper_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
           >,
       ]
   >;
@@ -1593,8 +1665,8 @@ def StdC : StandardSpec<"stdc"> {
   >;
 
   
-  NamedType StructLconv : NamedType<"struct lconv">;
-  PtrType StructLconvPtr : PtrType<StructLconv>;
+  NamedType StructLconv = NamedType<"struct lconv">;
+  PtrType StructLconvPtr = PtrType<StructLconv>;
 
   HeaderSpec Locale = HeaderSpec<
      "locale.h",

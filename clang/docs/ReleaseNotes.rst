@@ -107,19 +107,6 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
-C++17 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++20 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++23 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- Removed the restriction to literal types in constexpr functions in C++23 mode.
-
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -130,6 +117,13 @@ C++2c Feature Support
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
+
+C++23 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Removed the restriction to literal types in constexpr functions in C++23 mode.
+
+C++20 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -183,8 +177,6 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
-
-- The compiler flag `-fbracket-depth` default value is increased from 256 to 2048.
 
 - The ``-ffp-model`` option has been updated to enable a more limited set of
   optimizations when the ``fast`` argument is used and to accept a new argument,
@@ -243,7 +235,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
-- Don't emit duplicated dangling diagnostics. (#GH93386).
+- Improved diagnostic when trying to befriend a concept. (#GH45182).
 
 - Added the ``-Winvalid-gnu-asm-cast`` diagnostic group to control warnings
   about use of "noop" casts for lvalues (a GNU extension). This diagnostic is
