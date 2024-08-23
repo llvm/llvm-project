@@ -3262,9 +3262,6 @@ template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
