@@ -263,13 +263,6 @@ static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
   cl::desc("Enable AMDGPU Alias Analysis"),
   cl::init(true));
 
-// Option to run late CFG structurizer
-static cl::opt<bool, true> LateCFGStructurize(
-  "amdgpu-late-structurize",
-  cl::desc("Enable late CFG structurization"),
-  cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
-  cl::Hidden);
-
 // Disable structurizer-based control-flow lowering in order to test convergence
 // control tokens. This should eventually be replaced by the wave-transform.
 static cl::opt<bool, true> DisableStructurizer(
@@ -627,7 +620,6 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
   }
 }
 
-bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 bool AMDGPUTargetMachine::DisableStructurizer = false;
@@ -1009,7 +1001,6 @@ public:
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
 
-  void addPreRegAlloc() override;
   bool addPreRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -1248,7 +1239,7 @@ bool GCNPassConfig::addPreISel() {
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
-  if (!LateCFGStructurize && !DisableStructurizer) {
+  if (!DisableStructurizer) {
     if (EnableStructurizerWorkarounds) {
       addPass(createFixIrreduciblePass());
       addPass(createUnifyLoopExitsPass());
@@ -1256,7 +1247,7 @@ bool GCNPassConfig::addPreISel() {
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
-  if (!LateCFGStructurize && !DisableStructurizer) {
+  if (!DisableStructurizer) {
     addPass(createSIAnnotateControlFlowLegacyPass());
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making
@@ -1345,12 +1336,6 @@ void GCNPassConfig::addPreGlobalInstructionSelect() {
 bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
   return false;
-}
-
-void GCNPassConfig::addPreRegAlloc() {
-  if (LateCFGStructurize) {
-    addPass(createAMDGPUMachineCFGStructurizerPass());
-  }
 }
 
 void GCNPassConfig::addFastRegAlloc() {
@@ -1878,7 +1863,6 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
-  const bool LateCFGStructurize = AMDGPUTargetMachine::EnableLateStructurizeCFG;
   const bool DisableStructurizer = AMDGPUTargetMachine::DisableStructurizer;
   const bool EnableStructurizerWorkarounds =
       AMDGPUTargetMachine::EnableStructurizerWorkarounds;
@@ -1896,7 +1880,7 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
   addPass(AMDGPUUnifyDivergentExitNodesPass());
 
-  if (!LateCFGStructurize && !DisableStructurizer) {
+  if (!DisableStructurizer) {
     if (EnableStructurizerWorkarounds) {
       addPass(FixIrreduciblePass());
       addPass(UnifyLoopExitsPass());
@@ -1907,7 +1891,7 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
   addPass(AMDGPUAnnotateUniformValuesPass());
 
-  if (!LateCFGStructurize && !DisableStructurizer) {
+  if (!DisableStructurizer) {
     addPass(SIAnnotateControlFlowPass(TM));
 
     // TODO: Move this right after structurizeCFG to avoid extra divergence
