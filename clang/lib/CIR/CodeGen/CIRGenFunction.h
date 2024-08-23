@@ -866,6 +866,8 @@ public:
   mlir::Value buildRuntimeCall(mlir::Location loc, mlir::cir::FuncOp callee,
                                ArrayRef<mlir::Value> args = {});
 
+  void buildInvariantStart(CharUnits Size);
+
   /// Create a check for a function parameter that may potentially be
   /// declared as non-null.
   void buildNonNullArgCheck(RValue RV, QualType ArgType, SourceLocation ArgLoc,
