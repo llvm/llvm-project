@@ -36,7 +36,6 @@ protected:
   StringRef getFeatureString(const Function &F) const;
 
 public:
-  static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
   static bool DisableStructurizer;
