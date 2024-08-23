@@ -91,9 +91,9 @@ misattributed to a block containing one of the instructions-to-be-merged.
 
 Examples of transformations that should follow this rule include:
 
-* Hoisting identical instructions from successors of a conditional branch or
-  sinking those from different predecessors. For example, merging identical
-  loads/stores which occur on both sides of a CFG diamond (see the
+* Hoisting identical instructions from all successors of a conditional branch
+  or sinking those from all different predecessors. For example, merging
+  identical loads/stores which occur on both sides of a CFG diamond (see the
   ``MergedLoadStoreMotion`` pass). For each group of identical instructions
   being hoisted/sunk, the merge of all their locations should be applied to
   the merged instruction.
