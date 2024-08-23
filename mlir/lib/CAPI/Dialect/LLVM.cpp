@@ -293,10 +293,10 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
     MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
     MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type, intptr_t nNodes,
-    MlirAttribute const *nodes) {
+    uint64_t subprogramFlags, MlirAttribute type, intptr_t nRetainedNodes,
+    MlirAttribute const *retainedNodes) {
   SmallVector<Attribute> nodesStorage;
-  nodesStorage.reserve(nNodes);
+  nodesStorage.reserve(nRetainedNodes);
   return wrap(DISubprogramAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)),
       cast<DICompileUnitAttr>(unwrap(compileUnit)),
@@ -304,8 +304,9 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
       cast<StringAttr>(unwrap(linkageName)), cast<DIFileAttr>(unwrap(file)),
       line, scopeLine, DISubprogramFlags(subprogramFlags),
       cast<DISubroutineTypeAttr>(unwrap(type)),
-      llvm::map_to_vector(unwrapList(nNodes, nodes, nodesStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); })));
+      llvm::map_to_vector(
+          unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
+          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetScope(MlirAttribute diSubprogram) {
@@ -353,14 +354,13 @@ MlirAttribute mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule) {
 
 MlirAttribute mlirLLVMDIImportedEntityAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute entity, MlirAttribute file,
-    unsigned int line, MlirAttribute name, intptr_t nRetainedNodes,
-    MlirAttribute const *retainedNodes) {
-  SmallVector<Attribute> nodesStorage;
-  nodesStorage.reserve(nRetainedNodes);
+    unsigned int line, MlirAttribute name, intptr_t nElements,
+    MlirAttribute const *elements) {
+  SmallVector<Attribute> elementsStorage;
+  elementsStorage.reserve(nElements);
   return wrap(DIImportedEntityAttr::get(
       unwrap(ctx), tag, cast<DINodeAttr>(unwrap(entity)),
       cast<DIFileAttr>(unwrap(file)), line, cast<StringAttr>(unwrap(name)),
-      llvm::map_to_vector(
-          unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
-          [](Attribute a) { return cast<DINodeAttr>(a); })));
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
