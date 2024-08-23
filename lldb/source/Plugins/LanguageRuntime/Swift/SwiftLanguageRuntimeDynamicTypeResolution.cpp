@@ -1691,7 +1691,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
           dem.demangleSymbol(sil_pack_type.GetMangledTypeName().GetStringRef());
       using Kind = Node::Kind;
       auto *dem_sil_pack_type =
-          swift_demangle::nodeAtPath(global, {Kind::TypeMangling, Kind::Type});
+          swift_demangle::ChildAtPath(global, {Kind::TypeMangling, Kind::Type});
       return dem_sil_pack_type;
     } else {
       return CreatePackType(dem, *ts, elements);
@@ -2563,7 +2563,7 @@ std::optional<SwiftNominalType> GetSwiftClass(ValueObject &valobj,
   swift::Demangle::Context ctx;
   auto *global = ctx.demangleSymbolAsNode(*swift_symbol);
   using Kind = Node::Kind;
-  auto *class_node = swift_demangle::nodeAtPath(
+  auto *class_node = swift_demangle::ChildAtPath(
       global, {Kind::TypeMetadata, Kind::Type, Kind::Class});
   if (class_node && class_node->getNumChildren() == 2) {
     auto module_node = class_node->getFirstChild();
@@ -2836,7 +2836,7 @@ bool SwiftLanguageRuntimeImpl::IsTaggedPointer(lldb::addr_t addr,
   Demangler dem;
   auto *root = dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
   using Kind = Node::Kind;
-  auto *unowned_node = swift_demangle::nodeAtPath(
+  auto *unowned_node = swift_demangle::ChildAtPath(
       root, {Kind::TypeMangling, Kind::Type, Kind::Unowned});
   if (!unowned_node)
     return false;

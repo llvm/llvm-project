@@ -2785,6 +2785,8 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
         }
         return false;
       }
+      case Node::Kind::ImplFunctionType:
+        return false;
       case Node::Kind::BuiltinTypeName: {
         if (!node->hasText())
           return false;
@@ -4663,7 +4665,7 @@ bool TypeSystemSwiftTypeRef::IsSIMDType(CompilerType type) {
   swift::Demangle::NodePointer global =
       dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
   using Kind = swift::Demangle::Node::Kind;
-  auto *simd_storage = swift_demangle::nodeAtPath(
+  auto *simd_storage = swift_demangle::ChildAtPath(
       global, {Kind::TypeMangling, Kind::Type, Kind::Structure});
   if (!simd_storage || simd_storage->getNumChildren() != 2)
     return false;
