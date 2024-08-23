@@ -41,46 +41,30 @@ int main() {
 
   // fmin
   static_assert(is_same_val<CALL_BUILTIN(fmin, 15.24, 1.3), 1.3>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmin, -0.0, +0.0), -0.0>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmin, +0.0, -0.0), -0.0>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fminf, NAN, -1), -1.f>);
   // nan-not-constant-error@-1 {{non-type template argument is not a constant expression}}
   // nan-not-constant-note@-2 {{floating point arithmetic produces a NaN}}
-  // cplusplus20andless-error@-3 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fminf, +INFINITY, 0), 0.f>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fminf, -INFINITY, 0), -INFINITY>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fminf, NAN, NAN), NAN>);
   // nan-not-constant-error@-1 {{non-type template argument is not a constant expression}}
   // nan-not-constant-note@-2 {{floating point arithmetic produces a NaN}}
-  // cplusplus20andless-error@-3 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fminl, 123.456L, 789.012L), 123.456L>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
 
   static_assert(is_same_val<CALL_BUILTIN(fmax, 15.24, 1.3), 15.24>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmax, -0.0, +0.0), +0.0>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmax, +0.0, -0.0), +0.0>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmaxf, NAN, -1), -1.f>);
   // nan-not-constant-error@-1 {{non-type template argument is not a constant expression}}
   // nan-not-constant-note@-2 {{floating point arithmetic produces a NaN}}
-  // cplusplus20andless-error@-3 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmaxf, +INFINITY, 0), INFINITY>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmaxf, -INFINITY, 0), 0.f>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmaxf, NAN, NAN), NAN>);
   // nan-not-constant-error@-1 {{non-type template argument is not a constant expression}}
   // nan-not-constant-note@-2 {{floating point arithmetic produces a NaN}}
-  // cplusplus20andless-error@-3 {{non-type template argument is not a constant expression}}
   static_assert(is_same_val<CALL_BUILTIN(fmaxl, 123.456L, 789.012L), 789.012L>);
-  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
 
   // frexp
   static_assert(is_same_val<CALL_BUILTIN(frexp, 123.45, (int [1]){}), 123.45/128>);

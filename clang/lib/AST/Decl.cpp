@@ -3068,14 +3068,22 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
 }
 
 void FunctionDecl::setConstexprBuiltinSinceVersion(IdentifierInfo *I) {
-  static const std::unordered_set<std::string> constexprFunctions = {
+  const std::unordered_set<std::string> ConstexprFunctions = {
+      "__builtin_fmax", "__builtin_fmaxf", "__builtin_fmaxl",
+      "__builtin_fmin", "__builtin_fminf", "__builtin_fminl"};
+  const std::unordered_set<std::string> ConstexprFunctionsFrexp = {
       "__builtin_frexp", "__builtin_frexpf", "__builtin_frexpl",
-      "__builtin_fmax",  "__builtin_fmaxf",  "__builtin_fmaxl",
-      "__builtin_fmin",  "__builtin_fminf",  "__builtin_fminl"};
-  bool isConstExpr =
-      constexprFunctions.find(I->getName().str()) != constexprFunctions.end();
-  isConstExpr ? setConstexprSinceVersion(clang::LangStandard::lang_cxx23)
-              : setConstexprSinceVersion(clang::LangStandard::lang_cxx20);
+      "__builtin_frexpf16", "__builtin_frexpf128"};
+  std::string BuiltinName = I->getName().str();
+  if (ConstexprFunctions.count(BuiltinName)) {
+    setConstexprSinceVersion(getLangOpts().CPlusPlus23
+                                 ? LangStandard::lang_cxx23
+                                 : getLangOpts().LangStd);
+  } else if (ConstexprFunctionsFrexp.count(BuiltinName)) {
+    setConstexprSinceVersion(LangStandard::lang_cxx23);
+  } else {
+    setConstexprSinceVersion(getLangOpts().LangStd);
+  }
 }
 
 void FunctionDecl::getNameForDiagnostic(
