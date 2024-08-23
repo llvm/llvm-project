@@ -1,6 +1,6 @@
-#include "SPIRV.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
+#include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
