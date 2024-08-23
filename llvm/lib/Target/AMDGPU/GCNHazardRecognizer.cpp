@@ -3014,9 +3014,21 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
 
 // Return the numeric ID 0-63 of an 64b SGPR pair for a given SGPR.
 // i.e. SGPR0 = SGPR0_SGPR1 = 0, SGPR3 = SGPR2_SGPR3 = 1, etc
-static unsigned sgprPairNumber(Register Reg, const SIRegisterInfo &TRI) {
+static std::optional<unsigned> sgprPairNumber(Register Reg, const SIRegisterInfo &TRI) {
+  switch (Reg) {
+  case AMDGPU::M0:
+  case AMDGPU::EXEC:
+  case AMDGPU::EXEC_LO:
+  case AMDGPU::EXEC_HI:
+  case AMDGPU::SGPR_NULL:
+  case AMDGPU::SGPR_NULL64:
+    return {};
+  default:
+    break;
+  }
   unsigned RegN = TRI.getEncodingValue(Reg);
-  assert(RegN <= 127);
+  if (RegN > 127)
+    return {};
   return (RegN >> 1) & 0x3f;
 }
 
@@ -3049,7 +3061,6 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
   // before a SALU write to the same SGPR.  This provides a reduction in
   // hazard insertion when all VALU access to an SGPR occurs after its last
   // SALU write, when compared to a linear scan.
-  const unsigned SGPR_NULL = TRI.getEncodingValue(AMDGPU::SGPR_NULL_gfx11plus);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector SALUWriteSGPRs(64), ReadSGPRs(64);
   MachineCycleInfo CI;
@@ -3074,19 +3085,19 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
           continue;
         if (!TRI.isSGPRReg(MRI, Reg))
           continue;
-        if (TRI.getEncodingValue(Reg) >= SGPR_NULL)
+        auto RegN = sgprPairNumber(Reg, TRI);
+        if (!RegN)
           continue;
-        unsigned RegN = sgprPairNumber(Reg, TRI);
         if (IsVALU && Op.isUse()) {
           // Note: any access within a cycle must be considered a hazard.
-          if (InCycle || (ReadSGPRs[RegN] && SALUWriteSGPRs[RegN]))
-            VALUReadHazardSGPRs.set(RegN);
-          ReadSGPRs.set(RegN);
+          if (InCycle || (ReadSGPRs[*RegN] && SALUWriteSGPRs[*RegN]))
+            VALUReadHazardSGPRs.set(*RegN);
+          ReadSGPRs.set(*RegN);
         } else if (IsSALU) {
           if (Op.isDef())
-            SALUWriteSGPRs.set(RegN);
+            SALUWriteSGPRs.set(*RegN);
           else
-            ReadSGPRs.set(RegN);
+            ReadSGPRs.set(*RegN);
         }
       }
     }
@@ -3155,7 +3166,6 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
                          MI->getOpcode() == AMDGPU::S_ENDPGM_SAVED);
 
   // Collect all SGPR sources for MI which are read by a VALU.
-  const unsigned SGPR_NULL = TRI.getEncodingValue(AMDGPU::SGPR_NULL_gfx11plus);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallSet<Register, 4> SGPRsUsed;
 
@@ -3171,12 +3181,11 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
       if (!TRI.isSGPRReg(MRI, OpReg))
         continue;
 
-      // Ignore special purposes registers such as NULL, EXEC, and M0.
-      if (TRI.getEncodingValue(OpReg) >= SGPR_NULL)
+      auto RegN = sgprPairNumber(OpReg, TRI);
+      if (!RegN)
         continue;
 
-      unsigned RegN = sgprPairNumber(OpReg, TRI);
-      if (!VALUReadHazardSGPRs[RegN])
+      if (!VALUReadHazardSGPRs[*RegN])
         continue;
 
       SGPRsUsed.insert(OpReg);
@@ -3239,8 +3248,8 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
     auto hazardPair = [this](Register Reg) {
       if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
         return Register(AMDGPU::VCC);
-      // TODO: handle TTMP?
-      return Register(AMDGPU::SGPR0_SGPR1 + sgprPairNumber(Reg, TRI));
+      auto RegN = sgprPairNumber(Reg, TRI);
+      return Register(AMDGPU::SGPR0_SGPR1 + *RegN);
     };
     auto SearchHazardFn = [this, hazardPair,
                            &SGPRsUsed](const MachineInstr &I) {
