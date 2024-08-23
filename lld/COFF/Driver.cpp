@@ -2440,6 +2440,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (isArm64EC(config->machine)) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
   }
