@@ -46,6 +46,9 @@
 # CHECK: [ 5] DEBUG            0x00000000deadbeef
 # CHECK: [ 6] NULL             0x0000000000000000
 
+# Make sure the ObjectFileELF::GetImageInfoAddress() works.
+# CHECK: image_info_address = 0x0000000000000158
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

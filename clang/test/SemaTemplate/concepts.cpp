@@ -836,13 +836,13 @@ struct Parent {
 static_assert(Parent<void>::TakesUnary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesUnary'}}
 // expected-note@#UNARY{{because 'decltype(0ULL)' (aka 'unsigned long long') does not satisfy 'C'}}
-// expected-note@#61777_C{{because 'sizeof(decltype(0ULL)) == 4' (8 == 4) evaluated to false}}
+// expected-note@#61777_C{{because 'sizeof(unsigned long long) == 4' (8 == 4) evaluated to false}}
 static_assert(Parent<void>::TakesUnary<int, 0uLL>::i == 0);
 
 static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesBinary'}}
 // expected-note@#BINARY{{because 'C2<decltype(0ULL), int>' evaluated to false}}
-// expected-note@#61777_C2{{because 'sizeof(decltype(0ULL)) == sizeof(int)' (8 == 4) evaluated to false}}
+// expected-note@#61777_C2{{because 'sizeof(unsigned long long) == sizeof(int)' (8 == 4) evaluated to false}}
 static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
 }
 
@@ -1006,7 +1006,14 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+// expected-error@-1 {{a concept definition cannot refer to itself}} \
+// expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
+// expected-note@-1 {{declared here}}
+
+template<typename T> concept C1 = C1<T> && []<C1>(C1 auto) -> C1 auto {};
+//expected-error@-1 4{{a concept definition cannot refer to itself}} \
+//expected-note@-1 4{{declared here}}
 
 template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}

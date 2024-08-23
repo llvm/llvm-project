@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_DAGISELMATCHER_H
-#define LLVM_UTILS_TABLEGEN_DAGISELMATCHER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -452,7 +452,7 @@ class CheckPredicateMatcher : public Matcher {
 
 public:
   CheckPredicateMatcher(const TreePredicateFn &pred,
-                        const SmallVectorImpl<unsigned> &Operands);
+                        ArrayRef<unsigned> Operands);
 
   TreePredicateFn getPredicate() const;
   unsigned getNumOperands() const;
@@ -836,7 +836,8 @@ class EmitIntegerMatcher : public Matcher {
 
 public:
   EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt)
-      : Matcher(EmitInteger), Val(val), VT(vt) {}
+      : Matcher(EmitInteger), Val(SignExtend64(val, MVT(vt).getSizeInBits())),
+        VT(vt) {}
 
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
@@ -1130,4 +1131,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H

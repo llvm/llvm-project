@@ -188,8 +188,8 @@ define i32 @test3(ptr nocapture readonly %p, ptr nocapture readonly %q) {
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP4]], [[SUM]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]

@@ -10,20 +10,20 @@
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-7'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '4'
+; YAML-NEXT:    - TreeSize:        '5'
 
 define void @test(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr i32, ptr [[P]], i64 32
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr i32, ptr [[P]], i64 34
-; CHECK-NEXT:    [[I6:%.*]] = load i32, ptr [[ARRAYIDX18]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr i32, ptr [[P]], i64 33
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[I]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[I6]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[I]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[I2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP3]], <2 x i32> [[TMP0]], i64 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    ret void

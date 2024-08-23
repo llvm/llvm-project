@@ -44,7 +44,7 @@ entry:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-2'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '7'
+; YAML-NEXT:    - TreeSize:        '6'
 define i32 @min_float(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-LABEL: @min_float(
 ; CHECK-NEXT:  entry:
@@ -112,7 +112,7 @@ entry:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-2'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '7'
+; YAML-NEXT:    - TreeSize:        '6'
 define i32 @max_float(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-LABEL: @max_float(
 ; CHECK-NEXT:  entry:

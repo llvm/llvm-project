@@ -23,7 +23,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -252,17 +251,6 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
-
-CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
-                             BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                             std::string Suffix)
-    : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
-      Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
-                                     /* AllowVarArgs */ false,
-                                     /* AllowAlloca */ false)),
-      Suffix(Suffix) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.

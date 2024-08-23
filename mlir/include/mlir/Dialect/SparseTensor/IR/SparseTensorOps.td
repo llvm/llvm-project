@@ -1749,6 +1749,10 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
 
+  let builders = [
+    OpBuilder<(ins "ValueRange":$iterSpace, "ValueRange":$initArgs, "unsigned":$numCases)>,
+  ];
+
   let extraClassDeclaration = [{
     unsigned getSpaceDim() {
       return llvm::cast<::mlir::sparse_tensor::IterSpaceType>(
@@ -1765,18 +1769,18 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
       });
     }
 
-    // The block arguments starts with referenced coordinates, follows by
-    // user-provided iteration arguments and ends with iterators.
+    // The block arguments starts with user-provided iteration arguments,
+    // follows by referenced coordinates and ends with iterators.
     Block::BlockArgListType getCrds(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
-          .take_front(getCrdUsedLvls().count());
+          .slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
     }
-    unsigned getNumRegionIterArgs(unsigned regionIdx) {
+    unsigned getNumRegionIterArgs() {
       return getInitArgs().size();
     }
     Block::BlockArgListType getRegionIterArgs(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
-          .slice(getCrdUsedLvls().count(), getNumRegionIterArgs(regionIdx));
+          .take_front(getNumRegionIterArgs());
     }
     Block::BlockArgListType getRegionIterators(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()

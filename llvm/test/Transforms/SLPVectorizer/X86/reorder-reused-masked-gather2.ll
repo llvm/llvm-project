@@ -11,12 +11,15 @@ define void @"foo"(ptr addrspace(1) %0, ptr addrspace(1) %1) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 24
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x float>, ptr addrspace(1) [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP7]], <8 x i32> <i32 0, i32 2, i32 0, i32 2, i32 3, i32 1, i32 3, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul <8 x float> [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x float> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x float> [[TMP11]], <8 x float> poison, <8 x i32> <i32 0, i32 5, i32 2, i32 7, i32 4, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    store <8 x float> [[TMP12]], ptr addrspace(1) [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x float>, ptr addrspace(1) [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP6]], i64 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP10]], <2 x float> [[TMP8]], i64 2)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> poison, <8 x i32> <i32 0, i32 3, i32 0, i32 3, i32 2, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul <8 x float> [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <8 x float> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x float> [[TMP14]], <8 x float> poison, <8 x i32> <i32 0, i32 5, i32 2, i32 7, i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    store <8 x float> [[TMP15]], ptr addrspace(1) [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %3 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 8

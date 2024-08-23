@@ -2046,7 +2046,8 @@ example:
     attributes.
 ``naked``
     This attribute disables prologue / epilogue emission for the
-    function. This can have very system-specific consequences.
+    function. This can have very system-specific consequences. The arguments of
+    a ``naked`` function can not be referenced through IR values.
 ``"no-inline-line-tables"``
     When this attribute is set to true, the inliner discards source locations
     when inlining code and instead uses the source location of the call site.
@@ -16131,6 +16132,96 @@ The returned value is completely identical to the input except for the sign bit;
 in particular, if the input is a NaN, then the quiet/signaling bit and payload
 are perfectly preserved.
 
+.. _i_fminmax_family:
+
+'``llvm.min.*``' Intrinsics Comparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Standard:
+"""""""""
+
+IEEE754 and ISO C define some min/max operations, and they have some differences
+on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
+
+.. list-table::
+   :header-rows: 2
+
+   * - ``ISO C``
+     - fmin/fmax
+     - fmininum/fmaximum
+     - fminimum_num/fmaximum_num
+
+   * - ``IEEE754``
+     - minNum/maxNum (2008)
+     - minimum/maximum (2019)
+     - minimumNumber/maximumNumber (2019)
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0 > -0.0
+     - +0.0 > -0.0
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
+
+LLVM Implementation:
+""""""""""""""""""""
+
+LLVM implements all ISO C flavors as listed in this table, except in the
+default floating-point environment exceptions are ignored. The constrained
+versions of the intrinsics respect the exception behavior.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 28 28 28
+
+   * - Operation
+     - minnum/maxnum
+     - minimum/maximum
+     - minimumnum/maximumnum
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``sNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0(max)/-0.0(min)
+     - +0.0(max)/-0.0(min)
+
+   * - ``NUM vs NUM``
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+
 .. _i_minnum:
 
 '``llvm.minnum.*``' Intrinsic
@@ -16311,6 +16402,98 @@ If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
 IEEE 754-2019.
+
+.. _i_minimumnum:
+
+'``llvm.minimumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.minimumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.minimumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.minimumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.minimumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.minimumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.minimumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.minimumnum.*``' intrinsics return the minimum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs (including sNaN), returns qNaN. If one operand
+is NaN (including sNaN) and another operand is a number, return the number.
+Otherwise returns the lesser of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+
+It has some differences with '``llvm.minnum.*``':
+1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
+
+.. _i_maximumnum:
+
+'``llvm.maximumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.maximumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.maximumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.maximumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.maximumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.maximumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.maximumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.maximumnum.*``' intrinsics return the maximum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs (including sNaN), returns qNaN. If one operand
+is NaN (including sNaN) and another operand is a number, return the number.
+Otherwise returns the greater of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+
+It has some differences with '``llvm.maxnum.*``':
+1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
 
 .. _int_copysign:
 
@@ -16636,7 +16819,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.lround`` on any
-floating-point type. Not all targets support all types however.
+floating-point type or vector of floating-point type. Not all targets
+support all types however.
 
 ::
 
@@ -19571,7 +19755,7 @@ This is an overloaded intrinsic. A number of scalar values of integer, floating 
 from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
 The remaining lanes are filled with values from ``passthru``.
 
-:: code-block:: llvm
+.. code-block:: llvm
 
       declare <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
       declare <16 x float> @llvm.experimental.vector.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)

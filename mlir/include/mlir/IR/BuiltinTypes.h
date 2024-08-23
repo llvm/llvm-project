@@ -198,6 +198,7 @@ public:
 #include "mlir/IR/BuiltinTypes.h.inc"
 
 namespace mlir {
+#include "mlir/IR/BuiltinTypeConstraints.h.inc"
 
 //===----------------------------------------------------------------------===//
 // MemRefType
