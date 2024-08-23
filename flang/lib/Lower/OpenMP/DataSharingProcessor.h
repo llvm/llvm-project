@@ -153,6 +153,12 @@ public:
   getAllSymbolsToPrivatize() const {
     return allPrivatizedSymbols;
   }
+
+  llvm::ArrayRef<const semantics::Symbol *> getDelayedPrivSymbols() const {
+    return useDelayedPrivatization
+               ? allPrivatizedSymbols.getArrayRef()
+               : llvm::ArrayRef<const semantics::Symbol *>();
+  }
 };
 
 } // namespace omp
