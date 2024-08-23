@@ -14870,6 +14870,7 @@ public:
   QualType BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
   QualType BuiltinEnumUnderlyingType(QualType BaseType, SourceLocation Loc);
+  QualType BuiltinDedupTemplateArgs(QualType BaseType, SourceLocation Loc);
   QualType BuiltinAddPointer(QualType BaseType, SourceLocation Loc);
   QualType BuiltinRemovePointer(QualType BaseType, SourceLocation Loc);
   QualType BuiltinDecay(QualType BaseType, SourceLocation Loc);

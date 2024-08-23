@@ -9736,6 +9736,10 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
     Result = BuiltinEnumUnderlyingType(BaseType, Loc);
     break;
   }
+  case UnaryTransformType::DedupTemplateArgs: {
+    Result = BuiltinDedupTemplateArgs(BaseType, Loc);
+    break;
+  }
   case UnaryTransformType::AddPointer: {
     Result = BuiltinAddPointer(BaseType, Loc);
     break;

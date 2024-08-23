@@ -17,7 +17,9 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -38,6 +40,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -8035,6 +8038,36 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
   }
 
   return false;
+}
+
+QualType Sema::BuiltinDedupTemplateArgs(QualType BaseType, SourceLocation Loc) {
+  if (RequireCompleteType(Loc, BaseType,
+                          diag::err_incomplete_type_used_in_type_trait_expr))
+    return QualType();
+  const ElaboratedType *ET = cast<ElaboratedType>(BaseType);
+  auto *TST = ET->getNamedType()->castAs<TemplateSpecializationType>();
+  if (!TST) {
+    Diag(Loc, diag::err_underlying_type_of_incomplete_enum) << BaseType;
+    return QualType();
+  }
+  TemplateArgumentListInfo Args(Loc, Loc);
+  auto AddArg = [&](TemplateArgument T) {
+    Args.addArgument(TemplateArgumentLoc(
+        T, Context.getTrivialTypeSourceInfo(T.getAsType(), Loc)));
+  };
+  llvm::DenseSet<QualType> SeenArgTypes;
+  for (const auto &T : TST->template_arguments()) {
+    if (SeenArgTypes.contains(T.getAsType()))
+      continue;
+    AddArg(T);
+    SeenArgTypes.insert(T.getAsType());
+  }
+  QualType DedupType = CheckTemplateIdType(TST->getTemplateName(), Loc, Args);
+
+  if (RequireCompleteType(Loc, DedupType,
+                          diag::err_coroutine_type_missing_specialization))
+    return QualType();
+  return DedupType;
 }
 
 bool Sema::CheckTemplatePartialSpecializationArgs(
