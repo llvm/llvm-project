@@ -47,7 +47,7 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
         )
 
         events = self.continue_to_next_stop()
-        print("huh", events)
+
         stackFrames = self.get_stackFrames(threadId=events[0]["body"]["threadId"])
         self.assertGreaterEqual(len(stackFrames), 3, "expect >= 3 frames")
         self.assertEqual(stackFrames[0]["name"], "one")
