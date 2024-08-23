@@ -35,9 +35,13 @@
   explicitVal = 1 : i32
 }>
 
-// An example of vector reductions.
-module {
+#VEC = #sparse_tensor.encoding<{
+  map = (d0) -> (d0 : compressed)
+}>
 
+
+module {
+  // An example of vector reductions (lowered through sparse_tensor.iterate).
   func.func @sqsum(%arg0: tensor<2x3x4x5xi32, #COO>) -> tensor<i32> {
     %cst = arith.constant dense<0> : tensor<i32>
     %0 = linalg.generic {
@@ -55,7 +59,30 @@ module {
     return %0 : tensor<i32>
   }
 
+  // An example of vector addition (lowered through sparse_tensor.coiterate).
+  func.func @vec_add(%arg0: tensor<4xi32, #VEC>, %arg1: tensor<4xi32, #VEC>) -> tensor<4xi32> {
+    %cst = arith.constant dense<0> : tensor<4xi32>
+    %0 = linalg.generic {
+      indexing_maps = [
+        affine_map<(d0) -> (d0)>,
+        affine_map<(d0) -> (d0)>,
+        affine_map<(d0) -> (d0)>
+      ],
+      iterator_types = ["parallel"]
+    }
+    ins(%arg0, %arg1 : tensor<4xi32, #VEC>, tensor<4xi32, #VEC>)
+    outs(%cst : tensor<4xi32>) {
+      ^bb0(%in1: i32, %in2: i32, %out: i32):
+        %2 = arith.addi %in1, %in2 : i32
+        linalg.yield %2 : i32
+    } -> tensor<4xi32>
+    return %0 : tensor<4xi32>
+  }
+
   func.func @main() {
+    %c0 = arith.constant 0 : index
+    %i0 = arith.constant 0 : i32
+
     %cst = arith.constant sparse<
      [
        [0, 1, 2, 3],
@@ -66,15 +93,33 @@ module {
      [1, 1, 1, 1]
     > : tensor<2x3x4x5xi32>
 
+    %l = arith.constant dense<
+       [0, 1, 2, 3]
+    > : tensor<4xi32>
+    %r = arith.constant dense<
+       [1, 0, 3, 0]
+    > : tensor<4xi32>
+
     %input = sparse_tensor.convert %cst : tensor<2x3x4x5xi32> to tensor<2x3x4x5xi32, #COO>
     %0 = call @sqsum(%input) : (tensor<2x3x4x5xi32, #COO>) -> tensor<i32>
     %v = tensor.extract %0[] : tensor<i32>
 
+    %lhs = sparse_tensor.convert %l : tensor<4xi32> to tensor<4xi32, #VEC>
+    %rhs = sparse_tensor.convert %r : tensor<4xi32> to tensor<4xi32, #VEC>
+    %add = call @vec_add(%lhs, %rhs) : (tensor<4xi32, #VEC>, tensor<4xi32, #VEC>) -> tensor<4xi32>
+
     // CHECK: 4
     vector.print %v : i32
+    // CHECK-NEXT: ( 1, 1, 5, 3 )
+    %vec = vector.transfer_read %add[%c0], %i0 : tensor<4xi32>, vector<4xi32>
+    vector.print %vec : vector<4xi32>
 
     bufferization.dealloc_tensor %input : tensor<2x3x4x5xi32, #COO>
     bufferization.dealloc_tensor %0 : tensor<i32>
+
+    bufferization.dealloc_tensor %lhs : tensor<4xi32, #VEC>
+    bufferization.dealloc_tensor %rhs : tensor<4xi32, #VEC>
+    bufferization.dealloc_tensor %add : tensor<4xi32>
     return
   }
 }

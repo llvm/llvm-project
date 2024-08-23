@@ -1787,6 +1787,10 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
           .take_back(getRegionDefinedSpace(regionIdx).count());
     }
     ValueRange getYieldedValues(unsigned regionIdx);
+
+    // Returns a vector of regions that are the `sub-cases` of the given case region.
+    // E.g., `case %it1, _, %it3` is a subcase of `case %it1, %it2, %it3`.
+    SmallVector<Region *> getSubCasesOf(unsigned regionIdx);
   }];
 
   let hasVerifier = 1;
