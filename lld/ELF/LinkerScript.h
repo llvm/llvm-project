@@ -96,13 +96,14 @@ class ConstantExpr : public ScriptExpr {
 public:
   // ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
   ConstantExpr(uint64_t val) : ScriptExpr(ExprKind::Constant), val_(val) {}
-  std::function<ExprValue()> getExpr() const {
+  std::function<ExprValue()> getConstantExpr() const {
     return [=] { return val_; };
   }
-  ExprValue getExprValue() const { return val_; }
+  ExprValue getConstantExprValue() const { return ExprValue(val_); }
 
 private:
-  ExprValue val_;
+  // ExprValue val_;
+  uint64_t val_;
 };
 
 class DynamicExpr : public ScriptExpr {
@@ -321,7 +322,7 @@ struct ByteCommand : SectionCommand {
   // Keeps string representing the command. Used for -Map" is perhaps better.
   std::string commandString;
 
-  ScriptExpr *expression;
+  ScriptExpr *expression = nullptr;
 
   // This is just an offset of this assignment command in the output section.
   unsigned offset;

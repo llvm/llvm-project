@@ -136,10 +136,9 @@ std::function<ExprValue()> ScriptExpr::getExpr() const {
   // reinterpret_cast<uintptr_t>(this) << "\n";
   switch (kind_) {
   case ExprKind::Constant:
-    return static_cast<const ConstantExpr *>(this)->getExpr();
+    return static_cast<const ConstantExpr *>(this)->getConstantExpr();
   case ExprKind::Dynamic: {
     auto expr = static_cast<const DynamicExpr *>(this);
-    // llvm::errs() << "expr = " <<
     return expr->getImpl();
   }
   default:
@@ -148,9 +147,11 @@ std::function<ExprValue()> ScriptExpr::getExpr() const {
 }
 
 ExprValue ScriptExpr::getExprValue() const {
+  // llvm::errs() << "getExprValue: " << static_cast<int>(kind_) << ", " <<
+  // reinterpret_cast<uintptr_t>(this) << "\n";
   switch (kind_) {
   case ExprKind::Constant:
-    return static_cast<const ConstantExpr *>(this)->getExprValue();
+    return static_cast<const ConstantExpr *>(this)->getConstantExprValue();
   case ExprKind::Dynamic:
     return static_cast<const DynamicExpr *>(this)->getImpl()();
   default:
