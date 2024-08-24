@@ -15444,6 +15444,9 @@ static SDValue PerformVECTOR_REG_CASTCombine(SDNode *N, SelectionDAG &DAG,
   if (ST->isLittle())
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);
 
+  // VT VECTOR_REG_CAST (VT Op) -> Op
+  if (Op.getValueType() == VT)
+    return Op;
   // VECTOR_REG_CAST undef -> undef
   if (Op.isUndef())
     return DAG.getUNDEF(VT);
