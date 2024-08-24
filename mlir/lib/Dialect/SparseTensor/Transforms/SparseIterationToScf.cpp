@@ -111,7 +111,7 @@ genCoIterateBranchNest(PatternRewriter &rewriter, Location loc, CoIterateOp op,
 
 static ValueRange genLoopWithIterator(
     PatternRewriter &rewriter, Location loc, SparseIterator *it,
-    ValueRange reduc, bool iterFirst,
+    ValueRange reduc,
     function_ref<SmallVector<Value>(PatternRewriter &rewriter, Location loc,
                                     Region &loopBody, SparseIterator *it,
                                     ValueRange reduc)>
@@ -138,15 +138,9 @@ static ValueRange genLoopWithIterator(
     }
     return forOp.getResults();
   }
-  SmallVector<Value> ivs;
-  // TODO: always put iterator SSA values at the end of argument list to be
-  // consistent with coiterate operation.
-  if (!iterFirst)
-    llvm::append_range(ivs, it->getCursor());
-  // Appends the user-provided values.
-  llvm::append_range(ivs, reduc);
-  if (iterFirst)
-    llvm::append_range(ivs, it->getCursor());
+
+  SmallVector<Value> ivs(reduc);
+  llvm::append_range(ivs, it->getCursor());
 
   TypeRange types = ValueRange(ivs).getTypes();
   auto whileOp = rewriter.create<scf::WhileOp>(loc, types, ivs);
@@ -164,12 +158,8 @@ static ValueRange genLoopWithIterator(
     Region &dstRegion = whileOp.getAfter();
     Block *after = rewriter.createBlock(&dstRegion, {}, types, l);
     ValueRange aArgs = whileOp.getAfterArguments();
-    if (iterFirst) {
-      aArgs = it->linkNewScope(aArgs);
-    } else {
-      aArgs = aArgs.take_front(reduc.size());
-      it->linkNewScope(aArgs.drop_front(reduc.size()));
-    }
+    it->linkNewScope(aArgs.drop_front(reduc.size()));
+    aArgs = aArgs.take_front(reduc.size());
 
     rewriter.setInsertionPointToStart(after);
     SmallVector<Value> ret = bodyBuilder(rewriter, loc, dstRegion, it, aArgs);
@@ -177,12 +167,8 @@ static ValueRange genLoopWithIterator(
 
     // Forward loops
     SmallVector<Value> yields;
-    ValueRange nx = it->forward(rewriter, loc);
-    if (iterFirst)
-      llvm::append_range(yields, nx);
     llvm::append_range(yields, ret);
-    if (!iterFirst)
-      llvm::append_range(yields, nx);
+    llvm::append_range(yields, it->forward(rewriter, loc));
     rewriter.create<scf::YieldOp>(loc, yields);
   }
   return whileOp.getResults().drop_front(it->getCursor().size());
@@ -244,88 +230,41 @@ public:
     std::unique_ptr<SparseIterator> it =
         iterSpace.extractIterator(rewriter, loc);
 
-    if (it->iteratableByFor()) {
-      auto [lo, hi] = it->genForCond(rewriter, loc);
-      Value step = constantIndex(rewriter, loc, 1);
-      SmallVector<Value> ivs;
-      for (ValueRange inits : adaptor.getInitArgs())
-        llvm::append_range(ivs, inits);
-      scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, lo, hi, step, ivs);
+    SmallVector<Value> ivs;
+    for (ValueRange inits : adaptor.getInitArgs())
+      llvm::append_range(ivs, inits);
 
-      Block *loopBody = op.getBody();
-      OneToNTypeMapping bodyTypeMapping(loopBody->getArgumentTypes());
-      if (failed(typeConverter->convertSignatureArgs(
-              loopBody->getArgumentTypes(), bodyTypeMapping)))
-        return failure();
-      rewriter.applySignatureConversion(loopBody, bodyTypeMapping);
+    // Type conversion on iterate op block.
+    OneToNTypeMapping blockTypeMapping(op.getBody()->getArgumentTypes());
+    if (failed(typeConverter->convertSignatureArgs(
+            op.getBody()->getArgumentTypes(), blockTypeMapping)))
+      return rewriter.notifyMatchFailure(
+          op, "failed to convert iterate region argurment types");
+    rewriter.applySignatureConversion(op.getBody(), blockTypeMapping);
 
-      rewriter.eraseBlock(forOp.getBody());
-      Region &dstRegion = forOp.getRegion();
-      rewriter.inlineRegionBefore(op.getRegion(), dstRegion, dstRegion.end());
+    Block *block = op.getBody();
+    ValueRange ret = genLoopWithIterator(
+        rewriter, loc, it.get(), ivs,
+        [block](PatternRewriter &rewriter, Location loc, Region &loopBody,
+                SparseIterator *it, ValueRange reduc) -> SmallVector<Value> {
+          SmallVector<Value> blockArgs(reduc);
+          // TODO: Also appends coordinates if used.
+          // blockArgs.push_back(it->deref(rewriter, loc));
+          llvm::append_range(blockArgs, it->getCursor());
 
-      auto yieldOp =
-          llvm::cast<sparse_tensor::YieldOp>(forOp.getBody()->getTerminator());
+          Block *dstBlock = &loopBody.getBlocks().front();
+          rewriter.inlineBlockBefore(block, dstBlock, dstBlock->end(),
+                                     blockArgs);
+          auto yield = llvm::cast<sparse_tensor::YieldOp>(dstBlock->back());
+          // We can not use ValueRange as the operation holding the values will
+          // be destoryed.
+          SmallVector<Value> result(yield.getResults());
+          rewriter.eraseOp(yield);
+          return result;
+        });
 
-      rewriter.setInsertionPointToEnd(forOp.getBody());
-      // replace sparse_tensor.yield with scf.yield.
-      rewriter.create<scf::YieldOp>(loc, yieldOp.getResults());
-      rewriter.eraseOp(yieldOp);
-
-      const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
-      rewriter.replaceOp(op, forOp.getResults(), resultMapping);
-    } else {
-      SmallVector<Value> ivs;
-      // TODO: put iterator at the end of argument list to be consistent with
-      // coiterate operation.
-      llvm::append_range(ivs, it->getCursor());
-      for (ValueRange inits : adaptor.getInitArgs())
-        llvm::append_range(ivs, inits);
-
-      assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
-
-      TypeRange types = ValueRange(ivs).getTypes();
-      auto whileOp = rewriter.create<scf::WhileOp>(loc, types, ivs);
-      SmallVector<Location> l(types.size(), op.getIterator().getLoc());
-
-      // Generates loop conditions.
-      Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types, l);
-      rewriter.setInsertionPointToStart(before);
-      ValueRange bArgs = before->getArguments();
-      auto [whileCond, remArgs] = it->genWhileCond(rewriter, loc, bArgs);
-      assert(remArgs.size() == adaptor.getInitArgs().size());
-      rewriter.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
-
-      // Generates loop body.
-      Block *loopBody = op.getBody();
-      OneToNTypeMapping bodyTypeMapping(loopBody->getArgumentTypes());
-      if (failed(typeConverter->convertSignatureArgs(
-              loopBody->getArgumentTypes(), bodyTypeMapping)))
-        return failure();
-      rewriter.applySignatureConversion(loopBody, bodyTypeMapping);
-
-      Region &dstRegion = whileOp.getAfter();
-      // TODO: handle uses of coordinate!
-      rewriter.inlineRegionBefore(op.getRegion(), dstRegion, dstRegion.end());
-      ValueRange aArgs = whileOp.getAfterArguments();
-      auto yieldOp = llvm::cast<sparse_tensor::YieldOp>(
-          whileOp.getAfterBody()->getTerminator());
-
-      rewriter.setInsertionPointToEnd(whileOp.getAfterBody());
-
-      aArgs = it->linkNewScope(aArgs);
-      ValueRange nx = it->forward(rewriter, loc);
-      SmallVector<Value> yields;
-      llvm::append_range(yields, nx);
-      llvm::append_range(yields, yieldOp.getResults());
-
-      // replace sparse_tensor.yield with scf.yield.
-      rewriter.eraseOp(yieldOp);
-      rewriter.create<scf::YieldOp>(loc, yields);
-      const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
-      rewriter.replaceOp(
-          op, whileOp.getResults().drop_front(it->getCursor().size()),
-          resultMapping);
-    }
+    const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
+    rewriter.replaceOp(op, ret, resultMapping);
     return success();
   }
 };
@@ -366,9 +305,10 @@ class SparseCoIterateOpConverter
       Block *block = &region.getBlocks().front();
       OneToNTypeMapping blockTypeMapping(block->getArgumentTypes());
       if (failed(typeConverter->convertSignatureArgs(block->getArgumentTypes(),
-                                                     blockTypeMapping)))
+                                                     blockTypeMapping))) {
         return rewriter.notifyMatchFailure(
             op, "failed to convert coiterate region argurment types");
+      }
 
       rewriter.applySignatureConversion(block, blockTypeMapping);
     }
@@ -450,7 +390,7 @@ class SparseCoIterateOpConverter
 
         Block *block = &r.getBlocks().front();
         ValueRange curResult = genLoopWithIterator(
-            rewriter, loc, validIters.front(), userReduc, /*iterFirst=*/false,
+            rewriter, loc, validIters.front(), userReduc,
             /*bodyBuilder=*/
             [block](PatternRewriter &rewriter, Location loc, Region &dstRegion,
                     SparseIterator *it,

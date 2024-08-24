@@ -146,7 +146,7 @@ private:
   };
 
   std::deque<RegisteredEntry> m_recognizers;
-  uint16_t m_generation;
+  uint16_t m_generation = 0;
 };
 
 /// \class ValueObjectRecognizerSynthesizedValue
