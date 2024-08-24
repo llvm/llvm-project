@@ -150,7 +150,7 @@ private:
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierLeave(MachineInstr &I) const;
 
-  std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
+  std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,
                                                    bool AllowAbs = true,
                                                    bool OpSel = false) const;
@@ -371,7 +371,6 @@ private:
   const AMDGPURegisterBankInfo &RBI;
   const AMDGPUTargetMachine &TM;
   const GCNSubtarget &STI;
-  bool EnableLateStructurizeCFG;
 #define GET_GLOBALISEL_PREDICATES_DECL
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"

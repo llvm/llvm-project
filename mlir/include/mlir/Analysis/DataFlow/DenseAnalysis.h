@@ -87,9 +87,9 @@ public:
 protected:
   /// Propagate the dense lattice before the execution of an operation to the
   /// lattice after its execution.
-  virtual void visitOperationImpl(Operation *op,
-                                  const AbstractDenseLattice &before,
-                                  AbstractDenseLattice *after) = 0;
+  virtual LogicalResult visitOperationImpl(Operation *op,
+                                           const AbstractDenseLattice &before,
+                                           AbstractDenseLattice *after) = 0;
 
   /// Get the dense lattice after the execution of the given program point.
   virtual AbstractDenseLattice *getLattice(ProgramPoint point) = 0;
@@ -114,7 +114,7 @@ protected:
   /// operation, then the state after the execution of the operation is set by
   /// control-flow or the callgraph. Otherwise, this function invokes the
   /// operation transfer function.
-  virtual void processOperation(Operation *op);
+  virtual LogicalResult processOperation(Operation *op);
 
   /// Propagate the dense lattice forward along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -191,8 +191,8 @@ public:
   /// Visit an operation with the dense lattice before its execution. This
   /// function is expected to set the dense lattice after its execution and
   /// trigger change propagation in case of change.
-  virtual void visitOperation(Operation *op, const LatticeT &before,
-                              LatticeT *after) = 0;
+  virtual LogicalResult visitOperation(Operation *op, const LatticeT &before,
+                                       LatticeT *after) = 0;
 
   /// Hook for customizing the behavior of lattice propagation along the call
   /// control flow edges. Two types of (forward) propagation are possible here:
@@ -263,10 +263,11 @@ protected:
 
   /// Type-erased wrappers that convert the abstract dense lattice to a derived
   /// lattice and invoke the virtual hooks operating on the derived lattice.
-  void visitOperationImpl(Operation *op, const AbstractDenseLattice &before,
-                          AbstractDenseLattice *after) final {
-    visitOperation(op, static_cast<const LatticeT &>(before),
-                   static_cast<LatticeT *>(after));
+  LogicalResult visitOperationImpl(Operation *op,
+                                   const AbstractDenseLattice &before,
+                                   AbstractDenseLattice *after) final {
+    return visitOperation(op, static_cast<const LatticeT &>(before),
+                          static_cast<LatticeT *>(after));
   }
   void visitCallControlFlowTransfer(CallOpInterface call,
                                     CallControlFlowAction action,
@@ -326,9 +327,9 @@ public:
 protected:
   /// Propagate the dense lattice after the execution of an operation to the
   /// lattice before its execution.
-  virtual void visitOperationImpl(Operation *op,
-                                  const AbstractDenseLattice &after,
-                                  AbstractDenseLattice *before) = 0;
+  virtual LogicalResult visitOperationImpl(Operation *op,
+                                           const AbstractDenseLattice &after,
+                                           AbstractDenseLattice *before) = 0;
 
   /// Get the dense lattice before the execution of the program point. That is,
   /// before the execution of the given operation or after the execution of the
@@ -353,7 +354,7 @@ protected:
   /// Visit an operation. Dispatches to specialized methods for call or region
   /// control-flow operations. Otherwise, this function invokes the operation
   /// transfer function.
-  virtual void processOperation(Operation *op);
+  virtual LogicalResult processOperation(Operation *op);
 
   /// Propagate the dense lattice backwards along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -442,8 +443,8 @@ public:
   /// Transfer function. Visits an operation with the dense lattice after its
   /// execution. This function is expected to set the dense lattice before its
   /// execution and trigger propagation in case of change.
-  virtual void visitOperation(Operation *op, const LatticeT &after,
-                              LatticeT *before) = 0;
+  virtual LogicalResult visitOperation(Operation *op, const LatticeT &after,
+                                       LatticeT *before) = 0;
 
   /// Hook for customizing the behavior of lattice propagation along the call
   /// control flow edges. Two types of (back) propagation are possible here:
@@ -513,10 +514,11 @@ protected:
 
   /// Type-erased wrappers that convert the abstract dense lattice to a derived
   /// lattice and invoke the virtual hooks operating on the derived lattice.
-  void visitOperationImpl(Operation *op, const AbstractDenseLattice &after,
-                          AbstractDenseLattice *before) final {
-    visitOperation(op, static_cast<const LatticeT &>(after),
-                   static_cast<LatticeT *>(before));
+  LogicalResult visitOperationImpl(Operation *op,
+                                   const AbstractDenseLattice &after,
+                                   AbstractDenseLattice *before) final {
+    return visitOperation(op, static_cast<const LatticeT &>(after),
+                          static_cast<LatticeT *>(before));
   }
   void visitCallControlFlowTransfer(CallOpInterface call,
                                     CallControlFlowAction action,

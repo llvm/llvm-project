@@ -159,6 +159,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
+def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -722,6 +723,35 @@ let hasSideEffects = false in {
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Int32Regs>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_SM80<"bf16x2", Int32Regs>;
+
+  // FP8 conversions.
+  multiclass CVT_TO_F8X2<string F8Name> {
+    def _f32 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F8Name, "x2.f32 \t$dst, $src1, $src2;"), []>,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+    def _f16x2 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Int32Regs:$src, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F8Name, "x2.f16x2 \t$dst, $src;"), []>,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+  }
+
+  defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
+  defm CVT_e5m2x2 : CVT_TO_F8X2<"e5m2">;
+
+  class CVT_f16x2_fp8<string F8Name> :
+    NVPTXInst<(outs Int32Regs:$dst),
+              (ins Int16Regs:$src, CvtMode:$mode),
+              !strconcat("cvt${mode:base}${mode:relu}.f16x2.",
+              F8Name, "x2 \t$dst, $src;"), []>,
+    Requires<[hasPTX<81>, hasSM<89>]>;
+
+  def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
+  def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
 }
 
 //-----------------------------------
@@ -3844,6 +3874,8 @@ def Callseq_End :
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
 // This won't be necessary in a future version of ptxas.
 def trapinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>;
+// brkpt instruction
+def debugtrapinst : NVPTXInst<(outs), (ins), "brkpt;", [(debugtrap)]>;
 
 // Call prototype wrapper
 def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
@@ -3879,6 +3911,73 @@ def DYNAMIC_STACKALLOC64 :
             "cvta.local.u64 \t$ptr, $ptr;",
             [(set Int64Regs:$ptr, (dyn_alloca Int64Regs:$size, (i32 timm:$align)))]>,
             Requires<[hasPTX<73>, hasSM<52>]>;
+
+
+//
+// BRX
+//
+
+def SDTBrxStartProfile : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+def SDTBrxItemProfile : SDTypeProfile<0, 1, [SDTCisVT<0, OtherVT>]>;
+def SDTBrxEndProfile : SDTypeProfile<0, 3, [SDTCisVT<0, OtherVT>, SDTCisInt<1>, SDTCisInt<2>]>;
+
+def brx_start :
+  SDNode<"NVPTXISD::BrxStart", SDTBrxStartProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPSideEffect]>;
+def brx_item :
+  SDNode<"NVPTXISD::BrxItem", SDTBrxItemProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+def brx_end :
+  SDNode<"NVPTXISD::BrxEnd", SDTBrxEndProfile,
+         [SDNPHasChain, SDNPInGlue, SDNPSideEffect]>;
+
+let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
+
+  def BRX_START :
+    NVPTXInst<(outs), (ins i32imm:$id),
+              "$$L_brx_$id: .branchtargets",
+              [(brx_start (i32 imm:$id))]>;
+
+  def BRX_ITEM :
+    NVPTXInst<(outs), (ins brtarget:$target),
+              "\t$target,",
+              [(brx_item bb:$target)]>;
+
+  def BRX_END :
+    NVPTXInst<(outs), (ins brtarget:$target, Int32Regs:$val, i32imm:$id),
+              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;",
+              [(brx_end bb:$target, (i32 Int32Regs:$val), (i32 imm:$id))]> {
+      let isBarrier = 1;
+    }
+}
+
+
+foreach a_type = ["s", "u"] in {
+  foreach b_type = ["s", "u"] in {
+
+    def DOT4_ # a_type # b_type :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                "dp4a." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                [(set Int32Regs:$dst,
+                    (!cast<Intrinsic>("int_nvvm_idp4a_" # a_type # "_" # b_type)
+                     (i32 Int32Regs:$a), (i32 Int32Regs:$b), (i32 Int32Regs:$c)))]>,
+                Requires<[hasDotInstructions]>;
+
+    foreach is_hi = [0, -1] in {
+      defvar lohi_suffix = !if(is_hi, "hi", "lo");
+
+      def DOT2_ # lohi_suffix # _ # a_type # b_type :
+        NVPTXInst<(outs Int32Regs:$dst),
+                  (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                  "dp2a." # lohi_suffix # "." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                  [(set Int32Regs:$dst,
+                      (!cast<Intrinsic>("int_nvvm_idp2a_" # a_type # "_" # b_type)
+                       (i32 Int32Regs:$a), (i32 Int32Regs:$b), is_hi, (i32 Int32Regs:$c)))]>,
+                  Requires<[hasDotInstructions]>;
+    }
+  }
+}
 
 include "NVPTXIntrinsics.td"
 
@@ -3925,7 +4024,6 @@ def : Pat<(atomic_fence (i64 6), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, /
       Requires<[hasPTX<60>, hasSM<70>]>;
 def : Pat<(atomic_fence (i64 7), (i64 1)), (atomic_thread_fence_seq_cst_sys)>, // seq_cst(7) sys(1)
       Requires<[hasPTX<60>, hasSM<70>]>;
-
 
 // If PTX<60 or SM<70, we fall back to MEMBAR:
 def : Pat<(atomic_fence (i64 4), (i64 1)), (INT_MEMBAR_SYS)>; // acquire(4) sys(1)

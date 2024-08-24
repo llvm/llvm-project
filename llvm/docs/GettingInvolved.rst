@@ -150,7 +150,7 @@ what to add to your calendar invite.
      - Calendar link
      - Minutes/docs link
    * - Loop Optimization Working Group
-     - Every 2 weeks on Wednesday
+     - Every first Wednesday of the month
      - `ics <./_static/LoopOptWG_invite.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit>`__
    * - RISC-V

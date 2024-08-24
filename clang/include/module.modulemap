@@ -70,6 +70,7 @@ module Clang_Basic {
   textual header "clang/Basic/DiagnosticOptions.def"
   textual header "clang/Basic/FPOptions.def"
   textual header "clang/Basic/Features.def"
+  textual header "clang/Basic/HLSLIntangibleTypes.def"
   textual header "clang/Basic/LangOptions.def"
   textual header "clang/Basic/MSP430Target.def"
   textual header "clang/Basic/OpenACCClauses.def"

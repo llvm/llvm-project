@@ -171,8 +171,7 @@ define arm_aapcs_vfpcc <4 x i8> @vabd_v4u8(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-NEXT:    vmov.i32 q2, #0xff
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vsub.i32 q0, q0, q1
-; CHECK-NEXT:    vabs.s32 q0, q0
+; CHECK-NEXT:    vabd.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %zextsrc1 = zext <4 x i8> %src1 to <4 x i16>
   %zextsrc2 = zext <4 x i8> %src2 to <4 x i16>

@@ -246,6 +246,26 @@ public:
   }
 };
 
+/// Floating Point Type subclass - Float8E3M4Type.
+class PyFloat8E3M4Type : public PyConcreteType<PyFloat8E3M4Type, PyFloatType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E3M4;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirFloat8E3M4TypeGetTypeID;
+  static constexpr const char *pyClassName = "Float8E3M4Type";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirFloat8E3M4TypeGet(context->get());
+          return PyFloat8E3M4Type(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a float8_e3m4 type.");
+  }
+};
+
 /// Floating Point Type subclass - BF16Type.
 class PyBF16Type : public PyConcreteType<PyBF16Type, PyFloatType> {
 public:
@@ -864,6 +884,7 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyFloat8E4M3FNUZType::bind(m);
   PyFloat8E4M3B11FNUZType::bind(m);
   PyFloat8E5M2FNUZType::bind(m);
+  PyFloat8E3M4Type::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
   PyTF32Type::bind(m);
