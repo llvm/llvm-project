@@ -1399,7 +1399,7 @@ public:
   Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
-    std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
     GVSummaryPtrSet DeclarationSummaries;
 
     std::error_code EC;

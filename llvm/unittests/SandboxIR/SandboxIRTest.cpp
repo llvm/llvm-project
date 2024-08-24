@@ -2022,6 +2022,77 @@ catch2:
   EXPECT_EQ(CRI->getSuccessor(), Catch);
 }
 
+TEST_F(SandboxIRTest, CleanupReturnInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  invoke void @foo()
+              to label %throw unwind label %cleanup
+throw:
+  ret void
+cleanup:
+  %cleanuppad = cleanuppad within none []
+  cleanupret from %cleanuppad unwind label %cleanup2
+cleanup2:
+  %cleanuppad2 = cleanuppad within none []
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCleanup = getBasicBlockByName(LLVMF, "cleanup");
+  auto LLVMIt = LLVMCleanup->begin();
+  [[maybe_unused]] auto *LLVMCP = cast<llvm::CleanupPadInst>(&*LLVMIt++);
+  auto *LLVMCRI = cast<llvm::CleanupReturnInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Throw = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "throw")));
+  auto *Cleanup = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCleanup));
+  auto *Cleanup2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "cleanup2")));
+  auto It = Cleanup->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CleanupPadInst>(&*It++);
+  auto *CRI = cast<sandboxir::CleanupReturnInst>(&*It++);
+  It = Cleanup2->begin();
+  auto *CP2 = cast<sandboxir::CleanupPadInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check hasUnwindDest().
+  EXPECT_EQ(CRI->hasUnwindDest(), LLVMCRI->hasUnwindDest());
+  // Check unwindsToCaller().
+  EXPECT_EQ(CRI->unwindsToCaller(), LLVMCRI->unwindsToCaller());
+  // Check getCleanupPad().
+  EXPECT_EQ(CRI->getCleanupPad(), Ctx.getValue(LLVMCRI->getCleanupPad()));
+  // Check setCleanupPad().
+  auto *OrigCleanupPad = CRI->getCleanupPad();
+  auto *NewCleanupPad = CP2;
+  EXPECT_NE(NewCleanupPad, OrigCleanupPad);
+  CRI->setCleanupPad(NewCleanupPad);
+  EXPECT_EQ(CRI->getCleanupPad(), NewCleanupPad);
+  CRI->setCleanupPad(OrigCleanupPad);
+  EXPECT_EQ(CRI->getCleanupPad(), OrigCleanupPad);
+  // Check setNumSuccessors().
+  EXPECT_EQ(CRI->getNumSuccessors(), LLVMCRI->getNumSuccessors());
+  // Check getUnwindDest().
+  EXPECT_EQ(CRI->getUnwindDest(), Ctx.getValue(LLVMCRI->getUnwindDest()));
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CRI->getUnwindDest();
+  auto *NewUnwindDest = Throw;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  CRI->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CRI->getUnwindDest(), NewUnwindDest);
+  CRI->setUnwindDest(OrigUnwindDest);
+  EXPECT_EQ(CRI->getUnwindDest(), OrigUnwindDest);
+  // Check create().
+  auto *UnwindBB = Cleanup;
+  auto *NewCRI = sandboxir::CleanupReturnInst::create(
+      CP2, UnwindBB, Ret->getIterator(), Ret->getParent(), Ctx);
+  EXPECT_EQ(NewCRI->getCleanupPad(), CP2);
+  EXPECT_EQ(NewCRI->getUnwindDest(), UnwindBB);
+  EXPECT_EQ(NewCRI->getNextNode(), Ret);
+}
+
 TEST_F(SandboxIRTest, GetElementPtrInstruction) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, <2 x ptr> %ptrs) {

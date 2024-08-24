@@ -335,25 +335,43 @@ bool ResourceInfo::operator==(const ResourceInfo &RHS) const {
   if (std::tie(Symbol, Name, Binding, RC, Kind) !=
       std::tie(RHS.Symbol, RHS.Name, RHS.Binding, RHS.RC, RHS.Kind))
     return false;
-  if (isCBuffer())
-    return CBufferSize == RHS.CBufferSize;
-  if (isSampler())
-    return SamplerTy == RHS.SamplerTy;
-  if (isUAV() && UAVFlags != RHS.UAVFlags)
+  if (isCBuffer() && RHS.isCBuffer() && CBufferSize != RHS.CBufferSize)
     return false;
-
-  if (isStruct())
-    return Struct == RHS.Struct;
-  if (isFeedback())
-    return Feedback == RHS.Feedback;
-  if (isTyped() && Typed != RHS.Typed)
+  if (isSampler() && RHS.isSampler() && SamplerTy != RHS.SamplerTy)
     return false;
-
-  if (isMultiSample())
-    return MultiSample == RHS.MultiSample;
-
-  assert((Kind == ResourceKind::RawBuffer) && "Unhandled resource kind");
+  if (isUAV() && RHS.isUAV() && UAVFlags != RHS.UAVFlags)
+    return false;
+  if (isStruct() && RHS.isStruct() && Struct != RHS.Struct)
+    return false;
+  if (isFeedback() && RHS.isFeedback() && Feedback != RHS.Feedback)
+    return false;
+  if (isTyped() && RHS.isTyped() && Typed != RHS.Typed)
+    return false;
+  if (isMultiSample() && RHS.isMultiSample() && MultiSample != RHS.MultiSample)
+    return false;
   return true;
+}
+
+bool ResourceInfo::operator<(const ResourceInfo &RHS) const {
+  // Skip the symbol to avoid non-determinism, and the name to keep a consistent
+  // ordering even when we strip reflection data.
+  if (std::tie(Binding, RC, Kind) < std::tie(RHS.Binding, RHS.RC, RHS.Kind))
+    return true;
+  if (isCBuffer() && RHS.isCBuffer() && CBufferSize < RHS.CBufferSize)
+    return true;
+  if (isSampler() && RHS.isSampler() && SamplerTy < RHS.SamplerTy)
+    return true;
+  if (isUAV() && RHS.isUAV() && UAVFlags < RHS.UAVFlags)
+    return true;
+  if (isStruct() && RHS.isStruct() && Struct < RHS.Struct)
+    return true;
+  if (isFeedback() && RHS.isFeedback() && Feedback < RHS.Feedback)
+    return true;
+  if (isTyped() && RHS.isTyped() && Typed < RHS.Typed)
+    return true;
+  if (isMultiSample() && RHS.isMultiSample() && MultiSample < RHS.MultiSample)
+    return true;
+  return false;
 }
 
 MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
@@ -534,18 +552,10 @@ namespace {
 class ResourceMapper {
   Module &M;
   LLVMContext &Context;
-  DXILResourceMap &Resources;
-
-  // In DXC, Record ID is unique per resource type. Match that.
-  uint32_t NextUAV = 0;
-  uint32_t NextSRV = 0;
-  uint32_t NextCBuf = 0;
-  uint32_t NextSmp = 0;
+  SmallVector<std::pair<CallInst *, dxil::ResourceInfo>> Resources;
 
 public:
-  ResourceMapper(Module &M,
-                 MapVector<CallInst *, dxil::ResourceInfo> &Resources)
-      : M(M), Context(M.getContext()), Resources(Resources) {}
+  ResourceMapper(Module &M) : M(M), Context(M.getContext()) {}
 
   void diagnoseHandle(CallInst *CI, const Twine &Msg,
                       DiagnosticSeverity Severity = DS_Error) {
@@ -585,13 +595,11 @@ public:
     // TODO: We don't actually keep track of the name right now...
     StringRef Name = "";
 
-    auto [It, Success] = Resources.try_emplace(CI, RC, Kind, Symbol, Name);
-    assert(Success && "Mapping the same CallInst again?");
-    (void)Success;
-    // We grab a pointer into the map's storage, which isn't generally safe.
-    // Since we're just using this to fill in the info the map won't mutate and
-    // the pointer stays valid for as long as we need it to.
-    ResourceInfo *RI = &(It->second);
+    // Note that we return a pointer into the vector's storage. This is okay as
+    // long as we don't add more elements until we're done with the pointer.
+    auto &Pair =
+        Resources.emplace_back(CI, ResourceInfo{RC, Kind, Symbol, Name});
+    ResourceInfo *RI = &Pair.second;
 
     if (RI->isUAV())
       // TODO: We need analysis for GloballyCoherent and HasCounter
@@ -658,27 +666,18 @@ public:
     if (!RI)
       return nullptr;
 
-    uint32_t NextID;
-    if (RI->isCBuffer())
-      NextID = NextCBuf++;
-    else if (RI->isSampler())
-      NextID = NextSmp++;
-    else if (RI->isUAV())
-      NextID = NextUAV++;
-    else
-      NextID = NextSRV++;
-
     uint32_t Space = cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
     uint32_t LowerBound =
         cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     uint32_t Size = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
 
-    RI->bind(NextID, Space, LowerBound, Size);
+    // We use a binding ID of zero for now - these will be filled in later.
+    RI->bind(0U, Space, LowerBound, Size);
 
     return RI;
   }
 
-  void mapResources() {
+  DXILResourceMap mapResources() {
     for (Function &F : M.functions()) {
       if (!F.isDeclaration())
         continue;
@@ -697,10 +696,67 @@ public:
         break;
       }
     }
+
+    return DXILResourceMap(std::move(Resources));
   }
 };
 
 } // namespace
+
+DXILResourceMap::DXILResourceMap(
+    SmallVectorImpl<std::pair<CallInst *, dxil::ResourceInfo>> &&CIToRI) {
+  if (CIToRI.empty())
+    return;
+
+  llvm::stable_sort(CIToRI, [](auto &LHS, auto &RHS) {
+    // Sort by resource class first for grouping purposes, and then by the rest
+    // of the fields so that we can remove duplicates.
+    ResourceClass LRC = LHS.second.getResourceClass();
+    ResourceClass RRC = RHS.second.getResourceClass();
+    return std::tie(LRC, LHS.second) < std::tie(RRC, RHS.second);
+  });
+  for (auto [CI, RI] : CIToRI) {
+    if (Resources.empty() || RI != Resources.back())
+      Resources.push_back(RI);
+    CallMap[CI] = Resources.size() - 1;
+  }
+
+  unsigned Size = Resources.size();
+  // In DXC, Record ID is unique per resource type. Match that.
+  FirstUAV = FirstCBuffer = FirstSampler = Size;
+  uint32_t NextID = 0;
+  for (unsigned I = 0, E = Size; I != E; ++I) {
+    ResourceInfo &RI = Resources[I];
+    if (RI.isUAV() && FirstUAV == Size) {
+      FirstUAV = I;
+      NextID = 0;
+    } else if (RI.isCBuffer() && FirstCBuffer == Size) {
+      FirstCBuffer = I;
+      NextID = 0;
+    } else if (RI.isSampler() && FirstSampler == Size) {
+      FirstSampler = I;
+      NextID = 0;
+    }
+
+    // Adjust the resource binding to use the next ID.
+    const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
+    RI.bind(NextID++, Binding.Space, Binding.LowerBound, Binding.Size);
+  }
+}
+
+void DXILResourceMap::print(raw_ostream &OS) const {
+  for (unsigned I = 0, E = Resources.size(); I != E; ++I) {
+    OS << "Binding " << I << ":\n";
+    Resources[I].print(OS);
+    OS << "\n";
+  }
+
+  for (const auto &[CI, Index] : CallMap) {
+    OS << "Call bound to " << Index << ":";
+    CI->print(OS);
+    OS << "\n";
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // DXILResourceAnalysis and DXILResourcePrinterPass
@@ -710,24 +766,14 @@ AnalysisKey DXILResourceAnalysis::Key;
 
 DXILResourceMap DXILResourceAnalysis::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  DXILResourceMap Data;
-  ResourceMapper(M, Data).mapResources();
+  DXILResourceMap Data = ResourceMapper(M).mapResources();
   return Data;
 }
 
 PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  DXILResourceMap &Data =
-      AM.getResult<DXILResourceAnalysis>(M);
-
-  for (const auto &[Handle, Info] : Data) {
-    OS << "Binding for ";
-    Handle->print(OS);
-    OS << "\n";
-    Info.print(OS);
-    OS << "\n";
-  }
-
+  DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
+  DRM.print(OS);
   return PreservedAnalyses::all();
 }
 
@@ -745,8 +791,7 @@ void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool DXILResourceWrapperPass::runOnModule(Module &M) {
-  ResourceMap.reset(new DXILResourceMap());
-  ResourceMapper(M, *ResourceMap).mapResources();
+  ResourceMap.reset(new DXILResourceMap(ResourceMapper(M).mapResources()));
   return false;
 }
 
@@ -757,13 +802,7 @@ void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *) const {
     OS << "No resource map has been built!\n";
     return;
   }
-  for (const auto &[Handle, Info] : *ResourceMap) {
-    OS << "Binding for ";
-    Handle->print(OS);
-    OS << "\n";
-    Info.print(OS);
-    OS << "\n";
-  }
+  ResourceMap->print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -749,6 +749,17 @@ private:
   std::vector<ECCodeMapEntry> &map;
 };
 
+class CHPECodeRangesChunk : public NonSectionChunk {
+public:
+  CHPECodeRangesChunk(std::vector<std::pair<Chunk *, Defined *>> &exportThunks)
+      : exportThunks(exportThunks) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  std::vector<std::pair<Chunk *, Defined *>> &exportThunks;
+};
+
 class CHPERedirectionChunk : public NonSectionChunk {
 public:
   CHPERedirectionChunk(std::vector<std::pair<Chunk *, Defined *>> &exportThunks)

@@ -1013,6 +1013,8 @@ def Wwrite_strings : Flag<["-"], "Wwrite-strings">, Group<W_Group>,
   Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def Wno_write_strings : Flag<["-"], "Wno-write-strings">, Group<W_Group>,
   Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+def Winvalid_gnu_asm_cast : Flag<["-"], "Winvalid-gnu-asm-cast">, Group<W_Group>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def W_Joined : Joined<["-"], "W">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FC1Option, FlangOption]>,
   MetaVarName<"<warning>">, HelpText<"Enable the specified warning">;
@@ -2573,7 +2575,7 @@ defm sanitize_stats : BoolOption<"f", "sanitize-stats",
 def fsanitize_undefined_ignore_overflow_pattern_EQ : CommaJoined<["-"], "fsanitize-undefined-ignore-overflow-pattern=">,
   HelpText<"Specify the overflow patterns to exclude from artihmetic sanitizer instrumentation">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,all,add-overflow-test,negated-unsigned-const,post-decr-while">,
+  Values<"none,all,add-unsigned-overflow-test,add-signed-overflow-test,negated-unsigned-const,unsigned-post-decr-while">,
   MarshallingInfoStringVector<LangOpts<"OverflowPatternExclusionValues">>;
 def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
                                      Group<f_clang_Group>,
@@ -2766,9 +2768,13 @@ defm gnu89_inline : BoolFOption<"gnu89-inline",
   NegFlag<SetFalse>>, ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
 def fgnu_runtime : Flag<["-"], "fgnu-runtime">, Group<f_Group>,
   HelpText<"Generate output compatible with the standard GNU Objective-C runtime">;
+// This used to be a standalone flag but is now mapped to
+// -Wno-error=invalid-gnu-asm-cast, which is the only thing the flag used to
+// control.
 def fheinous_gnu_extensions : Flag<["-"], "fheinous-gnu-extensions">,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"HeinousExtensions">>;
+  Alias<W_Joined>, AliasArgs<["no-error=invalid-gnu-asm-cast"]>,
+  HelpText<"(Deprecated) Controls whether '-Winvalid-gnu-asm-cast' defaults to "
+           "an error or a warning">;
 def filelist : Separate<["-"], "filelist">, Flags<[LinkerInput]>,
                Group<Link_Group>;
 def : Flag<["-"], "findirect-virtual-calls">, Alias<fapple_kext>;

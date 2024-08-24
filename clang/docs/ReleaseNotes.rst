@@ -77,6 +77,8 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -179,6 +181,10 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
+- ``-fheinous-gnu-extensions`` is deprecated; it is now equivalent to
+  specifying ``-Wno-error=invalid-gnu-asm-cast`` and may be removed in the
+  future.
+
 Modified Compiler Flags
 -----------------------
 
@@ -242,6 +248,11 @@ Improvements to Clang's diagnostics
 - Don't emit duplicated dangling diagnostics. (#GH93386).
 
 - Improved diagnostic when trying to befriend a concept. (#GH45182).
+
+- Added the ``-Winvalid-gnu-asm-cast`` diagnostic group to control warnings
+  about use of "noop" casts for lvalues (a GNU extension). This diagnostic is
+  a warning which defaults to being an error, is enabled by default, and is
+  also controlled by the now-deprecated ``-fheinous-gnu-extensions`` flag.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -462,15 +473,21 @@ Sanitizers
 
 - Added the ``-fsanitize-undefined-ignore-overflow-pattern`` flag which can be
   used to disable specific overflow-dependent code patterns. The supported
-  patterns are: ``add-overflow-test``, ``negated-unsigned-const``, and
-  ``post-decr-while``. The sanitizer instrumentation can be toggled off for all
-  available patterns by specifying ``all``. Conversely, you can disable all
-  exclusions with ``none``.
+  patterns are: ``add-signed-overflow-test``, ``add-unsigned-overflow-test``,
+  ``negated-unsigned-const``, and ``unsigned-post-decr-while``. The sanitizer
+  instrumentation can be toggled off for all available patterns by specifying
+  ``all``. Conversely, you may disable all exclusions with ``none`` which is
+  the default.
 
   .. code-block:: c++
 
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-overflow-test``
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test``
      int common_overflow_check_pattern(unsigned base, unsigned offset) {
+       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
+     }
+
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test``
+     int common_overflow_check_pattern_signed(signed int base, signed int offset) {
        if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
      }
 
@@ -480,10 +497,10 @@ Sanitizers
        unsigned long bar = -2UL; // and so on...
      }
 
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=post-decr-while``
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while``
      void while_post_decrement() {
        unsigned char count = 16;
-       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
+       while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
      }
 
   Many existing projects have a large amount of these code patterns present.
