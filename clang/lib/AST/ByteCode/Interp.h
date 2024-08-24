@@ -2608,9 +2608,11 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     // the function we're about to call is a lambda call operator,
     // skip the CheckInvoke, since the ThisPtr is a null pointer
     // anyway.
-    if (!(S.Current->getFunction() &&
-          S.Current->getFunction()->isLambdaStaticInvoker() &&
-          Func->isLambdaCallOperator())) {
+    if (S.Current->getFunction() &&
+        S.Current->getFunction()->isLambdaStaticInvoker() &&
+        Func->isLambdaCallOperator()) {
+      assert(ThisPtr.isZero());
+    } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return false;
     }
