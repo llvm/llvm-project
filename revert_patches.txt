@@ -155,3 +155,6 @@ revert: breaks clang LIT tests
 revert : inf compile on rocTHRUST
 c46b41aaa6ea LSV: forbid load-cycles when vectorizing; fix bug (#104815)     
 ---
+revert : breaks build of amdgpu flat intrinsics
+ee08d9cba561 AMDGPU: Remove global/flat atomic fadd intrinics (#97051) 
+---

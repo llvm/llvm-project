@@ -149,6 +149,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return Query.Types[0].getNumElements() <= 16;
           },
           0, s8)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})

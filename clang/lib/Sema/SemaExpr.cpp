@@ -5062,8 +5062,7 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
       }
     }
 
-    ExprResult ConvExpr =
-        tryConvertExprToType(IndexExpr, Context.getSizeType());
+    ExprResult ConvExpr = IndexExpr;
     assert(!ConvExpr.isInvalid() &&
            "should be able to convert any integer type to size type");
     return ConvExpr.get();
