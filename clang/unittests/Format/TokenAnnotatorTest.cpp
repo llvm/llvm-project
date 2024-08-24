@@ -620,6 +620,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
 
+  Tokens = annotate("return checklower ? a < b : a > b;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
+
   Tokens = annotate("return A < B ^ A > B;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
