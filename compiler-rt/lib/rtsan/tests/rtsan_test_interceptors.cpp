@@ -321,7 +321,7 @@ TEST(TestRtsanInterceptors, PthreadCreateDiesWhenRealtime) {
   auto Func = []() {
     pthread_t thread{};
     const pthread_attr_t attr{};
-    struct thread_info *thread_info;
+    struct thread_info *thread_info{};
     pthread_create(&thread, &attr, &FakeThreadEntryPoint, thread_info);
   };
   ExpectRealtimeDeath(Func, "pthread_create");
