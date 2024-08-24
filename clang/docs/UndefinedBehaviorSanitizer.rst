@@ -330,10 +330,6 @@ Currently, this option supports three overflow-dependent code idioms:
     if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
                                             // won't be instrumented (signed or unsigned types)
 
-Of the two arithmetic overflow sanitizer kinds ``unsigned-integer-overflow``
-and ``signed-integer-overflow``, ignored overflow patterns exclude
-instrumentation from one of them.
-
 .. list-table:: Overflow Pattern Types
    :widths: 30 50
    :header-rows: 1
@@ -351,10 +347,8 @@ instrumentation from one of them.
 
 
 
-Ignoring overflow patterns has no effect on the definedness of the arithmetic
-within the pattern. Since ``add-signed-overflow-test`` works with the
-``signed-integer-overflow`` sanitizer instrumentation for code matching this
-overflow pattern is ommitted which may cause eager UB optimizations. One may
+Note: ``add-signed-overflow-test`` suppresses only the check for Undefined
+Behavior. Eager Undefined Behavior optimizations are still possible. One may
 remedy this with ``-fwrapv`` or ``-fno-strict-overflow``.
 
 You can enable all exclusions with

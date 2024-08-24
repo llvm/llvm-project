@@ -4812,25 +4812,17 @@ getOverflowPatternBinOp(const BinaryOperator *E) {
 /// -fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test
 static void computeOverflowPatternExclusion(const ASTContext &Ctx,
                                             const BinaryOperator *E) {
-  bool AddSignedOverflowTest = Ctx.getLangOpts().isOverflowPatternExcluded(
-      LangOptions::OverflowPatternExclusionKind::AddSignedOverflowTest);
-  bool AddUnsignedOverflowTest = Ctx.getLangOpts().isOverflowPatternExcluded(
-      LangOptions::OverflowPatternExclusionKind::AddUnsignedOverflowTest);
-
-  if (!AddSignedOverflowTest && !AddUnsignedOverflowTest)
-    return;
-
   std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(E);
-
   if (!Result.has_value())
     return;
-
   QualType AdditionResultType = Result.value()->getType();
 
-  if (AddSignedOverflowTest && AdditionResultType->isSignedIntegerType())
-    Result.value()->setExcludedOverflowPattern(true);
-  else if (AddUnsignedOverflowTest &&
-           AdditionResultType->isUnsignedIntegerType())
+  if ((AdditionResultType->isSignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddSignedOverflowTest)) ||
+      (AdditionResultType->isUnsignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddUnsignedOverflowTest)))
     Result.value()->setExcludedOverflowPattern(true);
 }
 
