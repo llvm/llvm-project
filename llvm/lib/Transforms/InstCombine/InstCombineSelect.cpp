@@ -4202,13 +4202,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   // select (trunc nuw X to i1), X, Y --> select (trunc nuw X to i1), 1, Y
-  if (auto *TI = dyn_cast<TruncInst>(CondVal)) {
-    Value *Trunc;
-    if (TI->hasNoUnsignedWrap() && match(CondVal, m_Trunc(m_Value(Trunc))) &&
-        match(TrueVal, m_Specific(Trunc))) {
-      return SelectInst::Create(
-          CondVal, ConstantInt::get(TrueVal->getType(), 1), FalseVal);
-    }
+  // select (trunc nuw X to i1), Y, X --> select (trunc nuw X to i1), Y, 0
+  // select (trunc nsw X to i1), X, Y --> select (trunc nsw X to i1), -1, Y
+  // select (trunc nsw X to i1), Y, X --> select (trunc nsw X to i1), Y, 0
+  Value *Trunc;
+  if (match(CondVal, m_NUWTrunc(m_Value(Trunc)))) {
+    if (match(TrueVal, m_Specific(Trunc)))
+      return replaceOperand(SI, 1, ConstantInt::get(TrueVal->getType(), 1));
+    if (match(FalseVal, m_Specific(Trunc)))
+      return replaceOperand(SI, 2, ConstantInt::get(TrueVal->getType(), 0));
+  }
+  if (match(CondVal, m_NSWTrunc(m_Value(Trunc)))) {
+    if (match(TrueVal, m_Specific(Trunc)))
+      return replaceOperand(SI, 1, ConstantInt::get(TrueVal->getType(), -1));
+    if (match(FalseVal, m_Specific(Trunc)))
+      return replaceOperand(SI, 2, ConstantInt::get(TrueVal->getType(), 0));
   }
 
   return nullptr;
