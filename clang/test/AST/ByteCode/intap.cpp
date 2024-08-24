@@ -104,6 +104,15 @@ static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
                                     // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
 static const __int128_t INT128_MIN = -INT128_MAX - 1;
 
+
+namespace PointerArithmeticOverflow {
+  int n;
+  constexpr int *p = (&n + 1) + (unsigned __int128)-1; // expected-error {{constant expression}} \
+                                                       // expected-note {{cannot refer to element 3402}} \
+                                                       // ref-error {{constant expression}} \
+                                                       // ref-note {{cannot refer to element 3402}}
+}
+
 namespace i128 {
 
   constexpr int128_t I128_1 = 12;
