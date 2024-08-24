@@ -12,6 +12,7 @@
 
 #include "CoroInstr.h"
 #include "CoroInternal.h"
+#include "CoroShape.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
