@@ -4817,7 +4817,7 @@ static void TryListInitialization(Sema &S,
       // and no ref-qualifier is present, e has type cv A and each element is
       // copy-initialized or direct-initialized from the corresponding element
       // of the assignment-expression as specified by the form of the
-      // initializer.
+      // initializer. ...
       //
       // This is a special case not following list-initialization.
       if (isa<ConstantArrayType>(DestAT) &&
@@ -4832,7 +4832,7 @@ static void TryListInitialization(Sema &S,
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)
-          Sequence.AddUnwrapInitListAtFirst(InitList);
+          Sequence.AddUnwrapInitListAtTheBeginning(InitList);
         return;
       }
 

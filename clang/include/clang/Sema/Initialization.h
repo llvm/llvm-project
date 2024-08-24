@@ -1384,9 +1384,10 @@ public:
 
   void AddParenthesizedListInitStep(QualType T);
 
-  /// Only used when initializing non-reference structured bindings from braced
-  /// array. Unwrap the initializer list to get the array for array copy.
-  void AddUnwrapInitListAtFirst(InitListExpr *Syntactic);
+  /// Only used when initializing array-typed structured bindings with
+  /// direct-list-initialization. Unwrap the initializer list to get the array
+  /// for array copy.
+  void AddUnwrapInitListAtTheBeginning(InitListExpr *Syntactic);
 
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.
