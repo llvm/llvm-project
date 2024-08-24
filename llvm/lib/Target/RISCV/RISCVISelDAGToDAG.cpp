@@ -362,17 +362,17 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
                              /*IsStridedOrIndexed*/ true, Operands,
                              /*IsLoad=*/true, &IndexVT);
 
+#ifndef NDEBUG
   // Number of element = RVVBitsPerBlock * LMUL / SEW
   unsigned ContainedTyNumElts = RISCV::RVVBitsPerBlock >> Log2SEW;
-  unsigned Log2LMUL = static_cast<unsigned>(LMUL);
-  if (Log2LMUL > 3) {
-    Log2LMUL = 8 - Log2LMUL;
-    ContainedTyNumElts = ContainedTyNumElts >> Log2LMUL;
-  } else {
-    ContainedTyNumElts = ContainedTyNumElts << Log2LMUL;
-  }
+  auto DecodedLMUL = RISCVVType::decodeVLMUL(LMUL);
+  if (DecodedLMUL.second)
+    ContainedTyNumElts /= DecodedLMUL.first;
+  else
+    ContainedTyNumElts *= DecodedLMUL.first;
   assert(ContainedTyNumElts == IndexVT.getVectorMinNumElements() &&
          "Element count mismatch");
+#endif
 
   RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
@@ -437,17 +437,17 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
                              /*IsStridedOrIndexed*/ true, Operands,
                              /*IsLoad=*/false, &IndexVT);
 
+#ifndef NDEBUG
   // Number of element = RVVBitsPerBlock * LMUL / SEW
   unsigned ContainedTyNumElts = RISCV::RVVBitsPerBlock >> Log2SEW;
-  unsigned Log2LMUL = static_cast<unsigned>(LMUL);
-  if (Log2LMUL > 3) {
-    Log2LMUL = 8 - Log2LMUL;
-    ContainedTyNumElts = ContainedTyNumElts >> Log2LMUL;
-  } else {
-    ContainedTyNumElts = ContainedTyNumElts << Log2LMUL;
-  }
+  auto DecodedLMUL = RISCVVType::decodeVLMUL(LMUL);
+  if (DecodedLMUL.second)
+    ContainedTyNumElts /= DecodedLMUL.first;
+  else
+    ContainedTyNumElts *= DecodedLMUL.first;
   assert(ContainedTyNumElts == IndexVT.getVectorMinNumElements() &&
          "Element count mismatch");
+#endif
 
   RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());

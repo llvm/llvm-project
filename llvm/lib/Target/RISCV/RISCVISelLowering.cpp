@@ -6908,8 +6908,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     EVT VecTy = Load->getMemoryVT();
     // Handle normal vector tuple load.
     if (VecTy.isRISCVVectorTuple()) {
-      MachineFunction &MF = DAG.getMachineFunction();
-      MachineFrameInfo &MFI = MF.getFrameInfo();
       SDLoc DL(Op);
       MVT XLenVT = Subtarget.getXLenVT();
       unsigned NF = VecTy.getRISCVVectorTupleNumFields();
@@ -6921,23 +6919,24 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       Flag.setNoUnsignedWrap(true);
       SDValue Ret = DAG.getUNDEF(VecTy);
       SDValue BasePtr = Load->getBasePtr();
-      if (auto *FI = dyn_cast<FrameIndexSDNode>(BasePtr))
-        MFI.setStackID(FI->getIndex(), TargetStackID::ScalableVector);
       SDValue VROffset = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
       VROffset =
           DAG.getNode(ISD::SHL, DL, XLenVT, VROffset,
                       DAG.getConstant(std::max(Log2LMUL, 0), DL, XLenVT));
+      SmallVector<SDValue, 8> OutChains;
 
       // Load NF vector registers and combine them to a vector tuple.
       for (unsigned i = 0; i < NF; ++i) {
         SDValue LoadVal = DAG.getLoad(
-            MVT::getScalableVectorVT(MVT::i8, NumElts), DL, DAG.getEntryNode(),
+            MVT::getScalableVectorVT(MVT::i8, NumElts), DL, Load->getChain(),
             BasePtr, MachinePointerInfo(Load->getAddressSpace()), Align(8));
+        OutChains.push_back(LoadVal.getValue(1));
         Ret = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTy, Ret, LoadVal,
                           DAG.getVectorIdxConstant(i, DL));
         BasePtr = DAG.getNode(ISD::ADD, DL, XLenVT, BasePtr, VROffset, Flag);
       }
-      return DAG.getMergeValues({Ret, DAG.getEntryNode()}, DL);
+      return DAG.getMergeValues(
+          {Ret, DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains)}, DL);
     }
 
     if (auto V = expandUnalignedRVVLoad(Op, DAG))
@@ -6952,8 +6951,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     EVT VecTy = StoredVal.getValueType();
     // Handle normal vector tuple store.
     if (VecTy.isRISCVVectorTuple()) {
-      MachineFunction &MF = DAG.getMachineFunction();
-      MachineFrameInfo &MFI = MF.getFrameInfo();
       SDLoc DL(Op);
       MVT XLenVT = Subtarget.getXLenVT();
       unsigned NF = VecTy.getRISCVVectorTupleNumFields();
@@ -6966,8 +6963,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue Ret;
       SDValue Chain = Store->getChain();
       SDValue BasePtr = Store->getBasePtr();
-      if (auto *FI = dyn_cast<FrameIndexSDNode>(BasePtr))
-        MFI.setStackID(FI->getIndex(), TargetStackID::ScalableVector);
       SDValue VROffset = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
       VROffset =
           DAG.getNode(ISD::SHL, DL, XLenVT, VROffset,
