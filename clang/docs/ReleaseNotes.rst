@@ -77,6 +77,9 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed tail padding not being reused on types with oversized bit-fields and
+  potentially-overlapping members (#GH50766).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
