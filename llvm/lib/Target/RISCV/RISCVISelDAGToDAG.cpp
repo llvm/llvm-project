@@ -3054,7 +3054,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
         }
       }
     } else if (N0.getOpcode() == ISD::SRA && N0.hasOneUse() &&
-               isa<ConstantSDNode>(N.getOperand(1))) {
+               isa<ConstantSDNode>(N0.getOperand(1))) {
       uint64_t Mask = N.getConstantOperandVal(1);
       unsigned C2 = N0.getConstantOperandVal(1);
 

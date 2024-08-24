@@ -326,6 +326,14 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // with the CB BB ('Entry') between which the inlined callee will be pasted.
   Successors.insert(succ_begin(&CallSiteBB), succ_end(&CallSiteBB));
 
+  // the outcome of the inlining may be that some edges get lost (DCEd BBs
+  // because inlining brought some constant, for example). We don't know which
+  // edges will be removed, so we list all of them as potentially removable.
+  for (auto *Succ : successors(&CallSiteBB))
+    DomTreeUpdates.emplace_back(DominatorTree::UpdateKind::Delete,
+                                const_cast<BasicBlock *>(&CallSiteBB),
+                                const_cast<BasicBlock *>(Succ));
+
   // Inlining only handles invoke and calls. If this is an invoke, and inlining
   // it pulls another invoke, the original landing pad may get split, so as to
   // share its content with other potential users. So the edge up to which we
@@ -336,6 +344,11 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   if (const auto *II = dyn_cast<InvokeInst>(&CB)) {
     const auto *UnwindDest = II->getUnwindDest();
     Successors.insert(succ_begin(UnwindDest), succ_end(UnwindDest));
+    // Same idea as above, we pretend we lose all these edges.
+    for (auto *Succ : successors(UnwindDest))
+      DomTreeUpdates.emplace_back(DominatorTree::UpdateKind::Delete,
+                                  const_cast<BasicBlock *>(UnwindDest),
+                                  const_cast<BasicBlock *>(Succ));
   }
 
   // Exclude the CallSiteBB, if it happens to be its own successor (1-BB loop).
@@ -354,6 +367,30 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // followed in `finish`, too.
   for (const auto *BB : LikelyToChangeBBs)
     FPI.updateForBB(*BB, -1);
+}
+
+DominatorTree &FunctionPropertiesUpdater::getUpdatedDominatorTree(
+    FunctionAnalysisManager &FAM) const {
+  auto &DT =
+      FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(Caller));
+
+  SmallVector<DominatorTree::UpdateType, 2> FinalDomTreeUpdates;
+
+  for (auto &Upd : DomTreeUpdates)
+    FinalDomTreeUpdates.push_back(Upd);
+
+  DenseSet<const BasicBlock *> Inserted;
+  for (auto *Succ : successors(&CallSiteBB))
+    if (Inserted.insert(Succ).second)
+      FinalDomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                                     const_cast<BasicBlock *>(&CallSiteBB),
+                                     const_cast<BasicBlock *>(Succ)});
+
+  DT.applyUpdates(FinalDomTreeUpdates);
+#ifdef EXPENSIVE_CHECKS
+  assert(DT.verify(DominatorTree::VerificationLevel::Full));
+#endif
+  return DT;
 }
 
 void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
@@ -383,8 +420,7 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
   // remove E.
   SetVector<const BasicBlock *> Reinclude;
   SetVector<const BasicBlock *> Unreachable;
-  const auto &DT =
-      FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(Caller));
+  auto &DT = getUpdatedDominatorTree(FAM);
 
   if (&CallSiteBB != &*Caller.begin())
     Reinclude.insert(&*Caller.begin());
@@ -427,6 +463,9 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
 
   const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(Caller));
   FPI.updateAggregateStats(Caller, LI);
+#ifdef EXPENSIVE_CHECKS
+  assert(isUpdateValid(Caller, FPI, FAM));
+#endif
 }
 
 bool FunctionPropertiesUpdater::isUpdateValid(Function &F,
