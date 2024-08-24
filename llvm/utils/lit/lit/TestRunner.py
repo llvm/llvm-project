@@ -1227,7 +1227,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
         f.write(b"set -x;" if mode == "wb" else "set -x;")
-        if sys.version_info > (3, 0) and mode == "wb":
+        if mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
             f.write("{ " + "; } &&\n{ ".join(commands) + "; }")
