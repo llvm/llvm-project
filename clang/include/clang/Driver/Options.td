@@ -2570,7 +2570,7 @@ defm sanitize_stats : BoolOption<"f", "sanitize-stats",
 def fsanitize_undefined_ignore_overflow_pattern_EQ : CommaJoined<["-"], "fsanitize-undefined-ignore-overflow-pattern=">,
   HelpText<"Specify the overflow patterns to exclude from artihmetic sanitizer instrumentation">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,all,add-overflow-test,negated-unsigned-const,post-decr-while">,
+  Values<"none,all,add-unsigned-overflow-test,add-signed-overflow-test,negated-unsigned-const,unsigned-post-decr-while">,
   MarshallingInfoStringVector<LangOpts<"OverflowPatternExclusionValues">>;
 def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
                                      Group<f_clang_Group>,
