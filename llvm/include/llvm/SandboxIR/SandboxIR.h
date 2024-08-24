@@ -131,6 +131,7 @@ class FuncletPadInst;
 class CatchPadInst;
 class CleanupPadInst;
 class CatchReturnInst;
+class CleanupReturnInst;
 class GetElementPtrInst;
 class CastInst;
 class PtrToIntInst;
@@ -266,6 +267,7 @@ protected:
   friend class CatchReturnInst;       // For getting `Val`.
   friend class GetElementPtrInst;     // For getting `Val`.
   friend class CatchSwitchInst;       // For getting `Val`.
+  friend class CleanupReturnInst;     // For getting `Val`.
   friend class SwitchInst;            // For getting `Val`.
   friend class UnaryOperator;         // For getting `Val`.
   friend class BinaryOperator;        // For getting `Val`.
@@ -690,6 +692,7 @@ protected:
   friend class CatchPadInst;       // For getTopmostLLVMInstruction().
   friend class CleanupPadInst;     // For getTopmostLLVMInstruction().
   friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
+  friend class CleanupReturnInst;  // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
   friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
@@ -1941,6 +1944,36 @@ public:
   }
 };
 
+class CleanupReturnInst
+    : public SingleLLVMInstructionImpl<llvm::CleanupReturnInst> {
+  CleanupReturnInst(llvm::CleanupReturnInst *CRI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CleanupRet, Opcode::CleanupRet, CRI,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
+                                   BasicBlock *UnwindBB, BBIterator WhereIt,
+                                   BasicBlock *WhereBB, Context &Ctx);
+  bool hasUnwindDest() const {
+    return cast<llvm::CleanupReturnInst>(Val)->hasUnwindDest();
+  }
+  bool unwindsToCaller() const {
+    return cast<llvm::CleanupReturnInst>(Val)->unwindsToCaller();
+  }
+  CleanupPadInst *getCleanupPad() const;
+  void setCleanupPad(CleanupPadInst *CleanupPad);
+  unsigned getNumSuccessors() const {
+    return cast<llvm::CleanupReturnInst>(Val)->getNumSuccessors();
+  }
+  BasicBlock *getUnwindDest() const;
+  void setUnwindDest(BasicBlock *NewDest);
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CleanupRet;
+  }
+};
+
 class GetElementPtrInst final
     : public SingleLLVMInstructionImpl<llvm::GetElementPtrInst> {
   /// Use Context::createGetElementPtrInst(). Don't call
@@ -2849,6 +2882,8 @@ protected:
   friend CleanupPadInst; // For createCleanupPadInst()
   CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
   friend CatchReturnInst; // For createCatchReturnInst()
+  CleanupReturnInst *createCleanupReturnInst(llvm::CleanupReturnInst *I);
+  friend CleanupReturnInst; // For createCleanupReturnInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
   CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);

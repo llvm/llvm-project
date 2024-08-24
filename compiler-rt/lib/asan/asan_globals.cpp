@@ -439,7 +439,7 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};
   global_registration_site_vector->push_back(site);
-  if (UNLIKELY(common_flags()->verbosity >= 3)) {
+  if (UNLIKELY(common_flags()->verbosity >= 4)) {
     PRINT_CURRENT_STACK();
     Printf("=== ID %d; %p %p\n", stack_id, (void *)&globals[0],
            (void *)&globals[n - 1]);
