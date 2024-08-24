@@ -116,6 +116,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
 
+- Fixed :doc:`cppcoreguidelines-pro-type-union-access
+  <clang-tidy/checks/cppcoreguidelines/pro-type-union-access>` check to
+  report location even when member location is not valid.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
