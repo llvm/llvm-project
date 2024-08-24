@@ -7215,9 +7215,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Compute cost of branches for each replicate region in the VPlan,
   // which is more accurate than the legacy cost model.
   for (BasicBlock *BB : OrigLoop->blocks()) {
-    if (BB == OrigLoop->getLoopLatch())
+    if (CostCtx.skipCostComputation(BB->getTerminator(), VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(BB->getTerminator());
+    if (BB == OrigLoop->getLoopLatch())
+      continue;
     auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
     Cost += BranchCost;
   }
