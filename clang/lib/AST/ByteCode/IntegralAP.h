@@ -153,7 +153,7 @@ public:
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
 
-  void print(llvm::raw_ostream &OS) const { OS << V; }
+  void print(llvm::raw_ostream &OS) const { V.print(OS, Signed);}
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
