@@ -260,7 +260,7 @@ if(C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW)
 endif()
 
 check_cxx_symbol_exists(logf128 cmath HAS_LOGF128)
-check_symbol_exists(__powerpc64le__ "" __PPC64LE)
+check_symbol_exists(__powerpc__ "" __PPC64LE)
 if(HAS_LOGF128 AND NOT __PPC64LE)
     set(LLVM_HAS_LOGF128 On)
     add_compile_definitions(HAS_LOGF128)
