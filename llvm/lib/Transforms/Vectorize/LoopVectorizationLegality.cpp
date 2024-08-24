@@ -1452,7 +1452,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // vectorizer.
   if (!canVectorizeLoopNestCFG(TheLoop, UseVPlanNativePath)) {
     if (DoExtraAnalysis) {
-      LLVM_DEBUG(dbgs() << "LV legality check failed: loop nest");
+      LLVM_DEBUG(dbgs() << "LV: legality check failed: loop nest");
       Result = false;
     } else {
       return false;
