@@ -709,6 +709,7 @@ class TestCase:
             res += "\n#endif\n"
         return res
 
+
 class ParsingContext(Enum):
     NoneCtx = 0
     Code = 1

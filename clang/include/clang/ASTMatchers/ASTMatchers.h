@@ -8031,7 +8031,8 @@ AST_MATCHER_P(ImplicitCastExpr, hasImplicitDestinationType,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{tagDecl(isStruct())} matches \match{struct S},
-/// but does not match \nomatch{class C}, \nomatch{union U} or \nomatch{enum E {}}.
+/// but does not match \nomatch{class C}, \nomatch{union U} or
+/// \nomatch{enum E {}}.
 AST_MATCHER(TagDecl, isStruct) {
   return Node.isStruct();
 }
@@ -8046,8 +8047,9 @@ AST_MATCHER(TagDecl, isStruct) {
 ///   enum E {};
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isUnion())} matches \match{union U}, but does
-/// not match \nomatch{struct S}, \nomatch{class C} or \nomatch{enum E {}}.
+/// The matcher \matcher{tagDecl(isUnion())} matches \match{union U},
+/// but does not match \nomatch{struct S}, \nomatch{class C} or
+/// \nomatch{enum E {}}.
 AST_MATCHER(TagDecl, isUnion) {
   return Node.isUnion();
 }
@@ -8062,8 +8064,9 @@ AST_MATCHER(TagDecl, isUnion) {
 ///   enum E {};
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isClass())} matches \match{class C}, but does
-/// not match \nomatch{struct S}, \nomatch{union U} or \nomatch{enum E {}}.
+/// The matcher \matcher{tagDecl(isClass())} matches \match{class C},
+/// but does not match \nomatch{struct S}, \nomatch{union U} or
+/// \nomatch{enum E {}}.
 AST_MATCHER(TagDecl, isClass) {
   return Node.isClass();
 }
