@@ -830,6 +830,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   const auto IsSimpleFunction = [&](const FormatToken &Tok) {
     if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
       return false;
+    // Nested calls that involve `new` expressions also look like simple
+    // function calls, eg:
+    // - foo(new Bar())
+    // - foo(::new Bar())
+    if (Tok.is(tok::kw_new) || Tok.startsSequence(tok::coloncolon, tok::kw_new))
+      return true;
     const auto *Previous = Tok.Previous;
     if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
                                          TT_LambdaDefinitionLParen) &&
@@ -852,6 +858,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //       caaaaaaaaaaaall(
       //           caaaaaaaaaaaall(
       //               caaaaaaaaaaaaaaaaaaaaaaall(aaaaaaaaaaaaaa, aaaaaaaaa))));
+      //  or
+      //  caaaaaaaaaaaaaaaaaaaaal(
+      //       new SomethingElseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee());
       !IsSimpleFunction(Current)) {
     CurrentState.NoLineBreak = true;
   }
