@@ -3614,6 +3614,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
+  assert(ED && "An enumeration definition is required");
   for (const auto *Enum : ED->enumerators()) {
     Enumerators.push_back(
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));

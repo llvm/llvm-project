@@ -94,6 +94,7 @@ c99bd3ce [ctx_prof] Extend `WorkloadImportsManager` to use the contextual profil
 aca01bff0 [ctx_prof] CtxProfAnalysis: populate module data (#102930) 
 0c876a486eb [nfc][ctx_prof] Remove the need for `PassBuilder` to know about `UseCtxProfile` (#104492)
 1e70122cbc18 [ctx_prof] API to get the instrumentation of a BB (#105468)
+960a210b1f22 [ctx_prof] Remove the dependency on the "name" GlobalVariable (#105731)      
 Contacts: RonL and Hulk
 ---
 needs previous SEMA patches
