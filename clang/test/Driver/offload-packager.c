@@ -26,7 +26,7 @@
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a \
 // RUN:   --image=file=%t/elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90c 
-// RUN: cd %t && clang-offload-packager %t/package --image=kind=openmp
+// RUN: clang-offload-packager %t/package --image=kind=openmp
 // RUN: diff *-nvptx64-nvidia-cuda-sm_70.0.o %t/elf.o; rm *-nvptx64-nvidia-cuda-sm_70.0.o
 // RUN: diff *-nvptx64-nvidia-cuda-sm_80.1.o %t/elf.o; rm *-nvptx64-nvidia-cuda-sm_80.1.o
 // RUN: diff *-amdgcn-amd-amdhsa-gfx908.2.o %t/elf.o; rm *-amdgcn-amd-amdhsa-gfx908.2.o
