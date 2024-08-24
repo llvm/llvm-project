@@ -1460,9 +1460,12 @@ static int parseOverflowPatternExclusionValues(const Driver &D,
         llvm::StringSwitch<int>(Value)
             .Case("none", LangOptionsBase::None)
             .Case("all", LangOptionsBase::All)
-            .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+            .Case("add-unsigned-overflow-test",
+                  LangOptionsBase::AddUnsignedOverflowTest)
+            .Case("add-signed-overflow-test",
+                  LangOptionsBase::AddSignedOverflowTest)
             .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
-            .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+            .Case("unsigned-post-decr-while", LangOptionsBase::PostDecrInWhile)
             .Default(0);
     if (E == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
