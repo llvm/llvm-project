@@ -466,15 +466,21 @@ Sanitizers
 
 - Added the ``-fsanitize-undefined-ignore-overflow-pattern`` flag which can be
   used to disable specific overflow-dependent code patterns. The supported
-  patterns are: ``add-overflow-test``, ``negated-unsigned-const``, and
-  ``post-decr-while``. The sanitizer instrumentation can be toggled off for all
-  available patterns by specifying ``all``. Conversely, you can disable all
-  exclusions with ``none``.
+  patterns are: ``add-signed-overflow-test``, ``add-unsigned-overflow-test``,
+  ``negated-unsigned-const``, and ``unsigned-post-decr-while``. The sanitizer
+  instrumentation can be toggled off for all available patterns by specifying
+  ``all``. Conversely, you may disable all exclusions with ``none`` which is
+  the default.
 
   .. code-block:: c++
 
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-overflow-test``
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test``
      int common_overflow_check_pattern(unsigned base, unsigned offset) {
+       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
+     }
+
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test``
+     int common_overflow_check_pattern_signed(signed int base, signed int offset) {
        if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
      }
 
@@ -484,10 +490,10 @@ Sanitizers
        unsigned long bar = -2UL; // and so on...
      }
 
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=post-decr-while``
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while``
      void while_post_decrement() {
        unsigned char count = 16;
-       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
+       while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
      }
 
   Many existing projects have a large amount of these code patterns present.
