@@ -82,22 +82,28 @@ struct partial_instantiation {
 
 // type categories defined in [basic.fundamental] plus extensions (without CV-qualifiers)
 
-using character_types =
+using variable_width_character_types =
     type_list<char
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
               ,
               wchar_t
 #endif
+              >;
+
+using fixed_width_character_types = type_list<
 #ifndef TEST_HAS_NO_CHAR8_T
-              ,
-              char8_t
+    char8_t
 #endif
 #if TEST_STD_VER >= 11
-              ,
-              char16_t,
-              char32_t
+#  ifndef TEST_HAS_NO_CHAR8_T
+    ,
+#  endif
+    char16_t,
+    char32_t
 #endif
-              >;
+    >;
+
+using character_types = concatenate_t<variable_width_character_types, fixed_width_character_types>;
 
 using signed_integer_types =
     type_list<signed char,
