@@ -1520,10 +1520,10 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *R = combineAddSubWithShlAddSub(Builder, I))
     return R;
 
-  if (Instruction *R = foldAddLike(I))
-    return R;
-
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+  if (Instruction *R =
+          foldAddLike(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap()))
+    return R;
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(LHS, RHS);
@@ -2296,11 +2296,11 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       Instruction *R = nullptr;
       if (W == Y)
         R = BinaryOperator::CreateSub(X, Z);
-      if (W == Z)
+      else if (W == Z)
         R = BinaryOperator::CreateSub(X, Y);
-      if (X == Y)
+      else if (X == Y)
         R = BinaryOperator::CreateSub(W, Z);
-      if (X == Z)
+      else if (X == Z)
         R = BinaryOperator::CreateSub(W, Y);
       if (R) {
         bool NSW = I.hasNoSignedWrap() &&

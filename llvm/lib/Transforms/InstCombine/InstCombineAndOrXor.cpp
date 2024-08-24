@@ -3581,7 +3581,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return R;
 
   if (cast<PossiblyDisjointInst>(I).isDisjoint())
-    if (Instruction *R = foldAddLike(I))
+    if (Instruction *R = foldAddLike(I.getOperand(0), I.getOperand(1),
+                                     /*NSW=*/true, /*NUW=*/true))
       return R;
 
   Value *X, *Y;
