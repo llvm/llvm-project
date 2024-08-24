@@ -406,8 +406,7 @@ def executeBuiltinEcho(cmd, shenv):
             return arg
 
         arg = lit.util.to_bytes(arg)
-        codec = "string_escape" if sys.version_info < (3, 0) else "unicode_escape"
-        return arg.decode(codec)
+        return arg.decode("unicode_escape")
 
     if args:
         for arg in args[:-1]:
@@ -1173,7 +1172,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
         mode += "b"  # Avoid CRLFs when writing bash scripts.
-    elif sys.version_info > (3, 0):
+    else:
         open_kwargs["encoding"] = "utf-8"
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
