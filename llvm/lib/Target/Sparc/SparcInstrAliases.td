@@ -601,7 +601,7 @@ def : InstAlias<"flush", (FLUSH), 0>;
 // unimp -> unimp 0
 def : InstAlias<"unimp", (UNIMP 0), 0>;
 
-// Not in spec, but we follow GNU & Solaris behavior of having `illtrap`
+// Not in spec, but we follow Solaris behavior of having `illtrap`
 // interchangeable with `unimp` all the time.
 def : MnemonicAlias<"illtrap", "unimp">;
 
