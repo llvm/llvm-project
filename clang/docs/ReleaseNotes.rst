@@ -174,6 +174,10 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
+- ``-fheinous-gnu-extensions`` is deprecated; it is now equivalent to
+  specifying ``-Wno-error=invalid-gnu-asm-cast`` and may be removed in the
+  future.
+
 Modified Compiler Flags
 -----------------------
 
@@ -237,6 +241,11 @@ Improvements to Clang's diagnostics
 - Don't emit duplicated dangling diagnostics. (#GH93386).
 
 - Improved diagnostic when trying to befriend a concept. (#GH45182).
+
+- Added the ``-Winvalid-gnu-asm-cast`` diagnostic group to control warnings
+  about use of "noop" casts for lvalues (a GNU extension). This diagnostic is
+  a warning which defaults to being an error, is enabled by default, and is
+  also controlled by the now-deprecated ``-fheinous-gnu-extensions`` flag.
 
 Improvements to Clang's time-trace
 ----------------------------------
