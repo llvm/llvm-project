@@ -38,9 +38,7 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
-- P2609R3 - Relaxing Ranges Just A Smidge
-
-- TODO
+- P2609R3 - Relaxing Ranges Just A Smidge  (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
 
 
 Improvements and New Features
