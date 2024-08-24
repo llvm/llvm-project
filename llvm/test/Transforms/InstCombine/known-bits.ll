@@ -1018,7 +1018,7 @@ define i1 @extract_value_sadd_fail(i8 %xx, i8 %yy) {
 define i1 @extract_value_usub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_usub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
@@ -1062,7 +1062,7 @@ define i1 @extract_value_usub_fail(i8 %x, i8 %z) {
 define i1 @extract_value_ssub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_ssub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[SUB_SOV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[Y]], i8 [[X]])
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 0
 ; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 1
@@ -1586,7 +1586,7 @@ define i32 @test_qnan_quiet_bit2(float nofpclass(sub norm inf snan) %x) {
 define i16 @test_simplify_mask(i32 %ui, float %x) {
 ; CHECK-LABEL: @test_simplify_mask(
 ; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[UI:%.*]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[CONV]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[CONV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i16 31744

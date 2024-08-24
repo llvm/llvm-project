@@ -57,7 +57,6 @@ public:
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedOps &result,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
-  bool processDefault() const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -212,22 +211,18 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
 
-          auto origSymbol = converter.getSymbolAddress(*object.sym());
-          mlir::Value symAddr = info.addr;
-          if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
-            symAddr = origSymbol;
-
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
+          mlir::Value baseOp = info.rawInput;
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr,
+              firOpBuilder, clauseLocation, baseOp,
               /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
               /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
+              mlir::omp::VariableCaptureKind::ByRef, baseOp.getType());
 
           if (object.sym()->owner().IsDerivedType()) {
             addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,

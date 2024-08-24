@@ -2345,6 +2345,25 @@ section.
   }];
 }
 
+def BPFFastCallDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Functions annotated with this attribute are likely to be inlined by BPF JIT.
+It is assumed that inlined implementation uses less caller saved registers,
+than a regular function.
+Specifically, the following registers are likely to be preserved:
+- ``R0`` if function return value is ``void``;
+- ``R2-R5` if function takes 1 argument;
+- ``R3-R5` if function takes 2 arguments;
+- ``R4-R5` if function takes 3 arguments;
+- ``R5`` if function takes 4 arguments;
+
+For such functions Clang generates code pattern that allows BPF JIT
+to recognize and remove unnecessary spills and fills of the preserved
+registers.
+  }];
+}
+
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (MIPS)";
@@ -6802,77 +6821,103 @@ def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 The attribute ``[[clang::unsafe_buffer_usage]]`` should be placed on functions
-that need to be avoided as they are prone to buffer overflows. It is designed to
-work together with the off-by-default compiler warning ``-Wunsafe-buffer-usage``
-to help codebases transition away from raw pointer based buffer management,
-in favor of safer abstractions such as C++20 ``std::span``. The attribute causes
-``-Wunsafe-buffer-usage`` to warn on every use of the function, and it may
-enable ``-Wunsafe-buffer-usage`` to emit automatic fix-it hints
-which would help the user replace such unsafe functions with safe
+that need to be avoided as they are prone to buffer overflows or unsafe buffer
+struct fields. It is designed to work together with the off-by-default compiler
+warning ``-Wunsafe-buffer-usage``to help codebases transition away from raw pointer
+based buffer management, in favor of safer abstractions such as C++20 ``std::span``.
+The attribute causes ``-Wunsafe-buffer-usage`` to warn on every use of the function or
+the field it is attached to, and it may also lead to emission of automatic fix-it
+hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-The attribute does not suppress ``-Wunsafe-buffer-usage`` inside the function
-to which it is attached. These warnings still need to be addressed.
+* Attribute attached to functions: The attribute does not suppress 
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+  These warnings still need to be addressed.
 
-The attribute is warranted even if the only way a function can overflow
-the buffer is by violating the function's preconditions. For example, it
-would make sense to put the attribute on function ``foo()`` below because
-passing an incorrect size parameter would cause a buffer overflow:
+  The attribute is warranted even if the only way a function can overflow
+  the buffer is by violating the function's preconditions. For example, it
+  would make sense to put the attribute on function ``foo()`` below because
+  passing an incorrect size parameter would cause a buffer overflow:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  [[clang::unsafe_buffer_usage]]
-  void foo(int *buf, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
-      buf[i] = i;
+    [[clang::unsafe_buffer_usage]]
+    void foo(int *buf, size_t size) {
+      for (size_t i = 0; i < size; ++i) {
+        buf[i] = i;
+      }
     }
-  }
 
-The attribute is NOT warranted when the function uses safe abstractions,
-assuming that these abstractions weren't misused outside the function.
-For example, function ``bar()`` below doesn't need the attribute,
-because assuming that the container ``buf`` is well-formed (has size that
-fits the original buffer it refers to), overflow cannot occur:
+  The attribute is NOT warranted when the function uses safe abstractions,
+  assuming that these abstractions weren't misused outside the function.
+  For example, function ``bar()`` below doesn't need the attribute,
+  because assuming that the container ``buf`` is well-formed (has size that
+  fits the original buffer it refers to), overflow cannot occur:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  void bar(std::span<int> buf) {
-    for (size_t i = 0; i < buf.size(); ++i) {
-      buf[i] = i;
+    void bar(std::span<int> buf) {
+      for (size_t i = 0; i < buf.size(); ++i) {
+        buf[i] = i;
+      }
     }
-  }
 
-In this case function ``bar()`` enables the user to keep the buffer
-"containerized" in a span for as long as possible. On the other hand,
-Function ``foo()`` in the previous example may have internal
-consistency, but by accepting a raw buffer it requires the user to unwrap
-their span, which is undesirable according to the programming model
-behind ``-Wunsafe-buffer-usage``.
+  In this case function ``bar()`` enables the user to keep the buffer
+  "containerized" in a span for as long as possible. On the other hand,
+  Function ``foo()`` in the previous example may have internal
+  consistency, but by accepting a raw buffer it requires the user to unwrap
+  their span, which is undesirable according to the programming model
+  behind ``-Wunsafe-buffer-usage``.
 
-The attribute is warranted when a function accepts a raw buffer only to
-immediately put it into a span:
+  The attribute is warranted when a function accepts a raw buffer only to
+  immediately put it into a span:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  [[clang::unsafe_buffer_usage]]
-  void baz(int *buf, size_t size) {
-    std::span<int> sp{ buf, size };
-    for (size_t i = 0; i < sp.size(); ++i) {
-      sp[i] = i;
+    [[clang::unsafe_buffer_usage]]
+    void baz(int *buf, size_t size) {
+      std::span<int> sp{ buf, size };
+      for (size_t i = 0; i < sp.size(); ++i) {
+        sp[i] = i;
+      }
     }
-  }
 
-In this case ``baz()`` does not contain any unsafe operations, but the awkward
-parameter type causes the caller to unwrap the span unnecessarily.
-Note that regardless of the attribute, code inside ``baz()`` isn't flagged
-by ``-Wunsafe-buffer-usage`` as unsafe. It is definitely undesirable,
-but if ``baz()`` is on an API surface, there is no way to improve it
-to make it as safe as ``bar()`` without breaking the source and binary
-compatibility with existing users of the function. In such cases
-the proper solution would be to create a different function (possibly
-an overload of ``baz()``) that accepts a safe container like ``bar()``,
-and then use the attribute on the original ``baz()`` to help the users
-update their code to use the new function.
+  In this case ``baz()`` does not contain any unsafe operations, but the awkward
+  parameter type causes the caller to unwrap the span unnecessarily.
+  Note that regardless of the attribute, code inside ``baz()`` isn't flagged
+  by ``-Wunsafe-buffer-usage`` as unsafe. It is definitely undesirable,
+  but if ``baz()`` is on an API surface, there is no way to improve it
+  to make it as safe as ``bar()`` without breaking the source and binary
+  compatibility with existing users of the function. In such cases
+  the proper solution would be to create a different function (possibly
+  an overload of ``baz()``) that accepts a safe container like ``bar()``,
+  and then use the attribute on the original ``baz()`` to help the users
+  update their code to use the new function.
+
+* Attribute attached to fields: The attribute should only be attached to 
+  struct fields, if the fields can not be updated to a safe type with bounds 
+  check, such as std::span. In other words, the buffers prone to unsafe accesses 
+  should always be updated to use safe containers/views and attaching the attribute 
+  must be last resort when such an update is infeasible.
+
+  The attribute can be placed on individual fields or a set of them as shown below.
+
+  .. code-block:: c++
+
+    struct A {
+      [[clang::unsafe_buffer_usage]]
+      int *ptr1;
+
+      [[clang::unsafe_buffer_usage]]
+      int *ptr2, buf[10];
+
+      [[clang::unsafe_buffer_usage]]
+      size_t sz;
+    };
+
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
+
   }];
 }
 

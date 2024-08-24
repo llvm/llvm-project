@@ -56,6 +56,9 @@ namespace detail {
 struct BitmaskEnumStorage;
 } // namespace detail
 
+/// Predefined constant_mask kinds.
+enum class ConstantMaskKind { AllFalse = 0, AllTrue };
+
 /// Default callback to build a region with a 'vector.yield' terminator with no
 /// arguments.
 void buildTerminatedBody(OpBuilder &builder, Location loc);
@@ -167,6 +170,11 @@ SmallVector<Value> getAsValues(OpBuilder &builder, Location loc,
 /// constant operations.
 SmallVector<arith::ConstantIndexOp>
 getAsConstantIndexOps(ArrayRef<Value> values);
+
+/// If `value` is a constant multiple of `vector.vscale` (e.g. `%cst *
+/// vector.vscale`), return the multiplier (`%cst`). Otherwise, return
+/// `std::nullopt`.
+std::optional<int64_t> getConstantVscaleMultiplier(Value value);
 
 //===----------------------------------------------------------------------===//
 // Vector Masking Utilities

@@ -98,11 +98,13 @@ test()
 
 int main(int, char**)
 {
+    test<forward_iterator<int*> >();
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
 
 #if TEST_STD_VER >= 20
+    static_assert(test<forward_iterator<int*>>());
     static_assert(test<bidirectional_iterator<int*>>());
     static_assert(test<random_access_iterator<int*>>());
     static_assert(test<int*>());

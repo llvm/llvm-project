@@ -852,14 +852,14 @@ gentbl(
 )
 
 gentbl(
-    name = "ast_interp_opcodes_gen",
+    name = "ast_bytecode_opcodes_gen",
     tbl_outs = [(
         "-gen-clang-opcodes",
-        "lib/AST/Interp/Opcodes.inc",
+        "lib/AST/ByteCode/Opcodes.inc",
     )],
     tblgen = ":clang-tblgen",
-    td_file = "lib/AST/Interp/Opcodes.td",
-    td_srcs = ["lib/AST/Interp/Opcodes.td"],
+    td_file = "lib/AST/ByteCode/Opcodes.td",
+    td_srcs = ["lib/AST/ByteCode/Opcodes.td"],
 )
 
 gentbl(
@@ -922,11 +922,11 @@ cc_library(
     srcs = glob([
         "lib/AST/*.cpp",
         "lib/AST/*.h",
-        "lib/AST/Interp/*.cpp",
-        "lib/AST/Interp/*.h",
+        "lib/AST/ByteCode/*.cpp",
+        "lib/AST/ByteCode/*.h",
     ]) + [
         "lib/AST/AttrDocTable.inc",
-        "lib/AST/Interp/Opcodes.inc",
+        "lib/AST/ByteCode/Opcodes.inc",
     ],
     hdrs = glob([
         "include/clang/AST/*.h",
@@ -942,7 +942,7 @@ cc_library(
         # this library because it contains files that collide easily with system
         # headers such as `CXXABI.h`.
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST",
-        "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/Interp",
+        "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/ByteCode",
     ],
     textual_hdrs = [
         "include/clang/AST/AttrImpl.inc",
@@ -972,8 +972,8 @@ cc_library(
         ":ast_comment_html_tags_gen",
         ":ast_comment_html_tags_properties_gen",
         ":ast_comment_nodes_gen",
+        ":ast_bytecode_opcodes_gen",
         ":ast_decl_nodes_gen",
-        ":ast_interp_opcodes_gen",
         ":ast_properties_base_gen",
         ":ast_stmt_data_collectors_gen",
         ":ast_stmt_nodes_gen",

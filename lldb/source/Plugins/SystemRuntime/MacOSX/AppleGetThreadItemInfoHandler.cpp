@@ -216,7 +216,7 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
 
 AppleGetThreadItemInfoHandler::GetThreadItemInfoReturnInfo
 AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
-                                                 tid_t thread_id,
+                                                 lldb::tid_t thread_id,
                                                  addr_t page_to_free,
                                                  uint64_t page_to_free_size,
                                                  Status &error) {

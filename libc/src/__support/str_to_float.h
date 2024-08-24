@@ -526,8 +526,8 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   T float_mantissa;
   if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
     float_mantissa =
-        (static_cast<T>(uint64_t(mantissa)) * static_cast<T>(0x1.0p64)) +
-        static_cast<T>(uint64_t(mantissa >> 64));
+        (static_cast<T>(uint64_t(mantissa >> 64)) * static_cast<T>(0x1.0p64)) +
+        static_cast<T>(uint64_t(mantissa));
   } else {
     float_mantissa = static_cast<T>(mantissa);
   }
@@ -591,7 +591,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   }
 
   ExpandedFloat<T> output;
-  output.mantissa = result.get_mantissa();
+  output.mantissa = result.get_explicit_mantissa();
   output.exponent = result.get_biased_exponent();
   return output;
 }
@@ -1159,13 +1159,11 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       index += 3;
       StorageType nan_mantissa = 0;
       // this handles the case of `NaN(n-character-sequence)`, where the
-      // n-character-sequence is made of 0 or more letters and numbers in any
-      // order.
+      // n-character-sequence is made of 0 or more letters, numbers, or
+      // underscore characters in any order.
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        // Apparently it's common for underscores to also be accepted. No idea
-        // why, but it's causing fuzz failures.
         while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {

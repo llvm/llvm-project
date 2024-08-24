@@ -134,7 +134,7 @@ def main():
             if line_count != 0:
                 end_line += line_count - 1
             lines_by_file.setdefault(filename, []).extend(
-                ["-lines", str(start_line) + ":" + str(end_line)]
+                ["--lines", str(start_line) + ":" + str(end_line)]
             )
 
     # Reformat files containing changes in place.
@@ -146,12 +146,12 @@ def main():
         if args.i:
             command.append("-i")
         if args.sort_includes:
-            command.append("-sort-includes")
+            command.append("--sort-includes")
         command.extend(lines)
         if args.style:
-            command.extend(["-style", args.style])
+            command.extend(["--style", args.style])
         if args.fallback_style:
-            command.extend(["-fallback-style", args.fallback_style])
+            command.extend(["--fallback-style", args.fallback_style])
 
         try:
             p = subprocess.Popen(
