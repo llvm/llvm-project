@@ -8081,8 +8081,9 @@ AST_MATCHER(TagDecl, isClass) {
 ///   enum E {};
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isEnum())} matches \match{enum E {}}, but does not
-/// match \nomatch{struct S}, \nomatch{class C} or \nomatch{union U}.
+/// The matcher \matcher{tagDecl(isEnum())} matches \match{enum E {}},
+/// but does not match \nomatch{struct S}, \nomatch{class C} or
+/// \nomatch{union U}.
 AST_MATCHER(TagDecl, isEnum) {
   return Node.isEnum();
 }
