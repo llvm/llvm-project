@@ -354,6 +354,10 @@ std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
 // Returns the MC opcode of RVV pseudo instruction.
 unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
+// For a (non-pseudo) RVV instruction \p Desc and the given \p Log2SEW, returns
+// the EEW of the destination operand.
+unsigned getDestEEW(const MCInstrDesc &Desc, unsigned Log2SEW);
+
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
