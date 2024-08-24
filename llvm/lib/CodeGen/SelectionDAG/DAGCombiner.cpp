@@ -14919,23 +14919,14 @@ SDValue DAGCombiner::visitTRUNCATE_USAT_U(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
 
-  std::function<SDValue(SDValue)> MatchFPTOINT = [&](SDValue Val) -> SDValue {
-    if (Val.getOpcode() == ISD::FP_TO_UINT)
-      return Val;
-    return SDValue();
-  };
+  SDValue FPVal;
+  if (sd_match(N0, m_FPToUI(m_Value(FPVal))) &&
+      DAG.getTargetLoweringInfo().shouldConvertFpToSat(
+          ISD::FP_TO_UINT_SAT, FPVal.getValueType(), VT))
+    return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N0), VT, FPVal,
+                       DAG.getValueType(VT.getScalarType()));
 
-  SDValue FPInstr = MatchFPTOINT(N0);
-  if (!FPInstr)
-    return SDValue();
-
-  EVT FPVT = FPInstr.getOperand(0).getValueType();
-  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(ISD::FP_TO_UINT_SAT,
-                                                        FPVT, VT))
-    return SDValue();
-  return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(FPInstr), VT,
-                     FPInstr.getOperand(0),
-                     DAG.getValueType(VT.getScalarType()));
+  return SDValue();
 }
 
 /// Detect patterns of truncation with unsigned saturation:
