@@ -1,0 +1,11 @@
+#ifndef LLVM_LIB_TARGET_MYLOONGARCH_TARGETINFO_MYLOONGARCHTARGETINFO_H
+#define LLVM_LIB_TARGET_MYLOONGARCH_TARGETINFO_MYLOONGARCHTARGETINFO_H
+
+namespace llvm {
+class Target;
+
+Target &getMyLoongArchTarget();
+
+} // namespace llvm
+
+#endif
