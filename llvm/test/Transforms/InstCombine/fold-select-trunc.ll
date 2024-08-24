@@ -23,15 +23,15 @@ define i8 @fold_select_trunc_nuw_false(i8 %x, i8 %y) {
   ret i8 %ret
 }
 
-define i8 @fold_select_trunc_nsw_true(i8 %x, i8 %y) {
+define i128 @fold_select_trunc_nsw_true(i128 %x, i128 %y) {
 ; CHECK-LABEL: @fold_select_trunc_nsw_true(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 -1, i8 [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i128 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i128 -1, i128 [[Y:%.*]]
+; CHECK-NEXT:    ret i128 [[RET]]
 ;
-  %trunc = trunc nsw i8 %x to i1
-  %ret = select i1 %trunc, i8 %x, i8 %y
-  ret i8 %ret
+  %trunc = trunc nsw i128 %x to i1
+  %ret = select i1 %trunc, i128 %x, i128 %y
+  ret i128 %ret
 }
 
 define i8 @fold_select_trunc_nsw_false(i8 %x, i8 %y) {
