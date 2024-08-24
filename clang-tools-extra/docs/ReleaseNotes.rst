@@ -118,7 +118,7 @@ Changes in existing checks
 
 - Fixed :doc:`cppcoreguidelines-pro-type-union-access
   <clang-tidy/checks/cppcoreguidelines/pro-type-union-access>` check to
-  report location even when member location is not valid.
+  report a location even when the member location is not valid.
 
 Removed checks
 ^^^^^^^^^^^^^^
