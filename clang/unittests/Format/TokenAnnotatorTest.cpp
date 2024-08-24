@@ -3380,7 +3380,7 @@ TEST_F(TokenAnnotatorTest, SplitPenalty) {
                          "      -> bool;\n"
                          "};",
                          Style);
-  ASSERT_EQ(Tokens.size(), 13u);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::arrow, TT_TrailingReturnArrow);
   EXPECT_SPLIT_PENALTY(Tokens[7], 23u);
 }
