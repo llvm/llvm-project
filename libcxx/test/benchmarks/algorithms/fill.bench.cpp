@@ -45,7 +45,7 @@ static void bm_deque_fill(benchmark::State& state) {
     std::fill(vec1.begin(), vec1.end(), false);
   }
 }
-BENCHMARK(bm_fill)->DenseRange(1, 8)->Range(16, 1 << 20);
+BENCHMARK(bm_deque_fill)->DenseRange(1, 8)->Range(16, 1 << 20);
 
 static void bm_ranges_fill(benchmark::State& state) {
   std::vector<bool> vec1(state.range());
