@@ -3163,7 +3163,7 @@ bool Sema::checkTargetClonesAttrString(
                 return !RISCV().isValidFMVExtension(Ext);
               }))
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                  << Unsupported << None << Str << TargetClones;
+                   << Unsupported << None << Str << TargetClones;
         } else if (AttrStr.starts_with("default")) {
           IsDefault = true;
           DefaultIsDupe = HasDefault;
@@ -3173,10 +3173,10 @@ bool Sema::checkTargetClonesAttrString(
           int Digit;
           if (AttrStr.getAsInteger(0, Digit))
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                  << Unsupported << None << Str << TargetClones;
+                   << Unsupported << None << Str << TargetClones;
         } else {
           return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                << Unsupported << None << Str << TargetClones;
+                 << Unsupported << None << Str << TargetClones;
         }
       }
 

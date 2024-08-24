@@ -2972,7 +2972,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     //     return DefaultVersion;
 
     // TODO: Add a condition to check the length before accessing elements.
-    // Without checking the length first, we may access an incorrect memory 
+    // Without checking the length first, we may access an incorrect memory
     // address when using different versions.
     llvm::SmallVector<StringRef, 8> CurrTargetAttrFeats;
 
