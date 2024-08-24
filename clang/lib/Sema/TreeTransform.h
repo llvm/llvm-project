@@ -14568,15 +14568,30 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                  /*NewThisContext*/false);
 
   bool Invalid = false;
+  bool ContainsUnexpandedInBody =
+      E->containsUnexpandedParameterPack() &&
+      Sema::containsUnexpandedParameterPacksInLambdaBody(E->getBody());
+
+  SmallVector<Decl *, 1> PacksExpandedInBody;
+  if (ContainsUnexpandedInBody) {
+    SemaRef.collectExpandedParameterPacksFromLambdaBody(E->getBody(),
+                                                        PacksExpandedInBody);
+  }
+
 
   // Transform captures.
+  bool FinishedExplicitCaptures = false;
   for (LambdaExpr::capture_iterator C = E->capture_begin(),
                                  CEnd = E->capture_end();
        C != CEnd; ++C) {
     // When we hit the first implicit capture, tell Sema that we've finished
     // the list of explicit captures.
-    if (C->isImplicit())
-      break;
+    if (C->isImplicit()) {
+      if (!FinishedExplicitCaptures) {
+        getSema().finishLambdaExplicitCaptures(LSI);
+      }
+      FinishedExplicitCaptures = true;
+    }
 
     // Capturing 'this' is trivial.
     if (C->capturesThis()) {
@@ -14649,12 +14664,15 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                            ? Sema::TryCapture_ExplicitByVal
                            : Sema::TryCapture_ExplicitByRef;
     SourceLocation EllipsisLoc;
-    if (C->isPackExpansion()) {
+    const bool IsImplicitCapturePack =
+        C->isImplicit() &&
+        C->getCapturedVar()->getType()->getAs<PackExpansionType>();
+    if (C->isPackExpansion() || IsImplicitCapturePack) {
       UnexpandedParameterPack Unexpanded(C->getCapturedVar(), C->getLocation());
       bool ShouldExpand = false;
       bool RetainExpansion = false;
       std::optional<unsigned> NumExpansions;
-      if (getDerived().TryExpandParameterPacks(C->getEllipsisLoc(),
+      if (getDerived().TryExpandParameterPacks(IsImplicitCapturePack ? C->getLocation() : C->getEllipsisLoc(),
                                                C->getLocation(),
                                                Unexpanded,
                                                ShouldExpand, RetainExpansion,
@@ -14663,31 +14681,58 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         continue;
       }
 
+
+
       if (ShouldExpand) {
         // The transform has determined that we should perform an expansion;
         // transform and capture each of the arguments.
         // expansion of the pattern. Do so.
         auto *Pack = cast<VarDecl>(C->getCapturedVar());
-        for (unsigned I = 0; I != *NumExpansions; ++I) {
-          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
-          VarDecl *CapturedVar
-            = cast_or_null<VarDecl>(getDerived().TransformDecl(C->getLocation(),
-                                                               Pack));
-          if (!CapturedVar) {
-            Invalid = true;
-            continue;
-          }
+        // Transform the implicitly and explicitly captured packs in a lambda.
+        // For the implicit capture case, there are two forms:
+        // 1. [&] {
+        //      sink(x...)
+        //    }
+        //    We need to capture all x...
+        // 2. [](auto... c) {
+        //      sink([&]() {
+        //        c;
+        //      }...);
+        //    }
+        //    We need to capture the correct c[index] of the pack.
+        if (!IsImplicitCapturePack || !ContainsUnexpandedInBody ||
+            llvm::is_contained(PacksExpandedInBody, Pack)) {
+          for (unsigned I = 0; I != *NumExpansions; ++I) {
+            Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
+            VarDecl *CapturedVar = cast_or_null<VarDecl>(
+                getDerived().TransformDecl(C->getLocation(), Pack));
+            if (!CapturedVar) {
+              Invalid = true;
+              continue;
+            }
 
-          // Capture the transformed variable.
-          getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind);
+            // Capture the transformed variable.
+            getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind);
+          }
+        } else {
+          if (*NumExpansions > 0) {
+            assert(getSema().ArgumentPackSubstitutionIndex != -1);
+            VarDecl *CapturedVar = cast_or_null<VarDecl>(
+                getDerived().TransformDecl(C->getLocation(), Pack));
+            if (!CapturedVar) {
+              Invalid = true;
+            } else {
+              getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind);
+            }
+          }
         }
 
-        // FIXME: Retain a pack expansion if RetainExpansion is true.
 
+        // FIXME: Retain a pack expansion if RetainExpansion is true.
         continue;
       }
 
-      EllipsisLoc = C->getEllipsisLoc();
+      EllipsisLoc = IsImplicitCapturePack ? C->getLocation() : C->getEllipsisLoc();
     }
 
     // Transform the captured variable.
@@ -14707,8 +14752,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
                                  EllipsisLoc);
   }
-  getSema().finishLambdaExplicitCaptures(LSI);
 
+  if (!FinishedExplicitCaptures)
+    getSema().finishLambdaExplicitCaptures(LSI);
+  
   // Transform the template parameters, and add them to the current
   // instantiation scope. The null case is handled correctly.
   auto TPL = getDerived().TransformTemplateParameterList(

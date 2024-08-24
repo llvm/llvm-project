@@ -69,6 +69,8 @@ namespace {
     // We need this so we can find e.g. attributes on lambdas.
     bool shouldVisitImplicitCode() const { return true; }
 
+    void SetInLambda(bool b) { InLambda = true; }
+
     //------------------------------------------------------------------------
     // Recording occurrences of (unexpanded) parameter packs.
     //------------------------------------------------------------------------
@@ -281,7 +283,150 @@ namespace {
       return inherited::TraverseLambdaCapture(Lambda, C, Init);
     }
   };
-}
+
+
+  class CollectExpandedParameterPacksVisitor
+      : public RecursiveASTVisitor<CollectExpandedParameterPacksVisitor> {
+    typedef RecursiveASTVisitor<CollectExpandedParameterPacksVisitor> inherited;
+
+    SmallVectorImpl<Decl*> &Expanded;
+    bool UnderExpanded = false;
+
+    struct UnderExpandedRAII {
+      bool &UnderExpanded;
+      bool Old;
+      UnderExpandedRAII(bool &NewUnderExpanded)
+          : UnderExpanded(NewUnderExpanded), Old{NewUnderExpanded} {
+        UnderExpanded = true;
+      }
+      ~UnderExpandedRAII() { UnderExpanded = Old; }
+    };
+
+
+     bool InLambda = false;
+    unsigned DepthLimit = (unsigned)-1;
+
+    void addExpanded(Decl *VD, SourceLocation Loc = SourceLocation()) {
+      Expanded.push_back(VD);
+    }
+
+  public:
+    explicit CollectExpandedParameterPacksVisitor(
+        SmallVectorImpl<Decl *> &Expanded)
+        : Expanded(Expanded) {}
+
+    bool shouldWalkTypesOfTypeLocs() const { return false; }
+
+    // We need this so we can find e.g. attributes on lambdas.
+    bool shouldVisitImplicitCode() const { return false; }
+
+    void SetInLambda(bool b) { InLambda = true; }
+
+    bool VisitDeclRefExpr(DeclRefExpr *E) {
+      if (E->getDecl()->isParameterPack() && UnderExpanded)
+        addExpanded(E->getDecl(), E->getLocation());
+
+      return true;
+    }
+
+    /// Suppress traversal into Objective-C container literal
+    /// elements that are pack expansions.
+    bool TraverseObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
+      for (unsigned I = 0, N = E->getNumElements(); I != N; ++I) {
+        ObjCDictionaryElement Element = E->getKeyValueElement(I);
+        if (Element.isPackExpansion()) {
+          UnderExpandedRAII UnderExpandedRAII{UnderExpanded};
+          TraverseStmt(Element.Key);
+          TraverseStmt(Element.Value);
+        }
+      }
+      return true;
+    }
+    /// Suppress traversal of parameter packs.
+    bool TraverseDecl(Decl *D) {
+      // A function parameter pack is a pack expansion, so cannot contain
+      // an unexpanded parameter pack. Likewise for a template parameter
+      // pack that contains any references to other packs.
+      if (D && D->isParameterPack()) {
+        UnderExpandedRAII UnderExpandedRAII{UnderExpanded};
+        return inherited::TraverseDecl(D);
+      }
+      return true;
+    }
+
+    bool TraversePackExpansionExpr(PackExpansionExpr *E) { 
+      UnderExpandedRAII UnderExpandedRAII{UnderExpanded};
+      return inherited::TraversePackExpansionExpr(E);
+    }
+    bool TraverseCXXFoldExpr(CXXFoldExpr *E) { 
+      UnderExpandedRAII UnderExpandedRAII{UnderExpanded};
+      return inherited::TraverseCXXFoldExpr(E);
+    }
+    // TODO?
+    bool TraversePackIndexingExpr(PackIndexingExpr *E) {
+      return inherited::TraverseStmt(E->getIndexExpr());
+    }
+
+    // TODO: MemberExpr & FunctionParmPackExpr
+
+    /// Suppress traversal of using-declaration pack expansion.
+    bool TraverseUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
+      if (D->isPackExpansion())
+        return true;
+
+      return inherited::TraverseUnresolvedUsingValueDecl(D);
+    }
+
+    /// Suppress traversal of using-declaration pack expansion.
+    bool TraverseUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D) {
+      if (D->isPackExpansion())
+        return true;
+
+      return inherited::TraverseUnresolvedUsingTypenameDecl(D);
+    }
+
+    /// Suppress traversal of template argument pack expansions.
+    bool TraverseTemplateArgument(const TemplateArgument &Arg) {
+      if (Arg.isPackExpansion())
+        return true;
+
+      return inherited::TraverseTemplateArgument(Arg);
+    }
+
+    /// Suppress traversal of template argument pack expansions.
+    bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
+      if (ArgLoc.getArgument().isPackExpansion())
+        return true;
+
+      return inherited::TraverseTemplateArgumentLoc(ArgLoc);
+    }
+
+    /// Suppress traversal of base specifier pack expansions.
+    bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
+      if (Base.isPackExpansion())
+        return true;
+
+      return inherited::TraverseCXXBaseSpecifier(Base);
+    }
+
+    /// Suppress traversal of mem-initializer pack expansions.
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+      if (Init->isPackExpansion())
+        return true;
+
+      return inherited::TraverseConstructorInitializer(Init);
+    }
+
+    /// Note whether we're traversing a lambda containing an unexpanded
+    /// parameter pack. In this case, the unexpanded pack can occur anywhere,
+    /// including all the places where we normally wouldn't look. Within a
+    /// lambda, we don't propagate the 'contains unexpanded parameter pack' bit
+    /// outside an expression.
+    bool TraverseLambdaExpr(LambdaExpr *Lambda) {
+      return true;
+    }
+  };
+  }
 
 /// Determine whether it's possible for an unexpanded parameter pack to
 /// be valid in this location. This only happens when we're in a declaration
@@ -569,6 +714,25 @@ void Sema::collectUnexpandedParameterPacks(
 void Sema::collectUnexpandedParameterPacks(
     Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
   CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(E);
+}
+
+void Sema::collectUnexpandedParameterPacksFromLambdaBody(
+    Stmt *Body, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
+  CollectUnexpandedParameterPacksVisitor visitor(Unexpanded);
+  visitor.SetInLambda(true);
+  visitor.TraverseStmt(Body);
+}
+
+void Sema::collectExpandedParameterPacksFromLambdaBody(
+      Stmt *Body, SmallVectorImpl<Decl *> &Expanded) {
+  CollectExpandedParameterPacksVisitor visitor(Expanded);
+  visitor.TraverseStmt(Body);
+}
+
+bool Sema::containsUnexpandedParameterPacksInLambdaBody(Stmt *Body) {
+  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+  collectUnexpandedParameterPacksFromLambdaBody(Body, Unexpanded);
+  return !Unexpanded.empty();
 }
 
 ParsedTemplateArgument

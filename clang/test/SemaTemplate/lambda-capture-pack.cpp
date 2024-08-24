@@ -23,3 +23,16 @@ namespace PR41576 {
   }
   static_assert(f(3, 4) == 6); // expected-note {{instantiation}}
 }
+
+namespace multi_unpack {
+template <typename... Args> void sink(Args...) {}
+void f() {
+  [](auto... c) {
+    check_sizes<int[3], int[3], int[3]>([=](auto... b) {
+      c;
+      sink(c...);
+      return c;
+    }...);
+  }(400, 60, 3);
+}
+} // namespace multi_unpack

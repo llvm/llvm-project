@@ -14111,6 +14111,28 @@ public:
   static void collectUnexpandedParameterPacks(
       Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
+  static void collectUnexpandedParameterPacksFromLambdaBody(
+      Stmt *Body, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
+
+  static bool containsUnexpandedParameterPacksInLambdaBody(Stmt *Body);
+
+  /// Collect decls expanded inside the lambda body.
+  /// e.g.
+  /// 
+  /// \code
+  ///   auto v = [](auto... c) {
+  ///    sink([&](auto ...b) {
+  ///      c;           // expanded outside the lambda body
+  ///      sink(c...);  // expanded inside the lambda body
+  ///    }...);
+  ///  }(400, 50, 6);
+  /// \endcode
+  ///
+  /// \param Body The lambda body
+  ///
+  static void collectExpandedParameterPacksFromLambdaBody(
+      Stmt *Body, SmallVectorImpl<Decl *> &Expanded);
+
   /// Invoked when parsing a template argument followed by an
   /// ellipsis, which creates a pack expansion.
   ///
