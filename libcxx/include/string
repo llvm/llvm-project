@@ -760,7 +760,7 @@ struct __short_impl {
 
 template <class _CharT, size_t __min_cap>
 struct __short_impl<_CharT, __min_cap, 0> {
-  value_type __data_[__min_cap];
+  _CharT __data_[__min_cap];
   unsigned char __size_    : 7;
   unsigned char __is_long_ : 1;
 };
