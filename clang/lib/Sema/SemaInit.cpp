@@ -4091,7 +4091,8 @@ void InitializationSequence::AddParenthesizedListInitStep(QualType T) {
   Steps.push_back(S);
 }
 
-void InitializationSequence::AddUnwrapInitListAtFirst(InitListExpr *Syntactic) {
+void InitializationSequence::AddUnwrapInitListAtTheBeginning(
+    InitListExpr *Syntactic) {
   assert(Syntactic->getNumInits() == 1 &&
          "Can only unwrap trivial init lists.");
   Step S;
