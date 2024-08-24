@@ -4201,5 +4201,15 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // select (trunc nuw X to i1), X, Y --> select (trunc nuw X to i1), 1, Y
+  if (auto *TI = dyn_cast<TruncInst>(CondVal)) {
+    Value *Trunc;
+    if (TI->hasNoUnsignedWrap() && match(CondVal, m_Trunc(m_Value(Trunc))) &&
+        match(TrueVal, m_Specific(Trunc))) {
+      return SelectInst::Create(
+          CondVal, ConstantInt::get(TrueVal->getType(), 1), FalseVal);
+    }
+  }
+
   return nullptr;
 }
