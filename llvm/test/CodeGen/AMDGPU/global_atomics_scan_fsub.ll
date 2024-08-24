@@ -14508,8 +14508,8 @@ define amdgpu_kernel void @global_atomic_fsub_double_uni_address_div_value_defau
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #2 = { strictfp }
 
 !llvm.module.flags = !{!0}

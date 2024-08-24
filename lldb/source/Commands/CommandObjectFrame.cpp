@@ -278,6 +278,30 @@ protected:
       if (frame_idx == UINT32_MAX)
         frame_idx = 0;
 
+      // If moving up/down by one, skip over hidden frames.
+      if (*m_options.relative_frame_offset == 1 ||
+          *m_options.relative_frame_offset == -1) {
+        uint32_t candidate_idx = frame_idx;
+        const unsigned max_depth = 12;
+        for (unsigned num_try = 0; num_try < max_depth; ++num_try) {
+          if (candidate_idx == 0 && *m_options.relative_frame_offset == -1) {
+            candidate_idx = UINT32_MAX;
+            break;
+          }
+          candidate_idx += *m_options.relative_frame_offset;
+          if (auto candidate_sp = thread->GetStackFrameAtIndex(candidate_idx)) {
+            if (candidate_sp->IsHidden())
+              continue;
+            // Now candidate_idx is the first non-hidden frame.
+            break;
+          }
+          candidate_idx = UINT32_MAX;
+          break;
+        };
+        if (candidate_idx != UINT32_MAX)
+          m_options.relative_frame_offset = candidate_idx - frame_idx;
+      }
+
       if (*m_options.relative_frame_offset < 0) {
         if (static_cast<int32_t>(frame_idx) >=
             -*m_options.relative_frame_offset)
@@ -687,7 +711,7 @@ protected:
                                            m_cmd_name);
 
     // Increment statistics.
-    TargetStats &target_stats = GetSelectedOrDummyTarget().GetStatistics();
+    TargetStats &target_stats = GetTarget().GetStatistics();
     if (result.Succeeded())
       target_stats.GetFrameVariableStats().NotifySuccess();
     else
@@ -874,13 +898,13 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
         RegularExpressionSP(new RegularExpression(m_options.m_module));
     auto func =
         RegularExpressionSP(new RegularExpression(m_options.m_symbols.front()));
-    GetSelectedOrDummyTarget().GetFrameRecognizerManager().AddRecognizer(
+    GetTarget().GetFrameRecognizerManager().AddRecognizer(
         recognizer_sp, module, func, m_options.m_first_instruction_only);
   } else {
     auto module = ConstString(m_options.m_module);
     std::vector<ConstString> symbols(m_options.m_symbols.begin(),
                                      m_options.m_symbols.end());
-    GetSelectedOrDummyTarget().GetFrameRecognizerManager().AddRecognizer(
+    GetTarget().GetFrameRecognizerManager().AddRecognizer(
         recognizer_sp, module, symbols, m_options.m_first_instruction_only);
   }
 #endif
@@ -898,9 +922,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    GetSelectedOrDummyTarget()
-        .GetFrameRecognizerManager()
-        .RemoveAllRecognizers();
+    GetTarget().GetFrameRecognizerManager().RemoveAllRecognizers();
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 };
@@ -922,7 +944,7 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    GetSelectedOrDummyTarget().GetFrameRecognizerManager().ForEach(
+    GetTarget().GetFrameRecognizerManager().ForEach(
         [&request](uint32_t rid, std::string rname, std::string module,
                    llvm::ArrayRef<lldb_private::ConstString> symbols,
                    bool regexp) {
@@ -953,9 +975,7 @@ protected:
         return;
       }
 
-      GetSelectedOrDummyTarget()
-          .GetFrameRecognizerManager()
-          .RemoveAllRecognizers();
+      GetTarget().GetFrameRecognizerManager().RemoveAllRecognizers();
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
     }
@@ -973,9 +993,8 @@ protected:
       return;
     }
 
-    if (!GetSelectedOrDummyTarget()
-             .GetFrameRecognizerManager()
-             .RemoveRecognizerWithID(recognizer_id)) {
+    if (!GetTarget().GetFrameRecognizerManager().RemoveRecognizerWithID(
+            recognizer_id)) {
       result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
                                    command.GetArgumentAtIndex(0));
       return;
@@ -996,7 +1015,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool any_printed = false;
-    GetSelectedOrDummyTarget().GetFrameRecognizerManager().ForEach(
+    GetTarget().GetFrameRecognizerManager().ForEach(
         [&result, &any_printed](
             uint32_t recognizer_id, std::string name, std::string module,
             llvm::ArrayRef<ConstString> symbols, bool regexp) {
@@ -1073,9 +1092,8 @@ protected:
       return;
     }
 
-    auto recognizer = GetSelectedOrDummyTarget()
-                          .GetFrameRecognizerManager()
-                          .GetRecognizerForFrame(frame_sp);
+    auto recognizer =
+        GetTarget().GetFrameRecognizerManager().GetRecognizerForFrame(frame_sp);
 
     Stream &output_stream = result.GetOutputStream();
     output_stream.Printf("frame %d ", frame_index);

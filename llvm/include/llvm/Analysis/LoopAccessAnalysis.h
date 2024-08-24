@@ -15,8 +15,7 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include <optional>
 #include <variant>
@@ -26,11 +25,8 @@ namespace llvm {
 class AAResults;
 class DataLayout;
 class Loop;
-class LoopAccessInfo;
 class raw_ostream;
-class SCEV;
-class SCEVUnionPredicate;
-class Value;
+class TargetTransformInfo;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
@@ -200,9 +196,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(const DepCandidates &AccessSets,
-                   const MemAccessInfoList &CheckDeps,
-                   const DenseMap<Value *, SmallVector<const Value *, 16>>
-                       &UnderlyingObjects);
+                   const MemAccessInfoList &CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -340,6 +334,9 @@ private:
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
+  /// Cache for the loop guards of InnermostLoop.
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
   /// Check whether there is a plausible dependence between the two
   /// accesses.
   ///
@@ -352,11 +349,8 @@ private:
   /// element access it records this distance in \p MinDepDistBytes (if this
   /// distance is smaller than any other distance encountered so far).
   /// Otherwise, this function returns true signaling a possible dependence.
-  Dependence::DepType
-  isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
-              unsigned BIdx,
-              const DenseMap<Value *, SmallVector<const Value *, 16>>
-                  &UnderlyingObjects);
+  Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
+                                  const MemAccessInfo &B, unsigned BIdx);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
@@ -393,11 +387,9 @@ private:
   /// determined, or a struct containing (Distance, Stride, TypeSize, AIsWrite,
   /// BIsWrite).
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
-  getDependenceDistanceStrideAndSize(
-      const MemAccessInfo &A, Instruction *AInst, const MemAccessInfo &B,
-      Instruction *BInst,
-      const DenseMap<Value *, SmallVector<const Value *, 16>>
-          &UnderlyingObjects);
+  getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
+                                     const MemAccessInfo &B,
+                                     Instruction *BInst);
 };
 
 class RuntimePointerChecking;
@@ -493,6 +485,7 @@ public:
     Need = false;
     Pointers.clear();
     Checks.clear();
+    DiffChecks.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.
@@ -799,7 +792,8 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                           Value *Ptr);
 
 /// If the pointer has a constant stride return it in units of the access type
-/// size.  Otherwise return std::nullopt.
+/// size. If the pointer is loop-invariant, return 0. Otherwise return
+/// std::nullopt.
 ///
 /// Ensure that it does not wrap in the address space, assuming the predicate
 /// associated with \p PSE is true.

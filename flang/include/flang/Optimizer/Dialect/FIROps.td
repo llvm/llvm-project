@@ -782,7 +782,10 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
           lower bounds and extents may not be known until runtime),
         - slice: an array section can be described with a slice triple,
         - typeparams: for emboxing a derived type with LEN type parameters,
+        - sourceBox: A box to read information from such as CFI type,
+          type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
+        - allocator_idx: specify special allocator to use.
   }];
 
   let arguments = (ins
@@ -791,7 +794,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
     Optional<fir_ClassType>:$sourceBox,
-    OptionalAttr<AffineMapAttr>:$accessMap
+    OptionalAttr<AffineMapAttr>:$accessMap,
+    OptionalAttr<I32Attr>:$allocator_idx
   );
 
   let results = (outs BoxOrClassType);
@@ -801,9 +805,11 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$sourceBox),
+      CArg<"mlir::Value", "{}">:$sourceBox,
+      CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, sourceBox, mlir::AffineMapAttr{}); }]>
+                    typeparams, sourceBox, mlir::AffineMapAttr{},
+                    allocator_idx); }]>
   ];
 
   let assemblyFormat = [{
@@ -2426,9 +2432,9 @@ def fir_CallOp : fir_Op<"call",
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath,
-    UnitAttr:$is_bind_c
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
   );
   let results = (outs Variadic<AnyType>);
 

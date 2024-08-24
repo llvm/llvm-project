@@ -13,10 +13,12 @@ from __future__ import unicode_literals
 
 import argparse
 import io
+import itertools
 import os
 import re
 import sys
 import textwrap
+
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
 # entry and 'False' if the entry already existed.
@@ -55,13 +57,28 @@ def adapt_cmake(module_path, check_name_camel):
 
 # Adds a header for the new check.
 def write_header(
-    module_path, module, namespace, check_name, check_name_camel, description
+    module_path,
+    module,
+    namespace,
+    check_name,
+    check_name_camel,
+    description,
+    lang_restrict,
 ):
     wrapped_desc = "\n".join(
         textwrap.wrap(
             description, width=80, initial_indent="/// ", subsequent_indent="/// "
         )
     )
+    if lang_restrict:
+        override_supported = """
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return %s;
+  }""" % (
+            lang_restrict % {"lang": "LangOpts"}
+        )
+    else:
+        override_supported = ""
     filename = os.path.join(module_path, check_name_camel) + ".h"
     print("Creating %s..." % filename)
     with io.open(filename, "w", encoding="utf8", newline="\n") as f:
@@ -102,7 +119,7 @@ public:
   %(check_name_camel)s(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;%(override_supported)s
 };
 
 } // namespace clang::tidy::%(namespace)s
@@ -116,6 +133,7 @@ public:
                 "module": module,
                 "namespace": namespace,
                 "description": wrapped_desc,
+                "override_supported": override_supported,
             }
         )
 
@@ -306,7 +324,9 @@ def add_release_notes(module_path, module, check_name, description):
 
 
 # Adds a test for the check.
-def write_test(module_path, module, check_name, test_extension):
+def write_test(module_path, module, check_name, test_extension, test_standard):
+    if test_standard:
+        test_standard = f"-std={test_standard}-or-later "
     check_name_dashes = module + "-" + check_name
     filename = os.path.normpath(
         os.path.join(
@@ -323,7 +343,7 @@ def write_test(module_path, module, check_name, test_extension):
     print("Creating %s..." % filename)
     with io.open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
-            """// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
+            """// RUN: %%check_clang_tidy %(standard)s%%s %(check_name_dashes)s %%t
 
 // FIXME: Add something that triggers the check here.
 void f();
@@ -338,7 +358,7 @@ void f();
 // FIXME: Add something that doesn't trigger the check here.
 void awesome_f2();
 """
-            % {"check_name_dashes": check_name_dashes}
+            % {"check_name_dashes": check_name_dashes, "standard": test_standard}
         )
 
 
@@ -511,7 +531,10 @@ def update_checks_list(clang_tidy_path):
         if (match or (check_name.startswith("clang-analyzer-"))) and check_name:
             module = doc_file[0]
             check_file = doc_file[1].replace(".rst", "")
-            if not match or match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers":
+            if (
+                not match
+                or match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers"
+            ):
                 title = "Clang Static Analyzer " + check_file
                 # Preserve the anchor in checkers.html from group 2.
                 target = "" if not match else match.group(1) + ".html" + match.group(2)
@@ -529,7 +552,7 @@ def update_checks_list(clang_tidy_path):
             if target:
                 # The checker is just a redirect.
                 return (
-                        "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(ref_begin)s`%(title)s <%(target)s>`%(ref_end)s,%(autofix)s\n"
+                    "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(ref_begin)s`%(title)s <%(target)s>`%(ref_end)s,%(autofix)s\n"
                     % {
                         "check_name": check_name,
                         "module": module,
@@ -537,13 +560,14 @@ def update_checks_list(clang_tidy_path):
                         "target": target,
                         "title": title,
                         "autofix": autofix,
-                        "ref_begin" : ref_begin,
-                        "ref_end" : ref_end
-                    })
+                        "ref_begin": ref_begin,
+                        "ref_end": ref_end,
+                    }
+                )
             else:
                 # The checker is just a alias without redirect.
                 return (
-                        "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(title)s,%(autofix)s\n"
+                    "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(title)s,%(autofix)s\n"
                     % {
                         "check_name": check_name,
                         "module": module,
@@ -551,7 +575,8 @@ def update_checks_list(clang_tidy_path):
                         "target": target,
                         "title": title,
                         "autofix": autofix,
-                    })
+                    }
+                )
         return ""
 
     checks = map(format_link, doc_files)
@@ -613,6 +638,22 @@ def main():
         "objc": "m",
         "objc++": "mm",
     }
+    cpp_language_to_requirements = {
+        "c++98": "CPlusPlus",
+        "c++11": "CPlusPlus11",
+        "c++14": "CPlusPlus14",
+        "c++17": "CPlusPlus17",
+        "c++20": "CPlusPlus20",
+        "c++23": "CPlusPlus23",
+        "c++26": "CPlusPlus26",
+    }
+    c_language_to_requirements = {
+        "c99": None,
+        "c11": "C11",
+        "c17": "C17",
+        "c23": "C23",
+        "c27": "C2Y",
+    }
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--update-docs",
@@ -623,7 +664,7 @@ def main():
         "--language",
         help="language to use for new check (defaults to c++)",
         choices=language_to_extension.keys(),
-        default="c++",
+        default=None,
         metavar="LANG",
     )
     parser.add_argument(
@@ -632,6 +673,16 @@ def main():
         help="short description of what the check does",
         default="FIXME: Write a short description",
         type=str,
+    )
+    parser.add_argument(
+        "--standard",
+        help="Specify a specific version of the language",
+        choices=list(
+            itertools.chain(
+                cpp_language_to_requirements.keys(), c_language_to_requirements.keys()
+            )
+        ),
+        default=None,
     )
     parser.add_argument(
         "module",
@@ -677,14 +728,49 @@ def main():
     if not description.endswith("."):
         description += "."
 
+    language = args.language
+
+    if args.standard:
+        if args.standard in cpp_language_to_requirements:
+            if language and language != "c++":
+                raise ValueError("C++ standard chosen when language is not C++")
+            language = "c++"
+        elif args.standard in c_language_to_requirements:
+            if language and language != "c":
+                raise ValueError("C standard chosen when language is not C")
+            language = "c"
+
+    if not language:
+        language = "c++"
+
+    language_restrict = None
+
+    if language == "c":
+        language_restrict = "!%(lang)s.CPlusPlus"
+        extra = c_language_to_requirements.get(args.standard, None)
+        if extra:
+            language_restrict += f" && %(lang)s.{extra}"
+    elif language == "c++":
+        language_restrict = (
+            f"%(lang)s.{cpp_language_to_requirements.get(args.standard, 'CPlusPlus')}"
+        )
+    elif language in ["objc", "objc++"]:
+        language_restrict = "%(lang)s.ObjC"
+
     write_header(
-        module_path, module, namespace, check_name, check_name_camel, description
+        module_path,
+        module,
+        namespace,
+        check_name,
+        check_name_camel,
+        description,
+        language_restrict,
     )
     write_implementation(module_path, module, namespace, check_name_camel)
     adapt_module(module_path, module, check_name, check_name_camel)
     add_release_notes(module_path, module, check_name, description)
-    test_extension = language_to_extension.get(args.language)
-    write_test(module_path, module, check_name, test_extension)
+    test_extension = language_to_extension.get(language)
+    write_test(module_path, module, check_name, test_extension, args.standard)
     write_docs(module_path, module, check_name)
     update_checks_list(clang_tidy_path)
     print("Done. Now it's your turn!")

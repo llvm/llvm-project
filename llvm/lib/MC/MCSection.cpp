@@ -23,8 +23,8 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
                      bool IsVirtual, MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), IsText(IsText), IsVirtual(IsVirtual), Name(Name),
-      Variant(V) {
+      HasLayout(false), IsRegistered(false), IsText(IsText),
+      IsVirtual(IsVirtual), Name(Name), Variant(V) {
   DummyFragment.setParent(this);
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;

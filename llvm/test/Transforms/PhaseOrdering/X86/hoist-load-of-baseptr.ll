@@ -46,7 +46,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
 ; O2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
 ; O2-NEXT:    [[N_VEC:%.*]] = and i64 [[NUMELEMS]], -8
-; O2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[NUMELEMS]]
+; O2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUMELEMS]], [[N_VEC]]
 ; O2-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; O2:       for.cond1.preheader:
 ; O2-NEXT:    [[I_06:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC7:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
@@ -96,7 +96,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3:       for.cond1.preheader.us.preheader:
 ; O3-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
 ; O3-NEXT:    [[N_VEC:%.*]] = and i64 [[NUMELEMS]], -8
-; O3-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[NUMELEMS]]
+; O3-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUMELEMS]], [[N_VEC]]
 ; O3-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; O3:       for.cond1.preheader.us:
 ; O3-NEXT:    [[I_06_US:%.*]] = phi i64 [ [[INC7_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]

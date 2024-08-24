@@ -176,6 +176,53 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
+# if KMP_OS_LINUX
+// BTI and PAC gnu property note
+#  define NT_GNU_PROPERTY_TYPE_0 5
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+
+#  define GNU_PROPERTY(type, value)                                            \
+  .pushsection .note.gnu.property, "a";                                        \
+  .p2align 3;                                                                  \
+  .word 4;                                                                     \
+  .word 16;                                                                    \
+  .word NT_GNU_PROPERTY_TYPE_0;                                                \
+  .asciz "GNU";                                                                \
+  .word type;                                                                  \
+  .word 4;                                                                     \
+  .word value;                                                                 \
+  .word 0;                                                                     \
+  .popsection
+# endif
+
+# if defined(__ARM_FEATURE_BTI_DEFAULT)
+#  define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
+# else
+#  define BTI_FLAG 0
+# endif
+# if __ARM_FEATURE_PAC_DEFAULT & 3
+#  define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
+# else
+#  define PAC_FLAG 0
+# endif
+
+# if (BTI_FLAG | PAC_FLAG) != 0
+#  if PAC_FLAG != 0
+#   define PACBTI_C hint #25
+#   define PACBTI_RET hint #29
+#  else
+#   define PACBTI_C hint #34
+#   define PACBTI_RET
+#  endif
+#  define GNU_PROPERTY_BTI_PAC \
+    GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
+# else
+#  define PACBTI_C
+#  define PACBTI_RET
+#  define GNU_PROPERTY_BTI_PAC
+# endif
 #endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
 
 .macro COMMON name, size, align_power
@@ -1296,6 +1343,7 @@ __tid = 8
 // mark_begin;
 	.text
 	PROC __kmp_invoke_microtask
+	PACBTI_C
 
 	stp	x29, x30, [sp, #-16]!
 # if OMPT_SUPPORT
@@ -1359,6 +1407,7 @@ KMP_LABEL(kmp_1):
 	ldp	x19, x20, [sp], #16
 # endif
 	ldp	x29, x30, [sp], #16
+	PACBTI_RET
 	ret
 
 	DEBUG_INFO __kmp_invoke_microtask
@@ -2453,22 +2502,6 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 # endif
 #endif
 
-#if KMP_ARCH_WASM
-.data
-.global .gomp_critical_user_
-.global .gomp_critical_user_.var
-.global .gomp_critical_user_.reduction.var
-.global __kmp_unnamed_critical_addr
-.gomp_critical_user_:
-.zero 4
-.size .gomp_critical_user_, 4
-.gomp_critical_user_.var:
-.zero 4
-.size .gomp_critical_user_.var, 4
-.gomp_critical_user_.reduction.var:
-.zero 4
-.size .gomp_critical_user_.reduction.var, 4
-__kmp_unnamed_critical_addr:
-    .4byte .gomp_critical_user_
-    .size __kmp_unnamed_critical_addr, 4
+#if KMP_OS_LINUX && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+GNU_PROPERTY_BTI_PAC
 #endif

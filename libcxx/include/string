@@ -1048,7 +1048,7 @@ public:
       __r_.first()       = __str.__r_.first();
       __str.__r_.first() = __rep();
       __str.__annotate_new(0);
-      if (!__is_long() && this != &__str)
+      if (!__is_long() && this != std::addressof(__str))
         __annotate_new(size());
     }
   }
@@ -2246,6 +2246,10 @@ private:
   friend constexpr basic_string operator+ <>(const basic_string&, type_identity_t<__self_view>);
   friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, const basic_string&);
 #endif
+
+  template <class _CharT2, class _Traits2, class _Allocator2>
+  friend inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+  operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
 };
 
 // These declarations must appear before any functions are implicitly used
@@ -2707,7 +2711,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   __str.__set_short_size(0);
   traits_type::assign(__str.__get_short_pointer()[0], value_type());
 
-  if (__str_was_short && this != &__str)
+  if (__str_was_short && this != std::addressof(__str))
     __str.__annotate_shrink(__str_old_size);
   else
     // ASan annotations: was long, so object memory is unpoisoned as new.
@@ -2721,7 +2725,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   // invariants hold (so functions without preconditions, such as the assignment operator,
   // can be safely used on the object after it was moved from):"
   // Quote: "v = std::move(v); // the value of v is unspecified"
-  if (!__is_long() && &__str != this)
+  if (!__is_long() && std::addressof(__str) != this)
     // If it is long string, delete was never called on original __str's buffer.
     __annotate_new(__get_short_size());
 }
@@ -3446,13 +3450,13 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
       "swapping non-equal allocators");
   if (!__is_long())
     __annotate_delete();
-  if (this != &__str && !__str.__is_long())
+  if (this != std::addressof(__str) && !__str.__is_long())
     __str.__annotate_delete();
   std::swap(__r_.first(), __str.__r_.first());
   std::__swap_allocator(__alloc(), __str.__alloc());
   if (!__is_long())
     __annotate_new(__get_short_size());
-  if (this != &__str && !__str.__is_long())
+  if (this != std::addressof(__str) && !__str.__is_long())
     __str.__annotate_new(__str.__get_short_size());
 }
 
@@ -3855,16 +3859,18 @@ operator==(const _CharT* __lhs, const basic_string<_CharT, _Traits, _Allocator>&
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs) _NOEXCEPT {
-#if _LIBCPP_STD_VER >= 20
-  return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
-#else
-  typedef basic_string<_CharT, _Traits, _Allocator> _String;
   _LIBCPP_ASSERT_NON_NULL(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
+
+  using _String = basic_string<_CharT, _Traits, _Allocator>;
+
   size_t __rhs_len = _Traits::length(__rhs);
+  if (__builtin_constant_p(__rhs_len) && !_String::__fits_in_sso(__rhs_len)) {
+    if (!__lhs.__is_long())
+      return false;
+  }
   if (__rhs_len != __lhs.size())
     return false;
   return __lhs.compare(0, _String::npos, __rhs, __rhs_len) == 0;
-#endif
 }
 
 #if _LIBCPP_STD_VER >= 20
