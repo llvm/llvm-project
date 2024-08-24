@@ -867,10 +867,10 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
                                  TypeAliasTemplateDecl *AliasTemplate,
                                  QualType ReturnType,
                                  SmallVector<NamedDecl *> TemplateParams,
-                                 TemplateDecl *DeducingTemplate = nullptr) {
+                                 TemplateDecl *DeducedTemplate = nullptr) {
   ASTContext &Context = SemaRef.Context;
   // Constraint AST nodes must use uninstantiated depth.
-  assert(!DeducingTemplate || DeducingTemplate->getTemplateDepth() ==
+  assert(!DeducedTemplate || DeducedTemplate->getTemplateDepth() ==
                                   AliasTemplate->getTemplateDepth());
   if (auto *PrimaryTemplate =
           AliasTemplate->getInstantiatedFromMemberTemplate();
@@ -904,7 +904,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
         Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate));
   };
 
-  TemplateDecl *TD = DeducingTemplate ? DeducingTemplate : AliasTemplate;
+  TemplateDecl *TD = DeducedTemplate ? DeducedTemplate : AliasTemplate;
 
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
@@ -950,14 +950,19 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
   return {Template, AliasRhsTemplateArgs};
 }
 
+struct InheritedConstructorDeductionInfo {
+  TemplateDecl *DerivedClassTemplate;
+  TypeSourceInfo *CCType;
+};
+
 // Build the type for a deduction guide generated from an inherited constructor
 // [over.match.class.deduct]p1.10:
 // ... the set contains the guides of A with the return type R
 // of each guide replaced with `typename CC<R>::type` ...
-std::pair<TypeSourceInfo *, QualType>
+TypeSourceInfo *
 buildInheritedConstructorDeductionGuideType(
-    Sema &SemaRef, TypeSourceInfo *DerivedClassMapperType,
-    TemplateDecl *DeducingTemplate, TypeSourceInfo *SourceGuideTSI) {
+    Sema &SemaRef, InheritedConstructorDeductionInfo Info,
+    TypeSourceInfo *SourceGuideTSI) {
   auto &Context = SemaRef.Context;
   const auto *FPT = SourceGuideTSI->getType()->getAs<FunctionProtoType>();
   assert(FPT && "Source Guide type should be a FunctionProtoType");
@@ -967,14 +972,14 @@ buildInheritedConstructorDeductionGuideType(
   Sema::SFINAETrap Trap(SemaRef);
 
   MultiLevelTemplateArgumentList Args;
-  Args.addOuterTemplateArguments(DeducingTemplate,
+  Args.addOuterTemplateArguments(Info.DerivedClassTemplate,
                                  TemplateArgument(FPT->getReturnType()), false);
-  Args.addOuterRetainedLevels(DeducingTemplate->getTemplateDepth());
+  Args.addOuterRetainedLevels(Info.DerivedClassTemplate->getTemplateDepth());
   TypeSourceInfo *ReturnTypeTSI =
-      SemaRef.SubstType(DerivedClassMapperType, Args,
-                        DeducingTemplate->getBeginLoc(), DeclarationName());
+      SemaRef.SubstType(Info.CCType, Args,
+                        Info.DerivedClassTemplate->getBeginLoc(), DeclarationName());
   if (!ReturnTypeTSI || Trap.hasErrorOccurred())
-    return {nullptr, QualType()};
+    return nullptr;
   QualType ReturnType = ReturnTypeTSI->getType();
 
   TypeLocBuilder TLB;
@@ -993,7 +998,7 @@ buildInheritedConstructorDeductionGuideType(
     NewTL.setParam(I, TL.getParam(I));
 
   TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, FT);
-  return {TSI, ReturnType};
+  return TSI;
 }
 
 // Build deduction guides for a type alias template from the given underlying
@@ -1005,8 +1010,7 @@ buildInheritedConstructorDeductionGuideType(
 FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     FunctionTemplateDecl *F, SourceLocation Loc,
-    TemplateDecl *DeducingTemplate = nullptr,
-    TypeSourceInfo *DerivedClassMapperType = nullptr) {
+    std::optional<InheritedConstructorDeductionInfo> FromInheritedCtor = std::nullopt) {
   LocalInstantiationScope Scope(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
       SemaRef, AliasTemplate->getLocation(), F,
@@ -1179,17 +1183,18 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
 
     TypeSourceInfo *TSI = GG->getTypeSourceInfo();
     QualType ReturnType = FPrime->getReturnType();
-    if (!DeducingTemplate)
-      DeducingTemplate = AliasTemplate;
-    if (DerivedClassMapperType)
-      std::tie(TSI, ReturnType) = buildInheritedConstructorDeductionGuideType(
-          SemaRef, DerivedClassMapperType, DeducingTemplate, TSI);
-    if (!TSI)
-      return nullptr;
+    TemplateDecl *DeducedTemplate = FromInheritedCtor ? FromInheritedCtor->DerivedClassTemplate : AliasTemplate;
+    if (FromInheritedCtor) {
+      TSI = buildInheritedConstructorDeductionGuideType(
+          SemaRef, *FromInheritedCtor, TSI);
+      if (!TSI)
+        return nullptr;
+      ReturnType = TSI->getType().getTypePtr()->getAs<FunctionProtoType>()->getReturnType();
+    }
 
     Expr *IsDeducible =
         buildIsDeducibleConstraint(SemaRef, AliasTemplate, ReturnType,
-                                   FPrimeTemplateParams, DeducingTemplate);
+                                   FPrimeTemplateParams, DeducedTemplate);
     Expr *RequiresClause =
         buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
                                    FirstUndeducedParamIdx, IsDeducible);
@@ -1201,7 +1206,7 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
         AliasTemplate->getTemplateParameters()->getRAngleLoc(),
         /*RequiresClause=*/RequiresClause);
     auto *Result = cast<FunctionTemplateDecl>(buildDeductionGuide(
-        SemaRef, DeducingTemplate, FPrimeTemplateParamList,
+        SemaRef, DeducedTemplate, FPrimeTemplateParamList,
         GG->getCorrespondingConstructor(), GG->getExplicitSpecifier(), TSI,
         AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
         AliasTemplate->getEndLoc(), F->isImplicit()));
@@ -1210,7 +1215,7 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     DGuide->setSourceDeductionGuide(
         cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
     DGuide->setSourceKind(
-        DerivedClassMapperType
+        FromInheritedCtor
             ? CXXDeductionGuideDecl::SourceKind::InheritedConstructor
             : CXXDeductionGuideDecl::SourceKind::Alias);
     return Result;
@@ -1220,19 +1225,17 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
 
 void DeclareImplicitDeductionGuidesForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate, SourceLocation Loc,
-    TemplateDecl *DeducingTemplate = nullptr,
-    TypeSourceInfo *DerivedClassMapperType = nullptr) {
+    std::optional<InheritedConstructorDeductionInfo> FromInheritedCtor = std::nullopt)  {
   if (AliasTemplate->isInvalidDecl())
     return;
-  if (!DeducingTemplate)
-    DeducingTemplate = AliasTemplate;
+  TemplateDecl *DeducedTemplate = FromInheritedCtor ? FromInheritedCtor->DerivedClassTemplate : AliasTemplate;
   auto &Context = SemaRef.Context;
   // FIXME: if there is an explicit deduction guide after the first use of the
   // type alias usage, we will not cover this explicit deduction guide. fix this
   // case.
   // This check is already performed in the inherited constructor case by
   // DeclareImplicitDeductionGuides
-  if (!DerivedClassMapperType &&
+  if (!FromInheritedCtor &&
       hasDeclaredDeductionGuides(
           Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
           AliasTemplate->getDeclContext()))
@@ -1269,16 +1272,18 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 
       QualType ReturnType =
           cast<FunctionProtoType>(FunctionType->getType())->getReturnType();
-      if (DerivedClassMapperType)
-        std::tie(FunctionType, ReturnType) =
-            buildInheritedConstructorDeductionGuideType(
-                SemaRef, DerivedClassMapperType, DeducingTemplate,
-                FunctionType);
       if (!FunctionType)
         continue;
+      if (FromInheritedCtor) {
+        FunctionType = buildInheritedConstructorDeductionGuideType(
+            SemaRef, *FromInheritedCtor, FunctionType);
+        if (!FunctionType)
+          continue;
+        ReturnType = FunctionType->getType().getTypePtr()->getAs<FunctionProtoType>()->getReturnType();
+      }
 
       auto *Transformed = cast<CXXDeductionGuideDecl>(buildDeductionGuide(
-          SemaRef, DeducingTemplate, /*TemplateParams=*/nullptr,
+          SemaRef, DeducedTemplate, /*TemplateParams=*/nullptr,
           /*Constructor=*/nullptr, DG->getExplicitSpecifier(), FunctionType,
           AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
           AliasTemplate->getEndLoc(), DG->isImplicit()));
@@ -1288,7 +1293,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
       // if the declarator declares a templated function, a bug in standard?
       auto *Constraint = buildIsDeducibleConstraint(
-          SemaRef, AliasTemplate, ReturnType, {}, DeducingTemplate);
+          SemaRef, AliasTemplate, ReturnType, {}, DeducedTemplate);
       if (auto *RC = DG->getTrailingRequiresClause()) {
         auto Conjunction =
             SemaRef.BuildBinOp(SemaRef.getCurScope(), SourceLocation{},
@@ -1309,7 +1314,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       continue;
 
     BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate, F, Loc,
-                                    DeducingTemplate, DerivedClassMapperType);
+                                    FromInheritedCtor);
   }
 }
 
@@ -1327,7 +1332,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   if (!BaseTD)
     return;
 
-  // Subsitute any parameters with default arguments not present in the base,
+  // Substitute any parameters with default arguments not present in the base,
   // since partial specializations cannot have default parameters
   TemplateParameterList *TemplateTPL = Pattern->getTemplateParameters();
   auto BaseDeducedTemplateParams =
@@ -1523,8 +1528,9 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   TypeSourceInfo *MapperTSI =
       ReturnTypeTLB.getTypeSourceInfo(Context, MapperReturnType);
 
+  InheritedConstructorDeductionInfo Info{Template, MapperTSI};
   DeclareImplicitDeductionGuidesForTypeAlias(SemaRef, BaseATD, BaseLoc,
-                                             Template, MapperTSI);
+                                             Info);
 }
 
 // Build an aggregate deduction guide for a type alias template.
@@ -1633,6 +1639,8 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   if (!isCompleteType(Loc, Transform.DeducedType))
     return;
 
+  // FIXME: Handle explicit deduction guides from inherited constructors
+  // when the base deduction guides are declared after this has first run
   if (hasDeclaredDeductionGuides(Transform.DeductionGuideName, DC))
     return;
 
@@ -1695,8 +1703,14 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   if (!AddedAny)
     Transform.buildSimpleDeductionGuide(std::nullopt);
 
-  // FIXME: Handle explicit deduction guides from inherited constructors
-  // when the base deduction guides are declared after this has first run
+  //    -- An additional function template derived as above from a hypothetical
+  //    constructor C(C), called the copy deduction candidate.
+  cast<CXXDeductionGuideDecl>(
+      cast<FunctionTemplateDecl>(
+          Transform.buildSimpleDeductionGuide(Transform.DeducedType))
+          ->getTemplatedDecl())
+      ->setDeductionCandidateKind(DeductionCandidate::Copy);
+
   CXXRecordDecl *TemplatedDecl = Pattern->getTemplatedDecl();
   if (getLangOpts().CPlusPlus23 && TemplatedDecl->hasDefinition()) {
     unsigned BaseIdx = 0;
@@ -1721,14 +1735,6 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
           *this, Template, Pattern, TSI, BaseIdx - 1);
     }
   }
-
-  //    -- An additional function template derived as above from a hypothetical
-  //    constructor C(C), called the copy deduction candidate.
-  cast<CXXDeductionGuideDecl>(
-      cast<FunctionTemplateDecl>(
-          Transform.buildSimpleDeductionGuide(Transform.DeducedType))
-          ->getTemplatedDecl())
-      ->setDeductionCandidateKind(DeductionCandidate::Copy);
 
   SavedContext.pop();
 }
