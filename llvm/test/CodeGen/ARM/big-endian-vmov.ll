@@ -227,7 +227,6 @@ define arm_aapcs_vfpcc <8 x i16> @xor_v8i16_m1(<8 x i16> %a) {
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    vmvn.i32 q8, #0x10000
 ; CHECK-BE-NEXT:    vrev64.16 q9, q0
-; CHECK-BE-NEXT:    vrev32.16 q8, q8
 ; CHECK-BE-NEXT:    veor q8, q9, q8
 ; CHECK-BE-NEXT:    vrev64.16 q0, q8
 ; CHECK-BE-NEXT:    bx lr
