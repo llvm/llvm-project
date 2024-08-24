@@ -369,38 +369,7 @@ namespace {
 
     // TODO: MemberExpr & FunctionParmPackExpr
 
-    /// Suppress traversal of using-declaration pack expansion.
-    bool TraverseUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
-      if (D->isPackExpansion())
-        return true;
-
-      return inherited::TraverseUnresolvedUsingValueDecl(D);
-    }
-
-    /// Suppress traversal of using-declaration pack expansion.
-    bool TraverseUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D) {
-      if (D->isPackExpansion())
-        return true;
-
-      return inherited::TraverseUnresolvedUsingTypenameDecl(D);
-    }
-
-    /// Suppress traversal of template argument pack expansions.
-    bool TraverseTemplateArgument(const TemplateArgument &Arg) {
-      if (Arg.isPackExpansion())
-        return true;
-
-      return inherited::TraverseTemplateArgument(Arg);
-    }
-
-    /// Suppress traversal of template argument pack expansions.
-    bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
-      if (ArgLoc.getArgument().isPackExpansion())
-        return true;
-
-      return inherited::TraverseTemplateArgumentLoc(ArgLoc);
-    }
-
+    // TODO:
     /// Suppress traversal of base specifier pack expansions.
     bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
       if (Base.isPackExpansion())
@@ -417,11 +386,7 @@ namespace {
       return inherited::TraverseConstructorInitializer(Init);
     }
 
-    /// Note whether we're traversing a lambda containing an unexpanded
-    /// parameter pack. In this case, the unexpanded pack can occur anywhere,
-    /// including all the places where we normally wouldn't look. Within a
-    /// lambda, we don't propagate the 'contains unexpanded parameter pack' bit
-    /// outside an expression.
+    /// we don't need to traverse into lambdas
     bool TraverseLambdaExpr(LambdaExpr *Lambda) {
       return true;
     }
