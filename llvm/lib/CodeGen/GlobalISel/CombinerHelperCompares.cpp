@@ -187,19 +187,6 @@ bool CombinerHelper::matchZextOfICmp(const MachineInstr &MI,
   Register RHS = Cmp->getRHSReg();
   CmpInst::Predicate Pred = Cmp->getCond();
 
-  /*
-    %x:_(p0) = COPY $x0
-    %y:_(p0) = COPY $x1
-    %zero:_(p0) = G_CONSTANT i64 0
-    %cmp1:_(s1) = G_ICMP intpred(eq), %x:_(p0), %zero:_
-   */
-
-  if (MRI.getType(LHS).isPointer() || MRI.getType(RHS).isPointer())
-    return false;
-
-  if (!MRI.getType(LHS).isScalar() || !MRI.getType(RHS).isScalar())
-    return false;
-
   GZext *ZL = cast<GZext>(MRI.getVRegDef(LHS));
   GZext *ZR = cast<GZext>(MRI.getVRegDef(RHS));
 

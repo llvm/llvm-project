@@ -2024,9 +2024,6 @@ bool llvm::isKnownNonZero(Register Reg, const MachineRegisterInfo &MRI,
   if (Ty.isPointer())
     return false;
 
-  if (!Ty.isScalar())
-    errs() << "type: " << Ty << '\n';
-
   assert(Ty.isScalar() && "Expected a scalar value");
   return ::isKnownNonZero(Reg, MRI, KB, Depth);
 }
