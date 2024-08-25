@@ -150,7 +150,6 @@ private:
 
   std::deque<RegisteredEntry> m_recognizers;
   uint16_t m_generation = 0;
-  std::unordered_set<Mangled::NamePreference> m_used_manglings;
 };
 
 /// \class ValueObjectRecognizerSynthesizedValue

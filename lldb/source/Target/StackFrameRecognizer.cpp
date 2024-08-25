@@ -67,7 +67,6 @@ void StackFrameRecognizerManager::AddRecognizer(
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
                             module, RegularExpressionSP(), symbols,
                             RegularExpressionSP(), first_instruction_only});
-  m_used_manglings.insert(mangling_preference);
   BumpGeneration();
 }
 
@@ -79,7 +78,6 @@ void StackFrameRecognizerManager::AddRecognizer(
                             ConstString(), module, std::vector<ConstString>(),
                             symbol, first_instruction_only,
                             mangling_preference});
-  m_used_manglings.insert(mangling_preference);
   BumpGeneration();
 }
 
@@ -124,30 +122,12 @@ bool StackFrameRecognizerManager::RemoveRecognizerWithID(
 void StackFrameRecognizerManager::RemoveAllRecognizers() {
   BumpGeneration();
   m_recognizers.clear();
-  m_used_manglings.clear();
 }
 
 StackFrameRecognizerSP
 StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   const SymbolContext &symctx = frame->GetSymbolContext(
       eSymbolContextModule | eSymbolContextFunction | eSymbolContextSymbol);
-  ConstString function_name_mangled;
-  ConstString function_name_demangled;
-  ConstString function_name_noargs;
-  for (Mangled::NamePreference m : m_used_manglings) {
-    switch (m) {
-    case Mangled::ePreferMangled:
-      function_name_mangled = symctx.GetFunctionName(m);
-      break;
-    case Mangled::ePreferDemangled:
-      function_name_demangled = symctx.GetFunctionName(m);
-      break;
-    case Mangled::ePreferDemangledWithoutArguments:
-      function_name_noargs = symctx.GetFunctionName(m);
-      break;
-    }
-  }
-
   ModuleSP module_sp = symctx.module_sp;
   if (!module_sp)
     return StackFrameRecognizerSP();
@@ -170,11 +150,11 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
     ConstString function_name = [&]() {
       switch (entry.mangling_preference) {
       case Mangled::ePreferMangled:
-        return function_name_mangled;
+        return symctx.GetFunctionName(entry.mangling_preference);
       case Mangled::ePreferDemangled:
-        return function_name_demangled;
+        return symctx.GetFunctionName(entry.mangling_preference);
       case Mangled::ePreferDemangledWithoutArguments:
-        return function_name_noargs;
+        return symctx.GetFunctionName(entry.mangling_preference);
       }
     }();
 
