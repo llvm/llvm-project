@@ -1630,8 +1630,6 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
 }
 
 void MipsConstantIslands::prescanForConstants() {
-  unsigned J = 0;
-  (void)J;
   for (MachineBasicBlock &B : *MF) {
     for (MachineBasicBlock::instr_iterator I = B.instr_begin(),
                                            EB = B.instr_end();
@@ -1640,8 +1638,7 @@ void MipsConstantIslands::prescanForConstants() {
         case Mips::LwConstant32: {
           PrescannedForConstants = true;
           LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
-          J = I->getNumOperands();
-          LLVM_DEBUG(dbgs() << "num operands " << J << "\n");
+          LLVM_DEBUG(dbgs() << "num operands " << I->getNumOperands() << "\n");
           MachineOperand& Literal = I->getOperand(1);
           if (Literal.isImm()) {
             int64_t V = Literal.getImm();
