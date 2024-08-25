@@ -405,13 +405,13 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
 
     const auto EquivalentForBoolLiteral =
         getEquivalentForBoolLiteral(BoolLiteral, DestType, Context);
-    if (UseUpperCaseLiteralSuffix) {
+    if (UseUpperCaseLiteralSuffix)
       Diag << tooling::fixit::createReplacement(
           *Cast, EquivalentForBoolLiteral.upper());
-    } else {
+    else
       Diag << tooling::fixit::createReplacement(*Cast,
                                                 EquivalentForBoolLiteral);
-    }
+
   } else {
     fixGenericExprCastFromBool(Diag, Cast, Context, DestType.getAsString());
   }
