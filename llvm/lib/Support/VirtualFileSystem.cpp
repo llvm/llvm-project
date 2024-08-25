@@ -2800,7 +2800,7 @@ bool JSONWriter::containedIn(StringRef Parent, StringRef Path) {
 StringRef JSONWriter::containedPart(StringRef Parent, StringRef Path) {
   assert(!Parent.empty());
   assert(containedIn(Parent, Path));
-  return Path.slice(Parent.size() + 1, StringRef::npos);
+  return Path.substr(Parent.size() + 1);
 }
 
 void JSONWriter::startDirectory(StringRef Path) {
@@ -2866,7 +2866,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
     if (UseOverlayRelative) {
       assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDir.size(), RPath.size());
+      RPath = RPath.substr(OverlayDir.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2899,7 +2899,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       if (UseOverlayRelative) {
         assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDir.size(), RPath.size());
+        RPath = RPath.substr(OverlayDir.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
