@@ -173,6 +173,7 @@ private:
   TypeNode *demangleType(std::string_view &MangledName,
                          QualifierMangleMode QMM);
   PrimitiveTypeNode *demanglePrimitiveType(std::string_view &MangledName);
+  PlaceholderTypeNode *demanglePlaceholderType(std::string_view &MangledName);
   CustomTypeNode *demangleCustomType(std::string_view &MangledName);
   TagTypeNode *demangleClassType(std::string_view &MangledName);
   PointerTypeNode *demanglePointerType(std::string_view &MangledName);

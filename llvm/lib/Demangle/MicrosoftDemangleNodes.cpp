@@ -153,6 +153,14 @@ void PrimitiveTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
   outputQualifiers(OB, Quals, true, false);
 }
 
+void PlaceholderTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
+  switch (PlaceholderKind) {
+    OUTPUT_ENUM_CLASS_VALUE(PlaceholderKind, Auto, "auto");
+    OUTPUT_ENUM_CLASS_VALUE(PlaceholderKind, DecltypeAuto, "decltype(auto)");
+  };
+  outputQualifiers(OB, Quals, true, false);
+}
+
 void NodeArrayNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   output(OB, Flags, ", ");
 }

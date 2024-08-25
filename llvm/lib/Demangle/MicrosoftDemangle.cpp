@@ -241,6 +241,11 @@ static bool isFunctionType(std::string_view S) {
          llvm::itanium_demangle::starts_with(S, "$$A6");
 }
 
+static bool isPlaceholderType(std::string_view S) {
+  return llvm::itanium_demangle::starts_with(S, "_P") ||
+         llvm::itanium_demangle::starts_with(S, "_T");
+}
+
 static FunctionRefQualifier
 demangleFunctionRefQualifier(std::string_view &MangledName) {
   if (consumeFront(MangledName, 'G'))
@@ -1865,6 +1870,8 @@ TypeNode *Demangler::demangleType(std::string_view &MangledName,
     }
   } else if (isCustomType(MangledName)) {
     Ty = demangleCustomType(MangledName);
+  } else if (isPlaceholderType(MangledName)) {
+    Ty = demanglePlaceholderType(MangledName);
   } else {
     Ty = demanglePrimitiveType(MangledName);
   }
@@ -1976,6 +1983,23 @@ CustomTypeNode *Demangler::demangleCustomType(std::string_view &MangledName) {
   if (Error)
     return nullptr;
   return CTN;
+}
+
+PlaceholderTypeNode *
+Demangler::demanglePlaceholderType(std::string_view &MangledName) {
+  assert(MangledName.front() == '_');
+
+  MangledName.remove_prefix(1);
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
+  case 'P':
+    return Arena.alloc<PlaceholderTypeNode>(PlaceholderKind::Auto);
+  case 'T':
+    return Arena.alloc<PlaceholderTypeNode>(PlaceholderKind::DecltypeAuto);
+  }
+  Error = true;
+  return nullptr;
 }
 
 // Reads a primitive type.

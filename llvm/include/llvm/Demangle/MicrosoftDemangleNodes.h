@@ -106,6 +106,11 @@ enum class PrimitiveKind {
   Nullptr,
 };
 
+enum class PlaceholderKind {
+  Auto,
+  DecltypeAuto,
+};
+
 enum class CharKind {
   Char,
   Char16,
@@ -251,7 +256,8 @@ enum class NodeKind {
   LocalStaticGuardVariable,
   FunctionSymbol,
   VariableSymbol,
-  SpecialTableSymbol
+  SpecialTableSymbol,
+  PlaceholderType,
 };
 
 struct Node {
@@ -270,6 +276,7 @@ private:
 
 struct TypeNode;
 struct PrimitiveTypeNode;
+struct PlaceholderTypeNode;
 struct FunctionSignatureNode;
 struct IdentifierNode;
 struct NamedIdentifierNode;
@@ -316,6 +323,16 @@ struct PrimitiveTypeNode : public TypeNode {
   void outputPost(OutputBuffer &OB, OutputFlags Flags) const override {}
 
   PrimitiveKind PrimKind;
+};
+
+struct PlaceholderTypeNode : public TypeNode {
+  explicit PlaceholderTypeNode(PlaceholderKind K)
+      : TypeNode(NodeKind::PlaceholderType), PlaceholderKind(K) {}
+
+  void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
+  void outputPost(OutputBuffer &OB, OutputFlags Flags) const override {}
+
+  PlaceholderKind PlaceholderKind;
 };
 
 struct FunctionSignatureNode : public TypeNode {
