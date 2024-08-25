@@ -13776,6 +13776,12 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
 
+  if (N0.getOpcode() == ISD::FP_TO_SINT &&
+      N0.getScalarValueSizeInBits() <= VT.getScalarSizeInBits() &&
+      (!LegalOperations || TLI.isOperationLegal(N0.getOpcode(), VT))) {
+    return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0));
+  }
+
   return SDValue();
 }
 
