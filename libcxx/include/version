@@ -510,7 +510,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_bind_front
 # define __cpp_lib_bind_front                           202306L
 # define __cpp_lib_bitset                               202306L
-// # define __cpp_lib_constexpr_new                        202406L
+# if !defined(_LIBCPP_ABI_VCRUNTIME)
+#   define __cpp_lib_constexpr_new                      202406L
+# endif
 // # define __cpp_lib_constrained_equality                 202403L
 // # define __cpp_lib_copyable_function                    202306L
 // # define __cpp_lib_debugging                            202311L

@@ -363,7 +363,8 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_new",
             "values": {"c++26": 202406},  # P2747R2 constexpr placement new
             "headers": ["new"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_ABI_VCRUNTIME)",
+            "libcxx_guard": "!defined(_LIBCPP_ABI_VCRUNTIME)",
         },
         {
             "name": "__cpp_lib_constexpr_numeric",
