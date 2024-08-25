@@ -5316,7 +5316,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
-    const Expr *SubExpr = E->getSubExpr();
+  const Expr *SubExpr = E->getSubExpr();
   assert(SubExpr->getType()->isVectorType());
 
   if (DiscardResult)
@@ -5374,10 +5374,13 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
     if (!createTemp())
       return false;
 
-    // In C++, the logic operators !, &&, || are available for vectors. !v is equivalent to v == 0.
-    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html 
-    QualType SignedVecT = Ctx.getASTContext().GetSignedVectorType(SubExpr->getType());
-    PrimType SignedElemT = classifyPrim(SignedVecT->getAs<VectorType>()->getElementType());
+    // In C++, the logic operators !, &&, || are available for vectors. !v is
+    // equivalent to v == 0.
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    QualType SignedVecT =
+        Ctx.getASTContext().GetSignedVectorType(SubExpr->getType());
+    PrimType SignedElemT =
+        classifyPrim(SignedVecT->getAs<VectorType>()->getElementType());
     for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
@@ -5393,13 +5396,14 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
         if (!this->emitNeg(ElemT, E))
           return false;
         if (ElemT != SignedElemT &&
-          !this->emitPrimCast(ElemT, SignedElemT, SignedVecT, E))
-        return false;
+            !this->emitPrimCast(ElemT, SignedElemT, SignedVecT, E))
+          return false;
       } else {
-        // Float types result in an int of the same size, but -1 for true, or 0 for
-        // false.
+        // Float types result in an int of the same size, but -1 for true, or 0
+        // for false.
         auto &FpSemantics = Ctx.getFloatSemantics(VecT->getElementType());
-        unsigned NumBits = Ctx.getBitWidth(SignedVecT->getAs<VectorType>()->getElementType());
+        unsigned NumBits =
+            Ctx.getBitWidth(SignedVecT->getAs<VectorType>()->getElementType());
         auto Zero = APFloat::getZero(FpSemantics);
         APSInt SIntZero(APSInt::getZero(NumBits));
         APSInt SIntAllOne(APSInt::getAllOnes(NumBits));
