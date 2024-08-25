@@ -45,6 +45,11 @@
 #include <limits>
 #include <new> // __launder
 
+#ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
+#  include <__debug_utils/randomize_range.h>
+#  include <__numeric/iota.h>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -980,6 +985,9 @@ private:
   template <bool _UniqueKeys>
   _LIBCPP_HIDE_FROM_ABI void __do_rehash(size_type __n);
 
+  template <bool _UniqueKeys>
+  _LIBCPP_HIDE_FROM_ABI void __debug_randomize_order();
+
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI __node_holder __construct_node(_Args&&... __args);
 
@@ -1702,6 +1710,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_D
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <bool _UniqueKeys>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc) {
+  __debug_randomize_order<_UniqueKeys>();
   __pointer_allocator& __npa = __bucket_list_.get_deleter().__alloc();
   __bucket_list_.reset(__nbc > 0 ? __pointer_alloc_traits::allocate(__npa, __nbc) : nullptr);
   __bucket_list_.get_deleter().size() = __nbc;
@@ -1739,6 +1748,54 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc) {
       }
     }
   }
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <bool _UniqueKeys>
+void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__debug_randomize_order() {
+#ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
+  size_type __total_nodes       = size();
+  size_type __initialized_nodes = 0;
+
+  // Storage to handle non-assignable, non-default constructible __node_holder.
+  union __nh_storage {
+    __nh_storage() {}
+    ~__nh_storage() {}
+    __node_holder __nh;
+  };
+
+  auto __nh_storage_deleter = [&__initialized_nodes](__nh_storage* __p) {
+    for (size_type __i = 0; __i < __initialized_nodes; ++__i)
+      __p[__i].__nh.~__node_holder();
+    delete[] __p;
+  };
+
+  // Allocate storage for nodes and indices.
+  unique_ptr<__nh_storage[], decltype(__nh_storage_deleter)> __nodes(
+      new __nh_storage[__total_nodes], __nh_storage_deleter);
+  unique_ptr<size_type[]> __randomized_indices(new size_type[__total_nodes]);
+
+  // Move nodes into temporary storage.
+  for (; __initialized_nodes < __total_nodes; ++__initialized_nodes)
+    new (std::addressof(__nodes[__initialized_nodes].__nh)) __node_holder(remove(begin()));
+
+  // Randomize the order of indices.
+  std::iota(__randomized_indices.get(), __randomized_indices.get() + __total_nodes, size_type{0});
+  __debug_randomize_range<_ClassicAlgPolicy>(__randomized_indices.get(), __randomized_indices.get() + __total_nodes);
+
+  // Reinsert nodes into the hash table in randomized order.
+  for (size_type __i = 0; __i < __total_nodes; ++__i) {
+    __node_holder& __nh = __nodes[__randomized_indices[__i]].__nh;
+    __node_pointer __np = __nh->__upcast();
+    if _LIBCPP_CONSTEXPR_SINCE_CXX17 (_UniqueKeys) {
+      __node_insert_unique_perform(__np);
+    } else {
+      __next_pointer __pn = __node_insert_multi_prepare(__np->__hash(), __np->__get_value());
+      __node_insert_multi_perform(__np, __pn);
+    }
+    __nh.release();
+  }
+#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
