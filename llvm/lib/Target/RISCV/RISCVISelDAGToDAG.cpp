@@ -2670,7 +2670,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
     }
 
     // For RV32Zdinx we need to have more than 4 byte alignment so we can add 4
-    // to the offset when we expandin RISCVExpandPseudoInsts.
+    // to the offset when we expand in RISCVExpandPseudoInsts.
     if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
       const DataLayout &DL = CurDAG->getDataLayout();
       Align Alignment = commonAlignment(
