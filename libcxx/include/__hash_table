@@ -47,7 +47,6 @@
 
 #ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
 #  include <__debug_utils/randomize_range.h>
-#  include <__numeric/iota.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
