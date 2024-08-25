@@ -977,7 +977,22 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
         ScopeForParameters.InstantiatedLocal(PVD, PVD);
         continue;
       }
-      // Parameter packs should expand to a size-of-1 argument.
+      // This is hacky: we're mapping the parameter pack to a size-of-1 argument
+      // to avoid building SubstTemplateTypeParmPackTypes for
+      // PackExpansionTypes. The SubstTemplateTypeParmPackType node would
+      // otherwise reference the AssociatedDecl of the template arguments, which
+      // is, in this case, the template declaration.
+      //
+      // However, as we're also calculating the redeclarations of the template,
+      // the canonical declarations thereof are actually themselves at the
+      // moment. So if we didn't expand these packs, we would end up with an
+      // incorrect profile difference because we will be profiling the
+      // canonical types!
+      //
+      // FIXME: Improve the "no-transform" machinery in FindInstantiatedDecl so
+      // that we can eliminate the Scope in the cases where the declarations are
+      // not necessarily instantiated. It would also benefit the noexcept
+      // specifier comparison.
       ScopeForParameters.MakeInstantiatedLocalArgPack(PVD);
       ScopeForParameters.InstantiatedLocalPackArg(PVD, PVD);
     }
