@@ -18,47 +18,43 @@
 #include "test_macros.h"
 #include "type_algorithms.h"
 
+#if TEST_STD_VER >= 23
+#  define COMPILE_OR_RUNTIME_ASSERT(expr) static_assert(expr)
+#else
+#  define COMPILE_OR_RUNTIME_ASSERT(expr) assert(expr)
+#endif
+
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::isnormal(std::numeric_limits<T>::max()));
-    assert(!std::isnormal(std::numeric_limits<T>::infinity()));
-    assert(std::isnormal(std::numeric_limits<T>::min()));
-    assert(!std::isnormal(std::numeric_limits<T>::denorm_min()));
-    assert(std::isnormal(std::numeric_limits<T>::lowest()));
-    assert(!std::isnormal(-std::numeric_limits<T>::infinity()));
-    assert(!std::isnormal(T(0)));
-    assert(!std::isnormal(std::numeric_limits<T>::quiet_NaN()));
-    assert(!std::isnormal(std::numeric_limits<T>::signaling_NaN()));
-
-    return true;
+  static void test() {
+    COMPILE_OR_RUNTIME_ASSERT(std::isnormal(std::numeric_limits<T>::max()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(std::numeric_limits<T>::infinity()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isnormal(std::numeric_limits<T>::min()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(std::numeric_limits<T>::denorm_min()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isnormal(std::numeric_limits<T>::lowest()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(-std::numeric_limits<T>::infinity()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(T(0)));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(std::numeric_limits<T>::quiet_NaN()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(std::numeric_limits<T>::signaling_NaN()));
   }
 
   template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
+  void operator()() {
     test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::isnormal(std::numeric_limits<T>::max()));
-    assert(std::isnormal(std::numeric_limits<T>::lowest()) == std::is_signed<T>::value);
-    assert(!std::isnormal(T(0)));
-
-    return true;
+  static void test() {
+    COMPILE_OR_RUNTIME_ASSERT(std::isnormal(std::numeric_limits<T>::max()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isnormal(std::numeric_limits<T>::lowest()) == std::is_signed<T>::value);
+    COMPILE_OR_RUNTIME_ASSERT(!std::isnormal(T(0)));
   }
 
   template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
+  void operator()() {
     test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 

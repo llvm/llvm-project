@@ -18,53 +18,49 @@
 #include "test_macros.h"
 #include "type_algorithms.h"
 
+#if TEST_STD_VER >= 23
+#  define COMPILE_OR_RUNTIME_ASSERT(expr) static_assert(expr)
+#else
+#  define COMPILE_OR_RUNTIME_ASSERT(expr) assert(expr)
+#endif
+
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::isfinite(std::numeric_limits<T>::max()));
-    assert(!std::isfinite(std::numeric_limits<T>::infinity()));
-    assert(std::isfinite(std::numeric_limits<T>::min()));
-    assert(std::isfinite(std::numeric_limits<T>::denorm_min()));
-    assert(std::isfinite(std::numeric_limits<T>::lowest()));
-    assert(!std::isfinite(-std::numeric_limits<T>::infinity()));
-    assert(std::isfinite(T(0)));
-    assert(!std::isfinite(std::numeric_limits<T>::quiet_NaN()));
-    assert(!std::isfinite(std::numeric_limits<T>::signaling_NaN()));
-
-    return true;
+  static void test() {
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(std::numeric_limits<T>::max()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isfinite(std::numeric_limits<T>::infinity()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(std::numeric_limits<T>::min()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(std::numeric_limits<T>::denorm_min()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(std::numeric_limits<T>::lowest()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isfinite(-std::numeric_limits<T>::infinity()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(T(0)));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isfinite(std::numeric_limits<T>::quiet_NaN()));
+    COMPILE_OR_RUNTIME_ASSERT(!std::isfinite(std::numeric_limits<T>::signaling_NaN()));
   }
 
   template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
+  void operator()() {
     test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::isfinite(std::numeric_limits<T>::max()));
-    assert(std::isfinite(std::numeric_limits<T>::lowest()));
-    assert(std::isfinite(T(0)));
-
-    return true;
+  static void test() {
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(std::numeric_limits<T>::max()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(std::numeric_limits<T>::lowest()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(T(0)));
   }
 
   template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
+  void operator()() {
     test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
 template <typename T>
 struct ConvertibleTo {
-  operator T() const { return T(); }
+  TEST_CONSTEXPR_CXX23 operator T() const { return T(); }
 };
 
 int main(int, char**) {
@@ -73,9 +69,9 @@ int main(int, char**) {
 
   // Make sure we can call `std::isfinite` with convertible types
   {
-    assert(std::isfinite(ConvertibleTo<float>()));
-    assert(std::isfinite(ConvertibleTo<double>()));
-    assert(std::isfinite(ConvertibleTo<long double>()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(ConvertibleTo<float>()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(ConvertibleTo<double>()));
+    COMPILE_OR_RUNTIME_ASSERT(std::isfinite(ConvertibleTo<long double>()));
   }
 
   return 0;
