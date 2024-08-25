@@ -217,10 +217,7 @@ bb:
 }
 
 ; GCN-LABEL: @canonicalize_combine_v2f16
-; GFX8: call half @llvm.canonicalize.f16(
-; GFX8: call half @llvm.canonicalize.f16(
-
-; GFX9: call <2 x half> @llvm.canonicalize.v2f16(
+; GCN: call <2 x half> @llvm.canonicalize.v2f16(
 define void @canonicalize_combine_v2f16(ptr addrspace(1) %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -330,11 +327,8 @@ bb:
 }
 
 ; GCN-LABEL: @canonicalize_combine_v4f16
-; GFX8: call half @llvm.canonicalize.f16(
-; GFX8: call half @llvm.canonicalize.f16(
-
-; GFX9: call <2 x half> @llvm.canonicalize.v2f16(
-; GFX9: call <2 x half> @llvm.canonicalize.v2f16(
+; GCN: call <2 x half> @llvm.canonicalize.v2f16(
+; GCN: call <2 x half> @llvm.canonicalize.v2f16(
 define void @canonicalize_combine_v4f16(ptr addrspace(1) %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()

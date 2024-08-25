@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
-#define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
 
 #include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1373,8 +1373,7 @@ public:
 
   InstructionOpcodeMatcher(unsigned InsnVarID,
                            ArrayRef<const CodeGenInstruction *> I)
-      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID),
-        Insts(I.begin(), I.end()) {
+      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID), Insts(I) {
     assert((Insts.size() == 1 || Insts.size() == 2) &&
            "unexpected number of opcode alternatives");
   }
@@ -1553,7 +1552,7 @@ public:
   MemoryAddressSpacePredicateMatcher(unsigned InsnVarID, unsigned MMOIdx,
                                      ArrayRef<unsigned> AddrSpaces)
       : InstructionPredicateMatcher(IPM_MemoryAddressSpace, InsnVarID),
-        MMOIdx(MMOIdx), AddrSpaces(AddrSpaces.begin(), AddrSpaces.end()) {}
+        MMOIdx(MMOIdx), AddrSpaces(AddrSpaces) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_MemoryAddressSpace;
@@ -2505,4 +2504,4 @@ public:
 } // namespace gi
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H

@@ -911,6 +911,26 @@ func.func @identity_buffer(%arg0 : memref<?xf32>, %arg1: memref<?xf32>) {
 
 // -----
 
+#map = affine_map<(d0, d1) -> (d1, d0)>
+func.func @erase_non_identity_noop(%arg0 : tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [#map, #map],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%arg0 : tensor<?x?xf32>)
+    outs(%arg1 : tensor<?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in: f32
+  } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32> 
+}
+
+// Do not erase ops with buffer semantics.
+// CHECK-LABEL: func @erase_non_identity_noop
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: tensor<?x?xf32>)
+//       CHECK:   return %[[ARG0]] : tensor<?x?xf32>
+
+// -----
+
 // Just make sure that we don't crash.
 
 // CHECK-LABEL: func @dedeplicate_regression_test
@@ -1196,3 +1216,19 @@ func.func @concats_of_fill(
 //       CHECK:   %[[CONCAT:.+]] = tensor.concat dim(1) %[[EMPTY0]], %[[EMPTY1]]
 //       CHECK:   %[[FILL:.+]] = linalg.fill ins(%[[CST]] : f32) outs(%[[CONCAT]] :
 //       CHECK:   return %[[FILL]]
+
+// -----
+
+func.func @transpose_buffer(%input: memref<?xf32>,
+                            %init: memref<?xf32>) {
+  linalg.transpose ins(%input:memref<?xf32>)
+                   outs(%init:memref<?xf32>)
+                   permutation = [0]
+  func.return
+}
+
+// CHECK-LABEL:   func.func @transpose_buffer(
+//  CHECK-SAME:            %[[VAL_0:.*]]: memref<?xf32>,
+//  CHECK-SAME:            %[[VAL_1:.*]]: memref<?xf32>) {
+//       CHECK:     linalg.transpose ins(%[[VAL_0]] : memref<?xf32>)
+//  CHECK-SAME:       outs(%[[VAL_1]] : memref<?xf32>) permutation = [0]

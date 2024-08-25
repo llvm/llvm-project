@@ -552,9 +552,17 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
-  KernelLaunchParamsTy LaunchParams =
-      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
-                  Ptrs, *KernelLaunchEnvOrErr);
+  KernelLaunchParamsTy LaunchParams;
+
+  // Kernel languages don't use indirection.
+  if (KernelArgs.Flags.IsCUDA) {
+    LaunchParams =
+        *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
+  } else {
+    LaunchParams =
+        prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
+                    Args, Ptrs, *KernelLaunchEnvOrErr);
+  }
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
   uint64_t NumBlocks =
@@ -832,6 +840,20 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
            DeviceMemoryPoolTracking.AllocationTotal,
            DeviceMemoryPoolTracking.AllocationMin,
            DeviceMemoryPoolTracking.AllocationMax);
+  }
+
+  for (auto *Image : LoadedImages) {
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    if (!Handler.hasProfilingGlobals(*this, *Image))
+      continue;
+
+    GPUProfGlobals profdata;
+    auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
+    if (!ProfOrErr)
+      return ProfOrErr.takeError();
+
+    // TODO: write data to profiling file
+    ProfOrErr->dump();
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,

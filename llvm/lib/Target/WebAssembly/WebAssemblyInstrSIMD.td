@@ -43,7 +43,7 @@ multiclass HALF_PRECISION_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                             list<dag> pattern_r, string asmstr_r = "",
                             string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
-                            asmstr_s, simdop, [HasHalfPrecision]>;
+                            asmstr_s, simdop, [HasFP16]>;
 }
 
 
@@ -273,13 +273,13 @@ defm : LoadPat<vec.vt, loadpat, inst>;
 multiclass SIMDLoadZero<Vec vec, bits<32> simdop> {
   defvar name = "v128.load"#vec.lane_bits#"_zero";
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_ZERO_#vec#_A32 :
+  defm LOAD_ZERO_#vec.lane_bits#_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
            name#"\t$dst, ${off}(${addr})$p2align",
            name#"\t$off$p2align", simdop>;
-  defm LOAD_ZERO_#vec#_A64 :
+  defm LOAD_ZERO_#vec.lane_bits#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
@@ -293,32 +293,32 @@ defm "" : SIMDLoadZero<I64x2, 0x5d>;
 
 // Use load_zero to load scalars into vectors as well where possible.
 // TODO: i16, and i8 scalars
-foreach vec = [I32x4, I64x2] in {
-  defvar inst = "LOAD_ZERO_"#vec;
+foreach vec = [I32x4, I64x2, F32x4, F64x2] in {
+  defvar inst = "LOAD_ZERO_"#vec.lane_bits;
   defvar pat = PatFrag<(ops node:$addr), (scalar_to_vector (vec.lane_vt (load $addr)))>;
   defm : LoadPat<vec.vt, pat, inst>;
 }
 
 // TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {
-  defvar inst = "LOAD_ZERO_"#vec;
+  defvar inst = "LOAD_ZERO_"#vec.lane_bits;
   defvar pat = PatFrag<(ops node:$ptr),
     (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
   defm : LoadPat<vec.vt, pat, inst>;
 }
 
 // Load lane
-multiclass SIMDLoadLane<Vec vec, bits<32> simdop> {
-  defvar name = "v128.load"#vec.lane_bits#"_lane";
+multiclass SIMDLoadLane<bits<32> lane_bits, bits<32> simdop> {
+  defvar name = "v128.load"#lane_bits#"_lane";
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_LANE_#vec#_A32 :
+  defm LOAD_LANE_#lane_bits#_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx,
                 I32:$addr, V128:$vec),
            (outs), (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx),
            [], name#"\t$dst, ${off}(${addr})$p2align, $vec, $idx",
            name#"\t$off$p2align, $idx", simdop>;
-  defm LOAD_LANE_#vec#_A64 :
+  defm LOAD_LANE_#lane_bits#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
                 I64:$addr, V128:$vec),
@@ -328,15 +328,15 @@ multiclass SIMDLoadLane<Vec vec, bits<32> simdop> {
   } // mayLoad = 1, UseNamedOperandTable = 1
 }
 
-defm "" : SIMDLoadLane<I8x16, 0x54>;
-defm "" : SIMDLoadLane<I16x8, 0x55>;
-defm "" : SIMDLoadLane<I32x4, 0x56>;
-defm "" : SIMDLoadLane<I64x2, 0x57>;
+defm "" : SIMDLoadLane<8, 0x54>;
+defm "" : SIMDLoadLane<16, 0x55>;
+defm "" : SIMDLoadLane<32, 0x56>;
+defm "" : SIMDLoadLane<64, 0x57>;
 
 // Select loads with no constant offset.
 multiclass LoadLanePatNoOffset<Vec vec, SDPatternOperator kind> {
-  defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec#"_A32");
-  defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec#"_A64");
+  defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A32");
+  defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A64");
   def : Pat<(vec.vt (kind (i32 I32:$addr),
               (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
             (load_lane_a32 0, 0, imm:$idx, $addr, $vec)>,
@@ -354,17 +354,22 @@ def load16_lane :
   PatFrag<(ops node:$ptr, node:$vec, node:$idx),
           (vector_insert $vec, (i32 (extloadi16 $ptr)), $idx)>;
 def load32_lane :
-  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
-          (vector_insert $vec, (i32 (load $ptr)), $idx)>;
+  PatFrags<(ops node:$ptr, node:$vec, node:$idx), [
+           (vector_insert $vec, (i32 (load $ptr)), $idx),
+           (vector_insert $vec, (f32 (load $ptr)), $idx)
+]>;
 def load64_lane :
-  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
-          (vector_insert $vec, (i64 (load $ptr)), $idx)>;
-// TODO: floating point lanes as well
+  PatFrags<(ops node:$ptr, node:$vec, node:$idx), [
+           (vector_insert $vec, (i64 (load $ptr)), $idx),
+           (vector_insert $vec, (f64 (load $ptr)), $idx)
+]>;
 
 defm : LoadLanePatNoOffset<I8x16, load8_lane>;
 defm : LoadLanePatNoOffset<I16x8, load16_lane>;
 defm : LoadLanePatNoOffset<I32x4, load32_lane>;
 defm : LoadLanePatNoOffset<I64x2, load64_lane>;
+defm : LoadLanePatNoOffset<F32x4, load32_lane>;
+defm : LoadLanePatNoOffset<F64x2, load64_lane>;
 
 // TODO: Also support the other load patterns for load_lane once the instructions
 // are merged to the proposal.
@@ -745,7 +750,7 @@ multiclass SIMDCondition<Vec vec, string name, CondCode cond, bits<32> simdop,
 
 multiclass HalfPrecisionCondition<Vec vec, string name, CondCode cond,
                                   bits<32> simdop> {
-  defm "" : SIMDCondition<vec, name, cond, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDCondition<vec, name, cond, simdop, [HasFP16]>;
 }
 
 multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
@@ -827,7 +832,7 @@ multiclass SIMDBinary<Vec vec, SDPatternOperator node, string name,
 
 multiclass HalfPrecisionBinary<Vec vec, SDPatternOperator node, string name,
                                bits<32> simdop> {
-  defm "" : SIMDBinary<vec, node, name, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDBinary<vec, node, name, simdop, [HasFP16]>;
 }
 
 multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
@@ -852,7 +857,7 @@ multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name,
 
 multiclass HalfPrecisionUnary<Vec vec, SDPatternOperator node, string name,
                               bits<32> simdop> {
-  defm "" : SIMDUnary<vec, node, name, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDUnary<vec, node, name, simdop, [HasFP16]>;
 }
 
 // Bitwise logic: v128.not
@@ -1350,7 +1355,7 @@ multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
 
 multiclass HalfPrecisionConvert<Vec vec, Vec arg, SDPatternOperator op,
                                 string name, bits<32> simdop> {
-  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasFP16]>;
 }
 
 // Floating point to integer with saturation: trunc_sat
@@ -1463,10 +1468,10 @@ def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
 // Adapted from the body of LoadPatNoOffset
 // TODO: other addressing patterns
 def : Pat<(v2f64 (extloadv2f32 (i32 I32:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_I64x2_A32 0, 0, I32:$addr))>,
+          (promote_low_F64x2 (LOAD_ZERO_64_A32 0, 0, I32:$addr))>,
       Requires<[HasAddr32]>;
 def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_I64x2_A64 0, 0, I64:$addr))>,
+          (promote_low_F64x2 (LOAD_ZERO_64_A64 0, 0, I64:$addr))>,
       Requires<[HasAddr64]>;
 
 //===----------------------------------------------------------------------===//
@@ -1527,7 +1532,7 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasHalfPrecision]>;
+defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasFP16]>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect

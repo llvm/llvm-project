@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "LLVMInlining.h"
 #include "TypeDetail.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -24,6 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -2666,6 +2667,39 @@ OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
 // ConstantOp.
 //===----------------------------------------------------------------------===//
 
+/// Compute the total number of elements in the given type, also taking into
+/// account nested types. Supported types are `VectorType`, `LLVMArrayType` and
+/// `LLVMFixedVectorType`. Everything else is treated as a scalar.
+static int64_t getNumElements(Type t) {
+  if (auto vecType = dyn_cast<VectorType>(t))
+    return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
+    return arrayType.getNumElements() *
+           getNumElements(arrayType.getElementType());
+  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
+    return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  assert(!isa<LLVM::LLVMScalableVectorType>(t) &&
+         "number of elements of a scalable vector type is unknown");
+  return 1;
+}
+
+/// Check if the given type is a scalable vector type or a vector/array type
+/// that contains a nested scalable vector type.
+static bool hasScalableVectorType(Type t) {
+  if (isa<LLVM::LLVMScalableVectorType>(t))
+    return true;
+  if (auto vecType = dyn_cast<VectorType>(t)) {
+    if (vecType.isScalable())
+      return true;
+    return hasScalableVectorType(vecType.getElementType());
+  }
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
+    return hasScalableVectorType(arrayType.getElementType());
+  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
+    return hasScalableVectorType(vecType.getElementType());
+  return false;
+}
+
 LogicalResult LLVM::ConstantOp::verify() {
   if (StringAttr sAttr = llvm::dyn_cast<StringAttr>(getValue())) {
     auto arrayType = llvm::dyn_cast<LLVMArrayType>(getType());
@@ -2677,45 +2711,49 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     return success();
   }
-  if (auto structType = llvm::dyn_cast<LLVMStructType>(getType())) {
-    if (structType.getBody().size() != 2 ||
-        structType.getBody()[0] != structType.getBody()[1]) {
-      return emitError() << "expected struct type with two elements of the "
-                            "same type, the type of a complex constant";
+  if (auto structType = dyn_cast<LLVMStructType>(getType())) {
+    auto arrayAttr = dyn_cast<ArrayAttr>(getValue());
+    if (!arrayAttr) {
+      return emitOpError() << "expected array attribute for a struct constant";
     }
 
-    auto arrayAttr = llvm::dyn_cast<ArrayAttr>(getValue());
-    if (!arrayAttr || arrayAttr.size() != 2) {
-      return emitOpError() << "expected array attribute with two elements, "
-                              "representing a complex constant";
+    ArrayRef<Type> elementTypes = structType.getBody();
+    if (arrayAttr.size() != elementTypes.size()) {
+      return emitOpError() << "expected array attribute of size "
+                           << elementTypes.size();
     }
-    auto re = llvm::dyn_cast<TypedAttr>(arrayAttr[0]);
-    auto im = llvm::dyn_cast<TypedAttr>(arrayAttr[1]);
-    if (!re || !im || re.getType() != im.getType()) {
-      return emitOpError()
-             << "expected array attribute with two elements of the same type";
+    for (auto elementTy : elementTypes) {
+      if (!isa<IntegerType, FloatType, LLVMPPCFP128Type>(elementTy)) {
+        return emitOpError() << "expected struct element types to be floating "
+                                "point type or integer type";
+      }
     }
 
-    Type elementType = structType.getBody()[0];
-    if (!llvm::isa<IntegerType, Float16Type, Float32Type, Float64Type>(
-            elementType)) {
-      return emitError()
-             << "expected struct element types to be floating point type or "
-                "integer type";
+    for (size_t i = 0; i < elementTypes.size(); ++i) {
+      Attribute element = arrayAttr[i];
+      if (!isa<IntegerAttr, FloatAttr>(element)) {
+        return emitOpError()
+               << "expected struct element attribute types to be floating "
+                  "point type or integer type";
+      }
+      auto elementType = cast<TypedAttr>(element).getType();
+      if (elementType != elementTypes[i]) {
+        return emitOpError()
+               << "struct element at index " << i << " is of wrong type";
+      }
     }
+
     return success();
   }
   if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
     return emitOpError() << "does not support target extension type.";
   }
-  if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
-    return emitOpError()
-           << "only supports integer, float, string or elements attributes";
+
+  // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
   if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
-  }
-  if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
+  } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     unsigned floatWidth = APFloat::getSizeInBits(sem);
     if (auto floatTy = dyn_cast<FloatType>(getType())) {
@@ -2728,13 +2766,34 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
-  }
-  if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
-    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
-        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
-        !isa<LLVM::LLVMScalableVectorType>(getType()))
+  } else if (isa<ElementsAttr, ArrayAttr>(getValue())) {
+    if (hasScalableVectorType(getType())) {
+      // The exact number of elements of a scalable vector is unknown, so we
+      // allow only splat attributes.
+      auto splatElementsAttr = dyn_cast<SplatElementsAttr>(getValue());
+      if (!splatElementsAttr)
+        return emitOpError()
+               << "scalable vector type requires a splat attribute";
+      return success();
+    }
+    if (!isa<VectorType, LLVM::LLVMArrayType, LLVM::LLVMFixedVectorType>(
+            getType()))
       return emitOpError() << "expected vector or array type";
+    // The number of elements of the attribute and the type must match.
+    int64_t attrNumElements;
+    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue()))
+      attrNumElements = elementsAttr.getNumElements();
+    else
+      attrNumElements = cast<ArrayAttr>(getValue()).size();
+    if (getNumElements(getType()) != attrNumElements)
+      return emitOpError()
+             << "type and attribute have a different number of elements: "
+             << getNumElements(getType()) << " vs. " << attrNumElements;
+  } else {
+    return emitOpError()
+           << "only supports integer, float, string or elements attributes";
   }
+
   return success();
 }
 
@@ -3200,7 +3259,7 @@ void LLVMDialect::initialize() {
   // clang-format off
   addInterfaces<LLVMOpAsmDialectInterface>();
   // clang-format on
-  detail::addLLVMInlinerInterface(this);
+  declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
 }
 
 #define GET_OP_CLASSES

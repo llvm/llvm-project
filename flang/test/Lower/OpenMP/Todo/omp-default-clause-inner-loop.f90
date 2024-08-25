@@ -1,13 +1,14 @@
 ! This test checks the lowering of parallel do
 
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
-! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - \
+! RUN: | FileCheck %s
+
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - \
+! RUN: | FileCheck %s
 
 ! The string "EXPECTED" denotes the expected FIR
 
-! CHECK: omp.parallel   {
-! EXPECTED: %[[PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFEy"}
-! EXPECTED: %[[PRIVATE_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFEz"}
+! CHECK: omp.parallel  private(@{{.*}} %{{.*}} -> %[[PRIVATE_Y:.*]] : !fir.ref<i32>, @{{.*}} %{{.*}} -> %[[PRIVATE_Y:.*]] : !fir.ref<i32>) {
 ! CHECK: %[[TEMP:.*]] = fir.alloca i32 {bindc_name = "x", pinned, {{.*}}}
 ! CHECK: %[[const_1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[const_2:.*]] = arith.constant 10 : i32
