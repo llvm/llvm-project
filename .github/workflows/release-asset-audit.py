@@ -28,6 +28,7 @@ def main():
             "maryammo",
             "tstellar",
             "github-actions[bot]",
+            "keith",
         ]
     )
 
