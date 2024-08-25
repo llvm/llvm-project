@@ -1558,6 +1558,14 @@ public:
   /// Return a WebAssembly externref type.
   QualType getWebAssemblyExternrefType() const;
 
+  /// Return a signed ext_vector_type that is of identical size and number of
+  /// elements. For floating point vectors, return an integer type of identical
+  /// size and number of elements. In the non ext_vector_type case, search from
+  /// the largest type to the smallest type to avoid cases where long long ==
+  /// long, where long gets picked over long long.
+  QualType GetSignedVectorType(QualType V);
+  QualType GetSignedSizelessVectorType(QualType V);
+
   /// Return the unique reference to a vector type of the specified
   /// element type and size.
   ///

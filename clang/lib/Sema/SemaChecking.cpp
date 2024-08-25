@@ -4906,7 +4906,7 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   // TODO: When all classification function are implemented with is_fpclass,
   // vector argument can be supported in all of them.
   if (ElementTy->isVectorType() && IsFPClass) {
-    VectorResultTy = GetSignedVectorType(ElementTy);
+    VectorResultTy = Context.GetSignedVectorType(ElementTy);
     ElementTy = ElementTy->castAs<VectorType>()->getElementType();
   }
 

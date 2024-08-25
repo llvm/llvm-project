@@ -4991,6 +4991,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
+  if (SubExpr->getType()->isVectorType())
+    return this->VisitVectorUnaryOp(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -5305,6 +5307,145 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   case UO_Extension:
     return this->delegate(SubExpr);
 
+  default:
+    return this->emitInvalid(E);
+  }
+
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
+    const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isVectorType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  std::optional<PrimType> ResT = classify(E);
+  auto prepareResult = [=]() -> bool {
+    if (!ResT && !Initializing) {
+      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+      if (!LocalIndex)
+        return false;
+      return this->emitGetPtrLocal(*LocalIndex, E);
+    }
+
+    return true;
+  };
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset = ~0u;
+  auto createTemp = [=, &SubExprOffset]() -> bool {
+    SubExprOffset = this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitSetLocal(PT_Ptr, SubExprOffset, E);
+  };
+
+  const auto *VecT = SubExpr->getType()->getAs<VectorType>();
+  PrimType ElemT = classifyVectorElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (E->getOpcode()) {
+  case UO_Plus: // +x
+    return this->delegate(SubExpr);
+  case UO_Minus:
+    if (!prepareResult())
+      return false;
+    if (!createTemp())
+      return false;
+    for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  case UO_LNot: { // !x
+    if (!prepareResult())
+      return false;
+    if (!createTemp())
+      return false;
+
+    // In C++, the logic operators !, &&, || are available for vectors. !v is equivalent to v == 0.
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html 
+    QualType SignedVecT = Ctx.getASTContext().GetSignedVectorType(SubExpr->getType());
+    PrimType SignedElemT = classifyPrim(SignedVecT->getAs<VectorType>()->getElementType());
+    for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      if (isIntegralType(ElemT)) {
+        if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+          return false;
+        if (!this->emitInv(E))
+          return false;
+        if (!this->emitPrimCast(PT_Bool, ElemT, VecT->getElementType(), E))
+          return false;
+        if (!this->emitNeg(ElemT, E))
+          return false;
+        if (ElemT != SignedElemT &&
+          !this->emitPrimCast(ElemT, SignedElemT, SignedVecT, E))
+        return false;
+      } else {
+        // Float types result in an int of the same size, but -1 for true, or 0 for
+        // false.
+        auto &FpSemantics = Ctx.getFloatSemantics(VecT->getElementType());
+        unsigned NumBits = Ctx.getBitWidth(SignedVecT->getAs<VectorType>()->getElementType());
+        auto Zero = APFloat::getZero(FpSemantics);
+        APSInt SIntZero(APSInt::getZero(NumBits));
+        APSInt SIntAllOne(APSInt::getAllOnes(NumBits));
+        // Emit operations equivalent to isZero(Vec[I]) ? -1 : 0
+        if (!this->emitConstFloat(Zero, E))
+          return false;
+        if (!this->emitEQ(ElemT, E))
+          return false;
+        LabelTy LabelFalse = this->getLabel();
+        LabelTy LabelEnd = this->getLabel();
+        if (!this->jumpFalse(LabelFalse))
+          return false;
+        if (!this->emitConst(SIntAllOne, SignedElemT, E))
+          return false;
+        if (!this->jump(LabelEnd))
+          return false;
+        this->emitLabel(LabelFalse);
+        if (!this->emitConst(SIntZero, SignedElemT, E))
+          return false;
+        this->fallthrough(LabelEnd);
+        this->emitLabel(LabelEnd);
+      }
+      if (!this->emitInitElem(SignedElemT, I, E))
+        return false;
+    }
+    break;
+  }
+  case UO_Not: // ~x
+    if (!prepareResult())
+      return false;
+    if (!createTemp())
+      return false;
+    for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (ElemT == PT_Bool) {
+        if (!this->emitInv(E))
+          return false;
+      } else {
+        if (!this->emitComp(ElemT, E))
+          return false;
+      }
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
   default:
     return this->emitInvalid(E);
   }

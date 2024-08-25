@@ -7393,14 +7393,6 @@ public:
                                bool AllowBothBool, bool AllowBoolConversion,
                                bool AllowBoolOperation, bool ReportInvalid);
 
-  /// Return a signed ext_vector_type that is of identical size and number of
-  /// elements. For floating point vectors, return an integer type of identical
-  /// size and number of elements. In the non ext_vector_type case, search from
-  /// the largest type to the smallest type to avoid cases where long long ==
-  /// long, where long gets picked over long long.
-  QualType GetSignedVectorType(QualType V);
-  QualType GetSignedSizelessVectorType(QualType V);
-
   /// CheckVectorCompareOperands - vector comparisons are a clang extension that
   /// operates on extended vector types.  Instead of producing an IntTy result,
   /// like a scalar comparison, a vector comparison produces a vector of integer

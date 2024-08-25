@@ -4444,6 +4444,56 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   return QualType();
 }
 
+QualType ASTContext::GetSignedVectorType(QualType V) {
+  const VectorType *VTy = V->castAs<VectorType>();
+  unsigned TypeSize = getTypeSize(VTy->getElementType());
+
+  if (isa<ExtVectorType>(VTy)) {
+    if (VTy->isExtVectorBoolType())
+      return getExtVectorType(BoolTy, VTy->getNumElements());
+    if (TypeSize == getTypeSize(CharTy))
+      return getExtVectorType(CharTy, VTy->getNumElements());
+    if (TypeSize == getTypeSize(ShortTy))
+      return getExtVectorType(ShortTy, VTy->getNumElements());
+    if (TypeSize == getTypeSize(IntTy))
+      return getExtVectorType(IntTy, VTy->getNumElements());
+    if (TypeSize == getTypeSize(Int128Ty))
+      return getExtVectorType(Int128Ty, VTy->getNumElements());
+    if (TypeSize == getTypeSize(LongTy))
+      return getExtVectorType(LongTy, VTy->getNumElements());
+    assert(TypeSize == getTypeSize(LongLongTy) &&
+           "Unhandled vector element size in vector compare");
+    return getExtVectorType(LongLongTy, VTy->getNumElements());
+  }
+
+  if (TypeSize == getTypeSize(Int128Ty))
+    return getVectorType(Int128Ty, VTy->getNumElements(), VectorKind::Generic);
+  if (TypeSize == getTypeSize(LongLongTy))
+    return getVectorType(LongLongTy, VTy->getNumElements(),
+                         VectorKind::Generic);
+  if (TypeSize == getTypeSize(LongTy))
+    return getVectorType(LongTy, VTy->getNumElements(), VectorKind::Generic);
+  if (TypeSize == getTypeSize(IntTy))
+    return getVectorType(IntTy, VTy->getNumElements(), VectorKind::Generic);
+  if (TypeSize == getTypeSize(ShortTy))
+    return getVectorType(ShortTy, VTy->getNumElements(), VectorKind::Generic);
+  assert(TypeSize == getTypeSize(CharTy) &&
+         "Unhandled vector element size in vector compare");
+  return getVectorType(CharTy, VTy->getNumElements(), VectorKind::Generic);
+}
+
+QualType ASTContext::GetSignedSizelessVectorType(QualType V) {
+  const BuiltinType *VTy = V->castAs<BuiltinType>();
+  assert(VTy->isSizelessBuiltinType() && "expected sizeless type");
+
+  const QualType ETy = V->getSveEltType(*this);
+  const auto TypeSize = getTypeSize(ETy);
+
+  const QualType IntTy = getIntTypeForBitwidth(TypeSize, true);
+  const llvm::ElementCount VecSize = getBuiltinVectorTypeInfo(VTy).EC;
+  return getScalableVectorType(IntTy, VecSize.getKnownMinValue());
+}
+
 /// getVectorType - Return the unique reference to a vector type of
 /// the specified element type and size. VectorType must be a built-in type.
 QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,

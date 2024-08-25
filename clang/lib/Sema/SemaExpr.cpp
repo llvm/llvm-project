@@ -12534,61 +12534,6 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   return InvalidOperands(Loc, LHS, RHS);
 }
 
-QualType Sema::GetSignedVectorType(QualType V) {
-  const VectorType *VTy = V->castAs<VectorType>();
-  unsigned TypeSize = Context.getTypeSize(VTy->getElementType());
-
-  if (isa<ExtVectorType>(VTy)) {
-    if (VTy->isExtVectorBoolType())
-      return Context.getExtVectorType(Context.BoolTy, VTy->getNumElements());
-    if (TypeSize == Context.getTypeSize(Context.CharTy))
-      return Context.getExtVectorType(Context.CharTy, VTy->getNumElements());
-    if (TypeSize == Context.getTypeSize(Context.ShortTy))
-      return Context.getExtVectorType(Context.ShortTy, VTy->getNumElements());
-    if (TypeSize == Context.getTypeSize(Context.IntTy))
-      return Context.getExtVectorType(Context.IntTy, VTy->getNumElements());
-    if (TypeSize == Context.getTypeSize(Context.Int128Ty))
-      return Context.getExtVectorType(Context.Int128Ty, VTy->getNumElements());
-    if (TypeSize == Context.getTypeSize(Context.LongTy))
-      return Context.getExtVectorType(Context.LongTy, VTy->getNumElements());
-    assert(TypeSize == Context.getTypeSize(Context.LongLongTy) &&
-           "Unhandled vector element size in vector compare");
-    return Context.getExtVectorType(Context.LongLongTy, VTy->getNumElements());
-  }
-
-  if (TypeSize == Context.getTypeSize(Context.Int128Ty))
-    return Context.getVectorType(Context.Int128Ty, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.LongLongTy))
-    return Context.getVectorType(Context.LongLongTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.LongTy))
-    return Context.getVectorType(Context.LongTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.IntTy))
-    return Context.getVectorType(Context.IntTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.ShortTy))
-    return Context.getVectorType(Context.ShortTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  assert(TypeSize == Context.getTypeSize(Context.CharTy) &&
-         "Unhandled vector element size in vector compare");
-  return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
-                               VectorKind::Generic);
-}
-
-QualType Sema::GetSignedSizelessVectorType(QualType V) {
-  const BuiltinType *VTy = V->castAs<BuiltinType>();
-  assert(VTy->isSizelessBuiltinType() && "expected sizeless type");
-
-  const QualType ETy = V->getSveEltType(Context);
-  const auto TypeSize = Context.getTypeSize(ETy);
-
-  const QualType IntTy = Context.getIntTypeForBitwidth(TypeSize, true);
-  const llvm::ElementCount VecSize = Context.getBuiltinVectorTypeInfo(VTy).EC;
-  return Context.getScalableVectorType(IntTy, VecSize.getKnownMinValue());
-}
-
 QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                           SourceLocation Loc,
                                           BinaryOperatorKind Opc) {
@@ -12647,7 +12592,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   // Return a signed type for the vector.
-  return GetSignedVectorType(vType);
+  return Context.GetSignedVectorType(vType);
 }
 
 QualType Sema::CheckSizelessVectorCompareOperands(ExprResult &LHS,
@@ -12688,7 +12633,7 @@ QualType Sema::CheckSizelessVectorCompareOperands(ExprResult &LHS,
     return LHSType;
 
   // Return a signed type for the vector.
-  return GetSignedSizelessVectorType(vType);
+  return Context.GetSignedSizelessVectorType(vType);
 }
 
 static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
@@ -12835,7 +12780,7 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
       !(isa<ExtVectorType>(vType->getAs<VectorType>())))
     return InvalidLogicalVectorOperands(Loc, LHS, RHS);
 
-  return GetSignedVectorType(LHS.get()->getType());
+  return Context.GetSignedVectorType(LHS.get()->getType());
 }
 
 QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
@@ -14535,7 +14480,7 @@ static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
   // If Opc is a comparison, ResultType is a vector of shorts. In that case,
   // change BinOpResTy to a vector of ints.
   if (isVector(ResultTy, Context.ShortTy))
-    BinOpResTy = S.GetSignedVectorType(BinOpResTy);
+    BinOpResTy = S.Context.GetSignedVectorType(BinOpResTy);
 
   if (IsCompAssign)
     return CompoundAssignOperator::Create(Context, LHS.get(), RHS.get(), Opc,
@@ -15449,7 +15394,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                              << resultType << Input.get()->getSourceRange());
         }
         // Vector logical not returns the signed variant of the operand type.
-        resultType = GetSignedVectorType(resultType);
+        resultType = Context.GetSignedVectorType(resultType);
         break;
       } else if (Context.getLangOpts().CPlusPlus &&
                  resultType->isVectorType()) {
@@ -15459,7 +15404,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                            << resultType << Input.get()->getSourceRange());
 
         // Vector logical not returns the signed variant of the operand type.
-        resultType = GetSignedVectorType(resultType);
+        resultType = Context.GetSignedVectorType(resultType);
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
