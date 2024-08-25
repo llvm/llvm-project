@@ -437,6 +437,22 @@ static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
   return From.isSafeToMove(SawStore);
 }
 
+/// Given A and B are in the same MBB, returns true if A comes before B.
+static bool dominates(MachineBasicBlock::const_iterator A,
+                      MachineBasicBlock::const_iterator B) {
+  assert(A->getParent() == B->getParent());
+  const MachineBasicBlock *MBB = A->getParent();
+  auto MBBEnd = MBB->end();
+  if (B == MBBEnd)
+    return true;
+
+  MachineBasicBlock::const_iterator I = MBB->begin();
+  for (; &*I != A && &*I != B; ++I)
+    ;
+
+  return &*I == A;
+}
+
 /// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
 /// into it.
 ///
@@ -481,12 +497,15 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (!isVLKnownLE(SrcVL, MI.getOperand(3)))
     return false;
 
-  // If Src ends up using MI's passthru/VL, move it so it can access it.
-  // TODO: We don't need to do this if they already dominate Src.
-  if (!SrcPassthru.isIdenticalTo(Passthru)) {
-    if (!isSafeToMove(*Src, MI))
-      return false;
-    Src->moveBefore(&MI);
+  // If the new passthru doesn't dominate Src, try to move Src so it does.
+  if (Passthru.getReg() != RISCV::NoRegister) {
+    MachineInstr *PassthruDef = MRI->getVRegDef(Passthru.getReg());
+    if (PassthruDef->getParent() == Src->getParent() &&
+        !dominates(PassthruDef, Src)) {
+      if (!isSafeToMove(*Src, *PassthruDef->getNextNode()))
+        return false;
+      Src->moveBefore(PassthruDef->getNextNode());
+    }
   }
 
   if (SrcPassthru.getReg() != Passthru.getReg()) {

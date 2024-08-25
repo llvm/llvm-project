@@ -7215,9 +7215,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Compute cost of branches for each replicate region in the VPlan,
   // which is more accurate than the legacy cost model.
   for (BasicBlock *BB : OrigLoop->blocks()) {
-    if (BB == OrigLoop->getLoopLatch())
+    if (CostCtx.skipCostComputation(BB->getTerminator(), VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(BB->getTerminator());
+    if (BB == OrigLoop->getLoopLatch())
+      continue;
     auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
     Cost += BranchCost;
   }
@@ -7237,11 +7239,12 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
+#ifndef NDEBUG
 /// Return true if the original loop \ TheLoop contains any instructions that do
 /// not have corresponding recipes in \p Plan and are not marked to be ignored
 /// in \p CostCtx. This means the VPlan contains simplification that the legacy
 /// cost-model did not account for.
-[[maybe_unused]] static bool
+static bool
 planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
                                       VPCostContext &CostCtx, Loop *TheLoop,
                                       LoopVectorizationCostModel &CM) {
@@ -7286,6 +7289,7 @@ planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
         });
       });
 }
+#endif
 
 VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   if (VPlans.empty())
