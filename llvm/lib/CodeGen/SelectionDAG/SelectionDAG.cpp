@@ -550,10 +550,10 @@ std::optional<unsigned> ISD::getBaseOpcodeForVP(unsigned VPOpcode,
   return std::nullopt;
 }
 
-unsigned ISD::getVPForBaseOpcode(unsigned Opcode) {
+std::optional<unsigned> ISD::getVPForBaseOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
-    llvm_unreachable("can not translate this Opcode to VP.");
+    return std::nullopt;
 #define BEGIN_REGISTER_VP_SDNODE(VPOPC, ...) break;
 #define VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC) case ISD::SDOPC:
 #define END_REGISTER_VP_SDNODE(VPOPC) return ISD::VPOPC;
@@ -5436,6 +5436,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FCEIL:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::FRINT:
   case ISD::LRINT:
   case ISD::LLRINT:
@@ -7626,16 +7628,34 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              SDValue N1, SDValue N2, SDValue N3, SDValue N4) {
+                              SDValue N1, SDValue N2, SDValue N3, SDValue N4,
+                              const SDNodeFlags Flags) {
   SDValue Ops[] = { N1, N2, N3, N4 };
-  return getNode(Opcode, DL, VT, Ops);
+  return getNode(Opcode, DL, VT, Ops, Flags);
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                              SDValue N1, SDValue N2, SDValue N3, SDValue N4) {
+  SDNodeFlags Flags;
+  if (Inserter)
+    Flags = Inserter->getFlags();
+  return getNode(Opcode, DL, VT, N1, N2, N3, N4, Flags);
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                              SDValue N1, SDValue N2, SDValue N3, SDValue N4,
+                              SDValue N5, const SDNodeFlags Flags) {
+  SDValue Ops[] = { N1, N2, N3, N4, N5 };
+  return getNode(Opcode, DL, VT, Ops, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, SDValue N3, SDValue N4,
                               SDValue N5) {
-  SDValue Ops[] = { N1, N2, N3, N4, N5 };
-  return getNode(Opcode, DL, VT, Ops);
+  SDNodeFlags Flags;
+  if (Inserter)
+    Flags = Inserter->getFlags();
+  return getNode(Opcode, DL, VT, N1, N2, N3, N4, N5, Flags);
 }
 
 /// getStackArgumentTokenFactor - Compute a TokenFactor to force all

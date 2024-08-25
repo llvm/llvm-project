@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple arm-unknown -mattr=+vfp2,+v4t -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=ARM -check-prefix=LITTLE
-; RUN: llc -O0 -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -global-isel-abort=0 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=ARM -check-prefix=BIG
+; RUN: llc -O0 -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -global-isel-abort=0 -enable-arm-gisel-bigendian -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=ARM -check-prefix=BIG
 ; RUN: llc -O0 -mtriple thumb-unknown -mattr=+vfp2,+v6t2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE -check-prefix=THUMB
 
 declare arm_aapcscc ptr @simple_reg_params_target(i32, ptr)

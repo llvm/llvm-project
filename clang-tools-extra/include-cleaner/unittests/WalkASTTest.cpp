@@ -557,9 +557,9 @@ TEST(WalkAST, FriendDecl) {
 }
 
 TEST(WalkAST, OperatorNewDelete) {
-  testWalk("void* $explicit^operator new(decltype(sizeof(int)), void*);",
+  testWalk("void* $ambiguous^operator new(decltype(sizeof(int)), void*);",
            "struct Bar { void foo() { Bar b; ^new (&b) Bar; } };");
-  testWalk("struct A { static void $explicit^operator delete(void*); };",
+  testWalk("struct A { static void $ambiguous^operator delete(void*); };",
            "void foo() { A a; ^delete &a; }");
 }
 } // namespace

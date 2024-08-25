@@ -92,6 +92,7 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
+bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
@@ -656,15 +657,9 @@ inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 // Inv
 //===----------------------------------------------------------------------===//
 
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Inv(InterpState &S, CodePtr OpPC) {
-  using BoolT = PrimConv<PT_Bool>::T;
-  const T &Val = S.Stk.pop<T>();
-  const unsigned Bits = Val.bitWidth();
-  Boolean R;
-  Boolean::inv(BoolT::from(Val, Bits), &R);
-
-  S.Stk.push<BoolT>(R);
+inline bool Inv(InterpState &S, CodePtr OpPC) {
+  const auto &Val = S.Stk.pop<Boolean>();
+  S.Stk.push<Boolean>(!Val);
   return true;
 }
 
@@ -1574,7 +1569,7 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd())
+  if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
   return true;
@@ -1587,7 +1582,7 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd())
+  if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
   return true;
@@ -1853,6 +1848,32 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
+  // This is much simpler for integral pointers, so handle them first.
+  if (Ptr.isIntegralPointer()) {
+    uint64_t V = Ptr.getIntegerRepresentation();
+    uint64_t O = static_cast<uint64_t>(Offset) * Ptr.elemSize();
+    if constexpr (Op == ArithOp::Add)
+      S.Stk.push<Pointer>(V + O, Ptr.asIntPointer().Desc);
+    else
+      S.Stk.push<Pointer>(V - O, Ptr.asIntPointer().Desc);
+    return true;
+  } else if (Ptr.isFunctionPointer()) {
+    uint64_t O = static_cast<uint64_t>(Offset);
+    uint64_t N;
+    if constexpr (Op == ArithOp::Add)
+      N = Ptr.getByteOffset() + O;
+    else
+      N = Ptr.getByteOffset() - O;
+
+    if (N > 1)
+      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << N << /*non-array*/ true << 0;
+    S.Stk.push<Pointer>(Ptr.asFunctionPointer().getFunction(), N);
+    return true;
+  }
+
+  assert(Ptr.isBlockPointer());
+
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
   uint64_t Index;
   if (Ptr.isOnePastEnd())
@@ -2018,10 +2039,15 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  T A = LHS.isElementPastEnd() ? T::from(LHS.getNumElems())
-                               : T::from(LHS.getIndex());
-  T B = RHS.isElementPastEnd() ? T::from(RHS.getNumElems())
-                               : T::from(RHS.getIndex());
+  T A = LHS.isBlockPointer()
+            ? (LHS.isElementPastEnd() ? T::from(LHS.getNumElems())
+                                      : T::from(LHS.getIndex()))
+            : T::from(LHS.getIntegerRepresentation());
+  T B = RHS.isBlockPointer()
+            ? (RHS.isElementPastEnd() ? T::from(RHS.getNumElems())
+                                      : T::from(RHS.getIndex()))
+            : T::from(RHS.getIntegerRepresentation());
+
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
 }
 
@@ -2582,9 +2608,11 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     // the function we're about to call is a lambda call operator,
     // skip the CheckInvoke, since the ThisPtr is a null pointer
     // anyway.
-    if (!(S.Current->getFunction() &&
-          S.Current->getFunction()->isLambdaStaticInvoker() &&
-          Func->isLambdaCallOperator())) {
+    if (S.Current->getFunction() &&
+        S.Current->getFunction()->isLambdaStaticInvoker() &&
+        Func->isLambdaCallOperator()) {
+      assert(ThisPtr.isZero());
+    } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return false;
     }
@@ -2720,7 +2748,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
   }
 
-  if (!FuncPtr.isValid())
+  if (!FuncPtr.isValid() || !F->getDecl())
     return Invalid(S, OpPC);
 
   assert(F);
@@ -2899,8 +2927,15 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
 
   if constexpr (std::is_same_v<FromT, FunctionPointer> &&
                 std::is_same_v<ToT, Pointer>) {
-    S.Stk.push<Pointer>(OldPtr.getFunction());
+    S.Stk.push<Pointer>(OldPtr.getFunction(), OldPtr.getOffset());
     return true;
+  } else if constexpr (std::is_same_v<FromT, Pointer> &&
+                       std::is_same_v<ToT, FunctionPointer>) {
+    if (OldPtr.isFunctionPointer()) {
+      S.Stk.push<FunctionPointer>(OldPtr.asFunctionPointer().getFunction(),
+                                  OldPtr.getByteOffset());
+      return true;
+    }
   }
 
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
@@ -3041,6 +3076,11 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
   }
   return CheckNewDeleteForms(S, OpPC, WasArrayAlloc, DeleteIsArrayForm,
                              BlockDesc, Source);
+}
+
+static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
+  S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+  return true;
 }
 
 inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {

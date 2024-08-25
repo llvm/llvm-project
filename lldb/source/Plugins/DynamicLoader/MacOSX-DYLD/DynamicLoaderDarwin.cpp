@@ -1151,7 +1151,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     // TLS data for the pthread_key on a specific thread yet. If we have we
     // can re-use it since its location will not change unless the process
     // execs.
-    const tid_t tid = thread_sp->GetID();
+    const lldb::tid_t tid = thread_sp->GetID();
     auto tid_pos = m_tid_to_tls_map.find(tid);
     if (tid_pos != m_tid_to_tls_map.end()) {
       auto tls_pos = tid_pos->second.find(key);

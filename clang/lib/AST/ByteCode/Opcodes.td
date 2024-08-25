@@ -103,10 +103,6 @@ def PtrTypeClass : TypeClass {
   let Types = [Ptr, FnPtr, MemberPtr];
 }
 
-def BoolTypeClass : TypeClass {
-  let Types = [Bool];
-}
-
 def NonPtrTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float]);
 }
@@ -574,11 +570,8 @@ def Shr : Opcode {
 // Unary operators.
 //===----------------------------------------------------------------------===//
 
-// [Real] -> [Real]
-def Inv: Opcode {
-  let Types = [BoolTypeClass];
-  let HasGroup = 1;
-}
+// [Bool] -> [Bool]
+def Inv: Opcode;
 
 // Increment and decrement.
 def Inc: AluOpcode;
@@ -787,3 +780,5 @@ def AllocCN : Opcode {
 def Free : Opcode {
   let Args = [ArgBool];
 }
+
+def IsConstantContext: Opcode;
