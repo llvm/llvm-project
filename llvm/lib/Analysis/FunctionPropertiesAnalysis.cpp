@@ -374,32 +374,17 @@ DominatorTree &FunctionPropertiesUpdater::getUpdatedDominatorTree(
   auto &DT =
       FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(Caller));
 
-  SetVector<const BasicBlock *> NewSucc;
-  NewSucc.insert(succ_begin(&CallSiteBB), succ_end(&CallSiteBB));
-
-  // tell the DomTree about the new edges
-  std::deque<const BasicBlock *> Worklist;
-  Worklist.push_back(&CallSiteBB);
-
-  // Build the list of edges to actually remove. Those are those edges in the
-  // DomTreeUpdates that cannot be found in the CFG anymore.
   SmallVector<DominatorTree::UpdateType, 2> FinalDomTreeUpdates;
-  while (!Worklist.empty()) {
-    auto *BB = Worklist.front();
-    Worklist.pop_front();
-    assert(DT.getNode(BB));
 
-    for (auto *Succ : NewSucc) {
-      if (!DT.getNode(Succ))
-        Worklist.push_back(Succ);
-      FinalDomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
-                                     const_cast<BasicBlock *>(BB),
-                                     const_cast<BasicBlock *>(Succ)});
-    }
-  }
   for (auto &Upd : DomTreeUpdates)
-    if (!llvm::is_contained(successors(Upd.getFrom()), Upd.getTo()))
-      FinalDomTreeUpdates.push_back(Upd);
+    FinalDomTreeUpdates.push_back(Upd);
+
+  DenseSet<const BasicBlock *> Inserted;
+  for (auto *Succ : successors(&CallSiteBB))
+    if (Inserted.insert(Succ).second)
+      FinalDomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                                     const_cast<BasicBlock *>(&CallSiteBB),
+                                     const_cast<BasicBlock *>(Succ)});
 
   DT.applyUpdates(FinalDomTreeUpdates);
 #ifdef EXPENSIVE_CHECKS
