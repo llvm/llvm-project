@@ -580,7 +580,7 @@ MIParser::MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
 
 void MIParser::lex(unsigned SkipChar) {
   CurrentSource = lexMIToken(
-      CurrentSource.slice(SkipChar, StringRef::npos), Token,
+      CurrentSource.substr(SkipChar), Token,
       [this](StringRef::iterator Loc, const Twine &Msg) { error(Loc, Msg); });
 }
 
@@ -2306,7 +2306,7 @@ bool MIParser::parseDIExpression(MDNode *&Expr) {
   Expr = llvm::parseDIExpressionBodyAtBeginning(
       CurrentSource, Read, Error, *PFS.MF.getFunction().getParent(),
       &PFS.IRSlots);
-  CurrentSource = CurrentSource.slice(Read, StringRef::npos);
+  CurrentSource = CurrentSource.substr(Read);
   lex();
   if (!Expr)
     return error(Error.getMessage());
