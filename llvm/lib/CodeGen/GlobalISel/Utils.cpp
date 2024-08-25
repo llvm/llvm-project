@@ -2148,7 +2148,7 @@ static bool isKnownNonZeroCastOp(const GCastOp &CastOp,
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
     // ext X != 0 if X != 0.
-    return isKnownNonZero(CastOp.getSrcReg(), MRI, KB);
+    return ::isKnownNonZero(CastOp.getSrcReg(), MRI, KB, Depth);
   case Instruction::Trunc:
     // nuw/nsw trunc preserves zero/non-zero status of input.
     if (CastOp.getFlag(MachineInstr::MIFlag::NoSWrap) ||
