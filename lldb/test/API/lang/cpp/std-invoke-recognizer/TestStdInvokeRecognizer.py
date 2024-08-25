@@ -16,16 +16,28 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
         )
 
         while process.GetState() != lldb.eStateExited:
-            self.assertTrue(any(f in thread.GetFrameAtIndex(0).GetFunctionName() for f in ["print_num", "add", "PrintAdder"]))
+            self.assertTrue(
+                any(
+                    f in thread.GetFrameAtIndex(0).GetFunctionName()
+                    for f in ["print_num", "add", "PrintAdder"]
+                )
+            )
             print(thread.GetFrameAtIndex(0).GetFunctionName())
             # Skip all hidden frames
             frame_id = 1
-            while frame_id < thread.GetNumFrames() and thread.GetFrameAtIndex(frame_id).IsHidden():
+            while (
+                frame_id < thread.GetNumFrames()
+                and thread.GetFrameAtIndex(frame_id).IsHidden()
+            ):
                 print(thread.GetFrameAtIndex(frame_id).GetFunctionName())
                 frame_id = frame_id + 1
             print(thread.GetFrameAtIndex(frame_id).GetFunctionName())
             # Expect `std::invoke` to be the direct parent
-            self.assertIn("::invoke", thread.GetFrameAtIndex(frame_id).GetFunctionName())
+            self.assertIn(
+                "::invoke", thread.GetFrameAtIndex(frame_id).GetFunctionName()
+            )
             # And right above that, there should be the `main` frame
-            self.assertIn("main", thread.GetFrameAtIndex(frame_id + 1).GetFunctionName())
+            self.assertIn(
+                "main", thread.GetFrameAtIndex(frame_id + 1).GetFunctionName()
+            )
             process.Continue()

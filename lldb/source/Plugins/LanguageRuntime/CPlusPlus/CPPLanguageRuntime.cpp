@@ -106,8 +106,8 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
         std::make_shared<RegularExpression>("^std::__[^:]*::"),
-        /*first_instruction_only=*/ false,
-        /*mangling_preference=*/ Mangled::ePreferDemangledWithoutArguments);
+        /*mangling_preference=*/Mangled::ePreferDemangledWithoutArguments,
+        /*first_instruction_only=*/false);
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
