@@ -53,7 +53,7 @@ int main(int, char**) {
   {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([] {
-          std::extents<char, D, 5> e1(std::array{1000, 5});
+          std::extents<signed char, D, 5> e1(std::array{1000, 5});
         }()),
         "extents ctor: arguments must be representable as index_type and nonnegative");
   }
@@ -61,7 +61,7 @@ int main(int, char**) {
   {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([] {
-          std::extents<char, D, 5> e1(std::array{-1, 5});
+          std::extents<signed char, D, 5> e1(std::array{-1, 5});
         }()),
         "extents ctor: arguments must be representable as index_type and nonnegative");
   }
