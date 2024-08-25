@@ -10,11 +10,13 @@
 #ifndef _LIBCPP___HASH_TABLE
 #define _LIBCPP___HASH_TABLE
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__bit/countl.h>
 #include <__config>
+#include <__debug_utils/randomize_range.h>
 #include <__functional/hash.h>
 #include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
@@ -44,10 +46,6 @@
 #include <cstring>
 #include <limits>
 #include <new> // __launder
-
-#ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
-#  include <__debug_utils/randomize_range.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
