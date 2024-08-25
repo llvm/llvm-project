@@ -415,32 +415,6 @@ enum NodeType : unsigned {
   /// operand 1 is the target address.
   SW_GUARDED_BRIND,
 
-  // FP to 32 bit int conversions for RV64. These are used to keep track of the
-  // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-  STRICT_FCVT_WU_RV64,
-  STRICT_FADD_VL,
-  STRICT_FSUB_VL,
-  STRICT_FMUL_VL,
-  STRICT_FDIV_VL,
-  STRICT_FSQRT_VL,
-  STRICT_VFMADD_VL,
-  STRICT_VFNMADD_VL,
-  STRICT_VFMSUB_VL,
-  STRICT_VFNMSUB_VL,
-  STRICT_FP_ROUND_VL,
-  STRICT_FP_EXTEND_VL,
-  STRICT_VFNCVT_ROD_VL,
-  STRICT_SINT_TO_FP_VL,
-  STRICT_UINT_TO_FP_VL,
-  STRICT_VFCVT_RM_X_F_VL,
-  STRICT_VFCVT_RTZ_X_F_VL,
-  STRICT_VFCVT_RTZ_XU_F_VL,
-  STRICT_FSETCC_VL,
-  STRICT_FSETCCS_VL,
-  STRICT_VFROUND_NOEXCEPT_VL,
-  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
-
   SF_VC_XV_SE,
   SF_VC_IV_SE,
   SF_VC_VV_SE,
@@ -467,6 +441,32 @@ enum NodeType : unsigned {
   SF_VC_V_IVW_SE,
   SF_VC_V_VVW_SE,
   SF_VC_V_FVW_SE,
+
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RV64,
+  STRICT_FADD_VL,
+  STRICT_FSUB_VL,
+  STRICT_FMUL_VL,
+  STRICT_FDIV_VL,
+  STRICT_FSQRT_VL,
+  STRICT_VFMADD_VL,
+  STRICT_VFNMADD_VL,
+  STRICT_VFMSUB_VL,
+  STRICT_VFNMSUB_VL,
+  STRICT_FP_ROUND_VL,
+  STRICT_FP_EXTEND_VL,
+  STRICT_VFNCVT_ROD_VL,
+  STRICT_SINT_TO_FP_VL,
+  STRICT_UINT_TO_FP_VL,
+  STRICT_VFCVT_RM_X_F_VL,
+  STRICT_VFCVT_RTZ_X_F_VL,
+  STRICT_VFCVT_RTZ_XU_F_VL,
+  STRICT_FSETCC_VL,
+  STRICT_FSETCCS_VL,
+  STRICT_VFROUND_NOEXCEPT_VL,
+  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
