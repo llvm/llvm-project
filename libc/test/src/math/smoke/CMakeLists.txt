@@ -3779,6 +3779,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanhf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanhf16_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.tanhf16
+)
+
+add_fp_unittest(
   atanhf_test
   SUITE
     libc-math-smoke-tests

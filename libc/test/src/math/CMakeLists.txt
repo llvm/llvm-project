@@ -1967,6 +1967,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanhf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanhf16_test.cpp
+  DEPENDS
+    libc.src.math.tanhf16
+)
+
+add_fp_unittest(
   atanhf_test
   NEED_MPFR
   SUITE
