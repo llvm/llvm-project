@@ -250,7 +250,7 @@ private:
         if (Precedence > prec::Conditional && Precedence < prec::Relational)
           return false;
       }
-      if (Prev.is(TT_ConditionalExpr))
+      if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
       updateParameterCount(Left, CurrentToken);
       if (Style.Language == FormatStyle::LK_Proto) {
