@@ -210,7 +210,7 @@ Attribute Changes in Clang
 - The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
   that a function requires an additional x86-64 thunk, which may be patched at runtime.
 
-- The attribute ``[[clang::diagnose_specializations]]`` has been added to warn
+- The attribute ``[[clang::no_specializations]]`` has been added to warn
   users that a specific template shouldn't be specialized. This is useful for
   e.g. standard library type traits, where adding a specialization results in
   undefined behaviour.

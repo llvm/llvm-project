@@ -104,7 +104,7 @@ def NonLocalVar : SubsetSubject<Var,
                                 [{!S->hasLocalStorage()}],
                                 "variables with non-local storage">;
 def VarTmpl : SubsetSubject<Var, [{S->getDescribedVarTemplate()}],
-                            "variable template">;
+                            "variable templates">;
 
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
@@ -3340,7 +3340,7 @@ def DiagnoseIf : InheritableAttr {
 }
 
 def DiagnoseSpecializations : InheritableAttr {
-  let Spellings = [Clang<"diagnose_specializations", /*AllowInC*/0>];
+  let Spellings = [Clang<"no_specializations", /*AllowInC*/0>];
   let Args = [StringArgument<"Message", 1>];
   let Subjects = SubjectList<[ClassTmpl, VarTmpl]>;
   let Documentation = [DiagnoseSpecializationsDocs];
@@ -4628,7 +4628,7 @@ def HLSLResource : InheritableAttr {
 def HLSLROV : InheritableAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let Subjects = SubjectList<[Struct]>;
-  let LangOpts = [HLSL]; 
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
