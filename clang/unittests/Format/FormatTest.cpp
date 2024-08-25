@@ -19314,6 +19314,15 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "X        = func<Type, Type>(looooooooooooooooooooooooong,\n"
                "                            arrrrrrrrrrg);",
                Alignment);
+
+  Alignment.ColumnLimit = 80;
+  Alignment.SpacesInAngles = FormatStyle::SIAS_Always;
+  verifyFormat("void **ptr = reinterpret_cast< void ** >(unkn);\n"
+               "ptr        = reinterpret_cast< void ** >(ptr[0]);",
+               Alignment);
+  verifyFormat("quint32 *dstimg  = reinterpret_cast< quint32 * >(out(i));\n"
+               "quint32 *dstmask = reinterpret_cast< quint32 * >(outmask(i));",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveBitFields) {
