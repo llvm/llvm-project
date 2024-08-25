@@ -21,18 +21,18 @@
 #include <mdspan>
 
 void invalid_index_types() {
-  // expected-error-re@*:* {{static assertion failed {{.*}}extents::index_type must be a signed or unsigned integer type}}
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
   [[maybe_unused]] std::extents<char, '*'> ec;
 #ifndef TEST_HAS_NO_CHAR8_T
-  // expected-error-re@*:* {{static assertion failed {{.*}}extents::index_type must be a signed or unsigned integer type}}
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
   [[maybe_unused]] std::extents<char8_t, u8'*'> ec8;
 #endif
-  // expected-error-re@*:* {{static assertion failed {{.*}}extents::index_type must be a signed or unsigned integer type}}
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
   [[maybe_unused]] std::extents<char16_t, u'*'> ec16;
-  // expected-error-re@*:* {{static assertion failed {{.*}}extents::index_type must be a signed or unsigned integer type}}
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
   [[maybe_unused]] std::extents<char32_t, U'*'> ec32;
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  // expected-error-re@*:* {{static assertion failed {{.*}}extents::index_type must be a signed or unsigned integer type}}
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
   [[maybe_unused]] std::extents<wchar_t, L'*'> ewc;
 #endif
 }
