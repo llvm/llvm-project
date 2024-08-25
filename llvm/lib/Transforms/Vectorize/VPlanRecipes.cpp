@@ -860,7 +860,9 @@ void VPIRInstruction::execute(VPTransformState &State) {
   assert(isa<VPIRBasicBlock>(getParent()) &&
          "VPIRInstructions can only be placed in VPIRBasicBlocks");
 
-  if (getNumOperands() == 1 && isa<PHINode>(&I)) {
+  assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
+         "Only PHINodes can have extra operands");
+  if (getNumOperands() == 1) {
     VPValue *ExitValue = getOperand(0);
     auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                     ? VPLane::getFirstLane()
@@ -882,6 +884,12 @@ void VPIRInstruction::execute(VPTransformState &State) {
 void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
                             VPSlotTracker &SlotTracker) const {
   O << Indent << "IR " << I;
+
+  if (getNumOperands() != 0) {
+    O << " (extra operands: ";
+    printOperands(O, SlotTracker);
+    O << ")";
+  }
 }
 #endif
 
