@@ -2874,6 +2874,8 @@ private:
     // Search for unexpected tokens.
     for (auto *Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous) {
       if (Prev->is(tok::r_paren)) {
+        if (Prev->is(TT_CastRParen))
+          return false;
         Prev = Prev->MatchingParen;
         if (!Prev)
           return false;
