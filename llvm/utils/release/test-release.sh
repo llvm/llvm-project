@@ -647,7 +647,7 @@ if [ $do_test_suite = "yes" ]; then
   TestSuiteSrcDir="$BuildDir/llvm-test-suite"
 
   ${venv} $SandboxDir
-  $SandboxDir/bin/python $BuildDir/llvm-project/llvm/utils/lit/setup.py install
+  $SandboxDir/bin/python -m pip install $BuildDir/llvm-project/llvm/utils/lit
   mkdir -p $TestSuiteBuildDir
 fi
 
