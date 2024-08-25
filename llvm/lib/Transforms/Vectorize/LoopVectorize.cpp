@@ -7904,11 +7904,7 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
 iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
 VPRecipeBuilder::mapToVPValues(User::op_range Operands) {
   std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-    if (auto *I = dyn_cast<Instruction>(Op)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
-    }
-    return Plan.getOrAddLiveIn(Op);
+    return getVPValueOrAddLiveIn(Op, Plan);
   };
   return map_range(Operands, Fn);
 }
