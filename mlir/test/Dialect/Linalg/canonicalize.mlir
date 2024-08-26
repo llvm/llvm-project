@@ -1216,3 +1216,19 @@ func.func @concats_of_fill(
 //       CHECK:   %[[CONCAT:.+]] = tensor.concat dim(1) %[[EMPTY0]], %[[EMPTY1]]
 //       CHECK:   %[[FILL:.+]] = linalg.fill ins(%[[CST]] : f32) outs(%[[CONCAT]] :
 //       CHECK:   return %[[FILL]]
+
+// -----
+
+func.func @transpose_buffer(%input: memref<?xf32>,
+                            %init: memref<?xf32>) {
+  linalg.transpose ins(%input:memref<?xf32>)
+                   outs(%init:memref<?xf32>)
+                   permutation = [0]
+  func.return
+}
+
+// CHECK-LABEL:   func.func @transpose_buffer(
+//  CHECK-SAME:            %[[VAL_0:.*]]: memref<?xf32>,
+//  CHECK-SAME:            %[[VAL_1:.*]]: memref<?xf32>) {
+//       CHECK:     linalg.transpose ins(%[[VAL_0]] : memref<?xf32>)
+//  CHECK-SAME:       outs(%[[VAL_1]] : memref<?xf32>) permutation = [0]

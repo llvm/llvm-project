@@ -40,6 +40,17 @@ BPFRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SaveList;
 }
 
+const uint32_t *
+BPFRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                      CallingConv::ID CC) const {
+  switch (CC) {
+  default:
+    return CSR_RegMask;
+  case CallingConv::PreserveAll:
+    return CSR_PreserveAll_RegMask;
+  }
+}
+
 BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, BPF::W10); // [W|R]10 is read only frame pointer

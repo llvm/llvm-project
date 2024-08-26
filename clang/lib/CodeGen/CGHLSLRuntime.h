@@ -79,7 +79,11 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Saturate, saturate)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FDot, fdot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.

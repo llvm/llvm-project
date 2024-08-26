@@ -326,7 +326,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   auto IsConstType = [&S](const VarDecl *VD) -> bool {
     QualType T = VD->getType();
 
-    if (T.isConstant(S.getCtx()))
+    if (T.isConstant(S.getASTContext()))
       return true;
 
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
@@ -523,9 +523,9 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(S.getLangOpts().CPlusPlus);
   const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
   if ((!VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(S.getCtx())) ||
+       VD->mightBeUsableInConstantExpressions(S.getASTContext())) ||
       (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
-       !VD->hasICEInitializer(S.getCtx()))) {
+       !VD->hasICEInitializer(S.getASTContext()))) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
     S.Note(VD->getLocation(), diag::note_declared_at);
@@ -555,6 +555,31 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK))
+    return false;
+  return true;
+}
+
+/// This is not used by any of the opcodes directly. It's used by
+/// EvalEmitter to do the final lvalue-to-rvalue conversion.
+bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckConstant(S, OpPC, Ptr))
+    return false;
+
+  if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckActive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckMutable(S, OpPC, Ptr))
     return false;
   return true;
 }
@@ -772,7 +797,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
   // but we want to get the array size right.
   if (D->isArray()) {
     QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getCtx().getConstantArrayType(
+    TypeToDiagnose = S.getASTContext().getConstantArrayType(
         ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
         nullptr, ArraySizeModifier::Normal, 0);
   } else
@@ -794,7 +819,7 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
   // Whatever this is, we didn't heap allocate it.
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
-      << Ptr.toDiagnosticString(S.getCtx());
+      << Ptr.toDiagnosticString(S.getASTContext());
 
   if (Ptr.isTemporary())
     S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
