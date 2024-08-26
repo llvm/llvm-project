@@ -257,7 +257,7 @@ SetVector<Function *> AMDGPUSwLowerLDS::getOrderedIndirectLDSAccessingKernels(
     Func->setMetadata("llvm.amdgcn.lds.kernel.id",
                       MDNode::get(Ctx, AttrMDArgs));
   }
-  return std::move(OrderedKernels);
+  return OrderedKernels;
 }
 
 void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
