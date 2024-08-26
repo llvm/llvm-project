@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class GCNDPPCombinePass : public MachinePassInfoMixin<GCNDPPCombinePass> {
+class GCNDPPCombinePass : public PassInfoMixin<GCNDPPCombinePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MAM);
