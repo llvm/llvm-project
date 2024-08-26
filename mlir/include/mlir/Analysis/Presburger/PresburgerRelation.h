@@ -142,9 +142,9 @@ public:
   SymbolicLexOpt findSymbolicIntegerLexMax() const;
 
   /// Return true if the set contains the given point, and false otherwise.
-  bool containsPoint(ArrayRef<MPInt> point) const;
+  bool containsPoint(ArrayRef<DynamicAPInt> point) const;
   bool containsPoint(ArrayRef<int64_t> point) const {
-    return containsPoint(getMPIntVec(point));
+    return containsPoint(getDynamicAPIntVec(point));
   }
 
   /// Return the complement of this set. All local variables in the set must
@@ -169,17 +169,17 @@ public:
   bool isIntegerEmpty() const;
 
   /// Return true if there is no disjunct, false otherwise.
-  bool isPlainEmpty() const;
+  bool isObviouslyEmpty() const;
 
   /// Return true if the set is known to have one unconstrained disjunct, false
   /// otherwise.
-  bool isPlainUniverse() const;
+  bool isObviouslyUniverse() const;
 
   /// Perform a quick equality check on `this` and `other`. The relations are
   /// equal if the check return true, but may or may not be equal if the check
   /// returns false. This is doing by directly comparing whether each internal
   /// disjunct is the same.
-  bool isPlainEqual(const PresburgerRelation &set) const;
+  bool isObviouslyEqual(const PresburgerRelation &set) const;
 
   /// Return true if the set is consist of a single disjunct, without any local
   /// variables, false otherwise.
@@ -187,7 +187,7 @@ public:
 
   /// Find an integer sample from the given set. This should not be called if
   /// any of the disjuncts in the union are unbounded.
-  bool findIntegerSample(SmallVectorImpl<MPInt> &sample);
+  bool findIntegerSample(SmallVectorImpl<DynamicAPInt> &sample);
 
   /// Compute an overapproximation of the number of integer points in the
   /// disjunct. Symbol vars are currently not supported. If the computed
@@ -196,7 +196,7 @@ public:
   /// This currently just sums up the overapproximations of the volumes of the
   /// disjuncts, so the approximation might be far from the true volume in the
   /// case when there is a lot of overlap between disjuncts.
-  std::optional<MPInt> computeVolume() const;
+  std::optional<DynamicAPInt> computeVolume() const;
 
   /// Simplifies the representation of a PresburgerRelation.
   ///
@@ -212,6 +212,14 @@ public:
   /// representation may involve local ids that correspond to divisions, and may
   /// also be a union of convex disjuncts.
   PresburgerRelation computeReprWithOnlyDivLocals() const;
+
+  /// Simplify each disjunct, canonicalizing each disjunct and removing
+  /// redundencies.
+  PresburgerRelation simplify() const;
+
+  /// Return whether the given PresburgerRelation is full-dimensional. By full-
+  /// dimensional we mean that it is not flat along any dimension.
+  bool isFullDim() const;
 
   /// Print the set's internal state.
   void print(raw_ostream &os) const;

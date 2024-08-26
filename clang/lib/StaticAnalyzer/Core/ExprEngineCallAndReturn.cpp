@@ -846,6 +846,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
+  case CE_CXXStaticOperator:
   case CE_Block:
     break;
   case CE_CXXMember:
@@ -888,7 +889,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     if (!Opts.mayInlineCXXMemberFunction(CIMK_Destructors))
       return CIP_DisallowedAlways;
 
-    if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete) {
+    if (CtorExpr->getConstructionKind() == CXXConstructionKind::Complete) {
       // If we don't handle temporary destructors, we shouldn't inline
       // their constructors.
       if (CallOpts.IsTemporaryCtorOrDtor &&

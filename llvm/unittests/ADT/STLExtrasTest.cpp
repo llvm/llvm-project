@@ -18,12 +18,14 @@
 #include <list>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 using namespace llvm;
 
 using testing::ElementsAre;
+using testing::UnorderedElementsAre;
 
 namespace {
 
@@ -403,6 +405,14 @@ std::vector<int>::const_iterator end(const some_struct &s) {
   return s.data.end();
 }
 
+std::vector<int>::const_reverse_iterator rbegin(const some_struct &s) {
+  return s.data.rbegin();
+}
+
+std::vector<int>::const_reverse_iterator rend(const some_struct &s) {
+  return s.data.rend();
+}
+
 void swap(some_struct &lhs, some_struct &rhs) {
   // make swap visible as non-adl swap would even seem to
   // work with std::swap which defaults to moving
@@ -541,12 +551,38 @@ TEST(STLExtrasTest, AppendRange) {
   EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'));
 }
 
+TEST(STLExtrasTest, AppendValues) {
+  std::vector<int> Vals = {1, 2};
+  append_values(Vals, 3);
+  EXPECT_THAT(Vals, ElementsAre(1, 2, 3));
+
+  append_values(Vals, 4, 5);
+  EXPECT_THAT(Vals, ElementsAre(1, 2, 3, 4, 5));
+
+  std::vector<StringRef> Strs;
+  std::string A = "A";
+  std::string B = "B";
+  std::string C = "C";
+  append_values(Strs, A, B);
+  EXPECT_THAT(Strs, ElementsAre(A, B));
+  append_values(Strs, C);
+  EXPECT_THAT(Strs, ElementsAre(A, B, C));
+
+  std::unordered_set<int> Set;
+  append_values(Set, 1, 2);
+  EXPECT_THAT(Set, UnorderedElementsAre(1, 2));
+  append_values(Set, 3, 1);
+  EXPECT_THAT(Set, UnorderedElementsAre(1, 2, 3));
+}
+
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
   some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};
 
   EXPECT_EQ(*adl_begin(s), 1);
   EXPECT_EQ(*(adl_end(s) - 1), 5);
+  EXPECT_EQ(*adl_rbegin(s), 5);
+  EXPECT_EQ(*(adl_rend(s) - 1), 1);
 
   adl_swap(s, s2);
   EXPECT_EQ(s.swap_val, "lhs");
@@ -978,6 +1014,19 @@ TEST(STLExtras, Unique) {
   EXPECT_EQ(3, V[3]);
 }
 
+TEST(STLExtras, UniqueNoPred) {
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
+
+  auto I = llvm::unique(V);
+
+  EXPECT_EQ(I, V.begin() + 4);
+
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(5, V[1]);
+  EXPECT_EQ(4, V[2]);
+  EXPECT_EQ(3, V[3]);
+}
+
 TEST(STLExtrasTest, MakeVisitorOneCallable) {
   auto IdentityLambda = [](auto X) { return X; };
   auto IdentityVisitor = makeVisitor(IdentityLambda);
@@ -1297,6 +1346,33 @@ TEST(STLExtrasTest, LessSecond) {
     std::tuple<int, int> B(1, 0);
     EXPECT_FALSE(less_second()(A, B));
     EXPECT_TRUE(less_second()(B, A));
+  }
+}
+
+TEST(STLExtrasTest, Mismatch) {
+  {
+    const int MMIndex = 5;
+    StringRef First = "FooBar";
+    StringRef Second = "FooBaz";
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.begin() + MMIndex);
+    EXPECT_EQ(MMSecond, Second.begin() + MMIndex);
+  }
+
+  {
+    SmallVector<int> First = {0, 1, 2};
+    SmallVector<int> Second = {0, 1, 2, 3};
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.end());
+    EXPECT_EQ(MMSecond, Second.begin() + 3);
+  }
+
+  {
+    SmallVector<int> First = {0, 1};
+    SmallVector<int> Empty;
+    auto [MMFirst, MMEmpty] = mismatch(First, Empty);
+    EXPECT_EQ(MMFirst, First.begin());
+    EXPECT_EQ(MMEmpty, Empty.begin());
   }
 }
 

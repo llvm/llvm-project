@@ -268,7 +268,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
-  BatchAAResults BatchAA(AA);
+  BatchAAResults BatchAA(AA, &EII);
   return getPointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst, Limit,
                                   BatchAA);
 }
@@ -291,10 +291,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   if (isa<GlobalValue>(LoadOperand))
     return MemDepResult::getUnknown();
 
-  // Queue to process all pointers that are equivalent to load operand.
-  SmallVector<const Value *, 8> LoadOperandsQueue;
-  LoadOperandsQueue.push_back(LoadOperand);
-
   Instruction *ClosestDependency = nullptr;
   // Order of instructions in uses list is unpredictible. In order to always
   // get the same result, we will look for the closest dominance.
@@ -305,44 +301,19 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
     return Best;
   };
 
-  // FIXME: This loop is O(N^2) because dominates can be O(n) and in worst case
-  // we will see all the instructions. This should be fixed in MSSA.
-  while (!LoadOperandsQueue.empty()) {
-    const Value *Ptr = LoadOperandsQueue.pop_back_val();
-    assert(Ptr && !isa<GlobalValue>(Ptr) &&
-           "Null or GlobalValue should not be inserted");
+  for (const Use &Us : LoadOperand->uses()) {
+    auto *U = dyn_cast<Instruction>(Us.getUser());
+    if (!U || U == LI || !DT.dominates(U, LI))
+      continue;
 
-    for (const Use &Us : Ptr->uses()) {
-      auto *U = dyn_cast<Instruction>(Us.getUser());
-      if (!U || U == LI || !DT.dominates(U, LI))
-        continue;
-
-      // Bitcast or gep with zeros are using Ptr. Add to queue to check it's
-      // users.      U = bitcast Ptr
-      if (isa<BitCastInst>(U)) {
-        LoadOperandsQueue.push_back(U);
-        continue;
-      }
-      // Gep with zeros is equivalent to bitcast.
-      // FIXME: we are not sure if some bitcast should be canonicalized to gep 0
-      // or gep 0 to bitcast because of SROA, so there are 2 forms. When
-      // typeless pointers will be ready then both cases will be gone
-      // (and this BFS also won't be needed).
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
-        if (GEP->hasAllZeroIndices()) {
-          LoadOperandsQueue.push_back(U);
-          continue;
-        }
-
-      // If we hit load/store with the same invariant.group metadata (and the
-      // same pointer operand) we can assume that value pointed by pointer
-      // operand didn't change.
-      if ((isa<LoadInst>(U) ||
-           (isa<StoreInst>(U) &&
-            cast<StoreInst>(U)->getPointerOperand() == Ptr)) &&
-          U->hasMetadata(LLVMContext::MD_invariant_group))
-        ClosestDependency = GetClosestDependency(ClosestDependency, U);
-    }
+    // If we hit load/store with the same invariant.group metadata (and the
+    // same pointer operand) we can assume that value pointed by pointer
+    // operand didn't change.
+    if ((isa<LoadInst>(U) ||
+         (isa<StoreInst>(U) &&
+          cast<StoreInst>(U)->getPointerOperand() == LoadOperand)) &&
+        U->hasMetadata(LLVMContext::MD_invariant_group))
+      ClosestDependency = GetClosestDependency(ClosestDependency, U);
   }
 
   if (!ClosestDependency)
@@ -373,7 +344,10 @@ static bool canSkipClobberingStore(const StoreInst *SI,
     return false;
   if (MemoryLocation::get(SI).Size != MemLoc.Size)
     return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() < MemLoc.Size.getValue())
+  if (MemLoc.Size.isScalable())
+    return false;
+  if (std::min(MemLocAlign, SI->getAlign()).value() <
+      MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
   auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
@@ -396,7 +370,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     BatchAAResults &BatchAA) {
   bool isInvariantLoad = false;
   Align MemLocAlign =
-      MemLoc.Ptr->getPointerAlignment(BB->getModule()->getDataLayout());
+      MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
   if (!Limit)
@@ -645,11 +619,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         continue;
 
     // See if this instruction (e.g. a call or vaarg) mod/ref's the pointer.
-    ModRefInfo MR = BatchAA.getModRefInfo(Inst, MemLoc);
-    // If necessary, perform additional analysis.
-    if (isModAndRefSet(MR))
-      MR = BatchAA.callCapturesBefore(Inst, MemLoc, &DT);
-    switch (MR) {
+    switch (BatchAA.getModRefInfo(Inst, MemLoc)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;
@@ -911,7 +881,7 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
                                        const_cast<Value *>(Loc.Ptr)));
     return;
   }
-  const DataLayout &DL = FromBB->getModule()->getDataLayout();
+  const DataLayout &DL = FromBB->getDataLayout();
   PHITransAddr Address(const_cast<Value *>(Loc.Ptr), DL, &AC);
 
   // This is the set of blocks we've inspected, and the pointer we consider in
@@ -1103,7 +1073,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         // be conservative.
         ThrowOutEverything =
             CacheInfo->Size.isPrecise() != Loc.Size.isPrecise() ||
-            CacheInfo->Size.getValue() < Loc.Size.getValue();
+            !TypeSize::isKnownGE(CacheInfo->Size.getValue(),
+                                 Loc.Size.getValue());
       } else {
         // For our purposes, unknown size > all others.
         ThrowOutEverything = !Loc.Size.hasValue();
@@ -1227,7 +1198,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   bool GotWorklistLimit = false;
   LLVM_DEBUG(AssertSorted(*Cache));
 
-  BatchAAResults BatchAA(AA);
+  BatchAAResults BatchAA(AA, &EII);
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
 
@@ -1292,16 +1263,16 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         if (InsertRes.first->second != Pointer.getAddr()) {
           // Make sure to clean up the Visited map before continuing on to
           // PredTranslationFailure.
-          for (unsigned i = 0; i < NewBlocks.size(); i++)
-            Visited.erase(NewBlocks[i]);
+          for (auto *NewBlock : NewBlocks)
+            Visited.erase(NewBlock);
           goto PredTranslationFailure;
         }
       }
       if (NewBlocks.size() > WorklistEntries) {
         // Make sure to clean up the Visited map before continuing on to
         // PredTranslationFailure.
-        for (unsigned i = 0; i < NewBlocks.size(); i++)
-          Visited.erase(NewBlocks[i]);
+        for (auto *NewBlock : NewBlocks)
+          Visited.erase(NewBlock);
         GotWorklistLimit = true;
         goto PredTranslationFailure;
       }
@@ -1359,8 +1330,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
         // Make sure to clean up the Visited map before continuing on to
         // PredTranslationFailure.
-        for (unsigned i = 0, n = PredList.size(); i < n; ++i)
-          Visited.erase(PredList[i].first);
+        for (const auto &Pred : PredList)
+          Visited.erase(Pred.first);
 
         goto PredTranslationFailure;
       }
@@ -1371,9 +1342,9 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // any results for.  (getNonLocalPointerDepFromBB will modify our
     // datastructures in ways the code after the PredTranslationFailure label
     // doesn't expect.)
-    for (unsigned i = 0, n = PredList.size(); i < n; ++i) {
-      BasicBlock *Pred = PredList[i].first;
-      PHITransAddr &PredPointer = PredList[i].second;
+    for (auto &I : PredList) {
+      BasicBlock *Pred = I.first;
+      PHITransAddr &PredPointer = I.second;
       Value *PredPtrVal = PredPointer.getAddr();
 
       bool CanTranslate = true;
@@ -1539,6 +1510,8 @@ void MemoryDependenceResults::invalidateCachedPredecessors() {
 }
 
 void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
+  EII.removeInstruction(RemInst);
+
   // Walk through the Non-local dependencies, removing this one as the value
   // for any cached queries.
   NonLocalDepMapType::iterator NLDI = NonLocalDepsMap.find(RemInst);

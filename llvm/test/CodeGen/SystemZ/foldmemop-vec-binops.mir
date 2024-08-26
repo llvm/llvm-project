@@ -4,30 +4,30 @@
 # Test folding of a memory operand into an fp memory instruction.
 
 --- |
-  define void @fun0(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun1(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun2(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun3(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun4(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun5(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun6(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun7(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun8(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun9(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun10(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun11(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun12(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun13(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun14(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun15(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun16(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun17(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun18(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun19(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun20(double %arg0, double %arg1, double* %Dst) { ret void }
-  define void @fun21(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun22(float %arg0, float %arg1, float* %Dst) { ret void }
-  define void @fun23(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun0(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun1(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun2(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun3(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun4(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun5(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun6(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun7(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun8(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun9(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun10(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun11(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun12(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun13(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun14(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun15(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun16(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun17(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun18(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun19(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun20(double %arg0, double %arg1, ptr %Dst) { ret void }
+  define void @fun21(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun22(float %arg0, float %arg1, ptr %Dst) { ret void }
+  define void @fun23(float %arg0, float %arg1, ptr %Dst) { ret void }
 
 ...
 

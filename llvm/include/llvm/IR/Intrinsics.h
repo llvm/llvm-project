@@ -100,10 +100,18 @@ namespace Intrinsic {
                                 StringRef Name);
 
   /// Map a Clang builtin name to an intrinsic ID.
-  ID getIntrinsicForClangBuiltin(const char *Prefix, StringRef BuiltinName);
+  ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
   /// Map a MS builtin name to an intrinsic ID.
-  ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
+  ID getIntrinsicForMSBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
+
+  /// Returns true if the intrinsic ID is for one of the "Constrained
+  /// Floating-Point Intrinsics".
+  bool isConstrainedFPIntrinsic(ID QID);
+
+  /// Returns true if the intrinsic ID is for one of the "Constrained
+  /// Floating-Point Intrinsics" that take rounding mode metadata.
+  bool hasConstrainedFPRoundingModeOperand(ID QID);
 
   /// This is a type descriptor which explains the type requirements of an
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
@@ -231,7 +239,12 @@ namespace Intrinsic {
   /// specified by the .td file. The overloaded types are pushed into the
   /// AgTys vector.
   ///
-  /// Returns false if the given function is not a valid intrinsic call.
+  /// Returns false if the given ID and function type combination is not a
+  /// valid intrinsic call.
+  bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
+                             SmallVectorImpl<Type *> &ArgTys);
+
+  /// Same as previous, but accepts a Function instead of ID and FunctionType.
   bool getIntrinsicSignature(Function *F, SmallVectorImpl<Type *> &ArgTys);
 
   // Checks if the intrinsic name matches with its signature and if not

@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                       -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                        -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=ALL
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                       '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                        '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -polly-allow-nonaffine '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALL
 ;
 ; Here we have a non-affine loop (in the context of the loop nest)
 ; and also a non-affine access (A[k]). While we can always model the
@@ -44,9 +44,9 @@
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_1] };
 ; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_2] };
-; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[i0] };
-; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[i0] };
 ; INNERMOST-NEXT:     Stmt_bb26
 ; INNERMOST-NEXT:         Domain :=

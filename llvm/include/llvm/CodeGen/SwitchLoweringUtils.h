@@ -137,18 +137,21 @@ struct CaseBlock {
   SDLoc DL;
   DebugLoc DbgLoc;
 
-  // Branch weights.
+  // Branch weights and predictability.
   BranchProbability TrueProb, FalseProb;
+  bool IsUnpredictable;
 
   // Constructor for SelectionDAG.
   CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
             const Value *cmpmiddle, MachineBasicBlock *truebb,
             MachineBasicBlock *falsebb, MachineBasicBlock *me, SDLoc dl,
             BranchProbability trueprob = BranchProbability::getUnknown(),
-            BranchProbability falseprob = BranchProbability::getUnknown())
+            BranchProbability falseprob = BranchProbability::getUnknown(),
+            bool isunpredictable = false)
       : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
         TrueBB(truebb), FalseBB(falsebb), ThisBB(me), DL(dl),
-        TrueProb(trueprob), FalseProb(falseprob) {}
+        TrueProb(trueprob), FalseProb(falseprob),
+        IsUnpredictable(isunpredictable) {}
 
   // Constructor for GISel.
   CaseBlock(CmpInst::Predicate pred, bool nocmp, const Value *cmplhs,
@@ -156,10 +159,12 @@ struct CaseBlock {
             MachineBasicBlock *truebb, MachineBasicBlock *falsebb,
             MachineBasicBlock *me, DebugLoc dl,
             BranchProbability trueprob = BranchProbability::getUnknown(),
-            BranchProbability falseprob = BranchProbability::getUnknown())
+            BranchProbability falseprob = BranchProbability::getUnknown(),
+            bool isunpredictable = false)
       : PredInfo({pred, nocmp}), CmpLHS(cmplhs), CmpMHS(cmpmiddle),
         CmpRHS(cmprhs), TrueBB(truebb), FalseBB(falsebb), ThisBB(me),
-        DbgLoc(dl), TrueProb(trueprob), FalseProb(falseprob) {}
+        DbgLoc(dl), TrueProb(trueprob), FalseProb(falseprob),
+        IsUnpredictable(isunpredictable) {}
 };
 
 struct JumpTable {
@@ -174,8 +179,12 @@ struct JumpTable {
   /// check MBB.  This is when updating PHI nodes in successors.
   MachineBasicBlock *Default;
 
-  JumpTable(unsigned R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D)
-      : Reg(R), JTI(J), MBB(M), Default(D) {}
+  /// The debug location of the instruction this JumpTable was produced from.
+  std::optional<SDLoc> SL; // For SelectionDAG
+
+  JumpTable(unsigned R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D,
+            std::optional<SDLoc> SL)
+      : Reg(R), JTI(J), MBB(M), Default(D), SL(SL) {}
 };
 struct JumpTableHeader {
   APInt First;
@@ -270,13 +279,13 @@ public:
   std::vector<BitTestBlock> BitTestCases;
 
   void findJumpTables(CaseClusterVector &Clusters, const SwitchInst *SI,
-                      MachineBasicBlock *DefaultMBB,
+                      std::optional<SDLoc> SL, MachineBasicBlock *DefaultMBB,
                       ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI);
 
   bool buildJumpTable(const CaseClusterVector &Clusters, unsigned First,
                       unsigned Last, const SwitchInst *SI,
+                      const std::optional<SDLoc> &SL,
                       MachineBasicBlock *DefaultMBB, CaseCluster &JTCluster);
-
 
   void findBitTestClusters(CaseClusterVector &Clusters, const SwitchInst *SI);
 
@@ -289,6 +298,22 @@ public:
       MachineBasicBlock *Src, MachineBasicBlock *Dst,
       BranchProbability Prob = BranchProbability::getUnknown()) = 0;
 
+  /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
+  /// than each cluster in the range, its rank is 0.
+  unsigned caseClusterRank(const CaseCluster &CC, CaseClusterIt First,
+                           CaseClusterIt Last);
+
+  struct SplitWorkItemInfo {
+    CaseClusterIt LastLeft;
+    CaseClusterIt FirstRight;
+    BranchProbability LeftProb;
+    BranchProbability RightProb;
+  };
+  /// Compute information to balance the tree based on branch probabilities to
+  /// create a near-optimal (in terms of search time given key frequency) binary
+  /// search tree. See e.g. Kurt Mehlhorn "Nearly Optimal Binary Search Trees"
+  /// (1975).
+  SplitWorkItemInfo computeSplitWorkItemInfo(const SwitchWorkListItem &W);
   virtual ~SwitchLowering() = default;
 
 private:

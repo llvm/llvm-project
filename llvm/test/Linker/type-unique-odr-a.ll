@@ -1,4 +1,4 @@
-; REQUIRES: x86-registered-target
+; REQUIRES: object-emission
 ;
 ; RUN: llvm-link %s %p/type-unique-odr-b.ll -S -o - \
 ; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
@@ -55,8 +55,6 @@
 ; CHECK-NOT:  AT_name{{.*(getFoo)|("A")}}
 
 ; ModuleID = 'type-unique-odr-a.cpp'
-
-target triple = "x86_64-unknown-linux-gnu"
 
 %class.A = type { i32 }
 

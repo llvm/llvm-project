@@ -14,6 +14,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -53,6 +54,7 @@ namespace arith {
 class ConstantIntOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant int op that produces an integer of the specified width.
   static void build(OpBuilder &builder, OperationState &result, int64_t value,
@@ -74,6 +76,7 @@ public:
 class ConstantFloatOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant float op that produces a float of the specified type.
   static void build(OpBuilder &builder, OperationState &result,
@@ -90,7 +93,7 @@ public:
 class ConstantIndexOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
-
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
   /// Build a constant int op that produces an index.
   static void build(OpBuilder &builder, OperationState &result, int64_t value);
 

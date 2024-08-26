@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "ptx-builder"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -28,6 +26,8 @@
 using namespace mlir;
 using namespace NVVM;
 
+static constexpr int64_t kSharedMemorySpace = 3;
+
 static char getRegisterType(Type type) {
   if (type.isInteger(1))
     return 'b';
@@ -41,9 +41,9 @@ static char getRegisterType(Type type) {
     return 'f';
   if (type.isF64())
     return 'd';
-  if (auto ptr = type.dyn_cast<LLVM::LLVMPointerType>()) {
+  if (auto ptr = dyn_cast<LLVM::LLVMPointerType>(type)) {
     // Shared address spaces is addressed with 32-bit pointers.
-    if (ptr.getAddressSpace() == NVVM::kSharedMemorySpace) {
+    if (ptr.getAddressSpace() == kSharedMemorySpace) {
       return 'r';
     }
     return 'l';
@@ -64,7 +64,7 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   auto getModifier = [&]() -> const char * {
     if (itype == PTXRegisterMod::ReadWrite) {
       assert(false && "Read-Write modifier is not supported. Try setting the "
-                      "same value as Write and Read seperately.");
+                      "same value as Write and Read separately.");
       return "+";
     }
     if (itype == PTXRegisterMod::Write) {
@@ -121,6 +121,14 @@ LLVM::InlineAsmOp PtxBuilder::build() {
     registerConstraints.pop_back();
 
   std::string ptxInstruction = interfaceOp.getPtx();
+
+  // Add the predicate to the asm string.
+  if (interfaceOp.getPredicate().has_value() &&
+      interfaceOp.getPredicate().value()) {
+    std::string predicateStr = "@%";
+    predicateStr += std::to_string((ptxOperands.size() - 1));
+    ptxInstruction = predicateStr + " " + ptxInstruction;
+  }
 
   // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
   // Replace all % with $

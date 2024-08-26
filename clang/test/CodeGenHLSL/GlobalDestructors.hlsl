@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CS,CHECK
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=LIB,CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CS,CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=LIB,CHECK
 
 // Make sure global variable for dtors exist for lib profile.
 // LIB:@llvm.global_dtors

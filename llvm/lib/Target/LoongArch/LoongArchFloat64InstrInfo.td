@@ -34,6 +34,8 @@ def FNEG_D   : FP_ALU_2R<0x01141800, FPR64>;
 def FSQRT_D  : FP_ALU_2R<0x01144800, FPR64>;
 def FRECIP_D : FP_ALU_2R<0x01145800, FPR64>;
 def FRSQRT_D : FP_ALU_2R<0x01146800, FPR64>;
+def FRECIPE_D : FP_ALU_2R<0x01147800, FPR64>;
+def FRSQRTE_D : FP_ALU_2R<0x01148800, FPR64>;
 def FSCALEB_D : FP_ALU_3R<0x01110000, FPR64>;
 def FLOGB_D   : FP_ALU_2R<0x01142800, FPR64>;
 def FCOPYSIGN_D : FP_ALU_3R<0x01130000, FPR64>;
@@ -247,6 +249,12 @@ def : Pat<(f64 (fpextend FPR32:$src)), (FCVT_D_S FPR32:$src)>;
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR64:$src), (FRECIP_D $src)>;
 
+let Predicates = [HasFrecipe] in {
+// FP approximate reciprocal operation
+def : Pat<(int_loongarch_frecipe_d FPR64:$src), (FRECIPE_D FPR64:$src)>;
+def : Pat<(int_loongarch_frsqrte_d FPR64:$src), (FRSQRTE_D FPR64:$src)>;
+}
+
 // fmadd.d: fj * fk + fa
 def : Pat<(fma FPR64:$fj, FPR64:$fk, FPR64:$fa), (FMADD_D $fj, $fk, $fa)>;
 
@@ -263,7 +271,11 @@ def : Pat<(fma_nsz (fneg FPR64:$fj), FPR64:$fk, (fneg FPR64:$fa)),
           (FNMADD_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
 
 // fnmsub.d: -(fj * fk - fa)
-def : Pat<(fma (fneg FPR64:$fj), FPR64:$fk, FPR64:$fa),
+def : Pat<(fneg (fma FPR64:$fj, FPR64:$fk, (fneg FPR64:$fa))),
+          (FNMSUB_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
+
+// fnmsub.d: -fj * fk + fa (the nsz flag on the FMA)
+def : Pat<(fma_nsz (fneg FPR64:$fj), FPR64:$fk, FPR64:$fa),
           (FNMSUB_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
 } // Predicates = [HasBasicD]
 

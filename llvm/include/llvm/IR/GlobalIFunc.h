@@ -29,7 +29,7 @@ class Twine;
 class Module;
 
 // Traits class for using GlobalIFunc in symbol table in Module.
-template <typename ValueSubClass> class SymbolTableListTraits;
+template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
 
 class GlobalIFunc final : public GlobalObject, public ilist_node<GlobalIFunc> {
   friend class SymbolTableListTraits<GlobalIFunc>;
@@ -78,10 +78,6 @@ public:
   Function *getResolverFunction() {
     return const_cast<Function *>(
         static_cast<const GlobalIFunc *>(this)->getResolverFunction());
-  }
-
-  static FunctionType *getResolverFunctionType(Type *IFuncValTy) {
-    return FunctionType::get(IFuncValTy->getPointerTo(), false);
   }
 
   static bool isValidLinkage(LinkageTypes L) {

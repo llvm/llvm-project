@@ -10,9 +10,10 @@
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, strcasecmp, (const char *left, const char *right)) {
   auto case_cmp = [](char a, char b) {
@@ -22,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, strcasecmp, (const char *left, const char *right)) {
   return inline_strcmp(left, right, case_cmp);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

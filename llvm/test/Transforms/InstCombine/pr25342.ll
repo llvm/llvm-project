@@ -17,9 +17,9 @@ define void @_Z3fooi(i32 signext %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @dd, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr getelementptr inbounds (i8, ptr @dd, i64 4), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr @dd2, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr getelementptr inbounds (i8, ptr @dd2, i64 4), align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[MUL4_I:%.*]] = fmul float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[SUB_I:%.*]] = fsub float [[MUL_I]], [[MUL4_I]]
@@ -32,7 +32,7 @@ define void @_Z3fooi(i32 signext %n) {
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    store float [[TMP0]], ptr @dd, align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr getelementptr inbounds (i8, ptr @dd, i64 4), align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -78,28 +78,28 @@ define void @multi_phi(i32 signext %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP6:%.*]], [[ODD_BB:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP7:%.*]], [[ODD_BB:%.*]] ]
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[ODD_BB]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @dd, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr getelementptr inbounds (i8, ptr @dd, i64 4), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr @dd2, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr getelementptr inbounds (i8, ptr @dd2, i64 4), align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[MUL4_I:%.*]] = fmul float [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[SUB_I:%.*]] = fsub float [[MUL_I]], [[MUL4_I]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = fadd float [[SUB_I]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
-; CHECK-NEXT:    [[BIT0:%.*]] = and i32 [[INC]], 1
-; CHECK-NEXT:    [[EVEN_NOT_NOT:%.*]] = icmp eq i32 [[BIT0]], 0
-; CHECK-NEXT:    br i1 [[EVEN_NOT_NOT]], label [[EVEN_BB:%.*]], label [[ODD_BB]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[I_0]], 1
+; CHECK-NEXT:    [[EVEN_NOT_NOT_NOT:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[EVEN_NOT_NOT_NOT]], label [[ODD_BB]], label [[EVEN_BB:%.*]]
 ; CHECK:       even.bb:
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd float [[SUB_I]], [[ADD_I]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd float [[SUB_I]], [[ADD_I]]
 ; CHECK-NEXT:    br label [[ODD_BB]]
 ; CHECK:       odd.bb:
-; CHECK-NEXT:    [[TMP6]] = phi float [ [[ADD_I]], [[FOR_BODY]] ], [ [[TMP5]], [[EVEN_BB]] ]
+; CHECK-NEXT:    [[TMP7]] = phi float [ [[ADD_I]], [[FOR_BODY]] ], [ [[TMP6]], [[EVEN_BB]] ]
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    store float [[TMP0]], ptr @dd, align 4

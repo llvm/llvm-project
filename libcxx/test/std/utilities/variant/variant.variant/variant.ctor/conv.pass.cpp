@@ -24,17 +24,16 @@ int main(int, char**)
 {
   static_assert(!std::is_constructible<std::variant<int, int>, int>::value, "");
   static_assert(!std::is_constructible<std::variant<long, long long>, int>::value, "");
-  static_assert(std::is_constructible<std::variant<char>, int>::value == VariantAllowsNarrowingConversions, "");
+  static_assert(!std::is_constructible<std::variant<char>, int>::value, "");
 
-  static_assert(std::is_constructible<std::variant<std::string, float>, int>::value == VariantAllowsNarrowingConversions, "");
-  static_assert(std::is_constructible<std::variant<std::string, double>, int>::value == VariantAllowsNarrowingConversions, "");
+  static_assert(!std::is_constructible<std::variant<std::string, float>, int>::value, "");
+  static_assert(!std::is_constructible<std::variant<std::string, double>, int>::value, "");
   static_assert(!std::is_constructible<std::variant<std::string, bool>, int>::value, "");
 
   static_assert(!std::is_constructible<std::variant<int, bool>, decltype("meow")>::value, "");
   static_assert(!std::is_constructible<std::variant<int, const bool>, decltype("meow")>::value, "");
-  static_assert(!std::is_constructible<std::variant<int, const volatile bool>, decltype("meow")>::value, "");
 
-  static_assert(!std::is_constructible<std::variant<bool>, std::true_type>::value, "");
+  static_assert(std::is_constructible<std::variant<bool>, std::true_type>::value, "");
   static_assert(!std::is_constructible<std::variant<bool>, std::unique_ptr<char> >::value, "");
   static_assert(!std::is_constructible<std::variant<bool>, decltype(nullptr)>::value, "");
 

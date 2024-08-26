@@ -170,4 +170,14 @@ void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
   }
 }
 
+// Dump a message to stderr.
+void dumpMessage(SMLoc Loc, Init *Message) {
+  auto *MessageInit = dyn_cast<StringInit>(Message);
+  if (!MessageInit) {
+    PrintError(Loc, "dump value is not of type string");
+  } else {
+    PrintNote(Loc, MessageInit->getValue());
+  }
+}
+
 } // end namespace llvm

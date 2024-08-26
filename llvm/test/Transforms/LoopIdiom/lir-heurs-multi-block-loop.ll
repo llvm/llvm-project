@@ -16,7 +16,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 ; CHECK: call void @llvm.memset
 ; CHECK: for.body:
 ;
-define i32 @LoopMemset([2048 x i8]* noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
+define i32 @LoopMemset(ptr noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
 entry:
   %cmp12 = icmp sgt i32 %SIZE, 0
   br i1 %cmp12, label %for.body.preheader, label %for.end
@@ -71,7 +71,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: call void @llvm.memset
 ; CHECK: for.cond1.preheader:
 ;
-define i32 @NestedMemset_LoopMemset([2046 x i8]* noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
+define i32 @NestedMemset_LoopMemset(ptr noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
 entry:
   %cmp25 = icmp sgt i32 %SIZE, 0
   br i1 %cmp25, label %for.cond1.preheader.preheader, label %for.end11
@@ -133,7 +133,7 @@ for.end11:                                        ; preds = %for.end11.loopexit,
 ; CHECK-LABEL: @Non_NestedMemset
 ; CHECK-NOT: call void @llvm.memset
 ;
-define i32 @Non_NestedMemset(i8* noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
+define i32 @Non_NestedMemset(ptr noalias nocapture %DST, i32 %SIZE) local_unnamed_addr optsize {
 entry:
   %cmp12 = icmp sgt i32 %SIZE, 0
   br i1 %cmp12, label %for.body.preheader, label %for.end

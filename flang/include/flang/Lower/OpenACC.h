@@ -35,8 +35,10 @@ class FirOpBuilder;
 
 namespace Fortran {
 namespace parser {
+struct AccClauseList;
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
+struct OpenACCRoutineConstruct;
 } // namespace parser
 
 namespace semantics {
@@ -63,14 +65,22 @@ static constexpr llvm::StringRef declarePreDeallocSuffix =
 static constexpr llvm::StringRef declarePostDeallocSuffix =
     "_acc_declare_update_desc_post_dealloc";
 
-void genOpenACCConstruct(AbstractConverter &,
-                         Fortran::semantics::SemanticsContext &,
-                         pft::Evaluation &, const parser::OpenACCConstruct &);
+static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
+
+mlir::Value genOpenACCConstruct(AbstractConverter &,
+                                Fortran::semantics::SemanticsContext &,
+                                pft::Evaluation &,
+                                const parser::OpenACCConstruct &);
 void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     Fortran::semantics::SemanticsContext &,
                                     StatementContext &,
                                     const parser::OpenACCDeclarativeConstruct &,
                                     AccRoutineInfoMappingList &);
+void genOpenACCRoutineConstruct(AbstractConverter &,
+                                Fortran::semantics::SemanticsContext &,
+                                mlir::ModuleOp &,
+                                const parser::OpenACCRoutineConstruct &,
+                                AccRoutineInfoMappingList &);
 
 void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
                                       AccRoutineInfoMappingList &);
@@ -105,6 +115,14 @@ void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
 
 void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
                           mlir::Location);
+
+int64_t getCollapseValue(const Fortran::parser::AccClauseList &);
+
+bool isInOpenACCLoop(fir::FirOpBuilder &);
+
+void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
+
+void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
 
 } // namespace lower
 } // namespace Fortran

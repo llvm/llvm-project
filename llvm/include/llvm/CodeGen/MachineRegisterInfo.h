@@ -243,16 +243,6 @@ public:
   /// Returns true if the updated CSR list was initialized and false otherwise.
   bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
 
-  /// Returns true if a register can be used as an argument to a function.
-  bool isArgumentRegister(const MachineFunction &MF, MCRegister Reg) const;
-
-  /// Returns true if a register is a fixed register.
-  bool isFixedRegister(const MachineFunction &MF, MCRegister Reg) const;
-
-  /// Returns true if a register is a general purpose register.
-  bool isGeneralPurposeRegister(const MachineFunction &MF,
-                                MCRegister Reg) const;
-
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
   /// \see UpdatedCalleeSavedRegs.
@@ -752,6 +742,24 @@ public:
   Register createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
 
+  /// All attributes(register class or bank and low-level type) a virtual
+  /// register can have.
+  struct VRegAttrs {
+    RegClassOrRegBank RCOrRB;
+    LLT Ty;
+  };
+
+  /// Returns register class or bank and low level type of \p Reg. Always safe
+  /// to use. Special values are returned when \p Reg does not have some of the
+  /// attributes.
+  VRegAttrs getVRegAttrs(Register Reg) {
+    return {getRegClassOrRegBank(Reg), getType(Reg)};
+  }
+
+  /// Create and return a new virtual register in the function with the
+  /// specified register attributes(register class or bank and low level type).
+  Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
+
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
   Register cloneVirtualRegister(Register VReg, StringRef Name = "");
@@ -793,6 +801,7 @@ public:
   /// of an earlier hint it will be overwritten.
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
+    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
     RegAllocHints[VReg].first  = Type;
     RegAllocHints[VReg].second.clear();
     RegAllocHints[VReg].second.push_back(PrefReg);
@@ -802,6 +811,7 @@ public:
   /// vector for VReg.
   void addRegAllocationHint(Register VReg, Register PrefReg) {
     assert(VReg.isVirtual());
+    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
     RegAllocHints[VReg].second.push_back(PrefReg);
   }
 
@@ -814,7 +824,8 @@ public:
   void clearSimpleHint(Register VReg) {
     assert (!RegAllocHints[VReg].first &&
             "Expected to clear a non-target hint!");
-    RegAllocHints[VReg].second.clear();
+    if (RegAllocHints.inBounds(VReg))
+      RegAllocHints[VReg].second.clear();
   }
 
   /// getRegAllocationHint - Return the register allocation hint for the
@@ -822,6 +833,8 @@ public:
   /// one with the greatest weight.
   std::pair<unsigned, Register> getRegAllocationHint(Register VReg) const {
     assert(VReg.isVirtual());
+    if (!RegAllocHints.inBounds(VReg))
+      return {0, Register()};
     Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
                          RegAllocHints[VReg.id()].second[0] : Register());
     return {RegAllocHints[VReg.id()].first, BestHint};
@@ -837,10 +850,10 @@ public:
 
   /// getRegAllocationHints - Return a reference to the vector of all
   /// register allocation hints for VReg.
-  const std::pair<unsigned, SmallVector<Register, 4>> &
+  const std::pair<unsigned, SmallVector<Register, 4>> *
   getRegAllocationHints(Register VReg) const {
     assert(VReg.isVirtual());
-    return RegAllocHints[VReg];
+    return RegAllocHints.inBounds(VReg) ? &RegAllocHints[VReg] : nullptr;
   }
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
@@ -912,7 +925,7 @@ public:
 
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
-  void freezeReservedRegs(const MachineFunction&);
+  void freezeReservedRegs();
 
   /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
   /// will not suggest using it. This should not be used during the middle

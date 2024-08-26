@@ -58,10 +58,16 @@
         movs sp, r0
         movs r0, sp
         movs sp, sp
-// CHECK-V7: error: instruction variant requires ARMv8 or later
+// CHECK-V7: error: invalid instruction, any one of the following would fix this:
 // CHECK-V7-NEXT: movs sp, r0
-// CHECK-V7: instruction variant requires ARMv8 or later
+// CHECK-V7: note: instruction variant requires ARMv8 or later
+// CHECK-V7: note: operand must be a register in range [r0, r7]
+// CHECK-V7: error: invalid instruction, any one of the following would fix this:
 // CHECK-V7-NEXT: movs r0, sp
+// CHECK-V7: note: instruction variant requires ARMv8 or later
+// CHECK-V7: note: invalid operand for instruction
+// CHECK-V7: note: operand must be an immediate in the range [0,255] or a relocatable expression
+// CHECK-V7: note: operand must be a register in range [r0, r7]
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs sp, sp
 // CHECK-V8: movs.w sp, r0            @ encoding: [0x5f,0xea,0x00,0x0d]
@@ -69,8 +75,9 @@
 // CHECK-V8: movs.w sp, sp            @ encoding: [0x5f,0xea,0x0d,0x0d]
 
         mov.w sp, sp
-// CHECK-V7: error: instruction variant requires ARMv8 or later
+// CHECK-V7: error: invalid instruction, any one of the following would fix this:
 // CHECK-V7-NEXT: mov.w sp, sp
+// CHECK-V7: note: instruction variant requires ARMv8 or later
 // CHECK-V8: mov.w sp, sp             @ encoding: [0x4f,0xea,0x0d,0x0d]
 
         movs.w sp, r0
@@ -78,8 +85,9 @@
         movs.w sp, sp
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs.w sp, r0
-// CHECK-V7: instruction variant requires ARMv8 or later
+// CHECK-V7: error: invalid instruction, any one of the following would fix this:
 // CHECK-V7-NEXT: movs.w r0, sp
+// CHECK-V7: note: instruction variant requires ARMv8 or later
 // CHECK-V7: error: instruction variant requires ARMv8 or later
 // CHECK-V7-NEXT: movs.w sp, sp
 // CHECK-V8: movs.w sp, r0            @ encoding: [0x5f,0xea,0x00,0x0d]

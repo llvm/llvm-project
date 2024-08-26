@@ -13,8 +13,8 @@ body: |
     ; CHECK-NEXT: $x0 = COPY [[EVEC]](s64)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(<2 x s64>) = COPY $q0
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s64) = G_EXTRACT_VECTOR_ELT %0(<2 x s64>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s64) = G_EXTRACT_VECTOR_ELT %0(<2 x s64>), %1(s64)
     $x0 = COPY %2(s64)
     RET_ReallyLR
 ...
@@ -368,10 +368,10 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_eve_v4p0
-    ; CHECK: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[DEF]](p0), [[DEF]](p0)
+    ; CHECK: %vec:_(<4 x p0>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: %idx:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: %eve:_(p0) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<2 x p0>), %idx(s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x p0>), [[UV1:%[0-9]+]]:_(<2 x p0>) = G_UNMERGE_VALUES %vec(<4 x p0>)
+    ; CHECK-NEXT: %eve:_(p0) = G_EXTRACT_VECTOR_ELT [[UV]](<2 x p0>), %idx(s64)
     ; CHECK-NEXT: $x0 = COPY %eve(p0)
     ; CHECK-NEXT: RET_ReallyLR
     %vec:_(<4 x p0>) = G_IMPLICIT_DEF
@@ -452,16 +452,15 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_eve_v4p0_unknown_idx
-    ; CHECK: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[DEF]](p0), [[DEF]](p0)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[DEF]](p0), [[DEF]](p0)
+    ; CHECK: %vec:_(<4 x p0>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: %idx:_(s64) = COPY $x0
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[BUILD_VECTOR]](<2 x p0>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x p0>), [[UV1:%[0-9]+]]:_(<2 x p0>) = G_UNMERGE_VALUES %vec(<4 x p0>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[UV]](<2 x p0>)
     ; CHECK-NEXT: G_STORE [[BITCAST]](<2 x s64>), [[FRAME_INDEX]](p0) :: (store (<2 x s64>) into %stack.0, align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[BUILD_VECTOR1]](<2 x p0>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[UV1]](<2 x p0>)
     ; CHECK-NEXT: G_STORE [[BITCAST1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %stack.0 + 16, basealign 32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %idx, [[C1]]

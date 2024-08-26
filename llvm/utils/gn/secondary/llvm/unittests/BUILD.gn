@@ -8,6 +8,7 @@ group("unittests") {
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
     "Bitstream:BitstreamTests",
+    "CGData:CodeGenDataTests",
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
@@ -43,15 +44,18 @@ group("unittests") {
     "Passes/Plugins:PluginsTests",
     "ProfileData:ProfileDataTests",
     "Remarks:RemarksTests",
+    "SandboxIR:SandboxIRTests",
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
     "TableGen:TableGenTests",
+    "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
     "Transforms/Coroutines:CoroTests",
     "Transforms/IPO:IPOTests",
+    "Transforms/Instrumentation:InstrumentationTests",
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
     "Transforms/Vectorize:VectorizeTests",
@@ -76,7 +80,7 @@ group("unittests") {
   }
   if (llvm_build_AMDGPU) {
     deps += [
-      "MC/AMDGPU:AMDGPUDwarfTests",
+      "MC/AMDGPU:AMDGPUMCTests",
       "Target/AMDGPU:AMDGPUTests",
     ]
   }

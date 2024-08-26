@@ -29,6 +29,62 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xsi32> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSB
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> i32 {
+  // CHECK: %{{.*}} = spirv.GroupNonUniformBallotFindLSB <Subgroup> %{{.*}}: vector<4xi32>, i32
+  %0 = spirv.GroupNonUniformBallotFindLSB <Subgroup> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> i32 {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spirv.GroupNonUniformBallotFindLSB <Device> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> si32 {
+  // expected-error @+1 {{op result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformBallotFindLSB <Subgroup> %value : vector<4xi32>, si32
+  return %0: si32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSB
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> i32 {
+  // CHECK: %{{.*}} = spirv.GroupNonUniformBallotFindMSB <Subgroup> %{{.*}}: vector<4xi32>, i32
+  %0 = spirv.GroupNonUniformBallotFindMSB <Subgroup> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> i32 {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spirv.GroupNonUniformBallotFindMSB <Device> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> si32 {
+  // expected-error @+1 {{op result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformBallotFindMSB <Subgroup> %value : vector<4xi32>, si32
+  return %0: si32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.NonUniformGroupBroadcast
 //===----------------------------------------------------------------------===//
 
@@ -420,5 +476,131 @@ func.func @group_non_uniform_umax_reduce(%val: i32) -> i32 {
 func.func @group_non_uniform_umin_reduce(%val: i32) -> i32 {
   // CHECK: %{{.+}} = spirv.GroupNonUniformUMin "Workgroup" "Reduce" %{{.+}} : i32
   %0 = spirv.GroupNonUniformUMin "Workgroup" "Reduce" %val : i32
+  return %0: i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBitwiseAnd
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_bitwise_and
+func.func @group_non_uniform_bitwise_and(%val: i32) -> i32 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformBitwiseAnd "Workgroup" "Reduce" %{{.+}} : i32
+  %0 = spirv.GroupNonUniformBitwiseAnd "Workgroup" "Reduce" %val : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_bitwise_and(%val: i1) -> i1 {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'i1'}}
+  %0 = spirv.GroupNonUniformBitwiseAnd "Workgroup" "Reduce" %val : i1
+  return %0: i1
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBitwiseOr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_bitwise_or
+func.func @group_non_uniform_bitwise_or(%val: i32) -> i32 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformBitwiseOr "Workgroup" "Reduce" %{{.+}} : i32
+  %0 = spirv.GroupNonUniformBitwiseOr "Workgroup" "Reduce" %val : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_bitwise_or(%val: i1) -> i1 {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'i1'}}
+  %0 = spirv.GroupNonUniformBitwiseOr "Workgroup" "Reduce" %val : i1
+  return %0: i1
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBitwiseXor
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_bitwise_xor
+func.func @group_non_uniform_bitwise_xor(%val: i32) -> i32 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformBitwiseXor "Workgroup" "Reduce" %{{.+}} : i32
+  %0 = spirv.GroupNonUniformBitwiseXor "Workgroup" "Reduce" %val : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_bitwise_xor(%val: i1) -> i1 {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'i1'}}
+  %0 = spirv.GroupNonUniformBitwiseXor "Workgroup" "Reduce" %val : i1
+  return %0: i1
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformLogicalAnd
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_logical_and
+func.func @group_non_uniform_logical_and(%val: i1) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformLogicalAnd "Workgroup" "Reduce" %{{.+}} : i1
+  %0 = spirv.GroupNonUniformLogicalAnd "Workgroup" "Reduce" %val : i1
+  return %0: i1
+}
+
+// -----
+
+func.func @group_non_uniform_logical_and(%val: i32) -> i32 {
+  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  %0 = spirv.GroupNonUniformLogicalAnd "Workgroup" "Reduce" %val : i32
+  return %0: i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformLogicalOr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_logical_or
+func.func @group_non_uniform_logical_or(%val: i1) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformLogicalOr "Workgroup" "Reduce" %{{.+}} : i1
+  %0 = spirv.GroupNonUniformLogicalOr "Workgroup" "Reduce" %val : i1
+  return %0: i1
+}
+
+// -----
+
+func.func @group_non_uniform_logical_or(%val: i32) -> i32 {
+  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  %0 = spirv.GroupNonUniformLogicalOr "Workgroup" "Reduce" %val : i32
+  return %0: i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformLogicalXor
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_logical_xor
+func.func @group_non_uniform_logical_xor(%val: i1) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformLogicalXor "Workgroup" "Reduce" %{{.+}} : i1
+  %0 = spirv.GroupNonUniformLogicalXor "Workgroup" "Reduce" %val : i1
+  return %0: i1
+}
+
+// -----
+
+func.func @group_non_uniform_logical_xor(%val: i32) -> i32 {
+  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  %0 = spirv.GroupNonUniformLogicalXor "Workgroup" "Reduce" %val : i32
   return %0: i32
 }

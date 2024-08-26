@@ -29,7 +29,7 @@ struct MCFixupKindInfo;
 class AVRAsmBackend : public MCAsmBackend {
 public:
   AVRAsmBackend(Triple::OSType OSType)
-      : MCAsmBackend(support::little), OSType(OSType) {}
+      : MCAsmBackend(llvm::endianness::little), OSType(OSType) {}
 
   void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                         uint64_t &Value, MCContext *Ctx = nullptr) const;
@@ -49,18 +49,12 @@ public:
     return AVR::NumTargetFixupKinds;
   }
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    llvm_unreachable("RelaxInstruction() unimplemented");
-    return false;
-  }
-
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
 private:
   Triple::OSType OSType;

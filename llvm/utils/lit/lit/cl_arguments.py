@@ -36,7 +36,7 @@ def parse_args():
         metavar="N",
         help="Number of workers used for testing",
         type=_positive_int,
-        default=lit.util.usable_core_count(),
+        default=os.getenv("LIT_MAX_WORKERS", lit.util.usable_core_count()),
     )
     parser.add_argument(
         "--config-prefix",
@@ -119,6 +119,18 @@ def parse_args():
 
     execution_group = parser.add_argument_group("Test Execution")
     execution_group.add_argument(
+        "--gtest-sharding",
+        help="Enable sharding for GoogleTest format",
+        action="store_true",
+        default=True,
+    )
+    execution_group.add_argument(
+        "--no-gtest-sharding",
+        dest="gtest_sharding",
+        help="Disable sharding for GoogleTest format",
+        action="store_false",
+    )
+    execution_group.add_argument(
         "--path",
         help="Additional paths to add to testing environment",
         action="append",
@@ -141,11 +153,6 @@ def parse_args():
         help="Specify an extra argument for valgrind",
         action="append",
         default=[],
-    )
-    execution_group.add_argument(
-        "--time-tests",
-        help="Track elapsed wall time for each test",
-        action="store_true",
     )
     execution_group.add_argument(
         "--no-execute",
@@ -196,6 +203,17 @@ def parse_args():
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
+    )
+    execution_test_time_group = execution_group.add_mutually_exclusive_group()
+    execution_test_time_group.add_argument(
+        "--skip-test-time-recording",
+        help="Do not track elapsed wall time for each test",
+        action="store_true",
+    )
+    execution_test_time_group.add_argument(
+        "--time-tests",
+        help="Track elapsed wall time for each test printed in a histogram",
+        action="store_true",
     )
 
     selection_group = parser.add_argument_group("Test Selection")

@@ -475,19 +475,36 @@ public:
     return removeDiscardableAttr(StringAttr::get(getContext(), name));
   }
 
-  /// Return all of the discardable attributes on this operation.
-  ArrayRef<NamedAttribute> getDiscardableAttrs() { return attrs.getValue(); }
+  /// Return a range of all of discardable attributes on this operation. Note
+  /// that for unregistered operations that are not storing inherent attributes
+  /// as properties, all attributes are considered discardable.
+  auto getDiscardableAttrs() {
+    std::optional<RegisteredOperationName> opName = getRegisteredInfo();
+    ArrayRef<StringAttr> attributeNames =
+        opName ? getRegisteredInfo()->getAttributeNames()
+               : ArrayRef<StringAttr>();
+    return llvm::make_filter_range(
+        attrs.getValue(),
+        [this, attributeNames](const NamedAttribute attribute) {
+          return getPropertiesStorage() ||
+                 !llvm::is_contained(attributeNames, attribute.getName());
+        });
+  }
 
   /// Return all of the discardable attributes on this operation as a
   /// DictionaryAttr.
-  DictionaryAttr getDiscardableAttrDictionary() { return attrs; }
+  DictionaryAttr getDiscardableAttrDictionary() {
+    if (getPropertiesStorage())
+      return attrs;
+    return DictionaryAttr::get(getContext(),
+                               llvm::to_vector(getDiscardableAttrs()));
+  }
+
+  /// Return all attributes that are not stored as properties.
+  DictionaryAttr getRawDictionaryAttrs() { return attrs; }
 
   /// Return all of the attributes on this operation.
-  ArrayRef<NamedAttribute> getAttrs() {
-    if (!getPropertiesStorage())
-      return getDiscardableAttrs();
-    return getAttrDictionary().getValue();
-  }
+  ArrayRef<NamedAttribute> getAttrs() { return getAttrDictionary().getValue(); }
 
   /// Return all of the attributes on this operation as a DictionaryAttr.
   DictionaryAttr getAttrDictionary();
@@ -878,8 +895,7 @@ public:
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
     if (propertiesStorageSize)
-      return {
-          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+      return getPropertiesStorageUnsafe();
     return {nullptr};
   }
   OpaqueProperties getPropertiesStorage() const {
@@ -888,17 +904,24 @@ public:
           getTrailingObjects<detail::OpProperties>()))};
     return {nullptr};
   }
+  /// Returns the properties storage without checking whether properties are
+  /// present.
+  OpaqueProperties getPropertiesStorageUnsafe() {
+    return {
+        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+  }
 
   /// Return the properties converted to an attribute.
   /// This is expensive, and mostly useful when dealing with unregistered
   /// operation. Returns an empty attribute if no properties are present.
   Attribute getPropertiesAsAttribute();
 
-  /// Set the properties from the provided  attribute.
+  /// Set the properties from the provided attribute.
   /// This is an expensive operation that can fail if the attribute is not
   /// matching the expectations of the properties for this operation. This is
   /// mostly useful for unregistered operations or used when parsing the
-  /// generic format. An optional diagnostic can be passed in for richer errors.
+  /// generic format. An optional diagnostic emitter can be passed in for richer
+  /// errors, if none is passed then behavior is undefined in error case.
   LogicalResult
   setPropertiesFromAttribute(Attribute attr,
                              function_ref<InFlightDiagnostic()> emitError);

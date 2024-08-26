@@ -33,9 +33,9 @@
   ; Function Attrs: nounwind
   define void @caller() #0 !dbg !12 {
   entry:
-    %0 = load i32, i32* @ga, align 4, !dbg !15
-    %1 = load i32, i32* @gb, align 4, !dbg !16
-    %2 = load i32, i32* @gc, align 4, !dbg !17
+    %0 = load i32, ptr @ga, align 4, !dbg !15
+    %1 = load i32, ptr @gb, align 4, !dbg !16
+    %2 = load i32, ptr @gc, align 4, !dbg !17
     call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28}"(), !dbg !18, !srcloc !19
     call void @callee(i32 %0, i32 %1, i32 %2), !dbg !20
     ret void, !dbg !21

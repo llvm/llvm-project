@@ -28,7 +28,11 @@ template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
   return D;
 }
 
-inline constexpr bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+inline constexpr bool isPowerOfTwo(uptr X) {
+  if (X == 0)
+    return false;
+  return (X & (X - 1)) == 0;
+}
 
 inline constexpr uptr roundUp(uptr X, uptr Boundary) {
   DCHECK(isPowerOfTwo(Boundary));
@@ -112,6 +116,21 @@ template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   *RandState = State;
 }
 
+inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
+                              uptr *Fractional) {
+  constexpr uptr Digits = 100;
+  if (Denominator == 0) {
+    *Integral = 100;
+    *Fractional = 0;
+    return;
+  }
+
+  *Integral = Numerator * Digits / Denominator;
+  *Fractional =
+      (((Numerator * Digits) % Denominator) * Digits + Denominator / 2) /
+      Denominator;
+}
+
 // Platform specific functions.
 
 extern uptr PageSizeCached;
@@ -174,10 +193,6 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       MapPlatformData *Data = nullptr);
-
-// Internal map & unmap fatal error. This must not call map(). SizeIfOOM shall
-// hold the requested size on an out-of-memory error, 0 otherwise.
-void NORETURN dieOnMapUnmapError(uptr SizeIfOOM = 0);
 
 // Logging related functions.
 

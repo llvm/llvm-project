@@ -45,7 +45,8 @@ COFFLinkGraphBuilder::getPointerSize(const object::COFFObjectFile &Obj) {
 
 llvm::endianness
 COFFLinkGraphBuilder::getEndianness(const object::COFFObjectFile &Obj) {
-  return Obj.isLittleEndian() ? support::little : support::big;
+  return Obj.isLittleEndian() ? llvm::endianness::little
+                              : llvm::endianness::big;
 }
 
 uint64_t COFFLinkGraphBuilder::getSectionSize(const object::COFFObjectFile &Obj,
@@ -466,7 +467,7 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
     return &G->addDefinedSymbol(
         G->createZeroFillBlock(getCommonSection(), Symbol.getValue(),
                                orc::ExecutorAddr(), Symbol.getValue(), 0),
-        0, SymbolName, Symbol.getValue(), Linkage::Strong, Scope::Default,
+        0, SymbolName, Symbol.getValue(), Linkage::Weak, Scope::Default,
         false, false);
   }
   if (Symbol.isAbsolute())

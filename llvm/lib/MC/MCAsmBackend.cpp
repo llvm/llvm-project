@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -31,16 +32,17 @@ MCAsmBackend::~MCAsmBackend() = default;
 std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
+  bool IsLE = Endian == llvm::endianness::little;
   switch (TW->getFormat()) {
-  case Triple::ELF:
-    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)), OS,
-                                 Endian == support::little);
   case Triple::MachO:
-    return createMachObjectWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                  OS, Endian == support::little);
+    return std::make_unique<MachObjectWriter>(
+        cast<MCMachObjectTargetWriter>(std::move(TW)), OS, IsLE);
   case Triple::COFF:
     return createWinCOFFObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
+  case Triple::ELF:
+    return std::make_unique<ELFObjectWriter>(
+        cast<MCELFObjectTargetWriter>(std::move(TW)), OS, IsLE);
   case Triple::SPIRV:
     return createSPIRVObjectWriter(
         cast<MCSPIRVObjectTargetWriter>(std::move(TW)), OS);
@@ -70,9 +72,9 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
     return createWinCOFFDwoObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   case Triple::ELF:
-    return createELFDwoObjectWriter(
+    return std::make_unique<ELFObjectWriter>(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
-        Endian == support::little);
+        Endian == llvm::endianness::little);
   case Triple::Wasm:
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);
@@ -92,6 +94,7 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_Data_2", 0, 16, 0},
       {"FK_Data_4", 0, 32, 0},
       {"FK_Data_8", 0, 64, 0},
+      {"FK_Data_leb128", 0, 0, 0},
       {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -114,13 +117,14 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(
-    const MCFixup &Fixup, bool Resolved, uint64_t Value,
-    const MCRelaxableFragment *DF, const MCAsmLayout &Layout,
-    const bool WasForced) const {
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                const MCFixup &Fixup,
+                                                bool Resolved, uint64_t Value,
+                                                const MCRelaxableFragment *DF,
+                                                const bool WasForced) const {
   if (!Resolved)
     return true;
-  return fixupNeedsRelaxation(Fixup, Value, DF, Layout);
+  return fixupNeedsRelaxation(Fixup, Value);
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/GOFF.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
@@ -137,7 +136,8 @@ public:
 
   // Support for endian-specific data.
   template <typename value_type> void writebe(value_type Value) {
-    Value = support::endian::byte_swap<value_type>(Value, support::big);
+    Value =
+        support::endian::byte_swap<value_type>(Value, llvm::endianness::big);
     write(reinterpret_cast<const char *>(&Value), sizeof(value_type));
   }
 };
@@ -235,12 +235,10 @@ public:
   void writeEnd();
 
   // Implementation of the MCObjectWriter interface.
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override {}
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {}
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override {}
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 } // end anonymous namespace
 
@@ -277,8 +275,7 @@ void GOFFObjectWriter::writeEnd() {
   OS.finalize();
 }
 
-uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
+uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = OS.tell();
 
   writeHeader();

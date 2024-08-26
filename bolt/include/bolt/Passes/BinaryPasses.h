@@ -16,9 +16,9 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DynoStats.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
-#include <map>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -50,19 +50,34 @@ public:
   /// this pass is completed (printPass() must have returned true).
   virtual bool shouldPrint(const BinaryFunction &BF) const;
 
-  /// Execute this pass on the given functions.
-  virtual void runOnFunctions(BinaryContext &BC) = 0;
+  virtual Error runOnFunctions(BinaryContext &BC) = 0;
+};
+
+/// A pass to set initial program-wide dynostats.
+class DynoStatsSetPass : public BinaryFunctionPass {
+public:
+  DynoStatsSetPass() : BinaryFunctionPass(false) {}
+
+  const char *getName() const override {
+    return "set dyno-stats before optimizations";
+  }
+
+  bool shouldPrint(const BinaryFunction &BF) const override { return false; }
+
+  Error runOnFunctions(BinaryContext &BC) override {
+    BC.InitialDynoStats = getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
+    return Error::success();
+  }
 };
 
 /// A pass to print program-wide dynostats.
 class DynoStatsPrintPass : public BinaryFunctionPass {
 protected:
-  DynoStats PrevDynoStats;
   std::string Title;
 
 public:
-  DynoStatsPrintPass(const DynoStats &PrevDynoStats, const char *Title)
-      : BinaryFunctionPass(false), PrevDynoStats(PrevDynoStats), Title(Title) {}
+  DynoStatsPrintPass(const char *Title)
+      : BinaryFunctionPass(false), Title(Title) {}
 
   const char *getName() const override {
     return "print dyno-stats after optimizations";
@@ -70,18 +85,20 @@ public:
 
   bool shouldPrint(const BinaryFunction &BF) const override { return false; }
 
-  void runOnFunctions(BinaryContext &BC) override {
+  Error runOnFunctions(BinaryContext &BC) override {
+    const DynoStats PrevDynoStats = BC.InitialDynoStats;
     const DynoStats NewDynoStats =
         getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
     const bool Changed = (NewDynoStats != PrevDynoStats);
-    outs() << "BOLT-INFO: program-wide dynostats " << Title
-           << (Changed ? "" : " (no change)") << ":\n\n"
-           << PrevDynoStats;
+    BC.outs() << "BOLT-INFO: program-wide dynostats " << Title
+              << (Changed ? "" : " (no change)") << ":\n\n"
+              << PrevDynoStats;
     if (Changed) {
-      outs() << '\n';
-      NewDynoStats.print(outs(), &PrevDynoStats, BC.InstPrinter.get());
+      BC.outs() << '\n';
+      NewDynoStats.print(BC.outs(), &PrevDynoStats, BC.InstPrinter.get());
     }
-    outs() << '\n';
+    BC.outs() << '\n';
+    return Error::success();
   }
 };
 
@@ -100,7 +117,7 @@ public:
 
   const char *getName() const override { return "normalize CFG"; }
 
-  void runOnFunctions(BinaryContext &) override;
+  Error runOnFunctions(BinaryContext &) override;
 };
 
 /// Detect and eliminate unreachable basic blocks. We could have those
@@ -119,7 +136,7 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override {
     return BinaryFunctionPass::shouldPrint(BF) && Modified.count(&BF) > 0;
   }
-  void runOnFunctions(BinaryContext &) override;
+  Error runOnFunctions(BinaryContext &) override;
 };
 
 // Reorder the basic blocks for each function based on hotness.
@@ -165,7 +182,7 @@ public:
 
   const char *getName() const override { return "reorder-blocks"; }
   bool shouldPrint(const BinaryFunction &BF) const override;
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Sync local branches with CFG.
@@ -175,7 +192,7 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "fix-branches"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Fix the CFI state and exception handling information after all other
@@ -186,7 +203,7 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "finalize-functions"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Perform any necessary adjustments for functions that do not fit into their
@@ -198,7 +215,7 @@ public:
 
   const char *getName() const override { return "check-large-functions"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
   bool shouldOptimize(const BinaryFunction &BF) const override;
 };
@@ -210,7 +227,7 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "lower-annotations"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Clean the state of the MC representation before sending it to emission
@@ -220,7 +237,7 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "clean-mc-state"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// An optimization to simplify conditional tail calls by removing
@@ -292,7 +309,7 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override {
     return BinaryFunctionPass::shouldPrint(BF) && Modified.count(&BF) > 0;
   }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Convert instructions to the form with the minimum operand width.
@@ -305,7 +322,7 @@ public:
 
   const char *getName() const override { return "shorten-instructions"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Perform simple peephole optimizations.
@@ -339,7 +356,7 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "peepholes"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// An optimization to simplify loads from read-only sections.The pass converts
@@ -370,7 +387,7 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override {
     return BinaryFunctionPass::shouldPrint(BF) && Modified.count(&BF) > 0;
   }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Assign output sections to all functions.
@@ -379,7 +396,7 @@ public:
   explicit AssignSections() : BinaryFunctionPass(false) {}
 
   const char *getName() const override { return "assign-sections"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Compute and report to the user the imbalance in flow equations for all
@@ -394,19 +411,21 @@ public:
 
   const char *getName() const override { return "profile-stats"; }
   bool shouldPrint(const BinaryFunction &) const override { return false; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Prints a list of the top 100 functions sorted by a set of
 /// dyno stats categories.
 class PrintProgramStats : public BinaryFunctionPass {
+  BoltAddressTranslation *BAT = nullptr;
+
 public:
-  explicit PrintProgramStats(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
+  explicit PrintProgramStats(BoltAddressTranslation *BAT = nullptr)
+      : BinaryFunctionPass(false), BAT(BAT) {}
 
   const char *getName() const override { return "print-stats"; }
   bool shouldPrint(const BinaryFunction &) const override { return false; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Pass for lowering any instructions that we have raised and that have
@@ -418,7 +437,7 @@ public:
 
   const char *getName() const override { return "inst-lowering"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Pass for stripping 'repz' from 'repz retq' sequence of instructions.
@@ -429,7 +448,7 @@ public:
 
   const char *getName() const override { return "strip-rep-ret"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Pass for inlining calls to memcpy using 'rep movsb' on X86.
@@ -440,7 +459,7 @@ public:
 
   const char *getName() const override { return "inline-memcpy"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Pass for specializing memcpy for a size of 1 byte.
@@ -461,7 +480,7 @@ public:
 
   const char *getName() const override { return "specialize-memcpy"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 /// Pass to remove nops in code
@@ -475,7 +494,7 @@ public:
   const char *getName() const override { return "remove-nops"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 enum FrameOptimizationType : char {

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IndirectCallPromotion.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/Inliner.h"
 #include "llvm/ADT/STLExtras.h"
@@ -158,6 +158,7 @@ static cl::opt<bool> ICPPeelForInline(
 
 } // namespace opts
 
+#ifndef NDEBUG
 static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
   bool IsValid = true;
   for (auto &BFI : BFs) {
@@ -170,9 +171,10 @@ static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
         if (BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE && BI->Count > 0) {
           if (BB.getKnownExecutionCount() == 0 ||
               SuccBB->getKnownExecutionCount() == 0) {
-            errs() << "BOLT-WARNING: profile verification failed after ICP for "
-                      "function "
-                   << BF << '\n';
+            BF.getBinaryContext().errs()
+                << "BOLT-WARNING: profile verification failed after ICP for "
+                   "function "
+                << BF << '\n';
             IsValid = false;
           }
         }
@@ -182,6 +184,7 @@ static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
   }
   return IsValid;
 }
+#endif
 
 namespace llvm {
 namespace bolt {
@@ -383,13 +386,15 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
   JumpTableInfoType HotTargets;
   MCInst *MemLocInstr;
   MCInst *PCRelBaseOut;
+  MCInst *FixedEntryLoadInstr;
   unsigned BaseReg, IndexReg;
   int64_t DispValue;
   const MCExpr *DispExpr;
   MutableArrayRef<MCInst> Insts(&BB.front(), &CallInst);
   const IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
       CallInst, Insts.begin(), Insts.end(), BC.AsmInfo->getCodePointerSize(),
-      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut);
+      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut,
+      FixedEntryLoadInstr);
 
   assert(MemLocInstr && "There should always be a load for jump tables");
   if (!MemLocInstr)
@@ -458,7 +463,7 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
 
     if (AccessInfo.MemoryObject) {
       // Deal with bad/stale data
-      if (!AccessInfo.MemoryObject->getName().startswith(
+      if (!AccessInfo.MemoryObject->getName().starts_with(
               "JUMP_TABLE/" + Function.getOneName().str()))
         return JumpTableInfoType();
       Index =
@@ -524,6 +529,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
                                              size_t &N, BinaryBasicBlock &BB,
                                              MCInst &CallInst,
                                              MCInst *&TargetFetchInst) const {
+  const BinaryContext &BC = BB.getFunction()->getBinaryContext();
   const JumpTable *JT = BB.getFunction()->getJumpTable(CallInst);
   SymTargetsType SymTargets;
 
@@ -554,8 +560,9 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
   if (!HotTargets.empty()) {
     if (opts::Verbosity >= 1)
       for (size_t I = 0; I < HotTargets.size(); ++I)
-        outs() << "BOLT-INFO: HotTarget[" << I << "] = (" << HotTargets[I].first
-               << ", " << HotTargets[I].second << ")\n";
+        BC.outs() << "BOLT-INFO: HotTarget[" << I << "] = ("
+                  << HotTargets[I].first << ", " << HotTargets[I].second
+                  << ")\n";
 
     // Recompute hottest targets, now discriminating which index is hot
     // NOTE: This is a tradeoff. On one hand, we get index information. On the
@@ -591,7 +598,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
 
       NewTargets.push_back(Target);
       std::vector<uint64_t>({JTIndex}).swap(NewTargets.back().JTIndices);
-      llvm::erase_value(Target.JTIndices, JTIndex);
+      llvm::erase(Target.JTIndices, JTIndex);
 
       // Keep fixCFG counts sane if more indices use this same target later
       assert(IndicesPerTarget[Target.To.Sym] > 0 && "wrong map");
@@ -609,9 +616,9 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
     N = I;
 
     if (N == 0 && opts::Verbosity >= 1) {
-      outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " in "
-             << BB.getName() << ": failed to meet thresholds after memory "
-             << "profile data was loaded.\n";
+      BC.outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " in "
+                << BB.getName() << ": failed to meet thresholds after memory "
+                << "profile data was loaded.\n";
       return SymTargets;
     }
   }
@@ -754,6 +761,15 @@ IndirectCallPromotion::rewriteCall(
   const bool IsTailCallOrJT =
       (MIB->isTailCall(CallInst) || Function.getJumpTable(CallInst));
 
+  // If we are tracking the indirect call/jump address, propagate the address to
+  // the ICP code.
+  const std::optional<uint32_t> IndirectInstrOffset = MIB->getOffset(CallInst);
+  if (IndirectInstrOffset) {
+    for (auto &[Symbol, Instructions] : ICPcode)
+      for (MCInst &Inst : Instructions)
+        MIB->setOffset(Inst, *IndirectInstrOffset);
+  }
+
   // Move instructions from the tail of the original call block
   // to the merge block.
 
@@ -767,10 +783,12 @@ IndirectCallPromotion::rewriteCall(
       TailInsts.push_back(*++TailInst);
 
   InstructionListType MovedInst = IndCallBlock.splitInstructions(&CallInst);
-  // Link new BBs to the original input offset of the BB where the indirect
-  // call site is, so we can map samples recorded in new BBs back to the
-  // original BB seen in the input binary (if using BAT)
-  const uint32_t OrigOffset = IndCallBlock.getInputOffset();
+  // Link new BBs to the original input offset of the indirect call site or its
+  // containing BB, so we can map samples recorded in new BBs back to the
+  // original BB seen in the input binary (if using BAT).
+  const uint32_t OrigOffset = IndirectInstrOffset
+                                  ? *IndirectInstrOffset
+                                  : IndCallBlock.getInputOffset();
 
   IndCallBlock.eraseInstructions(MethodFetchInsns.begin(),
                                  MethodFetchInsns.end());
@@ -961,9 +979,9 @@ size_t IndirectCallPromotion::canPromoteCallsite(
   if (Targets.empty() || !NumCalls) {
     if (opts::Verbosity >= 1) {
       const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
-      outs() << "BOLT-INFO: ICP failed in " << *BF << " @ " << InstIdx << " in "
-             << BB.getName() << ", calls = " << NumCalls
-             << ", targets empty or NumCalls == 0.\n";
+      BC.outs() << "BOLT-INFO: ICP failed in " << *BF << " @ " << InstIdx
+                << " in " << BB.getName() << ", calls = " << NumCalls
+                << ", targets empty or NumCalls == 0.\n";
     }
     return 0;
   }
@@ -1002,10 +1020,10 @@ size_t IndirectCallPromotion::canPromoteCallsite(
     if (TopNFrequency == 0 || TopNFrequency < opts::ICPMispredictThreshold) {
       if (opts::Verbosity >= 1) {
         const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
-        outs() << "BOLT-INFO: ICP failed in " << *BF << " @ " << InstIdx
-               << " in " << BB.getName() << ", calls = " << NumCalls
-               << ", top N mis. frequency " << format("%.1f", TopNFrequency)
-               << "% < " << opts::ICPMispredictThreshold << "%\n";
+        BC.outs() << "BOLT-INFO: ICP failed in " << *BF << " @ " << InstIdx
+                  << " in " << BB.getName() << ", calls = " << NumCalls
+                  << ", top N mis. frequency " << format("%.1f", TopNFrequency)
+                  << "% < " << opts::ICPMispredictThreshold << "%\n";
       }
       return 0;
     }
@@ -1048,11 +1066,11 @@ size_t IndirectCallPromotion::canPromoteCallsite(
       if (TopNMispredictFrequency < opts::ICPMispredictThreshold) {
         if (opts::Verbosity >= 1) {
           const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
-          outs() << "BOLT-INFO: ICP failed in " << *BF << " @ " << InstIdx
-                 << " in " << BB.getName() << ", calls = " << NumCalls
-                 << ", top N mispredict frequency "
-                 << format("%.1f", TopNMispredictFrequency) << "% < "
-                 << opts::ICPMispredictThreshold << "%\n";
+          BC.outs() << "BOLT-INFO: ICP failed in " << *BF << " @ " << InstIdx
+                    << " in " << BB.getName() << ", calls = " << NumCalls
+                    << ", top N mispredict frequency "
+                    << format("%.1f", TopNMispredictFrequency) << "% < "
+                    << opts::ICPMispredictThreshold << "%\n";
         }
         return 0;
       }
@@ -1093,29 +1111,29 @@ void IndirectCallPromotion::printCallsiteInfo(
   const bool IsJumpTable = BB.getFunction()->getJumpTable(Inst);
   const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
 
-  outs() << "BOLT-INFO: ICP candidate branch info: " << *BB.getFunction()
-         << " @ " << InstIdx << " in " << BB.getName()
-         << " -> calls = " << NumCalls
-         << (IsTailCall ? " (tail)" : (IsJumpTable ? " (jump table)" : ""))
-         << "\n";
+  BC.outs() << "BOLT-INFO: ICP candidate branch info: " << *BB.getFunction()
+            << " @ " << InstIdx << " in " << BB.getName()
+            << " -> calls = " << NumCalls
+            << (IsTailCall ? " (tail)" : (IsJumpTable ? " (jump table)" : ""))
+            << "\n";
   for (size_t I = 0; I < N; I++) {
     const double Frequency = 100.0 * Targets[I].Branches / NumCalls;
     const double MisFrequency = 100.0 * Targets[I].Mispreds / NumCalls;
-    outs() << "BOLT-INFO:   ";
+    BC.outs() << "BOLT-INFO:   ";
     if (Targets[I].To.Sym)
-      outs() << Targets[I].To.Sym->getName();
+      BC.outs() << Targets[I].To.Sym->getName();
     else
-      outs() << Targets[I].To.Addr;
-    outs() << ", calls = " << Targets[I].Branches
-           << ", mispreds = " << Targets[I].Mispreds
-           << ", taken freq = " << format("%.1f", Frequency) << "%"
-           << ", mis. freq = " << format("%.1f", MisFrequency) << "%";
+      BC.outs() << Targets[I].To.Addr;
+    BC.outs() << ", calls = " << Targets[I].Branches
+              << ", mispreds = " << Targets[I].Mispreds
+              << ", taken freq = " << format("%.1f", Frequency) << "%"
+              << ", mis. freq = " << format("%.1f", MisFrequency) << "%";
     bool First = true;
     for (uint64_t JTIndex : Targets[I].JTIndices) {
-      outs() << (First ? ", indices = " : ", ") << JTIndex;
+      BC.outs() << (First ? ", indices = " : ", ") << JTIndex;
       First = false;
     }
-    outs() << "\n";
+    BC.outs() << "\n";
   }
 
   LLVM_DEBUG({
@@ -1124,9 +1142,9 @@ void IndirectCallPromotion::printCallsiteInfo(
   });
 }
 
-void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
+Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   if (opts::ICP == ICP_NONE)
-    return;
+    return Error::success();
 
   auto &BFs = BC.getBinaryFunctions();
 
@@ -1209,9 +1227,9 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
       Functions.insert(std::get<2>(IC));
       ++Num;
     }
-    outs() << "BOLT-INFO: ICP Total indirect calls = " << TotalIndirectCalls
-           << ", " << Num << " callsites cover " << opts::ICPTopCallsites
-           << "% of all indirect calls\n";
+    BC.outs() << "BOLT-INFO: ICP Total indirect calls = " << TotalIndirectCalls
+              << ", " << Num << " callsites cover " << opts::ICPTopCallsites
+              << "% of all indirect calls\n";
   }
 
   for (BinaryFunction *FuncPtr : Functions) {
@@ -1288,11 +1306,11 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
               Info.getLivenessAnalysis().getStateBefore(Inst);
           if (!State || (State && (*State)[BC.MIB->getFlagsReg()])) {
             if (opts::Verbosity >= 1)
-              outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
-                     << InstIdx << " in " << BB->getName()
-                     << ", calls = " << NumCalls
-                     << (State ? ", cannot clobber flags reg.\n"
-                               : ", no liveness data available.\n");
+              BC.outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
+                        << InstIdx << " in " << BB->getName()
+                        << ", calls = " << NumCalls
+                        << (State ? ", cannot clobber flags reg.\n"
+                                  : ", no liveness data available.\n");
             continue;
           }
         }
@@ -1328,11 +1346,11 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
         if (SymTargets.size() < N) {
           const size_t LastTarget = SymTargets.size();
           if (opts::Verbosity >= 1)
-            outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
-                   << InstIdx << " in " << BB->getName()
-                   << ", calls = " << NumCalls
-                   << ", ICP failed to find target symbol for "
-                   << Targets[LastTarget].To.Sym->getName() << "\n";
+            BC.outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
+                      << InstIdx << " in " << BB->getName()
+                      << ", calls = " << NumCalls
+                      << ", ICP failed to find target symbol for "
+                      << Targets[LastTarget].To.Sym->getName() << "\n";
           continue;
         }
 
@@ -1361,10 +1379,10 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
 
         if (ICPcode.empty()) {
           if (opts::Verbosity >= 1)
-            outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
-                   << InstIdx << " in " << BB->getName()
-                   << ", calls = " << NumCalls
-                   << ", unable to generate promoted call code.\n";
+            BC.outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
+                      << InstIdx << " in " << BB->getName()
+                      << ", calls = " << NumCalls
+                      << ", unable to generate promoted call code.\n";
           continue;
         }
 
@@ -1397,9 +1415,9 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
           BBs.push_back(MergeBlock);
 
         if (opts::Verbosity >= 1)
-          outs() << "BOLT-INFO: ICP succeeded in " << Function << " @ "
-                 << InstIdx << " in " << BB->getName()
-                 << " -> calls = " << NumCalls << "\n";
+          BC.outs() << "BOLT-INFO: ICP succeeded in " << Function << " @ "
+                    << InstIdx << " in " << BB->getName()
+                    << " -> calls = " << NumCalls << "\n";
 
         if (IsJumpTable)
           ++TotalOptimizedJumpTableCallsites;
@@ -1413,53 +1431,54 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
     TotalIndirectJmps += FuncTotalIndirectJmps;
   }
 
-  outs() << "BOLT-INFO: ICP total indirect callsites with profile = "
-         << TotalIndirectCallsites << "\n"
-         << "BOLT-INFO: ICP total jump table callsites = "
-         << TotalJumpTableCallsites << "\n"
-         << "BOLT-INFO: ICP total number of calls = " << TotalCalls << "\n"
-         << "BOLT-INFO: ICP percentage of calls that are indirect = "
-         << format("%.1f", (100.0 * TotalIndirectCalls) / TotalCalls) << "%\n"
-         << "BOLT-INFO: ICP percentage of indirect calls that can be "
-            "optimized = "
-         << format("%.1f", (100.0 * TotalNumFrequentCalls) /
-                               std::max<size_t>(TotalIndirectCalls, 1))
-         << "%\n"
-         << "BOLT-INFO: ICP percentage of indirect callsites that are "
-            "optimized = "
-         << format("%.1f", (100.0 * TotalOptimizedIndirectCallsites) /
-                               std::max<uint64_t>(TotalIndirectCallsites, 1))
-         << "%\n"
-         << "BOLT-INFO: ICP number of method load elimination candidates = "
-         << TotalMethodLoadEliminationCandidates << "\n"
-         << "BOLT-INFO: ICP percentage of method calls candidates that have "
-            "loads eliminated = "
-         << format("%.1f", (100.0 * TotalMethodLoadsEliminated) /
-                               std::max<uint64_t>(
-                                   TotalMethodLoadEliminationCandidates, 1))
-         << "%\n"
-         << "BOLT-INFO: ICP percentage of indirect branches that are "
-            "optimized = "
-         << format("%.1f", (100.0 * TotalNumFrequentJmps) /
-                               std::max<uint64_t>(TotalIndirectJmps, 1))
-         << "%\n"
-         << "BOLT-INFO: ICP percentage of jump table callsites that are "
-         << "optimized = "
-         << format("%.1f", (100.0 * TotalOptimizedJumpTableCallsites) /
-                               std::max<uint64_t>(TotalJumpTableCallsites, 1))
-         << "%\n"
-         << "BOLT-INFO: ICP number of jump table callsites that can use hot "
-         << "indices = " << TotalIndexBasedCandidates << "\n"
-         << "BOLT-INFO: ICP percentage of jump table callsites that use hot "
-            "indices = "
-         << format("%.1f", (100.0 * TotalIndexBasedJumps) /
-                               std::max<uint64_t>(TotalIndexBasedCandidates, 1))
-         << "%\n";
+  BC.outs()
+      << "BOLT-INFO: ICP total indirect callsites with profile = "
+      << TotalIndirectCallsites << "\n"
+      << "BOLT-INFO: ICP total jump table callsites = "
+      << TotalJumpTableCallsites << "\n"
+      << "BOLT-INFO: ICP total number of calls = " << TotalCalls << "\n"
+      << "BOLT-INFO: ICP percentage of calls that are indirect = "
+      << format("%.1f", (100.0 * TotalIndirectCalls) / TotalCalls) << "%\n"
+      << "BOLT-INFO: ICP percentage of indirect calls that can be "
+         "optimized = "
+      << format("%.1f", (100.0 * TotalNumFrequentCalls) /
+                            std::max<size_t>(TotalIndirectCalls, 1))
+      << "%\n"
+      << "BOLT-INFO: ICP percentage of indirect callsites that are "
+         "optimized = "
+      << format("%.1f", (100.0 * TotalOptimizedIndirectCallsites) /
+                            std::max<uint64_t>(TotalIndirectCallsites, 1))
+      << "%\n"
+      << "BOLT-INFO: ICP number of method load elimination candidates = "
+      << TotalMethodLoadEliminationCandidates << "\n"
+      << "BOLT-INFO: ICP percentage of method calls candidates that have "
+         "loads eliminated = "
+      << format("%.1f",
+                (100.0 * TotalMethodLoadsEliminated) /
+                    std::max<uint64_t>(TotalMethodLoadEliminationCandidates, 1))
+      << "%\n"
+      << "BOLT-INFO: ICP percentage of indirect branches that are "
+         "optimized = "
+      << format("%.1f", (100.0 * TotalNumFrequentJmps) /
+                            std::max<uint64_t>(TotalIndirectJmps, 1))
+      << "%\n"
+      << "BOLT-INFO: ICP percentage of jump table callsites that are "
+      << "optimized = "
+      << format("%.1f", (100.0 * TotalOptimizedJumpTableCallsites) /
+                            std::max<uint64_t>(TotalJumpTableCallsites, 1))
+      << "%\n"
+      << "BOLT-INFO: ICP number of jump table callsites that can use hot "
+      << "indices = " << TotalIndexBasedCandidates << "\n"
+      << "BOLT-INFO: ICP percentage of jump table callsites that use hot "
+         "indices = "
+      << format("%.1f", (100.0 * TotalIndexBasedJumps) /
+                            std::max<uint64_t>(TotalIndexBasedCandidates, 1))
+      << "%\n";
 
-  (void)verifyProfile;
 #ifndef NDEBUG
   verifyProfile(BFs);
 #endif
+  return Error::success();
 }
 
 } // namespace bolt

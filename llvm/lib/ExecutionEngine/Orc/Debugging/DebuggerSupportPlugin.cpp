@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -35,7 +34,7 @@ class MachODebugObjectSynthesizerBase
     : public GDBJITDebugInfoRegistrationPlugin::DebugSectionSynthesizer {
 public:
   static bool isDebugSection(Section &Sec) {
-    return Sec.getName().startswith("__DWARF,");
+    return Sec.getName().starts_with("__DWARF,");
   }
 
   MachODebugObjectSynthesizerBase(LinkGraph &G, ExecutorAddr RegisterActionAddr)
@@ -374,7 +373,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
   case Triple::aarch64:
     // Supported, continue.
     assert(LG.getPointerSize() == 8 && "Graph has incorrect pointer size");
-    assert(LG.getEndianness() == support::little &&
+    assert(LG.getEndianness() == llvm::endianness::little &&
            "Graph has incorrect endianness");
     break;
   default:
@@ -384,7 +383,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
              << "MachO graph " << LG.getName()
              << "(triple = " << LG.getTargetTriple().str()
              << ", pointer size = " << LG.getPointerSize() << ", endianness = "
-             << (LG.getEndianness() == support::big ? "big" : "little")
+             << (LG.getEndianness() == llvm::endianness::big ? "big" : "little")
              << ")\n";
     });
     return;

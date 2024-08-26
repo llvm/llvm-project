@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zbkb -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zbkb < %s \
-# RUN:     | llvm-objdump --mattr=+zbkb -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zbkb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zbkb < %s \
-# RUN:     | llvm-objdump --mattr=+zbkb -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zbkb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: ror t0, t1, t2
@@ -35,11 +35,6 @@ xnor t0, t1, t2
 # CHECK-ASM-AND-OBJ: pack t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x42,0x73,0x08]
 pack t0, t1, t2
-
-# Test the encoding used for zext.h for RV32.
-# CHECK-ASM-AND-OBJ: pack t0, t1, zero
-# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
-pack t0, t1, x0
 
 # CHECK-ASM-AND-OBJ: packh t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x72,0x73,0x08]

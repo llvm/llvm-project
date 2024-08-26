@@ -81,6 +81,9 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<TypeSize> *Offsets,
                            TypeSize StartingOffset) {
+  assert((Ty->isScalableTy() == StartingOffset.isScalable() ||
+          StartingOffset.isZero()) &&
+         "Offset/TypeSize mismatch!");
   // Given a struct type, recursively traverse the elements.
   if (StructType *STy = dyn_cast<StructType>(Ty)) {
     // If the Offsets aren't needed, don't query the struct layout. This allows
@@ -92,8 +95,8 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                       EE = STy->element_end();
          EI != EE; ++EI) {
       // Don't compute the element offset if we didn't get a StructLayout above.
-      TypeSize EltOffset = SL ? SL->getElementOffset(EI - EB)
-                              : TypeSize::get(0, StartingOffset.isScalable());
+      TypeSize EltOffset =
+          SL ? SL->getElementOffset(EI - EB) : TypeSize::getZero();
       ComputeValueVTs(TLI, DL, *EI, ValueVTs, MemVTs, Offsets,
                       StartingOffset + EltOffset);
     }
@@ -121,50 +124,10 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
 
 void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<TypeSize> *Offsets,
-                           TypeSize StartingOffset) {
-  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, /*MemVTs=*/nullptr, Offsets,
-                         StartingOffset);
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<TypeSize> *Offsets,
-                           uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
-  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, Offsets, Offset);
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<uint64_t> *FixedOffsets,
-                           uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
-  if (FixedOffsets) {
-    SmallVector<TypeSize, 4> Offsets;
-    ComputeValueVTs(TLI, DL, Ty, ValueVTs, &Offsets, Offset);
-    for (TypeSize Offset : Offsets)
-      FixedOffsets->push_back(Offset.getFixedValue());
-  } else {
-    ComputeValueVTs(TLI, DL, Ty, ValueVTs, nullptr, Offset);
-  }
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<EVT> *MemVTs,
-                           SmallVectorImpl<TypeSize> *Offsets,
-                           uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
-  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, MemVTs, Offsets, Offset);
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
                            SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<uint64_t> *FixedOffsets,
                            uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
+  TypeSize Offset = TypeSize::getFixed(StartingOffset);
   if (FixedOffsets) {
     SmallVector<TypeSize, 4> Offsets;
     ComputeValueVTs(TLI, DL, Ty, ValueVTs, MemVTs, &Offsets, Offset);
@@ -569,7 +532,8 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
+bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
+                                bool ReturnsFirstArg) {
   const BasicBlock *ExitBB = Call.getParent();
   const Instruction *Term = ExitBB->getTerminator();
   const ReturnInst *Ret = dyn_cast<ReturnInst>(Term);
@@ -612,7 +576,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
 
   const Function *F = ExitBB->getParent();
   return returnTypeIsEligibleForTailCall(
-      F, &Call, Ret, *TM.getSubtargetImpl(*F)->getTargetLowering());
+      F, &Call, Ret, *TM.getSubtargetImpl(*F)->getTargetLowering(),
+      ReturnsFirstArg);
 }
 
 bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
@@ -630,9 +595,10 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
 
   // Following attributes are completely benign as far as calling convention
   // goes, they shouldn't affect whether the call is a tail call.
-  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
-                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
-                           Attribute::NonNull, Attribute::NoUndef}) {
+  for (const auto &Attr :
+       {Attribute::Alignment, Attribute::Dereferenceable,
+        Attribute::DereferenceableOrNull, Attribute::NoAlias,
+        Attribute::NonNull, Attribute::NoUndef, Attribute::Range}) {
     CallerAttrs.removeAttribute(Attr);
     CalleeAttrs.removeAttribute(Attr);
   }
@@ -674,26 +640,11 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   return CallerAttrs == CalleeAttrs;
 }
 
-/// Check whether B is a bitcast of a pointer type to another pointer type,
-/// which is equal to A.
-static bool isPointerBitcastEqualTo(const Value *A, const Value *B) {
-  assert(A && B && "Expected non-null inputs!");
-
-  auto *BitCastIn = dyn_cast<BitCastInst>(B);
-
-  if (!BitCastIn)
-    return false;
-
-  if (!A->getType()->isPointerTy() || !B->getType()->isPointerTy())
-    return false;
-
-  return A == BitCastIn->getOperand(0);
-}
-
 bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
                                            const Instruction *I,
                                            const ReturnInst *Ret,
-                                           const TargetLoweringBase &TLI) {
+                                           const TargetLoweringBase &TLI,
+                                           bool ReturnsFirstArg) {
   // If the block ends with a void return or unreachable, it doesn't matter
   // what the call's return type is.
   if (!Ret || Ret->getNumOperands() == 0) return true;
@@ -707,26 +658,11 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   if (!attributesPermitTailCall(F, I, Ret, TLI, &AllowDifferingSizes))
     return false;
 
-  const Value *RetVal = Ret->getOperand(0), *CallVal = I;
-  // Intrinsic like llvm.memcpy has no return value, but the expanded
-  // libcall may or may not have return value. On most platforms, it
-  // will be expanded as memcpy in libc, which returns the first
-  // argument. On other platforms like arm-none-eabi, memcpy may be
-  // expanded as library call without return value, like __aeabi_memcpy.
-  const CallInst *Call = cast<CallInst>(I);
-  if (Function *F = Call->getCalledFunction()) {
-    Intrinsic::ID IID = F->getIntrinsicID();
-    if (((IID == Intrinsic::memcpy &&
-          TLI.getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy")) ||
-         (IID == Intrinsic::memmove &&
-          TLI.getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove")) ||
-         (IID == Intrinsic::memset &&
-          TLI.getLibcallName(RTLIB::MEMSET) == StringRef("memset"))) &&
-        (RetVal == Call->getArgOperand(0) ||
-         isPointerBitcastEqualTo(RetVal, Call->getArgOperand(0))))
-      return true;
-  }
+  // If the return value is the first argument of the call.
+  if (ReturnsFirstArg)
+    return true;
 
+  const Value *RetVal = Ret->getOperand(0), *CallVal = I;
   SmallVector<unsigned, 4> RetPath, CallPath;
   SmallVector<Type *, 4> RetSubTypes, CallSubTypes;
 
@@ -766,13 +702,22 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // index is compatible with the value we return.
     if (!slotOnlyDiscardsData(RetVal, CallVal, TmpRetPath, TmpCallPath,
                               AllowDifferingSizes, TLI,
-                              F->getParent()->getDataLayout()))
+                              F->getDataLayout()))
       return false;
 
     CallEmpty  = !nextRealType(CallSubTypes, CallPath);
   } while(nextRealType(RetSubTypes, RetPath));
 
   return true;
+}
+
+bool llvm::funcReturnsFirstArgOfCall(const CallInst &CI) {
+  const ReturnInst *Ret = dyn_cast<ReturnInst>(CI.getParent()->getTerminator());
+  Value *RetVal = Ret ? Ret->getReturnValue() : nullptr;
+  bool ReturnsFirstArg = false;
+  if (RetVal && ((RetVal == CI.getArgOperand(0))))
+    ReturnsFirstArg = true;
+  return ReturnsFirstArg;
 }
 
 static void collectEHScopeMembers(

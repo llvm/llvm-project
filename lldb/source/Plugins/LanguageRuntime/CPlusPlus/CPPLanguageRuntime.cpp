@@ -26,6 +26,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Utility/Timer.h"
@@ -34,26 +35,71 @@ using namespace lldb;
 using namespace lldb_private;
 
 static ConstString g_this = ConstString("this");
+// Artificial coroutine-related variables emitted by clang.
+static ConstString g_promise = ConstString("__promise");
+static ConstString g_coro_frame = ConstString("__coro_frame");
 
 char CPPLanguageRuntime::ID = 0;
 
+/// A frame recognizer that is installed to hide libc++ implementation
+/// details from the backtrace.
+class LibCXXFrameRecognizer : public StackFrameRecognizer {
+  RegularExpression m_hidden_function_regex;
+  RecognizedStackFrameSP m_hidden_frame;
+
+  struct LibCXXHiddenFrame : public RecognizedStackFrame {
+    bool ShouldHide() override { return true; }
+  };
+
+public:
+  LibCXXFrameRecognizer()
+      : m_hidden_function_regex(
+            R"(^std::__.*::(__function.*::operator\(\)|__invoke))"
+            R"((\[.*\])?)"    // ABI tag.
+            R"(( const)?$)"), // const.
+        m_hidden_frame(new LibCXXHiddenFrame()) {}
+
+  std::string GetName() override { return "libc++ frame recognizer"; }
+
+  lldb::RecognizedStackFrameSP
+  RecognizeFrame(lldb::StackFrameSP frame_sp) override {
+    if (!frame_sp)
+      return {};
+    const auto &sc = frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+    if (!sc.function)
+      return {};
+
+    if (m_hidden_function_regex.Execute(sc.function->GetNameNoArguments()))
+      return m_hidden_frame;
+
+    return {};
+  }
+};
+
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
-    : LanguageRuntime(process) {}
+    : LanguageRuntime(process) {
+  if (process)
+    process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+        StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
+        std::make_shared<RegularExpression>("^std::__.*::"),
+        /*first_instruction_only*/ false);
+}
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
-  return name == g_this;
+  return name == g_this || name == g_promise || name == g_coro_frame;
 }
 
-bool CPPLanguageRuntime::GetObjectDescription(Stream &str,
-                                              ValueObject &object) {
+llvm::Error CPPLanguageRuntime::GetObjectDescription(Stream &str,
+                                                     ValueObject &object) {
   // C++ has no generic way to do this.
-  return false;
+  return llvm::createStringError("C++ does not support object descriptions");
 }
 
-bool CPPLanguageRuntime::GetObjectDescription(
-    Stream &str, Value &value, ExecutionContextScope *exe_scope) {
+llvm::Error
+CPPLanguageRuntime::GetObjectDescription(Stream &str, Value &value,
+                                         ExecutionContextScope *exe_scope) {
   // C++ has no generic way to do this.
-  return false;
+  return llvm::createStringError("C++ does not support object descriptions");
 }
 
 bool contains_lambda_identifier(llvm::StringRef &str_ref) {
@@ -217,7 +263,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   llvm::StringRef vtable_name(symbol->GetName().GetStringRef());
   bool found_expected_start_string =
-      vtable_name.startswith("vtable for std::__1::__function::__func<");
+      vtable_name.starts_with("vtable for std::__1::__function::__func<");
 
   if (!found_expected_start_string)
     return optional_info;
@@ -274,7 +320,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   }
 
   // Case 4 or 5
-  if (symbol && !symbol->GetName().GetStringRef().startswith("vtable for") &&
+  if (symbol && !symbol->GetName().GetStringRef().starts_with("vtable for") &&
       !contains_lambda_identifier(first_template_parameter) && !has_invoke) {
     optional_info.callable_case =
         LibCppStdFunctionCallableCase::FreeOrMemberFunction;
@@ -309,7 +355,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     lldb::FunctionSP func_sp =
         vtable_cu->FindFunction([name_to_use](const FunctionSP &f) {
           auto name = f->GetName().GetStringRef();
-          if (name.startswith(name_to_use) && name.contains("operator"))
+          if (name.starts_with(name_to_use) && name.contains("operator"))
             return true;
 
           return false;
@@ -370,7 +416,7 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   // step into the wrapped callable.
   //
   bool found_expected_start_string =
-      function_name.startswith("std::__1::function<");
+      function_name.starts_with("std::__1::function<");
 
   if (!found_expected_start_string)
     return ret_plan_sp;

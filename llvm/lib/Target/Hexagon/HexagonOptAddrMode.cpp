@@ -47,6 +47,8 @@ static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   cl::Hidden, cl::init(0), cl::desc("Code growth limit for address mode "
   "optimization"));
 
+extern cl::opt<unsigned> RDFFuncBlockLimit;
+
 namespace llvm {
 
   FunctionPass *createHexagonOptAddrMode();
@@ -68,7 +70,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineDominanceFrontier>();
     AU.setPreservesAll();
   }
@@ -120,7 +122,7 @@ char HexagonOptAddrMode::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonOptAddrMode, "amode-opt",
                       "Optimize addressing mode", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonOptAddrMode, "amode-opt", "Optimize addressing mode",
                     false, false)
@@ -856,13 +858,21 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  // Perform RDF optimizations only if number of basic blocks in the
+  // function is less than the limit
+  if (MF.size() > RDFFuncBlockLimit) {
+    LLVM_DEBUG(dbgs() << "Skipping " << getPassName()
+                      << ": too many basic blocks\n");
+    return false;
+  }
+
   bool Changed = false;
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   MRI = &MF.getRegInfo();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();
   const auto &MDF = getAnalysis<MachineDominanceFrontier>();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   DataFlowGraph G(MF, *HII, *HRI, *MDT, MDF);
   // Need to keep dead phis because we can propagate uses of registers into

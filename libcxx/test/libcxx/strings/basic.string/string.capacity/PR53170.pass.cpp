@@ -11,7 +11,7 @@
 // void reserve(); // Deprecated in C++20.
 // void reserve(size_type);
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE
 
 // This test ensures that libc++ implements https://wg21.link/P0966R1 (reserve never shrinks)
 // even before C++20. This is required in order to avoid ODR violations because basic_string::reserve(size)
@@ -21,8 +21,8 @@
 //
 // Reported as https://llvm.org/PR53170.
 
-// reserve(n) used to shrink the string until https://llvm.org/D117332 was shipped.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// reserve(n) used to shrink the string until https://llvm.org/D117332 was shipped in LLVM 14.
+// XFAIL: using-built-library-before-llvm-14
 
 #include <string>
 #include <stdexcept>

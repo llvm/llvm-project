@@ -9,6 +9,11 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
     -fno-omit-frame-pointer
+    # TODO: Remove once one of these lands:
+    # https://github.com/llvm/llvm-project/pull/87837
+    # https://github.com/llvm/llvm-project/pull/88054
+    # https://github.com/llvm/llvm-project/pull/88157
+    -ftrivial-auto-var-init=uninitialized
 )
 
 add_entrypoint_object(

@@ -15,7 +15,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
@@ -345,7 +344,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       ModuleSpec module_spec(FileSpec(GetPath()), target.GetArchitecture());
       if (IsKernel()) {
         Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error, true)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                       true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec()))
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
@@ -410,8 +410,7 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
 
   // Find the slide address
   addr_t fixed_slide = LLDB_INVALID_ADDRESS;
-  if (ObjectFileELF *memory_objfile_elf =
-          llvm::dyn_cast<ObjectFileELF>(memory_object_file)) {
+  if (llvm::dyn_cast<ObjectFileELF>(memory_object_file)) {
     addr_t load_address = memory_object_file->GetBaseAddress().GetFileAddress();
 
     if (load_address != LLDB_INVALID_ADDRESS &&

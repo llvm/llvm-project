@@ -44,8 +44,9 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
     ArchDefinePwr8 = 1 << 12,
     ArchDefinePwr9 = 1 << 13,
     ArchDefinePwr10 = 1 << 14,
-    ArchDefineFuture = 1 << 15,
-    ArchDefineA2 = 1 << 16,
+    ArchDefinePwr11 = 1 << 15,
+    ArchDefineFuture = 1 << 16,
+    ArchDefineA2 = 1 << 17,
     ArchDefineE500 = 1 << 18
   } ArchDefineTypes;
 
@@ -61,6 +62,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasROPProtect = false;
   bool HasPrivileged = false;
   bool HasAIXSmallLocalExecTLS = false;
+  bool HasAIXSmallLocalDynamicTLS = false;
   bool HasVSX = false;
   bool UseCRBits = false;
   bool HasP8Vector = false;
@@ -80,6 +82,8 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool IsISA3_0 = false;
   bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
+  bool HasAIXShLibTLSModelOpt = false;
+  bool UseLongCalls = false;
 
 protected:
   std::string ABI;
@@ -92,6 +96,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
     HasIbm128 = true;
+    HasUnalignedAccess = true;
   }
 
   // Set the language option for altivec based on our value.
@@ -162,11 +167,16 @@ public:
                          ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
+              .Cases("power11", "pwr11",
+                     ArchDefinePwr11 | ArchDefinePwr10 | ArchDefinePwr9 |
+                         ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
+                         ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                         ArchDefinePpcgr | ArchDefinePpcsq)
               .Case("future",
-                    ArchDefineFuture | ArchDefinePwr10 | ArchDefinePwr9 |
-                        ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
-                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                        ArchDefinePpcgr | ArchDefinePpcsq)
+                    ArchDefineFuture | ArchDefinePwr11 | ArchDefinePwr10 |
+                        ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
+                        ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("8548", "e500", ArchDefineE500)
               .Default(ArchDefineNone);
     }
@@ -188,6 +198,7 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   void addP10SpecificFeatures(llvm::StringMap<bool> &Features) const;
+  void addP11SpecificFeatures(llvm::StringMap<bool> &Features) const;
   void addFutureSpecificFeatures(llvm::StringMap<bool> &Features) const;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
@@ -302,9 +313,11 @@ public:
               // asm statements)
       Info.setAllowsMemory();
       break;
-    case 'R': // AIX TOC entry
     case 'a': // Address operand that is an indexed or indirect from a
               // register (`p' is preferable for asm statements)
+              // TODO: Add full support for this constraint
+      return false;
+    case 'R': // AIX TOC entry
     case 'S': // Constant suitable as a 64-bit mask operand
     case 'T': // Constant suitable as a 32-bit mask operand
     case 'U': // System V Release 4 small data area reference
@@ -357,8 +370,30 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("r1") || RegName.equals("x1");
+    return RegName == "r1" || RegName == "x1";
   }
+
+  // We support __builtin_cpu_supports/__builtin_cpu_is on targets that
+  // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
+  static constexpr int MINIMUM_AIX_OS_MAJOR = 7;
+  static constexpr int MINIMUM_AIX_OS_MINOR = 2;
+  bool supportsCpuSupports() const override {
+    llvm::Triple Triple = getTriple();
+    // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
+    return Triple.isOSGlibc() ||
+           (Triple.isOSAIX() &&
+            !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
+  }
+
+  bool supportsCpuIs() const override {
+    llvm::Triple Triple = getTriple();
+    // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
+    return Triple.isOSGlibc() ||
+           (Triple.isOSAIX() &&
+            !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
+  }
+  bool validateCpuSupports(StringRef Feature) const override;
+  bool validateCpuIs(StringRef Name) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY PPC32TargetInfo : public PPCTargetInfo {
@@ -405,6 +440,10 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 };
 
@@ -485,6 +524,10 @@ public:
     default:
       return CCCR_Warning;
     }
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
   }
 };
 

@@ -15,24 +15,54 @@
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/AsmParser/CodeComplete.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/Region.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Support/InterfaceSupport.h"
+#include "mlir/IR/Visitors.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/bit.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -278,6 +308,45 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   return success();
 }
 
+/// Parse an optional integer value only in decimal format from the stream.
+OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
+  Token curToken = getToken();
+  if (curToken.isNot(Token::integer, Token::minus)) {
+    return std::nullopt;
+  }
+
+  bool negative = consumeIf(Token::minus);
+  Token curTok = getToken();
+  if (parseToken(Token::integer, "expected integer value")) {
+    return failure();
+  }
+
+  StringRef spelling = curTok.getSpelling();
+  // If the integer is in hexadecimal return only the 0. The lexer has already
+  // moved past the entire hexidecimal encoded integer so we reset the lex
+  // pointer to just past the 0 we actualy want to consume.
+  if (spelling[0] == '0' && spelling.size() > 1 &&
+      llvm::toLower(spelling[1]) == 'x') {
+    result = 0;
+    state.lex.resetPointer(spelling.data() + 1);
+    consumeToken();
+    return success();
+  }
+
+  if (spelling.getAsInteger(10, result))
+    return emitError(curTok.getLoc(), "integer value too large");
+
+  // Make sure we have a zero at the top so we return the right signedness.
+  if (result.isNegative())
+    result = result.zext(result.getBitWidth() + 1);
+
+  // Process the negative sign if present.
+  if (negative)
+    result.negate();
+
+  return success();
+}
+
 /// Parse a floating point value from an integer literal token.
 ParseResult Parser::parseFloatFromIntegerLiteral(
     std::optional<APFloat> &result, const Token &tok, bool isNegative,
@@ -296,19 +365,15 @@ ParseResult Parser::parseFloatFromIntegerLiteral(
                           "leading minus");
   }
 
-  std::optional<uint64_t> value = tok.getUInt64IntegerValue();
-  if (!value)
+  APInt intValue;
+  tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
+  if (intValue.getActiveBits() > typeSizeInBits)
     return emitError(loc, "hexadecimal float constant out of range for type");
 
-  if (&semantics == &APFloat::IEEEdouble()) {
-    result = APFloat(semantics, APInt(typeSizeInBits, *value));
-    return success();
-  }
+  APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
+                       intValue.getRawData());
 
-  APInt apInt(typeSizeInBits, *value);
-  if (apInt != *value)
-    return emitError(loc, "hexadecimal float constant out of range for type");
-  result = APFloat(semantics, apInt);
+  result.emplace(semantics, truncatedValue);
 
   return success();
 }
@@ -1179,7 +1244,7 @@ ParseResult OperationParser::parseOperation() {
         resultIt += std::get<1>(record);
       }
       state.asmState->finalizeOperationDefinition(
-          op, nameTok.getLocRange(), /*endLoc=*/getToken().getLoc(),
+          op, nameTok.getLocRange(), /*endLoc=*/getLastToken().getEndLoc(),
           asmResultGroups);
     }
 
@@ -1195,8 +1260,9 @@ ParseResult OperationParser::parseOperation() {
 
     // Add this operation to the assembly state if it was provided to populate.
   } else if (state.asmState) {
-    state.asmState->finalizeOperationDefinition(op, nameTok.getLocRange(),
-                                                /*endLoc=*/getToken().getLoc());
+    state.asmState->finalizeOperationDefinition(
+        op, nameTok.getLocRange(),
+        /*endLoc=*/getLastToken().getEndLoc());
   }
 
   return success();
@@ -1470,8 +1536,9 @@ Operation *OperationParser::parseGenericOperation(Block *insertBlock,
   // If we are populating the parser asm state, finalize this operation
   // definition.
   if (state.asmState)
-    state.asmState->finalizeOperationDefinition(op, nameToken.getLocRange(),
-                                                /*endLoc=*/getToken().getLoc());
+    state.asmState->finalizeOperationDefinition(
+        op, nameToken.getLocRange(),
+        /*endLoc=*/getLastToken().getEndLoc());
   return op;
 }
 
@@ -2447,7 +2514,7 @@ public:
   AsmResourceEntryKind getKind() const final {
     if (value.isAny(Token::kw_true, Token::kw_false))
       return AsmResourceEntryKind::Bool;
-    return value.getSpelling().startswith("\"0x")
+    return value.getSpelling().starts_with("\"0x")
                ? AsmResourceEntryKind::Blob
                : AsmResourceEntryKind::String;
   }

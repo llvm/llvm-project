@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes=debugify,globalopt -f %s | FileCheck %s
+; RUN: opt -S -passes=debugify,globalopt -f %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 @foo = internal global i32 0, align 4
 
@@ -18,7 +19,7 @@ entry:
 ;CHECK-NEXT: entry:
 ;CHECK-NEXT:   %.b = load i1, ptr @foo, align 1, !dbg ![[DbgLocLoadSel:[0-9]+]]
 ;CHECK-NEXT:   %0 = select i1 %.b, i32 5, i32 0, !dbg ![[DbgLocLoadSel]]
-;CHECK-NEXT:   call void @llvm.dbg.value({{.*}}), !dbg ![[DbgLocLoadSel]]
+;CHECK-NEXT:   #dbg_value({{.*}},  ![[DbgLocLoadSel]]
 ;CHECK-NEXT:   ret i32 %0, !dbg ![[DbgLocRet:[0-9]+]]
 
 ;CHECK: ![[DbgLocLoadSel]] = !DILocation(line: 3,

@@ -30,8 +30,5 @@ add_llvm_unittest(UtilsTests
   SSAUpdaterBulkTest.cpp
   UnrollLoopTest.cpp
   ValueMapperTest.cpp
-  VFABIUtils.cpp
   ProfDataUtilTest.cpp
   )
-
-set_property(TARGET UtilsTests PROPERTY FOLDER "Tests/UnitTests/TransformsTests")

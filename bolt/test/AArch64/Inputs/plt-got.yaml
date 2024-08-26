@@ -1,0 +1,216 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+  Entry:           0x10360
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x270
+    Offset:          0x270
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .rela.dyn
+    Align:           0x10000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .plt.got
+    LastSec:         .text
+    VAddr:           0x10350
+    Align:           0x10000
+    Offset:          0x2e0
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .interp
+    LastSec:         .got
+    VAddr:           0x203B0
+    Align:           0x10000
+    Offset:          0x270
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .got.plt
+    LastSec:         .got.plt
+    VAddr:           0x304E0
+    Align:           0x10000
+    Offset:          0x420
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x203B0
+    Align:           0x8
+    Offset:          0x340
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Offset:          0x0
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x270
+    AddressAlign:    0x1
+    Offset:          0x270
+    Content:         2F6C69622F6C642D6C696E75782D616172636836342E736F2E3100
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2B0
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2E0
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2F0
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x204D8
+        Symbol:          abort
+        Type:            R_AARCH64_GLOB_DAT
+  - Name:            .plt.got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10350
+    AddressAlign:    0x10
+    Content:         90000090116E42F920021FD61F2003D5
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10360
+    AddressAlign:    0x4
+    Content:         FF8300D1FD7B01A9FD43009188000090086D42F9E80700F9E80740F9080100F1E8179F1AA800003701000014E80740F900013FD601000014EEFFFF97007D20D41000009010420D9100021FD61F2003D5
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x203B0
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x1
+      - Tag:             DT_RELA
+        Value:           0x2F0
+      - Tag:             DT_RELASZ
+        Value:           0x18
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_PLTGOT
+        Value:           0x304E0
+      - Tag:             DT_SYMTAB
+        Value:           0x2B0
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x2E0
+      - Tag:             DT_STRSZ
+        Value:           0x10
+      - Tag:             DT_GNU_HASH
+        Value:           0x290
+      - Tag:             DT_FLAGS_1
+        Value:           0x8000000
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x204D0
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x304E0
+    AddressAlign:    0x8
+    Content:         B00302000000000000000000000000000000000000000000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Offset:          0x1268
+    Info:            .text
+    Relocations:
+      - Offset:          0x1036C
+        Symbol:          abort
+        Type:            R_AARCH64_ADR_GOT_PAGE
+      - Offset:          0x10370
+        Symbol:          abort
+        Type:            R_AARCH64_LD64_GOT_LO12_NC
+      - Offset:          0x10398
+        Symbol:          abort
+        Type:            R_AARCH64_CALL26
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .interp
+      - Name:            .dynsym
+      - Name:            .dynstr
+      - Name:            .rela.dyn
+      - Name:            .plt.got
+      - Name:            .text
+      - Name:            .dynamic
+      - Name:            .got
+      - Name:            .got.plt
+      - Name:            .strtab
+      - Name:            .symtab
+      - Name:            .shstrtab
+      - Name:            .rela.text
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x10360
+  - Name:            .dynamic
+    Type:            STT_SECTION
+    Section:         .dynamic
+    Value:           0x203B0
+  - Name:            .got
+    Type:            STT_SECTION
+    Section:         .got
+    Value:           0x204D0
+  - Name:            .got.plt
+    Type:            STT_SECTION
+    Section:         .got.plt
+    Value:           0x304E0
+  - Name:            'abort$got'
+    Type:            STT_OBJECT
+    Section:         .got
+    Value:           0x204D8
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x10360
+    Size:            0x3C
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x203B0
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Section:         .got
+    Value:           0x204D0
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Size:            0x8
+DynamicSymbols:
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Size:            0x8
+...

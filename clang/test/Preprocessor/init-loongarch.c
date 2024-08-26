@@ -177,6 +177,11 @@
 // LA32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // LA32: #define __LONG_MAX__ 2147483647L
 // LA32: #define __LONG_WIDTH__ 32
+// LA32: #define __MEMORY_SCOPE_DEVICE 1 
+// LA32: #define __MEMORY_SCOPE_SINGLE 4 
+// LA32: #define __MEMORY_SCOPE_SYSTEM 0 
+// LA32: #define __MEMORY_SCOPE_WRKGRP 2 
+// LA32: #define __MEMORY_SCOPE_WVFRNT 3 
 // LA32: #define __NO_INLINE__ 1
 // LA32: #define __NO_MATH_ERRNO__ 1
 // LA32: #define __OBJC_BOOL_IS_BOOL 0
@@ -494,6 +499,11 @@
 // LA64: #define __LONG_MAX__ 9223372036854775807L
 // LA64: #define __LONG_WIDTH__ 64
 // LA64: #define __LP64__ 1
+// LA64: #define __MEMORY_SCOPE_DEVICE 1 
+// LA64: #define __MEMORY_SCOPE_SINGLE 4 
+// LA64: #define __MEMORY_SCOPE_SYSTEM 0 
+// LA64: #define __MEMORY_SCOPE_WRKGRP 2 
+// LA64: #define __MEMORY_SCOPE_WVFRNT 3 
 // LA64: #define __NO_INLINE__ 1
 // LA64: #define __NO_MATH_ERRNO__ 1
 // LA64: #define __OBJC_BOOL_IS_BOOL 0
@@ -788,22 +798,87 @@
 // LA64-FPU0-LP64S-NOT: #define __loongarch_single_float
 // LA64-FPU0-LP64S: #define __loongarch_soft_float 1
 
-/// Check __loongarch_arch and __loongarch_tune.
+/// Check __loongarch_arch{_tune/_frecipe}.
 
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - | \
-// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la464 | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la464 -DTUNE=la464 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -mtune=loongarch64 | \
-// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -mtune=la464 | \
-// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=la464 %s
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=la464 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -mtune=la464 | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=la464 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la464 -mtune=loongarch64 | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la464 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang -lsx | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +frecipe | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=la64v1.1 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 | \
+// RUN:   FileCheck --match-full-lines  --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=la64v1.1 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -frecipe | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -lsx | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +frecipe | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx -Xclang -target-feature -Xclang +frecipe | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=la64v1.1 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la664 | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=la664 -DTUNE=la664 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -mtune=la664 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=la664 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -mtune=la664 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=la664 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la664 -mtune=loongarch64 | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=la664 -DTUNE=loongarch64 %s
 
 // ARCH-TUNE: #define __loongarch_arch "[[ARCH]]"
+// FRECIPE: #define __loongarch_frecipe 1
 // ARCH-TUNE: #define __loongarch_tune "[[TUNE]]"
+
+// RUN: %clang --target=loongarch64 -mlsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
+// RUN: %clang --target=loongarch64 -mno-lsx -mlsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
+// RUN: %clang --target=loongarch64 -mlsx -mno-lasx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
+// RUN: %clang --target=loongarch64 -mno-lasx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
+// RUN: %clang --target=loongarch64 -mno-lasx -mlsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
+// MLSX-NOT: #define __loongarch_asx
+// MLSX: #define __loongarch_simd_width 128
+// MLSX: #define __loongarch_sx 1
+
+// RUN: %clang --target=loongarch64 -mlasx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLASX %s
+// RUN: %clang --target=loongarch64 -mlsx -mlasx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLASX %s
+// RUN: %clang --target=loongarch64 -mlasx -mlsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLASX %s
+// RUN: %clang --target=loongarch64 -mno-lasx -mlasx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MLASX %s
+// MLASX: #define __loongarch_asx 1
+// MLASX: #define __loongarch_simd_width 256
+// MLASX: #define __loongarch_sx 1
+
+// RUN: %clang --target=loongarch64 -mno-lsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -mlsx -mno-lsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -mno-lsx -mno-lasx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -mno-lasx -mno-lsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// MNO-LSX-NOT: #define __loongarch_asx
+// MNO-LSX-NOT: #define __loongarch_simd_width
+// MNO-LSX-NOT: #define __loongarch_sx

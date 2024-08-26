@@ -14,8 +14,12 @@ make_variant(
     copts = ["-w"],
     lib_name = "libpfm",
     lib_source = ":sources",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     toolchain = "@rules_foreign_cc//toolchains:preinstalled_autoconf_toolchain",
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
 
 alias(
@@ -27,5 +31,9 @@ alias(
 cc_library(
     name = "pfm_system",
     linkopts = ["-lpfm"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )

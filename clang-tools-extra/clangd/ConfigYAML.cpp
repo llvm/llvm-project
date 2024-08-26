@@ -156,6 +156,10 @@ private:
       });
       CheckOptDict.parse(N);
     });
+    Dict.handle("FastCheckFilter", [&](Node &N) {
+      if (auto FastCheckFilter = scalarValue(N, "FastCheckFilter"))
+        F.FastCheckFilter = *FastCheckFilter;
+    });
     Dict.parse(N);
   }
 
@@ -164,6 +168,10 @@ private:
     Dict.handle("IgnoreHeader", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.IgnoreHeader = std::move(*Values);
+    });
+    Dict.handle("AnalyzeAngledIncludes", [&](Node &N) {
+      if (auto Value = boolValue(N, "AnalyzeAngledIncludes"))
+        F.AnalyzeAngledIncludes = *Value;
     });
     Dict.parse(N);
   }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file --verify-diagnostics | FileCheck %s
 
 // Check that we produce async copies from the vector.transfer_xxx operations.
 builtin.module {
@@ -22,10 +22,12 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -54,10 +56,12 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -84,10 +88,12 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -120,10 +126,12 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -145,10 +153,12 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -159,9 +169,9 @@ builtin.module {
   // CHECK-LABEL: @read_2d_with_mask(
   //  CHECK-SAME:     %[[sz0:.*]]: index, %[[sz1:.*]]: index, %[[a:.*]]: memref<1024x1024xf32>
   func.func @read_2d_with_mask(%sz0: index, %sz1: index, %a: memref<1024x1024xf32>) {
-    // CHECK: %[[c0:.*]] = arith.constant 0 : index
-    // CHECK: %[[c1:.*]] = arith.constant 1 : index
-    // CHECK: %[[c2:.*]] = arith.constant 2 : index
+    // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+    // CHECK-DAG: %[[c2:.*]] = arith.constant 2 : index
     %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
     %c0 = arith.constant 0 : index
     %cst_0 = arith.constant 0.000000e+00 : f32
@@ -184,15 +194,17 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %top_level_func {
-      transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
-    } : !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
-    %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.apply_cse to %top_level_func_2 : !transform.any_op
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.apply_patterns to %top_level_func {
+        transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
+      } : !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.apply_cse to %top_level_func_2 : !transform.any_op
+      transform.yield
+    }
   }
 }
 
@@ -203,9 +215,9 @@ builtin.module {
   // CHECK-LABEL: @read_3d_with_mask(
   //  CHECK-SAME:     %[[sz0:.*]]: index, %[[sz1:.*]]: index, %[[sz2:.*]]: index, %[[a:.*]]: memref<1024x1024x1024xf32>
   func.func @read_3d_with_mask(%sz0: index, %sz1: index, %sz2: index, %a: memref<1024x1024x1024xf32>) {
-    // CHECK: %[[c0:.*]] = arith.constant 0 : index
-    // CHECK: %[[c1:.*]] = arith.constant 1 : index
-    // CHECK: %[[c2:.*]] = arith.constant 2 : index
+    // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+    // CHECK-DAG: %[[c2:.*]] = arith.constant 2 : index
     %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
     %c0 = arith.constant 0 : index
     %cst_0 = arith.constant 0.000000e+00 : f32
@@ -245,14 +257,16 @@ builtin.module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%variant_op: !transform.any_op):
-    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %top_level_func {
-      transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
-    } : !transform.any_op
-    transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
-    %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
-    transform.apply_cse to %top_level_func_2 : !transform.any_op
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.apply_patterns to %top_level_func {
+        transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
+      } : !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+      %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.apply_cse to %top_level_func_2 : !transform.any_op
+      transform.yield
+    }
   }
 }

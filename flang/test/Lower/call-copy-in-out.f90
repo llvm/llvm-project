@@ -1,5 +1,5 @@
 ! Test copy-in / copy-out of non-contiguous variable passed as F77 array arguments.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Nominal test
 ! CHECK-LABEL: func @_QPtest_assumed_shape_to_array(
@@ -33,12 +33,12 @@ subroutine test_assumed_shape_to_array(x)
 ! Copy-out
 ! CHECK-DAG:  %[[shape:.*]] = fir.shape %[[dim]]#1 : (index) -> !fir.shape<1>
 ! CHECK-DAG:  %[[temp_box:.*]] = fir.embox %[[addr]](%[[shape]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  %[[rebox:.*]] = fir.rebox %[[temp_box]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:  fir.store %[[rebox]] to %[[temp_box_ref:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK-DAG:  fir.store %[[x]] to %[[arg_box_loc:.*]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
-! CHECK-DAG:  %[[skipToInit:.*]] = arith.constant true
 ! CHECK-DAG: %[[arg_box_addr:.*]] = fir.convert %[[arg_box_loc]] : (!fir.ref<!fir.box<!fir.array<?xf32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK-DAG: %[[temp_box_cast:.*]] = fir.convert %[[temp_box]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-! CHECK-DAG: fir.call @_FortranACopyOutAssign(%[[arg_box_addr]], %[[temp_box_cast]], %[[skipToInit]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.ref<i8>, i32) -> none
-! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
+! CHECK-DAG: %[[temp_box_cast:.*]] = fir.convert %[[temp_box_ref]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG: fir.call @_FortranACopyOutAssign(%[[arg_box_addr]], %[[temp_box_cast]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none
 
   call bar(x)
 end subroutine
@@ -69,7 +69,6 @@ subroutine eval_expr_only_once(x)
 ! CHECK:  fir.call @_FortranACopyOutAssign
 ! CHECK-NOT: fir.call @_QPonly_once()
 
-! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
 end subroutine
 
 ! Test no copy-in/copy-out is generated for contiguous assumed shapes.
@@ -97,7 +96,6 @@ subroutine test_parenthesis(x)
 ! CHECK:  fir.call @_QPbar(%[[cast]]) {{.*}}: (!fir.ref<!fir.array<?xf32>>) -> ()
   call bar((x))
 ! CHECK-NOT:  fir.call @_FortranACopyOutAssign
-! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -125,7 +123,6 @@ subroutine test_intent_out(x)
   
 ! CHECK: fir.if %[[not_contiguous]]
 ! CHECK: fir.call @_FortranACopyOutAssign
-! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -155,8 +152,8 @@ subroutine test_intent_in(x)
 ! CHECK:  fir.call @_QPbar_intent_in(%[[cast]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
   call bar_intent_in(x)
 ! CHECK: fir.if %[[not_contiguous]]
-! CHECK-NOT:  fir.call @_FortranACopyOutAssign
-! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
+! CHECK: fir.zero
+! CHECK:  fir.call @_FortranACopyOutAssign
 ! CHECK: return
 end subroutine
 
@@ -183,7 +180,6 @@ subroutine test_intent_inout(x)
   call bar_intent_inout(x)
 ! CHECK: fir.if %[[not_contiguous]]
 ! CHECK:  fir.call @_FortranACopyOutAssign
-! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -221,12 +217,12 @@ subroutine test_char(x)
 ! CHECK:           fir.if %[[VAL_22]] {
 ! CHECK:             %[[VAL_26:.*]] = fir.shape %[[VAL_20]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_27:.*]] = fir.embox %[[VAL_24]](%[[VAL_26]]) : (!fir.heap<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
+! CHECK:             %[[REBOX:.*]] = fir.rebox %[[VAL_27]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
+! CHECK:             fir.store %[[REBOX]] to %[[TMP_BOX_REF:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
 ! CHECK:             fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<?x!fir.char<1,10>>>>
-! CHECK:             %[[VAL_30:.*]] = arith.constant true
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?x!fir.char<1,10>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_27]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<none>
-! CHECK:             %[[VAL_34:.*]] = fir.call @_FortranACopyOutAssign(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.ref<i8>, i32) -> none
-! CHECK:             fir.freemem %[[VAL_24]] : !fir.heap<!fir.array<?x!fir.char<1,10>>>
+! CHECK:             %[[VAL_32:.*]] = fir.convert %[[TMP_BOX_REF]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:             %[[VAL_34:.*]] = fir.call @_FortranACopyOutAssign(%[[VAL_31]], %[[VAL_32]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none
 ! CHECK:           }
   
   character(10) :: x(:)

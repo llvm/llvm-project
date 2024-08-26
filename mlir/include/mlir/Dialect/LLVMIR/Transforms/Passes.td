@@ -43,30 +43,12 @@ def LLVMRequestCWrappers
   let constructor = "::mlir::LLVM::createRequestCWrappersPass()";
 }
 
-def LLVMTypeConsistency
-    : Pass<"llvm-type-consistency", "::mlir::LLVM::LLVMFuncOp"> {
-  let summary = "Rewrites to improve type consistency";
-  let description = [{
-    Set of rewrites to improve the coherency of types within an LLVM dialect
-    program. This will adjust operations operating on pointers so they interpret
-    their associated pointee type as consistently as possible.
-  }];
-  let constructor = "::mlir::LLVM::createTypeConsistencyPass()";
-
-  let options = [
-    Option<"maxVectorSplitSize", "max-vector-split-size", "unsigned",
-           /*default=*/"512",
-           "Maximum size in bits of a vector value in a load or store operation"
-           " operating on multiple elements that should still be split">,
-  ];
-}
-
 def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
   let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
 }
 
-def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "LLVM::LLVMFuncOp"> {
+def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
   let summary = "Materialize LLVM debug info subprogram attribute on every LLVMFuncOp";
   let description = [{
     Having a debug info subprogram attribute on a function is required for

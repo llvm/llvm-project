@@ -18,22 +18,6 @@
 
 # CHECK: -- Testing:
 
-# CHECK: FAIL: shtest-shell :: cat-error-0.txt
-# CHECK: *** TEST 'shtest-shell :: cat-error-0.txt' FAILED ***
-# CHECK: cat -b temp1.txt
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | Unsupported: 'cat':  option -b not recognized
-# CHECK: # error: command failed with exit status: 1
-# CHECK: ***
-
-# CHECK: FAIL: shtest-shell :: cat-error-1.txt
-# CHECK: *** TEST 'shtest-shell :: cat-error-1.txt' FAILED ***
-# CHECK: cat temp1.txt
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | [Errno 2] No such file or directory: 'temp1.txt'
-# CHECK: # error: command failed with exit status: 1
-# CHECK: ***
-
 # CHECK: FAIL: shtest-shell :: colon-error.txt
 # CHECK: *** TEST 'shtest-shell :: colon-error.txt' FAILED ***
 # CHECK: :
@@ -561,10 +545,17 @@
 
 # FIXME: The output here sucks.
 #
-# CHECK: FAIL: shtest-shell :: error-1.txt
-# CHECK: *** TEST 'shtest-shell :: error-1.txt' FAILED ***
-# CHECK: shell parser error on RUN: at line 3: echo "missing quote
-# CHECK: ***
+#       CHECK: UNRESOLVED: shtest-shell :: error-1.txt
+#  CHECK-NEXT: *** TEST 'shtest-shell :: error-1.txt' FAILED ***
+#  CHECK-NEXT: Exit Code: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT: Command Output (stdout):
+#  CHECK-NEXT: --
+#  CHECK-NEXT: # shell parser error on RUN: at line 3: echo "missing quote
+# CHECK-EMPTY:
+#  CHECK-NEXT: --
+# CHECK-EMPTY:
+#  CHECK-NEXT: ***
 
 # CHECK: FAIL: shtest-shell :: error-2.txt
 # CHECK: *** TEST 'shtest-shell :: error-2.txt' FAILED ***
@@ -643,4 +634,5 @@
 #      CHECK: ***
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failed Tests (39)
+# CHECK: Unresolved Tests (1)
+# CHECK: Failed Tests (36)

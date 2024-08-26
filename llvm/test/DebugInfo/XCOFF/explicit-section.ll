@@ -42,8 +42,9 @@ entry:
 !15 = !DILocation(line: 3, column: 10, scope: !14)
 !16 = !DILocation(line: 3, column: 3, scope: !14)
 
-; CHECK:               .csect [PR],5
-; CHECK-NEXT:          .file   "2.c"
+; CHECK:               .file   "2.c"
+; CHECK-NEXT:          .csect ..text..[PR],5
+; CHECK-NEXT:          .rename ..text..[PR],""
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar
 ; CHECK-NEXT:          .align  2
@@ -51,7 +52,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .bar                         # @bar
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect [PR],5
+; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:  .bar:
 ; CHECK-NEXT:  L..func_begin0:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
@@ -129,7 +130,7 @@ entry:
 ; CHECK-NEXT:                                          # -- End function
 ; CHECK-NEXT:  L..sec_end0:
 ; CHECK:               .dwsect 0x60000
-; CHECK-NEXT:  L...dwabrev:
+; CHECK-NEXT:  .dwabrev:
 ; CHECK-NEXT:          .byte   1                               # Abbreviation Code
 ; CHECK-NEXT:          .byte   17                              # DW_TAG_compile_unit
 ; CHECK-NEXT:          .byte   1                               # DW_CHILDREN_yes
@@ -183,10 +184,10 @@ entry:
 ; CHECK-NEXT:          .byte   0                               # EOM(2)
 ; CHECK-NEXT:          .byte   0                               # EOM(3)
 ; CHECK:               .dwsect 0x10000
-; CHECK-NEXT:  L...dwinfo:
+; CHECK-NEXT:  .dwinfo:
 ; CHECK-NEXT:  L..cu_begin0:
 ; CHECK-NEXT:          .vbyte  2, 3                            # DWARF version number
-; CHECK-NEXT:          .vbyte  4, L...dwabrev                  # Offset Into Abbrev. Section
+; CHECK-NEXT:          .vbyte  4, .dwabrev                  # Offset Into Abbrev. Section
 ; CHECK-NEXT:          .byte   4                               # Address Size (in bytes)
 ; CHECK-NEXT:          .byte   1                               # Abbrev [1] 0xb:0x4f DW_TAG_compile_unit
 ; CHECK-NEXT:          .vbyte  4, L..info_string0              # DW_AT_producer
@@ -223,7 +224,7 @@ entry:
 ; CHECK-NEXT:          .byte   0                               # End Of Children Mark
 ; CHECK-NEXT:  L..debug_info_end0:
 ; CHECK:               .dwsect 0x80000
-; CHECK-NEXT:  L...dwrnges:
+; CHECK-NEXT:  .dwrnges:
 ; CHECK-NEXT:  L..debug_ranges0:
 ; CHECK-NEXT:          .vbyte  4, L..func_begin0
 ; CHECK-NEXT:          .vbyte  4, L..func_end0
@@ -232,7 +233,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, 0
 ; CHECK-NEXT:          .vbyte  4, 0
 ; CHECK:               .dwsect 0x70000
-; CHECK-NEXT:  L...dwstr:
+; CHECK-NEXT:  .dwstr:
 ; CHECK-NEXT:  L..info_string0:
 ; CHECK-NEXT:  	.string	"clang version 13.0.0"          # string offset=0
 ; CHECK-NEXT:  L..info_string1:
@@ -247,7 +248,7 @@ entry:
 ; CHECK-NEXT:  	.string	"main"                          # string offset=39
 ; CHECK-NEXT:          .toc
 ; CHECK:               .dwsect 0x20000
-; CHECK-NEXT:  L...dwline:
+; CHECK-NEXT:  .dwline:
 ; CHECK-NEXT:  L..debug_line_0:
 ; CHECK-NEXT:  .set L..line_table_start0, L..debug_line_0-4
 ; CHECK-NEXT:          .vbyte  2, 3

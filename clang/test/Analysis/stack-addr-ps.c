@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -fblocks -verify %s
 
 int* f1(void) {
   int x = 0;
@@ -20,13 +20,13 @@ int* f3(int x, int *y) {
 
 void* compound_literal(int x, int y) {
   if (x)
-    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}}
+    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
 
   int* array[] = {};
   struct s { int z; double y; int w; };
   
   if (y)
-    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}}
+    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
     
   
   void* p = &((struct s){ 42, 0.4, x ? 42 : 0 });
@@ -94,4 +94,35 @@ void testRegister(register const char *reg) {
 void callTestRegister(void) {
     char buf[20];
     testRegister(buf); // no-warning
+}
+
+void top_level_leaking(int **out) {
+  int local = 42;
+  *out = &local; // no-warning FIXME
+}
+
+void callee_leaking_via_param(int **out) {
+  int local = 1;
+  *out = &local;
+  // expected-warning@-1{{Address of stack memory associated with local variable 'local' is still referred to by the stack variable 'ptr'}}
+}
+
+void caller_for_leaking_callee() {
+  int *ptr = 0;
+  callee_leaking_via_param(&ptr);
+}
+
+void callee_nested_leaking(int **out) {
+  int local = 1;
+  *out = &local;
+  // expected-warning@-1{{Address of stack memory associated with local variable 'local' is still referred to by the stack variable 'ptr'}}
+}
+
+void caller_mid_for_nested_leaking(int **mid) {
+  callee_nested_leaking(mid);
+}
+
+void caller_for_nested_leaking() {
+  int *ptr = 0;
+  caller_mid_for_nested_leaking(&ptr);
 }

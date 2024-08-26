@@ -15,7 +15,7 @@
 
 from io import StringIO
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import re
 import sys
@@ -99,7 +99,7 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-DATA_ARRAY_TEMPLATE = """
+DATA_ARRAY_TEMPLATE = r"""
 /// The entries of the characters with an estimated width of 2.
 ///
 /// Contains the entries for [format.string.std]/12
@@ -143,7 +143,7 @@ DATA_ARRAY_TEMPLATE = """
 /// - bits [0, 13] The size of the range, allowing 16384 elements.
 /// - bits [14, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[{size}] = {{
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
 
 /// The upper bound entry of EastAsianWidth.txt.
@@ -155,7 +155,7 @@ inline constexpr uint32_t __table_upper_bound = 0x{upper_bound:08x};
 
 /// Returns the estimated width of a Unicode code point.
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int __estimated_width(const char32_t __code_point) noexcept {{
   // Since __table_upper_bound contains the unshifted range do the
   // comparison without shifting.

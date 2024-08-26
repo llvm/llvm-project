@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
@@ -31,6 +30,10 @@ class Triple;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
+class Module;
+
+/// Check if module has flag attached, if not add the flag.
+bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -43,12 +46,18 @@ BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
 // Create a constant for Str so that we can pass it to the run-time lib.
 GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
                                              bool AllowMerging,
-                                             const char *NamePrefix = "");
+                                             Twine NamePrefix = "");
 
 // Returns F.getComdat() if it exists.
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
 // Returns nullptr on failure.
 Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
+
+// Place global in a large section for x86-64 ELF binaries to mitigate
+// relocation overflow pressure. This can be be used for metadata globals that
+// aren't directly accessed by code, which has no performance impact.
+void setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                   GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
@@ -116,11 +125,17 @@ struct InstrProfOptions {
   // Use BFI to guide register promotion
   bool UseBFIInPromotion = false;
 
+  // Use sampling to reduce the profile instrumentation runtime overhead.
+  bool Sampling = false;
+
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
 
   InstrProfOptions() = default;
 };
+
+// Create the variable for profile sampling.
+void createProfileSamplingVar(Module &M);
 
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {

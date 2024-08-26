@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
       fflush(stdout);
       map_ptr = map_ptr->l_next;
     }
-    // CHECK: libc.so
+    // CHECK: libc{{[\-]*.*}}.so
     // CHECK: dladdr1_test
   }
 

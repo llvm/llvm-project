@@ -21,15 +21,17 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process, bkpt)
 
-        self.expect(
-            "frame variable v1",
-            substrs=["v1 =  Active Type = int  {", "Value = 12", "}"],
-        )
+        for name in ["v1", "v1_typedef"]:
+            self.expect(
+                "frame variable " + name,
+                substrs=[name + " =  Active Type = int  {", "Value = 12", "}"],
+            )
 
-        self.expect(
-            "frame variable v1_ref",
-            substrs=["v1_ref =  Active Type = int : {", "Value = 12", "}"],
-        )
+        for name in ["v1_ref", "v1_typedef_ref"]:
+            self.expect(
+                "frame variable " + name,
+                substrs=[name + " =  Active Type = int : {", "Value = 12", "}"],
+            )
 
         self.expect(
             "frame variable v_v1",
@@ -71,3 +73,29 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
             substrs=["v_many_types_no_value =  No Value"],
         )
         """
+
+    @add_test_categories(["libstdcxx"])
+    def test_invalid_variant_index(self):
+        """Test LibStdC++ data formatter for std::variant with invalid index."""
+        self.build()
+
+        (self.target, self.process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
+
+        lldbutil.continue_to_breakpoint(self.process, bkpt)
+
+        self.expect(
+            "frame variable v1",
+            substrs=["v1 =  Active Type = int  {", "Value = 12", "}"],
+        )
+
+        var_v1 = thread.frames[0].FindVariable("v1")
+        var_v1_raw_obj = var_v1.GetNonSyntheticValue()
+        index_obj = var_v1_raw_obj.GetChildMemberWithName("_M_index")
+        self.assertTrue(index_obj and index_obj.IsValid())
+
+        INVALID_INDEX = "100"
+        index_obj.SetValueFromCString(INVALID_INDEX)
+
+        self.expect("frame variable v1", substrs=["v1 =  <Invalid>"])

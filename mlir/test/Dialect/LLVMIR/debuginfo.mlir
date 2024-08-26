@@ -3,10 +3,10 @@
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
 
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
 #cu = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C, file = #file, producer = "MLIR",
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  producer = "MLIR", isOptimized = true, emissionKind = Full
 >
 
 // CHECK-DAG: #[[NULL:.*]] = #llvm.di_null_type
@@ -24,16 +24,24 @@
   sizeInBits = 32, encoding = DW_ATE_signed
 >
 
-// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT1]]>
 #ptr0 = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #int0,
-  sizeInBits = 64, alignInBits = 32, offsetInBits = 4
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 4,
+  extraData = #int1
 >
 
 // CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1">
 #ptr1 = #llvm.di_derived_type<
   // Specify the name parameter.
   tag = DW_TAG_pointer_type, name = "ptr1"
+>
+
+// CHECK-DAG: #[[PTR2:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, dwarfAddressSpace = 3, extraData = #[[INT1]]>
+#ptr2 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, baseType = #int0,
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 4,
+  dwarfAddressSpace = 3, extraData = #int1
 >
 
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
@@ -72,9 +80,9 @@
   flags = "TypePassByReference|NonTrivial"
 >
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>
@@ -95,11 +103,10 @@
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0
 >
 
-// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[COMP2]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE1]]>
+// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<scope = #[[COMP2]], file = #[[FILE]], type = #[[SPTYPE1]]>
 #sp1 = #llvm.di_subprogram<
-  // Omit the optional linkageName parameter.
-  compileUnit = #cu, scope = #comp2, name = "value",
-  file = #file, subprogramFlags = "Definition", type = #spType1
+  // Omit the optional parameters.
+  scope = #comp2, file = #file, type = #spType1
 >
 
 // CHECK-DAG: #[[MODULE:.*]] = #llvm.di_module<file = #[[FILE]], scope = #[[FILE]], name = "module", configMacros = "bar", includePath = "/", apinotes = "/", line = 42, isDecl = true>
@@ -111,7 +118,6 @@
 
 // CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
 #sp2 = #llvm.di_subprogram<
-  // Omit the optional linkageName parameter.
   compileUnit = #cu, scope = #module, name = "value",
   file = #file, subprogramFlags = "Definition", type = #spType2
 >
@@ -162,8 +168,8 @@ llvm.func @addr(%arg: i64) {
 
 // CHECK: llvm.func @value(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
 llvm.func @value(%arg1: i32, %arg2: i32) {
-  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG1]]
-  llvm.intr.dbg.value #var1 = %arg1 : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR1]] #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %[[ARG1]]
+  llvm.intr.dbg.value #var1 #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %arg1 : i32
   // CHECK: llvm.intr.dbg.value #[[VAR2]] = %[[ARG2]]
   llvm.intr.dbg.value #var2 = %arg2 : i32
   // CHECK: llvm.intr.dbg.label #[[LABEL1]]

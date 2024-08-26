@@ -1,0 +1,9 @@
+Test the profile version.
+
+RUN: llvm-profdata merge -o %t.profdata %p/Inputs/basic.proftext
+RUN: llvm-profdata show --profile-version %t.profdata | FileCheck %s
+CHECK: Profile version: 12
+
+RUN: llvm-profdata merge -o %t.prev.profdata %p/Inputs/basic.proftext --write-prev-version
+RUN: llvm-profdata show --profile-version %t.prev.profdata | FileCheck %s --check-prefix=PREV
+PREV: Profile version: 11

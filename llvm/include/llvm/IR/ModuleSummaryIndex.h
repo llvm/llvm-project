@@ -41,6 +41,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -68,20 +69,30 @@ struct CalleeInfo {
   // added to HotnessType enum.
   uint32_t Hotness : 3;
 
+  // True if at least one of the calls to the callee is a tail call.
+  bool HasTailCall : 1;
+
   /// The value stored in RelBlockFreq has to be interpreted as the digits of
   /// a scaled number with a scale of \p -ScaleShift.
-  uint32_t RelBlockFreq : 29;
+  static constexpr unsigned RelBlockFreqBits = 28;
+  uint32_t RelBlockFreq : RelBlockFreqBits;
   static constexpr int32_t ScaleShift = 8;
-  static constexpr uint64_t MaxRelBlockFreq = (1 << 29) - 1;
+  static constexpr uint64_t MaxRelBlockFreq = (1 << RelBlockFreqBits) - 1;
 
   CalleeInfo()
-      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)), RelBlockFreq(0) {}
-  explicit CalleeInfo(HotnessType Hotness, uint64_t RelBF)
-      : Hotness(static_cast<uint32_t>(Hotness)), RelBlockFreq(RelBF) {}
+      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
+        HasTailCall(false), RelBlockFreq(0) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, uint64_t RelBF)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
+        RelBlockFreq(RelBF) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
   }
+
+  bool hasTailCall() const { return HasTailCall; }
+
+  void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 
@@ -392,6 +403,10 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
+  // If requested, keep track of total profiled sizes for each MIB. This will be
+  // a vector of the same length and order as the MIBs vector, if non-empty.
+  std::vector<uint64_t> TotalSizes;
+
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
   }
@@ -412,6 +427,16 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
   }
+  if (!AE.TotalSizes.empty()) {
+    OS << " TotalSizes per MIB:\n\t\t";
+    First = true;
+    for (uint64_t TS : AE.TotalSizes) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << TS << "\n";
+    }
+  }
   return OS;
 }
 
@@ -421,6 +446,18 @@ class GlobalValueSummary {
 public:
   /// Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
+
+  enum ImportKind : unsigned {
+    // The global value definition corresponding to the summary should be
+    // imported from source module
+    Definition = 0,
+
+    // When its definition doesn't exist in the destination module and not
+    // imported (e.g., function is too large to be inlined), the global value
+    // declaration corresponding to the summary should be imported, or the
+    // attributes from summary should be annotated on the function declaration.
+    Declaration = 1,
+  };
 
   /// Group flags (Linkage, NotEligibleToImport, etc.) as a bitfield.
   struct GVFlags {
@@ -462,14 +499,19 @@ public:
     /// means the symbol was externally visible.
     unsigned CanAutoHide : 1;
 
+    /// This field is written by the ThinLTO indexing step to postlink combined
+    /// summary. The value is interpreted as 'ImportKind' enum defined above.
+    unsigned ImportType : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
-                     bool CanAutoHide)
+                     bool CanAutoHide, ImportKind ImportType)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
-          DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
+          DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
+          ImportType(static_cast<unsigned>(ImportType)) {}
   };
 
 private:
@@ -553,6 +595,16 @@ public:
   void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
+
+  bool shouldImportAsDecl() const {
+    return Flags.ImportType == GlobalValueSummary::ImportKind::Declaration;
+  }
+
+  void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
+
+  GlobalValueSummary::ImportKind importType() const {
+    return static_cast<ImportKind>(Flags.ImportType);
+  }
 
   GlobalValue::VisibilityTypes getVisibility() const {
     return (GlobalValue::VisibilityTypes)Flags.Visibility;
@@ -756,7 +808,7 @@ public:
       OS << ", hasUnknownCall: " << this->HasUnknownCall;
       OS << ", mustBeUnreachable: " << this->MustBeUnreachable;
       OS << ")";
-      return OS.str();
+      return Output;
     }
   };
 
@@ -803,7 +855,7 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false),
+            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),
@@ -999,6 +1051,12 @@ public:
   CallsitesTy &mutableCallsites() {
     assert(Callsites);
     return *Callsites;
+  }
+
+  void addCallsite(CallsiteInfo &Callsite) {
+    if (!Callsites)
+      Callsites = std::make_unique<CallsitesTy>();
+    Callsites->push_back(Callsite);
   }
 
   ArrayRef<AllocInfo> allocs() const {
@@ -1233,6 +1291,13 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
+/// Map of a module name to the GUIDs and summaries we will import from that
+/// module.
+using ModuleToSummariesForIndexTy = std::map<std::string, GVSummaryMapTy>;
+
+/// A set of global value summary pointers.
+using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
+
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
 using TypeIdSummaryMapTy =
@@ -1361,7 +1426,7 @@ private:
 
   // Temporary map while building StackIds list. Clear when index is completely
   // built via releaseTemporaryMemory.
-  std::map<uint64_t, unsigned> StackIdToIndex;
+  DenseMap<uint64_t, unsigned> StackIdToIndex;
 
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
@@ -1384,7 +1449,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 9;
+  static constexpr uint64_t BitcodeSummaryVersion = 10;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1699,7 +1764,7 @@ public:
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
     NewName += Suffix;
-    return std::string(NewName.str());
+    return std::string(NewName);
   }
 
   /// Helper to obtain the unpromoted name for a global value (or the original
@@ -1747,9 +1812,9 @@ public:
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      if (It->second.first == TypeId)
-        return It->second.second;
+    for (auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return TypeIdPair.second;
     auto It = TypeIdMap.insert(
         {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
     return It->second.second;
@@ -1759,9 +1824,9 @@ public:
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      if (It->second.first == TypeId)
-        return &It->second.second;
+    for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return &TypeIdPair.second;
     return nullptr;
   }
 

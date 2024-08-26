@@ -25,22 +25,37 @@
 
 using namespace mlir;
 
-/// Remap locations from the inlined blocks with CallSiteLoc locations with the
-/// provided caller location.
+/// Remap all locations reachable from the inlined blocks with CallSiteLoc
+/// locations with the provided caller location.
 static void
 remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
                       Location callerLoc) {
-  DenseMap<Location, Location> mappedLocations;
-  auto remapOpLoc = [&](Operation *op) {
-    auto it = mappedLocations.find(op->getLoc());
-    if (it == mappedLocations.end()) {
-      auto newLoc = CallSiteLoc::get(op->getLoc(), callerLoc);
-      it = mappedLocations.try_emplace(op->getLoc(), newLoc).first;
+  DenseMap<Location, LocationAttr> mappedLocations;
+  auto remapLoc = [&](Location loc) {
+    auto [it, inserted] = mappedLocations.try_emplace(loc);
+    // Only query the attribute uniquer once per callsite attribute.
+    if (inserted) {
+      auto newLoc = CallSiteLoc::get(loc, callerLoc);
+      it->getSecond() = newLoc;
     }
-    op->setLoc(it->second);
+    return it->second;
   };
-  for (auto &block : inlinedBlocks)
-    block.walk(remapOpLoc);
+
+  AttrTypeReplacer attrReplacer;
+  attrReplacer.addReplacement(
+      [&](LocationAttr loc) -> std::pair<LocationAttr, WalkResult> {
+        return {remapLoc(loc), WalkResult::skip()};
+      });
+
+  for (Block &block : inlinedBlocks) {
+    for (BlockArgument &arg : block.getArguments())
+      if (LocationAttr newLoc = remapLoc(arg.getLoc()))
+        arg.setLoc(newLoc);
+
+    for (Operation &op : block)
+      attrReplacer.recursivelyReplaceElementsIn(&op, /*replaceAttrs=*/false,
+                                                /*replaceLocs=*/true);
+  }
 }
 
 static void remapInlinedOperands(iterator_range<Region::iterator> inlinedBlocks,
@@ -97,7 +112,7 @@ void InlinerInterface::handleTerminator(Operation *op, Block *newDest) const {
 /// Handle the given inlined terminator by replacing it with a new operation
 /// as necessary.
 void InlinerInterface::handleTerminator(Operation *op,
-                                        ArrayRef<Value> valuesToRepl) const {
+                                        ValueRange valuesToRepl) const {
   auto *handler = getInterfaceFor(op);
   assert(handler && "expected valid dialect handler");
   handler->handleTerminator(op, valuesToRepl);
@@ -289,8 +304,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                        firstBlockTerminator->getOperands());
 
     // Have the interface handle the terminator of this block.
-    interface.handleTerminator(firstBlockTerminator,
-                               llvm::to_vector<6>(resultsToReplace));
+    interface.handleTerminator(firstBlockTerminator, resultsToReplace);
     firstBlockTerminator->erase();
 
     // Merge the post insert block into the cloned entry block.

@@ -1,9 +1,9 @@
 ; RUN: opt -S -mtriple=aarch64-linux-gnu -aarch64-sme-abi %s | FileCheck %s
 ; RUN: opt -S -mtriple=aarch64-linux-gnu -aarch64-sme-abi -aarch64-sme-abi %s | FileCheck %s
 
-declare void @shared_za_callee() "aarch64_pstate_za_shared"
+declare void @shared_za_callee() "aarch64_inout_za"
 
-define void @private_za() "aarch64_pstate_za_new" {
+define void @private_za() "aarch64_new_za" {
 ; CHECK-LABEL: @private_za(
 ; CHECK-NEXT:  prelude:
 ; CHECK-NEXT:    [[TPIDR2:%.*]] = call i64 @llvm.aarch64.sme.get.tpidr2()
@@ -24,7 +24,7 @@ define void @private_za() "aarch64_pstate_za_new" {
   ret void
 }
 
-define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_pstate_za_new" {
+define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za" {
 ; CHECK-LABEL: @private_za_multiple_exit(
 ; CHECK-NEXT:  prelude:
 ; CHECK-NEXT:    [[TPIDR2:%.*]] = call i64 @llvm.aarch64.sme.get.tpidr2()
@@ -62,4 +62,4 @@ if.end:
 }
 
 ; CHECK: declare void @__arm_tpidr2_save() #[[ATTR:[0-9]+]]
-; CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" "aarch64_pstate_za_preserved" }
+; CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" }

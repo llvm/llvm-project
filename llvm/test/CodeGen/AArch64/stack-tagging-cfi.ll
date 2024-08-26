@@ -8,7 +8,7 @@ entry:
 ; CHECK: .cfi_mte_tagged_frame
 ; CHECK: stg
   %x = alloca i32, align 4
-  call void @use32(i32* %x)
+  call void @use32(ptr %x)
   ret void
 }
 
@@ -18,7 +18,7 @@ entry:
 ; CHECK-NOT: .cfi_mte_tagged_frame
 ; CHECK: stg
   %x = alloca i32, align 4
-  call void @use32(i32* %x)
+  call void @use32(ptr %x)
   ret void
 }
 
@@ -28,7 +28,7 @@ entry:
 ; CHECK: .cfi_mte_tagged_frame
 ; CHECK: stg
   %x = alloca i32, align 4
-  call void @use32(i32* %x)
+  call void @use32(ptr %x)
   ret void
 }
 
@@ -38,6 +38,6 @@ entry:
 ; CHECK-NOT: .cfi_mte_tagged_frame
 ; CHECK-NOT: stg
   %x = alloca i32, align 4
-  call void @use32(i32* %x)
+  call void @use32(ptr %x)
   ret void
 }

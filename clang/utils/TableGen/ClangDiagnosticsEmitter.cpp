@@ -873,16 +873,12 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
     auto &S = RST.back();
 
     StringRef T = P->Text;
-    while (!T.empty() && T.front() == ' ') {
+    while (T.consume_front(" "))
       RST.back() += " |nbsp| ";
-      T = T.drop_front();
-    }
 
     std::string Suffix;
-    while (!T.empty() && T.back() == ' ') {
+    while (T.consume_back(" "))
       Suffix += " |nbsp| ";
-      T = T.drop_back();
-    }
 
     if (!T.empty()) {
       S += ':';
@@ -1090,7 +1086,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
       PluralPiece *Plural = New<PluralPiece>();
       do {
         Text = Text.drop_front(); // '{' or '|'
-        size_t End = Text.find_first_of(":");
+        size_t End = Text.find_first_of(':');
         if (End == StringRef::npos)
           Builder.PrintFatalError("expected ':' while parsing %plural");
         ++End;
@@ -1121,9 +1117,8 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
           if (!isdigit(Text[0]))
             break;
           Sub->Modifiers.push_back(parseModifier(Text));
-          if (Text.empty() || Text[0] != ',')
+          if (!Text.consume_front(","))
             break;
-          Text = Text.drop_front(); // ','
           assert(!Text.empty() && isdigit(Text[0]) &&
                  "expected another modifier");
         }
@@ -1218,6 +1213,197 @@ static bool isRemark(const Record &Diag) {
   return ClsName == "CLASS_REMARK";
 }
 
+// Presumes the text has been split at the first whitespace or hyphen.
+static bool isExemptAtStart(StringRef Text) {
+  // Fast path, the first character is lowercase or not alphanumeric.
+  if (Text.empty() || isLower(Text[0]) || !isAlnum(Text[0]))
+    return true;
+
+  // If the text is all uppercase (or numbers, +, or _), then we assume it's an
+  // acronym and that's allowed. This covers cases like ISO, C23, C++14, and
+  // OBJECT_MODE. However, if there's only a single letter other than "C", we
+  // do not exempt it so that we catch a case like "A really bad idea" while
+  // still allowing a case like "C does not allow...".
+  if (llvm::all_of(Text, [](char C) {
+        return isUpper(C) || isDigit(C) || C == '+' || C == '_';
+      }))
+    return Text.size() > 1 || Text[0] == 'C';
+
+  // Otherwise, there are a few other exemptions.
+  return StringSwitch<bool>(Text)
+      .Case("AddressSanitizer", true)
+      .Case("CFString", true)
+      .Case("Clang", true)
+      .Case("Fuchsia", true)
+      .Case("GNUstep", true)
+      .Case("IBOutletCollection", true)
+      .Case("Microsoft", true)
+      .Case("Neon", true)
+      .StartsWith("NSInvocation", true) // NSInvocation, NSInvocation's
+      .Case("Objective", true) // Objective-C (hyphen is a word boundary)
+      .Case("OpenACC", true)
+      .Case("OpenCL", true)
+      .Case("OpenMP", true)
+      .Case("Pascal", true)
+      .Case("Swift", true)
+      .Case("Unicode", true)
+      .Case("Vulkan", true)
+      .Case("WebAssembly", true)
+      .Default(false);
+}
+
+// Does not presume the text has been split at all.
+static bool isExemptAtEnd(StringRef Text) {
+  // Rather than come up with a list of characters that are allowed, we go the
+  // other way and look only for characters that are not allowed.
+  switch (Text.back()) {
+  default:
+    return true;
+  case '?':
+    // Explicitly allowed to support "; did you mean?".
+    return true;
+  case '.':
+  case '!':
+    return false;
+  }
+}
+
+static void verifyDiagnosticWording(const Record &Diag) {
+  StringRef FullDiagText = Diag.getValueAsString("Summary");
+
+  auto DiagnoseStart = [&](StringRef Text) {
+    // Verify that the text does not start with a capital letter, except for
+    // special cases that are exempt like ISO and C++. Find the first word
+    // by looking for a word breaking character.
+    char Separators[] = {' ', '-', ',', '}'};
+    auto Iter = std::find_first_of(
+        Text.begin(), Text.end(), std::begin(Separators), std::end(Separators));
+
+    StringRef First = Text.substr(0, Iter - Text.begin());
+    if (!isExemptAtStart(First)) {
+      PrintError(&Diag,
+                 "Diagnostics should not start with a capital letter; '" +
+                     First + "' is invalid");
+    }
+  };
+
+  auto DiagnoseEnd = [&](StringRef Text) {
+    // Verify that the text does not end with punctuation like '.' or '!'.
+    if (!isExemptAtEnd(Text)) {
+      PrintError(&Diag, "Diagnostics should not end with punctuation; '" +
+                            Text.substr(Text.size() - 1, 1) + "' is invalid");
+    }
+  };
+
+  // If the diagnostic starts with %select, look through it to see whether any
+  // of the options will cause a problem.
+  if (FullDiagText.starts_with("%select{")) {
+    // Do a balanced delimiter scan from the start of the text to find the
+    // closing '}', skipping intermediary {} pairs.
+
+    size_t BraceCount = 1;
+    constexpr size_t PercentSelectBraceLen = sizeof("%select{") - 1;
+    auto Iter = FullDiagText.begin() + PercentSelectBraceLen;
+    for (auto End = FullDiagText.end(); Iter != End; ++Iter) {
+      char Ch = *Iter;
+      if (Ch == '{')
+        ++BraceCount;
+      else if (Ch == '}')
+        --BraceCount;
+      if (!BraceCount)
+        break;
+    }
+    // Defending against a malformed diagnostic string.
+    if (BraceCount != 0)
+      return;
+
+    StringRef SelectText =
+        FullDiagText.substr(PercentSelectBraceLen, Iter - FullDiagText.begin() -
+                                                       PercentSelectBraceLen);
+    SmallVector<StringRef, 4> SelectPieces;
+    SelectText.split(SelectPieces, '|');
+
+    // Walk over all of the individual pieces of select text to see if any of
+    // them start with an invalid character. If any of the select pieces is
+    // empty, we need to look at the first word after the %select to see
+    // whether that is invalid or not. If all of the pieces are fine, then we
+    // don't need to check anything else about the start of the diagnostic.
+    bool CheckSecondWord = false;
+    for (StringRef Piece : SelectPieces) {
+      if (Piece.empty())
+        CheckSecondWord = true;
+      else
+        DiagnoseStart(Piece);
+    }
+
+    if (CheckSecondWord) {
+      // There was an empty select piece, so we need to check the second
+      // word. This catches situations like '%select{|fine}0 Not okay'. Add
+      // two to account for the closing curly brace and the number after it.
+      StringRef AfterSelect =
+          FullDiagText.substr(Iter - FullDiagText.begin() + 2).ltrim();
+      DiagnoseStart(AfterSelect);
+    }
+  } else {
+    // If the start of the diagnostic is not %select, we can check the first
+    // word and be done with it.
+    DiagnoseStart(FullDiagText);
+  }
+
+  // If the last character in the diagnostic is a number preceded by a }, scan
+  // backwards to see if this is for a %select{...}0. If it is, we need to look
+  // at each piece to see whether it ends in punctuation or not.
+  bool StillNeedToDiagEnd = true;
+  if (isDigit(FullDiagText.back()) && *(FullDiagText.end() - 2) == '}') {
+    // Scan backwards to find the opening curly brace.
+    size_t BraceCount = 1;
+    auto Iter = FullDiagText.end() - sizeof("}0");
+    for (auto End = FullDiagText.begin(); Iter != End; --Iter) {
+      char Ch = *Iter;
+      if (Ch == '}')
+        ++BraceCount;
+      else if (Ch == '{')
+        --BraceCount;
+      if (!BraceCount)
+        break;
+    }
+    // Defending against a malformed diagnostic string.
+    if (BraceCount != 0)
+      return;
+
+    // Continue the backwards scan to find the word before the '{' to see if it
+    // is 'select'.
+    constexpr size_t SelectLen = sizeof("select") - 1;
+    bool IsSelect =
+        (FullDiagText.substr(Iter - SelectLen - FullDiagText.begin(),
+                             SelectLen) == "select");
+    if (IsSelect) {
+      // Gather the content between the {} for the select in question so we can
+      // split it into pieces.
+      StillNeedToDiagEnd = false; // No longer need to handle the end.
+      StringRef SelectText =
+          FullDiagText.substr(Iter - FullDiagText.begin() + /*{*/ 1,
+                              FullDiagText.end() - Iter - /*pos before }0*/ 3);
+      SmallVector<StringRef, 4> SelectPieces;
+      SelectText.split(SelectPieces, '|');
+      for (StringRef Piece : SelectPieces) {
+        // Not worrying about a situation like: "this is bar. %select{foo|}0".
+        if (!Piece.empty())
+          DiagnoseEnd(Piece);
+      }
+    }
+  }
+
+  // If we didn't already cover the diagnostic because of a %select, handle it
+  // now.
+  if (StillNeedToDiagEnd)
+    DiagnoseEnd(FullDiagText);
+
+  // FIXME: This could also be improved by looking for instances of clang or
+  // gcc in the diagnostic and recommend Clang or GCC instead. However, this
+  // runs into odd situations like [[clang::warn_unused_result]],
+  // #pragma clang, or --unwindlib=libgcc.
+}
 
 /// ClangDiagsDefsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostics.
@@ -1277,6 +1463,9 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     // Filter by component.
     if (!Component.empty() && Component != R.getValueAsString("Component"))
       continue;
+
+    // Validate diagnostic wording for common issues.
+    verifyDiagnosticWording(R);
 
     OS << "DIAG(" << R.getName() << ", ";
     OS << R.getValueAsDef("Class")->getName();
@@ -1343,7 +1532,7 @@ static std::string getDiagCategoryEnum(llvm::StringRef name) {
   SmallString<256> enumName = llvm::StringRef("DiagCat_");
   for (llvm::StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
     enumName += isalnum(*I) ? *I : '_';
-  return std::string(enumName.str());
+  return std::string(enumName);
 }
 
 /// Emit the array of diagnostic subgroups.
@@ -1445,7 +1634,7 @@ static void emitDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
 ///     \000\020#pragma-messages\t#warnings\020CFString-literal"
 ///   };
 /// \endcode
-static void emitDiagGroupNames(StringToOffsetTable &GroupNames,
+static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
                                raw_ostream &OS) {
   OS << "static const char DiagGroupNames[] = {\n";
   GroupNames.EmitString(OS);
@@ -1467,7 +1656,7 @@ static void emitDiagGroupNames(StringToOffsetTable &GroupNames,
 static void emitAllDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
                               RecordVec &DiagsInPedantic,
                               RecordVec &GroupsInPedantic,
-                              StringToOffsetTable &GroupNames,
+                              const StringToOffsetTable &GroupNames,
                               raw_ostream &OS) {
   OS << "\n#ifdef GET_DIAG_ARRAYS\n";
   emitDiagArrays(DiagsInGroup, DiagsInPedantic, OS);
@@ -1494,7 +1683,8 @@ static void emitAllDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
 static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
                           RecordVec &DiagsInPedantic,
                           RecordVec &GroupsInPedantic,
-                          StringToOffsetTable &GroupNames, raw_ostream &OS) {
+                          const StringToOffsetTable &GroupNames,
+                          raw_ostream &OS) {
   unsigned MaxLen = 0;
 
   for (auto const &I: DiagsInGroup)
@@ -1516,7 +1706,7 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
     OS << I.first << " */, ";
     // Store a pascal-style length byte at the beginning of the string.
     std::string Name = char(I.first.size()) + I.first;
-    OS << GroupNames.GetOrAddStringOffset(Name, false) << ", ";
+    OS << *GroupNames.GetStringOffset(Name) << ", ";
 
     // Special handling for 'pedantic'.
     const bool IsPedantic = I.first == "pedantic";

@@ -12,6 +12,7 @@
 
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -383,6 +384,8 @@ void MappingTraits<WasmYAML::ElemSegment>::mapping(
   if (!IO.outputting() ||
       Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND)
     IO.mapOptional("ElemKind", Segment.ElemKind);
+  // TODO: Omit "offset" for passive segments? It's neither meaningful nor
+  // encoded.
   IO.mapRequired("Offset", Segment.Offset);
   IO.mapRequired("Functions", Segment.Functions);
 }
@@ -558,6 +561,7 @@ void ScalarBitSetTraits<WasmYAML::SegmentFlags>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_SEG_FLAG_##X)
   BCase(STRINGS);
   BCase(TLS);
+  BCase(RETAIN);
 #undef BCase
 }
 
@@ -593,7 +597,8 @@ void ScalarEnumerationTraits<WasmYAML::SymbolKind>::enumeration(
 
 void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
     IO &IO, WasmYAML::ValueType &Type) {
-#define ECase(X) IO.enumCase(Type, #X, wasm::WASM_TYPE_##X);
+#define CONCAT(X) (uint32_t) wasm::ValType::X
+#define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(I32);
   ECase(I64);
   ECase(F32);
@@ -601,7 +606,8 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(EXTERNREF);
-  ECase(FUNC);
+  ECase(EXNREF);
+  ECase(OTHERREF);
 #undef ECase
 }
 
@@ -631,9 +637,12 @@ void ScalarEnumerationTraits<WasmYAML::Opcode>::enumeration(
 
 void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
     IO &IO, WasmYAML::TableType &Type) {
-#define ECase(X) IO.enumCase(Type, #X, wasm::WASM_TYPE_##X);
+#define CONCAT(X) (uint32_t) wasm::ValType::X
+#define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
+  ECase(OTHERREF);
 #undef ECase
 }
 

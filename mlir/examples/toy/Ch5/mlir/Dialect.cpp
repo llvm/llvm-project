@@ -13,11 +13,25 @@
 
 #include "toy/Dialect.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <string>
 
 using namespace mlir;
 using namespace mlir::toy;
@@ -59,8 +73,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator(toy.return) by replacing it with a new
   /// operation as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
@@ -190,7 +203,7 @@ void ConstantOp::print(mlir::OpAsmPrinter &printer) {
 
 /// Verifier for the constant operation. This corresponds to the
 /// `let hasVerifier = 1` in the op definition.
-mlir::LogicalResult ConstantOp::verify() {
+llvm::LogicalResult ConstantOp::verify() {
   // If the return type of the constant is not an unranked tensor, the shape
   // must match the shape of the attribute holding the data.
   auto resultType = llvm::dyn_cast<mlir::RankedTensorType>(getResult().getType());
@@ -358,7 +371,7 @@ void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult ReturnOp::verify() {
+llvm::LogicalResult ReturnOp::verify() {
   // We know that the parent operation is a function, because of the 'HasParent'
   // trait attached to the operation definition.
   auto function = cast<FuncOp>((*this)->getParentOp());
@@ -407,7 +420,7 @@ void TransposeOp::inferShapes() {
   getResult().setType(RankedTensorType::get(dims, arrayTy.getElementType()));
 }
 
-mlir::LogicalResult TransposeOp::verify() {
+llvm::LogicalResult TransposeOp::verify() {
   auto inputType = llvm::dyn_cast<RankedTensorType>(getOperand().getType());
   auto resultType = llvm::dyn_cast<RankedTensorType>(getType());
   if (!inputType || !resultType)

@@ -994,9 +994,18 @@ def : InstRW<[Zn2WritePCMPGTQYm], (instrs VPCMPGTQYrm)>;
 //-- Move instructions --//
 
 // VPERM2F128 / VPERM2I128.
-def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rr,
+def Zn2WriteVPERM2r : SchedWriteRes<[Zn2FPU2]> {
+  let NumMicroOps = 1;
+  let Latency = 3;
+}
+def : InstRW<[Zn2WriteVPERM2r], (instrs VPERM2F128rr,
                                         VPERM2I128rr)>;
-def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rm,
+
+def Zn2WriteVPERM2m : SchedWriteRes<[Zn2AGU, Zn2FPU2]> {
+  let NumMicroOps = 1;
+  let Latency = 8;
+}
+def : InstRW<[Zn2WriteVPERM2m], (instrs VPERM2F128rm,
                                         VPERM2I128rm)>;
 
 def Zn2WriteBROADCAST : SchedWriteRes<[Zn2AGU, Zn2FPU13]> {
@@ -1004,14 +1013,14 @@ def Zn2WriteBROADCAST : SchedWriteRes<[Zn2AGU, Zn2FPU13]> {
   let Latency = 8;
 }
 // VBROADCASTF128 / VBROADCASTI128.
-def : InstRW<[Zn2WriteBROADCAST], (instrs VBROADCASTF128,
-                                          VBROADCASTI128)>;
+def : InstRW<[Zn2WriteBROADCAST], (instrs VBROADCASTF128rm,
+                                          VBROADCASTI128rm)>;
 
 // EXTRACTPS.
 // r32,x,i.
 def Zn2WriteEXTRACTPSr : SchedWriteRes<[Zn2FPU12, Zn2FPU2]> {
   let Latency = 2;
-  let NumMicroOps = 2; 
+  let NumMicroOps = 2;
   let ReleaseAtCycles = [1, 2];
 }
 def : InstRW<[Zn2WriteEXTRACTPSr], (instregex "(V?)EXTRACTPSrr")>;

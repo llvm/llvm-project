@@ -24,6 +24,7 @@ extern StringRef MachODataCommonSectionName;
 extern StringRef MachODataDataSectionName;
 extern StringRef MachOEHFrameSectionName;
 extern StringRef MachOCompactUnwindInfoSectionName;
+extern StringRef MachOCStringSectionName;
 extern StringRef MachOModInitFuncSectionName;
 extern StringRef MachOObjCCatListSectionName;
 extern StringRef MachOObjCCatList2SectionName;
@@ -36,6 +37,9 @@ extern StringRef MachOObjCImageInfoSectionName;
 extern StringRef MachOObjCMethNameSectionName;
 extern StringRef MachOObjCMethTypeSectionName;
 extern StringRef MachOObjCNLCatListSectionName;
+extern StringRef MachOObjCNLClassListSectionName;
+extern StringRef MachOObjCProtoListSectionName;
+extern StringRef MachOObjCProtoRefsSectionName;
 extern StringRef MachOObjCSelRefsSectionName;
 extern StringRef MachOSwift5ProtoSectionName;
 extern StringRef MachOSwift5ProtosSectionName;
@@ -47,7 +51,7 @@ extern StringRef MachOThreadBSSSectionName;
 extern StringRef MachOThreadDataSectionName;
 extern StringRef MachOThreadVarsSectionName;
 
-extern StringRef MachOInitSectionNames[19];
+extern StringRef MachOInitSectionNames[22];
 
 // ELF section names.
 extern StringRef ELFEHFrameSectionName;

@@ -22,9 +22,14 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-isel"
 #define PASS_NAME "LoongArch DAG->DAG Pattern Instruction Selection"
 
-char LoongArchDAGToDAGISel::ID;
+char LoongArchDAGToDAGISelLegacy::ID;
 
-INITIALIZE_PASS(LoongArchDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+LoongArchDAGToDAGISelLegacy::LoongArchDAGToDAGISelLegacy(
+    LoongArchTargetMachine &TM)
+    : SelectionDAGISelLegacy(ID, std::make_unique<LoongArchDAGToDAGISel>(TM)) {}
+
+INITIALIZE_PASS(LoongArchDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
+                false)
 
 void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
@@ -77,9 +82,59 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::BITCAST: {
-    if (VT.is128BitVector() || VT.is512BitVector()) {
+    if (VT.is128BitVector() || VT.is256BitVector()) {
       ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
       CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
+  }
+  case ISD::BUILD_VECTOR: {
+    // Select appropriate [x]vrepli.[bhwd] instructions for constant splats of
+    // 128/256-bit when LSX/LASX is enabled.
+    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Node);
+    APInt SplatValue, SplatUndef;
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+    unsigned Op;
+    EVT ViaVecTy;
+    bool Is128Vec = BVN->getValueType(0).is128BitVector();
+    bool Is256Vec = BVN->getValueType(0).is256BitVector();
+
+    if (!Subtarget->hasExtLSX() || (!Is128Vec && !Is256Vec))
+      break;
+    if (!BVN->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                              HasAnyUndefs, 8))
+      break;
+
+    switch (SplatBitSize) {
+    default:
+      break;
+    case 8:
+      Op = Is256Vec ? LoongArch::PseudoXVREPLI_B : LoongArch::PseudoVREPLI_B;
+      ViaVecTy = Is256Vec ? MVT::v32i8 : MVT::v16i8;
+      break;
+    case 16:
+      Op = Is256Vec ? LoongArch::PseudoXVREPLI_H : LoongArch::PseudoVREPLI_H;
+      ViaVecTy = Is256Vec ? MVT::v16i16 : MVT::v8i16;
+      break;
+    case 32:
+      Op = Is256Vec ? LoongArch::PseudoXVREPLI_W : LoongArch::PseudoVREPLI_W;
+      ViaVecTy = Is256Vec ? MVT::v8i32 : MVT::v4i32;
+      break;
+    case 64:
+      Op = Is256Vec ? LoongArch::PseudoXVREPLI_D : LoongArch::PseudoVREPLI_D;
+      ViaVecTy = Is256Vec ? MVT::v4i64 : MVT::v2i64;
+      break;
+    }
+
+    SDNode *Res;
+    // If we have a signed 10 bit integer, we can splat it directly.
+    if (SplatValue.isSignedIntN(10)) {
+      SDValue Imm = CurDAG->getTargetConstant(SplatValue, DL,
+                                              ViaVecTy.getVectorElementType());
+      Res = CurDAG->getMachineNode(Op, DL, ViaVecTy, Imm);
+      ReplaceNode(Node, Res);
       return;
     }
     break;
@@ -364,5 +419,5 @@ bool LoongArchDAGToDAGISel::selectVSplatUimmPow2(SDValue N,
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
 FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM) {
-  return new LoongArchDAGToDAGISel(TM);
+  return new LoongArchDAGToDAGISelLegacy(TM);
 }

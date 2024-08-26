@@ -11,6 +11,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -22,7 +23,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -127,6 +127,11 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     auto *FD = DRE->getFoundDecl();
+    // Prefer the underlying decl if FoundDecl isn't a shadow decl, e.g:
+    // - For templates, found-decl is always primary template, but we want the
+    // specializaiton itself.
+    if (!llvm::isa<UsingShadowDecl>(FD))
+      FD = DRE->getDecl();
     // For refs to non-meber-like decls, use the found decl.
     // For member-like decls, we should have a reference from the qualifier to
     // the container decl instead, which is preferred as it'll handle
@@ -222,6 +227,11 @@ public:
     // Mark declaration from definition as it needs type-checking.
     if (FD->isThisDeclarationADefinition())
       report(FD->getLocation(), FD);
+    // Explicit specializaiton/instantiations of a function template requires
+    // primary template.
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            FD->getTemplateSpecializationKind()))
+      report(FD->getLocation(), FD->getPrimaryTemplate());
     return true;
   }
   bool VisitVarDecl(VarDecl *VD) {
@@ -243,23 +253,32 @@ public:
     return true;
   }
 
+  bool VisitFriendDecl(FriendDecl *D) {
+    // We already visit the TypeLoc properly, but need to special case the decl
+    // case.
+    if (auto *FD = D->getFriendDecl())
+      report(D->getLocation(), FD);
+    return true;
+  }
+
   bool VisitConceptReference(const ConceptReference *CR) {
     report(CR->getConceptNameLoc(), CR->getFoundDecl());
     return true;
   }
 
-  // Report a reference from explicit specializations to the specialized
-  // template. Implicit ones are filtered out by RAV and explicit instantiations
-  // are already traversed through typelocs.
+  // Report a reference from explicit specializations/instantiations to the
+  // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    if (CTSD->isExplicitSpecialization())
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
              CTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    if (VTSD->isExplicitSpecialization())
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
@@ -328,6 +347,15 @@ public:
     report(E->getExprLoc(),
            const_cast<CXXRecordDecl *>(E->getBestDynamicClassType()),
            RefType::Implicit);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    report(E->getExprLoc(), E->getOperatorNew(), RefType::Ambiguous);
+    return true;
+  }
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
 };

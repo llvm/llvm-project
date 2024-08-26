@@ -112,4 +112,4 @@ Symbols:
 # CHECK-NEXT:      70: 00 00 00 00  
 # CHECK-NEXT:        ...
 # CHECK-NEXT:      7c: 00 12 34 00  
-# CHECK-NEXT:      80: 00 00 00 00  
+# CHECK-NEXT:      80: 00 00 00     

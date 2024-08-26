@@ -23,11 +23,12 @@ class DiagnosticInfo;
 /// which remarks are enabled.
 struct DiagnosticHandler {
   void *DiagnosticContext = nullptr;
+  bool HasErrors = false;
   DiagnosticHandler(void *DiagContext = nullptr)
       : DiagnosticContext(DiagContext) {}
   virtual ~DiagnosticHandler() = default;
 
-  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo &DI, void *Context);
+  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo *DI, void *Context);
 
   /// DiagHandlerCallback is settable from the C API and base implementation
   /// of DiagnosticHandler will call it from handleDiagnostics(). Any derived
@@ -41,7 +42,7 @@ struct DiagnosticHandler {
   /// with a prefix based on the severity.
   virtual bool handleDiagnostics(const DiagnosticInfo &DI) {
     if (DiagHandlerCallback) {
-      DiagHandlerCallback(DI, DiagnosticContext);
+      DiagHandlerCallback(&DI, DiagnosticContext);
       return true;
     }
     return false;

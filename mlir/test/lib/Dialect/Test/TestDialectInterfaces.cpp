@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -39,7 +40,7 @@ struct TestResourceBlobManagerInterface
 
 namespace {
 enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
-}
+} // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
 struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
@@ -77,7 +78,7 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
   }
 
   Attribute readAttribute(DialectBytecodeReader &reader) const final {
-    auto versionOr = reader.getDialectVersion("test");
+    auto versionOr = reader.getDialectVersion<test::TestDialect>();
     // Assume current version if not available through the reader.
     const auto version =
         (succeeded(versionOr))
@@ -93,9 +94,16 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
 
   // Emit a specific version of the dialect.
   void writeVersion(DialectBytecodeWriter &writer) const final {
-    auto version = TestDialectVersion();
-    writer.writeVarInt(version.major_); // major
-    writer.writeVarInt(version.minor_); // minor
+    // Construct the current dialect version.
+    test::TestDialectVersion versionToEmit;
+
+    // Check if a target version to emit was specified on the writer configs.
+    auto versionOr = writer.getDialectVersion<test::TestDialect>();
+    if (succeeded(versionOr))
+      versionToEmit =
+          *reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
+    writer.writeVarInt(versionToEmit.major_); // major
+    writer.writeVarInt(versionToEmit.minor_); // minor
   }
 
   std::unique_ptr<DialectVersion>
@@ -180,6 +188,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
             .Case("alias_test:dot_in_name", StringRef("test.alias"))
             .Case("alias_test:trailing_digit", StringRef("test_alias0"))
             .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
+            .Case("alias_test:prefixed_symbol", StringRef("%test"))
             .Case("alias_test:sanitize_conflict_a",
                   StringRef("test_alias_conflict0"))
             .Case("alias_test:sanitize_conflict_b",
@@ -307,8 +316,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
     auto returnOp = dyn_cast<TestReturnOp>(op);
     if (!returnOp)

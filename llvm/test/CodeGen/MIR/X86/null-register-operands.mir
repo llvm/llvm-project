@@ -3,9 +3,9 @@
 
 --- |
 
-  define i32 @deref(i32* %p) {
+  define i32 @deref(ptr %p) {
   entry:
-    %a = load i32, i32* %p
+    %a = load i32, ptr %p
     ret i32 %a
   }
 

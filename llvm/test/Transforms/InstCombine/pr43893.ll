@@ -1,5 +1,6 @@
 ; Check for setting dbg.value as undef which depends on trivially dead instructions.
 ; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 @a = common dso_local global i8 0, align 1, !dbg !0
 @b = common dso_local global i8 0, align 1, !dbg !6
@@ -9,9 +10,9 @@ entry:
   %0 = load i8, ptr @a, align 1, !dbg !17
   %dec = add i8 %0, -1, !dbg !17
   store i8 %dec, ptr @a, align 1, !dbg !17
-;CHECK: call void @llvm.dbg.value(metadata i32 poison
-;CHECK: call void @llvm.dbg.value(metadata i32 -8
-;CHECK: call void @llvm.dbg.value(metadata i32 poison
+;CHECK: #dbg_value(i32 poison
+;CHECK: #dbg_value(i32 -8
+;CHECK: #dbg_value(i32 poison
   %conv = sext i8 %dec to i32, !dbg !17
   %udiv = udiv i32 %conv, 4, !dbg !17
   call void @llvm.dbg.value(metadata i32 %udiv, metadata !18, metadata !DIExpression()), !dbg !19

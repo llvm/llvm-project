@@ -116,14 +116,13 @@
     cmake.
 
   <p>To build it separately, first
-  <a href="https://llvm.org/docs/CMake.html#quick-start">build LLVM</a>
-  separately to get llvm-config binary, and then run:
+  <a href="https://llvm.org/docs/CMake.html#quick-start">build LLVM</a>, and then run:
 
   <ul>
   <li>cd llvm-project</li>
   <li>mkdir build-compiler-rt</li>
   <li>cd build-compiler-rt</li>
-  <li>cmake ../compiler-rt -DLLVM_CONFIG_PATH=/path/to/llvm-config</li>
+  <li>cmake ../compiler-rt -DLLVM_CMAKE_DIR=/path/to/llvm-build-dir</li>
   <li>make</li>
   </ul>
 

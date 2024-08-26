@@ -10,12 +10,14 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringSet.h"
@@ -137,6 +139,10 @@ struct ModuleDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
+  /// The set of libraries or frameworks to link against when
+  /// an entity from this module is used.
+  llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
+
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
   const std::vector<std::string> &getBuildArguments();
@@ -147,6 +153,8 @@ private:
   std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
       BuildInfo;
 };
+
+using PrebuiltModuleVFSMapT = llvm::StringMap<llvm::StringSet<>>;
 
 class ModuleDepCollector;
 
@@ -165,7 +173,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;
@@ -211,8 +220,10 @@ public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
-                     CompilerInvocation OriginalCI, bool OptimizeArgs,
-                     bool EagerLoadModules, bool IsStdModuleP1689Format);
+                     CompilerInvocation OriginalCI,
+                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
+                     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
+                     bool IsStdModuleP1689Format);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -230,6 +241,8 @@ private:
   DependencyConsumer &Consumer;
   /// Callbacks for computing dependency information.
   DependencyActionController &Controller;
+  /// Mapping from prebuilt AST files to their sorted list of VFS overlay files.
+  PrebuiltModuleVFSMapT PrebuiltModuleVFSMap;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
@@ -254,7 +267,7 @@ private:
   /// for each individual module.
   CowCompilerInvocation CommonInvocation;
   /// Whether to optimize the modules' command-line arguments.
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
   /// If we're generating dependency output in P1689 format
@@ -299,6 +312,11 @@ private:
   void associateWithContextHash(const CowCompilerInvocation &CI,
                                 ModuleDeps &Deps);
 };
+
+/// Resets codegen options that don't affect modules/PCH.
+void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                               const LangOptions &LangOpts,
+                               CodeGenOptions &CGOpts);
 
 } // end namespace dependencies
 } // end namespace tooling

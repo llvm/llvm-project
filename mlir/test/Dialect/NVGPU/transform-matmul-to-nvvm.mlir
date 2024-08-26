@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file | FileCheck %s
 
-// CHECK: #[[$div4:.*]]  = affine_map<()[s0] -> (s0 floordiv 4)>                                    
+// CHECK: #[[$div4:.*]]  = affine_map<()[s0] -> (s0 floordiv 4)>
 // CHECK: #[[$mod4:.*]] = affine_map<()[s0] -> (s0 mod 4)>
 // CHECK: #[[$div4p8:.*]] = affine_map<()[s0] -> (s0 floordiv 4 + 8)>
 // CHECK: #[[$map3:.*]] = affine_map<()[s0] -> (s0 * 2 - (s0 floordiv 4) * 8)>
@@ -73,12 +73,14 @@ func.func @matmul_16x8x4xf32_global(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.nvgpu.rewrite_matmul_as_mma_sync %matmul 
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.nvgpu.rewrite_matmul_as_mma_sync %matmul
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }
 
 // -----
@@ -88,13 +90,13 @@ func.func @matmul_16x8x16xf16_global(
     %A: memref<16x16xf16>, %B: memref<16x8xf16>, %C: memref<16x8xf16>) {
 
   // CHECK-COUNT-8: memref.load {{.*}} : memref<16x16xf16>
-  // CHECK-COUNT-8: vector.insert {{.*}} : f16 into vector<4x2xf16> 
+  // CHECK-COUNT-8: vector.insert {{.*}} : f16 into vector<4x2xf16>
   // CHECK-COUNT-4: memref.load {{.*}} : memref<16x8xf16>
-  // CHECK-COUNT-4: vector.insert {{.*}} : f16 into vector<2x2xf16> 
+  // CHECK-COUNT-4: vector.insert {{.*}} : f16 into vector<2x2xf16>
   // CHECK-COUNT-4: memref.load {{.*}} : memref<16x8xf16>
   // CHECK-COUNT-4: vector.insert {{.*}} : f16 into vector<2x2xf16>
   //
-  //         CHECK: nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 16]} 
+  //         CHECK: nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 16]}
   //    CHECK-SAME:   : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   //
   // CHECK-COUNT-4: vector.extract %{{.*}} : f16 from vector<2x2xf16>
@@ -104,10 +106,12 @@ func.func @matmul_16x8x16xf16_global(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.nvgpu.rewrite_matmul_as_mma_sync %matmul 
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.nvgpu.rewrite_matmul_as_mma_sync %matmul
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }

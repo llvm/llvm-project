@@ -535,7 +535,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 
       SmallString<128> Filename = GCovFile->getString();
       sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
-      return std::string(Filename.str());
+      return std::string(Filename);
     }
   }
 
@@ -546,7 +546,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   if (sys::fs::current_path(CurPath))
     return std::string(FName);
   sys::path::append(CurPath, FName);
-  return std::string(CurPath.str());
+  return std::string(CurPath);
 }
 
 bool GCOVProfiler::runOnModule(
@@ -750,7 +750,7 @@ static BasicBlock *getInstrBB(CFGMST<Edge, BBInfo> &MST, Edge &E,
 #ifndef NDEBUG
 static void dumpEdges(CFGMST<Edge, BBInfo> &MST, GCOVFunction &GF) {
   size_t ID = 0;
-  for (auto &E : make_pointee_range(MST.AllEdges)) {
+  for (const auto &E : make_pointee_range(MST.allEdges())) {
     GCOVBlock &Src = E.SrcBB ? GF.getBlock(E.SrcBB) : GF.getEntryBlock();
     GCOVBlock &Dst = E.DestBB ? GF.getBlock(E.DestBB) : GF.getReturnBlock();
     dbgs() << "  Edge " << ID++ << ": " << Src.Number << "->" << Dst.Number
@@ -820,8 +820,8 @@ bool GCOVProfiler::emitProfileNotes(
       CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
 
       // getInstrBB can split basic blocks and push elements to AllEdges.
-      for (size_t I : llvm::seq<size_t>(0, MST.AllEdges.size())) {
-        auto &E = *MST.AllEdges[I];
+      for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {
+        auto &E = *MST.allEdges()[I];
         // For now, disable spanning tree optimization when fork or exec* is
         // used.
         if (HasExecOrFork)
@@ -836,16 +836,16 @@ bool GCOVProfiler::emitProfileNotes(
 
       // Some non-tree edges are IndirectBr which cannot be split. Ignore them
       // as well.
-      llvm::erase_if(MST.AllEdges, [](std::unique_ptr<Edge> &E) {
+      llvm::erase_if(MST.allEdges(), [](std::unique_ptr<Edge> &E) {
         return E->Removed || (!E->InMST && !E->Place);
       });
       const size_t Measured =
           std::stable_partition(
-              MST.AllEdges.begin(), MST.AllEdges.end(),
+              MST.allEdges().begin(), MST.allEdges().end(),
               [](std::unique_ptr<Edge> &E) { return E->Place; }) -
-          MST.AllEdges.begin();
+          MST.allEdges().begin();
       for (size_t I : llvm::seq<size_t>(0, Measured)) {
-        Edge &E = *MST.AllEdges[I];
+        Edge &E = *MST.allEdges()[I];
         GCOVBlock &Src =
             E.SrcBB ? Func.getBlock(E.SrcBB) : Func.getEntryBlock();
         GCOVBlock &Dst =
@@ -854,13 +854,13 @@ bool GCOVProfiler::emitProfileNotes(
         E.DstNumber = Dst.Number;
       }
       std::stable_sort(
-          MST.AllEdges.begin(), MST.AllEdges.begin() + Measured,
+          MST.allEdges().begin(), MST.allEdges().begin() + Measured,
           [](const std::unique_ptr<Edge> &L, const std::unique_ptr<Edge> &R) {
             return L->SrcNumber != R->SrcNumber ? L->SrcNumber < R->SrcNumber
                                                 : L->DstNumber < R->DstNumber;
           });
 
-      for (const Edge &E : make_pointee_range(MST.AllEdges)) {
+      for (const Edge &E : make_pointee_range(MST.allEdges())) {
         GCOVBlock &Src =
             E.SrcBB ? Func.getBlock(E.SrcBB) : Func.getEntryBlock();
         GCOVBlock &Dst =
@@ -917,7 +917,7 @@ bool GCOVProfiler::emitProfileNotes(
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
-          const Edge &E = *MST.AllEdges[I];
+          const Edge &E = *MST.allEdges()[I];
           IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
@@ -1031,9 +1031,9 @@ void GCOVProfiler::emitGlobalConstructor(
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-      Type::getInt8PtrTy(*Ctx), // const char *orig_filename
-      Type::getInt32Ty(*Ctx),   // uint32_t version
-      Type::getInt32Ty(*Ctx),   // uint32_t checksum
+      PointerType::getUnqual(*Ctx), // const char *orig_filename
+      Type::getInt32Ty(*Ctx),       // uint32_t version
+      Type::getInt32Ty(*Ctx),       // uint32_t checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   return M->getOrInsertFunction("llvm_gcda_start_file", FTy,
@@ -1100,19 +1100,16 @@ Function *GCOVProfiler::insertCounterWriteout(
   // Collect the relevant data into a large constant data structure that we can
   // walk to write out everything.
   StructType *StartFileCallArgsTy = StructType::create(
-      {Builder.getInt8PtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()},
+      {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()},
       "start_file_args_ty");
   StructType *EmitFunctionCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()},
       "emit_function_args_ty");
-  StructType *EmitArcsCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()},
-      "emit_arcs_args_ty");
-  StructType *FileInfoTy =
-      StructType::create({StartFileCallArgsTy, Builder.getInt32Ty(),
-                          EmitFunctionCallArgsTy->getPointerTo(),
-                          EmitArcsCallArgsTy->getPointerTo()},
-                         "file_info");
+  auto *PtrTy = Builder.getPtrTy();
+  StructType *EmitArcsCallArgsTy =
+      StructType::create({Builder.getInt32Ty(), PtrTy}, "emit_arcs_args_ty");
+  StructType *FileInfoTy = StructType::create(
+      {StartFileCallArgsTy, Builder.getInt32Ty(), PtrTy, PtrTy}, "file_info");
 
   Constant *Zero32 = Builder.getInt32(0);
   // Build an explicit array of two zeros for use in ConstantExpr GEP building.

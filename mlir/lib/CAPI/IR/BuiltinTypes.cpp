@@ -9,12 +9,15 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+
+#include <algorithm>
 
 using namespace mlir;
 
@@ -74,6 +77,14 @@ MlirType mlirIndexTypeGet(MlirContext ctx) {
 // Floating-point types.
 //===----------------------------------------------------------------------===//
 
+bool mlirTypeIsAFloat(MlirType type) {
+  return llvm::isa<FloatType>(unwrap(type));
+}
+
+unsigned mlirFloatTypeGetWidth(MlirType type) {
+  return llvm::cast<FloatType>(unwrap(type)).getWidth();
+}
+
 MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
   return wrap(Float8E5M2Type::getTypeID());
 }
@@ -84,6 +95,18 @@ bool mlirTypeIsAFloat8E5M2(MlirType type) {
 
 MlirType mlirFloat8E5M2TypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E5M2(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat8E4M3TypeGetTypeID() {
+  return wrap(Float8E4M3Type::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E4M3(MlirType type) {
+  return unwrap(type).isFloat8E4M3();
+}
+
+MlirType mlirFloat8E4M3TypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E4M3(unwrap(ctx)));
 }
 
 MlirTypeID mlirFloat8E4M3FNTypeGetTypeID() {
@@ -132,6 +155,18 @@ bool mlirTypeIsAFloat8E4M3B11FNUZ(MlirType type) {
 
 MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E4M3B11FNUZ(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat8E3M4TypeGetTypeID() {
+  return wrap(Float8E3M4Type::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E3M4(MlirType type) {
+  return unwrap(type).isFloat8E3M4();
+}
+
+MlirType mlirFloat8E3M4TypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E3M4(unwrap(ctx)));
 }
 
 MlirTypeID mlirBFloat16TypeGetTypeID() {
@@ -281,6 +316,31 @@ MlirType mlirVectorTypeGetChecked(MlirLocation loc, intptr_t rank,
       unwrap(elementType)));
 }
 
+MlirType mlirVectorTypeGetScalable(intptr_t rank, const int64_t *shape,
+                                   const bool *scalable, MlirType elementType) {
+  return wrap(VectorType::get(
+      llvm::ArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
+      llvm::ArrayRef(scalable, static_cast<size_t>(rank))));
+}
+
+MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
+                                          const int64_t *shape,
+                                          const bool *scalable,
+                                          MlirType elementType) {
+  return wrap(VectorType::getChecked(
+      unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
+      unwrap(elementType),
+      llvm::ArrayRef(scalable, static_cast<size_t>(rank))));
+}
+
+bool mlirVectorTypeIsScalable(MlirType type) {
+  return cast<VectorType>(unwrap(type)).isScalable();
+}
+
+bool mlirVectorTypeIsDimScalable(MlirType type, intptr_t dim) {
+  return cast<VectorType>(unwrap(type)).getScalableDims()[dim];
+}
+
 //===----------------------------------------------------------------------===//
 // Ranked / Unranked tensor type.
 //===----------------------------------------------------------------------===//
@@ -399,6 +459,18 @@ MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type) {
 
 MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type) {
   return wrap(llvm::cast<MemRefType>(unwrap(type)).getMemorySpace());
+}
+
+MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
+                                                    int64_t *strides,
+                                                    int64_t *offset) {
+  MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
+  SmallVector<int64_t> strides_;
+  if (failed(getStridesAndOffset(memrefType, strides_, *offset)))
+    return mlirLogicalResultFailure();
+
+  (void)std::copy(strides_.begin(), strides_.end(), strides);
+  return mlirLogicalResultSuccess();
 }
 
 MlirTypeID mlirUnrankedMemRefTypeGetTypeID() {

@@ -66,9 +66,7 @@ define <vscale x 1 x i8> @vpmerge_vi_nxv1i8(<vscale x 1 x i8> %vb, <vscale x 1 x
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 1 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 1 x i8> %elt.head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1> %m, <vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, i32 %evl)
+  %v = call <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1> %m, <vscale x 1 x i8> splat (i8 2), <vscale x 1 x i8> %vb, i32 %evl)
   ret <vscale x 1 x i8> %v
 }
 
@@ -103,9 +101,7 @@ define <vscale x 2 x i8> @vpmerge_vi_nxv2i8(<vscale x 2 x i8> %vb, <vscale x 2 x
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 2 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 2 x i8> %elt.head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1> %m, <vscale x 2 x i8> %va, <vscale x 2 x i8> %vb, i32 %evl)
+  %v = call <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1> %m, <vscale x 2 x i8> splat (i8 2), <vscale x 2 x i8> %vb, i32 %evl)
   ret <vscale x 2 x i8> %v
 }
 
@@ -140,9 +136,7 @@ define <vscale x 3 x i8> @vpmerge_vi_nxv3i8(<vscale x 3 x i8> %vb, <vscale x 3 x
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 3 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 3 x i8> %elt.head, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
-  %v = call <vscale x 3 x i8> @llvm.vp.merge.nxv3i8(<vscale x 3 x i1> %m, <vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, i32 %evl)
+  %v = call <vscale x 3 x i8> @llvm.vp.merge.nxv3i8(<vscale x 3 x i1> %m, <vscale x 3 x i8> splat (i8 2), <vscale x 3 x i8> %vb, i32 %evl)
   ret <vscale x 3 x i8> %v
 }
 
@@ -177,9 +171,7 @@ define <vscale x 4 x i8> @vpmerge_vi_nxv4i8(<vscale x 4 x i8> %vb, <vscale x 4 x
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 4 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 4 x i8> %elt.head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> %m, <vscale x 4 x i8> %va, <vscale x 4 x i8> %vb, i32 %evl)
+  %v = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> %m, <vscale x 4 x i8> splat (i8 2), <vscale x 4 x i8> %vb, i32 %evl)
   ret <vscale x 4 x i8> %v
 }
 
@@ -214,9 +206,7 @@ define <vscale x 8 x i7> @vpmerge_vi_nxv8i7(<vscale x 8 x i7> %vb, <vscale x 8 x
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 8 x i7> poison, i7 2, i32 0
-  %va = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1> %m, <vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, i32 %evl)
+  %v = call <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1> %m, <vscale x 8 x i7> splat (i7 2), <vscale x 8 x i7> %vb, i32 %evl)
   ret <vscale x 8 x i7> %v
 }
 
@@ -251,9 +241,7 @@ define <vscale x 8 x i8> @vpmerge_vi_nxv8i8(<vscale x 8 x i8> %vb, <vscale x 8 x
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 8 x i8> %elt.head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1> %m, <vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, i32 %evl)
+  %v = call <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1> %m, <vscale x 8 x i8> splat (i8 2), <vscale x 8 x i8> %vb, i32 %evl)
   ret <vscale x 8 x i8> %v
 }
 
@@ -288,9 +276,7 @@ define <vscale x 16 x i8> @vpmerge_vi_nxv16i8(<vscale x 16 x i8> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 16 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 16 x i8> %elt.head, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i8> @llvm.vp.merge.nxv16i8(<vscale x 16 x i1> %m, <vscale x 16 x i8> %va, <vscale x 16 x i8> %vb, i32 %evl)
+  %v = call <vscale x 16 x i8> @llvm.vp.merge.nxv16i8(<vscale x 16 x i1> %m, <vscale x 16 x i8> splat (i8 2), <vscale x 16 x i8> %vb, i32 %evl)
   ret <vscale x 16 x i8> %v
 }
 
@@ -325,9 +311,7 @@ define <vscale x 32 x i8> @vpmerge_vi_nxv32i8(<vscale x 32 x i8> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 32 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 32 x i8> %elt.head, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i8> @llvm.vp.merge.nxv32i8(<vscale x 32 x i1> %m, <vscale x 32 x i8> %va, <vscale x 32 x i8> %vb, i32 %evl)
+  %v = call <vscale x 32 x i8> @llvm.vp.merge.nxv32i8(<vscale x 32 x i1> %m, <vscale x 32 x i8> splat (i8 2), <vscale x 32 x i8> %vb, i32 %evl)
   ret <vscale x 32 x i8> %v
 }
 
@@ -362,9 +346,7 @@ define <vscale x 64 x i8> @vpmerge_vi_nxv64i8(<vscale x 64 x i8> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 64 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 64 x i8> %elt.head, <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer
-  %v = call <vscale x 64 x i8> @llvm.vp.merge.nxv64i8(<vscale x 64 x i1> %m, <vscale x 64 x i8> %va, <vscale x 64 x i8> %vb, i32 %evl)
+  %v = call <vscale x 64 x i8> @llvm.vp.merge.nxv64i8(<vscale x 64 x i1> %m, <vscale x 64 x i8> splat (i8 2), <vscale x 64 x i8> %vb, i32 %evl)
   ret <vscale x 64 x i8> %v
 }
 
@@ -379,7 +361,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; CHECK-NEXT:    vmv1r.v v1, v0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
@@ -387,23 +369,23 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a4, a0, a1
 ; CHECK-NEXT:    vl8r.v v16, (a4)
-; CHECK-NEXT:    vl8r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    sub a0, a3, a1
+; CHECK-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    sltu a2, a3, a0
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
+; CHECK-NEXT:    sub a2, a3, a1
+; CHECK-NEXT:    sltu a4, a3, a2
+; CHECK-NEXT:    vl8r.v v8, (a0)
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v24, v0
 ; CHECK-NEXT:    bltu a3, a1, .LBB28_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB28_2:
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
-; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -432,8 +414,8 @@ define <vscale x 128 x i8> @vpmerge_vx_nxv128i8(i8 %a, <vscale x 128 x i8> %vb, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB29_2:
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 128 x i8> poison, i8 %a, i32 0
@@ -460,13 +442,11 @@ define <vscale x 128 x i8> @vpmerge_vi_nxv128i8(<vscale x 128 x i8> %vb, <vscale
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB30_2:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 128 x i8> poison, i8 2, i32 0
-  %va = shufflevector <vscale x 128 x i8> %elt.head, <vscale x 128 x i8> poison, <vscale x 128 x i32> zeroinitializer
-  %v = call <vscale x 128 x i8> @llvm.vp.merge.nxv128i8(<vscale x 128 x i1> %m, <vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, i32 %evl)
+  %v = call <vscale x 128 x i8> @llvm.vp.merge.nxv128i8(<vscale x 128 x i1> %m, <vscale x 128 x i8> splat (i8 2), <vscale x 128 x i8> %vb, i32 %evl)
   ret <vscale x 128 x i8> %v
 }
 
@@ -501,9 +481,7 @@ define <vscale x 1 x i16> @vpmerge_vi_nxv1i16(<vscale x 1 x i16> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 1 x i16> poison, i16 2, i32 0
-  %va = shufflevector <vscale x 1 x i16> %elt.head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i16> @llvm.vp.merge.nxv1i16(<vscale x 1 x i1> %m, <vscale x 1 x i16> %va, <vscale x 1 x i16> %vb, i32 %evl)
+  %v = call <vscale x 1 x i16> @llvm.vp.merge.nxv1i16(<vscale x 1 x i1> %m, <vscale x 1 x i16> splat (i16 2), <vscale x 1 x i16> %vb, i32 %evl)
   ret <vscale x 1 x i16> %v
 }
 
@@ -538,9 +516,7 @@ define <vscale x 2 x i16> @vpmerge_vi_nxv2i16(<vscale x 2 x i16> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 2 x i16> poison, i16 2, i32 0
-  %va = shufflevector <vscale x 2 x i16> %elt.head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i16> @llvm.vp.merge.nxv2i16(<vscale x 2 x i1> %m, <vscale x 2 x i16> %va, <vscale x 2 x i16> %vb, i32 %evl)
+  %v = call <vscale x 2 x i16> @llvm.vp.merge.nxv2i16(<vscale x 2 x i1> %m, <vscale x 2 x i16> splat (i16 2), <vscale x 2 x i16> %vb, i32 %evl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -575,9 +551,7 @@ define <vscale x 4 x i16> @vpmerge_vi_nxv4i16(<vscale x 4 x i16> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 4 x i16> poison, i16 2, i32 0
-  %va = shufflevector <vscale x 4 x i16> %elt.head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i16> @llvm.vp.merge.nxv4i16(<vscale x 4 x i1> %m, <vscale x 4 x i16> %va, <vscale x 4 x i16> %vb, i32 %evl)
+  %v = call <vscale x 4 x i16> @llvm.vp.merge.nxv4i16(<vscale x 4 x i1> %m, <vscale x 4 x i16> splat (i16 2), <vscale x 4 x i16> %vb, i32 %evl)
   ret <vscale x 4 x i16> %v
 }
 
@@ -612,9 +586,7 @@ define <vscale x 8 x i16> @vpmerge_vi_nxv8i16(<vscale x 8 x i16> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %va = shufflevector <vscale x 8 x i16> %elt.head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1> %m, <vscale x 8 x i16> %va, <vscale x 8 x i16> %vb, i32 %evl)
+  %v = call <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1> %m, <vscale x 8 x i16> splat (i16 2), <vscale x 8 x i16> %vb, i32 %evl)
   ret <vscale x 8 x i16> %v
 }
 
@@ -649,9 +621,7 @@ define <vscale x 16 x i16> @vpmerge_vi_nxv16i16(<vscale x 16 x i16> %vb, <vscale
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 16 x i16> poison, i16 2, i32 0
-  %va = shufflevector <vscale x 16 x i16> %elt.head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i16> @llvm.vp.merge.nxv16i16(<vscale x 16 x i1> %m, <vscale x 16 x i16> %va, <vscale x 16 x i16> %vb, i32 %evl)
+  %v = call <vscale x 16 x i16> @llvm.vp.merge.nxv16i16(<vscale x 16 x i1> %m, <vscale x 16 x i16> splat (i16 2), <vscale x 16 x i16> %vb, i32 %evl)
   ret <vscale x 16 x i16> %v
 }
 
@@ -686,9 +656,7 @@ define <vscale x 32 x i16> @vpmerge_vi_nxv32i16(<vscale x 32 x i16> %vb, <vscale
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 32 x i16> poison, i16 2, i32 0
-  %va = shufflevector <vscale x 32 x i16> %elt.head, <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i16> @llvm.vp.merge.nxv32i16(<vscale x 32 x i1> %m, <vscale x 32 x i16> %va, <vscale x 32 x i16> %vb, i32 %evl)
+  %v = call <vscale x 32 x i16> @llvm.vp.merge.nxv32i16(<vscale x 32 x i1> %m, <vscale x 32 x i16> splat (i16 2), <vscale x 32 x i16> %vb, i32 %evl)
   ret <vscale x 32 x i16> %v
 }
 
@@ -723,9 +691,7 @@ define <vscale x 1 x i32> @vpmerge_vi_nxv1i32(<vscale x 1 x i32> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 1 x i32> poison, i32 2, i32 0
-  %va = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i32> @llvm.vp.merge.nxv1i32(<vscale x 1 x i1> %m, <vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, i32 %evl)
+  %v = call <vscale x 1 x i32> @llvm.vp.merge.nxv1i32(<vscale x 1 x i1> %m, <vscale x 1 x i32> splat (i32 2), <vscale x 1 x i32> %vb, i32 %evl)
   ret <vscale x 1 x i32> %v
 }
 
@@ -760,9 +726,7 @@ define <vscale x 2 x i32> @vpmerge_vi_nxv2i32(<vscale x 2 x i32> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 2 x i32> poison, i32 2, i32 0
-  %va = shufflevector <vscale x 2 x i32> %elt.head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, i32 %evl)
+  %v = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> splat (i32 2), <vscale x 2 x i32> %vb, i32 %evl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -797,9 +761,7 @@ define <vscale x 4 x i32> @vpmerge_vi_nxv4i32(<vscale x 4 x i32> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 4 x i32> poison, i32 2, i32 0
-  %va = shufflevector <vscale x 4 x i32> %elt.head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, i32 %evl)
+  %v = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i32> %vb, i32 %evl)
   ret <vscale x 4 x i32> %v
 }
 
@@ -834,9 +796,7 @@ define <vscale x 8 x i32> @vpmerge_vi_nxv8i32(<vscale x 8 x i32> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 8 x i32> poison, i32 2, i32 0
-  %va = shufflevector <vscale x 8 x i32> %elt.head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> %m, <vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, i32 %evl)
+  %v = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> %m, <vscale x 8 x i32> splat (i32 2), <vscale x 8 x i32> %vb, i32 %evl)
   ret <vscale x 8 x i32> %v
 }
 
@@ -871,9 +831,7 @@ define <vscale x 16 x i32> @vpmerge_vi_nxv16i32(<vscale x 16 x i32> %vb, <vscale
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 16 x i32> poison, i32 2, i32 0
-  %va = shufflevector <vscale x 16 x i32> %elt.head, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i32> @llvm.vp.merge.nxv16i32(<vscale x 16 x i1> %m, <vscale x 16 x i32> %va, <vscale x 16 x i32> %vb, i32 %evl)
+  %v = call <vscale x 16 x i32> @llvm.vp.merge.nxv16i32(<vscale x 16 x i1> %m, <vscale x 16 x i32> splat (i32 2), <vscale x 16 x i32> %vb, i32 %evl)
   ret <vscale x 16 x i32> %v
 }
 
@@ -920,9 +878,7 @@ define <vscale x 1 x i64> @vpmerge_vi_nxv1i64(<vscale x 1 x i64> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 1 x i64> poison, i64 2, i32 0
-  %va = shufflevector <vscale x 1 x i64> %elt.head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.merge.nxv1i64(<vscale x 1 x i1> %m, <vscale x 1 x i64> %va, <vscale x 1 x i64> %vb, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.merge.nxv1i64(<vscale x 1 x i1> %m, <vscale x 1 x i64> splat (i64 2), <vscale x 1 x i64> %vb, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -969,9 +925,7 @@ define <vscale x 2 x i64> @vpmerge_vi_nxv2i64(<vscale x 2 x i64> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 2 x i64> poison, i64 2, i32 0
-  %va = shufflevector <vscale x 2 x i64> %elt.head, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> %m, <vscale x 2 x i64> %va, <vscale x 2 x i64> %vb, i32 %evl)
+  %v = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> %m, <vscale x 2 x i64> splat (i64 2), <vscale x 2 x i64> %vb, i32 %evl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -1018,9 +972,7 @@ define <vscale x 4 x i64> @vpmerge_vi_nxv4i64(<vscale x 4 x i64> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 4 x i64> poison, i64 2, i32 0
-  %va = shufflevector <vscale x 4 x i64> %elt.head, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> %m, <vscale x 4 x i64> %va, <vscale x 4 x i64> %vb, i32 %evl)
+  %v = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> %m, <vscale x 4 x i64> splat (i64 2), <vscale x 4 x i64> %vb, i32 %evl)
   ret <vscale x 4 x i64> %v
 }
 
@@ -1067,9 +1019,7 @@ define <vscale x 8 x i64> @vpmerge_vi_nxv8i64(<vscale x 8 x i64> %vb, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <vscale x 8 x i64> poison, i64 2, i32 0
-  %va = shufflevector <vscale x 8 x i64> %elt.head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1> %m, <vscale x 8 x i64> %va, <vscale x 8 x i64> %vb, i32 %evl)
+  %v = call <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1> %m, <vscale x 8 x i64> splat (i64 2), <vscale x 8 x i64> %vb, i32 %evl)
   ret <vscale x 8 x i64> %v
 }
 

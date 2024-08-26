@@ -55,3 +55,8 @@ cntb  x0, vl512
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: cntb  x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cntb  x0, #all, mul #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: cntb  x0, #all, mul #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

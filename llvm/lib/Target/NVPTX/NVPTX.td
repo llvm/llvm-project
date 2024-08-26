@@ -24,23 +24,25 @@ include "NVPTXInstrInfo.td"
 //   TableGen in NVPTXGenSubtarget.inc.
 //===----------------------------------------------------------------------===//
 
-class FeatureSM<int version>:
-   SubtargetFeature<"sm_"# version, "SmVersion",
-                    "" # version,
-                    "Target SM " # version>;
-def SM90a: FeatureSM<90>;
+class FeatureSM<string sm, int value>:
+   SubtargetFeature<"sm_"# sm, "FullSmVersion",
+                    "" # value,
+                    "Target SM " # sm>;
 
 class FeaturePTX<int version>:
    SubtargetFeature<"ptx"# version, "PTXVersion",
                     "" # version,
                     "Use PTX version " # version>;
 
-foreach version = [20, 21, 30, 32, 35, 37, 50, 52, 53,
-                   60, 61, 62, 70, 72, 75, 80, 86, 87, 89, 90] in
-  def SM#version: FeatureSM<version>;
+foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
+              60, 61, 62, 70, 72, 75, 80, 86, 87, 89, 90] in
+  def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
 
-foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 63, 64, 65,
-                   70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 81] in
+def SM90a: FeatureSM<"90a", 901>;
+
+foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
+                   70, 71, 72, 73, 74, 75, 76, 77, 78,
+                   80, 81, 82, 83, 84, 85] in
   def PTX#version: FeaturePTX<version>;
 
 //===----------------------------------------------------------------------===//

@@ -50,7 +50,7 @@ void compression::compress(Params P, ArrayRef<uint8_t> Input,
     zlib::compress(Input, Output, P.level);
     break;
   case compression::Format::Zstd:
-    zstd::compress(Input, Output, P.level);
+    zstd::compress(Input, Output, P.level, P.zstdEnableLdm);
     break;
   }
 }
@@ -163,17 +163,39 @@ Error zlib::decompress(ArrayRef<uint8_t> Input,
 
 bool zstd::isAvailable() { return true; }
 
+#include <zstd.h> // Ensure ZSTD library is included
+
 void zstd::compress(ArrayRef<uint8_t> Input,
-                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
-  unsigned long CompressedBufferSize = ::ZSTD_compressBound(Input.size());
+                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
+                    bool EnableLdm) {
+  ZSTD_CCtx *Cctx = ZSTD_createCCtx();
+  if (!Cctx)
+    report_bad_alloc_error("Failed to create ZSTD_CCtx");
+
+  if (ZSTD_isError(ZSTD_CCtx_setParameter(
+          Cctx, ZSTD_c_enableLongDistanceMatching, EnableLdm ? 1 : 0))) {
+    ZSTD_freeCCtx(Cctx);
+    report_bad_alloc_error("Failed to set ZSTD_c_enableLongDistanceMatching");
+  }
+
+  if (ZSTD_isError(
+          ZSTD_CCtx_setParameter(Cctx, ZSTD_c_compressionLevel, Level))) {
+    ZSTD_freeCCtx(Cctx);
+    report_bad_alloc_error("Failed to set ZSTD_c_compressionLevel");
+  }
+
+  unsigned long CompressedBufferSize = ZSTD_compressBound(Input.size());
   CompressedBuffer.resize_for_overwrite(CompressedBufferSize);
-  unsigned long CompressedSize =
-      ::ZSTD_compress((char *)CompressedBuffer.data(), CompressedBufferSize,
-                      (const char *)Input.data(), Input.size(), Level);
+
+  size_t const CompressedSize =
+      ZSTD_compress2(Cctx, CompressedBuffer.data(), CompressedBufferSize,
+                     Input.data(), Input.size());
+
+  ZSTD_freeCCtx(Cctx);
+
   if (ZSTD_isError(CompressedSize))
-    report_bad_alloc_error("Allocation failed");
-  // Tell MemorySanitizer that zstd output buffer is fully initialized.
-  // This avoids a false report when running LLVM with uninstrumented ZLib.
+    report_bad_alloc_error("Compression failed");
+
   __msan_unpoison(CompressedBuffer.data(), CompressedSize);
   if (CompressedSize < CompressedBuffer.size())
     CompressedBuffer.truncate(CompressedSize);
@@ -205,7 +227,8 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
 #else
 bool zstd::isAvailable() { return false; }
 void zstd::compress(ArrayRef<uint8_t> Input,
-                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
+                    bool EnableLdm) {
   llvm_unreachable("zstd::compress is unavailable");
 }
 Error zstd::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,

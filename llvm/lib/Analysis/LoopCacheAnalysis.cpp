@@ -299,7 +299,12 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
     TripCount = SE.getNoopOrZeroExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
-    RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
+    // Round the fractional cost up to the nearest integer number.
+    // The impact is the most significant when cost is calculated
+    // to be a number less than one, because it makes more sense
+    // to say one cache line is used rather than zero cache line
+    // is used.
+    RefCost = SE.getUDivCeilSCEV(Numerator, CacheLineSize);
 
     LLVM_DEBUG(dbgs().indent(4)
                << "Access is consecutive: RefCost=(TripCount*Stride)/CLS="
@@ -315,7 +320,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     RefCost = TripCount;
 
     int Index = getSubscriptIndex(L);
-    assert(Index >= 0 && "Cound not locate a valid Index");
+    assert(Index >= 0 && "Could not locate a valid Index");
 
     for (unsigned I = Index + 1; I < getNumSubscripts() - 1; ++I) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(I));

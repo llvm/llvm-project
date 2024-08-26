@@ -174,6 +174,8 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i32, Legal);
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
                      isTypeLegal(MVT::i64) ? Legal : Custom);
+
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 const char *ARCTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -606,7 +608,7 @@ SDValue ARCTargetLowering::LowerCallArguments(
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
           Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
-          Alignment, false, false, false, MachinePointerInfo(),
+          Alignment, false, false, /*CI=*/nullptr, false, MachinePointerInfo(),
           MachinePointerInfo()));
     } else {
       InVals.push_back(ArgDI.SDV);
@@ -751,7 +753,7 @@ SDValue ARCTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  assert(cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0 &&
+  assert(Op.getConstantOperandVal(0) == 0 &&
          "Only support lowering frame addr of current frame.");
   Register FrameReg = ARI.getFrameRegister(MF);
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);

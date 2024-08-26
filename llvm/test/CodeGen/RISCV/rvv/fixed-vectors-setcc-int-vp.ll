@@ -135,9 +135,7 @@ define <8 x i1> @icmp_eq_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmseq.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"eq", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -147,9 +145,7 @@ define <8 x i1> @icmp_eq_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmseq.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"eq", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -193,9 +189,7 @@ define <8 x i1> @icmp_ne_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"ne", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"ne", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -205,9 +199,7 @@ define <8 x i1> @icmp_ne_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"ne", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"ne", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -251,9 +243,7 @@ define <8 x i1> @icmp_ugt_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgtu.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"ugt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"ugt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -263,9 +253,7 @@ define <8 x i1> @icmp_ugt_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsleu.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"ugt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"ugt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -311,9 +299,7 @@ define <8 x i1> @icmp_uge_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgtu.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"uge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -323,9 +309,7 @@ define <8 x i1> @icmp_uge_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsleu.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"uge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -369,9 +353,7 @@ define <8 x i1> @icmp_ult_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsleu.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"ult", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"ult", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -381,9 +363,7 @@ define <8 x i1> @icmp_ult_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgtu.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"ult", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"ult", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -427,9 +407,7 @@ define <8 x i1> @icmp_sgt_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgt.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"sgt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"sgt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -439,9 +417,7 @@ define <8 x i1> @icmp_sgt_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"sgt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"sgt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -487,9 +463,7 @@ define <8 x i1> @icmp_sge_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgt.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"sge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -499,9 +473,7 @@ define <8 x i1> @icmp_sge_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"sge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -545,9 +517,7 @@ define <8 x i1> @icmp_slt_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"slt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"slt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -557,9 +527,7 @@ define <8 x i1> @icmp_slt_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgt.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"slt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"slt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -605,9 +573,7 @@ define <8 x i1> @icmp_sle_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, 4, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> %vb, metadata !"sle", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %va, <8 x i8> splat (i8 4), metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -617,9 +583,7 @@ define <8 x i1> @icmp_sle_vi_swap_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsgt.vi v0, v8, 3, v0.t
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
-  %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> %vb, <8 x i8> %va, metadata !"sle", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i8(<8 x i8> splat (i8 4), <8 x i8> %va, metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -634,7 +598,7 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vmv1r.v v1, v0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
@@ -647,19 +611,18 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    vle8.v v8, (a2)
 ; CHECK-NEXT:    addi a2, a3, -128
 ; CHECK-NEXT:    sltu a4, a3, a2
-; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vle8.v v24, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a2, a4, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vmseq.vv v2, v16, v8, v0.t
+; CHECK-NEXT:    vmseq.vv v6, v16, v8, v0.t
 ; CHECK-NEXT:    bltu a3, a1, .LBB51_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:  .LBB51_2:
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
@@ -667,9 +630,10 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v16
-; CHECK-NEXT:    vmv1r.v v8, v2
+; CHECK-NEXT:    vmv1r.v v8, v6
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -696,8 +660,8 @@ define <256 x i1> @icmp_eq_vx_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 z
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB52_2:
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vmv1r.v v8, v25
@@ -725,8 +689,8 @@ define <256 x i1> @icmp_eq_vx_swap_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB53_2:
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vmv1r.v v8, v25
@@ -783,9 +747,7 @@ define <8 x i1> @icmp_eq_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) 
 ; CHECK-NEXT:    vmseq.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"eq", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -796,9 +758,7 @@ define <8 x i1> @icmp_eq_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vmseq.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"eq", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -846,9 +806,7 @@ define <8 x i1> @icmp_ne_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) 
 ; CHECK-NEXT:    vmsne.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"ne", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"ne", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -859,9 +817,7 @@ define <8 x i1> @icmp_ne_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vmsne.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"ne", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"ne", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -909,9 +865,7 @@ define <8 x i1> @icmp_ugt_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgtu.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"ugt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"ugt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -922,9 +876,7 @@ define <8 x i1> @icmp_ugt_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsleu.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"ugt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"ugt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -974,9 +926,7 @@ define <8 x i1> @icmp_uge_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgtu.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"uge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -987,9 +937,7 @@ define <8 x i1> @icmp_uge_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsleu.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"uge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1037,9 +985,7 @@ define <8 x i1> @icmp_ult_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsleu.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"ult", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"ult", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1050,9 +996,7 @@ define <8 x i1> @icmp_ult_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsgtu.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"ult", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"ult", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1100,9 +1044,7 @@ define <8 x i1> @icmp_sgt_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"sgt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"sgt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1113,9 +1055,7 @@ define <8 x i1> @icmp_sgt_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsle.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"sgt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"sgt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1165,9 +1105,7 @@ define <8 x i1> @icmp_sge_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"sge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1178,9 +1116,7 @@ define <8 x i1> @icmp_sge_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsle.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"sge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1228,9 +1164,7 @@ define <8 x i1> @icmp_slt_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsle.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"slt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"slt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1241,9 +1175,7 @@ define <8 x i1> @icmp_slt_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"slt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"slt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1293,9 +1225,7 @@ define <8 x i1> @icmp_sle_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsle.vi v10, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> %vb, metadata !"sle", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %va, <8 x i32> splat (i32 4), metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1306,118 +1236,64 @@ define <8 x i1> @icmp_sle_vi_swap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
-  %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %vb, <8 x i32> %va, metadata !"sle", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> splat (i32 4), <8 x i32> %va, metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
 declare <64 x i1> @llvm.vp.icmp.v64i32(<64 x i32>, <64 x i32>, metadata, <64 x i1>, i32)
 
 define <64 x i1> @icmp_eq_vv_v64i32(<64 x i32> %va, <64 x i32> %vb, <64 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: icmp_eq_vv_v64i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    sub sp, sp, a1
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; RV32-NEXT:    addi a1, a0, 128
-; RV32-NEXT:    li a3, 32
-; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
-; RV32-NEXT:    vle32.v v24, (a1)
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    vle32.v v24, (a0)
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; RV32-NEXT:    vslidedown.vi v1, v0, 4
-; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:    bltu a2, a3, .LBB99_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 32
-; RV32-NEXT:  .LBB99_2:
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; RV32-NEXT:    vmseq.vv v2, v8, v24, v0.t
-; RV32-NEXT:    addi a0, a2, -32
-; RV32-NEXT:    sltu a1, a2, a0
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v1
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    add a0, sp, a0
-; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; RV32-NEXT:    vmseq.vv v24, v16, v8, v0.t
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vslideup.vi v2, v24, 4
-; RV32-NEXT:    vmv1r.v v0, v2
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 4
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: icmp_eq_vv_v64i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    sub sp, sp, a1
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; RV64-NEXT:    addi a1, a0, 128
-; RV64-NEXT:    li a3, 32
-; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
-; RV64-NEXT:    vle32.v v24, (a1)
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vle32.v v24, (a0)
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:    vslidedown.vi v1, v0, 4
-; RV64-NEXT:    bltu a2, a3, .LBB99_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 32
-; RV64-NEXT:  .LBB99_2:
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vmseq.vv v2, v8, v24, v0.t
-; RV64-NEXT:    addi a0, a2, -32
-; RV64-NEXT:    sltu a1, a2, a0
-; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    and a0, a1, a0
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    vmv1r.v v0, v1
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 3
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    addi a0, a0, 16
-; RV64-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vmseq.vv v24, v16, v8, v0.t
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vslideup.vi v2, v24, 4
-; RV64-NEXT:    vmv1r.v v0, v2
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 4
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    ret
+; CHECK-LABEL: icmp_eq_vv_v64i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; CHECK-NEXT:    addi a1, a0, 128
+; CHECK-NEXT:    li a3, 32
+; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a1)
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vle32.v v24, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v6, v0, 4
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    bltu a2, a3, .LBB99_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:  .LBB99_2:
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vmseq.vv v7, v8, v24, v0.t
+; CHECK-NEXT:    addi a0, a2, -32
+; CHECK-NEXT:    sltu a1, a2, a0
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    vmv1r.v v0, v6
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vmseq.vv v8, v16, v24, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v7, v8, 4
+; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
   %v = call <64 x i1> @llvm.vp.icmp.v64i32(<64 x i32> %va, <64 x i32> %vb, metadata !"eq", <64 x i1> %m, i32 %evl)
   ret <64 x i1> %v
 }
@@ -1425,8 +1301,8 @@ define <64 x i1> @icmp_eq_vv_v64i32(<64 x i32> %va, <64 x i32> %vb, <64 x i1> %m
 define <64 x i1> @icmp_eq_vx_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_v64i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a3, 32
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 4
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    bltu a1, a3, .LBB100_2
@@ -1439,8 +1315,8 @@ define <64 x i1> @icmp_eq_vx_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i32 ze
 ; CHECK-NEXT:    sltu a1, a1, a2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v8, v16, a0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v25, v8, 4
@@ -1455,8 +1331,8 @@ define <64 x i1> @icmp_eq_vx_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i32 ze
 define <64 x i1> @icmp_eq_vx_swap_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_swap_v64i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a3, 32
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 4
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    bltu a1, a3, .LBB101_2
@@ -1469,8 +1345,8 @@ define <64 x i1> @icmp_eq_vx_swap_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i
 ; CHECK-NEXT:    sltu a1, a1, a2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v8, v16, a0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v25, v8, 4
@@ -1558,9 +1434,7 @@ define <8 x i1> @icmp_eq_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) 
 ; CHECK-NEXT:    vmseq.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"eq", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1571,9 +1445,7 @@ define <8 x i1> @icmp_eq_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vmseq.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"eq", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1651,9 +1523,7 @@ define <8 x i1> @icmp_ne_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) 
 ; CHECK-NEXT:    vmsne.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"ne", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"ne", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1664,9 +1534,7 @@ define <8 x i1> @icmp_ne_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vmsne.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"ne", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"ne", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1744,9 +1612,7 @@ define <8 x i1> @icmp_ugt_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgtu.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"ugt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"ugt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1757,9 +1623,7 @@ define <8 x i1> @icmp_ugt_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsleu.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"ugt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"ugt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1839,9 +1703,7 @@ define <8 x i1> @icmp_uge_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgtu.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"uge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1852,9 +1714,7 @@ define <8 x i1> @icmp_uge_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsleu.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"uge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1932,9 +1792,7 @@ define <8 x i1> @icmp_ult_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsleu.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"ult", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"ult", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -1945,9 +1803,7 @@ define <8 x i1> @icmp_ult_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsgtu.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"ult", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"ult", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2025,9 +1881,7 @@ define <8 x i1> @icmp_sgt_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgt.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"sgt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"sgt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2038,9 +1892,7 @@ define <8 x i1> @icmp_sgt_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsle.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"sgt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"sgt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2120,9 +1972,7 @@ define <8 x i1> @icmp_sge_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsgt.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"sge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2133,9 +1983,7 @@ define <8 x i1> @icmp_sge_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsle.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"sge", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2213,9 +2061,7 @@ define <8 x i1> @icmp_slt_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsle.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"slt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"slt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2226,9 +2072,7 @@ define <8 x i1> @icmp_slt_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsgt.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"slt", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"slt", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2308,9 +2152,7 @@ define <8 x i1> @icmp_sle_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vmsle.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> %vb, metadata !"sle", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %va, <8 x i64> splat (i64 4), metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
 
@@ -2321,8 +2163,6 @@ define <8 x i1> @icmp_sle_vi_swap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vmsgt.vi v12, v8, 3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
-  %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
-  %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> %vb, <8 x i64> %va, metadata !"sle", <8 x i1> %m, i32 %evl)
+  %v = call <8 x i1> @llvm.vp.icmp.v8i64(<8 x i64> splat (i64 4), <8 x i64> %va, metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }

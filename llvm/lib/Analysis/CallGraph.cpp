@@ -319,15 +319,13 @@ PreservedAnalyses CallGraphSCCsPrinterPass::run(Module &M,
     const std::vector<CallGraphNode *> &nextSCC = *SCCI;
     OS << "\nSCC #" << ++sccNum << ": ";
     bool First = true;
-    for (std::vector<CallGraphNode *>::const_iterator I = nextSCC.begin(),
-                                                      E = nextSCC.end();
-         I != E; ++I) {
+    for (CallGraphNode *CGN : nextSCC) {
       if (First)
         First = false;
       else
         OS << ", ";
-      OS << ((*I)->getFunction() ? (*I)->getFunction()->getName()
-                                 : "external node");
+      OS << (CGN->getFunction() ? CGN->getFunction()->getName()
+                                : "external node");
     }
 
     if (nextSCC.size() == 1 && SCCI.hasCycle())
@@ -382,33 +380,3 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
-
-namespace {
-
-struct CallGraphPrinterLegacyPass : public ModulePass {
-  static char ID; // Pass ID, replacement for typeid
-
-  CallGraphPrinterLegacyPass() : ModulePass(ID) {
-    initializeCallGraphPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequiredTransitive<CallGraphWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    getAnalysis<CallGraphWrapperPass>().print(errs(), &M);
-    return false;
-  }
-};
-
-} // end anonymous namespace
-
-char CallGraphPrinterLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(CallGraphPrinterLegacyPass, "print-callgraph",
-                      "Print a call graph", true, true)
-INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(CallGraphPrinterLegacyPass, "print-callgraph",
-                    "Print a call graph", true, true)

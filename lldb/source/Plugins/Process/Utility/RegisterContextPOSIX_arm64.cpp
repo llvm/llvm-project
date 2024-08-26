@@ -55,6 +55,10 @@ bool RegisterContextPOSIX_arm64::IsTLS(unsigned reg) const {
   return m_register_info_up->IsTLSReg(reg);
 }
 
+bool RegisterContextPOSIX_arm64::IsMTE(unsigned reg) const {
+  return m_register_info_up->IsMTEReg(reg);
+}
+
 RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)

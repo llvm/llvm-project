@@ -28,6 +28,7 @@ class LoongArchTTIImpl : public BasicTTIImplBase<LoongArchTTIImpl> {
   typedef TargetTransformInfo TTI;
   friend BaseT;
 
+  enum LoongArchRegisterClass { GPRRC, FPRRC, VRRC };
   const LoongArchSubtarget *ST;
   const LoongArchTargetLowering *TLI;
 
@@ -36,8 +37,14 @@ class LoongArchTTIImpl : public BasicTTIImplBase<LoongArchTTIImpl> {
 
 public:
   explicit LoongArchTTIImpl(const LoongArchTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
+
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
+  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
+  unsigned getMaxInterleaveFactor(ElementCount VF);
+  const char *getRegisterClassName(unsigned ClassID) const;
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };

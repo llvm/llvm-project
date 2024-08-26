@@ -15,6 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
+#include <utility>
 
 namespace clang::tidy::performance {
 namespace {
@@ -74,27 +75,33 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   }
 }
 
-AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
+AST_MATCHER_FUNCTION_P(StatementMatcher,
+                       isRefReturningMethodCallWithConstOverloads,
                        std::vector<StringRef>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
-  // const, this will be checked in `check()` part. This returned const
-  // reference is highly likely to outlive the local const reference of the
-  // variable being declared. The assumption is that the const reference being
-  // returned either points to a global static variable or to a member of the
-  // called object.
+  // const, this will be checked in `check()` part. This returned reference is
+  // highly likely to outlive the local const reference of the variable being
+  // declared. The assumption is that the reference being returned either points
+  // to a global static variable or to a member of the called object.
   const auto MethodDecl =
-      cxxMethodDecl(returns(hasCanonicalType(matchers::isReferenceToConst())))
+      cxxMethodDecl(returns(hasCanonicalType(referenceType())))
           .bind(MethodDeclId);
-  const auto ReceiverExpr = declRefExpr(to(varDecl().bind(ObjectArgId)));
+  const auto ReceiverExpr =
+      ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ObjectArgId))));
+  const auto OnExpr = anyOf(
+      // Direct reference to `*this`: `a.f()` or `a->f()`.
+      ReceiverExpr,
+      // Access through dereference, typically used for `operator[]`: `(*a)[3]`.
+      unaryOperator(hasOperatorName("*"), hasUnaryOperand(ReceiverExpr)));
   const auto ReceiverType =
       hasCanonicalType(recordType(hasDeclaration(namedDecl(
           unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
 
-  return expr(anyOf(
-      cxxMemberCallExpr(callee(MethodDecl), on(ReceiverExpr),
-                        thisPointerType(ReceiverType)),
-      cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, ReceiverExpr),
-                          hasArgument(0, hasType(ReceiverType)))));
+  return expr(
+      anyOf(cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
+                              thisPointerType(ReceiverType)),
+            cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, OnExpr),
+                                hasArgument(0, hasType(ReceiverType)))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
@@ -114,7 +121,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
-            isConstRefReturningMethodCall(ExcludedContainerTypes),
+            isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes),
             ignoringImpCasts(OldVarDeclRef),
             ignoringImpCasts(unaryOperator(hasOperatorName("&"),
                                            hasUnaryOperand(OldVarDeclRef)))));
@@ -135,10 +142,11 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
 static bool isInitializingVariableImmutable(
     const VarDecl &InitializingVar, const Stmt &BlockStmt, ASTContext &Context,
     const std::vector<StringRef> &ExcludedContainerTypes) {
-  if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context))
+  QualType T = InitializingVar.getType().getCanonicalType();
+  if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context,
+                         T->isPointerType() ? 1 : 0))
     return false;
 
-  QualType T = InitializingVar.getType().getCanonicalType();
   // The variable is a value type and we know it is only used as const. Safe
   // to reference it and avoid the copy.
   if (!isa<ReferenceType, PointerType>(T))
@@ -251,10 +259,11 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
         .bind("blockStmt");
   };
 
-  Finder->addMatcher(LocalVarCopiedFrom(anyOf(isConstRefReturningFunctionCall(),
-                                              isConstRefReturningMethodCall(
-                                                  ExcludedContainerTypes))),
-                     this);
+  Finder->addMatcher(
+      LocalVarCopiedFrom(anyOf(
+          isConstRefReturningFunctionCall(),
+          isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes))),
+      this);
 
   Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),
@@ -263,18 +272,26 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
 
 void UnnecessaryCopyInitialization::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *NewVar = Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
+  const auto &NewVar = *Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
+  const auto &BlockStmt = *Result.Nodes.getNodeAs<Stmt>("blockStmt");
+  const auto &VarDeclStmt = *Result.Nodes.getNodeAs<DeclStmt>("declStmt");
+  // Do not propose fixes if the DeclStmt has multiple VarDecls or in
+  // macros since we cannot place them correctly.
+  const bool IssueFix =
+      VarDeclStmt.isSingleDecl() && !NewVar.getLocation().isMacroID();
+  const bool IsVarUnused = isVariableUnused(NewVar, BlockStmt, *Result.Context);
+  const bool IsVarOnlyUsedAsConst =
+      isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context,
+                        // `NewVar` is always of non-pointer type.
+                        0);
+  const CheckContext Context{
+      NewVar,   BlockStmt,   VarDeclStmt,         *Result.Context,
+      IssueFix, IsVarUnused, IsVarOnlyUsedAsConst};
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
-  const auto *BlockStmt = Result.Nodes.getNodeAs<Stmt>("blockStmt");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
-  const auto *Stmt = Result.Nodes.getNodeAs<DeclStmt>("declStmt");
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
-
-  // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
-  // since we cannot place them correctly.
-  bool IssueFix = Stmt->isSingleDecl() && !NewVar->getLocation().isMacroID();
 
   // A constructor that looks like T(const T& t, bool arg = false) counts as a
   // copy only when it is called with default arguments for the arguments after
@@ -289,74 +306,71 @@ void UnnecessaryCopyInitialization::check(
   // instantiations where the types differ and rely on implicit conversion would
   // no longer compile if we switched to a reference.
   if (differentReplacedTemplateParams(
-          NewVar->getType(), constructorArgumentType(OldVar, Result.Nodes),
+          Context.Var.getType(), constructorArgumentType(OldVar, Result.Nodes),
           *Result.Context))
     return;
 
   if (OldVar == nullptr) {
-    handleCopyFromMethodReturn(*NewVar, *BlockStmt, *Stmt, IssueFix, ObjectArg,
-                               *Result.Context);
+    // `auto NewVar = functionCall();`
+    handleCopyFromMethodReturn(Context, ObjectArg);
   } else {
-    handleCopyFromLocalVar(*NewVar, *OldVar, *BlockStmt, *Stmt, IssueFix,
-                           *Result.Context);
+    // `auto NewVar = OldVar;`
+    handleCopyFromLocalVar(Context, *OldVar);
   }
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
-    const VarDecl &Var, const Stmt &BlockStmt, const DeclStmt &Stmt,
-    bool IssueFix, const VarDecl *ObjectArg, ASTContext &Context) {
-  bool IsConstQualified = Var.getType().isConstQualified();
-  if (!IsConstQualified && !isOnlyUsedAsConst(Var, BlockStmt, Context))
+    const CheckContext &Ctx, const VarDecl *ObjectArg) {
+  bool IsConstQualified = Ctx.Var.getType().isConstQualified();
+  if (!IsConstQualified && !Ctx.IsVarOnlyUsedAsConst)
     return;
   if (ObjectArg != nullptr &&
-      !isInitializingVariableImmutable(*ObjectArg, BlockStmt, Context,
+      !isInitializingVariableImmutable(*ObjectArg, Ctx.BlockStmt, Ctx.ASTCtx,
                                        ExcludedContainerTypes))
     return;
-  if (isVariableUnused(Var, BlockStmt, Context)) {
-    auto Diagnostic =
-        diag(Var.getLocation(),
-             "the %select{|const qualified }0variable %1 is copy-constructed "
-             "from a const reference but is never used; consider "
-             "removing the statement")
-        << IsConstQualified << &Var;
-    if (IssueFix)
-      recordRemoval(Stmt, Context, Diagnostic);
-  } else {
-    auto Diagnostic =
-        diag(Var.getLocation(),
-             "the %select{|const qualified }0variable %1 is copy-constructed "
-             "from a const reference%select{ but is only used as const "
-             "reference|}0; consider making it a const reference")
-        << IsConstQualified << &Var;
-    if (IssueFix)
-      recordFixes(Var, Context, Diagnostic);
-  }
+  diagnoseCopyFromMethodReturn(Ctx);
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
-    const VarDecl &NewVar, const VarDecl &OldVar, const Stmt &BlockStmt,
-    const DeclStmt &Stmt, bool IssueFix, ASTContext &Context) {
-  if (!isOnlyUsedAsConst(NewVar, BlockStmt, Context) ||
-      !isInitializingVariableImmutable(OldVar, BlockStmt, Context,
+    const CheckContext &Ctx, const VarDecl &OldVar) {
+  if (!Ctx.IsVarOnlyUsedAsConst ||
+      !isInitializingVariableImmutable(OldVar, Ctx.BlockStmt, Ctx.ASTCtx,
                                        ExcludedContainerTypes))
     return;
+  diagnoseCopyFromLocalVar(Ctx, OldVar);
+}
 
-  if (isVariableUnused(NewVar, BlockStmt, Context)) {
-    auto Diagnostic = diag(NewVar.getLocation(),
-                           "local copy %0 of the variable %1 is never modified "
-                           "and never used; "
-                           "consider removing the statement")
-                      << &NewVar << &OldVar;
-    if (IssueFix)
-      recordRemoval(Stmt, Context, Diagnostic);
-  } else {
-    auto Diagnostic =
-        diag(NewVar.getLocation(),
-             "local copy %0 of the variable %1 is never modified; "
-             "consider avoiding the copy")
-        << &NewVar << &OldVar;
-    if (IssueFix)
-      recordFixes(NewVar, Context, Diagnostic);
+void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
+    const CheckContext &Ctx) {
+  auto Diagnostic =
+      diag(Ctx.Var.getLocation(),
+           "the %select{|const qualified }0variable %1 is "
+           "copy-constructed "
+           "from a const reference%select{%select{ but is only used as const "
+           "reference|}0| but is never used}2; consider "
+           "%select{making it a const reference|removing the statement}2")
+      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.IsVarUnused;
+  maybeIssueFixes(Ctx, Diagnostic);
+}
+
+void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
+    const CheckContext &Ctx, const VarDecl &OldVar) {
+  auto Diagnostic =
+      diag(Ctx.Var.getLocation(),
+           "local copy %1 of the variable %0 is never modified%select{"
+           "| and never used}2; consider %select{avoiding the copy|removing "
+           "the statement}2")
+      << &OldVar << &Ctx.Var << Ctx.IsVarUnused;
+  maybeIssueFixes(Ctx, Diagnostic);
+}
+
+void UnnecessaryCopyInitialization::maybeIssueFixes(
+    const CheckContext &Ctx, DiagnosticBuilder &Diagnostic) {
+  if (Ctx.IssueFix) {
+    if (Ctx.IsVarUnused)
+      recordRemoval(Ctx.VarDeclStmt, Ctx.ASTCtx, Diagnostic);
+    else
+      recordFixes(Ctx.Var, Ctx.ASTCtx, Diagnostic);
   }
 }
 

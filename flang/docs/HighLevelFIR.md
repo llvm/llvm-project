@@ -1,3 +1,5 @@
+# High-Level Fortran IR (HLFIR)
+
 The approach of FIR and lowering design so far was to start with the minimal set
 of IR operations that could allow implementing the core aspects of Fortran (like
 memory allocations, array addressing, runtime descriptors, and structured
@@ -43,7 +45,7 @@ The core impact on lowering will be:
 
 ## Variable and Expression value concepts in HLFIR
 
-## Strengthening the variable concept
+### Strengthening the variable concept
 
 Fortran variables are currently represented in FIR as mlir::Value with reference
 or box type coming from special operations or block arguments. They are either
@@ -128,7 +130,7 @@ from the caller scope name and the function name.). In general, fir.declare
 will allow to view every memory storage as a variable, and this will be used to
 describe and use compiler created array temporaries.
 
-## Adding an expression value concept in HLFIR
+### Adding an expression value concept in HLFIR
 
 Currently, Fortran expressions can be represented as SSA values for scalar
 logical, integer, real, and complex expressions. Scalar character or
@@ -588,7 +590,7 @@ Syntax:
 
 Note that %indices are not operands, they are the elemental region block
 arguments, representing the array iteration space in a one based fashion.
-The choice of using one based indicies is to match Fortran default for
+The choice of using one based indices is to match Fortran default for
 array variables, so that there is no need to generate bound adjustments
 when working with one based array variables in an expression.
 
@@ -1035,7 +1037,7 @@ HLFIR array assignment lowering pass:
     associated variables that are neither target nor pointers.
 -   Lower to assignment to loop:
 
-```HFLIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1320,7 +1322,7 @@ Lowering of vector subscripted entities would happen as follow:
   input IO) by inlining the elemental body into the created loops, and
   identifying the hlfir.designate producing the result.
 
-```HFLFIR
+```
 func.func @_QPfoo(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array<?xf32>>, %arg2: !fir.box<<!fir.array<?xi32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
@@ -1353,9 +1355,9 @@ will be inlined, hlfir.forall will be rewritten into normal loops taking into
 account the alias analysis, and hlfir.assign/hlfir.designate operations will be
 lowered to fir.array_coor and fir.store operations).
 
-# Alternatives that were not retained
+## Alternatives that were not retained
 
-## Using a non-MLIR based mutable CFG representation
+### Using a non-MLIR based mutable CFG representation
 
 An option would have been to extend the PFT to describe expressions in a way
 that can be annotated and modified with the ability to introduce temporaries.
@@ -1364,9 +1366,9 @@ infrastructure and data structures while FIR is already using MLIR
 infrastructure, so enriching FIR seems a smoother approach and will benefit from
 the MLIR infrastructure experience that was gained.
 
-## Using symbols for HLFIR variables
+### Using symbols for HLFIR variables
 
-### Using attributes as pseudo variable symbols
+#### Using attributes as pseudo variable symbols
 
 Instead of restricting the memory types an HLFIR variable can have, it was
 force the defining operation of HLFIR variable SSA values to always be
@@ -1390,7 +1392,7 @@ doing code motion, and whose complexity would be increased by the naming
 constraints.
 
 
-### Using MLIR symbols for variables
+#### Using MLIR symbols for variables
 
 Using MLIR symbols for HLFIR variables has been rejected because MLIR symbols
 are mainly intended to deal with globals and functions that may refer to each
@@ -1407,9 +1409,9 @@ Using SSA values also makes the transition and mixture with lower-level FIR
 operations smoother: a variable SSA usage can simply be replaced by lower-level
 FIR operations using the same SSA value.
 
-## Using some existing MLIR dialects for the high-level Fortran.
+### Using some existing MLIR dialects for the high-level Fortran.
 
-### Why not using Linalg dialect?
+#### Why not using Linalg dialect?
 
 The linalg dialects offers a powerful way to represent array operations: the
 linalg.generic operation takes a set of input and output arrays, a related set
@@ -1438,7 +1440,7 @@ semi-affine cases).
 So using linalg is for now left as an optimization pass opportunity in some
 cases that could be experimented.
 
-### Why not using Shape dialect?
+#### Why not using Shape dialect?
 
 MLIR shape dialect gives a set of operations to manipulate shapes. The
 shape.meet operation is exactly similar with hlfir.shape_meet, except that it
@@ -1451,7 +1453,7 @@ shape.meet The shape dialect is a lot more complex because it is intended to
 deal with computations involving dynamically ranked entity, which is not the
 case in Fortran (assumed rank usage in Fortran is greatly limited).
 
-## Using embox/rebox and box as an alternative to fir.declare/hlfir.designate and hlfir.expr/ variable concept
+### Using embox/rebox and box as an alternative to fir.declare/hlfir.designate and hlfir.expr/ variable concept
 
 All Fortran entities (*) can be described at runtime by a fir.box, except for
 some attributes that are not part of the runtime descriptors (like TARGET,

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 #matmat_accesses = [
   affine_map<(i, j, k) -> (i, k)>,
@@ -14,9 +14,9 @@
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x4xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x3xf32>,
 // CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
-//      CHECK:  %[[vcst:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
-//      CHECK:  %[[vcst_0:.*]] = arith.constant dense<0.000000e+00> : vector<12xf32>
-//      CHECK:  %[[vcst_1:.*]] = arith.constant dense<0.000000e+00> : vector<2x3xf32>
+//  CHECK-DAG:  %[[vcst:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
+//  CHECK-DAG:  %[[vcst_0:.*]] = arith.constant dense<0.000000e+00> : vector<12xf32>
+//  CHECK-DAG:  %[[vcst_1:.*]] = arith.constant dense<0.000000e+00> : vector<2x3xf32>
 //      CHECK:  %[[a0:.*]] = vector.extract %[[A]][0] : vector<4xf32> from vector<2x4xf32>
 //      CHECK:  %[[a1:.*]] = vector.insert_strided_slice %[[a0]], %[[vcst]] {offsets = [0], strides = [1]} : vector<4xf32> into vector<8xf32>
 //      CHECK:  %[[a2:.*]] = vector.extract %[[A]][1] : vector<4xf32> from vector<2x4xf32>
@@ -36,23 +36,35 @@
 //      CHECK:  %[[mm5:.*]] = vector.insert %[[mm4]], %[[mm3]] [1] : vector<3xf32> into vector<2x3xf32>
 //      CHECK:  %[[mm6:.*]] = arith.addf %[[C]], %[[mm5]] : vector<2x3xf32>
 func.func @matmul(%arg0: vector<2x4xf32>,
-                          %arg1: vector<4x3xf32>,
-                          %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
+                  %arg1: vector<4x3xf32>,
+                  %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
   %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
     : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!transform.any_op) -> !transform.any_op
+// CHECK-LABEL: func @matmul_scalable
+// CHECK-NOT: vector.matrix_multiply
+func.func @matmul_scalable(%arg0: vector<2x4xf32>,
+                           %arg1: vector<4x[3]xf32>,
+                           %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
+  %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
+    : vector<2x4xf32>, vector<4x[3]xf32> into vector<2x[3]xf32>
+  return %0 : vector<2x[3]xf32>
+}
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_contraction lowering_strategy = "matmulintrinsics"
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_shape_cast
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_contraction lowering_strategy = "matmulintrinsics"
+    } : !transform.any_op
+
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_shape_cast
+    } : !transform.any_op
+    transform.yield
+  }
 }

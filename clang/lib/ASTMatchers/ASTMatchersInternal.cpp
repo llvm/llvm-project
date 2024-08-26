@@ -87,7 +87,7 @@ bool matchesAnyBase(const CXXRecordDecl &Node,
       [Finder, Builder, &BaseSpecMatcher](const CXXBaseSpecifier *BaseSpec,
                                           CXXBasePath &IgnoredParam) {
         BoundNodesTreeBuilder Result(*Builder);
-        if (BaseSpecMatcher.matches(*BaseSpec, Finder, Builder)) {
+        if (BaseSpecMatcher.matches(*BaseSpec, Finder, &Result)) {
           *Builder = std::move(Result);
           return true;
         }
@@ -480,11 +480,11 @@ HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
 
 static bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   StringRef Name = FullName;
-  if (!Name.endswith(Suffix))
+  if (!Name.ends_with(Suffix))
     return false;
   Name = Name.drop_back(Suffix.size());
   if (!Name.empty()) {
-    if (!Name.endswith("::"))
+    if (!Name.ends_with("::"))
       return false;
     Name = Name.drop_back(2);
   }
@@ -530,21 +530,30 @@ public:
   PatternSet(ArrayRef<std::string> Names) {
     Patterns.reserve(Names.size());
     for (StringRef Name : Names)
-      Patterns.push_back({Name, Name.startswith("::")});
+      Patterns.push_back({Name, Name.starts_with("::")});
   }
 
   /// Consumes the name suffix from each pattern in the set and removes the ones
   /// that didn't match.
   /// Return true if there are still any patterns left.
   bool consumeNameSuffix(StringRef NodeName, bool CanSkip) {
-    for (size_t I = 0; I < Patterns.size();) {
-      if (::clang::ast_matchers::internal::consumeNameSuffix(Patterns[I].P,
-                                                             NodeName) ||
-          CanSkip) {
-        ++I;
-      } else {
-        Patterns.erase(Patterns.begin() + I);
+    if (CanSkip) {
+      // If we can skip the node, then we need to handle the case where a
+      // skipped node has the same name as its parent.
+      // namespace a { inline namespace a { class A; } }
+      // cxxRecordDecl(hasName("::a::A"))
+      // To do this, any patterns that match should be duplicated in our set,
+      // one of them with the tail removed.
+      for (size_t I = 0, E = Patterns.size(); I != E; ++I) {
+        StringRef Pattern = Patterns[I].P;
+        if (ast_matchers::internal::consumeNameSuffix(Patterns[I].P, NodeName))
+          Patterns.push_back({Pattern, Patterns[I].IsFullyQualified});
       }
+    } else {
+      llvm::erase_if(Patterns, [&NodeName](auto &Pattern) {
+        return !::clang::ast_matchers::internal::consumeNameSuffix(Pattern.P,
+                                                                   NodeName);
+      });
     }
     return !Patterns.empty();
   }
@@ -652,11 +661,11 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
     const StringRef FullName = OS.str();
 
     for (const StringRef Pattern : Names) {
-      if (Pattern.startswith("::")) {
+      if (Pattern.starts_with("::")) {
         if (FullName == Pattern)
           return true;
-      } else if (FullName.endswith(Pattern) &&
-                 FullName.drop_back(Pattern.size()).endswith("::")) {
+      } else if (FullName.ends_with(Pattern) &&
+                 FullName.drop_back(Pattern.size()).ends_with("::")) {
         return true;
       }
     }
@@ -893,6 +902,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
     cxxRewrittenBinaryOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;

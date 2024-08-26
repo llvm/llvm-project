@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=dce -S -debug-counter=dce-transform-skip=1,dce-transform-count=2  < %s | FileCheck %s
+; RUN: opt -passes=dce -S -debug-counter=dce-transform=1-2  < %s | FileCheck %s
 ;; Test that, with debug counters on, we will skip the first DCE opportunity, perform next 2,
 ;; and ignore all the others left.
 

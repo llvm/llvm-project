@@ -14,6 +14,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -44,8 +45,8 @@ addModuleFlags(Module &M,
   return true;
 }
 
-static bool runCGProfilePass(
-    Module &M, FunctionAnalysisManager &FAM) {
+static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
+                             bool InLTO) {
   MapVector<std::pair<Function *, Function *>, uint64_t> Counts;
   InstrProfSymtab Symtab;
   auto UpdateCounts = [&](TargetTransformInfo &TTI, Function *F,
@@ -59,7 +60,7 @@ static bool runCGProfilePass(
     Count = SaturatingAdd(Count, NewCount);
   };
   // Ignore error here.  Indirect calls are ignored if this fails.
-  (void)(bool) Symtab.create(M);
+  (void)(bool)Symtab.create(M, InLTO);
   for (auto &F : M) {
     // Avoid extra cost of running passes for BFI when the function doesn't have
     // entry count.
@@ -78,16 +79,11 @@ static bool runCGProfilePass(
         if (!CB)
           continue;
         if (CB->isIndirectCall()) {
-          InstrProfValueData ValueData[8];
-          uint32_t ActualNumValueData;
           uint64_t TotalC;
-          if (!getValueProfDataFromInst(*CB, IPVK_IndirectCallTarget, 8,
-                                        ValueData, ActualNumValueData, TotalC))
-            continue;
-          for (const auto &VD :
-               ArrayRef<InstrProfValueData>(ValueData, ActualNumValueData)) {
+          auto ValueData =
+              getValueProfDataFromInst(*CB, IPVK_IndirectCallTarget, 8, TotalC);
+          for (const auto &VD : ValueData)
             UpdateCounts(TTI, &F, Symtab.getFunction(VD.Value), VD.Count);
-          }
           continue;
         }
         UpdateCounts(TTI, &F, CB->getCalledFunction(), *BBCount);
@@ -101,7 +97,7 @@ static bool runCGProfilePass(
 PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  runCGProfilePass(M, FAM);
+  runCGProfilePass(M, FAM, InLTO);
 
   return PreservedAnalyses::all();
 }

@@ -38,7 +38,7 @@ static Value createI32Constant(ConversionPatternRewriter &rewriter,
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
                               bool value) {
   Type llvmI1 = rewriter.getI1Type();
-  return rewriter.createOrFold<LLVM::ConstantOp>(loc, llvmI1, value);
+  return rewriter.create<LLVM::ConstantOp>(loc, llvmI1, value);
 }
 
 namespace {
@@ -163,7 +163,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value ptr = memrefDescriptor.alignedPtr(rewriter, loc);
     // The stride value is always 0 for raw buffers. This also disables
     // swizling.
-    Value stride = rewriter.createOrFold<LLVM::ConstantOp>(
+    Value stride = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI16, rewriter.getI16IntegerAttr(0));
     Value numRecords;
     if (memrefType.hasStaticShape()) {
@@ -270,24 +270,73 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 };
 
 struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
-  using ConvertOpToLLVMPattern<LDSBarrierOp>::ConvertOpToLLVMPattern;
+  LDSBarrierOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<LDSBarrierOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
 
   LogicalResult
   matchAndRewrite(LDSBarrierOp op, LDSBarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
-                                                    LLVM::AsmDialect::AD_ATT);
-    const char *asmStr = "s_waitcnt lgkmcnt(0)\ns_barrier";
-    const char *constraints = "";
-    rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
-        op,
-        /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
-        /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
-        /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
-        /*operand_attrs=*/ArrayAttr());
+    bool requiresInlineAsm =
+        chipset.majorVersion < 9 ||
+        (chipset.majorVersion == 9 && chipset.minorVersion < 0x0a) ||
+        (chipset.majorVersion == 11);
+
+    if (requiresInlineAsm) {
+      auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
+                                                      LLVM::AsmDialect::AD_ATT);
+      const char *asmStr =
+          ";;;WARNING: BREAKS DEBUG WATCHES\ns_waitcnt lgkmcnt(0)\ns_barrier";
+      const char *constraints = "";
+      rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
+          op,
+          /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
+          /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
+          /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+          /*operand_attrs=*/ArrayAttr());
+      return success();
+    }
+    constexpr int32_t ldsOnlyBitsGfx6789 = ~(0x1f << 8);
+    constexpr int32_t ldsOnlyBitsGfx10 = ~(0x3f << 8);
+    // Left in place in case someone disables the inline ASM path or future
+    // chipsets use the same bit pattern.
+    constexpr int32_t ldsOnlyBitsGfx11 = ~(0x3f << 4);
+
+    int32_t ldsOnlyBits;
+    if (chipset.majorVersion == 11)
+      ldsOnlyBits = ldsOnlyBitsGfx11;
+    else if (chipset.majorVersion == 10)
+      ldsOnlyBits = ldsOnlyBitsGfx10;
+    else if (chipset.majorVersion <= 9)
+      ldsOnlyBits = ldsOnlyBitsGfx6789;
+    else
+      return op.emitOpError(
+                 "don't know how to lower this for chipset major version")
+             << chipset.majorVersion;
+
+    Location loc = op->getLoc();
+    rewriter.create<ROCDL::WaitcntOp>(loc, ldsOnlyBits);
+    rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
     return success();
   }
 };
+
+struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
+  SchedBarrierOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<SchedBarrierOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SchedBarrierOp op, SchedBarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<ROCDL::SchedBarrier>(op,
+                                                     (uint32_t)op.getOpts());
+    return success();
+  }
+};
+
 } // namespace
 
 /// If `input` is a vector of bytes, concatentate those bytes in little-endian
@@ -338,7 +387,7 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                                  bool isUnsigned, Value llvmInput,
                                  SmallVector<Value, 4> &operands) {
   Type inputType = llvmInput.getType();
-  auto vectorType = inputType.dyn_cast<VectorType>();
+  auto vectorType = dyn_cast<VectorType>(inputType);
   Type elemType = vectorType.getElementType();
 
   if (elemType.isBF16())
@@ -381,7 +430,7 @@ static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
                                   Value output, int32_t subwordOffset,
                                   bool clamp, SmallVector<Value, 4> &operands) {
   Type inputType = output.getType();
-  auto vectorType = inputType.dyn_cast<VectorType>();
+  auto vectorType = dyn_cast<VectorType>(inputType);
   Type elemType = vectorType.getElementType();
   if (elemType.isBF16())
     output = rewriter.create<LLVM::BitcastOp>(
@@ -536,15 +585,15 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
 /// on the architecture you are compiling for.
 static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
                                                   Chipset chipset) {
-
-  auto sourceVectorType = wmma.getSourceA().getType().dyn_cast<VectorType>();
-  auto destVectorType = wmma.getDestC().getType().dyn_cast<VectorType>();
+  auto sourceVectorType = dyn_cast<VectorType>(wmma.getSourceA().getType());
+  auto destVectorType = dyn_cast<VectorType>(wmma.getDestC().getType());
   auto elemSourceType = sourceVectorType.getElementType();
   auto elemDestType = destVectorType.getElementType();
 
   if (elemSourceType.isF16() && elemDestType.isF32()) {
     return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
-  } else if (elemSourceType.isBF16() && elemDestType.isF32()) {
+  }
+  if (elemSourceType.isBF16() && elemDestType.isF32()) {
     return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
   } else if (elemSourceType.isF16() && elemDestType.isF16()) {
     return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
@@ -693,7 +742,7 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   Type f32 = getTypeConverter()->convertType(op.getResult().getType());
 
   Value source = adaptor.getSource();
-  auto sourceVecType = op.getSource().getType().dyn_cast<VectorType>();
+  auto sourceVecType = dyn_cast<VectorType>(op.getSource().getType());
   Type sourceElemType = getElementTypeOrSelf(op.getSource());
   // Extend to a v4i8
   if (!sourceVecType || sourceVecType.getNumElements() < 4) {
@@ -795,6 +844,155 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
   return success();
 }
 
+// Implement the AMDGPU_DPPLowering class that will convert the amdgpu.dpp
+// operation into the corresponding ROCDL instructions.
+struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
+  AMDGPUDPPLowering(LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DPPOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(DPPOp DppOp, DPPOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    // Convert the source operand to the corresponding LLVM type
+    Location loc = DppOp.getLoc();
+    Value src = adaptor.getSrc();
+    Value old = adaptor.getOld();
+    Type srcType = src.getType();
+    Type oldType = old.getType();
+    Type llvmType = nullptr;
+    if (srcType.getIntOrFloatBitWidth() < 32) {
+      llvmType = rewriter.getI32Type();
+    } else if (isa<FloatType>(srcType)) {
+      llvmType = (srcType.getIntOrFloatBitWidth() == 32)
+                     ? rewriter.getF32Type()
+                     : rewriter.getF64Type();
+    } else if (isa<IntegerType>(srcType)) {
+      llvmType = (srcType.getIntOrFloatBitWidth() == 32)
+                     ? rewriter.getI32Type()
+                     : rewriter.getI64Type();
+    }
+    auto llvmSrcIntType = typeConverter->convertType(
+        rewriter.getIntegerType(srcType.getIntOrFloatBitWidth()));
+
+    // If the source type is less of 32, use bitcast to convert it to i32.
+    auto convertOperand = [&](Value operand, Type operandType) {
+      if (operandType.getIntOrFloatBitWidth() <= 16) {
+        if (llvm::isa<FloatType>(operandType)) {
+          operand =
+              rewriter.create<LLVM::BitcastOp>(loc, llvmSrcIntType, operand);
+        }
+        auto llvmVecType = typeConverter->convertType(mlir::VectorType::get(
+            32 / operandType.getIntOrFloatBitWidth(), llvmSrcIntType));
+        Value undefVec = rewriter.create<LLVM::UndefOp>(loc, llvmVecType);
+        operand = rewriter.create<LLVM::InsertElementOp>(
+            loc, undefVec, operand, createI32Constant(rewriter, loc, 0));
+        operand = rewriter.create<LLVM::BitcastOp>(loc, llvmType, operand);
+      }
+      return operand;
+    };
+
+    src = convertOperand(src, srcType);
+    old = convertOperand(old, oldType);
+
+    // This is taken from the following file llvm/lib/Target/AMDGPU/SIDefines.h
+    enum DppCtrl : unsigned {
+      ROW_SHL0 = 0x100,
+      ROW_SHR0 = 0x110,
+      ROW_ROR0 = 0x120,
+      WAVE_SHL1 = 0x130,
+      WAVE_ROL1 = 0x134,
+      WAVE_SHR1 = 0x138,
+      WAVE_ROR1 = 0x13C,
+      ROW_MIRROR = 0x140,
+      ROW_HALF_MIRROR = 0x141,
+      BCAST15 = 0x142,
+      BCAST31 = 0x143,
+    };
+
+    auto kind = DppOp.getKind();
+    auto permArgument = DppOp.getPermArgument();
+    uint32_t DppCtrl = 0;
+
+    switch (kind) {
+
+    case DPPPerm::quad_perm:
+      if (auto quadPermAttr = cast<ArrayAttr>(*permArgument)) {
+        int32_t i = 0;
+        for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
+          uint32_t num = elem.getInt();
+          DppCtrl |= num << (i * 2);
+          i++;
+        }
+      }
+      break;
+    case DPPPerm::row_shl:
+      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
+        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
+      }
+      break;
+    case DPPPerm::row_shr:
+      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
+        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
+      }
+      break;
+    case DPPPerm::row_ror:
+      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
+        DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
+      }
+      break;
+    case DPPPerm::wave_shl:
+      DppCtrl = DppCtrl::WAVE_SHL1;
+      break;
+    case DPPPerm::wave_shr:
+      DppCtrl = DppCtrl::WAVE_SHR1;
+      break;
+    case DPPPerm::wave_rol:
+      DppCtrl = DppCtrl::WAVE_ROL1;
+      break;
+    case DPPPerm::wave_ror:
+      DppCtrl = DppCtrl::WAVE_ROR1;
+      break;
+    case DPPPerm::row_mirror:
+      DppCtrl = DppCtrl::ROW_MIRROR;
+      break;
+    case DPPPerm::row_half_mirror:
+      DppCtrl = DppCtrl::ROW_HALF_MIRROR;
+      break;
+    case DPPPerm::row_bcast_15:
+      DppCtrl = DppCtrl::BCAST15;
+      break;
+    case DPPPerm::row_bcast_31:
+      DppCtrl = DppCtrl::BCAST31;
+      break;
+    }
+
+    // Check for row_mask, bank_mask, bound_ctrl if they exist and create
+    // constants
+    auto rowMask = DppOp->getAttrOfType<IntegerAttr>("row_mask").getInt();
+    auto bankMask = DppOp->getAttrOfType<IntegerAttr>("bank_mask").getInt();
+    bool boundCtrl = DppOp->getAttrOfType<BoolAttr>("bound_ctrl").getValue();
+
+    // create a ROCDL_DPPMovOp instruction with the appropriate attributes
+    auto dppMovOp = rewriter.create<ROCDL::DPPUpdateOp>(
+        loc, llvmType, old, src, DppCtrl, rowMask, bankMask, boundCtrl);
+
+    Value result = dppMovOp.getRes();
+    if (srcType.getIntOrFloatBitWidth() < 32) {
+      result = rewriter.create<LLVM::TruncOp>(loc, llvmSrcIntType, result);
+      if (!llvm::isa<IntegerType>(srcType)) {
+        result = rewriter.create<LLVM::BitcastOp>(loc, srcType, result);
+      }
+    }
+
+    // We are replacing the AMDGPU_DPPOp instruction with the new
+    // ROCDL_DPPMovOp instruction
+    rewriter.replaceOp(DppOp, ValueRange(result));
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
   ConvertAMDGPUToROCDLPass() = default;
@@ -833,7 +1031,6 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
     return converter.convertType(t.clone(IntegerType::get(t.getContext(), 16)));
   });
 
-  patterns.add<LDSBarrierOpLowering>(converter);
   patterns
       .add<RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
            RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
@@ -847,6 +1044,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                ROCDL::RawPtrBufferAtomicUminOp>,
            RawBufferOpLowering<RawBufferAtomicCmpswapOp,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
+           AMDGPUDPPLowering, LDSBarrierOpLowering, SchedBarrierOpLowering,
            MFMAOpLowering, WMMAOpLowering, ExtPackedFp8OpLowering,
            PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering>(converter,
                                                                       chipset);

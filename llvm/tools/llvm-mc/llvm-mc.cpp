@@ -66,11 +66,6 @@ static cl::opt<bool> ShowEncoding("show-encoding",
                                   cl::desc("Show instruction encodings"),
                                   cl::cat(MCCategory));
 
-static cl::opt<bool> RelaxELFRel(
-    "relax-relocations", cl::init(true),
-    cl::desc("Emit R_X86_64_GOTPCRELX instead of R_X86_64_GOTPCREL"),
-    cl::cat(MCCategory));
-
 static cl::opt<DebugCompressionType> CompressDebugSections(
     "compress-debug-sections", cl::ValueOptional,
     cl::init(DebugCompressionType::None),
@@ -108,6 +103,10 @@ static cl::opt<bool>
     PreserveComments("preserve-comments",
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::cat(MCCategory));
+
+static cl::opt<unsigned> CommentColumn("comment-column",
+                                       cl::desc("Asm comments indentation"),
+                                       cl::init(40));
 
 enum OutputFileType {
   OFT_Null,
@@ -187,10 +186,6 @@ static cl::opt<std::string> MainFileName(
     "main-file-name",
     cl::desc("Specifies the name we should consider the input file"),
     cl::cat(MCCategory));
-
-static cl::opt<bool> SaveTempLabels("save-temp-labels",
-                                    cl::desc("Don't discard temporary labels"),
-                                    cl::cat(MCCategory));
 
 static cl::opt<bool> LexMasmIntegers(
     "masm-integers",
@@ -363,9 +358,13 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  const MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-  setDwarfDebugFlags(argc, argv);
+  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.CompressDebugSections = CompressDebugSections.getValue();
+  MCOptions.ShowMCInst = ShowInst;
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
 
+  setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
 
   const char *ProgName = argv[0];
@@ -401,7 +400,6 @@ int main(int argc, char **argv) {
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
-  MAI->setRelaxELFRelocations(RelaxELFRel);
   if (CompressDebugSections != DebugCompressionType::None) {
     if (const char *Reason = compression::getReasonIfUnsupported(
             compression::formatFor(CompressDebugSections))) {
@@ -410,8 +408,8 @@ int main(int argc, char **argv) {
       return 1;
     }
   }
-  MAI->setCompressDebugSections(CompressDebugSections);
   MAI->setPreserveAsmComments(PreserveComments);
+  MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
   std::string FeaturesStr;
@@ -433,9 +431,6 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
-
-  if (SaveTempLabels)
-    Ctx.setAllowTemporaryLabels(false);
 
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
@@ -547,15 +542,8 @@ int main(int argc, char **argv) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
-    // are (incorrectly) written directly to the unbuffered raw_ostream wrapped
-    // by the formatted_raw_ostream.
-    if (Action == AC_CDisassemble)
-      FOut->SetUnbuffered();
-    Str.reset(
-        TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
-                                     /*useDwarfDirectory*/ true, IP,
-                                     std::move(CE), std::move(MAB), ShowInst));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+                                           std::move(CE), std::move(MAB)));
 
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
@@ -573,15 +561,12 @@ int main(int argc, char **argv) {
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
                : MAB->createObjectWriter(*OS),
-        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
-        MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
       Str->initSections(true, *STI);
+    Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
+                              VersionTuple());
   }
-
-  // Use Assembler information for parsing.
-  Str->setUseAssemblerInfoForParsing(true);
 
   int Res = 1;
   bool disassemble = false;

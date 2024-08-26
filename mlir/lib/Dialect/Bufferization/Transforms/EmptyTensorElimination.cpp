@@ -10,12 +10,12 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -53,10 +53,9 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
 static bool insertionPointDominatesUses(const DominanceInfo &domInfo,
                                         Operation *insertionPoint,
                                         Operation *emptyTensorOp) {
-  for (Operation *user : emptyTensorOp->getUsers())
-    if (!domInfo.dominates(insertionPoint, user))
-      return false;
-  return true;
+  return llvm::all_of(emptyTensorOp->getUsers(), [&](Operation *user) {
+    return domInfo.dominates(insertionPoint, user);
+  });
 }
 
 /// Find a valid insertion point for a replacement of `emptyTensorOp`, assuming
@@ -153,6 +152,9 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
       if (emptyTensorOp == replacement.getDefiningOp())
         continue;
       if (replacement.getType() != v.getType()) {
+        if (cast<ShapedType>(replacement.getType()).getElementType() !=
+            cast<ShapedType>(v.getType()).getElementType())
+          continue;
         rewriter.setInsertionPointAfterValue(replacement);
         replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
                                                       replacement);

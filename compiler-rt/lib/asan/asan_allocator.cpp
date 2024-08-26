@@ -527,7 +527,7 @@ struct Allocator {
   // -------------------- Allocation/Deallocation routines ---------------
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
                  AllocType alloc_type, bool can_fill) {
-    if (UNLIKELY(!asan_inited))
+    if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
       if (AllocatorMayReturnNull())
@@ -717,7 +717,15 @@ struct Allocator {
       return;
     }
 
-    RunFreeHooks(ptr);
+    if (RunFreeHooks(ptr)) {
+      // Someone used __sanitizer_ignore_free_hook() and decided that they
+      // didn't want the memory to __sanitizer_ignore_free_hook freed right now.
+      // When they call free() on this pointer again at a later time, we should
+      // ignore the alloc-type mismatch and allow them to deallocate the pointer
+      // through free(), rather than the initial alloc type.
+      m->alloc_type = FROM_MALLOC;
+      return;
+    }
 
     // Must mark the chunk as quarantined before any changes to its metadata.
     // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.

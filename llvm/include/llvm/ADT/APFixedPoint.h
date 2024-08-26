@@ -17,7 +17,6 @@
 #define LLVM_ADT_APFIXEDPOINT_H
 
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -235,7 +234,7 @@ public:
   std::string toString() const {
     SmallString<40> S;
     toString(S);
-    return std::string(S.str());
+    return std::string(S);
   }
 
   void print(raw_ostream &) const;
@@ -260,6 +259,7 @@ public:
 
   static APFixedPoint getMax(const FixedPointSemantics &Sema);
   static APFixedPoint getMin(const FixedPointSemantics &Sema);
+  static APFixedPoint getEpsilon(const FixedPointSemantics &Sema);
 
   /// Given a floating point semantic, return the next floating point semantic
   /// with a larger exponent and larger or equal mantissa.

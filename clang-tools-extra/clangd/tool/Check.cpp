@@ -34,6 +34,8 @@
 #include "CompileCommands.h"
 #include "Compiler.h"
 #include "Config.h"
+#include "ConfigFragment.h"
+#include "ConfigProvider.h"
 #include "Diagnostics.h"
 #include "Feature.h"
 #include "GlobalCompilationDatabase.h"
@@ -103,15 +105,19 @@ llvm::cl::opt<bool> CheckCompletion{
     "check-completion",
     llvm::cl::desc("Run code-completion at each point (slow)"),
     llvm::cl::init(false)};
+llvm::cl::opt<bool> CheckWarnings{
+    "check-warnings",
+    llvm::cl::desc("Print warnings as well as errors"),
+    llvm::cl::init(false)};
 
-// Print (and count) the error-level diagnostics (warnings are ignored).
+// Print the diagnostics meeting severity threshold, and return count of errors.
 unsigned showErrors(llvm::ArrayRef<Diag> Diags) {
   unsigned ErrCount = 0;
   for (const auto &D : Diags) {
-    if (D.Severity >= DiagnosticsEngine::Error) {
+    if (D.Severity >= DiagnosticsEngine::Error || CheckWarnings)
       elog("[{0}] Line {1}: {2}", D.Name, D.Range.start.line + 1, D.Message);
+    if (D.Severity >= DiagnosticsEngine::Error)
       ++ErrCount;
-    }
   }
   return ErrCount;
 }
@@ -140,10 +146,13 @@ class Checker {
   ClangdLSPServer::Options Opts;
   // from buildCommand
   tooling::CompileCommand Cmd;
+  std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
+  std::unique_ptr<GlobalCompilationDatabase> CDB;
   // from buildInvocation
   ParseInputs Inputs;
   std::unique_ptr<CompilerInvocation> Invocation;
   format::FormatStyle Style;
+  std::optional<ModulesBuilder> ModulesManager;
   // from buildAST
   std::shared_ptr<const PreambleData> Preamble;
   std::optional<ParsedAST> AST;
@@ -162,14 +171,14 @@ public:
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
-    std::unique_ptr<GlobalCompilationDatabase> BaseCDB =
+    BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     auto Mangler = CommandMangler::detect();
     Mangler.SystemIncludeExtractor =
         getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
-    auto CDB = std::make_unique<OverlayCDB>(
+    CDB = std::make_unique<OverlayCDB>(
         BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
@@ -207,6 +216,11 @@ public:
         return false;
       }
     }
+    if (Opts.EnableExperimentalModulesSupport) {
+      if (!ModulesManager)
+        ModulesManager.emplace(*CDB);
+      Inputs.ModulesManager = &*ModulesManager;
+    }
     log("Parsing command...");
     Invocation =
         buildCompilerInvocation(Inputs, CaptureInvocationDiags, &CC1Args);
@@ -220,7 +234,7 @@ public:
 
     // FIXME: Check that resource-dir/built-in-headers exist?
 
-    Style = getFormatStyleForFile(File, Inputs.Contents, TFS);
+    Style = getFormatStyleForFile(File, Inputs.Contents, TFS, false);
 
     return true;
   }
@@ -361,7 +375,13 @@ public:
     auto Hints = inlayHints(*AST, LineRange);
 
     for (const auto &Hint : Hints) {
-      vlog("  {0} {1} {2}", Hint.kind, Hint.position, Hint.label);
+      vlog("  {0} {1} [{2}]", Hint.kind, Hint.position, [&] {
+        return llvm::join(llvm::map_range(Hint.label,
+                                          [&](auto &L) {
+                                            return llvm::formatv("{{{0}}", L);
+                                          }),
+                          ", ");
+      }());
     }
   }
 
@@ -476,8 +496,23 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
   }
   log("Testing on source file {0}", File);
 
+  class OverrideConfigProvider : public config::Provider {
+    std::vector<config::CompiledFragment>
+    getFragments(const config::Params &,
+                 config::DiagnosticCallback Diag) const override {
+      config::Fragment F;
+      // If we're timing clang-tidy checks, implicitly disabling the slow ones
+      // is counterproductive! 
+      if (CheckTidyTime.getNumOccurrences())
+        F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
+      return {std::move(F).compile(Diag)};
+    }
+  } OverrideConfig;
+  auto ConfigProvider =
+      config::Provider::combine({Opts.ConfigProvider, &OverrideConfig});
+
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
-      Opts.ConfigProvider, nullptr);
+      ConfigProvider.get(), nullptr);
   WithContext Ctx(ContextProvider(
       FakeFile.empty()
           ? File

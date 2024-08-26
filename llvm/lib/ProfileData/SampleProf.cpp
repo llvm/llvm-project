@@ -121,7 +121,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
   for (const auto &I : Other.getCallTargets()) {
-    MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
+    mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
   return Result;
 }
@@ -181,7 +181,8 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     for (const auto &CS : SortedCallsiteSamples.get()) {
       for (const auto &FS : CS->second) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getName() << ": ";
+        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
+           << ": ";
         FS.second.print(OS, Indent + 4);
       }
     }
@@ -234,16 +235,10 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
   }
 }
 
-uint64_t FunctionSamples::getCallSiteHash(StringRef CalleeName,
-                                          const LineLocation &Callsite) {
-  uint64_t NameHash = std::hash<std::string>{}(CalleeName.str());
-  uint64_t LocId =
-      (((uint64_t)Callsite.LineOffset) << 32) | Callsite.Discriminator;
-  return NameHash + (LocId << 5) + LocId;
-}
-
 const FunctionSamples *FunctionSamples::findFunctionSamples(
-    const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper) const {
+    const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
+    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+        *FuncNameToProfNameMap) const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
@@ -263,16 +258,17 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
     return this;
   const FunctionSamples *FS = this;
   for (int i = S.size() - 1; i >= 0 && FS != nullptr; i--) {
-    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second, Remapper);
+    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second, Remapper,
+                                   FuncNameToProfNameMap);
   }
   return FS;
 }
 
-void FunctionSamples::findAllNames(DenseSet<StringRef> &NameSet) const {
-  NameSet.insert(getName());
+void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
+  NameSet.insert(getFunction());
   for (const auto &BS : BodySamples)
     for (const auto &TS : BS.second.getCallTargets())
-      NameSet.insert(TS.getKey());
+      NameSet.insert(TS.first);
 
   for (const auto &CS : CallsiteSamples) {
     for (const auto &NameFS : CS.second) {
@@ -284,22 +280,32 @@ void FunctionSamples::findAllNames(DenseSet<StringRef> &NameSet) const {
 
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
-    SampleProfileReaderItaniumRemapper *Remapper) const {
+    SampleProfileReaderItaniumRemapper *Remapper,
+    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+        *FuncNameToProfNameMap) const {
   CalleeName = getCanonicalFnName(CalleeName);
 
-  std::string CalleeGUID;
-  CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
-
-  auto iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
-  if (iter == CallsiteSamples.end())
+  auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
+  if (I == CallsiteSamples.end())
     return nullptr;
-  auto FS = iter->second.find(CalleeName);
-  if (FS != iter->second.end())
+  auto FS = I->second.find(getRepInFormat(CalleeName));
+  if (FS != I->second.end())
     return &FS->second;
+
+  if (FuncNameToProfNameMap && !FuncNameToProfNameMap->empty()) {
+    auto R = FuncNameToProfNameMap->find(FunctionId(CalleeName));
+    if (R != FuncNameToProfNameMap->end()) {
+      CalleeName = R->second.stringRef();
+      auto FS = I->second.find(getRepInFormat(CalleeName));
+      if (FS != I->second.end())
+        return &FS->second;
+    }
+  }
+
   if (Remapper) {
     if (auto NameInProfile = Remapper->lookUpNameInProfile(CalleeName)) {
-      auto FS = iter->second.find(*NameInProfile);
-      if (FS != iter->second.end())
+      auto FS = I->second.find(getRepInFormat(*NameInProfile));
+      if (FS != I->second.end())
         return &FS->second;
     }
   }
@@ -310,7 +316,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     return nullptr;
   uint64_t MaxTotalSamples = 0;
   const FunctionSamples *R = nullptr;
-  for (const auto &NameFS : iter->second)
+  for (const auto &NameFS : I->second)
     if (NameFS.second.getTotalSamples() >= MaxTotalSamples) {
       MaxTotalSamples = NameFS.second.getTotalSamples();
       R = &NameFS.second;
@@ -374,7 +380,7 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
       if (ColdContextFrameLength < MergedContext.size())
         MergedContext = MergedContext.take_back(ColdContextFrameLength);
       // Need to set MergedProfile's context here otherwise it will be lost.
-      FunctionSamples &MergedProfile = MergedProfileMap.Create(MergedContext);
+      FunctionSamples &MergedProfile = MergedProfileMap.create(MergedContext);
       MergedProfile.merge(*I.second);
     }
     ProfileMap.erase(I.first);
@@ -422,7 +428,7 @@ void ProfileSymbolList::dump(raw_ostream &OS) const {
 
 ProfileConverter::FrameNode *
 ProfileConverter::FrameNode::getOrCreateChildFrame(const LineLocation &CallSite,
-                                                   StringRef CalleeName) {
+                                                   FunctionId CalleeName) {
   uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildFrames.find(Hash);
   if (It != AllChildFrames.end()) {
@@ -450,7 +456,7 @@ ProfileConverter::getOrCreateContextPath(const SampleContext &Context) {
   auto Node = &RootFrame;
   LineLocation CallSiteLoc(0, 0);
   for (auto &Callsite : Context.getContextFrames()) {
-    Node = Node->getOrCreateChildFrame(CallSiteLoc, Callsite.FuncName);
+    Node = Node->getOrCreateChildFrame(CallSiteLoc, Callsite.Func);
     CallSiteLoc = Callsite.Location;
   }
   return Node;
@@ -468,23 +474,23 @@ void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
     if (!ChildProfile)
       continue;
     SampleContext OrigChildContext = ChildProfile->getContext();
-    hash_code OrigChildContextHash = OrigChildContext.getHashCode();
+    uint64_t OrigChildContextHash = OrigChildContext.getHashCode();
     // Reset the child context to be contextless.
-    ChildProfile->getContext().setName(OrigChildContext.getName());
+    ChildProfile->getContext().setFunction(OrigChildContext.getFunction());
     if (NodeProfile) {
       // Add child profile to the callsite profile map.
       auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
-      SamplesMap.emplace(OrigChildContext.getName().str(), *ChildProfile);
+      SamplesMap.emplace(OrigChildContext.getFunction(), *ChildProfile);
       NodeProfile->addTotalSamples(ChildProfile->getTotalSamples());
       // Remove the corresponding body sample for the callsite and update the
       // total weight.
       auto Count = NodeProfile->removeCalledTargetAndBodySample(
           ChildNode.CallSiteLoc.LineOffset, ChildNode.CallSiteLoc.Discriminator,
-          OrigChildContext.getName());
+          OrigChildContext.getFunction());
       NodeProfile->removeTotalSamples(Count);
     }
 
-    hash_code NewChildProfileHash(0);
+    uint64_t NewChildProfileHash = 0;
     // Separate child profile to be a standalone profile, if the current parent
     // profile doesn't exist. This is a duplicating operation when the child
     // profile is already incorporated into the parent which is still useful and
@@ -498,7 +504,7 @@ void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
       ProfileMap[ChildProfile->getContext()].merge(*ChildProfile);
       NewChildProfileHash = ChildProfile->getContext().getHashCode();
       auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
-      SamplesMap[ChildProfile->getName().str()].getContext().setAttribute(
+      SamplesMap[ChildProfile->getFunction()].getContext().setAttribute(
           ContextDuplicatedIntoBase);
     }
 

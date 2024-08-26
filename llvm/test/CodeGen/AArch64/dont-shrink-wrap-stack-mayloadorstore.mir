@@ -46,7 +46,7 @@
 
 
  ; Test from: https://bugs.llvm.org/show_bug.cgi?id=37472
-  define i32 @f(%struct.S* nocapture %arg, i32 %arg1) {
+  define i32 @f(ptr nocapture %arg, i32 %arg1) {
   bb:
     %tmp = alloca [4 x i8], align 1
     %tmp6 = getelementptr inbounds [4 x i8], ptr %tmp, i64 0, i64 3

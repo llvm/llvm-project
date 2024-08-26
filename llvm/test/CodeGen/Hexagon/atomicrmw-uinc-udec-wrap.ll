@@ -160,10 +160,8 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = cmp.gtu(r3:2,r5:4)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r8 = mux(p0,r8,r1)
-; CHECK-NEXT:     r9 = mux(p0,r9,r1)
+; CHECK-NEXT:     if (!p0.new) r8 = add(r1,#0)
+; CHECK-NEXT:     if (!p0.new) r9 = add(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memd_locked(r0,p0) = r9:8

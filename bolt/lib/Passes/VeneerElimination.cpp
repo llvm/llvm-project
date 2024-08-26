@@ -29,9 +29,9 @@ static llvm::cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
-void VeneerElimination::runOnFunctions(BinaryContext &BC) {
+Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   if (!opts::EliminateVeneers || !BC.isAArch64())
-    return;
+    return Error::success();
 
   std::map<uint64_t, BinaryFunction> &BFs = BC.getBinaryFunctions();
   std::unordered_map<const MCSymbol *, const MCSymbol *> VeneerDestinations;
@@ -51,8 +51,8 @@ void VeneerElimination::runOnFunctions(BinaryContext &BC) {
       VeneerDestinations[Symbol] = VeneerTargetSymbol;
   }
 
-  outs() << "BOLT-INFO: number of removed linker-inserted veneers: "
-         << VeneersCount << "\n";
+  BC.outs() << "BOLT-INFO: number of removed linker-inserted veneers: "
+            << VeneersCount << "\n";
 
   // Handle veneers to veneers in case they occur
   for (auto &Entry : VeneerDestinations) {
@@ -77,11 +77,8 @@ void VeneerElimination::runOnFunctions(BinaryContext &BC) {
           continue;
 
         VeneerCallers++;
-        if (!BC.MIB->replaceBranchTarget(
-                Instr, VeneerDestinations[TargetSymbol], BC.Ctx.get())) {
-          errs() << "BOLT-ERROR: updating veneer call destination failed\n";
-          exit(1);
-        }
+        BC.MIB->replaceBranchTarget(Instr, VeneerDestinations[TargetSymbol],
+                                    BC.Ctx.get());
       }
     }
   }
@@ -89,6 +86,8 @@ void VeneerElimination::runOnFunctions(BinaryContext &BC) {
   LLVM_DEBUG(
       dbgs() << "BOLT-INFO: number of linker-inserted veneers call sites: "
              << VeneerCallers << "\n");
+  (void)VeneerCallers;
+  return Error::success();
 }
 
 } // namespace bolt

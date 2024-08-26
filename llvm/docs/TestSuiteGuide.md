@@ -71,6 +71,9 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
    ...
    ```
+**NOTE!** even in the case you only want to get the compile-time results(code size, llvm stats etc),
+you need to run the test with the above `llvm-lit` command. In that case, the *results.json* file will
+contain compile-time metrics.
 
 6. Show and compare result files (optional):
 
@@ -177,7 +180,7 @@ benchmarks. CMake can print a list of them:
 - `TEST_SUITE_FORTRAN`
 
   Activate that Fortran tests. This is a work in progress. More information can be
-  found in the [Flang documentation](https://flang.llvm.org/docs/html/FortranLLVMTestSuite.html)
+  found in the [Flang documentation](https://flang.llvm.org/docs/FortranLLVMTestSuite.html)
 
 - `TEST_SUITE_RUN_UNDER`
 

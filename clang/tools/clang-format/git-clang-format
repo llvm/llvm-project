@@ -132,6 +132,10 @@ def main():
                  help='passed to clang-format'),
   p.add_argument('-v', '--verbose', action='count', default=0,
                  help='print extra information')
+  p.add_argument('--diff_from_common_commit', action='store_true',
+                 help=('diff from the last common commit for commits in '
+                      'separate branches rather than the exact point of the '
+                      'commits'))
   # We gather all the remaining positional arguments into 'args' since we need
   # to use some heuristics to determine whether or not <commit> was present.
   # However, to print pretty messages, we make use of metavar and help.
@@ -145,15 +149,23 @@ def main():
   del opts.quiet
 
   commits, files = interpret_args(opts.args, dash_dash, opts.commit)
-  if len(commits) > 1:
+  if len(commits) > 2:
+    die('at most two commits allowed; %d given' % len(commits))
+  if len(commits) == 2:
     if opts.staged:
       die('--staged is not allowed when two commits are given')
     if not opts.diff:
       die('--diff is required when two commits are given')
-  else:
-    if len(commits) > 2:
-      die('at most two commits allowed; %d given' % len(commits))
-  changed_lines = compute_diff_and_extract_lines(commits, files, opts.staged)
+  elif opts.diff_from_common_commit:
+    die('--diff_from_common_commit is only allowed when two commits are given')
+
+  if os.path.dirname(opts.binary):
+    opts.binary = os.path.abspath(opts.binary)
+
+  changed_lines = compute_diff_and_extract_lines(commits,
+                                                 files,
+                                                 opts.staged,
+                                                 opts.diff_from_common_commit)
   if opts.verbose >= 1:
     ignored_files = set(changed_lines)
   filter_by_extension(changed_lines, opts.extensions.lower().split(','))
@@ -161,11 +173,12 @@ def main():
   # those files.
   cd_to_toplevel()
   filter_symlinks(changed_lines)
+  filter_ignored_files(changed_lines, binary=opts.binary)
   if opts.verbose >= 1:
     ignored_files.difference_update(changed_lines)
     if ignored_files:
-      print(
-        'Ignoring changes in the following files (wrong extension or symlink):')
+      print('Ignoring the following files (wrong extension, symlink, or '
+            'ignored by clang-format):')
       for filename in ignored_files:
         print('    %s' % filename)
     if changed_lines:
@@ -301,9 +314,9 @@ def get_object_type(value):
   return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files, staged):
+def compute_diff_and_extract_lines(commits, files, staged, diff_common_commit):
   """Calls compute_diff() followed by extract_lines()."""
-  diff_process = compute_diff(commits, files, staged)
+  diff_process = compute_diff(commits, files, staged, diff_common_commit)
   changed_lines = extract_lines(diff_process.stdout)
   diff_process.stdout.close()
   diff_process.wait()
@@ -313,7 +326,7 @@ def compute_diff_and_extract_lines(commits, files, staged):
   return changed_lines
 
 
-def compute_diff(commits, files, staged):
+def compute_diff(commits, files, staged, diff_common_commit):
   """Return a subprocess object producing the diff from `commits`.
 
   The return value's `stdin` file object will produce a patch with the
@@ -323,10 +336,13 @@ def compute_diff(commits, files, staged):
   Zero context lines are used in the patch."""
   git_tool = 'diff-index'
   extra_args = []
-  if len(commits) > 1:
+  if len(commits) == 2:
     git_tool = 'diff-tree'
+    if diff_common_commit:
+      commits = [f'{commits[0]}...{commits[1]}']
   elif staged:
     extra_args += ['--cached']
+
   cmd = ['git', git_tool, '-p', '-U0'] + extra_args + commits + ['--']
   cmd.extend(files)
   p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -382,6 +398,16 @@ def filter_symlinks(dictionary):
   for filename in list(dictionary.keys()):
     if os.path.islink(filename):
       del dictionary[filename]
+
+
+def filter_ignored_files(dictionary, binary):
+  """Delete every key in `dictionary` that is ignored by clang-format."""
+  ignored_files = run(binary, '-list-ignored', *dictionary.keys())
+  if not ignored_files:
+    return
+  ignored_files = ignored_files.split('\n')
+  for filename in ignored_files:
+    del dictionary[filename]
 
 
 def cd_to_toplevel():
@@ -484,12 +510,12 @@ def clang_format_to_blob(filename, line_ranges, revision=None,
   Returns the object ID (SHA-1) of the created blob."""
   clang_format_cmd = [binary]
   if style:
-    clang_format_cmd.extend(['-style='+style])
+    clang_format_cmd.extend(['--style='+style])
   clang_format_cmd.extend([
-      '-lines=%s:%s' % (start_line, start_line+line_count-1)
+      '--lines=%s:%s' % (start_line, start_line+line_count-1)
       for start_line, line_count in line_ranges])
   if revision is not None:
-    clang_format_cmd.extend(['-assume-filename='+filename])
+    clang_format_cmd.extend(['--assume-filename='+filename])
     git_show_cmd = ['git', 'cat-file', 'blob', '%s:%s' % (revision, filename)]
     git_show = subprocess.Popen(git_show_cmd, env=env, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE)

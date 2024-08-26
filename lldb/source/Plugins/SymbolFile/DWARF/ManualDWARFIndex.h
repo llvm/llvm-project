@@ -13,16 +13,19 @@
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFDebugInfo;
 class SymbolFileDWARFDwo;
 
-namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
   ManualDWARFIndex(Module &module, SymbolFileDWARF &dwarf,
-                   llvm::DenseSet<dw_offset_t> units_to_avoid = {})
+                   llvm::DenseSet<dw_offset_t> units_to_avoid = {},
+                   llvm::DenseSet<uint64_t> type_sigs_to_avoid = {})
       : DWARFIndex(module), m_dwarf(&dwarf),
-        m_units_to_avoid(std::move(units_to_avoid)) {}
+        m_units_to_avoid(std::move(units_to_avoid)),
+        m_type_sigs_to_avoid(std::move(type_sigs_to_avoid)) {}
 
   void Preload() override { Index(); }
 
@@ -169,10 +172,12 @@ private:
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
+  llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
   IndexSet m_set;
   bool m_indexed = false;
 };
-} // namespace lldb_private
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H

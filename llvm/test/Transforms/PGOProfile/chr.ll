@@ -1584,7 +1584,7 @@ define i32 @test_chr_17(i32 %i, i1 %j) !prof !14 {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1]], label [[BB0:%.*]], !prof [[PROF16]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[TMP0]], [[I]]
+; CHECK-NEXT:    [[S:%.*]] = add nuw nsw i32 [[TMP0]], [[I]]
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[I]], [[BBQ]] ], [ [[TMP0]], [[BBE]] ], [ [[S]], [[BB0]] ]
@@ -1931,20 +1931,20 @@ bb4:
 define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
 ; CHECK-LABEL: @test_chr_21(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[J_FR:%.*]] = freeze i64 [[J:%.*]]
 ; CHECK-NEXT:    [[I_FR:%.*]] = freeze i64 [[I:%.*]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i64 [[J_FR]], [[K:%.*]]
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i64 [[J:%.*]], [[K:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP0]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[I_FR]], [[J_FR]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[J]], [[I_FR]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[I_FR]], 86
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], [[CMP3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[CMP_I]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[CMP_I]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[I_FR]], 2
 ; CHECK-NEXT:    switch i64 [[I_FR]], label [[BB2:%.*]] [
-; CHECK-NEXT:    i64 2, label [[BB3_NONCHR2:%.*]]
-; CHECK-NEXT:    i64 86, label [[BB2_NONCHR1:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB3_NONCHR2:%.*]]
+; CHECK-NEXT:      i64 86, label [[BB2_NONCHR1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF19:![0-9]+]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @foo()
@@ -1971,7 +1971,7 @@ define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
 ; CHECK-NEXT:    [[CMP_I_NONCHR:%.*]] = icmp eq i64 [[I_FR]], 86
 ; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB6_NONCHR:%.*]], label [[BB4_NONCHR:%.*]], !prof [[PROF16]]
 ; CHECK:       bb6.nonchr:
-; CHECK-NEXT:    [[CMP3_NONCHR:%.*]] = icmp eq i64 [[J_FR]], [[I_FR]]
+; CHECK-NEXT:    [[CMP3_NONCHR:%.*]] = icmp eq i64 [[J]], [[I_FR]]
 ; CHECK-NEXT:    br i1 [[CMP3_NONCHR]], label [[BB8_NONCHR:%.*]], label [[BB7_NONCHR:%.*]], !prof [[PROF16]]
 ; CHECK:       bb8.nonchr:
 ; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB10]], label [[BB9_NONCHR:%.*]], !prof [[PROF16]]

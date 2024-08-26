@@ -110,6 +110,10 @@ BUILTIN(__builtin_ppc_fctiw, "dd", "")
 BUILTIN(__builtin_ppc_fctiwz, "dd", "")
 BUILTIN(__builtin_ppc_fctudz, "dd", "")
 BUILTIN(__builtin_ppc_fctuwz, "dd", "")
+
+// fence builtin prevents all instructions moved across it
+BUILTIN(__builtin_ppc_fence, "v", "")
+
 BUILTIN(__builtin_ppc_swdiv_nochk, "ddd", "")
 BUILTIN(__builtin_ppc_swdivs_nochk, "fff", "")
 BUILTIN(__builtin_ppc_alignx, "vIivC*", "nc")
@@ -151,9 +155,11 @@ TARGET_BUILTIN(__builtin_ppc_extract_exp, "Uid", "", "power9-vector")
 TARGET_BUILTIN(__builtin_ppc_extract_sig, "ULLid", "", "power9-vector")
 BUILTIN(__builtin_ppc_mtfsb0, "vUIi", "")
 BUILTIN(__builtin_ppc_mtfsb1, "vUIi", "")
+BUILTIN(__builtin_ppc_mffs, "d", "")
 TARGET_BUILTIN(__builtin_ppc_mffsl, "d", "", "isa-v30-instructions")
 BUILTIN(__builtin_ppc_mtfsf, "vUIiUi", "")
 BUILTIN(__builtin_ppc_mtfsfi, "vUIiUIi", "")
+BUILTIN(__builtin_ppc_set_fpscr_rn, "di", "")
 TARGET_BUILTIN(__builtin_ppc_insert_exp, "ddULLi", "", "power9-vector")
 BUILTIN(__builtin_ppc_fmsub, "dddd", "")
 BUILTIN(__builtin_ppc_fmsubs, "ffff", "")
@@ -508,6 +514,16 @@ TARGET_BUILTIN(__builtin_altivec_vctzb, "V16UcV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "", "power9-vector")
+
+// P7 BCD builtins.
+TARGET_BUILTIN(__builtin_cdtbcd, "UiUi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_cbcdtd, "UiUi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_addg6s, "UiUiUi", "", "isa-v206-instructions")
+
+// P7 XL Compat BCD builtins.
+TARGET_BUILTIN(__builtin_ppc_cdtbcd, "LLiLLi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_ppc_cbcdtd, "LLiLLi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_ppc_addg6s, "LLiLLiLLi", "", "isa-v206-instructions")
 
 // P8 BCD builtins.
 TARGET_BUILTIN(__builtin_ppc_bcdadd, "V16UcV16UcV16UcIi", "",

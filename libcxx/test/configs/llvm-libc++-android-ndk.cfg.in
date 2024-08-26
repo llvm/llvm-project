@@ -1,0 +1,47 @@
+# This testing configuration handles running the test suite against LLVM's
+# libc++ using adb and a libc++_shared.so library on Android.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+import re
+import site
+
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+
+import libcxx.test.android
+import libcxx.test.config
+import libcxx.test.params
+
+config.substitutions.append(('%{flags}',
+    '--sysroot @CMAKE_SYSROOT@' if '@CMAKE_SYSROOT@' else ''
+))
+
+compile_flags = '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
+if re.match(r'i686-linux-android(21|22|23)$', config.target_triple):
+    # 32-bit x86 Android has a bug where the stack is sometimes misaligned.
+    # The problem appears limited to versions before Android N (API 24) and only
+    # __attribute__((constructor)) functions. Compile with -mstackrealign to
+    # work around the bug.
+    # TODO: Consider automatically doing something like this in Clang itself (LIBCXX-ANDROID-FIXME)
+    # See https://github.com/android/ndk/issues/693.
+    compile_flags += ' -mstackrealign'
+config.substitutions.append(('%{compile_flags}', compile_flags))
+
+# The NDK library is called "libc++_shared.so". Use LD_LIBRARY_PATH to find
+# libc++_shared.so because older Bionic dynamic loaders don't support rpath
+# lookup.
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib-dir} -lc++_shared'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor}' +
+    ' --job-limit-socket ' + libcxx.test.android.adb_job_limit_socket() +
+    ' --prepend-path-env LD_LIBRARY_PATH /data/local/tmp/libc++ --execdir %T -- '
+))
+
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

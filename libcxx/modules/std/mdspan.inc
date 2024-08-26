@@ -15,10 +15,15 @@ export namespace std {
   // [mdspan.extents.dextents], alias template dextents
   using std::dextents;
 
+#  if _LIBCPP_STD_VER >= 26
+  // [mdspan.extents.dims]
+  using std::dims;
+#  endif // _LIBCPP_STD_VER >= 26
+
   // [mdspan.layout], layout mapping
   using std::layout_left;
   using std::layout_right;
-  // using std::layout_stride;
+  using std::layout_stride;
 
   // [mdspan.accessor.default], class template default_accessor
   using std::default_accessor;

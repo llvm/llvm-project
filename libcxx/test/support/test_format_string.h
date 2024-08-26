@@ -40,8 +40,8 @@ using test_format_string = std::format_string<Args...>;
 
 #else // TEST_STD_VER > 20 || defined(_LIBCPP_VERSION) || defined( _MSVC_STL_VERSION)
 
-#  error
-"Please create a vendor specific version of the test typedef and file a review at https://reviews.llvm.org/"
+#  error                                                                                                               \
+      "Please create a vendor specific version of the test typedef and file a PR at https://github.com/llvm/llvm-project"
 
 #endif // TEST_STD_VER > 20 || defined(_LIBCPP_VERSION) || defined( _MSVC_STL_VERSION)
 

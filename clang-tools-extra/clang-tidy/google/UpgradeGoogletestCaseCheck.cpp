@@ -66,7 +66,7 @@ public:
       // recent enough version of Google Test.
       llvm::StringRef FileName = PP->getSourceManager().getFilename(
           MD->getMacroInfo()->getDefinitionLoc());
-      ReplacementFound = FileName.endswith("gtest/gtest-typed-test.h") &&
+      ReplacementFound = FileName.ends_with("gtest/gtest-typed-test.h") &&
                          PP->getSpelling(MacroNameTok) == "TYPED_TEST_SUITE";
     }
   }
@@ -102,7 +102,7 @@ private:
 
     llvm::StringRef FileName = PP->getSourceManager().getFilename(
         MD.getMacroInfo()->getDefinitionLoc());
-    if (!FileName.endswith("gtest/gtest-typed-test.h"))
+    if (!FileName.ends_with("gtest/gtest-typed-test.h"))
       return;
 
     DiagnosticBuilder Diag = Check->diag(Loc, RenameCaseToSuiteMessage);

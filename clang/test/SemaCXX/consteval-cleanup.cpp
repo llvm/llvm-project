@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fblocks -Wno-unused-value -std=c++20 -ast-dump -verify %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -fblocks -Wno-unused-value -std=c++20 -ast-dump -verify %s -ast-dump -fexperimental-new-constant-interpreter | FileCheck %s
 
 // expected-no-diagnostics
 
@@ -21,11 +22,11 @@ void foo() {
   // CHECK: foo
   // CHECK: ExprWithCleanups
   // CHECK-NEXT: BinaryOperator {{.*}} 'bool' ','
-  // CHECK-NEXT: BinaryOperator {{.*}} 'P':'P' ','
-  // CHECK-NEXT: CXXFunctionalCastExpr {{.*}} 'A':'A'
-  // CHECK-NEXT: CXXBindTemporaryExpr {{.*}} 'A':'A'
-  // CHECK-NEXT: CXXConstructExpr {{.*}} 'A':'A'
-  // CHECK: ConstantExpr {{.*}} 'P':'P'
+  // CHECK-NEXT: BinaryOperator {{.*}} 'P' ','
+  // CHECK-NEXT: CXXFunctionalCastExpr {{.*}} 'A'
+  // CHECK-NEXT: CXXBindTemporaryExpr {{.*}} 'A'
+  // CHECK-NEXT: CXXConstructExpr {{.*}} 'A'
+  // CHECK: ConstantExpr {{.*}} 'P'
   // CHECK-NEXT: value:
   // CHECK-NEXT: ExprWithCleanups
 }
@@ -36,10 +37,10 @@ void foobar() {
   // CHECK: ExprWithCleanups
   // CHECK-NEXT: cleanup Block
   // CHECK-NEXT: BinaryOperator {{.*}} 'bool' ','
-  // CHECK-NEXT: BinaryOperator {{.*}} 'P':'P' ','
+  // CHECK-NEXT: BinaryOperator {{.*}} 'P' ','
   // CHECK-NEXT: CallExpr
   // CHECK-NEXT: BlockExpr
-  // CHECK: ConstantExpr {{.*}} 'P':'P'
+  // CHECK: ConstantExpr {{.*}} 'P'
   // CHECK-NEXT: value:
   // CHECK-NEXT: ExprWithCleanups
   // CHECK-NOT:  cleanup Block

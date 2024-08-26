@@ -546,63 +546,63 @@ entry:
   %p2.addr = alloca double, align 8
   %p1.addr = alloca float, align 4
   %v1 = alloca i32, align 4
-  %v2 = alloca i32*, align 8
-  %v21 = alloca i32*, align 8
-  %v3 = alloca i8*, align 8
+  %v2 = alloca ptr, align 8
+  %v21 = alloca ptr, align 8
+  %v3 = alloca ptr, align 8
   %v4 = alloca i32, align 8
-  %v5 = alloca i8*, align 8
+  %v5 = alloca ptr, align 8
   %l1 = alloca i32, align 4
   %l2 = alloca i32, align 4
   %l3 = alloca i32, align 4
   %l4 = alloca i32, align 4
-  %v6 = alloca i8*, align 8
-  store i64 %p3, i64* %p3.addr, align 8
-  call void @llvm.dbg.declare(metadata i64* %p3.addr, metadata !13, metadata !14), !dbg !15
-  store double %p2, double* %p2.addr, align 8
-  call void @llvm.dbg.declare(metadata double* %p2.addr, metadata !16, metadata !14), !dbg !17
-  store float %p1, float* %p1.addr, align 4
-  call void @llvm.dbg.declare(metadata float* %p1.addr, metadata !18, metadata !14), !dbg !19
-  call void @llvm.dbg.declare(metadata i32* %v1, metadata !20, metadata !14), !dbg !22
-  %0 = load i64, i64* %p3.addr, align 8, !dbg !23
+  %v6 = alloca ptr, align 8
+  store i64 %p3, ptr %p3.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p3.addr, metadata !13, metadata !14), !dbg !15
+  store double %p2, ptr %p2.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p2.addr, metadata !16, metadata !14), !dbg !17
+  store float %p1, ptr %p1.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %p1.addr, metadata !18, metadata !14), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %v1, metadata !20, metadata !14), !dbg !22
+  %0 = load i64, ptr %p3.addr, align 8, !dbg !23
   %conv = trunc i64 %0 to i32, !dbg !23
-  store i32 %conv, i32* %v1, align 4, !dbg !22
-  call void @llvm.dbg.declare(metadata i32** %v2, metadata !24, metadata !14), !dbg !26
-  store i32* %v1, i32** %v2, align 8, !dbg !26
-  call void @llvm.dbg.declare(metadata i32** %v21, metadata !27, metadata !14), !dbg !30
-  store i32* %v1, i32** %v21, align 8, !dbg !30
-  call void @llvm.dbg.declare(metadata i8** %v3, metadata !31, metadata !14), !dbg !33
-  %1 = bitcast i32* %v1 to i8*, !dbg !34
-  store i8* %1, i8** %v3, align 8, !dbg !33
-  call void @llvm.dbg.declare(metadata i32* %v4, metadata !35, metadata !14), !dbg !44
-  store i32 0, i32* %v4, align 8, !dbg !44
-  call void @llvm.dbg.declare(metadata i8** %v5, metadata !45, metadata !14), !dbg !47
-  store i8* bitcast (void (%struct.A*)* @"\01?f@A@@QEAAXXZ" to i8*), i8** %v5, align 8, !dbg !47
-  call void @llvm.dbg.declare(metadata i32* %l1, metadata !48, metadata !14), !dbg !50
-  store i32 0, i32* %l1, align 4, !dbg !50
-  call void @llvm.dbg.declare(metadata i32* %l2, metadata !51, metadata !14), !dbg !52
-  store i32 0, i32* %l2, align 4, !dbg !52
-  call void @llvm.dbg.declare(metadata i32* %l3, metadata !53, metadata !14), !dbg !55
-  store i32 0, i32* %l3, align 4, !dbg !55
-  call void @llvm.dbg.declare(metadata i32* %l4, metadata !56, metadata !14), !dbg !57
-  store i32 0, i32* %l4, align 4, !dbg !57
-  call void @llvm.dbg.declare(metadata i8** %v6, metadata !58, metadata !14), !dbg !61
-  %2 = bitcast i32* %v1 to i8*, !dbg !62
-  store i8* %2, i8** %v6, align 8, !dbg !61
-  %3 = load i32, i32* %l4, align 4, !dbg !63
-  %4 = load i32, i32* %l3, align 4, !dbg !64
-  %5 = load i32, i32* %l2, align 4, !dbg !65
-  %6 = load i32, i32* %l1, align 4, !dbg !66
-  %7 = load i8*, i8** %v3, align 8, !dbg !67
-  %8 = load i32*, i32** %v2, align 8, !dbg !68
-  %9 = load i32, i32* %v1, align 4, !dbg !69
-  call void (i32, ...) @"\01?usevars@@YAXHZZ"(i32 %9, i32* %8, i8* %7, i32 %6, i32 %5, i32 %4, i32 %3), !dbg !70
+  store i32 %conv, ptr %v1, align 4, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %v2, metadata !24, metadata !14), !dbg !26
+  store ptr %v1, ptr %v2, align 8, !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %v21, metadata !27, metadata !14), !dbg !30
+  store ptr %v1, ptr %v21, align 8, !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %v3, metadata !31, metadata !14), !dbg !33
+  %1 = bitcast ptr %v1 to ptr, !dbg !34
+  store ptr %1, ptr %v3, align 8, !dbg !33
+  call void @llvm.dbg.declare(metadata ptr %v4, metadata !35, metadata !14), !dbg !44
+  store i32 0, ptr %v4, align 8, !dbg !44
+  call void @llvm.dbg.declare(metadata ptr %v5, metadata !45, metadata !14), !dbg !47
+  store ptr @"\01?f@A@@QEAAXXZ", ptr %v5, align 8, !dbg !47
+  call void @llvm.dbg.declare(metadata ptr %l1, metadata !48, metadata !14), !dbg !50
+  store i32 0, ptr %l1, align 4, !dbg !50
+  call void @llvm.dbg.declare(metadata ptr %l2, metadata !51, metadata !14), !dbg !52
+  store i32 0, ptr %l2, align 4, !dbg !52
+  call void @llvm.dbg.declare(metadata ptr %l3, metadata !53, metadata !14), !dbg !55
+  store i32 0, ptr %l3, align 4, !dbg !55
+  call void @llvm.dbg.declare(metadata ptr %l4, metadata !56, metadata !14), !dbg !57
+  store i32 0, ptr %l4, align 4, !dbg !57
+  call void @llvm.dbg.declare(metadata ptr %v6, metadata !58, metadata !14), !dbg !61
+  %2 = bitcast ptr %v1 to ptr, !dbg !62
+  store ptr %2, ptr %v6, align 8, !dbg !61
+  %3 = load i32, ptr %l4, align 4, !dbg !63
+  %4 = load i32, ptr %l3, align 4, !dbg !64
+  %5 = load i32, ptr %l2, align 4, !dbg !65
+  %6 = load i32, ptr %l1, align 4, !dbg !66
+  %7 = load ptr, ptr %v3, align 8, !dbg !67
+  %8 = load ptr, ptr %v2, align 8, !dbg !68
+  %9 = load i32, ptr %v1, align 4, !dbg !69
+  call void (i32, ...) @"\01?usevars@@YAXHZZ"(i32 %9, ptr %8, ptr %7, i32 %6, i32 %5, i32 %4, i32 %3), !dbg !70
   ret void, !dbg !71
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @"\01?f@A@@QEAAXXZ"(%struct.A*) #2
+declare void @"\01?f@A@@QEAAXXZ"(ptr) #2
 
 declare void @"\01?usevars@@YAXHZZ"(i32, ...) #2
 
@@ -616,13 +616,13 @@ entry:
   %sc = alloca i8, align 1
   %c16 = alloca i16, align 2
   %c32 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i16* %w, metadata !75, metadata !14), !dbg !77
-  call void @llvm.dbg.declare(metadata i16* %us, metadata !78, metadata !14), !dbg !80
-  call void @llvm.dbg.declare(metadata i8* %c, metadata !81, metadata !14), !dbg !83
-  call void @llvm.dbg.declare(metadata i8* %uc, metadata !84, metadata !14), !dbg !86
-  call void @llvm.dbg.declare(metadata i8* %sc, metadata !87, metadata !14), !dbg !89
-  call void @llvm.dbg.declare(metadata i16* %c16, metadata !90, metadata !14), !dbg !92
-  call void @llvm.dbg.declare(metadata i32* %c32, metadata !93, metadata !14), !dbg !95
+  call void @llvm.dbg.declare(metadata ptr %w, metadata !75, metadata !14), !dbg !77
+  call void @llvm.dbg.declare(metadata ptr %us, metadata !78, metadata !14), !dbg !80
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !81, metadata !14), !dbg !83
+  call void @llvm.dbg.declare(metadata ptr %uc, metadata !84, metadata !14), !dbg !86
+  call void @llvm.dbg.declare(metadata ptr %sc, metadata !87, metadata !14), !dbg !89
+  call void @llvm.dbg.declare(metadata ptr %c16, metadata !90, metadata !14), !dbg !92
+  call void @llvm.dbg.declare(metadata ptr %c32, metadata !93, metadata !14), !dbg !95
   ret void, !dbg !96
 }
 

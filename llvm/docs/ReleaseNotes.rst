@@ -50,15 +50,8 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
-* The `llvm.stacksave` and `llvm.stackrestore` intrinsics now use
-  an overloaded pointer type to support non-0 address spaces.
-* The constant expression variants of the following instructions have been
-  removed:
-
-  * ``and``
-  * ``or``
-
-* Added `llvm.exp10` intrinsic.
+* The ``x86_mmx`` IR type has been removed. It will be translated to
+  the standard vector type ``<1 x i64>`` in bitcode upgrade.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -75,18 +68,24 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
-  for raw instruction access.
-
-* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
-
-* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
+* Removed ``llvm.amdgcn.flat.atomic.fadd`` and
+  ``llvm.amdgcn.global.atomic.fadd`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd` and
+  addrspace(0) or addrspace(1) instead.
 
 Changes to the ARM Backend
 --------------------------
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
 
 Changes to the AVR Backend
 --------------------------
@@ -109,8 +108,18 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* The Zfa extension version was upgraded to 1.0 and is no longer experimental.
-* Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+* Added Syntacore SCR4 and SCR5 CPUs: ``-mcpu=syntacore-scr4/5-rv32/64``
+* ``-mcpu=sifive-p470`` was added.
+* Added Hazard3 CPU as taped out for RP2350: ``-mcpu=rp2350-hazard3`` (32-bit
+  only).
+* Fixed length vector support using RVV instructions now requires VLEN>=64. This
+  means Zve32x and Zve32f will also require Zvl64b. The prior support was
+  largely untested.
+* The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
+* Added ``Smctr`` and ``Ssctr`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -118,21 +127,23 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
-* The LLVM filesystem class ``UniqueID`` and function ``equivalent()``
-  no longer determine that distinct different path names for the same
-  hard linked file actually are equal. This is an intentional tradeoff in a
-  bug fix, where the bug used to cause distinct files to be considered
-  equivalent on some file systems. This change fixed the issues
-  https://github.com/llvm/llvm-project/issues/61401 and
-  https://github.com/llvm/llvm-project/issues/22079.
-
 Changes to the X86 Backend
 --------------------------
 
-* The ``i128`` type now matches GCC and clang's ``__int128`` type. This mainly
-  benefits external projects such as Rust which aim to be binary compatible
-  with C, but also fixes code generation where LLVM already assumed that the
-  type matched and called into libgcc helper functions.
+* `.balign N, 0x90`, `.p2align N, 0x90`, and `.align N, 0x90` in code sections
+  now fill the required alignment space with repeating `0x90` bytes, rather than
+  using optimised NOP filling. Optimised NOP filling fills the space with NOP
+  instructions of various widths, not just those that use the `0x90` byte
+  encoding. To use optimised NOP filling in a code section, leave off the
+  "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
+
+* Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
+
+* Support ISA of ``AVX10.2-256`` and ``AVX10.2-512``.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -140,34 +151,47 @@ Changes to the OCaml bindings
 Changes to the Python bindings
 ------------------------------
 
-* The python bindings have been removed.
-
-
 Changes to the C API
 --------------------
 
-* Added ``LLVMGetTailCallKind`` and ``LLVMSetTailCallKind`` to
-  allow getting and setting ``tail``, ``musttail``, and ``notail``
-  attributes on call instructions.
-* The following functions for creating constant expressions have been removed,
-  because the underlying constant expressions are no longer supported. Instead,
-  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
-  constant fold the operands if possible and create an instruction otherwise:
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
 
-  * ``LLVMConstAnd``
-  * ``LLVMConstOr``
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
+
+ * The following functions are added to further support non-null-terminated strings:
+
+  * ``LLVMGetNamedFunctionWithLength``
+  * ``LLVMGetNamedGlobalWithLength``
+
+* The following functions are added to access the ``LLVMContextRef`` associated
+   with ``LLVMValueRef`` and ``LLVMBuilderRef`` objects:
+
+  * ``LLVMGetValueContext``
+  * ``LLVMGetBuilderContext``
+
+* The new pass manager can now be invoked with a custom alias analysis pipeline, using
+  the ``LLVMPassBuilderOptionsSetAAPipeline`` function.
+
+* It is now also possible to run the new pass manager on a single function, by calling
+  ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
+
+* Support for creating instructions with custom synchronization scopes has been added:
+
+  * ``LLVMGetSyncScopeID`` to map a synchronization scope name to an ID.
+  * ``LLVMBuildFenceSyncScope``, ``LLVMBuildAtomicRMWSyncScope`` and
+    ``LLVMBuildAtomicCmpXchgSyncScope`` versions of the existing builder functions
+    with an additional synchronization scope ID parameter.
+  * ``LLVMGetAtomicSyncScopeID`` and ``LLVMSetAtomicSyncScopeID`` to get and set the
+    synchronization scope of any atomic instruction.
+  * ``LLVMIsAtomic`` to check if an instruction is atomic, for use with the above functions.
+    Because of backwards compatibility, ``LLVMIsAtomicSingleThread`` and
+    ``LLVMSetAtomicSingleThread`` continue to work with any instruction type.
+
 
 Changes to the CodeGen infrastructure
 -------------------------------------
-
-* ``PrologEpilogInserter`` no longer supports register scavenging
-  during forwards frame index elimination. Targets should use
-  backwards frame index elimination instead.
-
-* ``RegScavenger`` no longer supports forwards register
-  scavenging. Clients should use backwards register scavenging
-  instead, which is preferred because it does not depend on accurate
-  kill flags.
 
 Changes to the Metadata Info
 ---------------------------------
@@ -178,43 +202,19 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
-* llvm-symbolizer now treats invalid input as an address for which source
-  information is not found.
-* llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
-  information (section name) when showing symbols.
-
-* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
-  debugging information to print symbols' filenames and line numbers.
-
 Changes to LLDB
 ---------------------------------
 
-* Methods in SBHostOS related to threads have had their implementations
-  removed. These methods will return a value indicating failure.
+Changes to BOLT
+---------------------------------
 
 Changes to Sanitizers
 ---------------------
-* HWASan now defaults to detecting use-after-scope bugs.
 
 Other Changes
 -------------
 
-* The ``Flags`` field of ``llvm::opt::Option`` has been split into ``Flags``
-  and ``Visibility`` to simplify option sharing between various drivers (such
-  as ``clang``, ``clang-cl``, or ``flang``) that rely on Clang's Options.td.
-  Overloads of ``llvm::opt::OptTable`` that use ``FlagsToInclude`` have been
-  deprecated. There is a script and instructions on how to resolve conflicts -
-  see https://reviews.llvm.org/D157150 and https://reviews.llvm.org/D157151 for
-  details.
-
-* On Linux, FreeBSD, and NetBSD, setting the environment variable
-  ``LLVM_ENABLE_SYMBOLIZER_MARKUP`` causes tools to print stacktraces using
-  :doc:`Symbolizer Markup <SymbolizerMarkupFormat>`.
-  This works even if the tools have no embedded symbol information (i.e. are
-  fully stripped); :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` can
-  symbolize the markup afterwards using ``debuginfod``.
-
-External Open Source Projects Using LLVM 15
+External Open Source Projects Using LLVM 19
 ===========================================
 
 * A project...

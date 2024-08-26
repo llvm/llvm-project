@@ -27,6 +27,7 @@
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
@@ -793,7 +794,9 @@ void COFFDumper::printCOFFDebugDirectory() {
       DictScope PDBScope(W, "PDBInfo");
       W.printHex("PDBSignature", DebugInfo->Signature.CVSignature);
       if (DebugInfo->Signature.CVSignature == OMF::Signature::PDB70) {
-        W.printBinary("PDBGUID", ArrayRef(DebugInfo->PDB70.Signature));
+        W.printString(
+            "PDBGUID",
+            formatv("{0}", fmt_guid(DebugInfo->PDB70.Signature)).str());
         W.printNumber("PDBAge", DebugInfo->PDB70.Age);
         W.printString("PDBFileName", PDBFileName);
       }
@@ -969,6 +972,43 @@ void COFFDumper::printCOFFLoadConfig() {
     printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount,
                   4 + Stride, PrintExtra);
   }
+
+  if (const coff_dynamic_reloc_table *DynRelocTable =
+          Obj->getDynamicRelocTable()) {
+    ListScope LS(W, "DynamicRelocations");
+    W.printHex("Version", DynRelocTable->Version);
+    for (auto reloc : Obj->dynamic_relocs()) {
+      switch (reloc.getType()) {
+      case COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X: {
+        ListScope TLS(W, "Arm64X");
+        for (auto Arm64XReloc : reloc.arm64x_relocs()) {
+          ListScope ELS(W, "Entry");
+          W.printHex("RVA", Arm64XReloc.getRVA());
+          switch (Arm64XReloc.getType()) {
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+            W.printString("Type", "ZEROFILL");
+            W.printHex("Size", Arm64XReloc.getSize());
+            break;
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+            W.printString("Type", "VALUE");
+            W.printHex("Size", Arm64XReloc.getSize());
+            W.printHex("Value", Arm64XReloc.getValue());
+            break;
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+            W.printString("Type", "DELTA");
+            W.printNumber("Value",
+                          static_cast<int32_t>(Arm64XReloc.getValue()));
+            break;
+          }
+        }
+        break;
+      }
+      default:
+        W.printHex("Type", reloc.getType());
+        break;
+      }
+    }
+  }
 }
 
 template <typename T>
@@ -1106,7 +1146,7 @@ void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
     if (Error E = Reader.readFixedString(Contents, SubSectionSize))
       reportError(std::move(E), Obj->getFileName());
 
-    BinaryStreamRef ST(Contents, support::little);
+    BinaryStreamRef ST(Contents, llvm::endianness::little);
     switch (DebugSubsectionKind(SubType)) {
     case DebugSubsectionKind::FileChecksums:
       if (Error E = CVFileChecksumTable.initialize(ST))
@@ -1148,7 +1188,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     reportError(errorCodeToError(object_error::parse_failed),
                 Obj->getFileName());
 
-  BinaryStreamReader FSReader(Data, support::little);
+  BinaryStreamReader FSReader(Data, llvm::endianness::little);
   initializeFileAndStringTables(FSReader);
 
   // TODO: Convert this over to using ModuleSubstreamVisitor.
@@ -1302,7 +1342,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     ListScope S(W, "FunctionLineTable");
     W.printString("LinkageName", Name);
 
-    BinaryStreamReader Reader(FunctionLineTables[Name], support::little);
+    BinaryStreamReader Reader(FunctionLineTables[Name],
+                              llvm::endianness::little);
 
     DebugLinesSubsectionRef LineInfo;
     if (Error E = LineInfo.initialize(Reader))
@@ -1945,7 +1986,7 @@ void COFFDumper::printCOFFResources() {
   ListScope ResourcesD(W, "Resources");
   for (const SectionRef &S : Obj->sections()) {
     StringRef Name = unwrapOrError(Obj->getFileName(), S.getName());
-    if (!Name.startswith(".rsrc"))
+    if (!Name.starts_with(".rsrc"))
       continue;
 
     StringRef Ref = unwrapOrError(Obj->getFileName(), S.getContents());
@@ -2091,10 +2132,10 @@ void COFFDumper::printStackMap() const {
 
   if (Obj->isLittleEndian())
     prettyPrintStackMap(
-        W, StackMapParser<support::little>(StackMapContentsArray));
+        W, StackMapParser<llvm::endianness::little>(StackMapContentsArray));
   else
     prettyPrintStackMap(
-        W, StackMapParser<support::big>(StackMapContentsArray));
+        W, StackMapParser<llvm::endianness::big>(StackMapContentsArray));
 }
 
 void COFFDumper::printAddrsig() {
@@ -2125,7 +2166,7 @@ void COFFDumper::printAddrsig() {
   const uint8_t *End = AddrsigContents.bytes_end();
   while (Cur != End) {
     unsigned Size;
-    const char *Err;
+    const char *Err = nullptr;
     uint64_t SymIndex = decodeULEB128(Cur, &Size, End, &Err);
     if (Err)
       reportError(createError(Err), Obj->getFileName());

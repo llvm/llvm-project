@@ -25,16 +25,16 @@
   entry:
     ret void
   }
-  define void @phiPropagation(i32* %src, i32* %dst, i1 %cond) {
+  define void @phiPropagation(ptr %src, ptr %dst, i1 %cond) {
   entry:
-    %srcVal = load i32, i32* %src
+    %srcVal = load i32, ptr %src
     br i1 %cond, label %end, label %then
   then:
     %res = add i32 %srcVal, 36
     br label %end
   end:
     %toStore = phi i32 [ %srcVal, %entry ], [ %res, %then ]
-    store i32 %toStore, i32* %dst
+    store i32 %toStore, ptr %dst
     ret void
   }
   define void @defaultMappingUseRepairPhysReg() {
@@ -71,26 +71,26 @@
   define void @copy_s128_from_load() { ret void }
   define void @copy_fp16() { ret void }
 
-  define i64 @greedyWithChainOfComputation(i64 %arg1, <2 x i32>* %addr) {
+  define i64 @greedyWithChainOfComputation(i64 %arg1, ptr %addr) {
     %varg1 = bitcast i64 %arg1 to <2 x i32>
-    %varg2 = load <2 x i32>, <2 x i32>* %addr
+    %varg2 = load <2 x i32>, ptr %addr
     %vres = or <2 x i32> %varg1, %varg2
     %res = bitcast <2 x i32> %vres to i64
     ret i64 %res
   }
 
-  define i64 @floatingPointLoad(i64 %arg1, double* %addr) {
+  define i64 @floatingPointLoad(i64 %arg1, ptr %addr) {
     %varg1 = bitcast i64 %arg1 to double
-    %varg2 = load double, double* %addr
+    %varg2 = load double, ptr %addr
     %vres = fadd double %varg1, %varg2
     %res = bitcast double %vres to i64
     ret i64 %res
   }
 
-  define void @floatingPointStore(i64 %arg1, double* %addr) {
+  define void @floatingPointStore(i64 %arg1, ptr %addr) {
     %varg1 = bitcast i64 %arg1 to double
     %vres = fadd double %varg1, %varg1
-    store double %vres, double* %addr
+    store double %vres, ptr %addr
     ret void
   }
 
@@ -106,8 +106,8 @@
   define half @passFp16ViaAllocas(half %p) {
   entry:
     %p.addr = alloca half, align 2
-    store half %p, half* %p.addr, align 2
-    %0 = load half, half* %p.addr, align 2
+    store half %p, ptr %p.addr, align 2
+    %0 = load half, ptr %p.addr, align 2
     ret half %0
   }
 ...

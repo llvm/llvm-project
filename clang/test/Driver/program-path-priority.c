@@ -36,7 +36,7 @@
 // RUN: touch %t/notreal-none-elf-gcc && chmod +x %t/notreal-none-elf-gcc
 // RUN: env "PATH=" %t/clang -### -target notreal-none-elf %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=PROG_PATH_NOTREAL_GCC %s
-// PROG_PATH_NOTREAL_GCC: notreal-none-elf-gcc"
+// PROG_PATH_NOTREAL_GCC: notreal-none-unknown-elf
 
 /// <triple>-gcc on the PATH is found
 // RUN: mkdir -p %t/env
@@ -57,7 +57,7 @@
 // RUN: touch %t/gcc && chmod +x %t/gcc
 // RUN: env "PATH=" %t/clang -### -target notreal-none-elf %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=NOTREAL_GCC_PREFERRED %s
-// NOTREAL_GCC_PREFERRED: notreal-none-elf-gcc"
+// NOTREAL_GCC_PREFERRED: notreal-none-unknown-elf"
 // NOTREAL_GCC_PREFERRED-NOT: /gcc"
 
 /// <triple>-gcc on the PATH is preferred to gcc in program path
@@ -87,8 +87,8 @@
 
 /// <default-triple>-gcc has lowest priority so <triple>-gcc
 /// on PATH beats default triple in program path
-// RUN: DEFAULT_TRIPLE=`%t/clang --version | grep "Target:" | cut -d ' ' -f2`
-// RUN: touch %t/$DEFAULT_TRIPLE-gcc && chmod +x %t/$DEFAULT_TRIPLE-gcc
+// RUN: %t/clang --version | grep "Target:" | cut -d ' ' -f2 > %t/default-triple.txt
+// RUN: env DEFAULT_TRIPLE=%{readfile:%t/default-triple.txt} touch %t/%{env:DEFAULT_TRIPLE}-gcc && chmod +x %t/%{env:DEFAULT_TRIPLE}-gcc
 // RUN: touch %t/%target_triple-gcc && chmod +x %t/%target_triple-gcc
 // RUN: env "PATH=%t/env/" %t/clang -### -target notreal-none-elf %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=DEFAULT_TRIPLE_GCC %s
@@ -125,6 +125,9 @@
 /// Only if there is nothing in the prefix will we search other paths
 /// -f in case $DEFAULT_TRIPLE == %target_triple
 // RUN: rm -f %t/prefix/$DEFAULT_TRIPLE-gcc %t/prefix/%target_triple-gcc %t/prefix/gcc
-// RUN: env "PATH=" %t/clang -### -target notreal-none-elf %s -B %t/prefix 2>&1 | \
-// RUN:   FileCheck --check-prefix=EMPTY_PREFIX_DIR %s
-// EMPTY_PREFIX_DIR: notreal-none-elf-gcc"
+// RUN: env "PATH=" %t/clang -### -canonical-prefixes --target=notreal-none-elf %s -B %t/prefix 2>&1 | \
+// RUN:   FileCheck --check-prefix=EMPTY_PREFIX_DIR1 %s
+// EMPTY_PREFIX_DIR1: gcc"
+// RUN: env "PATH=" %t/clang -### -no-canonical-prefixes --target=notreal-none-elf %s -B %t/prefix 2>&1 | \
+// RUN:   FileCheck --check-prefix=EMPTY_PREFIX_DIR2 %s
+// EMPTY_PREFIX_DIR2: notreal-none-elf-gcc"

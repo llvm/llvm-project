@@ -134,10 +134,10 @@ define <4 x float> @test_select(float %f, float %g) {
 
 define <2 x i64> @PR24922(<2 x i64> %v) {
 ; CHECK-LABEL: @PR24922(
-; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x i64> [[V:%.*]], i64 0, i64 0
-; CHECK-NEXT:    ret <2 x i64> [[RESULT1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> <i1 ptrtoint (ptr @PR24922 to i1), i1 true>, <2 x i64> [[V:%.*]], <2 x i64> <i64 0, i64 poison>
+; CHECK-NEXT:    ret <2 x i64> [[RESULT]]
 ;
-  %result = select <2 x i1> <i1 icmp eq (i64 extractelement (<2 x i64> bitcast (<4 x i32> <i32 15, i32 15, i32 15, i32 15> to <2 x i64>), i64 0), i64 0), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
+  %result = select <2 x i1> <i1 ptrtoint (ptr @PR24922 to i1), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
   ret <2 x i64> %result
 }
 
@@ -145,7 +145,7 @@ define <2 x i64> @PR24922(<2 x i64> %v) {
 
 define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand(
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> poison
 ;
   %out1 = insertelement <4 x float> poison, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -158,7 +158,7 @@ define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 
 define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_commute(
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> poison
 ;
   %out1 = insertelement <4 x float> poison, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -512,7 +512,7 @@ define ptr @gep_vbase_w_s_idx(<2 x ptr> %base, i64 %index) {
 
 define ptr @gep_splat_base_w_s_idx(ptr %base) {
 ; CHECK-LABEL: @gep_splat_base_w_s_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> poison, ptr %base, i32 0
@@ -566,7 +566,7 @@ define ptr @gep_cvbase_w_s_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_cv_idx(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @GLOBAL, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @GLOBAL, i64 4)
 ;
   %gep = getelementptr i32, <2 x ptr> <ptr @GLOBAL, ptr @GLOBAL>, <2 x i64> <i64 0, i64 1>
   %ee = extractelement <2 x ptr> %gep, i32 1
@@ -576,7 +576,7 @@ define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_sbase_w_cv_idx(ptr %base) {
 ; CHECK-LABEL: @gep_sbase_w_cv_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, ptr %base, <2 x i64> <i64 0, i64 1>
@@ -627,7 +627,7 @@ define <2 x ptr> @gep_all_lanes_undef(ptr %base, i64 %idx) {;
 
 define ptr @gep_demanded_lane_undef(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_demanded_lane_undef(
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr poison
 ;
   %basevec = insertelement <2 x ptr> poison, ptr %base, i32 0
   %idxvec = insertelement <2 x i64> poison, i64 %idx, i32 1

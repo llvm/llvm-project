@@ -6,8 +6,6 @@ func.func @primitive() {
   "some.op"() : () -> !llvm.void
   // CHECK: !llvm.ppc_fp128
   "some.op"() : () -> !llvm.ppc_fp128
-  // CHECK: !llvm.x86_mmx
-  "some.op"() : () -> !llvm.x86_mmx
   // CHECK: !llvm.token
   "some.op"() : () -> !llvm.token
   // CHECK: !llvm.label
@@ -63,8 +61,8 @@ func.func @ptr() {
   "some.op"() : () -> !llvm.ptr<0>
   // CHECK: !llvm.ptr<42>
   "some.op"() : () -> !llvm.ptr<42>
-  // CHECK: !llvm.ptr<ptr<42>, 9>
-  "some.op"() : () -> !llvm.ptr<ptr<42>, 9>
+  // CHECK: !llvm.ptr<9>
+  "some.op"() : () -> !llvm.ptr<9>
   return
 }
 
@@ -93,6 +91,10 @@ func.func @array() {
   "some.op"() : () -> !llvm.array<10 x ptr<4>>
   // CHECK: !llvm.array<10 x array<4 x f32>>
   "some.op"() : () -> !llvm.array<10 x array<4 x f32>>
+  // CHECK: !llvm.array<10 x array<4 x vector<8xf32>>>
+  "some.op"() : () -> !llvm.array<10 x array<4 x vector<8xf32>>>
+  // CHECK: !llvm.array<10 x array<4 x vector<[8]xf32>>>
+  "some.op"() : () -> !llvm.array<10 x array<4 x vector<[8]xf32>>>
   return
 }
 

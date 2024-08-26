@@ -61,7 +61,7 @@ struct Relocation {
 
   /// Handle special cases when relocation should not be processed by BOLT or
   /// change relocation \p Type to proper one before continuing if \p Contents
-  /// and \P Type mismatch occured.
+  /// and \P Type mismatch occurred.
   static bool skipRelocationProcess(uint64_t &Type, uint64_t Contents);
 
   // Adjust value depending on relocation type (make it PC relative or not)
@@ -123,6 +123,10 @@ struct Relocation {
   /// Return true if this relocation is R_*_RELATIVE type. Return false
   /// otherwise.
   bool isRelative() const { return isRelative(Type); }
+
+  /// Return true if this relocation is R_*_IRELATIVE type. Return false
+  /// otherwise.
+  bool isIRelative() const { return isIRelative(Type); }
 
   /// Emit relocation at a current \p Streamer' position. The caller is
   /// responsible for setting the position correctly.

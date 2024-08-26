@@ -1,15 +1,13 @@
-; RUN: llc -O0 -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX906 %s
-; RUN: llc -O0 -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX908 %s
-; RUN: not --crash llc -O0 -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX90A %s
-; RUN: not --crash llc -O0 -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX940 %s
-; RUN: llc -O0 -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1030 %s
-; RUN: llc -O0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100 %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
+; RUN: not --crash llc -O0 -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX90A %s
+; RUN: not --crash llc -O0 -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX940 %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1030 %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100 %s
 
-; GFX906-LABEL: image_sample_test:
-; GFX906: image_sample_lz
-
-; GFX908-LABEL: image_sample_test:
-; GFX908: image_sample_lz
+; GFX9-LABEL: image_sample_test:
+; GFX9: image_sample_lz
 
 ; GFX90A: LLVM ERROR: requested image instruction is not supported on this GPU
 

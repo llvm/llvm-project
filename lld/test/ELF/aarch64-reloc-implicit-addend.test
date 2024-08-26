@@ -1,0 +1,316 @@
+REQUIRES: aarch64
+
+## Test handling of addends taken from the relocated word or instruction
+## in AArch64 relocation sections of type SHT_REL. These can be generated
+## by assemblers other than LLVM, in particular the legacy 'armasm'.
+##
+## llvm-mc will only generate SHT_RELA when targeting AArch64. So to make
+## an input file with SHT_REL, we assemble our test source file, then
+## round-trip via YAML and do some seddery to change the type of the
+## relocation section. Since all the relocations were made manually with
+## .reloc directives containing no addend, this succeeds.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=aarch64 relocs.s -o rela.o
+# RUN: obj2yaml rela.o -o rela.yaml
+# RUN: sed "s/\.rela/\.rel/;s/SHT_RELA/SHT_REL/" rela.yaml > rel.yaml
+# RUN: yaml2obj rel.yaml -o rel.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 symbols.s -o symbols.o
+# RUN: ld.lld rel.o symbols.o -o a.out --section-start=.data=0x100000 --section-start=.text=0x200000
+# RUN: llvm-objdump -s a.out | FileCheck %s --check-prefix=DATA
+# RUN: llvm-objdump -d a.out | FileCheck %s --check-prefix=CODE
+
+#--- symbols.s
+
+// Source file containing the values of target symbols for the relocations. If
+// we don't keep these in their own file, then llvm-mc is clever enough to
+// resolve some of the relocations during assembly, even though they're written
+// as explicit .reloc directives. But we want the relocations to be present in
+// the object file, so that yaml2obj can change their type and we can test
+// lld's handling of the result. So we ensure that llvm-mc can't see both the
+// .reloc and the target symbol value at the same time.
+
+.globl abs16
+.globl abs32
+.globl abs64
+.globl big64
+.globl pcrel
+.globl data
+.globl branchtarget
+.globl calltarget
+
+.equ abs16, 0x9999
+.equ data, 0x100000
+.equ branchtarget, 0x200100
+.equ calltarget, 0x02000100
+.equ pcrel, 0x245678
+.equ abs32, 0x88888888
+.equ abs64, 0x7777777777777777
+.equ big64, 0x77ffffffffffff77
+
+#--- relocs.s
+
+// Source file containing the test instructions and their relocations, with the
+// FileCheck comments interleaved.
+
+// DATA: Contents of section .data:
+.data
+
+// First test absolute data relocations. For each one I show the expected
+// value in a comment, and then expect a line in llvm-objdump -s containing
+// all the values together.
+
+        // 0x7777777777777777 + 0x1234567887654321 = 0x89abcdeffedcba98
+        .reloc ., R_AARCH64_ABS64, abs64
+        .xword 0x1234567887654321
+
+        // 0x88888888 + 0x12344321 = 0x9abccba9
+        .reloc ., R_AARCH64_ABS32, abs32
+        .word 0x12344321
+
+        // 0x9999 + 0x1234 = 0xabcd
+        .reloc ., R_AARCH64_ABS16, abs16
+        .hword 0x1234
+
+        // DATA-NEXT:  100000 98badcfe efcdab89 a9cbbc9a cdab
+
+        .balign 16
+
+// Test relative data relocs, each subtracting the address of the relocated
+// word.
+
+        // 0x100000 + 0x1234567887654321 - 0x100010 = 0x1234567887654311
+        .reloc ., R_AARCH64_PREL64, data
+        .xword 0x1234567887654321
+
+        // 0x100000 + 0x12344321 - 0x100018 = 0x12344309
+        .reloc ., R_AARCH64_PREL32, data
+        .word 0x12344321
+
+        // 0x100000 + 0x1234 - 0x10001c = 0x1218
+        .reloc ., R_AARCH64_PREL16, data
+        .hword 0x1234
+
+        // DATA-NEXT:  100010 11436587 78563412 09433412 1812
+
+// CODE: 0000000000200000 <_start>:
+.text
+.globl _start
+_start:
+
+// Full set of 4 instructions loading the constant 'abs64' and adding 0x1234 to
+// it.
+
+// Expected constant is 0x7777777777777777 + 0x1234 = 0x77777777777789ab
+
+        .reloc ., R_AARCH64_MOVW_UABS_G0_NC, abs64
+        movz x0, #0x1234
+        // CODE-NEXT:  200000: d2913560      mov     x0, #0x89ab
+        .reloc ., R_AARCH64_MOVW_UABS_G1_NC, abs64
+        movk x0, #0x1234, lsl #16
+        // CODE-NEXT:  200004: f2aeeee0      movk    x0, #0x7777, lsl #16
+        .reloc ., R_AARCH64_MOVW_UABS_G2_NC, abs64
+        movk x0, #0x1234, lsl #32
+        // CODE-NEXT:  200008: f2ceeee0      movk    x0, #0x7777, lsl #32
+        .reloc ., R_AARCH64_MOVW_UABS_G3,    abs64
+        movk x0, #0x1234, lsl #48
+        // CODE-NEXT:  20000c: f2eeeee0      movk    x0, #0x7777, lsl #48
+
+// The same, but this constant has ffff in the middle 32 bits, forcing carries
+// to be propagated.
+
+// Expected constant: 0x77ffffffffffff77 + 0x1234 = 0x78000000000011ab
+
+        .reloc ., R_AARCH64_MOVW_UABS_G0_NC, big64
+        movz x0, #0x1234
+        // CODE-NEXT:  200010: d2823560      mov     x0, #0x11ab            
+        .reloc ., R_AARCH64_MOVW_UABS_G1_NC, big64
+        movk x0, #0x1234, lsl #16
+        // CODE-NEXT:  200014: f2a00000      movk    x0, #0x0, lsl #16
+        .reloc ., R_AARCH64_MOVW_UABS_G2_NC, big64
+        movk x0, #0x1234, lsl #32
+        // CODE-NEXT:  200018: f2c00000      movk    x0, #0x0, lsl #32
+        .reloc ., R_AARCH64_MOVW_UABS_G3,    big64
+        movk x0, #0x1234, lsl #48
+        // CODE-NEXT:  20001c: f2ef0000      movk    x0, #0x7800, lsl #48
+
+// Demonstrate that offsets are treated as signed: this one is taken to be
+// -0x1234. (If it were +0xedcc then you'd be able to tell the difference by
+// the carry into the second halfword.)
+
+// Expected value: 0x7777777777777777 - 0x1234 = 0x7777777777776543
+
+        .reloc ., R_AARCH64_MOVW_UABS_G0_NC, abs64
+        movz x0, #0xedcc
+        // CODE-NEXT:  200020: d28ca860      mov     x0, #0x6543
+        .reloc ., R_AARCH64_MOVW_UABS_G1_NC, abs64
+        movk x0, #0xedcc, lsl #16
+        // CODE-NEXT:  200024: f2aeeee0      movk    x0, #0x7777, lsl #16
+        .reloc ., R_AARCH64_MOVW_UABS_G2_NC, abs64
+        movk x0, #0xedcc, lsl #32
+        // CODE-NEXT:  200028: f2ceeee0      movk    x0, #0x7777, lsl #32
+        .reloc ., R_AARCH64_MOVW_UABS_G3,    abs64
+        movk x0, #0xedcc, lsl #48
+        // CODE-NEXT:  20002c: f2eeeee0      movk    x0, #0x7777, lsl #48
+
+// Check various bits of the ADR immediate, including in particular the low 2
+// bits, which are not contiguous with the rest in the encoding.
+//
+// These values are all 0x245678 + 2^n, except the last one, where the set bit
+// of the addend is the top bit, counting as negative, i.e. we expect the value
+// 0x254678 - 0x100000 = 0x145678.
+
+        .reloc ., R_AARCH64_ADR_PREL_LO21, pcrel
+        adr x0, .+1
+        // CODE-NEXT:  200030: 3022b240      adr     x0, 0x245679
+        .reloc ., R_AARCH64_ADR_PREL_LO21, pcrel
+        adr x0, .+2
+        // CODE-NEXT:  200034: 5022b220      adr     x0, 0x24567a
+        .reloc ., R_AARCH64_ADR_PREL_LO21, pcrel
+        adr x0, .+4
+        // CODE-NEXT:  200038: 1022b220      adr     x0, 0x24567c
+        .reloc ., R_AARCH64_ADR_PREL_LO21, pcrel
+        adr x0, .+8
+        // CODE-NEXT:  20003c: 1022b220      adr     x0, 0x245680
+        .reloc ., R_AARCH64_ADR_PREL_LO21, pcrel
+        adr x0, .+1<<19
+        // CODE-NEXT:  200040: 1062b1c0      adr     x0, 0x2c5678
+        .reloc ., R_AARCH64_ADR_PREL_LO21, pcrel
+        adr x0, .-1<<20
+        // CODE-NEXT:  200044: 10a2b1a0      adr     x0, 0x145678
+
+// Now load the same set of values with ADRP+ADD. But because the real ADRP
+// instruction shifts its immediate, we must account for that.
+
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, 1<<12
+        // CODE-NEXT:  200048: b0000220      adrp    x0, 0x245000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #1
+        // CODE-NEXT:  20004c: 9119e400      add     x0, x0, #0x679
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, 2<<12
+        // CODE-NEXT:  200050: b0000220      adrp    x0, 0x245000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #2
+        // CODE-NEXT:  200054: 9119e800      add     x0, x0, #0x67a
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, 4<<12
+        // CODE-NEXT:  200058: b0000220      adrp    x0, 0x245000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #4
+        // CODE-NEXT:  20005c: 9119f000      add     x0, x0, #0x67c
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, 8<<12
+        // CODE-NEXT:  200060: b0000220      adrp    x0, 0x245000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #8
+        // CODE-NEXT:  200064: 911a0000      add     x0, x0, #0x680
+
+        // Starting here, the high bits won't fit in the ADD immediate, so that
+        // becomes 0, and only the ADRP immediate shows evidence of the addend.
+
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, 1<<(19+12)
+        // CODE-NEXT:  200068: b0000620      adrp    x0, 0x2c5000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #0
+        // CODE-NEXT:  20006c: 9119e000      add     x0, x0, #0x678
+
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, -1<<(20+12)
+        // CODE-NEXT:  200070: b0fffa20      adrp    x0, 0x145000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #0
+        // CODE-NEXT:  200074: 9119e000      add     x0, x0, #0x678
+
+        // Finally, an example with a full 21-bit addend.
+        // Expected value = 0x245678 + 0xfedcb - 0x100000 = 0x244443
+        .reloc ., R_AARCH64_ADR_PREL_PG_HI21, pcrel
+        adrp x0, (0xfedcb-0x100000)<<12
+        // CODE-NEXT:  200078: 90000220      adrp    x0, 0x244000
+        .reloc ., R_AARCH64_ADD_ABS_LO12_NC,  pcrel
+        add x0, x0, #0xdcb
+        // CODE-NEXT:  20007c: 91110c00      add     x0, x0, #0x443
+
+// PC-relative loads, in which the 19-bit offset is shifted. The offsets are
+// the same as the ADRs above, except for the first two, which can't be
+// expressed by pc-relative LDR with an offset shifted left 2.
+//
+// (The input syntax is confusing here. I'd normally expect to write this as
+// `ldr x0, [pc, #offset]`, but LLVM writes just `#offset`.)
+
+        .reloc ., R_AARCH64_LD_PREL_LO19,     pcrel
+        ldr w0, #4
+        // CODE-NEXT:  200080: 1822afe0      ldr     w0, 0x24567c
+        .reloc ., R_AARCH64_LD_PREL_LO19,     pcrel
+        ldr w0, #8
+        // CODE-NEXT:  200084: 1822afe0      ldr     w0, 0x245680
+        .reloc ., R_AARCH64_LD_PREL_LO19,     pcrel
+        ldr w0, #1<<19
+        // CODE-NEXT:  200088: 1862af80      ldr     w0, 0x2c5678
+        .reloc ., R_AARCH64_LD_PREL_LO19,     pcrel
+        ldr w0, #-1<<20
+        // CODE-NEXT:  20008c: 18a2af60      ldr     w0, 0x145678
+
+
+// For these, the branch target is 0x200100 plus powers of 2, except the offset
+// 2^15, which is negative, because the addend is treated as signed.
+
+        .reloc ., R_AARCH64_TSTBR14, branchtarget
+        tbnz x1, #63, #4
+        // CODE-NEXT:  200090: b7f803a1      tbnz    x1, #0x3f, 0x200104
+        .reloc ., R_AARCH64_TSTBR14, branchtarget
+        tbnz x1, #62, #8
+        // CODE-NEXT:  200094: b7f003a1      tbnz    x1, #0x3e, 0x200108
+        .reloc ., R_AARCH64_TSTBR14, branchtarget
+        tbnz x1, #61, #1<<14
+        // CODE-NEXT:  200098: b7ea0341      tbnz    x1, #0x3d, 0x204100
+        .reloc ., R_AARCH64_TSTBR14, branchtarget
+        tbnz x1, #60, #-1<<15
+        // CODE-NEXT:  20009c: b7e40321      tbnz    x1, #0x3c, 0x1f8100
+
+// CONDBR19 is used for both cbz/cbnz and B.cond, so test both at once. Base
+// offset is the same again (from 0x200100), but this time, offsets can go up
+// to 2^20.
+
+        .reloc ., R_AARCH64_CONDBR19, branchtarget
+        cbnz x2, #4
+        // CODE-NEXT:  2000a0: b5000322      cbnz    x2, 0x200104
+        .reloc ., R_AARCH64_CONDBR19, branchtarget
+        b.eq #8
+        // CODE-NEXT:  2000a4: 54000320      b.eq    0x200108
+        .reloc ., R_AARCH64_CONDBR19, branchtarget
+        cbz x2, #1<<19
+        // CODE-NEXT:  2000a8: b44002c2      cbz     x2, 0x280100
+        .reloc ., R_AARCH64_CONDBR19, branchtarget
+        b.vs #-1<<20
+        // CODE-NEXT:  2000ac: 548002a6      b.vs    0x100100
+
+// And for BL and B, the offsets go up to 2^25.
+
+        .reloc ., R_AARCH64_CALL26, calltarget
+        bl #4
+        // CODE-NEXT:  2000b0: 94780015      bl      0x2000104
+        .reloc ., R_AARCH64_CALL26, calltarget
+        bl #8
+        // CODE-NEXT:  2000b4: 94780015      bl      0x2000108
+        .reloc ., R_AARCH64_CALL26, calltarget
+        bl #1<<24
+        // CODE-NEXT:  2000b8: 94b80012      bl      0x3000100
+        .reloc ., R_AARCH64_CALL26, calltarget
+        bl #-1<<25
+        // CODE-NEXT:  2000bc: 97f80011      bl      0x100
+
+        .reloc ., R_AARCH64_JUMP26, calltarget
+        b #4
+        // CODE-NEXT:  2000c0: 14780011      b       0x2000104
+        .reloc ., R_AARCH64_JUMP26, calltarget
+        b #8
+        // CODE-NEXT:  2000c4: 14780011      b       0x2000108
+        .reloc ., R_AARCH64_JUMP26, calltarget
+        b #1<<24
+        // CODE-NEXT:  2000c8: 14b8000e      b       0x3000100
+        .reloc ., R_AARCH64_JUMP26, calltarget
+        b #-1<<25
+        // CODE-NEXT:  2000cc: 17f8000d      b       0x100

@@ -132,7 +132,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:   "spellingLoc": {
 // CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "file": "<scratch space>",
-// CHECK-NEXT:    "line": 3,
+// CHECK-NEXT:    "line": 5,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
@@ -169,7 +169,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:   "spellingLoc": {
 // CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "file": "<scratch space>",
-// CHECK-NEXT:    "line": 5,
+// CHECK-NEXT:    "line": 7,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },

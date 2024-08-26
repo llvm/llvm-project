@@ -12,7 +12,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/matmul-transpose.h"
 #include "flang/Runtime/matmul.h"
 #include "flang/Runtime/transformational.h"
@@ -160,9 +160,7 @@ void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto xTy = x.getType();
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_JN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJn_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJn_8)>(loc, builder);
@@ -171,7 +169,7 @@ void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselJn_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_JN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_JN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -189,9 +187,7 @@ void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value n1, mlir::Value n2) {
   mlir::func::FuncOp func;
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_JN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_8)>(loc, builder);
@@ -200,7 +196,7 @@ void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselJnX0_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_JN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_JN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -219,9 +215,7 @@ void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto xTy = x.getType();
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_YN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYn_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYn_8)>(loc, builder);
@@ -230,7 +224,7 @@ void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselYn_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_YN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_YN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -248,9 +242,7 @@ void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value n1, mlir::Value n2) {
   mlir::func::FuncOp func;
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_YN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_8)>(loc, builder);
@@ -259,7 +251,7 @@ void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselYnX0_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_YN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_YN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -337,11 +329,64 @@ void fir::runtime::genEoshiftVector(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, eoshiftFunc, args);
 }
 
+/// Define ForcedMatmul<ACAT><AKIND><BCAT><BKIND> models.
+struct ForcedMatmulTypeModel {
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxRefTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::runtime::getModel<const char *>()(ctx);
+      auto intTy = fir::runtime::getModel<int>()(ctx);
+      auto voidTy = fir::runtime::getModel<void>()(ctx);
+      return mlir::FunctionType::get(
+          ctx, {boxRefTy, boxTy, boxTy, strTy, intTy}, {voidTy});
+    };
+  }
+};
+
+#define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
+  struct ForcedMatmul##ACAT##AKIND##BCAT##BKIND                                \
+      : public ForcedMatmulTypeModel {                                         \
+    static constexpr const char *name =                                        \
+        ExpandAndQuoteKey(RTNAME(Matmul##ACAT##AKIND##BCAT##BKIND));           \
+  };
+
+#define MATMUL_DIRECT_INSTANCE(ACAT, AKIND, BCAT, BKIND)
+#define MATMUL_FORCE_ALL_TYPES 1
+
+#include "flang/Runtime/matmul-instances.inc"
+
 /// Generate call to Matmul intrinsic runtime routine.
 void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value matrixABox,
                              mlir::Value matrixBBox) {
-  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Matmul)>(loc, builder);
+  mlir::func::FuncOp func;
+  auto boxATy = matrixABox.getType();
+  auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
+  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getEleTy();
+  auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
+  auto boxBTy = matrixBBox.getType();
+  auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
+  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getEleTy();
+  auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
+
+#define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
+  if (!func && aCat == TypeCategory::ACAT && aKind == AKIND &&                 \
+      bCat == TypeCategory::BCAT && bKind == BKIND) {                          \
+    func =                                                                     \
+        fir::runtime::getRuntimeFunc<ForcedMatmul##ACAT##AKIND##BCAT##BKIND>(  \
+            loc, builder);                                                     \
+  }
+
+#define MATMUL_DIRECT_INSTANCE(ACAT, AKIND, BCAT, BKIND)
+#define MATMUL_FORCE_ALL_TYPES 1
+#include "flang/Runtime/matmul-instances.inc"
+
+  if (!func) {
+    fir::intrinsicTypeTODO2(builder, arrAEleTy, arrBEleTy, loc, "MATMUL");
+  }
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -352,13 +397,48 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, func, args);
 }
 
-/// Generate call to MatmulTranspose intrinsic runtime routine.
+/// Define ForcedMatmulTranspose<ACAT><AKIND><BCAT><BKIND> models.
+#define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
+  struct ForcedMatmulTranspose##ACAT##AKIND##BCAT##BKIND                       \
+      : public ForcedMatmulTypeModel {                                         \
+    static constexpr const char *name =                                        \
+        ExpandAndQuoteKey(RTNAME(MatmulTranspose##ACAT##AKIND##BCAT##BKIND));  \
+  };
+
+#define MATMUL_DIRECT_INSTANCE(ACAT, AKIND, BCAT, BKIND)
+#define MATMUL_FORCE_ALL_TYPES 1
+
+#include "flang/Runtime/matmul-instances.inc"
+
 void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value resultBox,
                                       mlir::Value matrixABox,
                                       mlir::Value matrixBBox) {
-  auto func =
-      fir::runtime::getRuntimeFunc<mkRTKey(MatmulTranspose)>(loc, builder);
+  mlir::func::FuncOp func;
+  auto boxATy = matrixABox.getType();
+  auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
+  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getEleTy();
+  auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
+  auto boxBTy = matrixBBox.getType();
+  auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
+  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getEleTy();
+  auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
+
+#define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
+  if (!func && aCat == TypeCategory::ACAT && aKind == AKIND &&                 \
+      bCat == TypeCategory::BCAT && bKind == BKIND) {                          \
+    func = fir::runtime::getRuntimeFunc<                                       \
+        ForcedMatmulTranspose##ACAT##AKIND##BCAT##BKIND>(loc, builder);        \
+  }
+
+#define MATMUL_DIRECT_INSTANCE(ACAT, AKIND, BCAT, BKIND)
+#define MATMUL_FORCE_ALL_TYPES 1
+#include "flang/Runtime/matmul-instances.inc"
+
+  if (!func) {
+    fir::intrinsicTypeTODO2(builder, arrAEleTy, arrBEleTy, loc,
+                            "MATMUL-TRANSPOSE");
+  }
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =

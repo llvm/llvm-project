@@ -12,10 +12,8 @@
 
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -23,7 +21,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -37,16 +34,6 @@ using namespace mlir;
 using namespace affine;
 using namespace presburger;
 using llvm::SmallMapVector;
-
-namespace {
-// This structure is to pass and return sets of loop parameters without
-// confusing the order.
-struct LoopParams {
-  Value lowerBound;
-  Value upperBound;
-  Value step;
-};
-} // namespace
 
 /// Computes the cleanup loop lower bound of the loop being unrolled with
 /// the specified unroll factor; this bound will also be upper bound of the main
@@ -128,12 +115,12 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
-// TODO: extend this for arbitrary affine bounds.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
 
+  // TODO: extend this for arbitrary affine bounds.
   if (forOp.getLowerBoundMap().getNumResults() != 1)
     return failure();
 
@@ -261,7 +248,7 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
   unsigned numChildOps = shifts.size();
 
   // Do a linear time (counting) sort for the shifts.
-  uint64_t maxShift = *std::max_element(shifts.begin(), shifts.end());
+  uint64_t maxShift = *llvm::max_element(shifts);
   if (maxShift >= numChildOps) {
     // Large shifts are not the typical use case.
     forOp.emitWarning("not shifting because shifts are unrealistically large");
@@ -404,6 +391,7 @@ static LogicalResult performPreTilingChecks(MutableArrayRef<AffineForOp> input,
     return failure();
   }
 
+  //  TODO: handle non hyper-rectangular spaces.
   if (failed(checkIfHyperRectangular(input)))
     return failure();
 
@@ -818,7 +806,6 @@ mlir::affine::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
 /// Tiles the specified band of perfectly nested loops creating tile-space
 /// loops and intra-tile loops, using SSA values as tiling parameters. A band
 /// is a contiguous set of loops.
-//  TODO: handle non hyper-rectangular spaces.
 LogicalResult mlir::affine::tilePerfectlyNestedParametric(
     MutableArrayRef<AffineForOp> input, ArrayRef<Value> tileSizes,
     SmallVectorImpl<AffineForOp> *tiledNest) {
@@ -1102,34 +1089,6 @@ static bool areInnerBoundsInvariant(AffineForOp forOp) {
   return !walkResult.wasInterrupted();
 }
 
-// Gathers all maximal sub-blocks of operations that do not themselves
-// include a for op (a operation could have a descendant for op though
-// in its tree).  Ignore the block terminators.
-struct JamBlockGatherer {
-  // Store iterators to the first and last op of each sub-block found.
-  std::vector<std::pair<Block::iterator, Block::iterator>> subBlocks;
-
-  // This is a linear time walk.
-  void walk(Operation *op) {
-    for (auto &region : op->getRegions())
-      for (auto &block : region)
-        walk(block);
-  }
-
-  void walk(Block &block) {
-    for (auto it = block.begin(), e = std::prev(block.end()); it != e;) {
-      auto subBlockStart = it;
-      while (it != e && !isa<AffineForOp>(&*it))
-        ++it;
-      if (it != subBlockStart)
-        subBlocks.emplace_back(subBlockStart, std::prev(it));
-      // Process all for ops that appear next.
-      while (it != e && isa<AffineForOp>(&*it))
-        walk(&*it++);
-    }
-  }
-};
-
 /// Unrolls and jams this loop by the specified factor.
 LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
                                                   uint64_t unrollJamFactor) {
@@ -1159,7 +1118,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
     return failure();
 
   // Gather all sub-blocks to jam upon the loop being unrolled.
-  JamBlockGatherer jbg;
+  JamBlockGatherer<AffineForOp> jbg;
   jbg.walk(forOp);
   auto &subBlocks = jbg.subBlocks;
 
@@ -1425,7 +1384,7 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
   // just sort and check if it's iota.
-  SmallVector<unsigned, 4> checkPermMap(permMap.begin(), permMap.end());
+  SmallVector<unsigned, 4> checkPermMap(permMap);
   llvm::sort(checkPermMap);
   if (llvm::any_of(llvm::enumerate(checkPermMap),
                    [](const auto &en) { return en.value() != en.index(); }))
@@ -1514,11 +1473,7 @@ AffineForOp mlir::affine::sinkSequentialLoops(AffineForOp forOp) {
     }
   }
 
-  // Count the number of parallel loops.
-  unsigned numParallelLoops = 0;
-  for (unsigned i = 0, e = isParallelLoop.size(); i < e; ++i)
-    if (isParallelLoop[i])
-      ++numParallelLoops;
+  unsigned numParallelLoops = llvm::count(isParallelLoop, true);
 
   // Compute permutation of loops that sinks sequential loops (and thus raises
   // parallel loops) while preserving relative order.
@@ -1628,7 +1583,7 @@ SmallVector<SmallVector<AffineForOp, 8>, 8>
 mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
                    ArrayRef<AffineForOp> targets) {
   SmallVector<SmallVector<AffineForOp, 8>, 8> res;
-  SmallVector<AffineForOp, 8> currentTargets(targets.begin(), targets.end());
+  SmallVector<AffineForOp, 8> currentTargets(targets);
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
@@ -2069,7 +2024,7 @@ static LogicalResult generateCopy(
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = offset.dyn_cast<AffineConstantExpr>()) {
+    if (auto caf = dyn_cast<AffineConstantExpr>(offset)) {
       auto indexVal = caf.getValue();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);
@@ -2125,8 +2080,8 @@ static LogicalResult generateCopy(
 
   auto numElementsSSA = top.create<arith::ConstantIndexOp>(loc, *numElements);
 
-  Value dmaStride = nullptr;
-  Value numEltPerDmaStride = nullptr;
+  Value dmaStride;
+  Value numEltPerDmaStride;
   if (copyOptions.generateDma) {
     SmallVector<StrideInfo, 4> dmaStrideInfos;
     getMultiLevelStrides(region, fastBufferShape, &dmaStrideInfos);
@@ -2559,10 +2514,6 @@ void mlir::affine::gatherLoops(
   }
 }
 
-// TODO: if necessary, this can be extended to also compose in any
-// affine.applys, fold to constant if all result dimensions of the map are
-// constant (canonicalizeMapAndOperands below already does this for single
-// result bound maps), and use simplifyMap to perform algebraic simplification.
 AffineForOp mlir::affine::createCanonicalizedAffineForOp(
     OpBuilder b, Location loc, ValueRange lbOperands, AffineMap lbMap,
     ValueRange ubOperands, AffineMap ubMap, int64_t step) {
@@ -2772,4 +2723,52 @@ mlir::affine::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
     *fullTileNest = std::move(fullTileLoops);
 
   return success();
+}
+
+LogicalResult affine::coalescePerfectlyNestedAffineLoops(AffineForOp op) {
+  LogicalResult result(failure());
+  SmallVector<AffineForOp> loops;
+  getPerfectlyNestedLoops(loops, op);
+  if (loops.size() <= 1)
+    return success();
+
+  // Look for a band of loops that can be coalesced, i.e. perfectly nested
+  // loops with bounds defined above some loop.
+  // 1. For each loop, find above which parent loop its operands are
+  // defined.
+  SmallVector<unsigned> operandsDefinedAbove(loops.size());
+  for (unsigned i = 0, e = loops.size(); i < e; ++i) {
+    operandsDefinedAbove[i] = i;
+    for (unsigned j = 0; j < i; ++j) {
+      if (areValuesDefinedAbove(loops[i].getOperands(), loops[j].getRegion())) {
+        operandsDefinedAbove[i] = j;
+        break;
+      }
+    }
+  }
+
+  // 2. Identify bands of loops such that the operands of all of them are
+  // defined above the first loop in the band.  Traverse the nest bottom-up
+  // so that modifications don't invalidate the inner loops.
+  for (unsigned end = loops.size(); end > 0; --end) {
+    unsigned start = 0;
+    for (; start < end - 1; ++start) {
+      auto maxPos =
+          *std::max_element(std::next(operandsDefinedAbove.begin(), start),
+                            std::next(operandsDefinedAbove.begin(), end));
+      if (maxPos > start)
+        continue;
+      assert(maxPos == start &&
+             "expected loop bounds to be known at the start of the band");
+      auto band = llvm::MutableArrayRef(loops.data() + start, end - start);
+      if (succeeded(coalesceLoops(band)))
+        result = success();
+      break;
+    }
+    // If a band was found and transformed, keep looking at the loops above
+    // the outermost transformed loop.
+    if (start != end - 1)
+      end = start + 1;
+  }
+  return result;
 }

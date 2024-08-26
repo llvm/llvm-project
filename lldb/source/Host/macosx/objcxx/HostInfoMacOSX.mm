@@ -124,6 +124,12 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
   return g_program_filespec;
 }
 
+/// Resolve the given candidate support dir and return true if it's valid.
+static bool ResolveAndVerifyCandidateSupportDir(FileSpec &path) {
+  FileSystem::Instance().Resolve(path);
+  return FileSystem::Instance().IsDirectory(path);
+}
+
 bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec = GetShlibDir();
   if (!lldb_file_spec)
@@ -144,16 +150,24 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
 #endif
   } else {
     // Find the bin path relative to the lib path where the cmake-based
-    // OS X .dylib lives.  This is not going to work if the bin and lib
-    // dir are not both in the same dir.
+    // OS X .dylib lives. We try looking first at a possible sibling `bin`
+    // directory, and then at the `lib` directory itself. This last case is
+    // useful for supporting build systems like Bazel which in many cases prefer
+    // to place support binaries right next to dylibs.
     //
-    // It is not going to work to do it by the executable path either,
+    // It is not going to work to do it by the executable path,
     // as in the case of a python script, the executable is python, not
     // the lldb driver.
-    raw_path.append("/../bin");
-    FileSpec support_dir_spec(raw_path);
-    FileSystem::Instance().Resolve(support_dir_spec);
-    if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
+    FileSpec support_dir_spec_lib(raw_path);
+    FileSpec support_dir_spec_bin =
+        support_dir_spec_lib.CopyByAppendingPathComponent("/../bin");
+    FileSpec support_dir_spec;
+
+    if (ResolveAndVerifyCandidateSupportDir(support_dir_spec_bin)) {
+      support_dir_spec = support_dir_spec_bin;
+    } else if (ResolveAndVerifyCandidateSupportDir(support_dir_spec_lib)) {
+      support_dir_spec = support_dir_spec_lib;
+    } else {
       Log *log = GetLog(LLDBLog::Host);
       LLDB_LOG(log, "failed to find support directory");
       return false;
@@ -276,6 +290,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 #elif defined(TARGET_OS_WATCHOS) && TARGET_OS_WATCHOS == 1
         arch_32.GetTriple().setOS(llvm::Triple::WatchOS);
         arch_64.GetTriple().setOS(llvm::Triple::WatchOS);
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+        arch_32.GetTriple().setOS(llvm::Triple::XROS);
+        arch_64.GetTriple().setOS(llvm::Triple::XROS);
 #elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
         arch_32.GetTriple().setOS(llvm::Triple::MacOSX);
         arch_64.GetTriple().setOS(llvm::Triple::MacOSX);
@@ -394,7 +411,7 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   if (log) {
     std::string cmdstr;
     args.GetCommandString(cmdstr);
-    log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
+    LLDB_LOG(log, "GetXcodeSDK() running shell cmd '{0}'", cmdstr);
   }
 
   int status = 0;
@@ -410,13 +427,15 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   // Check that xcrun returned something useful.
   if (error.Fail()) {
     // Catastrophic error.
-    LLDB_LOG(log, "xcrun failed to execute: %s", error.AsCString());
+    LLDB_LOG(log, "xcrun failed to execute: {0}", error);
     return error.ToError();
   }
   if (status != 0) {
     // xcrun didn't find a matching SDK. Not an error, we'll try
     // different spellings.
-    LLDB_LOG(log, "xcrun returned exit code %d", status);
+    LLDB_LOG(log, "xcrun returned exit code {0}", status);
+    if (!output_str.empty())
+      LLDB_LOG(log, "xcrun output was:\n{0}", output_str);
     return "";
   }
   if (output_str.empty()) {
@@ -461,13 +480,11 @@ static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
     // Invoke xcrun with the shlib dir.
     if (FileSpec fspec = HostInfo::GetShlibDir()) {
       if (FileSystem::Instance().Exists(fspec)) {
-        std::string contents_dir =
-            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
-        llvm::StringRef shlib_developer_dir =
-            llvm::sys::path::parent_path(contents_dir);
-        if (!shlib_developer_dir.empty()) {
-          auto sdk =
-              xcrun(sdk_name, show_sdk_path, std::move(shlib_developer_dir));
+        llvm::SmallString<0> shlib_developer_dir(
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
+        llvm::sys::path::append(shlib_developer_dir, "Developer");
+        if (FileSystem::Instance().Exists(shlib_developer_dir)) {
+          auto sdk = xcrun(sdk_name, show_sdk_path, shlib_developer_dir);
           if (!sdk)
             return sdk.takeError();
           if (!sdk->empty())

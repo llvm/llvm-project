@@ -21,7 +21,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -137,6 +136,9 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
+
+static constexpr llvm::StringLiteral g_loader_path = "@loader_path";
+static constexpr llvm::StringLiteral g_executable_path = "@executable_path";
 
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
 
@@ -903,6 +905,11 @@ ConstString ObjectFileMachO::GetSegmentNameLINKEDIT() {
 
 ConstString ObjectFileMachO::GetSegmentNameDWARF() {
   static ConstString g_section_name("__DWARF");
+  return g_section_name;
+}
+
+ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static ConstString g_section_name("__LLVM_COV");
   return g_section_name;
 }
 
@@ -2165,20 +2172,20 @@ static SymbolType GetSymbolType(const char *&symbol_name,
 
       if (symbol_name) {
         llvm::StringRef symbol_name_ref(symbol_name);
-        if (symbol_name_ref.startswith("OBJC_")) {
+        if (symbol_name_ref.starts_with("OBJC_")) {
           static const llvm::StringRef g_objc_v2_prefix_class("OBJC_CLASS_$_");
           static const llvm::StringRef g_objc_v2_prefix_metaclass(
               "OBJC_METACLASS_$_");
           static const llvm::StringRef g_objc_v2_prefix_ivar("OBJC_IVAR_$_");
-          if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+          if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
             symbol_name = symbol_name + g_objc_v2_prefix_class.size();
             type = eSymbolTypeObjCClass;
             demangled_is_synthesized = true;
-          } else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass)) {
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_metaclass)) {
             symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
             type = eSymbolTypeObjCMetaClass;
             demangled_is_synthesized = true;
-          } else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar)) {
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
             symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
             type = eSymbolTypeObjCIVar;
             demangled_is_synthesized = true;
@@ -2220,10 +2227,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   if (!module_sp)
     return;
 
+  Log *log = GetLog(LLDBLog::Symbols);
+
   const FileSpec &file = m_file ? m_file : module_sp->GetFileSpec();
   const char *file_name = file.GetFilename().AsCString("<Unknown>");
   LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
-  Progress progress(llvm::formatv("Parsing symbol table for {0}", file_name));
+  LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
+  Progress progress("Parsing symbol table", file_name);
 
   llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
@@ -2252,7 +2262,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   uint32_t i;
   FileSpecList dylib_files;
-  Log *log = GetLog(LLDBLog::Symbols);
   llvm::StringRef g_objc_v2_prefix_class("_OBJC_CLASS_$_");
   llvm::StringRef g_objc_v2_prefix_metaclass("_OBJC_METACLASS_$_");
   llvm::StringRef g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
@@ -2652,7 +2661,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   std::vector<TrieEntryWithOffset> external_sym_trie_entries;
   std::set<lldb::addr_t> resolver_addresses;
 
-  if (dyld_trie_data.GetByteSize() > 0) {
+  const size_t dyld_trie_data_size = dyld_trie_data.GetByteSize();
+  if (dyld_trie_data_size > 0) {
+    LLDB_LOG(log, "Parsing {0} bytes of dyld trie data", dyld_trie_data_size);
     SectionSP text_segment_sp =
         GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
@@ -2865,7 +2876,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         if (symbol_name && symbol_name[0] == '_' &&
                             symbol_name[1] == 'O') {
                           llvm::StringRef symbol_name_ref(symbol_name);
-                          if (symbol_name_ref.startswith(
+                          if (symbol_name_ref.starts_with(
                                   g_objc_v2_prefix_class)) {
                             symbol_name_non_abi_mangled = symbol_name + 1;
                             symbol_name =
@@ -2873,14 +2884,14 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             type = eSymbolTypeObjCClass;
                             demangled_is_synthesized = true;
 
-                          } else if (symbol_name_ref.startswith(
+                          } else if (symbol_name_ref.starts_with(
                                          g_objc_v2_prefix_metaclass)) {
                             symbol_name_non_abi_mangled = symbol_name + 1;
                             symbol_name =
                                 symbol_name + g_objc_v2_prefix_metaclass.size();
                             type = eSymbolTypeObjCMetaClass;
                             demangled_is_synthesized = true;
-                          } else if (symbol_name_ref.startswith(
+                          } else if (symbol_name_ref.starts_with(
                                          g_objc_v2_prefix_ivar)) {
                             symbol_name_non_abi_mangled = symbol_name + 1;
                             symbol_name =
@@ -3379,7 +3390,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                                 if (symbol_name) {
                                   llvm::StringRef symbol_name_ref(symbol_name);
-                                  if (symbol_name_ref.startswith("_OBJC_")) {
+                                  if (symbol_name_ref.starts_with("_OBJC_")) {
                                     llvm::StringRef
                                         g_objc_v2_prefix_class(
                                             "_OBJC_CLASS_$_");
@@ -3388,7 +3399,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                             "_OBJC_METACLASS_$_");
                                     llvm::StringRef
                                         g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
-                                    if (symbol_name_ref.startswith(
+                                    if (symbol_name_ref.starts_with(
                                             g_objc_v2_prefix_class)) {
                                       symbol_name_non_abi_mangled =
                                           symbol_name + 1;
@@ -3398,7 +3409,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                       type = eSymbolTypeObjCClass;
                                       demangled_is_synthesized = true;
                                     } else if (
-                                        symbol_name_ref.startswith(
+                                        symbol_name_ref.starts_with(
                                             g_objc_v2_prefix_metaclass)) {
                                       symbol_name_non_abi_mangled =
                                           symbol_name + 1;
@@ -3407,7 +3418,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                           g_objc_v2_prefix_metaclass.size();
                                       type = eSymbolTypeObjCMetaClass;
                                       demangled_is_synthesized = true;
-                                    } else if (symbol_name_ref.startswith(
+                                    } else if (symbol_name_ref.starts_with(
                                                    g_objc_v2_prefix_ivar)) {
                                       symbol_name_non_abi_mangled =
                                           symbol_name + 1;
@@ -3438,7 +3449,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 llvm::StringRef symbol_name_ref(symbol_name);
                                 llvm::StringRef
                                     g_objc_v1_prefix_class(".objc_class_name_");
-                                if (symbol_name_ref.startswith(
+                                if (symbol_name_ref.starts_with(
                                         g_objc_v1_prefix_class)) {
                                   symbol_name_non_abi_mangled = symbol_name;
                                   symbol_name = symbol_name +
@@ -3786,18 +3797,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
           if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'O') {
             llvm::StringRef symbol_name_ref(symbol_name);
-            if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+            if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
               symbol_name_non_abi_mangled = symbol_name + 1;
               symbol_name = symbol_name + g_objc_v2_prefix_class.size();
               type = eSymbolTypeObjCClass;
               demangled_is_synthesized = true;
 
-            } else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass)) {
+            } else if (symbol_name_ref.starts_with(
+                           g_objc_v2_prefix_metaclass)) {
               symbol_name_non_abi_mangled = symbol_name + 1;
               symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
               type = eSymbolTypeObjCMetaClass;
               demangled_is_synthesized = true;
-            } else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar)) {
+            } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
               symbol_name_non_abi_mangled = symbol_name + 1;
               symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
               type = eSymbolTypeObjCIVar;
@@ -4247,27 +4259,27 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                   if (symbol_name) {
                     llvm::StringRef symbol_name_ref(symbol_name);
-                    if (symbol_name_ref.startswith("_OBJC_")) {
+                    if (symbol_name_ref.starts_with("_OBJC_")) {
                       llvm::StringRef g_objc_v2_prefix_class(
                           "_OBJC_CLASS_$_");
                       llvm::StringRef g_objc_v2_prefix_metaclass(
                           "_OBJC_METACLASS_$_");
                       llvm::StringRef g_objc_v2_prefix_ivar(
                           "_OBJC_IVAR_$_");
-                      if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+                      if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
                         symbol_name =
                             symbol_name + g_objc_v2_prefix_class.size();
                         type = eSymbolTypeObjCClass;
                         demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.startswith(
+                      } else if (symbol_name_ref.starts_with(
                                      g_objc_v2_prefix_metaclass)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
                         symbol_name =
                             symbol_name + g_objc_v2_prefix_metaclass.size();
                         type = eSymbolTypeObjCMetaClass;
                         demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.startswith(
+                      } else if (symbol_name_ref.starts_with(
                                      g_objc_v2_prefix_ivar)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
                         symbol_name =
@@ -4294,7 +4306,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   llvm::StringRef symbol_name_ref(symbol_name);
                   llvm::StringRef g_objc_v1_prefix_class(
                       ".objc_class_name_");
-                  if (symbol_name_ref.startswith(g_objc_v1_prefix_class)) {
+                  if (symbol_name_ref.starts_with(g_objc_v1_prefix_class)) {
                     symbol_name_non_abi_mangled = symbol_name;
                     symbol_name = symbol_name + g_objc_v1_prefix_class.size();
                     type = eSymbolTypeObjCClass;
@@ -4885,14 +4897,12 @@ struct OSEnv {
     case llvm::MachO::PLATFORM_WATCHOS:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
       return;
-    // TODO: add BridgeOS & DriverKit once in llvm/lib/Support/Triple.cpp
-    // NEED_BRIDGEOS_TRIPLE
-    // case llvm::MachO::PLATFORM_BRIDGEOS:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
-    //   return;
-    // case llvm::MachO::PLATFORM_DRIVERKIT:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
-    //   return;
+    case llvm::MachO::PLATFORM_BRIDGEOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
+      return;
+    case llvm::MachO::PLATFORM_DRIVERKIT:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
+      return;
     case llvm::MachO::PLATFORM_MACCATALYST:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
       environment = llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
@@ -4909,6 +4919,14 @@ struct OSEnv {
       return;
     case llvm::MachO::PLATFORM_WATCHOSSIMULATOR:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
+      environment =
+          llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
+      return;
+    case llvm::MachO::PLATFORM_XROS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::XROS);
+      return;
+    case llvm::MachO::PLATFORM_XROS_SIMULATOR:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::XROS);
       environment =
           llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
       return;
@@ -5101,104 +5119,119 @@ UUID ObjectFileMachO::GetUUID() {
 }
 
 uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return 0;
+
   uint32_t count = 0;
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    llvm::MachO::load_command load_cmd;
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    std::vector<std::string> rpath_paths;
-    std::vector<std::string> rpath_relative_paths;
-    std::vector<std::string> at_exec_relative_paths;
-    uint32_t i;
-    for (i = 0; i < m_header.ncmds; ++i) {
-      const uint32_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
-        break;
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  llvm::MachO::load_command load_cmd;
+  lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+  std::vector<std::string> rpath_paths;
+  std::vector<std::string> rpath_relative_paths;
+  std::vector<std::string> at_exec_relative_paths;
+  uint32_t i;
+  for (i = 0; i < m_header.ncmds; ++i) {
+    const uint32_t cmd_offset = offset;
+    if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+      break;
 
-      switch (load_cmd.cmd) {
-      case LC_RPATH:
-      case LC_LOAD_DYLIB:
-      case LC_LOAD_WEAK_DYLIB:
-      case LC_REEXPORT_DYLIB:
-      case LC_LOAD_DYLINKER:
-      case LC_LOADFVMLIB:
-      case LC_LOAD_UPWARD_DYLIB: {
-        uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
-        const char *path = m_data.PeekCStr(name_offset);
-        if (path) {
-          if (load_cmd.cmd == LC_RPATH)
-            rpath_paths.push_back(path);
-          else {
-            if (path[0] == '@') {
-              if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
-                rpath_relative_paths.push_back(path + strlen("@rpath"));
-              else if (strncmp(path, "@executable_path",
-                               strlen("@executable_path")) == 0)
-                at_exec_relative_paths.push_back(path +
-                                                 strlen("@executable_path"));
-            } else {
-              FileSpec file_spec(path);
-              if (files.AppendIfUnique(file_spec))
-                count++;
-            }
-          }
-        }
-      } break;
-
-      default:
-        break;
+    switch (load_cmd.cmd) {
+    case LC_RPATH:
+    case LC_LOAD_DYLIB:
+    case LC_LOAD_WEAK_DYLIB:
+    case LC_REEXPORT_DYLIB:
+    case LC_LOAD_DYLINKER:
+    case LC_LOADFVMLIB:
+    case LC_LOAD_UPWARD_DYLIB: {
+      uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+      // For LC_LOAD_DYLIB there is an alternate encoding
+      // which adds a uint32_t `flags` field for `DYLD_USE_*`
+      // flags.  This can be detected by a timestamp field with
+      // the `DYLIB_USE_MARKER` constant value.
+      bool is_delayed_init = false;
+      uint32_t use_command_marker = m_data.GetU32(&offset);
+      if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
+        offset += 4; /* uint32_t current_version */
+        offset += 4; /* uint32_t compat_version */
+        uint32_t flags = m_data.GetU32(&offset);
+        // If this LC_LOAD_DYLIB is marked delay-init,
+        // don't report it as a dependent library -- it
+        // may be loaded in the process at some point,
+        // but will most likely not be load at launch.
+        if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
+          is_delayed_init = true;
       }
-      offset = cmd_offset + load_cmd.cmdsize;
-    }
-
-    FileSpec this_file_spec(m_file);
-    FileSystem::Instance().Resolve(this_file_spec);
-
-    if (!rpath_paths.empty()) {
-      // Fixup all LC_RPATH values to be absolute paths
-      std::string loader_path("@loader_path");
-      std::string executable_path("@executable_path");
-      for (auto &rpath : rpath_paths) {
-        if (llvm::StringRef(rpath).startswith(loader_path)) {
-          rpath.erase(0, loader_path.size());
-          rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-        } else if (llvm::StringRef(rpath).startswith(executable_path)) {
-          rpath.erase(0, executable_path.size());
-          rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-        }
-      }
-
-      for (const auto &rpath_relative_path : rpath_relative_paths) {
-        for (const auto &rpath : rpath_paths) {
-          std::string path = rpath;
-          path += rpath_relative_path;
-          // It is OK to resolve this path because we must find a file on disk
-          // for us to accept it anyway if it is rpath relative.
-          FileSpec file_spec(path);
-          FileSystem::Instance().Resolve(file_spec);
-          if (FileSystem::Instance().Exists(file_spec) &&
-              files.AppendIfUnique(file_spec)) {
-            count++;
-            break;
+      const char *path = m_data.PeekCStr(name_offset);
+      if (path && !is_delayed_init) {
+        if (load_cmd.cmd == LC_RPATH)
+          rpath_paths.push_back(path);
+        else {
+          if (path[0] == '@') {
+            if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
+              rpath_relative_paths.push_back(path + strlen("@rpath"));
+            else if (strncmp(path, "@executable_path",
+                             strlen("@executable_path")) == 0)
+              at_exec_relative_paths.push_back(path +
+                                               strlen("@executable_path"));
+          } else {
+            FileSpec file_spec(path);
+            if (files.AppendIfUnique(file_spec))
+              count++;
           }
         }
       }
+    } break;
+
+    default:
+      break;
+    }
+    offset = cmd_offset + load_cmd.cmdsize;
+  }
+
+  FileSpec this_file_spec(m_file);
+  FileSystem::Instance().Resolve(this_file_spec);
+
+  if (!rpath_paths.empty()) {
+    // Fixup all LC_RPATH values to be absolute paths.
+    const std::string this_directory =
+        this_file_spec.GetDirectory().GetString();
+    for (auto &rpath : rpath_paths) {
+      if (llvm::StringRef(rpath).starts_with(g_loader_path))
+        rpath = this_directory + rpath.substr(g_loader_path.size());
+      else if (llvm::StringRef(rpath).starts_with(g_executable_path))
+        rpath = this_directory + rpath.substr(g_executable_path.size());
     }
 
-    // We may have @executable_paths but no RPATHS.  Figure those out here.
-    // Only do this if this object file is the executable.  We have no way to
-    // get back to the actual executable otherwise, so we won't get the right
-    // path.
-    if (!at_exec_relative_paths.empty() && CalculateType() == eTypeExecutable) {
-      FileSpec exec_dir = this_file_spec.CopyByRemovingLastPathComponent();
-      for (const auto &at_exec_relative_path : at_exec_relative_paths) {
-        FileSpec file_spec =
-            exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
+    for (const auto &rpath_relative_path : rpath_relative_paths) {
+      for (const auto &rpath : rpath_paths) {
+        std::string path = rpath;
+        path += rpath_relative_path;
+        // It is OK to resolve this path because we must find a file on disk
+        // for us to accept it anyway if it is rpath relative.
+        FileSpec file_spec(path);
+        FileSystem::Instance().Resolve(file_spec);
         if (FileSystem::Instance().Exists(file_spec) &&
-            files.AppendIfUnique(file_spec))
+            files.AppendIfUnique(file_spec)) {
           count++;
+          break;
+        }
       }
+    }
+  }
+
+  // We may have @executable_paths but no RPATHS.  Figure those out here.
+  // Only do this if this object file is the executable.  We have no way to
+  // get back to the actual executable otherwise, so we won't get the right
+  // path.
+  if (!at_exec_relative_paths.empty() && CalculateType() == eTypeExecutable) {
+    FileSpec exec_dir = this_file_spec.CopyByRemovingLastPathComponent();
+    for (const auto &at_exec_relative_path : at_exec_relative_paths) {
+      FileSpec file_spec =
+          exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
+      if (FileSystem::Instance().Exists(file_spec) &&
+          files.AppendIfUnique(file_spec))
+        count++;
     }
   }
   return count;
@@ -5463,8 +5496,6 @@ std::string ObjectFileMachO::GetIdentifierString() {
           uint32_t strsize = payload_size - sizeof(uint32_t);
           std::string result(strsize, '\0');
           m_data.CopyData(payload_offset, strsize, result.data());
-          while (result.back() == '\0')
-            result.resize(result.size() - 1);
           LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
                     result.c_str());
           return result;
@@ -5484,8 +5515,6 @@ std::string ObjectFileMachO::GetIdentifierString() {
         std::string result(ident_command.cmdsize, '\0');
         if (m_data.CopyData(offset, ident_command.cmdsize, result.data()) ==
             ident_command.cmdsize) {
-          while (result.back() == '\0')
-            result.resize(result.size() - 1);
           LLDB_LOGF(log, "LC_IDENT found with text '%s'", result.c_str());
           return result;
         }
@@ -5644,7 +5673,8 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
   return false;
 }
 
-bool ObjectFileMachO::GetCorefileThreadExtraInfos(std::vector<tid_t> &tids) {
+bool ObjectFileMachO::GetCorefileThreadExtraInfos(
+    std::vector<lldb::tid_t> &tids) {
   tids.clear();
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -5685,16 +5715,18 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(std::vector<tid_t> &tids) {
       }
       const size_t num_threads = threads->GetSize();
       for (size_t i = 0; i < num_threads; i++) {
-        StructuredData::Dictionary *thread;
-        if (!threads->GetItemAtIndexAsDictionary(i, thread) || !thread) {
+        std::optional<StructuredData::Dictionary *> maybe_thread =
+            threads->GetItemAtIndexAsDictionary(i);
+        if (!maybe_thread) {
           LLDB_LOGF(log,
                     "Unable to read 'process metadata' LC_NOTE, threads "
                     "array does not have a dictionary at index %zu.",
                     i);
           return false;
         }
-        tid_t tid = LLDB_INVALID_THREAD_ID;
-        if (thread->GetValueForKeyAsInteger<tid_t>("thread_id", tid))
+        StructuredData::Dictionary *thread = *maybe_thread;
+        lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+        if (thread->GetValueForKeyAsInteger<lldb::tid_t>("thread_id", tid))
           if (tid == 0)
             tid = LLDB_INVALID_THREAD_ID;
         tids.push_back(tid);
@@ -6129,14 +6161,17 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
   if (!section)
     return false;
-  const bool is_dsym = (m_header.filetype == MH_DSYM);
-  if (section->GetFileSize() == 0 && !is_dsym &&
-      section->GetName() != GetSegmentNameDATA())
-    return false;
   if (section->IsThreadSpecific())
     return false;
   if (GetModule().get() != section->GetModule().get())
     return false;
+  // firmware style binaries with llvm gcov segment do
+  // not have that segment mapped into memory.
+  if (section->GetName() == GetSegmentNameLLVM_COV()) {
+    const Strata strata = GetStrata();
+    if (strata == eStrataKernel || strata == eStrataRawImage)
+      return false;
+  }
   // Be careful with __LINKEDIT and __DWARF segments
   if (section->GetName() == GetSegmentNameLINKEDIT() ||
       section->GetName() == GetSegmentNameDWARF()) {
@@ -6165,6 +6200,7 @@ lldb::addr_t ObjectFileMachO::CalculateSectionLoadAddressForMemoryImage(
 
 bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                                      bool value_is_offset) {
+  Log *log(GetLog(LLDBLog::DynamicLoader));
   ModuleSP module_sp = GetModule();
   if (!module_sp)
     return false;
@@ -6180,17 +6216,33 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
   // malformed.
   const bool warn_multiple = true;
 
+  if (log) {
+    StreamString logmsg;
+    logmsg << "ObjectFileMachO::SetLoadAddress ";
+    if (GetFileSpec())
+      logmsg << "path='" << GetFileSpec().GetPath() << "' ";
+    if (GetUUID()) {
+      logmsg << "uuid=" << GetUUID().GetAsString();
+    }
+    LLDB_LOGF(log, "%s", logmsg.GetData());
+  }
   if (value_is_offset) {
     // "value" is an offset to apply to each top level segment
     for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
       // Iterate through the object file sections to find all of the
       // sections that size on disk (to avoid __PAGEZERO) and load them
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-      if (SectionIsLoadable(section_sp.get()))
+      if (SectionIsLoadable(section_sp.get())) {
+        LLDB_LOGF(log,
+                  "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
+                  "0x%" PRIx64,
+                  section_sp->GetName().AsCString(),
+                  section_sp->GetFileAddress() + value);
         if (target.GetSectionLoadList().SetSectionLoadAddress(
                 section_sp, section_sp->GetFileAddress() + value,
                 warn_multiple))
           ++num_loaded_sections;
+      }
     }
   } else {
     // "value" is the new base address of the mach_header, adjust each
@@ -6205,6 +6257,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
             CalculateSectionLoadAddressForMemoryImage(
                 value, mach_header_section, section_sp.get());
         if (section_load_addr != LLDB_INVALID_ADDRESS) {
+          LLDB_LOGF(log,
+                    "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
+                    "0x%" PRIx64,
+                    section_sp->GetName().AsCString(), section_load_addr);
           if (target.GetSectionLoadList().SetSectionLoadAddress(
                   section_sp, section_load_addr, warn_multiple))
             ++num_loaded_sections;
@@ -6292,22 +6348,24 @@ struct segment_vmaddr {
 // are some multiple passes over the image list while calculating
 // everything.
 
-static offset_t CreateAllImageInfosPayload(
-    const lldb::ProcessSP &process_sp, offset_t initial_file_offset,
-    StreamString &all_image_infos_payload, SaveCoreStyle core_style) {
+static offset_t
+CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
+                           offset_t initial_file_offset,
+                           StreamString &all_image_infos_payload,
+                           lldb_private::SaveCoreOptions &options) {
   Target &target = process_sp->GetTarget();
   ModuleList modules = target.GetImages();
 
   // stack-only corefiles have no reason to include binaries that
   // are not executing; we're trying to make the smallest corefile
   // we can, so leave the rest out.
-  if (core_style == SaveCoreStyle::eSaveCoreStackOnly)
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreStackOnly)
     modules.Clear();
 
   std::set<std::string> executing_uuids;
-  ThreadList &thread_list(process_sp->GetThreadList());
-  for (uint32_t i = 0; i < thread_list.GetSize(); i++) {
-    ThreadSP thread_sp = thread_list.GetThreadAtIndex(i);
+  std::vector<ThreadSP> thread_list =
+      process_sp->CalculateCoreFileThreadList(options);
+  for (const ThreadSP &thread_sp : thread_list) {
     uint32_t stack_frame_count = thread_sp->GetStackFrameCount();
     for (uint32_t j = 0; j < stack_frame_count; j++) {
       StackFrameSP stack_frame_sp = thread_sp->GetStackFrameAtIndex(j);
@@ -6465,15 +6523,16 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style, Status &error) {
-  if (!process_sp)
-    return false;
+                               lldb_private::SaveCoreOptions &options,
+                               Status &error) {
+  // The FileSpec and Process are already checked in PluginManager::SaveCore.
+  assert(options.GetOutputFile().has_value());
+  assert(process_sp);
+  const FileSpec outfile = options.GetOutputFile().value();
 
-  // Default on macOS is to create a dirty-memory-only corefile.
-  if (core_style == SaveCoreStyle::eSaveCoreUnspecified) {
-    core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
-  }
+  // MachO defaults to dirty pages
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
+    options.SetStyle(eSaveCoreDirtyOnly);
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
@@ -6482,7 +6541,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       (target_triple.getOS() == llvm::Triple::MacOSX ||
        target_triple.getOS() == llvm::Triple::IOS ||
        target_triple.getOS() == llvm::Triple::WatchOS ||
-       target_triple.getOS() == llvm::Triple::TvOS)) {
+       target_triple.getOS() == llvm::Triple::TvOS ||
+       target_triple.getOS() == llvm::Triple::XROS)) {
     // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
     // {
     bool make_core = false;
@@ -6502,115 +6562,42 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     }
 
     if (make_core) {
-      std::vector<llvm::MachO::segment_command_64> segment_load_commands;
-      //                uint32_t range_info_idx = 0;
-      MemoryRegionInfo range_info;
-      Status range_error = process_sp->GetMemoryRegionInfo(0, range_info);
-      const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
-      const ByteOrder byte_order = target_arch.GetByteOrder();
-      std::vector<page_object> pages_to_copy;
-
-      if (range_error.Success()) {
-        while (range_info.GetRange().GetRangeBase() != LLDB_INVALID_ADDRESS) {
-          // Calculate correct protections
-          uint32_t prot = 0;
-          if (range_info.GetReadable() == MemoryRegionInfo::eYes)
-            prot |= VM_PROT_READ;
-          if (range_info.GetWritable() == MemoryRegionInfo::eYes)
-            prot |= VM_PROT_WRITE;
-          if (range_info.GetExecutable() == MemoryRegionInfo::eYes)
-            prot |= VM_PROT_EXECUTE;
-
-          const addr_t addr = range_info.GetRange().GetRangeBase();
-          const addr_t size = range_info.GetRange().GetByteSize();
-
-          if (size == 0)
-            break;
-
-          bool include_this_region = true;
-          bool dirty_pages_only = false;
-          if (core_style == SaveCoreStyle::eSaveCoreStackOnly) {
-            dirty_pages_only = true;
-            if (range_info.IsStackMemory() != MemoryRegionInfo::eYes) {
-              include_this_region = false;
-            }
-          }
-          if (core_style == SaveCoreStyle::eSaveCoreDirtyOnly) {
-            dirty_pages_only = true;
-          }
-
-          if (prot != 0 && include_this_region) {
-            addr_t pagesize = range_info.GetPageSize();
-            const std::optional<std::vector<addr_t>> &dirty_page_list =
-                range_info.GetDirtyPageList();
-            if (dirty_pages_only && dirty_page_list) {
-              for (addr_t dirtypage : *dirty_page_list) {
-                page_object obj;
-                obj.addr = dirtypage;
-                obj.size = pagesize;
-                obj.prot = prot;
-                pages_to_copy.push_back(obj);
-              }
-            } else {
-              page_object obj;
-              obj.addr = addr;
-              obj.size = size;
-              obj.prot = prot;
-              pages_to_copy.push_back(obj);
-            }
-          }
-
-          range_error = process_sp->GetMemoryRegionInfo(
-              range_info.GetRange().GetRangeEnd(), range_info);
-          if (range_error.Fail())
-            break;
-        }
-
-        // Combine contiguous entries that have the same
-        // protections so we don't have an excess of
-        // load commands.
-        std::vector<page_object> combined_page_objects;
-        page_object last_obj;
-        last_obj.addr = LLDB_INVALID_ADDRESS;
-        last_obj.size = 0;
-        for (page_object obj : pages_to_copy) {
-          if (last_obj.addr == LLDB_INVALID_ADDRESS) {
-            last_obj = obj;
-            continue;
-          }
-          if (last_obj.addr + last_obj.size == obj.addr &&
-              last_obj.prot == obj.prot) {
-            last_obj.size += obj.size;
-            continue;
-          }
-          combined_page_objects.push_back(last_obj);
-          last_obj = obj;
-        }
-        // Add the last entry we were looking to combine
-        // on to the array.
-        if (last_obj.addr != LLDB_INVALID_ADDRESS && last_obj.size != 0)
-          combined_page_objects.push_back(last_obj);
-
-        for (page_object obj : combined_page_objects) {
+      Process::CoreFileMemoryRanges core_ranges;
+      error = process_sp->CalculateCoreFileSaveRanges(options, core_ranges);
+      if (error.Success()) {
+        const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
+        const ByteOrder byte_order = target_arch.GetByteOrder();
+        std::vector<llvm::MachO::segment_command_64> segment_load_commands;
+        for (const auto &core_range : core_ranges) {
           uint32_t cmd_type = LC_SEGMENT_64;
           uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
           if (addr_byte_size == 4) {
             cmd_type = LC_SEGMENT;
             segment_size = sizeof(llvm::MachO::segment_command);
           }
+          // Skip any ranges with no read/write/execute permissions and empty
+          // ranges.
+          if (core_range.lldb_permissions == 0 || core_range.range.size() == 0)
+            continue;
+          uint32_t vm_prot = 0;
+          if (core_range.lldb_permissions & ePermissionsReadable)
+            vm_prot |= VM_PROT_READ;
+          if (core_range.lldb_permissions & ePermissionsWritable)
+            vm_prot |= VM_PROT_WRITE;
+          if (core_range.lldb_permissions & ePermissionsExecutable)
+            vm_prot |= VM_PROT_EXECUTE;
+          const addr_t vm_addr = core_range.range.start();
+          const addr_t vm_size = core_range.range.size();
           llvm::MachO::segment_command_64 segment = {
               cmd_type,     // uint32_t cmd;
               segment_size, // uint32_t cmdsize;
               {0},          // char segname[16];
-              obj.addr,     // uint64_t vmaddr;    // uint32_t for 32-bit
-                            // Mach-O
-              obj.size,     // uint64_t vmsize;    // uint32_t for 32-bit
-                            // Mach-O
-              0,            // uint64_t fileoff;   // uint32_t for 32-bit Mach-O
-              obj.size,     // uint64_t filesize;  // uint32_t for 32-bit
-                            // Mach-O
-              obj.prot,     // uint32_t maxprot;
-              obj.prot,     // uint32_t initprot;
+              vm_addr,      // uint64_t vmaddr;   // uint32_t for 32-bit Mach-O
+              vm_size,      // uint64_t vmsize;   // uint32_t for 32-bit Mach-O
+              0,            // uint64_t fileoff;  // uint32_t for 32-bit Mach-O
+              vm_size,      // uint64_t filesize; // uint32_t for 32-bit Mach-O
+              vm_prot,      // uint32_t maxprot;
+              vm_prot,      // uint32_t initprot;
               0,            // uint32_t nsects;
               0};           // uint32_t flags;
           segment_load_commands.push_back(segment);
@@ -6619,11 +6606,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
 
         llvm::MachO::mach_header_64 mach_header;
-        if (addr_byte_size == 8) {
-          mach_header.magic = MH_MAGIC_64;
-        } else {
-          mach_header.magic = MH_MAGIC;
-        }
+        mach_header.magic = addr_byte_size == 8 ? MH_MAGIC_64 : MH_MAGIC;
         mach_header.cputype = target_arch.GetMachOCPUType();
         mach_header.cpusubtype = target_arch.GetMachOCPUSubType();
         mach_header.filetype = MH_CORE;
@@ -6689,7 +6672,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Bits will be set to indicate which bits are NOT used in
         // addressing in this process or 0 for unknown.
         uint64_t address_mask = process_sp->GetCodeAddressMask();
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           // LC_NOTE "addrable bits"
           mach_header.ncmds++;
           mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6723,7 +6706,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
         // Add "addrable bits" LC_NOTE when an address mask is available
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
               new LCNoteEntry(addr_byte_size, byte_order));
           addrable_bits_lcnote_up->name = "addrable bits";
@@ -6751,8 +6734,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             std::make_shared<StructuredData::Dictionary>());
         StructuredData::ArraySP threads(
             std::make_shared<StructuredData::Array>());
-        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+        for (const ThreadSP &thread_sp :
+             process_sp->CalculateCoreFileThreadList(options)) {
           StructuredData::DictionarySP thread(
               std::make_shared<StructuredData::Dictionary>());
           thread->AddIntegerItem("thread_id", thread_sp->GetID());
@@ -6775,7 +6758,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         all_image_infos_lcnote_up->payload_file_offset = file_offset;
         file_offset = CreateAllImageInfosPayload(
             process_sp, file_offset, all_image_infos_lcnote_up->payload,
-            core_style);
+            options);
         lc_notes.push_back(std::move(all_image_infos_lcnote_up));
 
         // Add LC_NOTE load commands
@@ -6908,9 +6891,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             }
           }
         }
-      } else {
-        error.SetErrorString(
-            "process doesn't support getting memory region info");
       }
     }
     return true; // This is the right plug to handle saving core files for

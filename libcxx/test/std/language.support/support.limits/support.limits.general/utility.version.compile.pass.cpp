@@ -19,12 +19,15 @@
     __cpp_lib_as_const                        201510L [C++17]
     __cpp_lib_constexpr_algorithms            201806L [C++20]
     __cpp_lib_constexpr_utility               201811L [C++20]
+    __cpp_lib_constrained_equality            202403L [C++26]
     __cpp_lib_exchange_function               201304L [C++14]
     __cpp_lib_forward_like                    202207L [C++23]
     __cpp_lib_integer_comparison_functions    202002L [C++20]
     __cpp_lib_integer_sequence                201304L [C++14]
     __cpp_lib_ranges_zip                      202110L [C++23]
     __cpp_lib_to_underlying                   202102L [C++23]
+    __cpp_lib_tuple_like                      202207L [C++23]
+                                              202311L [C++26]
     __cpp_lib_tuples_by_type                  201304L [C++14]
     __cpp_lib_unreachable                     202202L [C++23]
 */
@@ -44,6 +47,10 @@
 
 # ifdef __cpp_lib_constexpr_utility
 #   error "__cpp_lib_constexpr_utility should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_exchange_function
@@ -70,6 +77,10 @@
 #   error "__cpp_lib_to_underlying should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_tuples_by_type
 #   error "__cpp_lib_tuples_by_type should not be defined before c++14"
 # endif
@@ -90,6 +101,10 @@
 
 # ifdef __cpp_lib_constexpr_utility
 #   error "__cpp_lib_constexpr_utility should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -122,6 +137,10 @@
 #   error "__cpp_lib_to_underlying should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_tuples_by_type
 #   error "__cpp_lib_tuples_by_type should be defined in c++14"
 # endif
@@ -148,6 +167,10 @@
 
 # ifdef __cpp_lib_constexpr_utility
 #   error "__cpp_lib_constexpr_utility should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -178,6 +201,10 @@
 
 # ifdef __cpp_lib_to_underlying
 #   error "__cpp_lib_to_underlying should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -214,6 +241,10 @@
 #   error "__cpp_lib_constexpr_utility should have the value 201811L in c++20"
 # endif
 
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_exchange_function
 #   error "__cpp_lib_exchange_function should be defined in c++20"
 # endif
@@ -245,6 +276,10 @@
 
 # ifdef __cpp_lib_to_underlying
 #   error "__cpp_lib_to_underlying should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -279,6 +314,10 @@
 # endif
 # if __cpp_lib_constexpr_utility != 201811L
 #   error "__cpp_lib_constexpr_utility should have the value 201811L in c++23"
+# endif
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -329,6 +368,19 @@
 #   error "__cpp_lib_to_underlying should have the value 202102L in c++23"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++23"
+#   endif
+#   if __cpp_lib_tuple_like != 202207L
+#     error "__cpp_lib_tuple_like should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_tuples_by_type
 #   error "__cpp_lib_tuples_by_type should be defined in c++23"
 # endif
@@ -364,6 +416,19 @@
 # endif
 # if __cpp_lib_constexpr_utility != 201811L
 #   error "__cpp_lib_constexpr_utility should have the value 201811L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constrained_equality
+#     error "__cpp_lib_constrained_equality should be defined in c++26"
+#   endif
+#   if __cpp_lib_constrained_equality != 202403L
+#     error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constrained_equality
+#     error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -412,6 +477,19 @@
 # endif
 # if __cpp_lib_to_underlying != 202102L
 #   error "__cpp_lib_to_underlying should have the value 202102L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++26"
+#   endif
+#   if __cpp_lib_tuple_like != 202311L
+#     error "__cpp_lib_tuple_like should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_tuples_by_type

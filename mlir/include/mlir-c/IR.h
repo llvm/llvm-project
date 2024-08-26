@@ -73,7 +73,6 @@ DEFINE_C_API_STRUCT(MlirValue, const void);
 ///
 /// A named attribute is essentially a (name, attribute) pair where the name is
 /// a string.
-
 struct MlirNamedAttribute {
   MlirIdentifier name;
   MlirAttribute attribute;
@@ -429,6 +428,14 @@ MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
                                            intptr_t largeElementLimit);
 
+/// Enables the elision of large resources strings by omitting them from the
+/// `dialect_resources` section. The `largeResourceLimit` is used to configure
+/// what is considered to be a "large" resource by providing an upper limit to
+/// the string size.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                            intptr_t largeResourceLimit);
+
 /// Enable or disable printing of debug information (based on `enable`). If
 /// 'prettyForm' is set to true, debug information is printed in a more readable
 /// 'pretty' form. Note: The IR generated with 'prettyForm' is not parsable.
@@ -450,6 +457,10 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 /// Do not verify the operation when using custom operation printers.
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
+
+/// Skip printing regions.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags);
 
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
@@ -668,6 +679,13 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
+/// Same as mlirOperationPrint but accepts AsmState controlling the printing
+/// behavior as well as caching computed names.
+MLIR_CAPI_EXPORTED void mlirOperationPrintWithState(MlirOperation op,
+                                                    MlirAsmState state,
+                                                    MlirStringCallback callback,
+                                                    void *userData);
+
 /// Same as mlirOperationPrint but writing the bytecode format.
 MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
                                                    MlirStringCallback callback,
@@ -698,6 +716,32 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
 /// ownership is transferred to the block of the other operation.
 MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
                                                 MlirOperation other);
+
+/// Operation walk result.
+typedef enum MlirWalkResult {
+  MlirWalkResultAdvance,
+  MlirWalkResultInterrupt,
+  MlirWalkResultSkip
+} MlirWalkResult;
+
+/// Traversal order for operation walk.
+typedef enum MlirWalkOrder {
+  MlirWalkPreOrder,
+  MlirWalkPostOrder
+} MlirWalkOrder;
+
+/// Operation walker type. The handler is passed an (opaque) reference to an
+/// operation and a pointer to a `userData`.
+typedef MlirWalkResult (*MlirOperationWalkCallback)(MlirOperation,
+                                                    void *userData);
+
+/// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
+/// `*userData` is passed to the callback as well and can be used to tunnel some
+/// context or other data into the callback.
+MLIR_CAPI_EXPORTED
+void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
+                       void *userData, MlirWalkOrder walkOrder);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
@@ -826,6 +870,9 @@ MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
                                                   MlirType type,
                                                   MlirLocation loc);
 
+/// Erase the argument at 'index' and remove it from the argument list.
+MLIR_CAPI_EXPORTED void mlirBlockEraseArgument(MlirBlock block, unsigned index);
+
 /// Inserts an argument of the specified type at a specified index to the block.
 /// Returns the newly added argument.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockInsertArgument(MlirBlock block,
@@ -915,6 +962,9 @@ MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
 
 /// Returns whether the op operand is null.
 MLIR_CAPI_EXPORTED bool mlirOpOperandIsNull(MlirOpOperand opOperand);
+
+/// Returns the value of an op operand.
+MLIR_CAPI_EXPORTED MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand);
 
 /// Returns the owner operation of an op operand.
 MLIR_CAPI_EXPORTED MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand);

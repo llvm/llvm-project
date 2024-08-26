@@ -8,12 +8,13 @@
 define void @foo(i64 %n) {
 ; CHECK:      VPlan 'HCFGBuilder: Plain CFG
 ; CHECK-NEXT: {
-; CHECK-NEXT: ir<8> = original trip-count
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<8> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): outer.header
+; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> outer.header: {
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     WIDEN-PHI ir<%outer.iv> = phi ir<0>, ir<%outer.iv.next>
 ; CHECK-NEXT:     EMIT ir<%gep.1> = getelementptr ir<@arr2>, ir<0>, ir<%outer.iv>
@@ -31,17 +32,25 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT:       EMIT branch-on-cond ir<%inner.ec>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): outer.latch
+; CHECK-NEXT:  Successor(s): vector.latch
 ; CHECK-EMPTY:
-; CHECK-NEXT:   outer.latch:
+; CHECK-NEXT:   vector.latch:
 ; CHECK-NEXT:     EMIT ir<%outer.iv.next> = add ir<%outer.iv>, ir<1>
 ; CHECK-NEXT:     EMIT ir<%outer.ec> = icmp ir<%outer.iv.next>, ir<8>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<%outer.ec>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT: Successor(s): exit
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: exit:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq ir<8>, vp<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:

@@ -52,12 +52,13 @@ void foo() {
 
 struct A {
   A() {
-    clang_analyzer_dump(__func__);
-    clang_analyzer_dump(__FUNCTION__);
-    clang_analyzer_dump(__PRETTY_FUNCTION__);
-    // expected-warning@-3 {{&Element{"A",0 S64b,char}}}
-    // expected-warning@-3 {{&Element{"A",0 S64b,char}}}
-    // expected-warning@-3 {{&Element{"A::A()",0 S64b,char}}}
+    clang_analyzer_dump(__func__);     // expected-warning {{&Element{"A",0 S64b,char}}}
+#ifdef ANALYZER_MS
+    clang_analyzer_dump(__FUNCTION__); // expected-warning {{&Element{"A::A",0 S64b,char}}}
+#else
+    clang_analyzer_dump(__FUNCTION__); // expected-warning {{&Element{"A",0 S64b,char}}}
+#endif
+    clang_analyzer_dump(__PRETTY_FUNCTION__);  // expected-warning {{&Element{"A::A()",0 S64b,char}}}
 
 #ifdef ANALYZER_MS
     clang_analyzer_dump(__FUNCDNAME__);
@@ -71,12 +72,13 @@ struct A {
 #endif
   }
   ~A() {
-    clang_analyzer_dump(__func__);
-    clang_analyzer_dump(__FUNCTION__);
-    clang_analyzer_dump(__PRETTY_FUNCTION__);
-    // expected-warning@-3 {{&Element{"~A",0 S64b,char}}}
-    // expected-warning@-3 {{&Element{"~A",0 S64b,char}}}
-    // expected-warning@-3 {{&Element{"A::~A()",0 S64b,char}}}
+    clang_analyzer_dump(__func__);          // expected-warning {{&Element{"~A",0 S64b,char}}}
+#ifdef ANALYZER_MS
+    clang_analyzer_dump(__FUNCTION__);      // expected-warning {{&Element{"A::~A",0 S64b,char}}}
+#else
+    clang_analyzer_dump(__FUNCTION__);      // expected-warning {{&Element{"~A",0 S64b,char}}}
+#endif
+    clang_analyzer_dump(__PRETTY_FUNCTION__); // expected-warning {{&Element{"A::~A()",0 S64b,char}}}
 
 #ifdef ANALYZER_MS
     clang_analyzer_dump(__FUNCDNAME__);

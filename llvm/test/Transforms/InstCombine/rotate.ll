@@ -65,24 +65,24 @@ define <2 x i16> @rotl_v2i16_constant_splat(<2 x i16> %x) {
   ret <2 x i16> %r
 }
 
-define <2 x i16> @rotl_v2i16_constant_splat_undef0(<2 x i16> %x) {
-; CHECK-LABEL: @rotl_v2i16_constant_splat_undef0(
+define <2 x i16> @rotl_v2i16_constant_splat_poison0(<2 x i16> %x) {
+; CHECK-LABEL: @rotl_v2i16_constant_splat_poison0(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[X]], <2 x i16> <i16 1, i16 1>)
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
-  %shl = shl <2 x i16> %x, <i16 undef, i16 1>
+  %shl = shl <2 x i16> %x, <i16 poison, i16 1>
   %shr = lshr <2 x i16> %x, <i16 15, i16 15>
   %r = or <2 x i16> %shl, %shr
   ret <2 x i16> %r
 }
 
-define <2 x i16> @rotl_v2i16_constant_splat_undef1(<2 x i16> %x) {
-; CHECK-LABEL: @rotl_v2i16_constant_splat_undef1(
+define <2 x i16> @rotl_v2i16_constant_splat_poison1(<2 x i16> %x) {
+; CHECK-LABEL: @rotl_v2i16_constant_splat_poison1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[X]], <2 x i16> <i16 1, i16 1>)
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 1, i16 1>
-  %shr = lshr <2 x i16> %x, <i16 15, i16 undef>
+  %shr = lshr <2 x i16> %x, <i16 15, i16 poison>
   %r = or <2 x i16> %shl, %shr
   ret <2 x i16> %r
 }
@@ -100,30 +100,30 @@ define <2 x i17> @rotr_v2i17_constant_splat(<2 x i17> %x) {
   ret <2 x i17> %r
 }
 
-define <2 x i17> @rotr_v2i17_constant_splat_undef0(<2 x i17> %x) {
-; CHECK-LABEL: @rotr_v2i17_constant_splat_undef0(
+define <2 x i17> @rotr_v2i17_constant_splat_poison0(<2 x i17> %x) {
+; CHECK-LABEL: @rotr_v2i17_constant_splat_poison0(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[X:%.*]], <2 x i17> [[X]], <2 x i17> <i17 12, i17 12>)
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
-  %shl = shl <2 x i17> %x, <i17 12, i17 undef>
-  %shr = lshr <2 x i17> %x, <i17 undef, i17 5>
+  %shl = shl <2 x i17> %x, <i17 12, i17 poison>
+  %shr = lshr <2 x i17> %x, <i17 poison, i17 5>
   %r = or <2 x i17> %shr, %shl
   ret <2 x i17> %r
 }
 
-define <2 x i17> @rotr_v2i17_constant_splat_undef1(<2 x i17> %x) {
-; CHECK-LABEL: @rotr_v2i17_constant_splat_undef1(
+define <2 x i17> @rotr_v2i17_constant_splat_poison1(<2 x i17> %x) {
+; CHECK-LABEL: @rotr_v2i17_constant_splat_poison1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[X:%.*]], <2 x i17> [[X]], <2 x i17> <i17 12, i17 12>)
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
-  %shl = shl <2 x i17> %x, <i17 12, i17 undef>
-  %shr = lshr <2 x i17> %x, <i17 5, i17 undef>
+  %shl = shl <2 x i17> %x, <i17 12, i17 poison>
+  %shr = lshr <2 x i17> %x, <i17 5, i17 poison>
   %r = or <2 x i17> %shr, %shl
   ret <2 x i17> %r
 }
 
 ; Allow arbitrary shift constants.
-; Support undef elements.
+; Support poison elements.
 
 define <2 x i32> @rotr_v2i32_constant_nonsplat(<2 x i32> %x) {
 ; CHECK-LABEL: @rotr_v2i32_constant_nonsplat(
@@ -136,24 +136,24 @@ define <2 x i32> @rotr_v2i32_constant_nonsplat(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @rotr_v2i32_constant_nonsplat_undef0(<2 x i32> %x) {
-; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_undef0(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 0, i32 19>)
+define <2 x i32> @rotr_v2i32_constant_nonsplat_poison0(<2 x i32> %x) {
+; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_poison0(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 poison, i32 19>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %shl = shl <2 x i32> %x, <i32 undef, i32 19>
+  %shl = shl <2 x i32> %x, <i32 poison, i32 19>
   %shr = lshr <2 x i32> %x, <i32 15, i32 13>
   %r = or <2 x i32> %shl, %shr
   ret <2 x i32> %r
 }
 
-define <2 x i32> @rotr_v2i32_constant_nonsplat_undef1(<2 x i32> %x) {
-; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_undef1(
+define <2 x i32> @rotr_v2i32_constant_nonsplat_poison1(<2 x i32> %x) {
+; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_poison1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 17, i32 0>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl <2 x i32> %x, <i32 17, i32 19>
-  %shr = lshr <2 x i32> %x, <i32 15, i32 undef>
+  %shr = lshr <2 x i32> %x, <i32 15, i32 poison>
   %r = or <2 x i32> %shl, %shr
   ret <2 x i32> %r
 }
@@ -169,13 +169,13 @@ define <2 x i36> @rotl_v2i36_constant_nonsplat(<2 x i36> %x) {
   ret <2 x i36> %r
 }
 
-define <3 x i36> @rotl_v3i36_constant_nonsplat_undef0(<3 x i36> %x) {
-; CHECK-LABEL: @rotl_v3i36_constant_nonsplat_undef0(
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i36> @llvm.fshl.v3i36(<3 x i36> [[X:%.*]], <3 x i36> [[X]], <3 x i36> <i36 21, i36 11, i36 0>)
+define <3 x i36> @rotl_v3i36_constant_nonsplat_poison0(<3 x i36> %x) {
+; CHECK-LABEL: @rotl_v3i36_constant_nonsplat_poison0(
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i36> @llvm.fshl.v3i36(<3 x i36> [[X:%.*]], <3 x i36> [[X]], <3 x i36> <i36 21, i36 11, i36 poison>)
 ; CHECK-NEXT:    ret <3 x i36> [[R]]
 ;
-  %shl = shl <3 x i36> %x, <i36 21, i36 11, i36 undef>
-  %shr = lshr <3 x i36> %x, <i36 15, i36 25, i36 undef>
+  %shl = shl <3 x i36> %x, <i36 21, i36 11, i36 poison>
+  %shr = lshr <3 x i36> %x, <i36 15, i36 25, i36 poison>
   %r = or <3 x i36> %shl, %shr
   ret <3 x i36> %r
 }
@@ -705,7 +705,7 @@ define i9 @rotateleft_9_neg_mask_wide_amount_commute(i9 %v, i33 %shamt) {
 ; CHECK-NEXT:    [[LSHAMT:%.*]] = and i33 [[SHAMT]], 8
 ; CHECK-NEXT:    [[RSHAMT:%.*]] = and i33 [[NEG]], 8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i9 [[V:%.*]] to i33
-; CHECK-NEXT:    [[SHL:%.*]] = shl i33 [[CONV]], [[LSHAMT]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i33 [[CONV]], [[LSHAMT]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i33 [[CONV]], [[RSHAMT]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i33 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i33 [[OR]] to i9
@@ -893,11 +893,13 @@ define i64 @rotr_select_zext_shamt(i64 %x, i32 %y) {
 define i32 @rotl_constant_expr(i32 %shamt) {
 ; CHECK-LABEL: @rotl_constant_expr(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 ptrtoint (ptr @external_global to i32), [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], shl (i32 ptrtoint (ptr @external_global to i32), i32 11)
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 ptrtoint (ptr @external_global to i32), 11
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %shr = lshr i32 ptrtoint (ptr @external_global to i32), %shamt
-  %r = or i32 %shr, shl (i32 ptrtoint (ptr @external_global to i32), i32 11)
+  %shl = shl i32 ptrtoint (ptr @external_global to i32), 11
+  %r = or i32 %shr, %shl
   ret i32 %r
 }
 
@@ -956,4 +958,25 @@ define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %shamt) {
   %t7 = or i32 %t5, %t6
   %t8 = trunc i32 %t7 to i8
   ret i8 %t8
+}
+
+define i16 @check_rotate_masked_16bit(i8 %shamt, i32 %cond) {
+; CHECK-LABEL: @check_rotate_masked_16bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[COND:%.*]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = call i16 @llvm.fshr.i16(i16 [[TMP3]], i16 [[TMP3]], i16 [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+  %maskx = and i32 %cond, 1
+  %masky = and i8 %shamt, 15
+  %z = zext i8 %masky to i32
+  %shr = lshr i32 %maskx, %z
+  %sub = sub i8 0, %shamt
+  %maskw = and i8 %sub, 15
+  %z2 = zext i8 %maskw to i32
+  %shl = shl nuw nsw i32 %maskx, %z2
+  %or = or i32 %shr, %shl
+  %trunc = trunc i32 %or to i16
+  ret i16 %trunc
 }

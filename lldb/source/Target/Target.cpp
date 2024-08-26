@@ -43,6 +43,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -59,6 +60,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -86,8 +88,8 @@ const Target::Arch &Target::Arch::operator=(const ArchSpec &spec) {
   return *this;
 }
 
-ConstString &Target::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.target");
+llvm::StringRef Target::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.target");
   return class_name;
 }
 
@@ -95,7 +97,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
                const lldb::PlatformSP &platform_sp, bool is_dummy_target)
     : TargetProperties(this),
       Broadcaster(debugger.GetBroadcasterManager(),
-                  Target::GetStaticBroadcasterClass().AsCString()),
+                  Target::GetStaticBroadcasterClass().str()),
       ExecutionContextScope(), m_debugger(debugger), m_platform_sp(platform_sp),
       m_mutex(), m_arch(target_arch), m_images(this), m_section_load_history(),
       m_breakpoint_list(false), m_internal_breakpoint_list(true),
@@ -197,7 +199,7 @@ void Target::DeleteCurrentProcess() {
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
-    m_process_sp->Finalize();
+    m_process_sp->Finalize(false /* not destructing */);
 
     CleanupProcess();
 
@@ -480,12 +482,12 @@ BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
 
 lldb::BreakpointSP
 Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
-                                        const FileSpec *file_spec,
+                                        const FileSpec &file_spec,
                                         bool request_hardware) {
   SearchFilterSP filter_sp(
       new SearchFilterForUnconstrainedSearches(shared_from_this()));
   BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
-      nullptr, file_addr, file_spec ? *file_spec : FileSpec()));
+      nullptr, file_addr, file_spec));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }
@@ -503,7 +505,7 @@ BreakpointSP Target::CreateBreakpoint(
     if (skip_prologue == eLazyBoolCalculate)
       skip_prologue = GetSkipPrologue() ? eLazyBoolYes : eLazyBoolNo;
     if (language == lldb::eLanguageTypeUnknown)
-      language = GetLanguage();
+      language = GetLanguage().AsLanguageType();
 
     BreakpointResolverSP resolver_sp(new BreakpointResolverName(
         nullptr, func_name, func_name_type_mask, language, Breakpoint::Exact,
@@ -529,7 +531,7 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
     if (skip_prologue == eLazyBoolCalculate)
       skip_prologue = GetSkipPrologue() ? eLazyBoolYes : eLazyBoolNo;
     if (language == lldb::eLanguageTypeUnknown)
-      language = GetLanguage();
+      language = GetLanguage().AsLanguageType();
 
     BreakpointResolverSP resolver_sp(
         new BreakpointResolverName(nullptr, func_names, func_name_type_mask,
@@ -558,7 +560,7 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
         skip_prologue = eLazyBoolNo;
     }
     if (language == lldb::eLanguageTypeUnknown)
-      language = GetLanguage();
+      language = GetLanguage().AsLanguageType();
 
     BreakpointResolverSP resolver_sp(new BreakpointResolverName(
         nullptr, func_names, num_names, func_name_type_mask, language, offset,
@@ -727,7 +729,7 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   }
 }
 
-void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
+void Target::AddNameToBreakpoint(BreakpointID &id, llvm::StringRef name,
                                  Status &error) {
   BreakpointSP bp_sp =
       m_breakpoint_list.FindBreakpointByID(id.GetBreakpointID());
@@ -740,7 +742,7 @@ void Target::AddNameToBreakpoint(BreakpointID &id, const char *name,
   AddNameToBreakpoint(bp_sp, name, error);
 }
 
-void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, const char *name,
+void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
                                  Status &error) {
   if (!bp_sp)
     return;
@@ -840,7 +842,7 @@ static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
   if (!num_supported_hardware_watchpoints)
     return true;
 
-  if (num_supported_hardware_watchpoints == 0) {
+  if (*num_supported_hardware_watchpoints == 0) {
     error.SetErrorStringWithFormat(
         "Target supports (%u) hardware watchpoint slots.\n",
         *num_supported_hardware_watchpoints);
@@ -892,6 +894,18 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   if (ABISP abi = m_process_sp->GetABI())
     addr = abi->FixDataAddress(addr);
 
+  // LWP_TODO this sequence is looking for an existing watchpoint
+  // at the exact same user-specified address, disables the new one
+  // if addr/size/type match.  If type/size differ, disable old one.
+  // This isn't correct, we need both watchpoints to use a shared
+  // WatchpointResource in the target, and expand the WatchpointResource
+  // to handle the needs of both Watchpoints.
+  // Also, even if the addresses don't match, they may need to be
+  // supported by the same WatchpointResource, e.g. a watchpoint
+  // watching 1 byte at 0x102 and a watchpoint watching 1 byte at 0x103.
+  // They're in the same word and must be watched by a single hardware
+  // watchpoint register.
+
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
   WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
@@ -907,7 +921,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
       wp_sp->SetEnabled(false, notify);
     } else {
       // Nil the matched watchpoint; we will be creating a new one.
-      m_process_sp->DisableWatchpoint(matched_sp.get(), notify);
+      m_process_sp->DisableWatchpoint(matched_sp, notify);
       m_watchpoint_list.Remove(matched_sp->GetID(), true);
     }
   }
@@ -918,7 +932,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     m_watchpoint_list.Add(wp_sp, true);
   }
 
-  error = m_process_sp->EnableWatchpoint(wp_sp.get(), notify);
+  error = m_process_sp->EnableWatchpoint(wp_sp, notify);
   LLDB_LOGF(log, "Target::%s (creation of watchpoint %s with id = %u)\n",
             __FUNCTION__, error.Success() ? "succeeded" : "failed",
             wp_sp->GetID());
@@ -927,11 +941,6 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     // Enabling the watchpoint on the device side failed. Remove the said
     // watchpoint from the list maintained by the target instance.
     m_watchpoint_list.Remove(wp_sp->GetID(), true);
-    // See if we could provide more helpful error message.
-    if (!OptionGroupWatchpoint::IsWatchSizeSupported(size))
-      error.SetErrorStringWithFormat(
-          "watch size of %" PRIu64 " is not supported", (uint64_t)size);
-
     wp_sp.reset();
   } else
     m_last_created_watchpoint = wp_sp;
@@ -1231,7 +1240,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1260,7 +1269,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1287,7 +1296,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1350,7 +1359,7 @@ bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1369,7 +1378,7 @@ bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1561,14 +1570,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
 
       if (m_arch.GetSpec().IsCompatibleMatch(other)) {
         compatible_local_arch = true;
-        bool arch_changed, vendor_changed, os_changed, os_ver_changed,
-            env_changed;
 
-        m_arch.GetSpec().PiecewiseTripleCompare(other, arch_changed,
-                                                vendor_changed, os_changed,
-                                                os_ver_changed, env_changed);
-
-        if (!arch_changed && !vendor_changed && !os_changed && !env_changed)
+        if (m_arch.GetSpec().GetTriple() == other.GetTriple())
           replace_local_arch = false;
       }
     }
@@ -1697,8 +1700,9 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
-    BroadcastEvent(eBroadcastBitModulesLoaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitModulesLoaded, data_sp);
   }
 }
 
@@ -1712,16 +1716,18 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
 
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
-    BroadcastEvent(eBroadcastBitSymbolsLoaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitSymbolsLoaded, data_sp);
   }
 }
 
 void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
   if (m_valid && module_list.GetSize()) {
     UnloadModuleSections(module_list);
-    BroadcastEvent(eBroadcastBitModulesUnloaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitModulesUnloaded, data_sp);
     m_breakpoint_list.UpdateBreakpoints(module_list, false, delete_locations);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, false,
                                                  delete_locations);
@@ -2150,11 +2156,20 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
   return false;
 }
 
-ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr) {
+ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
+                                   bool notify, Status *error_ptr) {
   ModuleSP module_sp;
 
   Status error;
+
+  // Apply any remappings specified in target.object-map:
+  ModuleSpec module_spec(orig_module_spec);
+  PathMappingList &obj_mapping = GetObjectPathMap();
+  if (std::optional<FileSpec> remapped_obj_file =
+          obj_mapping.RemapPath(orig_module_spec.GetFileSpec().GetPath(),
+                                true /* only_if_exists */)) {
+    module_spec.GetFileSpec().SetPath(remapped_obj_file->GetPath());
+  }
 
   // First see if we already have this module in our module list.  If we do,
   // then we're done, we don't need to consult the shared modules list.  But
@@ -2409,8 +2424,7 @@ llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                         bool create_on_demand) {
   if (!m_valid)
-    return llvm::make_error<llvm::StringError>("Invalid Target",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Invalid Target");
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
@@ -2423,9 +2437,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                  // target language.
     } else {
       if (languages_for_expressions.Empty())
-        return llvm::make_error<llvm::StringError>(
-            "No expression support for any languages",
-            llvm::inconvertibleErrorCode());
+        return llvm::createStringError(
+            "No expression support for any languages");
       language = (LanguageType)languages_for_expressions.bitvector.find_first();
     }
   }
@@ -2499,15 +2512,16 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
 }
 
 UserExpression *Target::GetUserExpressionForLanguage(
-    llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
+    llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
     Status &error) {
-  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  auto type_system_or_err =
+      GetScratchTypeSystemForLanguage(language.AsLanguageType());
   if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
-        Language::GetNameForLanguageType(language),
+        Language::GetNameForLanguageType(language.AsLanguageType()),
         llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
@@ -2516,7 +2530,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   if (!ts) {
     error.SetErrorStringWithFormat(
         "Type system for language %s is no longer live",
-        Language::GetNameForLanguageType(language));
+        language.GetDescription().data());
     return nullptr;
   }
 
@@ -2525,7 +2539,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   if (!user_expr)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
-        Language::GetNameForLanguageType(language));
+        language.GetDescription().data());
 
   return user_expr;
 }
@@ -2568,23 +2582,20 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
     return type_system_or_err.takeError();
   auto ts = *type_system_or_err;
   if (!ts)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         llvm::StringRef("Type system for language ") +
-            Language::GetNameForLanguageType(language) +
-            llvm::StringRef(" is no longer live"),
-        llvm::inconvertibleErrorCode());
+        Language::GetNameForLanguageType(language) +
+        llvm::StringRef(" is no longer live"));
   std::unique_ptr<UtilityFunction> utility_fn =
       ts->CreateUtilityFunction(std::move(expression), std::move(name));
   if (!utility_fn)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         llvm::StringRef("Could not create an expression for language") +
-            Language::GetNameForLanguageType(language),
-        llvm::inconvertibleErrorCode());
+        Language::GetNameForLanguageType(language));
 
   DiagnosticManager diagnostics;
   if (!utility_fn->Install(diagnostics, exe_ctx))
-    return llvm::make_error<llvm::StringError>(diagnostics.GetString(),
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(diagnostics.GetString());
 
   return std::move(utility_fn);
 }
@@ -2615,8 +2626,7 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
 llvm::Error Target::SetLabel(llvm::StringRef label) {
   size_t n = LLDB_INVALID_INDEX32;
   if (llvm::to_integer(label, n))
-    return llvm::make_error<llvm::StringError>(
-        "Cannot use integer as target label.", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Cannot use integer as target label.");
   TargetList &targets = GetDebugger().GetTargetList();
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
@@ -2784,15 +2794,13 @@ llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
 
   // We haven't found the entry point address. Return an appropriate error.
   if (!has_primary_executable)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         "No primary executable found and could not find entry point address in "
-        "any executable module",
-        llvm::inconvertibleErrorCode());
+        "any executable module");
 
-  return llvm::make_error<llvm::StringError>(
+  return llvm::createStringError(
       "Could not find entry point address for primary executable module \"" +
-          exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"",
-      llvm::inconvertibleErrorCode());
+      exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"");
 }
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
@@ -4223,28 +4231,21 @@ void TargetProperties::UpdateLaunchInfoFromProperties() {
   DisableSTDIOValueChangedCallback();
 }
 
-bool TargetProperties::GetInjectLocalVariables(
-    ExecutionContext *exe_ctx) const {
+std::optional<bool> TargetProperties::GetExperimentalPropertyValue(
+    size_t prop_idx, ExecutionContext *exe_ctx) const {
   const Property *exp_property =
       m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values
-        ->GetPropertyAtIndexAs<bool>(ePropertyInjectLocalVars, exe_ctx)
-        .value_or(true);
-  else
-    return true;
+    return exp_values->GetPropertyAtIndexAs<bool>(prop_idx, exe_ctx);
+  return std::nullopt;
 }
 
-void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
-                                               bool b) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    exp_values->SetPropertyAtIndex(ePropertyInjectLocalVars, true, exe_ctx);
+bool TargetProperties::GetInjectLocalVariables(
+    ExecutionContext *exe_ctx) const {
+  return GetExperimentalPropertyValue(ePropertyInjectLocalVars, exe_ctx)
+      .value_or(true);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
@@ -4352,6 +4353,13 @@ InlineStrategy TargetProperties::GetInlineStrategy() const {
   return GetPropertyAtIndexAs<InlineStrategy>(
       idx,
       static_cast<InlineStrategy>(g_target_properties[idx].default_uint_value));
+}
+
+// Returning RealpathPrefixes, but the setting's type is FileSpecList. We do
+// this because we want the FileSpecList to normalize the file paths for us.
+RealpathPrefixes TargetProperties::GetSourceRealpathPrefixes() const {
+  const uint32_t idx = ePropertySourceRealpathPrefixes;
+  return RealpathPrefixes(GetPropertyAtIndexAs<FileSpecList>(idx, {}));
 }
 
 llvm::StringRef TargetProperties::GetArg0() const {
@@ -4462,6 +4470,14 @@ bool TargetProperties::GetSkipPrologue() const {
 
 PathMappingList &TargetProperties::GetSourcePathMap() const {
   const uint32_t idx = ePropertySourceMap;
+  OptionValuePathMappings *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
+PathMappingList &TargetProperties::GetObjectPathMap() const {
+  const uint32_t idx = ePropertyObjectMap;
   OptionValuePathMappings *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(idx);
   assert(option_value);
@@ -4593,7 +4609,7 @@ uint32_t TargetProperties::GetMaxZeroPaddingInFloatFormat() const {
 
 uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenCount;
-  return GetPropertyAtIndexAs<int64_t>(
+  return GetPropertyAtIndexAs<uint64_t>(
       idx, g_target_properties[idx].default_uint_value);
 }
 
@@ -4648,9 +4664,9 @@ void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
   SetPropertyAtIndex(idx, path);
 }
 
-LanguageType TargetProperties::GetLanguage() const {
+SourceLanguage TargetProperties::GetLanguage() const {
   const uint32_t idx = ePropertyLanguage;
-  return GetPropertyAtIndexAs<LanguageType>(idx, {});
+  return {GetPropertyAtIndexAs<LanguageType>(idx, {})};
 }
 
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
@@ -4952,4 +4968,7 @@ std::recursive_mutex &Target::GetAPIMutex() {
 }
 
 /// Get metrics associated with this target in JSON format.
-llvm::json::Value Target::ReportStatistics() { return m_stats.ToJSON(*this); }
+llvm::json::Value
+Target::ReportStatistics(const lldb_private::StatisticsOptions &options) {
+  return m_stats.ToJSON(*this, options);
+}

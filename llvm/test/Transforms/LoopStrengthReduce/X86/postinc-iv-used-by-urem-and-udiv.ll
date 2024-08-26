@@ -22,9 +22,7 @@ define i32 @test_pr38847() {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[LSR]], -1
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 [[LSR_IV_NEXT2]], 9
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], 9
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[LSR_IV_NEXT2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = urem i32 [[LSR_IV_NEXT2]], 9
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -109,9 +107,7 @@ define i32 @test_pr62852() {
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT]])
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[DEC_1]], 53
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP1]], 53
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[DEC_1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 [[DEC_1]], 53
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:

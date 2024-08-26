@@ -9,8 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // GCC has a issue for `Guaranteed copy elision for potentially-overlapping non-static data members`,
-// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333, but we have a workaround to
-// avoid this issue.
+// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333
+// XFAIL: gcc-14
 
 // <expected>
 

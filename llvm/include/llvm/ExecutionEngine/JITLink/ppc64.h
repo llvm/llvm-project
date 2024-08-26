@@ -51,6 +51,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   TOCDelta16HI,
   TOCDelta16LO,
   TOCDelta16LODS,
+  RequestGOTAndTransformToDelta34,
   CallBranchDelta,
   // Need to restore r2 after the bl, suggesting the bl is followed by a nop.
   CallBranchDeltaRestoreTOC,
@@ -60,6 +61,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   RequestCallNoTOC,
   RequestTLSDescInGOTAndTransformToTOCDelta16HA,
   RequestTLSDescInGOTAndTransformToTOCDelta16LO,
+  RequestTLSDescInGOTAndTransformToDelta34,
 };
 
 enum PLTCallStubKind {
@@ -170,6 +172,10 @@ public:
       // Create TOC section if TOC relocation, PLT or GOT is used.
       getOrCreateTOCSection(G);
       return false;
+    case RequestGOTAndTransformToDelta34:
+      E.setKind(ppc64::Delta34);
+      E.setTarget(createEntry(G, E.getTarget()));
+      return true;
     default:
       return false;
     }
@@ -197,6 +203,10 @@ public:
 
   static StringRef getSectionName() { return "$__STUBS"; }
 
+  // FIXME: One external symbol can only have one PLT stub in a object file.
+  // This is a limitation when we need different PLT stubs for the same symbol.
+  // For example, we need two different PLT stubs for `bl __tls_get_addr` and
+  // `bl __tls_get_addr@notoc`.
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     bool isExternal = E.getTarget().isExternal();
     Edge::Kind K = E.getKind();

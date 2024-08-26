@@ -26,13 +26,13 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GCStrategy.h"
@@ -339,6 +339,9 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   // get_return_value can either be a sequence of CopyFromReg instructions
   // to grab the return value from the return register(s), or it can be a LOAD
   // to load a value returned by reference via a stack slot.
+
+  if (CallEnd->getOpcode() == ISD::EH_LABEL)
+    CallEnd = CallEnd->getOperand(0).getNode();
 
   bool HasDef = !SI.CLI.RetTy->isVoidTy();
   if (HasDef) {
@@ -1033,10 +1036,16 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
     ActualCallee = Callee;
   }
 
+  const auto GCResultLocality = getGCResultLocality(I);
+  AttributeSet retAttrs;
+  if (GCResultLocality.first)
+    retAttrs = GCResultLocality.first->getAttributes().getRetAttrs();
+
   StatepointLoweringInfo SI(DAG);
   populateCallLoweringInfo(SI.CLI, &I, GCStatepointInst::CallArgsBeginPos,
                            I.getNumCallArgs(), ActualCallee,
-                           I.getActualReturnType(), false /* IsPatchPoint */);
+                           I.getActualReturnType(), retAttrs,
+                           /*IsPatchPoint=*/false);
 
   // There may be duplication in the gc.relocate list; such as two copies of
   // each relocation on normal and exceptional path for an invoke.  We only
@@ -1092,8 +1101,6 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const auto GCResultLocality = getGCResultLocality(I);
-
   if (!GCResultLocality.first && !GCResultLocality.second) {
     // The return value is not needed, just generate a poison value.
     // Note: This covers the void return case.
@@ -1138,7 +1145,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   populateCallLoweringInfo(
       SI.CLI, Call, ArgBeginIndex, Call->arg_size(), Callee,
       ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : Call->getType(),
-      false);
+      Call->getAttributes().getRetAttrs(), /*IsPatchPoint=*/false);
   if (!VarArgDisallowed)
     SI.CLI.IsVarArg = Call->getFunctionType()->isVarArg();
 
@@ -1283,7 +1290,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
     // Lowering relocate(undef) as arbitrary constant. Current constant value
     // is chosen such that it's unlikely to be a valid pointer.
-    setValue(&Relocate, DAG.getTargetConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
+    setValue(&Relocate, DAG.getConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
     return;
   }
 

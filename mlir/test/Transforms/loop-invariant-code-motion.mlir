@@ -374,7 +374,7 @@ func.func @parallel_loop_with_invariant() {
   // CHECK-NEXT: arith.addi
   // CHECK-NEXT: scf.parallel (%[[A:.*]],{{.*}}) =
   // CHECK-NEXT:   arith.addi %[[A]]
-  // CHECK-NEXT:   yield
+  // CHECK-NEXT:   reduce
   // CHECK-NEXT: }
   // CHECK-NEXT: return
 
@@ -699,6 +699,54 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
 
 // -----
 
+// CHECK-LABEL: @speculate_memref_dim_known_rank_known_dim_inbounds
+func.func @speculate_memref_dim_known_rank_known_dim_inbounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %alloc = memref.alloc(%c22) : memref<?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = memref.dim %alloc, %c0 : memref<?xi1>
+  }
+  return
+}
+// CHECK: memref.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_inbounds
+func.func @speculate_tensor_dim_known_rank_known_dim_inbounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %t = tensor.empty(%c22, %c22) : tensor<?x?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = tensor.dim %t, %c1 : tensor<?x?xi1>
+  }
+  return
+}
+// CHECK: tensor.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
+// CHECK-LABEL: @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds
+func.func @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %alloc = memref.alloc(%c22) : memref<?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = memref.dim %alloc, %c1 : memref<?xi1>
+  }
+  return
+}
+// CHECK: scf.for
+// CHECK-NEXT: memref.dim
+
+// -----
+
 func.func @no_speculate_divui(
 // CHECK-LABEL: @no_speculate_divui(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -870,6 +918,120 @@ func.func @speculate_ceildivsi_const(
 // CHECK: arith.ceildivsi
 // CHECK: scf.for
     %val = arith.ceildivsi %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divui_range(
+// CHECK-LABEL: @no_speculate_divui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_range(
+// CHECK-LABEL: @no_speculate_divsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1: i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: arith.divsi
+    %val0 = arith.divsi %num, %denom0 : i8
+    %val1 = arith.divsi %num, %denom1 : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui_range(
+// CHECK-LABEL: @no_speculate_ceildivui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_range(
+// CHECK-LABEL: @no_speculate_ceildivsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: arith.ceildivsi
+    %val0 = arith.ceildivsi %num, %denom0 : i8
+    %val1 = arith.ceildivsi %num, %denom1 : i8
+  }
+
+  return
+}
+
+func.func @speculate_divui_range(
+// CHECK-LABEL: @speculate_divui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.divui
+// CHECK: scf.for
+    %val = arith.divui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @speculate_divsi_range(
+// CHECK-LABEL: @speculate_divsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: arith.divsi
+// CHECK: scf.for
+    %val0 = arith.divsi %num, %denom0 : i8
+    %val1 = arith.divsi %num, %denom1 : i8
+
+  }
+
+  return
+}
+
+func.func @speculate_ceildivui_range(
+// CHECK-LABEL: @speculate_ceildivui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.ceildivui
+// CHECK: scf.for
+    %val = arith.ceildivui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @speculate_ceildivsi_range(
+// CHECK-LABEL: @speculate_ceildivsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: arith.ceildivsi
+// CHECK: scf.for
+    %val0 = arith.ceildivsi %num, %denom0 : i8
+    %val1 = arith.ceildivsi %num, %denom1 : i8
+
   }
 
   return

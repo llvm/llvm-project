@@ -46,6 +46,12 @@
   define void @test_64bitext() #0 {
     ret void
   }
+  ; Note that this function need to be compiled with -global-isel
+  ; to obtain testable MIR
+  define void @test_unused(i64 %0) #0 {
+    %unused = lshr i64 %0, 7
+    ret void
+  }
 ...
 ---
 name:            test_fcmp_storefloat
@@ -127,14 +133,14 @@ body:             |
   ; CHECK:   JMP_1 %bb.1
   ; CHECK: bb.1.if:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[VCMPSSZrr:%[0-9]+]]:vk1 = VCMPSSZrr [[COPY3]], [[COPY2]], 0
-  ; CHECK:   [[COPY9:%[0-9]+]]:vk32 = COPY [[VCMPSSZrr]]
+  ; CHECK:   [[VCMPSSZrri:%[0-9]+]]:vk1 = VCMPSSZrri [[COPY3]], [[COPY2]], 0
+  ; CHECK:   [[COPY9:%[0-9]+]]:vk32 = COPY [[VCMPSSZrri]]
   ; CHECK:   [[COPY10:%[0-9]+]]:vk8 = COPY [[COPY9]]
   ; CHECK:   JMP_1 %bb.3
   ; CHECK: bb.2.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[VCMPSSZrr1:%[0-9]+]]:vk1 = VCMPSSZrr [[COPY1]], [[COPY]], 0
-  ; CHECK:   [[COPY11:%[0-9]+]]:vk32 = COPY [[VCMPSSZrr1]]
+  ; CHECK:   [[VCMPSSZrri1:%[0-9]+]]:vk1 = VCMPSSZrri [[COPY1]], [[COPY]], 0
+  ; CHECK:   [[COPY11:%[0-9]+]]:vk32 = COPY [[VCMPSSZrri1]]
   ; CHECK:   [[COPY12:%[0-9]+]]:vk8 = COPY [[COPY11]]
   ; CHECK: bb.3.exit:
   ; CHECK:   [[PHI:%[0-9]+]]:vk8 = PHI [[COPY12]], %bb.2, [[COPY10]], %bb.1
@@ -167,7 +173,7 @@ body:             |
   bb.1.if:
     successors: %bb.3(0x80000000)
 
-    %14 = VCMPSSZrr %7, %8, 0, implicit $mxcsr
+    %14 = VCMPSSZrri %7, %8, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -177,7 +183,7 @@ body:             |
 
   bb.2.else:
     successors: %bb.3(0x80000000)
-    %12 = VCMPSSZrr %9, %10, 0, implicit $mxcsr
+    %12 = VCMPSSZrri %9, %10, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
@@ -857,6 +863,67 @@ body:             |
     %3 = COPY %7
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    RET 0
+
+...
+---
+name:            test_unused
+alignment:       16
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+# Note that this test is supposed to have registers without classes
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.1):
+    liveins: $rdi
+
     RET 0
 
 ...

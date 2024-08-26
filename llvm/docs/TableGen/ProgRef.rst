@@ -174,7 +174,7 @@ TableGen has two kinds of string literals:
 
 .. productionlist::
    TokString: '"' (non-'"' characters and escapes) '"'
-   TokCode: "[{" (shortest text not containing "}]") "}]"
+   TokCode: "[{" (text not containing "}]") "}]"
 
 A :token:`TokCode` is nothing more than a multi-line string literal
 delimited by ``[{`` and ``}]``. It can break across lines and the
@@ -202,10 +202,10 @@ TableGen has the following reserved keywords, which cannot be used as
 identifiers::
 
    assert     bit           bits          class         code
-   dag        def           else          false         foreach
-   defm       defset        defvar        field         if
-   in         include       int           let           list
-   multiclass string        then          true
+   dag        def           dump          else          false
+   foreach    defm          defset        defvar        field
+   if         in            include       int           let
+   list       multiclass    string        then          true
 
 .. warning::
   The ``field`` reserved word is deprecated, except when used with the
@@ -570,8 +570,8 @@ files.
 .. productionlist::
    TableGenFile: (`Statement` | `IncludeDirective`
             :| `PreprocessorDirective`)*
-   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
-            :| `Foreach` | `If` | `Let` | `MultiClass`
+   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Deftype`
+            :| `Defvar` | `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
 
 The following sections describe each of these top-level statements.
 
@@ -661,7 +661,7 @@ The argument values can be specified in two forms:
   argument with name ``a`` and ``a1`` will be assigned to the argument with
   name ``b``.
 
-Required arguments can alse be specified as named argument.
+Required arguments can also be specified as named argument.
 
 Note that the argument can only be specified once regardless of the way (named
 or positional) to specify and positional arguments should be put before named
@@ -1215,6 +1215,20 @@ set.
 Anonymous records created inside initialization expressions using the
 ``ClassID<...>`` syntax are not collected in the set.
 
+``deftype`` --- define a type
+--------------------------------
+
+A ``deftype`` statement defines a type. The type can be used throughout the
+statements that follow the definition.
+
+.. productionlist::
+   Deftype: "deftype" `TokIdentifier` "=" `Type` ";"
+
+The identifier on the left of the ``=`` is defined to be a type name
+whose actual type is given by the type expression on the right of the ``=``.
+
+Currently, only primitive types and type aliases are supported to be the source
+type and `deftype` statements can only appear at the top level.
 
 ``defvar`` --- define a variable
 --------------------------------
@@ -1274,6 +1288,29 @@ be nested.
 
 This loop defines records named ``R0``, ``R1``, ``R2``, and ``R3``, along
 with ``F0``, ``F1``, ``F2``, and ``F3``.
+
+``dump`` --- print messages to stderr
+-------------------------------------
+
+A ``dump`` statement prints the input string to standard error
+output. It is intended for debugging purpose.
+
+* At top level, the message is printed immediately.
+
+* Within a record/class/multiclass, `dump` gets evaluated at each
+  instantiation point of the containing record.
+
+.. productionlist::
+   Dump: "dump"  `string` ";"
+
+For example, it can be used in combination with `!repr` to investigate
+the values passed to a multiclass:
+
+.. code-block:: text
+
+  multiclass MC<dag s> {
+    dump "s = " # !repr(s);
+  }
 
 
 ``if`` --- select statements based on a test
@@ -1831,7 +1868,7 @@ and non-0 as true.
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
 
-``!range([``\ *start*\ ``,]`` *end*\ ``[, ``\ *step*\ ``])``
+``!range([``\ *start*\ ``,]`` *end*\ ``[,``\ *step*\ ``])``
     This operator produces half-open range sequence ``[start : end : step)`` as
     ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
     be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,

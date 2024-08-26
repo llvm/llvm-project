@@ -324,11 +324,11 @@ struct FragmentCompiler {
 
   void compile(Fragment::IndexBlock &&F) {
     if (F.Background) {
-      if (auto Val = compileEnum<Config::BackgroundPolicy>("Background",
-                                                           **F.Background)
-                         .map("Build", Config::BackgroundPolicy::Build)
-                         .map("Skip", Config::BackgroundPolicy::Skip)
-                         .value())
+      if (auto Val =
+              compileEnum<Config::BackgroundPolicy>("Background", *F.Background)
+                  .map("Build", Config::BackgroundPolicy::Build)
+                  .map("Skip", Config::BackgroundPolicy::Skip)
+                  .value())
         Out.Apply.push_back(
             [Val](const Params &, Config &C) { C.Index.Background = *Val; });
     }
@@ -490,15 +490,35 @@ struct FragmentCompiler {
     StringRef Str = StringRef(*Arg).trim();
     // Don't support negating here, its handled if the item is in the Add or
     // Remove list.
-    if (Str.startswith("-") || Str.contains(',')) {
+    if (Str.starts_with("-") || Str.contains(',')) {
       diag(Error, "Invalid clang-tidy check name", Arg.Range);
       return;
     }
-    if (!Str.contains('*') && !isRegisteredTidyCheck(Str)) {
-      diag(Warning,
-           llvm::formatv("clang-tidy check '{0}' was not found", Str).str(),
-           Arg.Range);
-      return;
+    if (!Str.contains('*')) {
+      if (!isRegisteredTidyCheck(Str)) {
+        diag(Warning,
+             llvm::formatv("clang-tidy check '{0}' was not found", Str).str(),
+             Arg.Range);
+        return;
+      }
+      auto Fast = isFastTidyCheck(Str);
+      if (!Fast.has_value()) {
+        diag(Warning,
+             llvm::formatv(
+                 "Latency of clang-tidy check '{0}' is not known. "
+                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
+                 Str)
+                 .str(),
+             Arg.Range);
+      } else if (!*Fast) {
+        diag(Warning,
+             llvm::formatv(
+                 "clang-tidy check '{0}' is slow. "
+                 "It will only run if ClangTidy.FastCheckFilter is None",
+                 Str)
+                 .str(),
+             Arg.Range);
+      }
     }
     CurSpec += ',';
     if (!IsPositive)
@@ -534,6 +554,16 @@ struct FragmentCompiler {
                   StringPair.first, StringPair.second);
           });
     }
+    if (F.FastCheckFilter.has_value())
+      if (auto Val = compileEnum<Config::FastCheckPolicy>("FastCheckFilter",
+                                                          *F.FastCheckFilter)
+                         .map("Strict", Config::FastCheckPolicy::Strict)
+                         .map("Loose", Config::FastCheckPolicy::Loose)
+                         .map("None", Config::FastCheckPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Diagnostics.ClangTidy.FastCheckFilter = *Val;
+        });
   }
 
   void compile(Fragment::DiagnosticsBlock::IncludesBlock &&F) {
@@ -542,32 +572,46 @@ struct FragmentCompiler {
 #else
     static llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags;
 #endif
-    auto Filters = std::make_shared<std::vector<llvm::Regex>>();
-    for (auto &HeaderPattern : F.IgnoreHeader) {
-      // Anchor on the right.
-      std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
-      llvm::Regex CompiledRegex(AnchoredPattern, Flags);
-      std::string RegexError;
-      if (!CompiledRegex.isValid(RegexError)) {
-        diag(Warning,
-             llvm::formatv("Invalid regular expression '{0}': {1}",
-                           *HeaderPattern, RegexError)
-                 .str(),
-             HeaderPattern.Range);
-        continue;
+    std::shared_ptr<std::vector<llvm::Regex>> Filters;
+    if (!F.IgnoreHeader.empty()) {
+      Filters = std::make_shared<std::vector<llvm::Regex>>();
+      for (auto &HeaderPattern : F.IgnoreHeader) {
+        // Anchor on the right.
+        std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
+        llvm::Regex CompiledRegex(AnchoredPattern, Flags);
+        std::string RegexError;
+        if (!CompiledRegex.isValid(RegexError)) {
+          diag(Warning,
+               llvm::formatv("Invalid regular expression '{0}': {1}",
+                             *HeaderPattern, RegexError)
+                   .str(),
+               HeaderPattern.Range);
+          continue;
+        }
+        Filters->push_back(std::move(CompiledRegex));
       }
-      Filters->push_back(std::move(CompiledRegex));
     }
-    if (Filters->empty())
+    // Optional to override the resulting AnalyzeAngledIncludes
+    // only if it's explicitly set in the current fragment.
+    // Otherwise it's inherited from parent fragment.
+    std::optional<bool> AnalyzeAngledIncludes;
+    if (F.AnalyzeAngledIncludes.has_value())
+      AnalyzeAngledIncludes = **F.AnalyzeAngledIncludes;
+    if (!Filters && !AnalyzeAngledIncludes.has_value())
       return;
-    auto Filter = [Filters](llvm::StringRef Path) {
-      for (auto &Regex : *Filters)
-        if (Regex.match(Path))
-          return true;
-      return false;
-    };
-    Out.Apply.push_back([Filter](const Params &, Config &C) {
-      C.Diagnostics.Includes.IgnoreHeader.emplace_back(Filter);
+    Out.Apply.push_back([Filters = std::move(Filters),
+                         AnalyzeAngledIncludes](const Params &, Config &C) {
+      if (Filters) {
+        auto Filter = [Filters](llvm::StringRef Path) {
+          for (auto &Regex : *Filters)
+            if (Regex.match(Path))
+              return true;
+          return false;
+        };
+        C.Diagnostics.Includes.IgnoreHeader.emplace_back(std::move(Filter));
+      }
+      if (AnalyzeAngledIncludes.has_value())
+        C.Diagnostics.Includes.AnalyzeAngledIncludes = *AnalyzeAngledIncludes;
     });
   }
 

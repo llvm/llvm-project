@@ -231,3 +231,91 @@ define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
   %8 = or i16 %6, %7
   ret i16 %8
 }
+
+define void @packh_i16_3(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2, ptr %p) {
+; RV32I-LABEL: packh_i16_3:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    sh a0, 0(a3)
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: packh_i16_3:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    add a0, a1, a0
+; RV32ZBKB-NEXT:    packh a0, a2, a0
+; RV32ZBKB-NEXT:    sh a0, 0(a3)
+; RV32ZBKB-NEXT:    ret
+  %4 = add i8 %1, %0
+  %5 = zext i8 %4 to i16
+  %6 = shl i16 %5, 8
+  %7 = zext i8 %2 to i16
+  %8 = or i16 %6, %7
+  store i16 %8, ptr %p
+  ret void
+}
+
+define i32 @zexth_i32(i32 %a) nounwind {
+; RV32I-LABEL: zexth_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: zexth_i32:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    zext.h a0, a0
+; RV32ZBKB-NEXT:    ret
+  %and = and i32 %a, 65535
+  ret i32 %and
+}
+
+define i64 @zexth_i64(i64 %a) nounwind {
+; RV32I-LABEL: zexth_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: zexth_i64:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    zext.h a0, a0
+; RV32ZBKB-NEXT:    li a1, 0
+; RV32ZBKB-NEXT:    ret
+  %and = and i64 %a, 65535
+  ret i64 %and
+}
+
+define i32 @zext_i16_to_i32(i16 %a) nounwind {
+; RV32I-LABEL: zext_i16_to_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: zext_i16_to_i32:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    zext.h a0, a0
+; RV32ZBKB-NEXT:    ret
+  %1 = zext i16 %a to i32
+  ret i32 %1
+}
+
+define i64 @zext_i16_to_i64(i16 %a) nounwind {
+; RV32I-LABEL: zext_i16_to_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: zext_i16_to_i64:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    zext.h a0, a0
+; RV32ZBKB-NEXT:    li a1, 0
+; RV32ZBKB-NEXT:    ret
+  %1 = zext i16 %a to i64
+  ret i64 %1
+}

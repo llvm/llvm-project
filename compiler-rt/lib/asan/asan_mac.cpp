@@ -49,14 +49,10 @@ void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress (uptr addr) { return false; }
 
-// No-op. Mac does not support static linkage anyway.
-void *AsanDoesNotSupportStaticLinkage() {
-  return 0;
-}
-
 uptr FindDynamicShadowStart() {
   return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 // No-op. Mac does not support static linkage anyway.
@@ -139,9 +135,11 @@ typedef void (*dispatch_mach_handler_function_t)(void *context,
                                                  dispatch_mach_reason reason,
                                                  dispatch_mach_msg_t message,
                                                  mach_error_t error);
+#  if !defined(MISSING_BLOCKS_SUPPORT)
 typedef void (^dispatch_mach_handler_t)(dispatch_mach_reason reason,
                                         dispatch_mach_msg_t message,
                                         mach_error_t error);
+#  endif
 
 // A wrapper for the ObjC blocks used to support libdispatch.
 typedef struct {

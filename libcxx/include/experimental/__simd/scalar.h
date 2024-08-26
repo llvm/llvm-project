@@ -10,8 +10,11 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 
+#include <__assert>
 #include <cstddef>
-#include <experimental/__simd/internal_declaration.h>
+#include <experimental/__config>
+#include <experimental/__simd/declaration.h>
+#include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -22,6 +25,9 @@ struct __scalar {
   static constexpr size_t __simd_size = 1;
 };
 } // namespace simd_abi
+
+template <>
+inline constexpr bool is_abi_tag_v<simd_abi::__scalar> = true;
 
 template <class _Tp>
 struct __simd_storage<_Tp, simd_abi::__scalar> {
@@ -51,6 +57,16 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
     return {__g(std::integral_constant<size_t, 0>())};
   }
+
+  template <class _Up>
+  static _LIBCPP_HIDE_FROM_ABI void __load(_SimdStorage& __s, const _Up* __mem) noexcept {
+    __s.__data = static_cast<_Tp>(__mem[0]);
+  }
+
+  template <class _Up>
+  static _LIBCPP_HIDE_FROM_ABI void __store(_SimdStorage __s, _Up* __mem) noexcept {
+    *__mem = static_cast<_Up>(__s.__data);
+  }
 };
 
 template <class _Tp>
@@ -58,6 +74,10 @@ struct __mask_operations<_Tp, simd_abi::__scalar> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
 
   static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept { return {__v}; }
+
+  static _LIBCPP_HIDE_FROM_ABI void __load(_MaskStorage& __s, const bool* __mem) noexcept { __s.__data = __mem[0]; }
+
+  static _LIBCPP_HIDE_FROM_ABI void __store(_MaskStorage __s, bool* __mem) noexcept { __mem[0] = __s.__data; }
 };
 
 } // namespace parallelism_v2

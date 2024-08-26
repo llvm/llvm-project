@@ -3,24 +3,24 @@
 
 ;
 ; C Call passes all arguments on stack ...
-define fastcc void @test1(i32* nocapture %out, i32 %in) nounwind {
+define fastcc void @test1(ptr nocapture %out, i32 %in) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l %d0, (%a0)
 ; CHECK-NEXT:    rts
 entry:
-  store i32 %in, i32* %out, align 4
+  store i32 %in, ptr %out, align 4
   ret void
 }
 
-define fastcc void @test2(i32* nocapture %pOut, i32* nocapture %pIn) nounwind {
+define fastcc void @test2(ptr nocapture %pOut, ptr nocapture %pIn) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (%a1), (%a0)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = load i32, i32* %pIn, align 4
-  store i32 %0, i32* %pOut, align 4
+  %0 = load i32, ptr %pIn, align 4
+  store i32 %0, ptr %pOut, align 4
   ret void
 }
 

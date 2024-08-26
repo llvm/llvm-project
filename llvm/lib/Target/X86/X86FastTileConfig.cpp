@@ -161,19 +161,20 @@ bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
     }
   }
 
-  if (Change)
-    X86FI->setHasVirtualTileReg(true);
-
   return Change;
 }
 
 bool X86FastTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
+  X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
+  // Early exit in the common case of non-AMX code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   MF = &MFunc;
   MRI = &MFunc.getRegInfo();
   const TargetSubtargetInfo *ST = &MFunc.getSubtarget<X86Subtarget>();
   TRI = ST->getRegisterInfo();
   TII = MFunc.getSubtarget().getInstrInfo();
-  X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
   bool Change = false;
 
   // Loop over all of the basic blocks, eliminating virtual register references

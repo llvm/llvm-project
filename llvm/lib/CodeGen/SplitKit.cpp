@@ -45,6 +45,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+static cl::opt<bool>
+    EnableLoopIVHeuristic("enable-split-loopiv-heuristic",
+                          cl::desc("Enable loop iv regalloc heuristic"),
+                          cl::init(true));
+
 STATISTIC(NumFinished, "Number of splits finished");
 STATISTIC(NumSimple,   "Number of splits that were simple");
 STATISTIC(NumCopies,   "Number of copies inserted for splitting");
@@ -179,8 +184,7 @@ void SplitAnalysis::analyzeUses() {
 
   // Remove duplicates, keeping the smaller slot for each instruction.
   // That is what we want for early clobbers.
-  UseSlots.erase(std::unique(UseSlots.begin(), UseSlots.end(),
-                             SlotIndex::isSameInstr),
+  UseSlots.erase(llvm::unique(UseSlots, SlotIndex::isSameInstr),
                  UseSlots.end());
 
   // Compute per-live block info.
@@ -292,6 +296,13 @@ void SplitAnalysis::calcLiveBlockInfo() {
     else
       MFI = LIS.getMBBFromIndex(LVI->start)->getIterator();
   }
+
+  LooksLikeLoopIV = EnableLoopIVHeuristic && UseBlocks.size() == 2 &&
+                    any_of(UseBlocks, [this](BlockInfo &BI) {
+                      MachineLoop *L = Loops.getLoopFor(BI.MBB);
+                      return BI.LiveIn && BI.LiveOut && BI.FirstDef && L &&
+                             L->isLoopLatch(BI.MBB);
+                    });
 
   assert(getNumLiveBlocks() == countLiveBlocks(CurLI) && "Bad block count");
 }
@@ -795,8 +806,10 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
     return Start;
   }
 
-  VNInfo *VNI = defFromParent(0, ParentVNI, Start, MBB,
-                              MBB.SkipPHIsLabelsAndDebug(MBB.begin()));
+  unsigned RegIdx = 0;
+  Register Reg = LIS.getInterval(Edit->get(RegIdx)).reg();
+  VNInfo *VNI = defFromParent(RegIdx, ParentVNI, Start, MBB,
+                              MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Reg));
   RegAssign.insert(Start, VNI->def, OpenIdx);
   LLVM_DEBUG(dump());
   return VNI->def;

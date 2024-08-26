@@ -182,7 +182,7 @@ protected:
     uint32_t Size = Count * sizeof(TypeIndexOffset);
     uint8_t *Buffer = GlobalState->Allocator.Allocate<uint8_t>(Size);
     MutableArrayRef<uint8_t> Bytes(Buffer, Size);
-    Storage = MutableBinaryByteStream(Bytes, support::little);
+    Storage = MutableBinaryByteStream(Bytes, llvm::endianness::little);
     BinaryStreamWriter Writer(Storage);
     for (const auto I : Indices)
       consumeError(Writer.writeObject(GlobalState->AllOffsets[I]));

@@ -16,9 +16,10 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -fblocks
 
-#include <functional>
-#include <cstdlib>
 #include <cassert>
+#include <cstdlib>
+#include <functional>
+#include <typeinfo>
 
 #include <Block.h>
 

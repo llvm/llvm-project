@@ -32,7 +32,9 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
 
 private:
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
 };
 } // end anonymous namespace
 namespace {
@@ -64,6 +66,27 @@ void CommonSPIRABIInfo::setCCs() {
   RuntimeCC = llvm::CallingConv::SPIR_FUNC;
 }
 
+ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
+  if (getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return DefaultABIInfo::classifyReturnType(RetTy);
+  if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
+    return DefaultABIInfo::classifyReturnType(RetTy);
+
+  if (const RecordType *RT = RetTy->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyReturnType(RetTy);
+  }
+
+  // TODO: The AMDGPU ABI is non-trivial to represent in SPIR-V; in order to
+  // avoid encoding various architecture specific bits here we return everything
+  // as direct to retain type info for things like aggregates, for later perusal
+  // when translating back to LLVM/lowering in the BE. This is also why we
+  // disable flattening as the outcomes can mismatch between SPIR-V and AMDGPU.
+  // This will be revisited / optimised in the future.
+  return ABIArgInfo::getDirect(CGT.ConvertType(RetTy), 0u, nullptr, false);
+}
+
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
   if (getContext().getLangOpts().CUDAIsDevice) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
@@ -78,16 +101,49 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
     }
 
-    // Force copying aggregate type in kernel arguments by value when
-    // compiling CUDA targeting SPIR-V. This is required for the object
-    // copied to be valid on the device.
-    // This behavior follows the CUDA spec
-    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-    // and matches the NVPTX implementation.
-    if (isAggregateTypeForABI(Ty))
+    if (isAggregateTypeForABI(Ty)) {
+      if (getTarget().getTriple().getVendor() == llvm::Triple::AMD)
+        // TODO: The AMDGPU kernel ABI passes aggregates byref, which is not
+        // currently expressible in SPIR-V; SPIR-V passes aggregates byval,
+        // which the AMDGPU kernel ABI does not allow. Passing aggregates as
+        // direct works around this impedance mismatch, as it retains type info
+        // and can be correctly handled, post reverse-translation, by the AMDGPU
+        // BE, which has to support this CC for legacy OpenCL purposes. It can
+        // be brittle and does lead to performance degradation in certain
+        // pathological cases. This will be revisited / optimised in the future,
+        // once a way to deal with the byref/byval impedance mismatch is
+        // identified.
+        return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
+      // Force copying aggregate type in kernel arguments by value when
+      // compiling CUDA targeting SPIR-V. This is required for the object
+      // copied to be valid on the device.
+      // This behavior follows the CUDA spec
+      // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
+      // and matches the NVPTX implementation.
       return getNaturalAlignIndirect(Ty, /* byval */ true);
+    }
   }
   return classifyArgumentType(Ty);
+}
+
+ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
+  if (getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return DefaultABIInfo::classifyArgumentType(Ty);
+  if (!isAggregateTypeForABI(Ty))
+    return DefaultABIInfo::classifyArgumentType(Ty);
+
+  // Records with non-trivial destructors/copy-constructors should not be
+  // passed by value.
+  if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
+    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyArgumentType(Ty);
+  }
+
+  return ABIArgInfo::getDirect(CGT.ConvertType(Ty), 0u, nullptr, false);
 }
 
 void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
@@ -146,14 +202,14 @@ static llvm::Type *getSPIRVImageType(llvm::LLVMContext &Ctx, StringRef BaseType,
 
   // Choose the dimension of the image--this corresponds to the Dim enum in
   // SPIR-V (first integer parameter of OpTypeImage).
-  if (OpenCLName.startswith("image2d"))
+  if (OpenCLName.starts_with("image2d"))
     IntParams[0] = 1; // 1D
-  else if (OpenCLName.startswith("image3d"))
+  else if (OpenCLName.starts_with("image3d"))
     IntParams[0] = 2; // 2D
   else if (OpenCLName == "image1d_buffer")
     IntParams[0] = 5; // Buffer
   else
-    assert(OpenCLName.startswith("image1d") && "Unknown image type");
+    assert(OpenCLName.starts_with("image1d") && "Unknown image type");
 
   // Set the other integer parameters of OpTypeImage if necessary. Note that the
   // OpenCL image types don't provide any information for the Sampled or

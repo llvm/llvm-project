@@ -54,8 +54,8 @@ module X { header "X.h" }
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_with_a.json.template    > %t/cdb_with_a.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_without_a.json.template > %t/cdb_without_a.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb_with_a.json    -format experimental-full -optimize-args >  %t/results.json
-// RUN: clang-scan-deps -compilation-database %t/cdb_without_a.json -format experimental-full -optimize-args >> %t/results.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_with_a.json    -format experimental-full -optimize-args=header-search >  %t/results.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_without_a.json -format experimental-full -optimize-args=header-search >> %t/results.json
 // RUN: cat %t/results.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
@@ -75,6 +75,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/X.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -90,6 +91,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/end/end.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -129,6 +131,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/X.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -143,6 +146,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/end/end.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

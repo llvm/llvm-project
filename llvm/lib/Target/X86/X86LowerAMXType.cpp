@@ -92,17 +92,24 @@ static bool isAMXIntrinsic(Value *I) {
   return false;
 }
 
+static bool containsAMXCode(Function &F) {
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (I.getType()->isX86_AMXTy())
+        return true;
+  return false;
+}
+
 static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder, BasicBlock *BB,
                                            Type *Ty) {
   Function &F = *BB->getParent();
-  Module *M = BB->getModule();
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   LLVMContext &Ctx = Builder.getContext();
   auto AllocaAlignment = DL.getPrefTypeAlign(Type::getX86_AMXTy(Ctx));
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   AllocaInst *AllocaRes =
-      new AllocaInst(Ty, AllocaAS, "", &F.getEntryBlock().front());
+      new AllocaInst(Ty, AllocaAS, "", F.getEntryBlock().begin());
   AllocaRes->setAlignment(AllocaAlignment);
   return AllocaRes;
 }
@@ -446,18 +453,17 @@ bool X86LowerAMXType::visit() {
 } // anonymous namespace
 
 static Value *getAllocaPos(BasicBlock *BB) {
-  Module *M = BB->getModule();
   Function *F = BB->getParent();
   IRBuilder<> Builder(&F->getEntryBlock().front());
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
   AllocaInst *AllocaRes =
-      new AllocaInst(V256I32Ty, AllocaAS, "", &F->getEntryBlock().front());
+      new AllocaInst(V256I32Ty, AllocaAS, "", F->getEntryBlock().begin());
   BasicBlock::iterator Iter = AllocaRes->getIterator();
   ++Iter;
   Builder.SetInsertPoint(&*Iter);
-  Value *I8Ptr = Builder.CreateBitCast(AllocaRes, Builder.getInt8PtrTy());
+  Value *I8Ptr = Builder.CreateBitCast(AllocaRes, Builder.getPtrTy());
   return I8Ptr;
 }
 
@@ -934,8 +940,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   IRBuilder<> Builder(ST);
   // Stride should be equal to col(measured by bytes)
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
-  Value *I8Ptr =
-      Builder.CreateBitCast(ST->getOperand(1), Builder.getInt8PtrTy());
+  Value *I8Ptr = Builder.CreateBitCast(ST->getOperand(1), Builder.getPtrTy());
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
   Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, std::nullopt,
                           Args);
@@ -975,10 +980,10 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
     Builder.CreateStore(LD, AllocaAddr);
 
     Builder.SetInsertPoint(Cast);
-    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
+    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getPtrTy());
     EraseLoad = false;
   } else {
-    I8Ptr = Builder.CreateBitCast(LD->getOperand(0), Builder.getInt8PtrTy());
+    I8Ptr = Builder.CreateBitCast(LD->getOperand(0), Builder.getPtrTy());
   }
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
@@ -1137,7 +1142,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
 
   auto Prepare = [&](Type *MemTy) {
     AllocaAddr = createAllocaInstAtEntry(Builder, AMXCast->getParent(), MemTy);
-    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
+    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getPtrTy());
     Stride = Builder.getInt64(64);
   };
 
@@ -1231,6 +1236,14 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    // Performance optimization: most code doesn't use AMX, so return early if
+    // there are no instructions that produce AMX values. This is sufficient, as
+    // AMX arguments and constants are not allowed -- so any producer of an AMX
+    // value must be an instruction.
+    // TODO: find a cheaper way for this, without looking at all instructions.
+    if (!containsAMXCode(F))
+      return false;
+
     bool C = false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     TargetLibraryInfo *TLI =

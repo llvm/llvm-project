@@ -13,7 +13,6 @@
 #ifndef LLVM_ANALYSIS_IVDESCRIPTORS_H
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -24,7 +23,6 @@ namespace llvm {
 class AssumptionCache;
 class DemandedBits;
 class DominatorTree;
-class Instruction;
 class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;

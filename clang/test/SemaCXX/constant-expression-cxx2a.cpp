@@ -994,7 +994,7 @@ namespace placement_new_delete {
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // expected-note {{call to placement 'operator new'}}
+      delete new (placement_new_arg{}) int; // expected-note {{this placement new expression is not supported in constant expressions}}
       break;
 
     case 1:
@@ -1012,7 +1012,7 @@ namespace placement_new_delete {
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // expected-note {{placement new expression is not yet supported}}
+      delete new (std::align_val_t{64}) Overaligned; // expected-note {{this placement new expression is not supported in constant expressions}}
       break;
     }
 
@@ -1492,3 +1492,9 @@ class B{
 class D : B{}; // expected-error {{deleted function '~D' cannot override a non-deleted function}}
 // expected-note@-1 {{destructor of 'D' is implicitly deleted because base class 'B' has an inaccessible destructor}}
 }
+
+namespace GH67317 {
+  constexpr unsigned char a = // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                              // expected-note {{subobject of type 'const unsigned char' is not initialized}}
+    __builtin_bit_cast(unsigned char, *new char[3][1]);
+};

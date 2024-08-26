@@ -104,7 +104,7 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
 
   // If we didn't find any arguments, we can fill in the pointer.
   if (!PtrArg) {
-    unsigned AS = CB->getModule()->getDataLayout().getAllocaAddrSpace();
+    unsigned AS = CB->getDataLayout().getAllocaAddrSpace();
 
     PointerType *PtrTy =
         PointerType::get(DataArg ? DataArg->getType()
@@ -113,12 +113,6 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
 
     PtrArg = ConstantPointerNull::get(PtrTy);
   }
-
-  // Make sure we don't emit an invalid store with typed pointers.
-  if (IsStore && DataArg->getType()->getPointerTo(
-        cast<PointerType>(PtrArg->getType())->getAddressSpace()) !=
-      PtrArg->getType())
-    return false;
 
   return true;
 }

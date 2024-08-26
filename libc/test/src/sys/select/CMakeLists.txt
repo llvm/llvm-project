@@ -25,7 +25,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.src.sys.select.select
     libc.src.unistd.read
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_subdirectory(testdata)

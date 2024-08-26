@@ -17,7 +17,6 @@
 
 #undef NDEBUG
 #include <assert.h>
-#include <dlfcn.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,6 +25,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <unwind.h>
+
+// Using __attribute__((section("main_func"))) is Linux specific, but then
+// this entire test is marked as requiring Linux, so we should be good.
+//
+// We don't use dladdr() because on musl it's a no-op when statically linked.
+extern char __start_main_func;
+extern char __stop_main_func;
 
 void foo();
 _Unwind_Exception ex;
@@ -41,14 +47,14 @@ _Unwind_Reason_Code stop(int version, _Unwind_Action actions,
   assert(exceptionObject == &ex);
   assert(stop_parameter == &foo);
 
-  Dl_info info = {0, 0, 0, 0};
-
-  // Unwind util the main is reached, above frames depend on the platform and
+  // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(context)), &info) &&
-      info.dli_sname && !strcmp("main", info.dli_sname)) {
+  uintptr_t ip = _Unwind_GetIP(context);
+  if (ip >= (uintptr_t)&__start_main_func &&
+      ip < (uintptr_t)&__stop_main_func) {
     _Exit(0);
   }
+
   return _URC_NO_REASON;
 }
 
@@ -61,12 +67,12 @@ __attribute__((noinline)) void foo() {
 #if defined(_LIBUNWIND_ARM_EHABI)
   // Create a mock exception object.
   memset(e, '\0', sizeof(*e));
-  strcpy(reinterpret_cast<char *>(&e->exception_class), "CLNGUNW");
+  memcpy(&e->exception_class, "CLNGUNW", sizeof(e->exception_class));
 #endif
   _Unwind_ForcedUnwind(e, stop, (void *)&foo);
 }
 
-int main() {
+__attribute__((section("main_func"))) int main() {
   foo();
   return -2;
 }

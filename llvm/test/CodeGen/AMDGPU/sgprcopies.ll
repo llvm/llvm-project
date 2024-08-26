@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}checkTwoBlocksWithUniformBranch
 ; GCN: BB0_2

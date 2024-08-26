@@ -145,8 +145,11 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
           DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
     if (auto *msg{Say(
             "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
-      msg->Attach(std::move(*whyNot));
+      msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
+    return false;
+  } else if (evaluate::IsAssumedRank(lhs)) {
+    Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
   } else {
     return true;
@@ -223,7 +226,8 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
             foldingContext_.messages().at(), scope_, {}, rhs)}) {
       if (auto *msg{
               Say("Pointer target is not a definable variable"_warn_en_US)}) {
-        msg->Attach(std::move(*because));
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
       }
       return false;
     }
@@ -244,7 +248,8 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), foldingContext_)};
+  auto proc{
+      Procedure::Characterize(f.proc(), foldingContext_, /*emitError=*/true)};
   if (!proc) {
     return false;
   }
@@ -265,8 +270,11 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " that is a not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
-    msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not contiguous"_err_en_US;
+    if (context_.ShouldWarn(
+            common::UsageWarning::PointerToPossibleNoncontiguous)) {
+      msg =
+          "CONTIGUOUS %s is associated with the result of reference to function '%s' that is not known to be contiguous"_warn_en_US;
+    }
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
@@ -329,8 +337,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 
       } else if (!isBoundsRemapping_ &&
           !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{evaluate::GetRank(lhsType_->shape())};
-        int rhsRank{evaluate::GetRank(rhsType->shape())};
+        int lhsRank{lhsType_->Rank()};
+        int rhsRank{rhsType->Rank()};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
@@ -350,8 +358,10 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       Say(std::get<MessageFormattedText>(*msg));
     }
     return false;
+  } else {
+    context_.NoteDefinedSymbol(*base);
+    return true;
   }
-  return true;
 }
 
 // Common handling for procedure pointer right-hand sides
@@ -359,11 +369,18 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
     const Procedure *rhsProcedure,
     const evaluate::SpecificIntrinsic *specific) {
   std::string whyNot;
+  std::optional<std::string> warning;
   CharacterizeProcedure();
   if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
-          isCall, procedure_, rhsProcedure, specific, whyNot)}) {
+          isCall, procedure_, rhsProcedure, specific, whyNot, warning,
+          /*ignoreImplicitVsExplicit=*/isCall)}) {
     Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
+  }
+  if (context_.ShouldWarn(common::UsageWarning::ProcDummyArgShapes) &&
+      warning) {
+    Say("%s and %s may not be completely compatible procedures: %s"_warn_en_US,
+        description_, rhsName, std::move(*warning));
   }
   return true;
 }
@@ -380,13 +397,14 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
         return false;
       }
     } else if (symbol->has<ProcBindingDetails>() &&
-        context_.ShouldWarn(common::UsageWarning::Portability)) {
+        context_.ShouldWarn(common::LanguageFeature::BindingAsProcedure)) {
       evaluate::SayWithDeclaration(foldingContext_.messages(), *symbol,
           "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
           symbol->name());
     }
   }
-  if (auto chars{Procedure::Characterize(d, foldingContext_)}) {
+  if (auto chars{
+          Procedure::Characterize(d, foldingContext_, /*emitError=*/true)}) {
     // Disregard the elemental attribute of RHS intrinsics.
     if (symbol && symbol->GetUltimate().attrs().test(Attr::INTRINSIC)) {
       chars->attrs.reset(Procedure::Attr::Elemental);

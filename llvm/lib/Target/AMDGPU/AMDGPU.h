@@ -10,13 +10,16 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
 class AMDGPUTargetMachine;
+class GCNTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
@@ -31,17 +34,18 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
-FunctionPass *createSIAnnotateControlFlowPass();
+FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsPass();
 FunctionPass *createSIPeepholeSDWAPass();
-FunctionPass *createSILowerI1CopiesPass();
+FunctionPass *createSILowerI1CopiesLegacyPass();
+FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangePass();
-FunctionPass *createSIFixSGPRCopiesPass();
+FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
@@ -52,11 +56,11 @@ FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
-FunctionPass *createAMDGPULateCodeGenPreparePass();
-FunctionPass *createAMDGPUMachineCFGStructurizerPass();
+FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
 
@@ -78,16 +82,20 @@ struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeAMDGPUDAGToDAGISelPass(PassRegistry&);
+class SILowerI1CopiesPass : public PassInfoMixin<SILowerI1CopiesPass> {
+public:
+  SILowerI1CopiesPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
-extern char &AMDGPUMachineCFGStructurizerID;
+void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 Pass *createAMDGPUAnnotateKernelFeaturesPass();
-Pass *createAMDGPUAttributorPass();
-void initializeAMDGPUAttributorPass(PassRegistry &);
+Pass *createAMDGPUAttributorLegacyPass();
+void initializeAMDGPUAttributorLegacyPass(PassRegistry &);
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 
@@ -134,6 +142,18 @@ struct AMDGPULowerModuleLDSPass : PassInfoMixin<AMDGPULowerModuleLDSPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+void initializeAMDGPULowerBufferFatPointersPass(PassRegistry &);
+extern char &AMDGPULowerBufferFatPointersID;
+
+struct AMDGPULowerBufferFatPointersPass
+    : PassInfoMixin<AMDGPULowerBufferFatPointersPass> {
+  AMDGPULowerBufferFatPointersPass(const TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  const TargetMachine &TM;
+};
+
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
@@ -149,8 +169,8 @@ extern char &SIPeepholeSDWAID;
 void initializeSIShrinkInstructionsPass(PassRegistry&);
 extern char &SIShrinkInstructionsID;
 
-void initializeSIFixSGPRCopiesPass(PassRegistry &);
-extern char &SIFixSGPRCopiesID;
+void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
+extern char &SIFixSGPRCopiesLegacyID;
 
 void initializeSIFixVGPRCopiesPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
@@ -158,8 +178,14 @@ extern char &SIFixVGPRCopiesID;
 void initializeSILowerWWMCopiesPass(PassRegistry &);
 extern char &SILowerWWMCopiesID;
 
-void initializeSILowerI1CopiesPass(PassRegistry &);
-extern char &SILowerI1CopiesID;
+void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
+extern char &SILowerI1CopiesLegacyID;
+
+void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
+extern char &AMDGPUGlobalISelDivergenceLoweringID;
+
+void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+extern char &AMDGPUMarkLastScratchLoadID;
 
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;
@@ -188,8 +214,11 @@ extern char &SIPreAllocateWWMRegsID;
 void initializeAMDGPUImageIntrinsicOptimizerPass(PassRegistry &);
 extern char &AMDGPUImageIntrinsicOptimizerID;
 
-void initializeAMDGPUPerfHintAnalysisPass(PassRegistry &);
-extern char &AMDGPUPerfHintAnalysisID;
+void initializeAMDGPUPerfHintAnalysisLegacyPass(PassRegistry &);
+extern char &AMDGPUPerfHintAnalysisLegacyID;
+
+void initializeGCNRegPressurePrinterPass(PassRegistry &);
+extern char &GCNRegPressurePrinterID;
 
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
@@ -239,6 +268,17 @@ private:
   bool GlobalOpt;
 };
 
+void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
+extern char &AMDGPUSwLowerLDSLegacyPassID;
+ModulePass *
+createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+
+struct AMDGPUSwLowerLDSPass : PassInfoMixin<AMDGPUSwLowerLDSPass> {
+  const AMDGPUTargetMachine &TM;
+  AMDGPUSwLowerLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 class AMDGPUCodeGenPreparePass
     : public PassInfoMixin<AMDGPUCodeGenPreparePass> {
 private:
@@ -246,6 +286,16 @@ private:
 
 public:
   AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
+class AMDGPULateCodeGenPreparePass
+    : public PassInfoMixin<AMDGPULateCodeGenPreparePass> {
+private:
+  const GCNTargetMachine &TM;
+
+public:
+  AMDGPULateCodeGenPreparePass(const GCNTargetMachine &TM) : TM(TM) {};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -259,7 +309,30 @@ public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
-FunctionPass *createAMDGPUAnnotateUniformValues();
+struct AMDGPUAttributorOptions {
+  bool IsClosedWorld = false;
+};
+
+class AMDGPUAttributorPass : public PassInfoMixin<AMDGPUAttributorPass> {
+private:
+  TargetMachine &TM;
+
+  AMDGPUAttributorOptions Options;
+
+public:
+  AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options = {})
+      : TM(TM), Options(Options) {};
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class AMDGPUAnnotateUniformValuesPass
+    : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
+public:
+  AMDGPUAnnotateUniformValuesPass() {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
@@ -287,8 +360,8 @@ extern char &SIOptimizeExecMaskingPreRAID;
 void initializeSIOptimizeVGPRLiveRangePass(PassRegistry &);
 extern char &SIOptimizeVGPRLiveRangeID;
 
-void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
-extern char &AMDGPUAnnotateUniformValuesPassID;
+void initializeAMDGPUAnnotateUniformValuesLegacyPass(PassRegistry &);
+extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;
@@ -296,8 +369,8 @@ extern char &AMDGPUCodeGenPrepareID;
 void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
-void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
-extern char &AMDGPULateCodeGenPrepareID;
+void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
+extern char &AMDGPULateCodeGenPrepareLegacyID;
 
 FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
 void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
@@ -310,8 +383,18 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeSIAnnotateControlFlowPass(PassRegistry&);
-extern char &SIAnnotateControlFlowPassID;
+class SIAnnotateControlFlowPass
+    : public PassInfoMixin<SIAnnotateControlFlowPass> {
+private:
+  const AMDGPUTargetMachine &TM;
+
+public:
+  SIAnnotateControlFlowPass(const AMDGPUTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+void initializeSIAnnotateControlFlowLegacyPass(PassRegistry &);
+extern char &SIAnnotateControlFlowLegacyPassID;
 
 void initializeSIMemoryLegalizerPass(PassRegistry&);
 extern char &SIMemoryLegalizerID;
@@ -321,6 +404,9 @@ extern char &SIModeRegisterID;
 
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
+
+void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
+extern char &AMDGPUInsertSingleUseVDSTID;
 
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
@@ -374,72 +460,6 @@ enum TargetIndex {
   TI_SCRATCH_RSRC_DWORD2,
   TI_SCRATCH_RSRC_DWORD3
 };
-}
-
-/// OpenCL uses address spaces to differentiate between
-/// various memory regions on the hardware. On the CPU
-/// all of the address spaces point to the same memory,
-/// however on the GPU, each address space points to
-/// a separate piece of memory that is unique from other
-/// memory locations.
-namespace AMDGPUAS {
-enum : unsigned {
-  // The maximum value for flat, generic, local, private, constant and region.
-  MAX_AMDGPU_ADDRESS = 8,
-
-  FLAT_ADDRESS = 0,   ///< Address space for flat memory.
-  GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
-  REGION_ADDRESS = 2, ///< Address space for region memory. (GDS)
-
-  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
-  LOCAL_ADDRESS = 3,    ///< Address space for local memory.
-  PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
-
-  CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.
-
-  BUFFER_FAT_POINTER = 7, ///< Address space for 160-bit buffer fat pointers.
-                          ///< Not used in backend.
-
-  BUFFER_RESOURCE = 8, ///< Address space for 128-bit buffer resources.
-
-  /// Internal address spaces. Can be freely renumbered.
-  STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
-  /// end Internal address spaces.
-
-  /// Address space for direct addressable parameter memory (CONST0).
-  PARAM_D_ADDRESS = 6,
-  /// Address space for indirect addressable parameter memory (VTX1).
-  PARAM_I_ADDRESS = 7,
-
-  // Do not re-order the CONSTANT_BUFFER_* enums.  Several places depend on
-  // this order to be able to dynamically index a constant buffer, for
-  // example:
-  //
-  // ConstantBufferAS = CONSTANT_BUFFER_0 + CBIdx
-
-  CONSTANT_BUFFER_0 = 8,
-  CONSTANT_BUFFER_1 = 9,
-  CONSTANT_BUFFER_2 = 10,
-  CONSTANT_BUFFER_3 = 11,
-  CONSTANT_BUFFER_4 = 12,
-  CONSTANT_BUFFER_5 = 13,
-  CONSTANT_BUFFER_6 = 14,
-  CONSTANT_BUFFER_7 = 15,
-  CONSTANT_BUFFER_8 = 16,
-  CONSTANT_BUFFER_9 = 17,
-  CONSTANT_BUFFER_10 = 18,
-  CONSTANT_BUFFER_11 = 19,
-  CONSTANT_BUFFER_12 = 20,
-  CONSTANT_BUFFER_13 = 21,
-  CONSTANT_BUFFER_14 = 22,
-  CONSTANT_BUFFER_15 = 23,
-
-  // Some places use this if the address space can't be determined.
-  UNKNOWN_ADDRESS_SPACE = ~0u,
-};
-}
-
-namespace AMDGPU {
 
 // FIXME: Missing constant_32bit
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
@@ -456,24 +476,25 @@ inline bool isExtendedGlobalAddrSpace(unsigned AS) {
 }
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 8, "Addr space out of range");
+  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
-  // This array is indexed by address space value enum elements 0 ... to 8
+  // This array is indexed by address space value enum elements 0 ... to 9
   // clang-format off
-  static const bool ASAliasRules[9][9] = {
-    /*                   Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc */
-    /* Flat     */        {true,  true,  false, true,  true,  true,  true,  true,  true},
-    /* Global   */        {true,  true,  false, false, true,  false, true,  true,  true},
-    /* Region   */        {false, false, true,  false, false, false, false, false, false},
-    /* Group    */        {true,  false, false, true,  false, false, false, false, false},
-    /* Constant */        {true,  true,  false, false, false, false, true,  true,  true},
-    /* Private  */        {true,  false, false, false, false, true,  false, false, false},
-    /* Constant 32-bit */ {true,  true,  false, false, true,  false, false, true,  true},
-    /* Buffer Fat Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true},
-    /* Buffer Resource */ {true,  true,  false, false, true,  false, true,  true,  true},
+  static const bool ASAliasRules[10][10] = {
+    /*                       Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false},
+    /* Group    */            {true,  false, false, true,  false, false, false, false, false, false},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
   };
   // clang-format on
 

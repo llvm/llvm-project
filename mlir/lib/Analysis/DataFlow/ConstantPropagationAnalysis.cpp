@@ -7,8 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 
 #define DEBUG_TYPE "constant-propagation"
 
@@ -35,7 +43,7 @@ void ConstantValue::print(raw_ostream &os) const {
 // SparseConstantPropagation
 //===----------------------------------------------------------------------===//
 
-void SparseConstantPropagation::visitOperation(
+LogicalResult SparseConstantPropagation::visitOperation(
     Operation *op, ArrayRef<const Lattice<ConstantValue> *> operands,
     ArrayRef<Lattice<ConstantValue> *> results) {
   LLVM_DEBUG(llvm::dbgs() << "SCP: Visiting operation: " << *op << "\n");
@@ -46,14 +54,14 @@ void SparseConstantPropagation::visitOperation(
   // folding.
   if (op->getNumRegions()) {
     setAllToEntryStates(results);
-    return;
+    return success();
   }
 
   SmallVector<Attribute, 8> constantOperands;
   constantOperands.reserve(op->getNumOperands());
   for (auto *operandLattice : operands) {
     if (operandLattice->getValue().isUninitialized())
-      return;
+      return success();
     constantOperands.push_back(operandLattice->getValue().getConstantValue());
   }
 
@@ -69,7 +77,7 @@ void SparseConstantPropagation::visitOperation(
   foldResults.reserve(op->getNumResults());
   if (failed(op->fold(constantOperands, foldResults))) {
     setAllToEntryStates(results);
-    return;
+    return success();
   }
 
   // If the folding was in-place, mark the results as overdefined and reset
@@ -79,7 +87,7 @@ void SparseConstantPropagation::visitOperation(
     op->setOperands(originalOperands);
     op->setAttrs(originalAttrs);
     setAllToEntryStates(results);
-    return;
+    return success();
   }
 
   // Merge the fold results into the lattice for this operation.
@@ -100,6 +108,7 @@ void SparseConstantPropagation::visitOperation(
           lattice, *getLatticeElement(foldResult.get<Value>()));
     }
   }
+  return success();
 }
 
 void SparseConstantPropagation::setToEntryState(

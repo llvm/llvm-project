@@ -802,9 +802,6 @@
 // X86_64H:#define __x86_64h 1
 // X86_64H:#define __x86_64h__ 1
 
-// RUN: %clang -xc - -E -dM -mcmodel=medium --target=i386-unknown-linux < /dev/null | FileCheck -match-full-lines -check-prefix X86_MEDIUM %s
-// X86_MEDIUM:#define __code_model_medium__ 1
-
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 -check-prefix X32-CXX %s
 //
@@ -1002,6 +999,7 @@
 // X32:#define __x86_64__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-pc-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix X86_64-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-unknown-fuchsia < /dev/null | FileCheck -match-full-lines -check-prefix X86_64-LINUX %s
 //
 // X86_64-LINUX:#define _LP64 1
 // X86_64-LINUX:#define __BIGGEST_ALIGNMENT__ 16

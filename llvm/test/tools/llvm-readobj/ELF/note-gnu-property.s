@@ -24,35 +24,37 @@
 // GNU-NEXT:     x86 feature: IBT, <unknown flags: 0xf000f000>
 // GNU-NEXT:     <corrupt type (0x2) datasz: 0x1>
 
-// LLVM:      Notes [
+// LLVM:      NoteSections [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.gnu.property
 // LLVM-NEXT:     Offset: 0x40
 // LLVM-NEXT:     Size: 0xF8
-// LLVM-NEXT:     Note {
-// LLVM-NEXT:       Owner: GNU
-// LLVM-NEXT:       Data size: 0xE8
-// LLVM-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
-// LLVM-NEXT:       Property [
-// LLVM-NEXT:         stack size: 0x100
-// LLVM-NEXT:         stack size: 0x100
-// LLVM-NEXT:         no copy on protected
-// LLVM-NEXT:         x86 feature: SHSTK
-// LLVM-NEXT:         x86 feature: IBT, SHSTK
-// LLVM-NEXT:         x86 feature: <None>
-// LLVM-NEXT:         x86 feature needed: x86, x87, MMX, XMM, YMM
-// LLVM-NEXT:         x86 feature used: ZMM, FXSR, XSAVE, XSAVEOPT, XSAVEC
-// LLVM-NEXT:         x86 ISA needed: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
-// LLVM-NEXT:         x86 ISA used: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
-// LLVM-NEXT:         <application-specific type 0xfefefefe>
-// LLVM-NEXT:         stack size: <corrupt length: 0x0>
-// LLVM-NEXT:         stack size: <corrupt length: 0x4>
-// LLVM-NEXT:         no copy on protected <corrupt length: 0x1>
-// LLVM-NEXT:         x86 feature: <corrupt length: 0x0>
-// LLVM-NEXT:         x86 feature: IBT, <unknown flags: 0xf000f000>
-// LLVM-NEXT:         <corrupt type (0x2) datasz: 0x1>
-// LLVM-NEXT:       ]
-// LLVM-NEXT:     }
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:		{
+// LLVM-NEXT:			Owner: GNU
+// LLVM-NEXT:			Data size: 0xE8
+// LLVM-NEXT:			Type: NT_GNU_PROPERTY_TYPE_0 (property note)
+// LLVM-NEXT:			Property [
+// LLVM-NEXT:				stack size: 0x100
+// LLVM-NEXT:				stack size: 0x100
+// LLVM-NEXT:				no copy on protected
+// LLVM-NEXT:				x86 feature: SHSTK
+// LLVM-NEXT:				x86 feature: IBT, SHSTK
+// LLVM-NEXT:				x86 feature: <None>
+// LLVM-NEXT:				x86 feature needed: x86, x87, MMX, XMM, YMM
+// LLVM-NEXT:				x86 feature used: ZMM, FXSR, XSAVE, XSAVEOPT, XSAVEC
+// LLVM-NEXT:				x86 ISA needed: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
+// LLVM-NEXT:				x86 ISA used: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
+// LLVM-NEXT:				<application-specific type 0xfefefefe>
+// LLVM-NEXT:				stack size: <corrupt length: 0x0>
+// LLVM-NEXT:				stack size: <corrupt length: 0x4>
+// LLVM-NEXT:				no copy on protected <corrupt length: 0x1>
+// LLVM-NEXT:				x86 feature: <corrupt length: 0x0>
+// LLVM-NEXT:				x86 feature: IBT, <unknown flags: 0xf000f000>
+// LLVM-NEXT:				<corrupt type (0x2) datasz: 0x1>
+// LLVM-NEXT:			]
+// LLVM-NEXT:		}
+// LLVM-NEXT:	  ]
 // LLVM-NEXT:   }
 // LLVM-NEXT: ]
 

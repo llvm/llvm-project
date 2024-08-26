@@ -46,6 +46,7 @@ public:
   const uint16_t RegSizeInBits;
   const int8_t CopyCost;
   const bool Allocatable;
+  const bool BaseClass;
 
   /// getID() - Return the register class ID number.
   ///
@@ -97,6 +98,9 @@ public:
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
   bool isAllocatable() const { return Allocatable; }
+
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return BaseClass; }
 };
 
 /// MCRegisterDesc - This record contains information about a particular
@@ -122,6 +126,9 @@ struct MCRegisterDesc {
   /// Index into list with lane mask sequences. The sequence contains a lanemask
   /// for every register unit.
   uint16_t RegUnitLaneMasks;
+
+  // Is true for constant registers.
+  bool IsConstant;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -149,13 +156,6 @@ public:
     bool operator<(DwarfLLVMRegPair RHS) const { return FromReg < RHS.FromReg; }
   };
 
-  /// SubRegCoveredBits - Emitted by tablegen: bit range covered by a subreg
-  /// index, -1 in any being invalid.
-  struct SubRegCoveredBits {
-    uint16_t Offset;
-    uint16_t Size;
-  };
-
 private:
   const MCRegisterDesc *Desc;                 // Pointer to the descriptor array
   unsigned NumRegs;                           // Number of entries in the array
@@ -172,8 +172,6 @@ private:
   const char *RegClassStrings;                // Pointer to the class strings.
   const uint16_t *SubRegIndices;              // Pointer to the subreg lookup
                                               // array.
-  const SubRegCoveredBits *SubRegIdxRanges;   // Pointer to the subreg covered
-                                              // bit ranges array.
   unsigned NumSubRegIndices;                  // Number of subreg indices.
   const uint16_t *RegEncodingTable;           // Pointer to array of register
                                               // encodings.
@@ -188,6 +186,9 @@ private:
   const DwarfLLVMRegPair *EHDwarf2LRegs;      // Dwarf to LLVM regs mapping EH
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
+
+  mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
+  ArrayRef<MCPhysReg> getCachedAliasesOf(MCPhysReg R) const;
 
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
@@ -265,6 +266,7 @@ public:
   friend class MCRegUnitIterator;
   friend class MCRegUnitMaskIterator;
   friend class MCRegUnitRootIterator;
+  friend class MCRegAliasIterator;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -274,7 +276,6 @@ public:
                           const int16_t *DL, const LaneBitmask *RUMS,
                           const char *Strings, const char *ClassStrings,
                           const uint16_t *SubIndices, unsigned NumIndices,
-                          const SubRegCoveredBits *SubIdxRanges,
                           const uint16_t *RET) {
     Desc = D;
     NumRegs = NR;
@@ -290,7 +291,6 @@ public:
     NumRegUnits = NRU;
     SubRegIndices = SubIndices;
     NumSubRegIndices = NumIndices;
-    SubRegIdxRanges = SubIdxRanges;
     RegEncodingTable = RET;
 
     // Initialize DWARF register mapping variables
@@ -302,6 +302,8 @@ public:
     EHDwarf2LRegsSize = 0;
     Dwarf2LRegs = nullptr;
     Dwarf2LRegsSize = 0;
+
+    RegAliasesCache.resize(NumRegs);
   }
 
   /// Used to initialize LLVM register to Dwarf
@@ -383,21 +385,14 @@ public:
   /// otherwise.
   unsigned getSubRegIndex(MCRegister RegNo, MCRegister SubRegNo) const;
 
-  /// Get the size of the bit range covered by a sub-register index.
-  /// If the index isn't continuous, return the sum of the sizes of its parts.
-  /// If the index is used to access subregisters of different sizes, return -1.
-  unsigned getSubRegIdxSize(unsigned Idx) const;
-
-  /// Get the offset of the bit range covered by a sub-register index.
-  /// If an Offset doesn't make sense (the index isn't continuous, or is used to
-  /// access sub-registers at different offsets), return -1.
-  unsigned getSubRegIdxOffset(unsigned Idx) const;
-
   /// Return the human-readable symbolic target-specific name for the
   /// specified physical register.
   const char *getName(MCRegister RegNo) const {
     return RegStrings + get(RegNo).Name;
   }
+
+  /// Returns true if the given register is constant.
+  bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
 
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
@@ -568,9 +563,10 @@ public:
   bool isValid() const { return SRIter.isValid(); }
 
   /// Moves to the next position.
-  void operator++() {
+  MCSubRegIndexIterator &operator++() {
     ++SRIter;
     ++SRIndex;
+    return *this;
   }
 };
 
@@ -684,9 +680,10 @@ public:
   bool isValid() const { return RUIter.isValid(); }
 
   /// Moves to the next position.
-  void operator++() {
+  MCRegUnitMaskIterator &operator++() {
     ++MaskListIter;
     ++RUIter;
+    return *this;
   }
 };
 
@@ -724,70 +721,39 @@ public:
   }
 
   /// Preincrement to move to the next root register.
-  void operator++() {
+  MCRegUnitRootIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
     Reg0 = Reg1;
     Reg1 = 0;
+    return *this;
   }
 };
 
-/// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
-/// set, Reg itself is included in the list.  This iterator does not guarantee
-/// any ordering or that entries are unique.
+/// MCRegAliasIterator enumerates all registers aliasing Reg.
 class MCRegAliasIterator {
 private:
-  MCRegister Reg;
-  const MCRegisterInfo *MCRI;
-  bool IncludeSelf;
-
-  MCRegUnitIterator RI;
-  MCRegUnitRootIterator RRI;
-  MCSuperRegIterator SI;
+  const MCPhysReg *It = nullptr;
+  const MCPhysReg *End = nullptr;
 
 public:
   MCRegAliasIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
-                     bool IncludeSelf)
-    : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
-    // Initialize the iterators.
-    for (RI = MCRegUnitIterator(Reg, MCRI); RI.isValid(); ++RI) {
-      for (RRI = MCRegUnitRootIterator(*RI, MCRI); RRI.isValid(); ++RRI) {
-        for (SI = MCSuperRegIterator(*RRI, MCRI, true); SI.isValid(); ++SI) {
-          if (!(!IncludeSelf && Reg == *SI))
-            return;
-        }
-      }
-    }
+                     bool IncludeSelf) {
+    ArrayRef<MCPhysReg> Cache = MCRI->getCachedAliasesOf(Reg);
+    assert(Cache.back() == Reg);
+    It = Cache.begin();
+    End = Cache.end();
+    if (!IncludeSelf)
+      --End;
   }
 
-  bool isValid() const { return RI.isValid(); }
+  bool isValid() const { return It != End; }
 
-  MCRegister operator*() const {
-    assert(SI.isValid() && "Cannot dereference an invalid iterator.");
-    return *SI;
-  }
+  MCRegister operator*() const { return *It; }
 
-  void advance() {
-    // Assuming SI is valid.
-    ++SI;
-    if (SI.isValid()) return;
-
-    ++RRI;
-    if (RRI.isValid()) {
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-      return;
-    }
-
-    ++RI;
-    if (RI.isValid()) {
-      RRI = MCRegUnitRootIterator(*RI, MCRI);
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-    }
-  }
-
-  void operator++() {
+  MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
-    do advance();
-    while (!IncludeSelf && isValid() && *SI == Reg);
+    ++It;
+    return *this;
   }
 };
 

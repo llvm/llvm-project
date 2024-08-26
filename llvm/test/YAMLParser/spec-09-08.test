@@ -1,3 +1,14 @@
-# RUN: yaml-bench -canonical %s
+# RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
+# CHECK: "as space trimmed\nspecific\L none"
 
- 'as space	 trimmed  specific  none'
+## Note: The parsing rules were changed in version 1.2 and the line-separator
+## character is no longer considered a line-break character. The example is
+## taken from Spec 1.1 and is now parsed as "..\L .." instead of "..\L\n.." as
+## in the original edition.
+## See https://yaml.org/spec/1.2.2/ext/changes/ for details.
+
+ 'as space	
+ trimmed 
+ 
+ specific 
+ none'

@@ -183,6 +183,7 @@ public:
   constexpr bool IsUnlimitedPolymorphic() const { // TYPE(*) or CLASS(*)
     return IsPolymorphic() && !derived_;
   }
+  bool IsLengthlessIntrinsicType() const;
   constexpr const semantics::DerivedTypeSpec &GetDerivedTypeSpec() const {
     return DEREF(derived_);
   }
@@ -206,6 +207,10 @@ public:
   std::optional<bool> ExtendsTypeOf(const DynamicType &) const;
   // SAME_TYPE_AS (16.9.165); ignores type parameter values
   std::optional<bool> SameTypeAs(const DynamicType &) const;
+
+  // 7.5.2.4 type equivalence; like operator==(), but SEQUENCE/BIND(C)
+  // derived types can be structurally equivalent.
+  bool IsEquivalentTo(const DynamicType &) const;
 
   // Result will be missing when a symbol is absent or
   // has an erroneous type, e.g., REAL(KIND=666).
@@ -267,8 +272,6 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
-std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
-
 template <TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
   static constexpr TypeCategory category{CATEGORY};
   static constexpr int kind{KIND};
@@ -290,7 +293,10 @@ class Type<TypeCategory::Real, KIND>
 public:
   static constexpr int precision{common::PrecisionOfRealKind(KIND)};
   static constexpr int bits{common::BitsForBinaryPrecision(precision)};
-  using Scalar = value::Real<value::Integer<bits>, precision>;
+  using Scalar =
+      value::Real<std::conditional_t<precision == 64,
+                      value::X87IntegerContainer, value::Integer<bits>>,
+          precision>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.
@@ -479,7 +485,8 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(const DynamicType &,
+// Returns nullopt for deferred, assumed, and non-constant lengths.
+std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &,
     const common::LanguageFeatureControl * = nullptr,
     bool checkCharLength = true);
 bool IsCUDAIntrinsicType(const DynamicType &);
@@ -487,7 +494,9 @@ bool IsCUDAIntrinsicType(const DynamicType &);
 // Determine whether two derived type specs are sufficiently identical
 // to be considered the "same" type even if declared separately.
 bool AreSameDerivedType(
-    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y);
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

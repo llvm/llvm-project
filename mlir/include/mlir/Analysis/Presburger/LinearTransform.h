@@ -40,19 +40,17 @@ public:
 
   // The given vector is interpreted as a row vector v. Post-multiply v with
   // this transform, say T, and return vT.
-  SmallVector<MPInt, 8> preMultiplyWithRow(ArrayRef<MPInt> rowVec) const {
+  SmallVector<DynamicAPInt, 8>
+  preMultiplyWithRow(ArrayRef<DynamicAPInt> rowVec) const {
     return matrix.preMultiplyWithRow(rowVec);
   }
 
   // The given vector is interpreted as a column vector v. Pre-multiply v with
   // this transform, say T, and return Tv.
-  SmallVector<MPInt, 8> postMultiplyWithColumn(ArrayRef<MPInt> colVec) const {
+  SmallVector<DynamicAPInt, 8>
+  postMultiplyWithColumn(ArrayRef<DynamicAPInt> colVec) const {
     return matrix.postMultiplyWithColumn(colVec);
   }
-
-  // Compute the determinant of the transform by converting it to row echelon
-  // form and then taking the product of the diagonal.
-  MPInt determinant();
 
 private:
   IntMatrix matrix;

@@ -305,7 +305,7 @@ define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: ge_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
@@ -497,7 +497,7 @@ define <2 x i64> @gt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: gt_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
@@ -613,7 +613,7 @@ define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: le_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
@@ -805,7 +805,7 @@ define <2 x i64> @lt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: lt_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2

@@ -25,7 +25,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
@@ -41,6 +40,13 @@ namespace fir {
 } // namespace fir
 
 #define DEBUG_TYPE "stack-arrays"
+
+static llvm::cl::opt<std::size_t> maxAllocsPerFunc(
+    "stack-arrays-max-allocs",
+    llvm::cl::desc("The maximum number of heap allocations to consider in one "
+                   "function before skipping (to save compilation time). Set "
+                   "to 0 for no limit."),
+    llvm::cl::init(1000), llvm::cl::Hidden);
 
 namespace {
 
@@ -143,8 +149,9 @@ class AllocationAnalysis
 public:
   using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
-  void visitOperation(mlir::Operation *op, const LatticePoint &before,
-                      LatticePoint *after) override;
+  mlir::LogicalResult visitOperation(mlir::Operation *op,
+                                     const LatticePoint &before,
+                                     LatticePoint *after) override;
 
   /// At an entry point, the last modifications of all memory resources are
   /// yet to be determined
@@ -153,7 +160,7 @@ public:
 protected:
   /// Visit control flow operations and decide whether to call visitOperation
   /// to apply the transfer function
-  void processOperation(mlir::Operation *op) override;
+  mlir::LogicalResult processOperation(mlir::Operation *op) override;
 };
 
 /// Drives analysis to find candidate fir.allocmem operations which could be
@@ -173,7 +180,7 @@ public:
 private:
   llvm::DenseMap<mlir::Operation *, AllocMemMap> funcMaps;
 
-  mlir::LogicalResult analyseFunction(mlir::Operation *func);
+  llvm::LogicalResult analyseFunction(mlir::Operation *func);
 };
 
 /// Converts a fir.allocmem to a fir.alloca
@@ -184,7 +191,7 @@ public:
       const StackArraysAnalysisWrapper::AllocMemMap &candidateOps)
       : OpRewritePattern(ctx), candidateOps{candidateOps} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::AllocMemOp allocmem,
                   mlir::PatternRewriter &rewriter) const override;
 
@@ -281,7 +288,7 @@ mlir::ChangeResult LatticePoint::join(const AbstractDenseLattice &lattice) {
 
 void LatticePoint::print(llvm::raw_ostream &os) const {
   for (const auto &[value, state] : stateMap) {
-    os << value << ": ";
+    os << "\n * " << value << ": ";
     ::print(os, state);
   }
 }
@@ -323,9 +330,8 @@ std::optional<AllocationState> LatticePoint::get(mlir::Value val) const {
   return it->second;
 }
 
-void AllocationAnalysis::visitOperation(mlir::Operation *op,
-                                        const LatticePoint &before,
-                                        LatticePoint *after) {
+mlir::LogicalResult AllocationAnalysis::visitOperation(
+    mlir::Operation *op, const LatticePoint &before, LatticePoint *after) {
   LLVM_DEBUG(llvm::dbgs() << "StackArrays: Visiting operation: " << *op
                           << "\n");
   LLVM_DEBUG(llvm::dbgs() << "--Lattice in: " << before << "\n");
@@ -340,14 +346,14 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     if (attr && attr.getValue()) {
       LLVM_DEBUG(llvm::dbgs() << "--Found fir.must_be_heap: skipping\n");
       // skip allocation marked not to be moved
-      return;
+      return mlir::success();
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!retTy.isa<fir::SequenceType>()) {
+    if (!mlir::isa<fir::SequenceType>(retTy)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "--Allocation is not for an array: skipping\n");
-      return;
+      return mlir::success();
     }
 
     mlir::Value result = op->getResult(0);
@@ -355,6 +361,13 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
   } else if (mlir::isa<fir::FreeMemOp>(op)) {
     assert(op->getNumOperands() == 1 && "fir.freemem has one operand");
     mlir::Value operand = op->getOperand(0);
+
+    // Note: StackArrays is scheduled in the pass pipeline after lowering hlfir
+    // to fir. Therefore, we only need to handle `fir::DeclareOp`s.
+    if (auto declareOp =
+            llvm::dyn_cast_if_present<fir::DeclareOp>(operand.getDefiningOp()))
+      operand = declareOp.getMemref();
+
     std::optional<AllocationState> operandState = before.get(operand);
     if (operandState && *operandState == AllocationState::Allocated) {
       // don't tag things not allocated in this function as freed, so that we
@@ -374,6 +387,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
 
   LLVM_DEBUG(llvm::dbgs() << "--Lattice out: " << *after << "\n");
   propagateIfChanged(after, changed);
+  return mlir::success();
 }
 
 void AllocationAnalysis::setToEntryState(LatticePoint *lattice) {
@@ -382,18 +396,20 @@ void AllocationAnalysis::setToEntryState(LatticePoint *lattice) {
 
 /// Mostly a copy of AbstractDenseLattice::processOperation - the difference
 /// being that call operations are passed through to the transfer function
-void AllocationAnalysis::processOperation(mlir::Operation *op) {
+mlir::LogicalResult AllocationAnalysis::processOperation(mlir::Operation *op) {
   // If the containing block is not executable, bail out.
   if (!getOrCreateFor<mlir::dataflow::Executable>(op, op->getBlock())->isLive())
-    return;
+    return mlir::success();
 
   // Get the dense lattice to update
   mlir::dataflow::AbstractDenseLattice *after = getLattice(op);
 
   // If this op implements region control-flow, then control-flow dictates its
   // transfer function.
-  if (auto branch = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op))
-    return visitRegionBranchOperation(op, branch, after);
+  if (auto branch = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
+    visitRegionBranchOperation(op, branch, after);
+    return mlir::success();
+  }
 
   // pass call operations through to the transfer function
 
@@ -405,12 +421,23 @@ void AllocationAnalysis::processOperation(mlir::Operation *op) {
     before = getLatticeFor(op, op->getBlock());
 
   /// Invoke the operation transfer function
-  visitOperationImpl(op, *before, after);
+  return visitOperationImpl(op, *before, after);
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   assert(mlir::isa<mlir::func::FuncOp>(func));
+  size_t nAllocs = 0;
+  func->walk([&nAllocs](fir::AllocMemOp) { nAllocs++; });
+  // don't bother with the analysis if there are no heap allocations
+  if (nAllocs == 0)
+    return mlir::success();
+  if ((maxAllocsPerFunc != 0) && (nAllocs > maxAllocsPerFunc)) {
+    LLVM_DEBUG(llvm::dbgs() << "Skipping stack arrays for function with "
+                            << nAllocs << " heap allocations");
+    return mlir::success();
+  }
+
   mlir::DataFlowSolver solver;
   // constant propagation is required for dead code analysis, dead code analysis
   // is required to mark blocks live (required for mlir dense dfa)
@@ -431,10 +458,15 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     const LatticePoint *lattice = solver.lookupState<LatticePoint>(op);
     // there will be no lattice for an unreachable block
     if (lattice)
-      point.join(*lattice);
+      (void)point.join(*lattice);
   };
+
   func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
   func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });
+  func->walk(
+      [&](mlir::omp::TerminatorOp child) { joinOperationLattice(child); });
+  func->walk([&](mlir::omp::YieldOp child) { joinOperationLattice(child); });
+
   llvm::DenseSet<mlir::Value> freedValues;
   point.appendFreedValues(freedValues);
 
@@ -489,7 +521,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
   return conv;
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
                                     mlir::PatternRewriter &rewriter) const {
   auto oldInsertionPt = rewriter.saveInsertionPoint();
@@ -501,9 +533,18 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
 
   // remove freemem operations
   llvm::SmallVector<mlir::Operation *> erases;
-  for (mlir::Operation *user : allocmem.getOperation()->getUsers())
+  for (mlir::Operation *user : allocmem.getOperation()->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          erases.push_back(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user))
       erases.push_back(user);
+  }
+
   // now we are done iterating the users, it is safe to mutate them
   for (mlir::Operation *erase : erases)
     rewriter.eraseOp(erase);
@@ -616,9 +657,19 @@ AllocMemConversion::findAllocaLoopInsertionPoint(fir::AllocMemOp &oldAlloc) {
 
   // find freemem ops
   llvm::SmallVector<mlir::Operation *, 1> freeOps;
-  for (mlir::Operation *user : oldAllocOp->getUsers())
+
+  for (mlir::Operation *user : oldAllocOp->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          freeOps.push_back(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user))
       freeOps.push_back(user);
+  }
+
   assert(freeOps.size() && "DFA should only return freed memory");
 
   // Don't attempt to reason about a stacksave/stackrestore between different
@@ -690,9 +741,9 @@ void AllocMemConversion::insertStackSaveRestore(
   builder.setInsertionPoint(oldAlloc);
   mlir::Value sp =
       builder
-          .create<fir::CallOp>(oldAlloc.getLoc(),
+          .create<fir::CallOp>(oldAlloc.getLoc(), stackSaveSym,
                                stackSaveFn.getFunctionType().getResults(),
-                               stackSaveSym, mlir::ValueRange{})
+                               mlir::ValueRange{})
           .getResult(0);
 
   mlir::func::FuncOp stackRestoreFn =
@@ -700,12 +751,23 @@ void AllocMemConversion::insertStackSaveRestore(
   mlir::SymbolRefAttr stackRestoreSym =
       builder.getSymbolRefAttr(stackRestoreFn.getName());
 
+  auto createStackRestoreCall = [&](mlir::Operation *user) {
+    builder.setInsertionPoint(user);
+    builder.create<fir::CallOp>(user->getLoc(), stackRestoreSym,
+                                stackRestoreFn.getFunctionType().getResults(),
+                                mlir::ValueRange{sp});
+  };
+
   for (mlir::Operation *user : oldAlloc->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          createStackRestoreCall(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user)) {
-      builder.setInsertionPoint(user);
-      builder.create<fir::CallOp>(user->getLoc(),
-                                  stackRestoreFn.getFunctionType().getResults(),
-                                  stackRestoreSym, mlir::ValueRange{sp});
+      createStackRestoreCall(user);
     }
   }
 
@@ -749,7 +811,7 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
   mlir::RewritePatternSet patterns(&context);
   mlir::GreedyRewriteConfig config;
   // prevent the pattern driver form merging blocks
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
   if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
@@ -757,8 +819,4 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<mlir::Pass> fir::createStackArraysPass() {
-  return std::make_unique<StackArraysPass>();
 }

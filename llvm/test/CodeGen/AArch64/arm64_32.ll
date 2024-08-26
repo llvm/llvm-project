@@ -598,7 +598,7 @@ define void @test_asm_memory(ptr %base.addr) {
 
 define void @test_unsafe_asm_memory(i64 %val) {
 ; CHECK-LABEL: test_unsafe_asm_memory:
-; CHECK: and x[[ADDR:[0-9]+]], x0, #0xffffffff
+; CHECK: mov w[[ADDR:[0-9]+]], w0
 ; CHECK: str wzr, [x[[ADDR]]]
   %addr_int = trunc i64 %val to i32
   %addr = inttoptr i32 %addr_int to ptr
@@ -615,7 +615,8 @@ define [9 x ptr] @test_demoted_return(ptr %in) {
 
 define ptr @test_inttoptr(i64 %in) {
 ; CHECK-LABEL: test_inttoptr:
-; CHECK: and x0, x0, #0xffffffff
+; CHECK-OPT: mov w0, w0
+; CHECK-FAST: and x0, x0, #0xffffffff
   %res = inttoptr i64 %in to ptr
   ret ptr %res
 }
@@ -732,7 +733,7 @@ define ptr @test_gep_nonpow2(ptr %a0, i32 %a1) {
 define void @test_memset(i64 %in, i8 %value)  {
 ; CHECK-LABEL: test_memset:
 ; CHECK-DAG: lsr x2, x0, #32
-; CHECK-DAG: and x0, x0, #0xffffffff
+; CHECK-DAG: mov w0, w0
 ; CHECK: b _memset
 
   %ptr.i32 = trunc i64 %in to i32
@@ -746,7 +747,7 @@ define void @test_memset(i64 %in, i8 %value)  {
 define void @test_bzero(i64 %in)  {
 ; CHECK-LABEL: test_bzero:
 ; CHECK-DAG: lsr x1, x0, #32
-; CHECK-DAG: and x0, x0, #0xffffffff
+; CHECK-DAG: mov w0, w0
 ; CHECK: b _bzero
 
   %ptr.i32 = trunc i64 %in to i32
@@ -758,6 +759,20 @@ define void @test_bzero(i64 %in)  {
 }
 
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
+
+define i1 @test_stackguard(ptr %p1) {
+; CHECK-LABEL: test_stackguard:
+; CHECK: adrp x[[TMP:[0-9]+]], ___stack_chk_guard@GOTPAGE
+; CHECK: ldr [[GUARD:w[0-9]+]], [x[[TMP]], ___stack_chk_guard@GOTPAGEOFF]
+; CHECK: cmp [[GUARD]], w
+
+  %p2 = call ptr @llvm.stackguard()
+  %res = icmp ne ptr %p2, %p1
+  ret i1 %res
+}
+declare ptr @llvm.stackguard()
+@__stack_chk_guard = external global i32
+
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"PIC Level", i32 2}

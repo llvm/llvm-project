@@ -11,7 +11,7 @@
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-ALIEN: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-ALIEN: declare extern_weak void @llvm.objc.release(ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr returned)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.initWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.loadWeakRetained(ptr)
@@ -24,7 +24,7 @@
 // ARC-NATIVE: declare ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-NATIVE: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-NATIVE: declare void @llvm.objc.release(ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr returned)
+// ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.initWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.loadWeakRetained(ptr)
@@ -362,7 +362,7 @@ void test13(void) {
 
   extern fnty ^test13_block;
   // CHECK-NEXT: [[TMP:%.*]] = load ptr, ptr @test13_block, align
-  // CHECK-NEXT: [[BLOCK_FN_PTR:%.*]] = getelementptr inbounds [[BLOCKTY:%.*]], ptr [[TMP]], i32 0, i32 3
+  // CHECK-NEXT: [[BLOCK_FN_PTR:%.*]] = getelementptr inbounds nuw [[BLOCKTY:%.*]], ptr [[TMP]], i32 0, i32 3
   // CHECK-NEXT: [[X_VAL:%.*]] = load ptr, ptr [[X]], align
   // CHECK-NEXT: [[X_TMP:%.*]] = call ptr @llvm.objc.retain(ptr [[X_VAL]]) [[NUW]]
   // CHECK-NEXT: [[BLOCK_FN_TMP:%.*]] = load ptr, ptr [[BLOCK_FN_PTR]]
@@ -1358,11 +1358,11 @@ struct AggDtor getAggDtor(void);
 // CHECK-LABEL: define{{.*}} void @test71
 void test71(void) {
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T]])
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T2:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T2]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T2]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T2]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T2]])
   getAggDtor();
@@ -1377,11 +1377,10 @@ void test71(void) {
 // CHECK: %[[T:.*]] = alloca [2 x ptr], align 16
 // CHECK: %[[V0:.*]] = call ptr @llvm.objc.retain(ptr %[[A]])
 // CHECK: %[[V1:.*]] = call ptr @llvm.objc.retain(ptr %[[B]]) #2
-// CHECK: %[[ARRAYINIT_BEGIN:.*]] = getelementptr inbounds [2 x ptr], ptr %[[T]], i64 0, i64 0
 // CHECK: %[[V3:.*]] = load ptr, ptr %[[A_ADDR]], align 8, !tbaa !7
 // CHECK: %[[V4:.*]] = call ptr @llvm.objc.retain(ptr %[[V3]]) #2
-// CHECK: store ptr %[[V4]], ptr %[[ARRAYINIT_BEGIN]], align 8, !tbaa !7
-// CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[ARRAYINIT_BEGIN]], i64 1
+// CHECK: store ptr %[[V4]], ptr %[[T]], align 8, !tbaa !7
+// CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[T]], i64 1
 // CHECK: %[[V5:.*]] = load ptr, ptr %[[B_ADDR]], align 8, !tbaa !7
 // CHECK: %[[V6:.*]] = call ptr @llvm.objc.retain(ptr %[[V5]]) #2
 // CHECK: store ptr %[[V6]], ptr %[[ARRAYINIT_ELEMENT]], align 8, !tbaa !7

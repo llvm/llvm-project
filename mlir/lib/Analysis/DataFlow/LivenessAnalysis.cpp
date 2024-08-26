@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/SymbolTable.h"
+#include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
 #include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
@@ -66,9 +68,9 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 ///   (3.b) `A` is used to compute some value `C` and `C` is used to compute
 ///   `B`.
 
-void LivenessAnalysis::visitOperation(Operation *op,
-                                      ArrayRef<Liveness *> operands,
-                                      ArrayRef<const Liveness *> results) {
+LogicalResult
+LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
+                                 ArrayRef<const Liveness *> results) {
   // This marks values of type (1.a) liveness as "live".
   if (!isMemoryEffectFree(op)) {
     for (auto *operand : operands)
@@ -87,6 +89,7 @@ void LivenessAnalysis::visitOperation(Operation *op,
     }
     addDependency(const_cast<Liveness *>(r), op);
   }
+  return success();
 }
 
 void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
@@ -156,7 +159,7 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   SmallVector<const Liveness *, 4> resultsLiveness;
   for (const Value result : op->getResults())
     resultsLiveness.push_back(getLatticeElement(result));
-  visitOperation(op, operandLiveness, resultsLiveness);
+  (void)visitOperation(op, operandLiveness, resultsLiveness);
 
   // We also visit the parent op with the parent's results and this operand if
   // `op` is a `RegionBranchTerminatorOpInterface` because its non-forwarded
@@ -168,7 +171,7 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   SmallVector<const Liveness *, 4> parentResultsLiveness;
   for (const Value parentResult : parentOp->getResults())
     parentResultsLiveness.push_back(getLatticeElement(parentResult));
-  visitOperation(parentOp, operandLiveness, parentResultsLiveness);
+  (void)visitOperation(parentOp, operandLiveness, parentResultsLiveness);
 }
 
 void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
@@ -189,7 +192,7 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
   // This marks values of type (2) liveness as "live".
-  lattice->markLive();
+  (void)lattice->markLive();
 }
 
 //===----------------------------------------------------------------------===//
