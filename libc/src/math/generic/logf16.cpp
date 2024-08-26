@@ -36,7 +36,6 @@ static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
         {0x0987U, 0xc858U, 0U, 1U, 0U},
         // x = 0x1.f2p-12, logf16(x) = -0x1.e98p+2 (RZ)
         {0x0fc8U, 0xc7a6U, 0U, 1U, 1U},
-// x = 0x1.4d4p-9, logf16(x) = -0x1.7e4p+2 (RZ)
 #endif
         // x = 0x1.4d4p-9, logf16(x) = -0x1.7e4p+2 (RZ)
         {0x1935U, 0xc5f9U, 0U, 1U, 0U},
