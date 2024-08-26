@@ -17,6 +17,7 @@
 #include <array>
 #include <cassert>
 #include <vector>
+#include <deque>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -100,6 +101,15 @@ int main(int, char**) {
 #if TEST_STD_VER >= 20
   static_assert(test());
 #endif
+
+  // check that segmented iterators work properly
+  int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
+  for (const int size : sizes) {
+    std::deque<bool> in(size, false);
+    std::deque<bool> expected(size, true);
+    std::fill(in.begin(), in.end(), true);
+    assert(in == expected);
+  }
 
   return 0;
 }
