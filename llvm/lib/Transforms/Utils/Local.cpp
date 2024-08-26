@@ -1048,35 +1048,27 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
 // Check whether removing BB will make the phis in its Succ have too
 // many incoming entries. This function does not check whether BB is foldable
 // or not.
-static bool introduceTooComplexPhi(BasicBlock *BB) {
-  // Check BB only has phi and an unconditional branch
-  BranchInst *Branch = dyn_cast<BranchInst>(BB->getFirstNonPHIOrDbg(true));
-  assert(Branch && Branch->isUnconditional() && "BB is not an empty block");
-
+static bool introduceTooComplexPhi(BasicBlock *BB, BasicBlock *Succ) {
   // If BB only has one predecessor, then removing it will not introduce more
   // incoming edges for phis.
   if (BB->hasNPredecessors(1))
     return false;
   int NumPreds = pred_size(BB);
-  auto *Succ = BB->getTerminator()->getSuccessor(0);
   for (auto &Phi : Succ->phis()) {
-    int BlockIdx = Phi.getBasicBlockIndex(BB);
-    if (BlockIdx >= 0) {
-      // If the incoming value is a phi and the phi is defined in BB,
-      // then removing BB will not increase the total phi entries of the ir.
-      if (PHINode *IncomingPhi =
-              dyn_cast<PHINode>(Phi.getIncomingValue(BlockIdx)))
-        if (IncomingPhi->getParent() == BB)
-          continue;
-      // Otherwise, we need to add (NumPreds - 1) entries to the phi node.
-      // If removing BB makes the phi have more than
-      // MaxPhiEntriesAfterRemovingEmptyBlock incoming values, then it will be
-      // considered as introducing too complex phi to the ir.
-      // The default threshold is 100.
-      if ((NumPreds - 1) + Phi.getNumIncomingValues() >
-          MaxPhiEntriesAfterRemovingEmptyBlock)
-        return true;
-    }
+    // If the incoming value is a phi and the phi is defined in BB,
+    // then removing BB will not increase the total phi entries of the ir.
+    if (PHINode *IncomingPhi =
+            dyn_cast<PHINode>(Phi.getIncomingValueForBlock(BB)))
+      if (IncomingPhi->getParent() == BB)
+        continue;
+    // Otherwise, we need to add (NumPreds - 1) entries to the phi node.
+    // If removing BB makes the phi have more than
+    // MaxPhiEntriesAfterRemovingEmptyBlock incoming values, then it will be
+    // considered as introducing too complex phi to the ir.
+    // The default threshold is 100.
+    if ((NumPreds - 1) + Phi.getNumIncomingValues() >
+        MaxPhiEntriesAfterRemovingEmptyBlock)
+      return true;
   }
   return false;
 }
@@ -1180,7 +1172,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       BBKillable ||
       CanRedirectPredsOfEmptyBBToSucc(BB, Succ, BBPreds, SuccPreds, CommonPred);
 
-  if ((!BBKillable && !BBPhisMergeable) || introduceTooComplexPhi(BB))
+  if ((!BBKillable && !BBPhisMergeable) || introduceTooComplexPhi(BB, Succ))
     return false;
 
   // Check to see if merging these blocks/phis would cause conflicts for any of
