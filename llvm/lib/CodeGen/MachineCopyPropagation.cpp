@@ -983,7 +983,7 @@ static bool isBackwardPropagatableCopy(const DestSourcePair &CopyOperands,
   if (MRI.isReserved(Def) || MRI.isReserved(Src))
     return false;
 
-  return CopyOperands.Source->isKill();
+  return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
 }
 
 void MachineCopyPropagation::propagateDefs(MachineInstr &MI) {
