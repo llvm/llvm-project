@@ -134,7 +134,7 @@ public:
              const std::string loc)
       : ScriptExpr(ExprKind::Binary), op_(op), LHS(LHS), RHS(RHS), loc_(loc) {}
 
-  uint64_t evaluateSymbolAssignment();
+  ExprValue evaluateSymbolAssignment();
   // Some operations only support one non absolute value. Move the
   // absolute one to the right hand side for convenience.
   static void moveAbsRight(ExprValue &a, ExprValue &b);

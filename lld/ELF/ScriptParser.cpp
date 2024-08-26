@@ -1164,31 +1164,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
     e = make<DynamicExpr>([=, c = op[0]]() -> ExprValue {
       ExprValue lhs = script->getSymbolValue(name, loc);
       BinaryExpr *expr = make<BinaryExpr>(op, lhs, e->getExprValue(), loc);
-      switch (c) {
-      case '*':
-        return lhs.getValue() * e->getExprValueAlignValue();
-      case '/':
-        if (uint64_t rv = e->getExprValueAlignValue())
-          return lhs.getValue() / rv;
-        error(loc + ": division by zero");
-        return 0;
-      case '+':
-        return BinaryExpr::add(lhs, e->getExprValue());
-      case '-':
-        return BinaryExpr::sub(lhs, e->getExprValue());
-      case '<':
-        return lhs.getValue() << e->getExprValueAlignValue() % 64;
-      case '>':
-        return lhs.getValue() >> e->getExprValueAlignValue() % 64;
-      case '&':
-        return lhs.getValue() & e->getExprValueAlignValue();
-      case '^':
-        return lhs.getValue() ^ e->getExprValueAlignValue();
-      case '|':
-        return lhs.getValue() | e->getExprValueAlignValue();
-      default:
-        llvm_unreachable("");
-      }
+      return expr->evaluateSymbolAssignment();
     });
   }
   return make<SymbolAssignment>(name, e, ctx.scriptSymOrderCounter++,

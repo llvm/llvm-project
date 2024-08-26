@@ -160,7 +160,7 @@ uint64_t ScriptExpr::getExprValueAlignValue() const {
   return e.getValue();
 }
 
-uint64_t BinaryExpr::evaluateSymbolAssignment() {
+ExprValue BinaryExpr::evaluateSymbolAssignment() {
   switch (op_[0]) {
   case '*':
     return LHS.getValue() * RHS.getValue();
@@ -169,7 +169,22 @@ uint64_t BinaryExpr::evaluateSymbolAssignment() {
       return LHS.getValue() / rv;
     error(loc_ + ": division by zero");
     return 0;
-    // case '+':
+  case '+':
+    return add(LHS, RHS);
+  case '-':
+    return sub(LHS, RHS);
+  case '<':
+    return LHS.getValue() << RHS.getValue() % 64;
+  case '>':
+    return LHS.getValue() >> RHS.getValue() % 64;
+  case '&':
+    return LHS.getValue() & RHS.getValue();
+  case '^':
+    return LHS.getValue() ^ RHS.getValue();
+  case '|':
+    return LHS.getValue() | RHS.getValue();
+  default:
+    llvm_unreachable("");
   }
   return 0;
 }
