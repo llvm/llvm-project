@@ -23,9 +23,7 @@
 // RUN: %env_ubsan_opts=halt_on_error=1 not %run %t nN 2>&1 | FileCheck %s --check-prefix=CHECK-NULL-MEMFUN --strict-whitespace
 // RUN: %env_ubsan_opts=print_stacktrace=1 %run %t dT 2>&1 | FileCheck %s --check-prefix=CHECK-DYNAMIC --allow-unused-prefixes --check-prefix=CHECK-%os-DYNAMIC --strict-whitespace
 
-// RUN: echo "vptr_check:S" > %t.supp
-// RUN: echo "vptr_check:T" >> %t.supp
-// RUN: echo "vptr_check:U" >> %t.supp
+// RUN: echo -e "vptr_check:S\nvptr_check:T\nvptr_check:U" > %t.supp
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mS
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t fS
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t cS
