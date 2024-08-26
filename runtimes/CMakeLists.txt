@@ -9,6 +9,8 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
 
 project(Runtimes C CXX ASM)
+set(LLVM_SUBPROJECT_TITLE "Runtimes")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -21,7 +23,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;offload")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -180,6 +182,25 @@ set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
 message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set(option_prefix "")
+  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+    set(option_prefix "/clang:")
+  endif()
+  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
+  execute_process(COMMAND ${print_target_triple}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE output
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(result EQUAL 0)
+    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
+  else()
+    string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+    # TODO(#97876): Report an error.
+    message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+  endif()
+endif()
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)

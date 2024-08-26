@@ -1400,12 +1400,6 @@ let hasPostISelHook = 1, Defs = [CPSR] in {
                 Sched<[WriteALU]>;
 }
 
-
-def : T1Pat<(ARMsubs tGPR:$Rn, tGPR:$Rm), (tSUBSrr $Rn, $Rm)>;
-def : T1Pat<(ARMsubs tGPR:$Rn, imm0_7:$imm3), (tSUBSi3 $Rn, imm0_7:$imm3)>;
-def : T1Pat<(ARMsubs tGPR:$Rn, imm0_255:$imm8), (tSUBSi8 $Rn, imm0_255:$imm8)>;
-
-
 // Sign-extend byte
 def tSXTB :                     // A8.6.222
   T1pIMiscEncode<{0,0,1,0,0,1,?}, (outs tGPR:$Rd), (ins tGPR:$Rm),

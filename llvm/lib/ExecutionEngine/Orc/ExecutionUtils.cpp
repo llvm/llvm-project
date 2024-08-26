@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -17,6 +18,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 
@@ -117,7 +119,7 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
 
   MangleAndInterner Mangle(
       JD.getExecutionSession(),
-      (*CtorDtors.begin()).Func->getParent()->getDataLayout());
+      (*CtorDtors.begin()).Func->getDataLayout());
 
   for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
@@ -294,7 +296,7 @@ StaticLibraryDefinitionGenerator::Load(
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
-    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    auto SliceRange = getMachOSliceRangeForTriple(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
 
@@ -357,7 +359,7 @@ StaticLibraryDefinitionGenerator::Create(
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
-    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    auto SliceRange = getMachOSliceRangeForTriple(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
 
@@ -422,6 +424,7 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   DenseMap<uint64_t, MemoryBufferRef> MemoryBuffers;
   DenseSet<uint64_t> Visited;
   DenseSet<uint64_t> Excluded;
+  StringSaver FileNames(ObjFileNameStorage);
   for (auto &S : Archive->symbols()) {
     StringRef SymName = S.getName();
     auto Member = S.getMember();
@@ -438,7 +441,17 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
         Excluded.insert(DataOffset);
         continue;
       }
-      MemoryBuffers[DataOffset] = (*Child)->getMemoryBufferRef();
+
+      // Give members of the archive a name that contains the archive path so
+      // that they can be differentiated from a member with the same name in a
+      // different archive. This also ensure initializer symbols names will be
+      // unique within a JITDylib.
+      StringRef FullName = FileNames.save(Archive->getFileName() + "(" +
+                                          (*Child)->getFileName() + ")");
+      MemoryBufferRef MemBuffer((*Child)->getMemoryBufferRef().getBuffer(),
+                                FullName);
+
+      MemoryBuffers[DataOffset] = MemBuffer;
     }
     if (!Excluded.count(DataOffset))
       ObjectFilesMap[L.getExecutionSession().intern(SymName)] =
@@ -446,27 +459,6 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   }
 
   return Error::success();
-}
-
-Expected<std::pair<size_t, size_t>>
-StaticLibraryDefinitionGenerator::getSliceRangeForArch(
-    object::MachOUniversalBinary &UB, const Triple &TT) {
-
-  for (const auto &Obj : UB.objects()) {
-    auto ObjTT = Obj.getTriple();
-    if (ObjTT.getArch() == TT.getArch() &&
-        ObjTT.getSubArch() == TT.getSubArch() &&
-        (TT.getVendor() == Triple::UnknownVendor ||
-         ObjTT.getVendor() == TT.getVendor())) {
-      // We found a match. Return the range for the slice.
-      return std::make_pair(Obj.getOffset(), Obj.getSize());
-    }
-  }
-
-  return make_error<StringError>(Twine("Universal binary ") + UB.getFileName() +
-                                     " does not contain a slice for " +
-                                     TT.str(),
-                                 inconvertibleErrorCode());
 }
 
 StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(

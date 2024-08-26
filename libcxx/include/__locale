@@ -49,6 +49,9 @@ _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale&);
 
 class _LIBCPP_EXPORTED_FROM_ABI locale {
 public:
+  // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor.
+  using __trivially_relocatable = locale;
+
   // types:
   class _LIBCPP_EXPORTED_FROM_ABI facet;
   class _LIBCPP_EXPORTED_FROM_ABI id;
@@ -343,12 +346,12 @@ public:
   static const mask __regex_word = 0x4000; // 0x8000 and 0x0100 and 0x00ff are used
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__)
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #  ifdef __APPLE__
   typedef __uint32_t mask;
 #  elif defined(__FreeBSD__)
   typedef unsigned long mask;
-#  elif defined(__EMSCRIPTEN__) || defined(__NetBSD__)
+#  elif defined(__NetBSD__)
   typedef unsigned short mask;
 #  endif
   static const mask space  = _CTYPE_S;

@@ -69,9 +69,9 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   // Mark the first block of the function as being executable.
   Solver.markBlockExecutable(&F.front());
 
-  // Mark all arguments to the function as being overdefined.
+  // Initialize arguments based on attributes.
   for (Argument &AI : F.args())
-    Solver.markOverdefined(&AI);
+    Solver.trackValueOfArgument(&AI);
 
   // Solve for constants.
   bool ResolvedUndefs = true;
@@ -119,7 +119,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
 }
 
 PreservedAnalyses SCCPPass::run(Function &F, FunctionAnalysisManager &AM) {
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);

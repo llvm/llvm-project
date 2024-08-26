@@ -48,7 +48,7 @@ static bool tryToImproveAlign(
 }
 
 bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   bool Changed = false;
 
   // Enforce preferred type alignment if possible. We do this as a separate

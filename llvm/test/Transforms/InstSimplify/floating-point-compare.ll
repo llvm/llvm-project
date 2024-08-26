@@ -547,30 +547,30 @@ define <2 x i1> @fabs_is_not_negative_anyzero(<2 x float> %V) {
   ret <2 x i1> %cmp
 }
 
-define <3 x i1> @fabs_is_not_negative_negzero_undef(<3 x float> %V) {
-; CHECK-LABEL: @fabs_is_not_negative_negzero_undef(
+define <3 x i1> @fabs_is_not_negative_negzero_poison(<3 x float> %V) {
+; CHECK-LABEL: @fabs_is_not_negative_negzero_poison(
 ; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %abs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %V)
-  %cmp = fcmp olt <3 x float> %abs, <float -0.0, float -0.0, float undef>
+  %cmp = fcmp olt <3 x float> %abs, <float -0.0, float -0.0, float poison>
   ret <3 x i1> %cmp
 }
 
-define <3 x i1> @fabs_is_not_negative_poszero_undef(<3 x float> %V) {
-; CHECK-LABEL: @fabs_is_not_negative_poszero_undef(
+define <3 x i1> @fabs_is_not_negative_poszero_poison(<3 x float> %V) {
+; CHECK-LABEL: @fabs_is_not_negative_poszero_poison(
 ; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %abs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %V)
-  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float 0.0, float undef>
+  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float 0.0, float poison>
   ret <3 x i1> %cmp
 }
 
-define <3 x i1> @fabs_is_not_negative_anyzero_undef(<3 x float> %V) {
-; CHECK-LABEL: @fabs_is_not_negative_anyzero_undef(
+define <3 x i1> @fabs_is_not_negative_anyzero_poison(<3 x float> %V) {
+; CHECK-LABEL: @fabs_is_not_negative_anyzero_poison(
 ; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %abs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %V)
-  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float -0.0, float undef>
+  %cmp = fcmp olt <3 x float> %abs, <float 0.0, float -0.0, float poison>
   ret <3 x i1> %cmp
 }
 
@@ -668,6 +668,38 @@ define i1 @assume_nonnan_x2_ord(float %x, float %y) {
   call void @llvm.assume(i1 %ord.x)
   %ord.y = fcmp ord float %y, 0.0
   call void @llvm.assume(i1 %ord.y)
+  %cmp = fcmp ord float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_x2_uno(float %x, float %y) {
+; CHECK-LABEL: @assume_nan_x2_uno(
+; CHECK-NEXT:    [[UNO_X:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
+; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
+; CHECK-NEXT:    ret i1 true
+;
+  %uno.x = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno.x)
+  %uno.y = fcmp uno float %y, 0.0
+  call void @llvm.assume(i1 %uno.y)
+  %cmp = fcmp uno float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_x2_ord(float %x, float %y) {
+; CHECK-LABEL: @assume_nan_x2_ord(
+; CHECK-NEXT:    [[UNO_X:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
+; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
+; CHECK-NEXT:    ret i1 false
+;
+  %uno.x = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno.x)
+  %uno.y = fcmp uno float %y, 0.0
+  call void @llvm.assume(i1 %uno.y)
   %cmp = fcmp ord float %x, %y
   ret i1 %cmp
 }
@@ -1335,19 +1367,19 @@ define <2 x i1> @orderedCompareWithNaNVector(<2 x double> %A) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @orderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
-; CHECK-LABEL: @orderedCompareWithNaNVector_undef_elt(
+define <2 x i1> @orderedCompareWithNaNVector_poison_elt(<2 x double> %A) {
+; CHECK-LABEL: @orderedCompareWithNaNVector_poison_elt(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %cmp = fcmp olt <2 x double> %A, <double 0xFFFFFFFFFFFFFFFF, double undef>
+  %cmp = fcmp olt <2 x double> %A, <double 0xFFFFFFFFFFFFFFFF, double poison>
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @unorderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
-; CHECK-LABEL: @unorderedCompareWithNaNVector_undef_elt(
+define <2 x i1> @unorderedCompareWithNaNVector_poison_elt(<2 x double> %A) {
+; CHECK-LABEL: @unorderedCompareWithNaNVector_poison_elt(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %cmp = fcmp ult <2 x double> %A, <double undef, double 0xFFFFFFFFFFFFFFFF>
+  %cmp = fcmp ult <2 x double> %A, <double poison, double 0xFFFFFFFFFFFFFFFF>
   ret <2 x i1> %cmp
 }
 

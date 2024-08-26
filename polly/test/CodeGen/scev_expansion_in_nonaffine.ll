@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; bugpoint-reduced testcase of MiBench/consumer-lame/quantize-pvt.c from the

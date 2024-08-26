@@ -32,6 +32,17 @@ void XeGPUDialect::initialize() {
 //===----------------------------------------------------------------------===//
 // XeGPU_TensorDescAttr
 //===----------------------------------------------------------------------===//
+TensorDescAttr TensorDescAttr::get(mlir::MLIRContext *context,
+                                   xegpu::MemoryScope memory_scope,
+                                   int array_length, bool boundary_check,
+                                   bool scattered) {
+  auto scopeAttr = MemoryScopeAttr::get(context, memory_scope);
+  auto lengthAttr =
+      IntegerAttr::get(IntegerType::get(context, 64), array_length);
+  auto boundaryAttr = BoolAttr::get(context, boundary_check);
+  auto scatteredAttr = BoolAttr::get(context, scattered);
+  return Base::get(context, scopeAttr, lengthAttr, boundaryAttr, scatteredAttr);
+}
 
 //===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
@@ -94,6 +105,16 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
     printer << ", " << encoding;
 
   printer << ">";
+}
+
+TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
+                                   mlir::Type elementType, bool scattered,
+                                   int array_length, MemoryScope memory_scope,
+                                   bool boundary_check) {
+  auto context = elementType.getContext();
+  auto attr = TensorDescAttr::get(context, memory_scope, array_length,
+                                  boundary_check, scattered);
+  return Base::get(context, shape, elementType, attr);
 }
 
 } // namespace xegpu

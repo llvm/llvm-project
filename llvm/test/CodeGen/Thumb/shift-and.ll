@@ -70,9 +70,8 @@ define i32 @test6(i32 %x) {
 ; CHECK-LABEL: test6:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movs r1, #5
-; CHECK-NEXT:    lsls r1, r1, #29
-; CHECK-NEXT:    lsls r0, r0, #29
-; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    ands r1, r0
+; CHECK-NEXT:    lsls r0, r1, #29
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = shl i32 %x, 29

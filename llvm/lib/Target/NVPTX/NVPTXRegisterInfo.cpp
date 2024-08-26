@@ -31,6 +31,8 @@ std::string getNVPTXRegClassName(TargetRegisterClass const *RC) {
     return ".f32";
   if (RC == &NVPTX::Float64RegsRegClass)
     return ".f64";
+  if (RC == &NVPTX::Int128RegsRegClass)
+    return ".b128";
   if (RC == &NVPTX::Int64RegsRegClass)
     // We use untyped (.b) integer registers here as NVCC does.
     // Correctness of generated code does not depend on register type,
@@ -67,6 +69,8 @@ std::string getNVPTXRegClassStr(TargetRegisterClass const *RC) {
     return "%f";
   if (RC == &NVPTX::Float64RegsRegClass)
     return "%fd";
+  if (RC == &NVPTX::Int128RegsRegClass)
+    return "%rq";
   if (RC == &NVPTX::Int64RegsRegClass)
     return "%rd";
   if (RC == &NVPTX::Int32RegsRegClass)

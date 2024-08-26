@@ -77,7 +77,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   %0 = transform.param.constant 2 : i64 -> !transform.param<i64>
-  // expected-error@below {{custom op 'transform.structured.vectorize' expected 2 operand type(s)}}
+  // expected-error@below {{custom op 'transform.structured.vectorize' 1 operands present, but expected 2}}
   transform.structured.vectorize %arg0 vector_sizes [%0, 2] : !transform.any_op, !transform.param<i64>, !transform.param<i64>
 
 }

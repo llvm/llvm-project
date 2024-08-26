@@ -328,8 +328,8 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       break;
     uptr pc_mask = (1ULL << 48) - 1;
     uptr pc = record & pc_mask;
-    frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
-                       reinterpret_cast<uptr>(record_addr), record);
+    frame_desc.AppendF("  record_addr:%p record:0x%zx",
+                       reinterpret_cast<const void *>(record_addr), record);
     SymbolizedStackHolder symbolized_stack(
         Symbolizer::GetOrInit()->SymbolizePC(pc));
     const SymbolizedStack *frame = symbolized_stack.get();

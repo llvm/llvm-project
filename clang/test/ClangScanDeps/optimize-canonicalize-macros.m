@@ -24,6 +24,7 @@
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "A"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -38,6 +39,7 @@
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "A"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

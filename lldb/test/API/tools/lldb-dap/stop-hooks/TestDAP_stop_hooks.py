@@ -9,7 +9,6 @@ import lldbdap_testcase
 
 
 class TestDAP_stop_hooks(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfRemote
     def test_stop_hooks_before_run(self):
         """
         Test that there is no race condition between lldb-dap and

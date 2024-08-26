@@ -105,6 +105,8 @@ protected:
 private:
   llvm::StringRef GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const;
   bool ParseInlineAsmUsingAsmParser;
+  void AddOpenMPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const;
 };
 
 } // end namespace toolchains

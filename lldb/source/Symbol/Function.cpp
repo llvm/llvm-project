@@ -220,17 +220,18 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
                                       ExecutionContext &exe_ctx) {
   Log *log = GetLog(LLDBLog::Step);
   Status error;
-  Value callee_addr_val;
-  if (!call_target.Evaluate(
-          &exe_ctx, exe_ctx.GetRegisterContext(), LLDB_INVALID_ADDRESS,
-          /*initial_value_ptr=*/nullptr,
-          /*object_address_ptr=*/nullptr, callee_addr_val, &error)) {
-    LLDB_LOGF(log, "IndirectCallEdge: Could not evaluate expression: %s",
-              error.AsCString());
+  llvm::Expected<Value> callee_addr_val = call_target.Evaluate(
+      &exe_ctx, exe_ctx.GetRegisterContext(), LLDB_INVALID_ADDRESS,
+      /*initial_value_ptr=*/nullptr,
+      /*object_address_ptr=*/nullptr);
+  if (!callee_addr_val) {
+    LLDB_LOG_ERROR(log, callee_addr_val.takeError(),
+                   "IndirectCallEdge: Could not evaluate expression: {0}");
     return nullptr;
   }
 
-  addr_t raw_addr = callee_addr_val.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  addr_t raw_addr =
+      callee_addr_val->GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   if (raw_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "IndirectCallEdge: Could not extract address from scalar");
     return nullptr;

@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX1100 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX1150 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx11-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX1100 %s
 
 ; On GFX11, ensure vdst and src2 do not partially overlap. Full overlap is ok.
 
@@ -907,8 +908,8 @@ define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
 define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; CI-LABEL: mad_i64_i32_uniform:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; CI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -923,33 +924,33 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
 ;
 ; SI-LABEL: mad_i64_i32_uniform:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
+; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s7
 ; SI-NEXT:    v_mul_hi_u32 v1, s6, v0
-; SI-NEXT:    s_mov_b32 s0, s4
-; SI-NEXT:    s_mul_i32 s4, s6, s7
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    v_mov_b32_e32 v2, s9
-; SI-NEXT:    v_add_i32_e32 v0, vcc, s8, v0
-; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    s_mul_i32 s2, s6, s7
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v2, s1
+; SI-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
+; SI-NEXT:    s_mov_b32 s8, s4
+; SI-NEXT:    s_mov_b32 s9, s5
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, v1, v2, vcc
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: mad_i64_i32_uniform:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mul_i32 s0, s6, s7
-; GFX9-NEXT:    s_mul_hi_u32 s1, s6, s7
-; GFX9-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-NEXT:    s_addc_u32 s1, s1, s3
+; GFX9-NEXT:    s_mul_i32 s3, s6, s7
+; GFX9-NEXT:    s_mul_hi_u32 s2, s6, s7
+; GFX9-NEXT:    s_add_u32 s0, s3, s0
+; GFX9-NEXT:    s_addc_u32 s1, s2, s1
 ; GFX9-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
@@ -957,8 +958,8 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
 ; GFX11-LABEL: mad_i64_i32_uniform:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mul_i32 s2, s6, s7
 ; GFX11-NEXT:    s_mul_hi_u32 s3, s6, s7
@@ -974,8 +975,8 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
 ; GFX12-LABEL: mad_i64_i32_uniform:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX12-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX12-NEXT:    s_mov_b32 s3, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s2, s6

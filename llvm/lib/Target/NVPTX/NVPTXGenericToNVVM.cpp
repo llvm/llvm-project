@@ -236,14 +236,6 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
   // the converted operands.
   unsigned Opcode = C->getOpcode();
   switch (Opcode) {
-  case Instruction::ICmp:
-    // CompareConstantExpr (icmp)
-    return Builder.CreateICmp(CmpInst::Predicate(C->getPredicate()),
-                              NewOperands[0], NewOperands[1]);
-  case Instruction::FCmp:
-    // CompareConstantExpr (fcmp)
-    llvm_unreachable("Address space conversion should have no effect "
-                     "on float point CompareConstantExpr (fcmp)!");
   case Instruction::ExtractElement:
     // ExtractElementConstantExpr
     return Builder.CreateExtractElement(NewOperands[0], NewOperands[1]);

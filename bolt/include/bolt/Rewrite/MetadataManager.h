@@ -28,6 +28,9 @@ public:
   /// Register a new \p Rewriter.
   void registerRewriter(std::unique_ptr<MetadataRewriter> Rewriter);
 
+  /// Run initializers after sections are discovered.
+  void runSectionInitializers();
+
   /// Execute initialization of rewriters while functions are disassembled, but
   /// CFG is not yet built.
   void runInitializersPreCFG();

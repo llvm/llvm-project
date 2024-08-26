@@ -206,9 +206,12 @@ private:
 };
 
 static StringRef ObjCRuntimeObjectSectionsData[] = {
-    MachOObjCCatListSectionName,   MachOObjCClassListSectionName,
-    MachOObjCClassRefsSectionName, MachOObjCConstSectionName,
-    MachOObjCDataSectionName,      MachOObjCSelRefsSectionName};
+    MachOObjCCatListSectionName,   MachOObjCCatList2SectionName,
+    MachOObjCClassListSectionName, MachOObjCClassRefsSectionName,
+    MachOObjCConstSectionName,     MachOObjCDataSectionName,
+    MachOObjCProtoListSectionName, MachOObjCProtoRefsSectionName,
+    MachOObjCNLCatListSectionName, MachOObjCNLClassListSectionName,
+    MachOObjCSelRefsSectionName};
 
 static StringRef ObjCRuntimeObjectSectionsText[] = {
     MachOObjCClassNameSectionName, MachOObjCMethNameSectionName,
@@ -276,6 +279,10 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
   case Triple::WatchOS:
     Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOSSIMULATOR
                                            : MachO::PLATFORM_WATCHOS;
+    break;
+  case Triple::XROS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
     break;
   default:
     return std::nullopt;
@@ -1134,12 +1141,16 @@ Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
                                        " does not match first registered flags",
                                    inconvertibleErrorCode());
 
-  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+  // HasCategoryClassProperties and HasSignedObjCClassROs can be disabled before
+  // they are registered, if necessary, but once they are in use must be
+  // supported by subsequent objects.
+  if (Info.Finalized && Old.HasCategoryClassProperties &&
+      !New.HasCategoryClassProperties)
     return make_error<StringError>("ObjC category class property support in " +
                                        G.getName() +
                                        " does not match first registered flags",
                                    inconvertibleErrorCode());
-  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+  if (Info.Finalized && Old.HasSignedObjCClassROs && !New.HasSignedObjCClassROs)
     return make_error<StringError>("ObjC class_ro_t pointer signing in " +
                                        G.getName() +
                                        " does not match first registered flags",
@@ -1158,6 +1169,12 @@ Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
   // Add a Swift ABI version if it was pure objc before.
   if (!New.SwiftABIVersion)
     New.SwiftABIVersion = Old.SwiftABIVersion;
+  // Disable class properties if any object does not support it.
+  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+    New.HasCategoryClassProperties = false;
+  // Disable signed class ro data if any object does not support it.
+  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+    New.HasSignedObjCClassROs = false;
 
   LLVM_DEBUG({
     dbgs() << "MachOPlatform: Merging __objc_imageinfo flags for "
@@ -1680,22 +1697,24 @@ Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
     HeaderAddr = I->second;
   }
 
-  SymbolTableVector LocalSymTab;
-  auto &SymTab = LLVM_LIKELY(!InBootstrapPhase) ? LocalSymTab
-                                                : MP.Bootstrap.load()->SymTab;
+  if (LLVM_UNLIKELY(InBootstrapPhase)) {
+    // If we're in the bootstrap phase then just record these symbols in the
+    // bootstrap object and then bail out -- registration will be attached to
+    // the bootstrap graph.
+    std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
+    auto &SymTab = MP.Bootstrap.load()->SymTab;
+    for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
+      SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
+                        flagsForSymbol(*OriginalSymbol)});
+    return Error::success();
+  }
+
+  SymbolTableVector SymTab;
   for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
     SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
                       flagsForSymbol(*OriginalSymbol)});
 
-  // Bail out if we're in the bootstrap phase -- registration of thees symbols
-  // will be attached to the bootstrap graph.
-  if (LLVM_UNLIKELY(InBootstrapPhase))
-    return Error::success();
-
-  shared::AllocActions &allocActions = LLVM_LIKELY(!InBootstrapPhase)
-                                           ? G.allocActions()
-                                           : MP.Bootstrap.load()->DeferredAAs;
-  allocActions.push_back(
+  G.allocActions().push_back(
       {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
            MP.RegisterObjectSymbolTable.Addr, HeaderAddr, SymTab)),
        cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(

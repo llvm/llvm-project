@@ -346,6 +346,40 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DL, get(And), Reg).addReg(Reg).addImm(Mask);
 }
 
+// Convert MOVI to MOVQ if the target is a data register and the immediate
+// fits in a sign-extended i8, otherwise emit a plain MOV.
+bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
+  Register Reg = MIB->getOperand(0).getReg();
+  int64_t Imm = MIB->getOperand(1).getImm();
+  bool IsAddressReg = false;
+
+  const auto *DR32 = RI.getRegClass(M68k::DR32RegClassID);
+  const auto *AR32 = RI.getRegClass(M68k::AR32RegClassID);
+  const auto *AR16 = RI.getRegClass(M68k::AR16RegClassID);
+
+  if (AR16->contains(Reg) || AR32->contains(Reg))
+    IsAddressReg = true;
+
+  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
+
+  if (MVTSize == MVT::i8 || (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
+    LLVM_DEBUG(dbgs() << "MOVEQ\n");
+
+    // We need to assign to the full register to make IV happy
+    Register SReg =
+        MVTSize == MVT::i32 ? Reg : Register(RI.getMatchingMegaReg(Reg, DR32));
+    assert(SReg && "No viable MEGA register available");
+
+    MIB->setDesc(get(M68k::MOVQ));
+    MIB->getOperand(0).setReg(SReg);
+  } else {
+    LLVM_DEBUG(dbgs() << "MOVE\n");
+    MIB->setDesc(get(MVTSize == MVT::i16 ? M68k::MOV16ri : M68k::MOV32ri));
+  }
+
+  return true;
+}
+
 bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
                                   MVT MVTSrc) const {
   unsigned Move = MVTDst == MVT::i16 ? M68k::MOV16rr : M68k::MOV32rr;

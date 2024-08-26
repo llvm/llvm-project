@@ -59,10 +59,10 @@ public:
         process.GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus));
   }
 
-  bool GetObjectDescription(Stream &str, ValueObject &object) override;
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object) override;
 
-  bool GetObjectDescription(Stream &str, Value &value,
-                            ExecutionContextScope *exe_scope) override;
+  llvm::Error GetObjectDescription(Stream &str, Value &value,
+                                   ExecutionContextScope *exe_scope) override;
 
   /// Obtain a ThreadPlan to get us into C++ constructs such as std::function.
   ///

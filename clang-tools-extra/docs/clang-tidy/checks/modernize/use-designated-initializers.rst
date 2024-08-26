@@ -37,7 +37,7 @@ declaration of ``S``.
 
 Even when compiling in a language version older than C++20, depending on your
 compiler, designated initializers are potentially supported. Therefore, the
-check is not restricted to C++20 and newer versions. Check out the options
+check is by default restricted to C99/C++20 and above. Check out the options
 ``-Wc99-designator`` to get support for mixed designators in initializer list in
 C and ``-Wc++20-designator`` for support of designated initializers in older C++
 language modes.
@@ -60,3 +60,13 @@ Options
     The value `true` specifies that only Plain Old Data (POD) types shall be
     checked. This makes the check applicable to even older C++ standards. The
     default value is `false`.
+
+.. option:: StrictCStandardCompliance
+
+   When set to `false`, the check will not restrict itself to C99 and above.
+   The default value is `true`.
+
+.. option:: StrictCppStandardCompliance
+
+   When set to `false`, the check will not restrict itself to C++20 and above.
+   The default value is `true`.

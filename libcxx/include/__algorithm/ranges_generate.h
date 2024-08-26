@@ -32,9 +32,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __generate {
-
-struct __fn {
+struct __generate {
   template <class _OutIter, class _Sent, class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr static _OutIter __generate_fn_impl(_OutIter __first, _Sent __last, _Func& __gen) {
     for (; __first != __last; ++__first) {
@@ -57,10 +55,8 @@ struct __fn {
   }
 };
 
-} // namespace __generate
-
 inline namespace __cpo {
-inline constexpr auto generate = __generate::__fn{};
+inline constexpr auto generate = __generate{};
 } // namespace __cpo
 } // namespace ranges
 

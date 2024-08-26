@@ -199,7 +199,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
   // Create an alloca for the incoming jump buffer ptr and the new jump buffer
   // that needs to be restored on all exits from the function. This is an alloca
   // because the value needs to be added to the global context list.
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const Align Alignment = DL.getPrefTypeAlign(FunctionContextTy);
   FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(), nullptr,
                            Alignment, "fn_context", EntryBB->begin());

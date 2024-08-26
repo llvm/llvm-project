@@ -18,7 +18,7 @@ define i32 @unroll(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N)
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i32 [ undef, [[FOR_BODY_LR_PH]] ], [ [[ADD_3:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i32 [ poison, [[FOR_BODY_LR_PH]] ], [ [[ADD_3:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT_3:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[C_010_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[ADD_3]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0

@@ -35,8 +35,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __contains_subrange {
-struct __fn {
+struct __contains_subrange {
   template <forward_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
             forward_iterator _Iter2,
@@ -45,7 +44,7 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<_Iter1, _Iter2, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool static operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -67,7 +66,7 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool static
   operator()(_Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) {
     if constexpr (sized_range<_Range2>) {
       if (ranges::size(__range2) == 0)
@@ -81,10 +80,9 @@ struct __fn {
     return __ret.empty() == false;
   }
 };
-} // namespace __contains_subrange
 
 inline namespace __cpo {
-inline constexpr auto contains_subrange = __contains_subrange::__fn{};
+inline constexpr auto contains_subrange = __contains_subrange{};
 } // namespace __cpo
 } // namespace ranges
 

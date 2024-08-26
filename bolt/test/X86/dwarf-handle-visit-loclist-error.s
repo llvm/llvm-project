@@ -7,7 +7,7 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections &> file
 # RUN: cat file | FileCheck --check-prefix=CHECK %s
 
-# Making sure we handle error returned by visitLocationList correctly.
+## Making sure we handle error returned by visitLocationList correctly.
 
 # CHECK: BOLT-WARNING: empty location list detected at
 # CHECK-NEXT: BOLT-WARNING: empty location list detected at

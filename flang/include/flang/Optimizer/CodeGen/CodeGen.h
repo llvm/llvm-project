@@ -28,22 +28,6 @@ struct NameUniquer;
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
-/// Prerequiste pass for code gen. Perform intermediate rewrites to perform
-/// the code gen (to LLVM-IR dialect) conversion.
-std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass();
-
-/// FirTargetRewritePass options.
-struct TargetRewriteOptions {
-  bool noCharacterConversion{};
-  bool noComplexConversion{};
-  bool noStructConversion{};
-};
-
-/// Prerequiste pass for code gen. Perform intermediate rewrites to tailor the
-/// FIR for the chosen target.
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>> createFirTargetRewritePass(
-    const TargetRewriteOptions &options = TargetRewriteOptions());
-
 /// FIR to LLVM translation pass options.
 struct FIRToLLVMPassOptions {
   // Do not fail when type descriptors are not found when translating
@@ -60,6 +44,16 @@ struct FIRToLLVMPassOptions {
 
   // Force the usage of a unified tbaa tree in TBAABuilder.
   bool forceUnifiedTBAATree = false;
+
+  // If set to true, then the global variables created
+  // for the derived types have been renamed to avoid usage
+  // of special symbols that may not be supported by all targets.
+  // The renaming is done by the CompilerGeneratedNamesConversion pass.
+  // If it is true, FIR-to-LLVM pass has to use
+  // fir::NameUniquer::getTypeDescriptorAssemblyName() to take
+  // the name of the global variable corresponding to a derived
+  // type's descriptor.
+  bool typeDescriptorsRenamedForAssembly = false;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.
@@ -77,18 +71,14 @@ std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
     LLVMIRLoweringPrinter printer =
         [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
 
-/// Convert boxproc values to a lower level representation. The default is to
-/// use function pointers and thunks.
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass();
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass(bool useThunks);
-
 /// Populate the given list with patterns that convert from FIR to LLVM.
 void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
                                          mlir::RewritePatternSet &patterns,
                                          fir::FIRToLLVMPassOptions &options);
 
 /// Populate the pattern set with the PreCGRewrite patterns.
-void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns);
+void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+                                  bool preserveDeclare);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

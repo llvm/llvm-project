@@ -43,8 +43,8 @@ static __inline int rep_clz(rep_t a) { return clzsi(a); }
 // 32x32 --> 64 bit multiply
 static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
   const uint64_t product = (uint64_t)a * b;
-  *hi = product >> 32;
-  *lo = product;
+  *hi = (rep_t)(product >> 32);
+  *lo = (rep_t)product;
 }
 COMPILER_RT_ABI fp_t __addsf3(fp_t a, fp_t b);
 
@@ -58,16 +58,7 @@ typedef double fp_t;
 #define REP_C UINT64_C
 #define significandBits 52
 
-static __inline int rep_clz(rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int rep_clz(rep_t a) { return __builtin_clzll(a); }
 
 #define loWord(a) (a & 0xffffffffU)
 #define hiWord(a) (a >> 32)
@@ -239,7 +230,7 @@ static __inline int normalize(rep_t *significand) {
   return 1 - shift;
 }
 
-static __inline void wideLeftShift(rep_t *hi, rep_t *lo, int count) {
+static __inline void wideLeftShift(rep_t *hi, rep_t *lo, unsigned int count) {
   *hi = *hi << count | *lo >> (typeWidth - count);
   *lo = *lo << count;
 }

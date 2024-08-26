@@ -66,7 +66,7 @@ define internal i1 @test1_g(ptr %h, i32 %i) #0 {
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TOBOOL1]], [[LAND_RHS]] ]
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
 entry:
   %tobool = icmp ne i32 %i, 0
@@ -142,7 +142,7 @@ define internal i1 @test2_g(ptr %h, i32 %i) {
 ; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp ne i32 [[CALL]], 0
 ; CHECK-NEXT:    br label [[LAND_END:%.*]]
 ; CHECK:       land.end:
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
 entry:
   %tobool = icmp ne i32 %i, 0
@@ -231,7 +231,7 @@ define internal i1 @test3_g(ptr %h, i32 %i) {
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TOBOOL1]], [[LAND_RHS]] ]
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
 entry:
   %tobool = icmp ne i32 %i, 0
@@ -294,7 +294,7 @@ define internal ptr @test4_c(ptr %arg) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr poison
 ;
 bb1:                                              ; preds = %bb
   %tmp = and i1 undef, undef
@@ -345,7 +345,7 @@ define internal ptr @test5_c(ptr %arg) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr poison
 ;
 bb1:                                              ; preds = %bb
   %tmp = and i1 undef, undef

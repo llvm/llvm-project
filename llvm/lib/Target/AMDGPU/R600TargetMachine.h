@@ -38,6 +38,12 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt,
+                             PassInstrumentationCallbacks *PIC) override;
+
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
@@ -47,6 +53,21 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+};
+
+//===----------------------------------------------------------------------===//
+// R600 CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+class R600CodeGenPassBuilder
+    : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
+public:
+  R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
+                         PassInstrumentationCallbacks *PIC);
+
+  void addPreISel(AddIRPass &addPass) const;
+  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
+  Error addInstSelector(AddMachinePass &) const;
 };
 
 } // end namespace llvm

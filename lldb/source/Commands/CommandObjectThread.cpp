@@ -89,6 +89,9 @@ public:
               "invalid boolean value for option '%c': %s", short_option,
               option_arg.data());
       } break;
+      case 'u':
+        m_filtered_backtrace = false;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -99,6 +102,7 @@ public:
       m_count = UINT32_MAX;
       m_start = 0;
       m_extended_backtrace = false;
+      m_filtered_backtrace = true;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -109,19 +113,23 @@ public:
     uint32_t m_count;
     uint32_t m_start;
     bool m_extended_backtrace;
+    bool m_filtered_backtrace;
   };
 
   CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread backtrace",
-            "Show thread call stacks.  Defaults to the current thread, thread "
-            "indexes can be specified as arguments.\n"
+            "Show backtraces of thread call stacks.  Defaults to the current "
+            "thread, thread indexes can be specified as arguments.\n"
             "Use the thread-index \"all\" to see all threads.\n"
             "Use the thread-index \"unique\" to see threads grouped by unique "
             "call stacks.\n"
             "Use 'settings set frame-format' to customize the printing of "
             "frames in the backtrace and 'settings set thread-format' to "
-            "customize the thread header.",
+            "customize the thread header.\n"
+            "Customizable frame recognizers may filter out less interesting "
+            "frames, which results in gaps in the numbering. "
+            "Use '-u' to see all frames.",
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
@@ -132,7 +140,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   std::optional<std::string> GetRepeatCommand(Args &current_args,
-                                              uint32_t idx) override {
+                                              uint32_t index) override {
     llvm::StringRef count_opt("--count");
     llvm::StringRef start_opt("--start");
 
@@ -151,14 +159,14 @@ public:
 
     for (size_t idx = 0; idx < num_entries; idx++) {
       llvm::StringRef arg_string = copy_args[idx].ref();
-      if (arg_string.equals("-c") || count_opt.starts_with(arg_string)) {
+      if (arg_string == "-c" || count_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
         count_idx = idx;
         if (copy_args[idx].ref().getAsInteger(0, count_val))
           return std::nullopt;
-      } else if (arg_string.equals("-s") || start_opt.starts_with(arg_string)) {
+      } else if (arg_string == "-s" || start_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
@@ -199,7 +207,8 @@ protected:
           strm.PutChar('\n');
           if (ext_thread_sp->GetStatus(strm, m_options.m_start,
                                        m_options.m_count,
-                                       num_frames_with_source, stop_format)) {
+                                       num_frames_with_source, stop_format,
+                                       !m_options.m_filtered_backtrace)) {
             DoExtendedBacktrace(ext_thread_sp.get(), result);
           }
         }
@@ -228,7 +237,8 @@ protected:
     const uint32_t num_frames_with_source = 0;
     const bool stop_format = true;
     if (!thread->GetStatus(strm, m_options.m_start, m_options.m_count,
-                           num_frames_with_source, stop_format, only_stacks)) {
+                           num_frames_with_source, stop_format,
+                           !m_options.m_filtered_backtrace, only_stacks)) {
       result.AppendErrorWithFormat(
           "error displaying backtrace for thread: \"0x%4.4x\"\n",
           thread->GetIndexID());
@@ -246,8 +256,6 @@ protected:
 
   CommandOptions m_options;
 };
-
-enum StepScope { eStepScopeSource, eStepScopeInstruction };
 
 #define LLDB_OPTIONS_thread_step_scope
 #include "CommandOptions.inc"
@@ -374,16 +382,14 @@ public:
   CommandObjectThreadStepWithTypeAndScope(CommandInterpreter &interpreter,
                                           const char *name, const char *help,
                                           const char *syntax,
-                                          StepType step_type,
-                                          StepScope step_scope)
+                                          StepType step_type)
       : CommandObjectParsed(interpreter, name, help, syntax,
                             eCommandRequiresProcess | eCommandRequiresThread |
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused),
-        m_step_type(step_type), m_step_scope(step_scope),
-        m_class_options("scripted step") {
-    AddSimpleArgumentList(eArgTypeThreadID, eArgRepeatOptional);
+        m_step_type(step_type), m_class_options("scripted step") {
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
 
     if (step_type == eStepTypeScripted) {
       m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
@@ -621,7 +627,6 @@ protected:
   }
 
   StepType m_step_type;
-  StepScope m_step_scope;
   ThreadStepScopeOptionGroup m_options;
   OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
@@ -882,7 +887,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
@@ -1386,7 +1391,10 @@ public:
     Stream &strm = result.GetOutputStream();
     ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
     if (exception_object_sp) {
-      exception_object_sp->Dump(strm);
+      if (llvm::Error error = exception_object_sp->Dump(strm)) {
+        result.AppendError(toString(std::move(error)));
+        return false;
+      }
     }
 
     ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
@@ -1394,7 +1402,8 @@ public:
       const uint32_t num_frames_with_source = 0;
       const bool stop_format = false;
       exception_thread_sp->GetStatus(strm, 0, UINT32_MAX,
-                                     num_frames_with_source, stop_format);
+                                     num_frames_with_source, stop_format,
+                                     /*filtered*/ false);
     }
 
     return true;
@@ -1438,9 +1447,12 @@ public:
       return false;
     }
     ValueObjectSP exception_object_sp = thread_sp->GetSiginfoValue();
-    if (exception_object_sp)
-      exception_object_sp->Dump(strm);
-    else
+    if (exception_object_sp) {
+      if (llvm::Error error = exception_object_sp->Dump(strm)) {
+        result.AppendError(toString(std::move(error)));
+        return false;
+      }
+    } else
       strm.Printf("(no siginfo)\n");
     strm.PutChar('\n');
 
@@ -2555,35 +2567,35 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                      interpreter, "thread step-in",
                      "Source level single step, stepping into calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeInto, eStepScopeSource)));
+                     nullptr, eStepTypeInto)));
 
   LoadSubCommand("step-out",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-out",
                      "Finish executing the current stack frame and stop after "
                      "returning.  Defaults to current thread unless specified.",
-                     nullptr, eStepTypeOut, eStepScopeSource)));
+                     nullptr, eStepTypeOut)));
 
   LoadSubCommand("step-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-over",
                      "Source level single step, stepping over calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeOver, eStepScopeSource)));
+                     nullptr, eStepTypeOver)));
 
   LoadSubCommand("step-inst",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst",
                      "Instruction level single step, stepping into calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTrace, eStepScopeInstruction)));
+                     nullptr, eStepTypeTrace)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst-over",
                      "Instruction level single step, stepping over calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTraceOver, eStepScopeInstruction)));
+                     nullptr, eStepTypeTraceOver)));
 
   LoadSubCommand(
       "step-scripted",
@@ -2594,7 +2606,7 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
           "that will be used to populate an SBStructuredData Dictionary, which "
           "will be passed to the constructor of the class implementing the "
           "scripted step.  See the Python Reference for more details.",
-          nullptr, eStepTypeScripted, eStepScopeSource)));
+          nullptr, eStepTypeScripted)));
 
   LoadSubCommand("plan", CommandObjectSP(new CommandObjectMultiwordThreadPlan(
                              interpreter)));

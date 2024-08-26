@@ -60,7 +60,9 @@ tablegen("AMDGPUGenMCPseudoLowering") {
 tablegen("AMDGPUGenRegisterBank") {
   visibility = [
     ":LLVMAMDGPUCodeGen",
+    "MCTargetDesc",
     "Utils",
+    "//llvm/unittests/MC/AMDGPU:AMDGPUMCTests",
     "//llvm/unittests/Target/AMDGPU:AMDGPUTests",
   ]
   args = [ "-gen-register-bank" ]
@@ -132,6 +134,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAnnotateKernelFeatures.cpp",
     "AMDGPUAnnotateUniformValues.cpp",
     "AMDGPUArgumentUsageInfo.cpp",
+    "AMDGPUAsanInstrumentation.cpp",
     "AMDGPUAsmPrinter.cpp",
     "AMDGPUAtomicOptimizer.cpp",
     "AMDGPUAttributor.cpp",
@@ -168,6 +171,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
     "AMDGPUMarkLastScratchLoad.cpp",
+    "AMDGPUMemoryUtils.cpp",
     "AMDGPUOpenCLEnqueuedBlockLowering.cpp",
     "AMDGPUPerfHintAnalysis.cpp",
     "AMDGPUPostLegalizerCombiner.cpp",
@@ -183,6 +187,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",
     "AMDGPUSetWavePriority.cpp",
+    "AMDGPUSplitModule.cpp",
     "AMDGPUSubtarget.cpp",
     "AMDGPUTargetMachine.cpp",
     "AMDGPUTargetObjectFile.cpp",
@@ -201,6 +206,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "GCNRegPressure.cpp",
     "GCNRewritePartialRegUses.cpp",
     "GCNSchedStrategy.cpp",
+    "GCNSubtarget.cpp",
     "GCNVOPDUtils.cpp",
     "R600AsmPrinter.cpp",
     "R600ClauseMergePass.cpp",

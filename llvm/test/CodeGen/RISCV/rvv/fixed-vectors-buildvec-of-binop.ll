@@ -567,13 +567,14 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 5
 ; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    lui a0, %hi(.LCPI19_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v12, (a0)
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 6
 ; CHECK-NEXT:    vmv.s.x v10, a3
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    lui a0, %hi(.LCPI19_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
-; CHECK-NEXT:    vle32.v v12, (a0)
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    ret

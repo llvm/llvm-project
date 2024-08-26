@@ -1,12 +1,9 @@
 ; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all --verify-machineinstrs | FileCheck %s --check-prefixes=FP,LEAF-FP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP-AAPCS
 ; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP-AAPCS
 ; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP
-; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP-AAPCS
 
 define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-FP-LABEL: leaf:

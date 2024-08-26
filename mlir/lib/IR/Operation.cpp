@@ -619,8 +619,8 @@ static void checkFoldResultTypes(Operation *op,
     if (auto value = dyn_cast<Value>(ofr)) {
       if (value.getType() != opResult.getType()) {
         op->emitOpError() << "folder produced a value of incorrect type: "
-                          << opResult.getType()
-                          << ", expected: " << value.getType();
+                          << value.getType()
+                          << ", expected: " << opResult.getType();
         assert(false && "incorrect fold result type");
       }
     }
@@ -801,6 +801,8 @@ ParseResult OpState::genericParseProperties(OpAsmParser &parser,
 /// 'elidedProps'
 void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
                                      ArrayRef<StringRef> elidedProps) {
+  if (!properties)
+    return;
   auto dictAttr = dyn_cast_or_null<::mlir::DictionaryAttr>(properties);
   if (dictAttr && !elidedProps.empty()) {
     ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
@@ -1154,7 +1156,7 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
 
   // delegate function that returns rank of shaped type with known rank
   auto getRank = [](const Type type) {
-    return type.cast<ShapedType>().getRank();
+    return cast<ShapedType>(type).getRank();
   };
 
   auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())

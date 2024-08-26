@@ -8,17 +8,17 @@
 // RUN: %clang_cc1 -std=c++20 -xc++-user-header h3.h -emit-header-unit -o h3.pcm
 // RUN: %clang_cc1 -std=c++20 -xc++-user-header h4.h -emit-header-unit -o h4.pcm
 
-// RUN: %clang_cc1 -std=c++20 Xlate.cpp -emit-module-interface -o Xlate.pcm \
+// RUN: %clang_cc1 -std=c++20 Xlate.cpp -o Xlate.pcm \
 // RUN: -fmodule-file=h1.pcm -fmodule-file=h2.pcm -fmodule-file=h3.pcm \
 // RUN: -fmodule-file=h4.pcm -fsyntax-only -Rmodule-include-translation -verify
 
 // Check that we do the intended translation and not more.
 // RUN: %clang_cc1 -std=c++20 Xlate.cpp \
 // RUN: -fmodule-file=h1.pcm -fmodule-file=h2.pcm -fmodule-file=h3.pcm \
-// RUN: -fmodule-file=h4.pcm  -E -undef | FileCheck %s
+// RUN: -fmodule-file=h4.pcm -E -undef | FileCheck %s
 
 // We expect no diagnostics here, the used functions should all be available.
-// RUN: %clang_cc1 -std=c++20 Xlate.cpp -emit-module-interface \
+// RUN: %clang_cc1 -std=c++20 Xlate.cpp \
 // RUN: -fmodule-file=h1.pcm -fmodule-file=h2.pcm -fmodule-file=h3.pcm \
 // RUN: -fmodule-file=h4.pcm -fsyntax-only
 

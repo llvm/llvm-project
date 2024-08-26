@@ -1064,21 +1064,19 @@ MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint64_t Type) {
   }
 }
 
-#define ELF_RELOC(name, value) #name,
-
 void Relocation::print(raw_ostream &OS) const {
-  static const char *X86RelocNames[] = {
-#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
-  };
-  static const char *AArch64RelocNames[] = {
-#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
-  };
   switch (Arch) {
   default:
     OS << "RType:" << Twine::utohexstr(Type);
     break;
 
   case Triple::aarch64:
+    static const char *const AArch64RelocNames[] = {
+#define ELF_RELOC(name, value) #name,
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
+#undef ELF_RELOC
+    };
+    assert(Type < ArrayRef(AArch64RelocNames).size());
     OS << AArch64RelocNames[Type];
     break;
 
@@ -1088,16 +1086,22 @@ void Relocation::print(raw_ostream &OS) const {
     switch (Type) {
     default:
       llvm_unreachable("illegal RISC-V relocation");
-#undef ELF_RELOC
 #define ELF_RELOC(name, value)                                                 \
   case value:                                                                  \
     OS << #name;                                                               \
     break;
 #include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+#undef ELF_RELOC
     }
     break;
 
   case Triple::x86_64:
+    static const char *const X86RelocNames[] = {
+#define ELF_RELOC(name, value) #name,
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
+#undef ELF_RELOC
+    };
+    assert(Type < ArrayRef(X86RelocNames).size());
     OS << X86RelocNames[Type];
     break;
   }

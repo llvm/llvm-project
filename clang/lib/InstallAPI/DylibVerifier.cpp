@@ -187,14 +187,18 @@ bool DylibVerifier::shouldIgnoreObsolete(const Record *R, SymbolContext &SymCtx,
 
 bool DylibVerifier::shouldIgnoreReexport(const Record *R,
                                          SymbolContext &SymCtx) const {
+  StringRef SymName = SymCtx.SymbolName;
+  // Linker directive symbols can never be ignored.
+  if (SymName.starts_with("$ld$"))
+    return false;
+
   if (Reexports.empty())
     return false;
 
   for (const InterfaceFile &Lib : Reexports) {
     if (!Lib.hasTarget(Ctx.Target))
       continue;
-    if (auto Sym =
-            Lib.getSymbol(SymCtx.Kind, SymCtx.SymbolName, SymCtx.ObjCIFKind))
+    if (auto Sym = Lib.getSymbol(SymCtx.Kind, SymName, SymCtx.ObjCIFKind))
       if ((*Sym)->hasTarget(Ctx.Target))
         return true;
   }
@@ -674,6 +678,11 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     return;
   }
 
+  if (Aliases.count({SymbolName.str(), SymCtx.Kind})) {
+    updateState(Result::Valid);
+    return;
+  }
+
   // All checks at this point classify as some kind of violation.
   // The different verification modes dictate whether they are reported to the
   // user.
@@ -971,6 +980,25 @@ bool DylibVerifier::verifyBinaryAttrs(const ArrayRef<Target> ProvidedTargets,
   }
 
   return true;
+}
+
+std::unique_ptr<SymbolSet> DylibVerifier::takeExports() {
+  for (const auto &[Alias, Base] : Aliases) {
+    TargetList Targets;
+    SymbolFlags Flags = SymbolFlags::None;
+    if (const Symbol *Sym = Exports->findSymbol(Base.second, Base.first)) {
+      Flags = Sym->getFlags();
+      Targets = {Sym->targets().begin(), Sym->targets().end()};
+    }
+
+    Record R(Alias.first, RecordLinkage::Exported, Flags);
+    SymbolContext SymCtx;
+    SymCtx.SymbolName = Alias.first;
+    SymCtx.Kind = Alias.second;
+    addSymbol(&R, SymCtx, std::move(Targets));
+  }
+
+  return std::move(Exports);
 }
 
 } // namespace installapi

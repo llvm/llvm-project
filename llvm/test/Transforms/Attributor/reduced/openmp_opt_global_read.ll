@@ -21,7 +21,7 @@ attributes #0 = { nocallback nofree nosync nounwind willreturn memory(inaccessib
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
 ;.
-; CHECK: @[[ISSPMDMODE:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef
+; CHECK: @IsSPMDMode = internal addrspace(3) global i32 undef
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_16_2e1d69__ZN11qmcplusplus7ompBLAS9gemv_implIfEEiRiciiT_PKS3_iS5_iS3_PS3_i_l44() {
 ; CHECK-NEXT:  bb:

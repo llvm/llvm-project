@@ -68,9 +68,16 @@ Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
 /// fold instructions like loads and stores, which have no constant expression
 /// form.
 ///
+/// In some cases, constant folding may return one value chosen from a set of
+/// multiple legal return values. For example, the exact bit pattern of NaN
+/// results is not guaranteed. Using such a result is usually only valid if
+/// all uses of the original operation are replaced by the constant-folded
+/// result. The \p AllowNonDeterministic parameter controls whether this is
+/// allowed.
 Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
-                                   const TargetLibraryInfo *TLI = nullptr);
+                                   const TargetLibraryInfo *TLI = nullptr,
+                                   bool AllowNonDeterministic = true);
 
 /// Attempt to constant fold a compare instruction (icmp/fcmp) with the
 /// specified operands. Returns null or a constant expression of the specified
@@ -95,7 +102,8 @@ Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
 /// Returns null or a constant expression of the specified operands on failure.
 Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                      Constant *RHS, const DataLayout &DL,
-                                     const Instruction *I);
+                                     const Instruction *I,
+                                     bool AllowNonDeterministic = true);
 
 /// Attempt to flush float point constant according to denormal mode set in the
 /// instruction's parent function attributes. If so, return a zero with the
@@ -190,7 +198,8 @@ bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
 /// with the specified arguments, returning null if unsuccessful.
 Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
-                           const TargetLibraryInfo *TLI = nullptr);
+                           const TargetLibraryInfo *TLI = nullptr,
+                           bool AllowNonDeterministic = true);
 
 Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                       Constant *RHS, Type *Ty,

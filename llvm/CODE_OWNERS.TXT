@@ -79,8 +79,8 @@ N: Hal Finkel
 E: hfinkel@anl.gov
 D: The loop reroller and alias analysis
 
-N: Nemanja Ivanovic
-E: nemanja.i.ibm@gmail.com
+N: Zheng Chen
+E: czhengsz@cn.ibm.com
 D: PowerPC Backend
 
 N: Dan Gohman
@@ -263,3 +263,7 @@ D: C-SKY backend (lib/Target/CSKY/*)
 N: Ilia Diachkov
 E: ilia.diachkov@gmail.com
 D: SPIR-V backend (lib/Target/SPIRV/*)
+
+N: Christopher Apple, David Trevelyan
+E: cja-private@pm.me, david.trevelyan@gmail.com
+D: RealtimeSanitizer (LLVM part)

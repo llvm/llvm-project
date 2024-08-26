@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
 ; RUN: -polly-target-1st-cache-level-associativity=8 \
@@ -6,7 +6,7 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    /* _PB_NK % Kc != 0 */
@@ -18,7 +18,7 @@
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
 ;
-; CHECK-LABEL: Printing analysis 'Polly - Generate an AST from the SCoP (isl)' for region: 'bb8 => bb32' in function 'kernel_gemm':
+; CHECK-LABEL:     :: isl ast :: kernel_gemm :: %bb8---%bb32
 ; CHECK:    {
 ; CHECK-NEXT:      // 1st level tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 32; c0 += 1)

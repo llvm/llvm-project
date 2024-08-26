@@ -61,9 +61,16 @@ public:
 
   bool Dwarf64 : 1;
 
+  // Use CREL relocation format for ELF.
+  bool Crel = false;
+
+  bool ImplicitMapSyms = false;
+
   // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
   // ELF.
   bool X86RelaxRelocations = true;
+
+  bool X86Sse2Avx = false;
 
   EmitDwarfUnwindType EmitDwarfUnwind;
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 // Checks debug info for properties from class extensions for a few cases.
 

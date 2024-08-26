@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_TYPES_CND_T_H
 #define LLVM_LIBC_TYPES_CND_T_H
 
-#include "mtx_t.h"
+#include "llvm-libc-types/__futex_word.h"
 
 typedef struct {
   void *__qfront;
   void *__qback;
-  mtx_t __qmtx;
+  __futex_word __qmtx;
 } cnd_t;
 
 #endif // LLVM_LIBC_TYPES_CND_T_H

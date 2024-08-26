@@ -23,19 +23,13 @@ STYLE-DAG: .light-row-bold
 STYLE-DAG: .column-entry
 STYLE-DAG: .column-entry-bold
 STYLE-DAG: .column-entry-yellow
-STYLE-DAG: .column-entry-yellow:hover
 STYLE-DAG: .column-entry-red
-STYLE-DAG: .column-entry-red:hover
 STYLE-DAG: .column-entry-green
-STYLE-DAG: .column-entry-green:hover
 STYLE-DAG: .covered-line
 STYLE-DAG: .uncovered-line
 STYLE-DAG: .tooltip
 STYLE-DAG: .tooltip span.tooltip-content
 STYLE-DAG: th, td
-STYLE-DAG: td:first-child
-STYLE-DAG: td:last-child
-STYLE-DAG: tr:hover
 
 TOPLEVEL-NOT: <style>
 TOPLEVEL: <head>

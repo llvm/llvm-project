@@ -73,11 +73,6 @@ if.else:                                          ; preds = %entry
 
 ; CHECK: call void asm "btsq $2, $1; setc $0"
 
-; Calculating the shadow offset of %bit.
-; CHECKz: [[PTR:%.*]] = ptrtoint {{.*}} %bit to i64
-; CHECKz: [[SH_NUM:%.*]] = xor i64 [[PTR]]
-; CHECKz: [[SHADOW:%.*]] = inttoptr i64 [[SH_NUM]] {{.*}}
-
 ; CHECK: [[META:%.*]] = call {{.*}} @__msan_metadata_ptr_for_load_1(ptr %bit)
 ; CHECK: [[SHADOW:%.*]] = extractvalue { ptr, ptr } [[META]], 0
 

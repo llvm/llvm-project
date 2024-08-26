@@ -13,6 +13,7 @@
 
 #include "llvm/TableGen/SetTheory.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -36,7 +37,7 @@ using RecVec = SetTheory::RecVec;
 
 // (add a, b, ...) Evaluate and union all arguments.
 struct AddOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ST.evaluate(Expr->arg_begin(), Expr->arg_end(), Elts, Loc);
   }
@@ -44,7 +45,7 @@ struct AddOp : public SetTheory::Operator {
 
 // (sub Add, Sub, ...) Set difference.
 struct SubOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     if (Expr->arg_size() < 2)
       PrintFatalError(Loc, "Set difference needs at least two arguments: " +
@@ -60,7 +61,7 @@ struct SubOp : public SetTheory::Operator {
 
 // (and S1, S2) Set intersection.
 struct AndOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     if (Expr->arg_size() != 2)
       PrintFatalError(Loc, "Set intersection requires two arguments: " +
@@ -76,17 +77,17 @@ struct AndOp : public SetTheory::Operator {
 
 // SetIntBinOp - Abstract base class for (Op S, N) operators.
 struct SetIntBinOp : public SetTheory::Operator {
-  virtual void apply2(SetTheory &ST, DagInit *Expr, RecSet &Set, int64_t N,
-                      RecSet &Elts, ArrayRef<SMLoc> Loc) = 0;
+  virtual void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set,
+                      int64_t N, RecSet &Elts, ArrayRef<SMLoc> Loc) = 0;
 
-  void apply(SetTheory &ST, DagInit *Expr, RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     if (Expr->arg_size() != 2)
       PrintFatalError(Loc, "Operator requires (Op Set, Int) arguments: " +
         Expr->getAsString());
     RecSet Set;
     ST.evaluate(Expr->arg_begin()[0], Set, Loc);
-    IntInit *II = dyn_cast<IntInit>(Expr->arg_begin()[1]);
+    const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[1]);
     if (!II)
       PrintFatalError(Loc, "Second argument must be an integer: " +
         Expr->getAsString());
@@ -96,7 +97,7 @@ struct SetIntBinOp : public SetTheory::Operator {
 
 // (shl S, N) Shift left, remove the first N elements.
 struct ShlOp : public SetIntBinOp {
-  void apply2(SetTheory &ST, DagInit *Expr, RecSet &Set, int64_t N,
+  void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (N < 0)
       PrintFatalError(Loc, "Positive shift required: " +
@@ -108,7 +109,7 @@ struct ShlOp : public SetIntBinOp {
 
 // (trunc S, N) Truncate after the first N elements.
 struct TruncOp : public SetIntBinOp {
-  void apply2(SetTheory &ST, DagInit *Expr, RecSet &Set, int64_t N,
+  void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (N < 0)
       PrintFatalError(Loc, "Positive length required: " +
@@ -125,7 +126,7 @@ struct RotOp : public SetIntBinOp {
 
   RotOp(bool Rev) : Reverse(Rev) {}
 
-  void apply2(SetTheory &ST, DagInit *Expr, RecSet &Set, int64_t N,
+  void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (Reverse)
       N = -N;
@@ -143,7 +144,7 @@ struct RotOp : public SetIntBinOp {
 
 // (decimate S, N) Pick every N'th element of S.
 struct DecimateOp : public SetIntBinOp {
-  void apply2(SetTheory &ST, DagInit *Expr, RecSet &Set, int64_t N,
+  void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (N <= 0)
       PrintFatalError(Loc, "Positive stride required: " +
@@ -155,62 +156,62 @@ struct DecimateOp : public SetIntBinOp {
 
 // (interleave S1, S2, ...) Interleave elements of the arguments.
 struct InterleaveOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     // Evaluate the arguments individually.
-    SmallVector<RecSet, 4> Args(Expr->getNumArgs());
+    SmallVector<RecSet, 4> Values(Expr->getNumArgs());
     unsigned MaxSize = 0;
-    for (unsigned i = 0, e = Expr->getNumArgs(); i != e; ++i) {
-      ST.evaluate(Expr->getArg(i), Args[i], Loc);
-      MaxSize = std::max(MaxSize, unsigned(Args[i].size()));
+    for (auto [Arg, Value] : zip(Expr->getArgs(), Values)) {
+      ST.evaluate(Arg, Value, Loc);
+      MaxSize = std::max(MaxSize, unsigned(Value.size()));
     }
     // Interleave arguments into Elts.
     for (unsigned n = 0; n != MaxSize; ++n)
-      for (unsigned i = 0, e = Expr->getNumArgs(); i != e; ++i)
-        if (n < Args[i].size())
-          Elts.insert(Args[i][n]);
+      for (const RecSet &Value : Values)
+        if (n < Value.size())
+          Elts.insert(Value[n]);
   }
 };
 
 // (sequence "Format", From, To) Generate a sequence of records by name.
 struct SequenceOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     int Step = 1;
     if (Expr->arg_size() > 4)
       PrintFatalError(Loc, "Bad args to (sequence \"Format\", From, To): " +
         Expr->getAsString());
-    else if (Expr->arg_size() == 4) {
-      if (IntInit *II = dyn_cast<IntInit>(Expr->arg_begin()[3])) {
+    if (Expr->arg_size() == 4) {
+      if (const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[3]))
         Step = II->getValue();
-      } else
+      else
         PrintFatalError(Loc, "Stride must be an integer: " +
           Expr->getAsString());
     }
 
     std::string Format;
-    if (StringInit *SI = dyn_cast<StringInit>(Expr->arg_begin()[0]))
+    if (const auto *SI = dyn_cast<StringInit>(Expr->arg_begin()[0]))
       Format = std::string(SI->getValue());
     else
       PrintFatalError(Loc,  "Format must be a string: " + Expr->getAsString());
 
     int64_t From, To;
-    if (IntInit *II = dyn_cast<IntInit>(Expr->arg_begin()[1]))
+    if (const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[1]))
       From = II->getValue();
     else
       PrintFatalError(Loc, "From must be an integer: " + Expr->getAsString());
     if (From < 0 || From >= (1 << 30))
       PrintFatalError(Loc, "From out of range");
 
-    if (IntInit *II = dyn_cast<IntInit>(Expr->arg_begin()[2]))
+    if (const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[2]))
       To = II->getValue();
     else
       PrintFatalError(Loc, "To must be an integer: " + Expr->getAsString());
     if (To < 0 || To >= (1 << 30))
       PrintFatalError(Loc, "To out of range");
 
-    RecordKeeper &Records =
-      cast<DefInit>(Expr->getOperator())->getDef()->getRecords();
+    const RecordKeeper &Records =
+        cast<DefInit>(Expr->getOperator())->getDef()->getRecords();
 
     Step *= From <= To ? 1 : -1;
     while (true) {
@@ -221,7 +222,7 @@ struct SequenceOp : public SetTheory::Operator {
       std::string Name;
       raw_string_ostream OS(Name);
       OS << format(Format.c_str(), unsigned(From));
-      Record *Rec = Records.getDef(OS.str());
+      Record *Rec = Records.getDef(Name);
       if (!Rec)
         PrintFatalError(Loc, "No def named '" + Name + "': " +
           Expr->getAsString());
@@ -242,7 +243,7 @@ struct FieldExpander : public SetTheory::Expander {
 
   FieldExpander(StringRef fn) : FieldName(fn) {}
 
-  void expand(SetTheory &ST, Record *Def, RecSet &Elts) override {
+  void expand(SetTheory &ST, const Record *Def, RecSet &Elts) override {
     ST.evaluate(Def->getValueInit(FieldName), Elts, Def->getLoc());
   }
 };
@@ -278,9 +279,9 @@ void SetTheory::addFieldExpander(StringRef ClassName, StringRef FieldName) {
   addExpander(ClassName, std::make_unique<FieldExpander>(FieldName));
 }
 
-void SetTheory::evaluate(Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
+void SetTheory::evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   // A def in a list can be a just an element, or it may expand.
-  if (DefInit *Def = dyn_cast<DefInit>(Expr)) {
+  if (const auto *Def = dyn_cast<DefInit>(Expr)) {
     if (const RecVec *Result = expand(Def->getDef()))
       return Elts.insert(Result->begin(), Result->end());
     Elts.insert(Def->getDef());
@@ -288,14 +289,14 @@ void SetTheory::evaluate(Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   }
 
   // Lists simply expand.
-  if (ListInit *LI = dyn_cast<ListInit>(Expr))
+  if (const auto *LI = dyn_cast<ListInit>(Expr))
     return evaluate(LI->begin(), LI->end(), Elts, Loc);
 
   // Anything else must be a DAG.
-  DagInit *DagExpr = dyn_cast<DagInit>(Expr);
+  const auto *DagExpr = dyn_cast<DagInit>(Expr);
   if (!DagExpr)
     PrintFatalError(Loc, "Invalid set element: " + Expr->getAsString());
-  DefInit *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
+  const DefInit *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
   if (!OpInit)
     PrintFatalError(Loc, "Bad set expression: " + Expr->getAsString());
   auto I = Operators.find(OpInit->getDef()->getName());
@@ -304,27 +305,26 @@ void SetTheory::evaluate(Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   I->second->apply(*this, DagExpr, Elts, Loc);
 }
 
-const RecVec *SetTheory::expand(Record *Set) {
+const RecVec *SetTheory::expand(const Record *Set) {
   // Check existing entries for Set and return early.
   ExpandMap::iterator I = Expansions.find(Set);
   if (I != Expansions.end())
     return &I->second;
 
   // This is the first time we see Set. Find a suitable expander.
-  ArrayRef<std::pair<Record *, SMRange>> SC = Set->getSuperClasses();
-  for (const auto &SCPair : SC) {
+  for (const auto &[SuperClass, Loc] : Set->getSuperClasses()) {
     // Skip unnamed superclasses.
-    if (!isa<StringInit>(SCPair.first->getNameInit()))
+    if (!isa<StringInit>(SuperClass->getNameInit()))
       continue;
-    auto I = Expanders.find(SCPair.first->getName());
-    if (I != Expanders.end()) {
-      // This breaks recursive definitions.
-      RecVec &EltVec = Expansions[Set];
-      RecSet Elts;
-      I->second->expand(*this, Set, Elts);
-      EltVec.assign(Elts.begin(), Elts.end());
-      return &EltVec;
-    }
+    auto I = Expanders.find(SuperClass->getName());
+    if (I == Expanders.end())
+      continue;
+    // This breaks recursive definitions.
+    RecVec &EltVec = Expansions[Set];
+    RecSet Elts;
+    I->second->expand(*this, Set, Elts);
+    EltVec.assign(Elts.begin(), Elts.end());
+    return &EltVec;
   }
 
   // Set is not expandable.

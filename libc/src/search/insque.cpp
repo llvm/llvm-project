@@ -9,11 +9,12 @@
 #include "src/search/insque.h"
 #include "src/__support/common.h"
 #include "src/__support/intrusive_list.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, insque, (void *elem, void *prev)) {
   internal::IntrusiveList::insert(elem, prev);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

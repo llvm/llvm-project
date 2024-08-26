@@ -2005,7 +2005,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPositive | fcQNan, UseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(false, UseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.SignBit);
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
@@ -2035,6 +2035,61 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     ASSERT_TRUE(ConstAggZero.SignBit);
     EXPECT_FALSE(*ConstAggZero.SignBit);
   }
+
+  {
+    KnownFPClass Undef =
+        computeKnownFPClass(UndefValue::get(F32), M->getDataLayout(),
+                            fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcAllFlags, Undef.KnownFPClasses);
+    EXPECT_FALSE(Undef.SignBit);
+  }
+
+  {
+    KnownFPClass Poison =
+        computeKnownFPClass(PoisonValue::get(F32), M->getDataLayout(),
+                            fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNone, Poison.KnownFPClasses);
+    ASSERT_TRUE(Poison.SignBit);
+    EXPECT_FALSE(*Poison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 0.
+    Constant *ZeroF32 = ConstantFP::getZero(F32);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({ZeroF32, PoisonF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcPosZero, PartiallyPoison.KnownFPClasses);
+    ASSERT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_FALSE(*PartiallyPoison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 1.
+    Constant *NegZeroF32 = ConstantFP::getZero(F32, true);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({NegZeroF32, PoisonF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    ASSERT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_TRUE(*PartiallyPoison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 1.
+    Constant *NegZeroF32 = ConstantFP::getZero(F32, true);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({PoisonF32, NegZeroF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    EXPECT_TRUE(PartiallyPoison.SignBit);
+  }
 }
 
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
@@ -2055,8 +2110,7 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   )");
   const DataLayout &DL = M->getDataLayout();
   AssumptionCache AC(*F);
-  EXPECT_TRUE(isKnownNonZero(A, /*Depth=*/0,
-                             SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
+  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
@@ -2080,9 +2134,8 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
   const SimplifyQuery SQ(DL, &DT, &AC);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI)), true);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI2)),
-            false);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
@@ -2106,9 +2159,8 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
   const SimplifyQuery SQ(DL, &DT, &AC);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI)), true);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI2)),
-            false);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
@@ -2714,11 +2766,11 @@ protected:
 const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     {
         "i8 0",
-        "i48* null",
+        "ptr null",
     },
     {
         "i8 undef",
-        "i48* undef",
+        "ptr undef",
     },
     {
         "i8 0",
@@ -2797,28 +2849,24 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "double 0xF1F1F1F1F1F1F1F1",
     },
     {
-        "i8 undef",
-        "i16* undef",
-    },
-    {
         "i8 0",
-        "i16* inttoptr (i64 0 to i16*)",
+        "ptr inttoptr (i64 0 to ptr)",
     },
     {
         "i8 -1",
-        "i16* inttoptr (i64 -1 to i16*)",
+        "ptr inttoptr (i64 -1 to ptr)",
     },
     {
         "i8 -86",
-        "i16* inttoptr (i64 -6148914691236517206 to i16*)",
+        "ptr inttoptr (i64 -6148914691236517206 to ptr)",
     },
     {
         "",
-        "i16* inttoptr (i48 -1 to i16*)",
+        "ptr inttoptr (i48 -1 to ptr)",
     },
     {
         "i8 -1",
-        "i16* inttoptr (i96 -1 to i16*)",
+        "ptr inttoptr (i96 -1 to ptr)",
     },
     {
         "i8 undef",
@@ -2928,19 +2976,19 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     },
     {
         "i8 0",
-        "{i8, i64, i16*} zeroinitializer",
+        "{i8, i64, ptr} zeroinitializer",
     },
     {
         "i8 undef",
-        "{i8, i64, i16*} undef",
+        "{i8, i64, ptr} undef",
     },
     {
         "i8 -86",
-        "{i8, i64, i16*} {i8 -86, i64 -6148914691236517206, i16* undef}",
+        "{i8, i64, ptr} {i8 -86, i64 -6148914691236517206, ptr undef}",
     },
     {
         "",
-        "{i8, i64, i16*} {i8 86, i64 -6148914691236517206, i16* undef}",
+        "{i8, i64, ptr} {i8 86, i64 -6148914691236517206, ptr undef}",
     },
 };
 

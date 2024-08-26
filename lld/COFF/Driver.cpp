@@ -44,6 +44,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -412,6 +413,8 @@ void LinkerDriver::parseDirectives(InputFile *file) {
         enqueuePath(*path, false, false);
       break;
     case OPT_entry:
+      if (!arg->getValue()[0])
+        fatal("missing entry point symbol name");
       ctx.config.entry = addUndefined(mangle(arg->getValue()));
       break;
     case OPT_failifmismatch:
@@ -934,7 +937,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     e2.SymbolName = std::string(e1.symbolName);
     e2.ExtName = std::string(e1.extName);
     e2.ExportAs = std::string(e1.exportAs);
-    e2.AliasTarget = std::string(e1.aliasTarget);
+    e2.ImportName = std::string(e1.importName);
     e2.Ordinal = e1.ordinal;
     e2.Noname = e1.noname;
     e2.Data = e1.data;
@@ -1034,7 +1037,7 @@ void LinkerDriver::parseModuleDefs(StringRef path) {
       e2.extName = saver().save(e1.ExtName);
     }
     e2.exportAs = saver().save(e1.ExportAs);
-    e2.aliasTarget = saver().save(e1.AliasTarget);
+    e2.importName = saver().save(e1.ImportName);
     e2.ordinal = e1.Ordinal;
     e2.noname = e1.Noname;
     e2.data = e1.Data;
@@ -1312,6 +1315,72 @@ void LinkerDriver::convertResources() {
       make<ObjFile>(ctx, convertResToCOFF(resources, resourceObjFiles));
   ctx.symtab.addFile(f);
   f->includeResourceChunks();
+}
+
+void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
+  Defined *def;
+  if (!sym)
+    return;
+  if (auto undef = dyn_cast<Undefined>(sym))
+    def = undef->getWeakAlias();
+  else
+    def = dyn_cast<Defined>(sym);
+  if (!def)
+    return;
+
+  if (def->getChunk()->getArm64ECRangeType() != chpe_range_type::Arm64EC)
+    return;
+  StringRef expName;
+  if (auto mangledName = getArm64ECMangledFunctionName(name))
+    expName = saver().save("EXP+" + *mangledName);
+  else
+    expName = saver().save("EXP+" + name);
+  sym = addUndefined(expName);
+  if (auto undef = dyn_cast<Undefined>(sym)) {
+    if (!undef->getWeakAlias()) {
+      auto thunk = make<ECExportThunkChunk>(def);
+      replaceSymbol<DefinedSynthetic>(undef, undef->getName(), thunk);
+    }
+  }
+}
+
+void LinkerDriver::createECExportThunks() {
+  // Check if EXP+ symbols have corresponding $hp_target symbols and use them
+  // to create export thunks when available.
+  for (Symbol *s : ctx.symtab.expSymbols) {
+    if (!s->isUsedInRegularObj)
+      continue;
+    assert(s->getName().starts_with("EXP+"));
+    std::string targetName =
+        (s->getName().substr(strlen("EXP+")) + "$hp_target").str();
+    Symbol *sym = ctx.symtab.find(targetName);
+    if (!sym)
+      continue;
+    Defined *targetSym;
+    if (auto undef = dyn_cast<Undefined>(sym))
+      targetSym = undef->getWeakAlias();
+    else
+      targetSym = dyn_cast<Defined>(sym);
+    if (!targetSym)
+      continue;
+
+    auto *undef = dyn_cast<Undefined>(s);
+    if (undef && !undef->getWeakAlias()) {
+      auto thunk = make<ECExportThunkChunk>(targetSym);
+      replaceSymbol<DefinedSynthetic>(undef, undef->getName(), thunk);
+    }
+    if (!targetSym->isGCRoot) {
+      targetSym->isGCRoot = true;
+      ctx.config.gcroot.push_back(targetSym);
+    }
+  }
+
+  if (ctx.config.entry)
+    maybeCreateECExportThunk(ctx.config.entry->getName(), ctx.config.entry);
+  for (Export &e : ctx.config.exports) {
+    if (!e.data)
+      maybeCreateECExportThunk(e.extName.empty() ? e.name : e.extName, e.sym);
+  }
 }
 
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
@@ -2248,6 +2317,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("Entry point");
     if (auto *arg = args.getLastArg(OPT_entry)) {
+      if (!arg->getValue()[0])
+        fatal("missing entry point symbol name");
       config->entry = addUndefined(mangle(arg->getValue()));
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
@@ -2369,8 +2440,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (isArm64EC(config->machine)) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+    ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points", 0);
+    ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points_count", 0);
   }
 
   if (config->pseudoRelocs) {
@@ -2423,9 +2498,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // file's symbol table. If any of those library functions are defined in a
       // bitcode file in an archive member, we need to arrange to use LTO to
       // compile those archive members by adding them to the link beforehand.
-      if (!ctx.bitcodeFileInstances.empty())
-        for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+      if (!ctx.bitcodeFileInstances.empty()) {
+        llvm::Triple TT(
+            ctx.bitcodeFileInstances.front()->obj->getTargetTriple());
+        for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
           ctx.symtab.addLibcall(s);
+      }
 
       // Windows specific -- if __load_config_used can be resolved, resolve it.
       if (ctx.symtab.findUnderscore("_load_config_used"))
@@ -2511,6 +2589,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Apply symbol renames for -wrap.
   if (!wrapped.empty())
     wrapSymbols(ctx, wrapped);
+
+  if (isArm64EC(config->machine))
+    createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
   ctx.symtab.resolveRemainingUndefines();
@@ -2603,6 +2684,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /print-symbol-order.
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
+
+  ctx.symtab.initializeEntryThunks();
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

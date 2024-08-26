@@ -7,6 +7,11 @@
 ; CHECK:        jmp     LBB0_9
 ; CHECK: LBB0_9:                                 ## %cleanup
 
+; RUN: llc -filetype=obj -mtriple=x86_64 -O0 -save-temp-labels < %s | llvm-objdump -d - | FileCheck %s --check-prefix=SAVETEMP
+
+; SAVETEMP:         jne {{.*}} <.LBB0_1>
+; SAVETEMP-LABEL: <.LBB0_1>:
+
 define void @foo()  {
 entry:
   br i1 undef, label %land.lhs.true, label %if.end11

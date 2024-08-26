@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Ensure we do not move instructions from region statements in case the
 ; instruction to move loads from an array which is also written to from
