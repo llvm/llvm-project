@@ -2030,34 +2030,22 @@ bool llvm::isKnownNonZero(Register Reg, const MachineRegisterInfo &MRI,
 
 static bool matchOpWithOpEqZero(Register Op0, Register Op1,
                                 const MachineRegisterInfo &MRI) {
-  MachineInstr *MI = MRI.getVRegDef(Op0);
-
-  bool Result = false;
-
-  if (GZextOrSextOp *ZS = dyn_cast<GZextOrSextOp>(MI)) {
-    MachineInstr *SrcMI = MRI.getVRegDef(ZS->getSrcReg());
-    if (GICmp *Cmp = dyn_cast<GICmp>(SrcMI)) {
-      std::optional<ValueAndVReg> MayBeConstant =
-          getIConstantVRegValWithLookThrough(Cmp->getRHSReg(), MRI);
-      if (MayBeConstant)
-        Result |= (MayBeConstant->Value == 0) && (Cmp->getLHSReg() == Op1) &&
-                  (Cmp->getCond() == ICmpInst::ICMP_EQ);
+  auto MatchIt = [&MRI](const Register Reg0, const Register Reg1) {
+    MachineInstr *MI = MRI.getVRegDef(Reg0);
+    if (GZextOrSextOp *ZS = dyn_cast<GZextOrSextOp>(MI)) {
+      MachineInstr *SrcMI = MRI.getVRegDef(ZS->getSrcReg());
+      if (GICmp *Cmp = dyn_cast<GICmp>(SrcMI)) {
+        std::optional<ValueAndVReg> MayBeConstant =
+            getIConstantVRegValWithLookThrough(Cmp->getRHSReg(), MRI);
+        return MayBeConstant && (MayBeConstant->Value == 0) &&
+               (Cmp->getLHSReg() == Reg1) &&
+               (Cmp->getCond() == ICmpInst::ICMP_EQ);
+      }
     }
-  }
+    return false;
+  };
 
-  MI = MRI.getVRegDef(Op1);
-  if (GZextOrSextOp *ZS = dyn_cast<GZextOrSextOp>(MI)) {
-    MachineInstr *SrcMI = MRI.getVRegDef(ZS->getSrcReg());
-    if (GICmp *Cmp = dyn_cast<GICmp>(SrcMI)) {
-      std::optional<ValueAndVReg> MayBeConstant =
-          getIConstantVRegValWithLookThrough(Cmp->getRHSReg(), MRI);
-      if (MayBeConstant)
-        Result |= (MayBeConstant->Value == 0) && (Cmp->getLHSReg() == Op0) &&
-                  (Cmp->getCond() == ICmpInst::ICMP_EQ);
-    }
-  }
-
-  return Result;
+  return MatchIt(Op0, Op1) || MatchIt(Op1, Op0);
 }
 
 static bool isNonZeroAdd(const GBinOp &Add, const MachineRegisterInfo &MRI,
@@ -2068,7 +2056,7 @@ static bool isNonZeroAdd(const GBinOp &Add, const MachineRegisterInfo &MRI,
   Register LHS = Add.getLHSReg();
   Register RHS = Add.getRHSReg();
 
-  // (X + (X != 0)) is non zero
+  // (X + (X != 0)) is non zero.
   if (matchOpWithOpEqZero(LHS, RHS, MRI))
     return true;
 
@@ -2115,12 +2103,12 @@ static bool isKnownNonZeroBinOp(const GBinOp &BinOp,
   unsigned BitWidth = MRI.getType(BinOp.getReg(0)).getScalarSizeInBits();
   switch (BinOp.getOpcode()) {
   case TargetOpcode::G_XOR:
-    // (X ^ (X != 0)) is non zero
+    // (X ^ (X != 0)) is non zero.
     if (matchOpWithOpEqZero(BinOp.getLHSReg(), BinOp.getRHSReg(), MRI))
       return true;
     break;
   case TargetOpcode::G_OR: {
-    // (X | (X != 0)) is non zero
+    // (X | (X != 0)) is non zero.
     if (matchOpWithOpEqZero(BinOp.getLHSReg(), BinOp.getRHSReg(), MRI))
       return true;
     // X | Y != 0 if X != 0 or Y != 0.

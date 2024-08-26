@@ -1981,8 +1981,8 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
-def all_combines : GICombineGroup<[icmp_combines, integer_reassoc_combines, trivial_combines,
-    vector_ops_combines, freeze_combines, cast_combines,
+def all_combines : GICombineGroup<[icmp_combines, integer_reassoc_combines,
+    trivial_combines, vector_ops_combines, freeze_combines, cast_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
     undef_combines, identity_combines, phi_combines,

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements CombinerHelper for G_ICMP
+// This file implements CombinerHelper for G_ICMP.
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -116,7 +116,6 @@ bool CombinerHelper::visitICmp(const MachineInstr &MI, BuildFnTy &MatchInfo) {
     return true;
   }
 
-  [[maybe_unused]] MachineInstr *MILHS = MRI.getVRegDef(LHS);
   MachineInstr *MIRHS = MRI.getVRegDef(RHS);
 
   // For EQ and NE, we can always pick a value for the undef to make the
