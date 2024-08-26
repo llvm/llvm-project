@@ -278,10 +278,9 @@ define arm_aapcs_vfpcc <4 x i32> @test(ptr %data) {
 ;
 ; CHECK-BE-LABEL: test:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    movs r1, #1
-; CHECK-BE-NEXT:    vldrw.u32 q1, [r0, #32]
-; CHECK-BE-NEXT:    vdup.32 q0, r1
-; CHECK-BE-NEXT:    vadd.i32 q0, q1, q0
+; CHECK-BE-NEXT:    vldrw.u32 q0, [r0, #32]
+; CHECK-BE-NEXT:    movs r0, #1
+; CHECK-BE-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    @APP
 ; CHECK-BE-NEXT:    vmullb.s32 q1, q0, q0
