@@ -48,7 +48,7 @@ username for an individual isn't available, the brackets will be empty.
 * Matthew Riley (Google) [@mmdriley]
 * Nikhil Gupta (Nvidia) []
 * Oliver Hunt (Apple) [@ojhunt]
-* Paul Robinson (Sony) [@pogo59]
+* Matthew Voss (Sony) [@ormris]
 * Peter Smith (ARM) [@smithp35]
 * Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
