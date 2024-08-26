@@ -4977,8 +4977,6 @@ const Value *getAddress(const DbgVariableIntrinsic *DVI) {
 }
 
 const Value *getAddress(const DbgVariableRecord *DVR) {
-  assert(DVR->getType() == DbgVariableRecord::LocationType::Declare ||
-         DVR->getType() == DbgVariableRecord::LocationType::Assign);
   return DVR->getAddress();
 }
 
@@ -4989,8 +4987,6 @@ bool isKillAddress(const DbgVariableIntrinsic *DVI) {
 }
 
 bool isKillAddress(const DbgVariableRecord *DVR) {
-  assert(DVR->getType() == DbgVariableRecord::LocationType::Declare ||
-         DVR->getType() == DbgVariableRecord::LocationType::Assign);
   if (DVR->getType() == DbgVariableRecord::LocationType::Assign)
     return DVR->isKillAddress();
   return DVR->isKillLocation();
@@ -5003,8 +4999,6 @@ const DIExpression *getAddressExpression(const DbgVariableIntrinsic *DVI) {
 }
 
 const DIExpression *getAddressExpression(const DbgVariableRecord *DVR) {
-  assert(DVR->getType() == DbgVariableRecord::LocationType::Declare ||
-         DVR->getType() == DbgVariableRecord::LocationType::Assign);
   if (DVR->getType() == DbgVariableRecord::LocationType::Assign)
     return DVR->getAddressExpression();
   return DVR->getExpression();
@@ -5182,6 +5176,19 @@ insertNewDbgInst(DIBuilder &DIB, DbgVariableRecord *Orig, AllocaInst *NewAddr,
   if (Orig->isDbgDeclare()) {
     DbgVariableRecord *DVR = DbgVariableRecord::createDVRDeclare(
         NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
+    BeforeInst->getParent()->insertDbgRecordBefore(DVR,
+                                                   BeforeInst->getIterator());
+    return;
+  }
+
+  if (Orig->isDbgValue()) {
+    DbgVariableRecord *DVR = DbgVariableRecord::createDbgVariableRecord(
+        NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
+    // Drop debug information if the expression doesn't start with a
+    // DW_OP_deref. This is because without a DW_OP_deref, the #dbg_value
+    // describes the address of alloca rather than the value inside the alloca.
+    if (!NewFragmentExpr->startsWithDeref())
+      DVR->setKillAddress();
     BeforeInst->getParent()->insertDbgRecordBefore(DVR,
                                                    BeforeInst->getIterator());
     return;
@@ -5389,7 +5396,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       };
       for_each(findDbgDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRDeclares(Fragment.Alloca), RemoveOne);
-
+      for_each(findDVRValues(Fragment.Alloca), RemoveOne);
       insertNewDbgInst(DIB, DbgVariable, Fragment.Alloca, NewExpr, &AI,
                        NewDbgFragment, BitExtractOffset);
     }
@@ -5399,6 +5406,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   // and the individual partitions.
   for_each(findDbgDeclares(&AI), MigrateOne);
   for_each(findDVRDeclares(&AI), MigrateOne);
+  for_each(findDVRValues(&AI), MigrateOne);
   for_each(at::getAssignmentMarkers(&AI), MigrateOne);
   for_each(at::getDVRAssignmentMarkers(&AI), MigrateOne);
 
@@ -5545,7 +5553,6 @@ bool SROA::deleteDeadInstructions(
   }
   return Changed;
 }
-
 /// Promote the allocas, using the best available technique.
 ///
 /// This attempts to promote whatever allocas have been identified as viable in

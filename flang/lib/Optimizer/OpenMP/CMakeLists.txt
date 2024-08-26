@@ -22,4 +22,5 @@ add_flang_library(FlangOpenMPTransforms
   MLIROpenMPDialect
   HLFIRDialect
   MLIRIR
+  MLIRPass
 )

@@ -558,11 +558,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Leak | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress |
                          SanitizerKind::Scudo | SanitizerKind::SafeStack),
-      std::make_pair(SanitizerKind::MemTag,
-                     SanitizerKind::Address | SanitizerKind::KernelAddress |
-                         SanitizerKind::HWAddress |
-                         SanitizerKind::KernelHWAddress),
-      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function)};
+      std::make_pair(SanitizerKind::MemTag, SanitizerKind::Address |
+                                                SanitizerKind::KernelAddress |
+                                                SanitizerKind::HWAddress |
+                                                SanitizerKind::KernelHWAddress),
+      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
+      std::make_pair(SanitizerKind::Realtime,
+                     SanitizerKind::Address | SanitizerKind::Thread |
+                         SanitizerKind::Undefined | SanitizerKind::Memory)};
+
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
@@ -1453,9 +1457,12 @@ static int parseOverflowPatternExclusionValues(const Driver &D,
         llvm::StringSwitch<int>(Value)
             .Case("none", LangOptionsBase::None)
             .Case("all", LangOptionsBase::All)
-            .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+            .Case("add-unsigned-overflow-test",
+                  LangOptionsBase::AddUnsignedOverflowTest)
+            .Case("add-signed-overflow-test",
+                  LangOptionsBase::AddSignedOverflowTest)
             .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
-            .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+            .Case("unsigned-post-decr-while", LangOptionsBase::PostDecrInWhile)
             .Default(0);
     if (E == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

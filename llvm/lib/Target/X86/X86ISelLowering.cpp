@@ -3239,14 +3239,14 @@ bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
 
 bool X86TargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   // Speculate cttz only if we can directly use TZCNT or can promote to i32/i64.
-  return Subtarget.hasBMI() ||
+  return Subtarget.hasBMI() || Subtarget.canUseCMOV() ||
          (!Ty->isVectorTy() &&
           Ty->getScalarSizeInBits() < (Subtarget.is64Bit() ? 64u : 32u));
 }
 
 bool X86TargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   // Speculate ctlz only if we can directly use LZCNT.
-  return Subtarget.hasLZCNT();
+  return Subtarget.hasLZCNT() || Subtarget.canUseCMOV();
 }
 
 bool X86TargetLowering::ShouldShrinkFPConstant(EVT VT) const {
@@ -35781,9 +35781,7 @@ X86TargetLowering::EmitLoweredIndirectThunk(MachineInstr &MI,
   // Zero out any registers that are already used.
   for (const auto &MO : MI.operands()) {
     if (MO.isReg() && MO.isUse())
-      for (unsigned &Reg : AvailableRegs)
-        if (Reg == MO.getReg())
-          Reg = 0;
+      llvm::replace(AvailableRegs, static_cast<unsigned>(MO.getReg()), 0U);
   }
 
   // Choose the first remaining non-zero available register.
