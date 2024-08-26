@@ -352,7 +352,7 @@ public:
     // (N1 -> N2, 2)
     // (N2 -> N0, 1)
     // The total latency which is a lower bound of the recurrence MII is the
-    // longest patch from N0 back to N0 given only the edges of this node set.
+    // longest path from N0 back to N0 given only the edges of this node set.
     // In this example, the latency is: 5 + 2 + 1 = 8.
     //
     // Hold a map from each SUnit in the circle to the maximum distance from the
@@ -377,18 +377,16 @@ public:
     SUnit *FirstNode = Nodes[0];
     SUnit *LastNode = Nodes[Nodes.size() - 1];
 
-    if (LastNode->getInstr()->mayStore() && FirstNode->getInstr()->mayLoad()) {
-      for (auto &PI : LastNode->Preds) {
-        // If we have an order dep between a load and a store that is
-        // potentially loop carried then a back-edge exists between the last
-        // node and the first node that isn't modeled in the DAG. Handle it
-        // manually by adding 1 to the distance of the last node.
-        if (PI.getSUnit() != FirstNode || PI.getKind() != SDep::Order ||
-            !DAG->isLoopCarriedDep(LastNode, PI, false))
-          continue;
-        SUnitToDistance[FirstNode] =
-            std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
-      }
+    for (auto &PI : LastNode->Preds) {
+      // If we have an order dep that is potentially loop carried then a
+      // back-edge exists between the last node and the first node that isn't
+      // modeled in the DAG. Handle it manually by adding 1 to the distance of
+      // the last node.
+      if (PI.getSUnit() != FirstNode || PI.getKind() != SDep::Order ||
+          !DAG->isLoopCarriedDep(LastNode, PI, false))
+        continue;
+      SUnitToDistance[FirstNode] =
+          std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
     }
 
     // The latency is the distance from the source node to itself.
