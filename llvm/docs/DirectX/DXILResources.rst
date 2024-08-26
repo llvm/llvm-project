@@ -162,7 +162,7 @@ the subsequent ``dx.op.annotateHandle`` operation in. Note that we don't have
 an analogue for `dx.op.createHandle`_, since ``dx.op.createHandleFromBinding``
 subsumes it.
 
-For simplicity of lowering, We match DXIL in using an index from the beginning
+For simplicity of lowering, we match DXIL in using an index from the beginning
 of the binding space rather than an index from the lower bound of the binding
 itself.
 
@@ -369,11 +369,11 @@ Examples:
 
 .. code-block:: llvm
 
-   call void @llvm.dx.typedBufferStore.tdx.Buffer_v4f32_1_0_0t(
+   call void @llvm.dx.bufferStore.tdx.Buffer_f32_1_0t(
        target("dx.TypedBuffer", f32, 1, 0) %buf, i32 %index, <4 x f32> %data)
-   call void @llvm.dx.typedBufferStore.tdx.Buffer_v4f16_1_0_0t(
+   call void @llvm.dx.bufferStore.tdx.Buffer_f16_1_0t(
        target("dx.TypedBuffer", f16, 1, 0) %buf, i32 %index, <4 x f16> %data)
-   call void @llvm.dx.typedBufferStore.tdx.Buffer_v2f64_1_0_0t(
+   call void @llvm.dx.bufferStore.tdx.Buffer_f64_1_0t(
        target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
 
 .. list-table:: ``@llvm.dx.rawBufferPtr``

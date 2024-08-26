@@ -5545,7 +5545,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       // Print a backtrace into the log so we can figure out where we are:
       StreamString s;
       s.PutCString("Thread state after unsuccessful completion: \n");
-      thread->GetStackFrameStatus(s, 0, UINT32_MAX, true, UINT32_MAX);
+      thread->GetStackFrameStatus(s, 0, UINT32_MAX, true, UINT32_MAX,
+                                  /*show_hidden*/ true);
       log->PutString(s.GetString());
     }
     // Restore the thread state if we are going to discard the plan execution.
@@ -5819,8 +5820,8 @@ size_t Process::GetThreadStatus(Stream &strm,
           continue;
       }
       thread_sp->GetStatus(strm, start_frame, num_frames,
-                           num_frames_with_source,
-                           stop_format);
+                           num_frames_with_source, stop_format,
+                           /*show_hidden*/ num_frames <= 1);
       ++num_thread_infos_dumped;
     } else {
       Log *log = GetLog(LLDBLog::Process);
@@ -6548,8 +6549,9 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
 }
 
 static void SaveOffRegionsWithStackPointers(
-    Process &process, const MemoryRegionInfos &regions,
-    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+    Process &process, const SaveCoreOptions &core_options,
+    const MemoryRegionInfos &regions, Process::CoreFileMemoryRanges &ranges,
+    std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
 
   // Before we take any dump, we want to save off the used portions of the
@@ -6571,10 +6573,16 @@ static void SaveOffRegionsWithStackPointers(
     if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
       const size_t stack_head = (sp - red_zone);
       const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
+      // Even if the SaveCoreOption doesn't want us to save the stack
+      // we still need to populate the stack_ends set so it doesn't get saved
+      // off in other calls
       sp_region.GetRange().SetRangeBase(stack_head);
       sp_region.GetRange().SetByteSize(stack_size);
       stack_ends.insert(sp_region.GetRange().GetRangeEnd());
-      AddRegion(sp_region, try_dirty_pages, ranges);
+      // This will return true if the threadlist the user specified is empty,
+      // or contains the thread id from thread_sp.
+      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
+        AddRegion(sp_region, try_dirty_pages, ranges);
     }
   }
 }
@@ -6643,10 +6651,11 @@ static void GetCoreFileSaveRangesStackOnly(
   }
 }
 
-Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
                                             CoreFileMemoryRanges &ranges) {
   lldb_private::MemoryRegionInfos regions;
   Status err = GetMemoryRegions(regions);
+  SaveCoreStyle core_style = options.GetStyle();
   if (err.Fail())
     return err;
   if (regions.empty())
@@ -6656,7 +6665,7 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
                   "eSaveCoreUnspecified");
 
   std::set<addr_t> stack_ends;
-  SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends);
+  SaveOffRegionsWithStackPointers(*this, options, regions, ranges, stack_ends);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
@@ -6682,6 +6691,18 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     return Status("no valid address ranges found for core style");
 
   return Status(); // Success!
+}
+
+std::vector<ThreadSP>
+Process::CalculateCoreFileThreadList(const SaveCoreOptions &core_options) {
+  std::vector<ThreadSP> thread_list;
+  for (const lldb::ThreadSP &thread_sp : m_thread_list.Threads()) {
+    if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
+      thread_list.push_back(thread_sp);
+    }
+  }
+
+  return thread_list;
 }
 
 void Process::SetAddressableBitMasks(AddressableBits bit_masks) {

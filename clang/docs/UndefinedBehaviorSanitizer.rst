@@ -302,7 +302,7 @@ unsigned constants, post-decrements in a while loop condition and simple
 overflow checks are accepted and pervasive code patterns. However, the signal
 received from sanitizers instrumenting these code patterns may be too noisy for
 some projects. To disable instrumentation for these common patterns one should
-use ``-fsanitize-overflow-pattern-exclusion=``.
+use ``-fsanitize-undefined-ignore-overflow-pattern=``.
 
 Currently, this option supports three overflow-dependent code idioms:
 
@@ -310,30 +310,53 @@ Currently, this option supports three overflow-dependent code idioms:
 
 .. code-block:: c++
 
-    /// -fsanitize-overflow-pattern-exclusion=negated-unsigned-const
+    /// -fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const
     unsigned long foo = -1UL; // No longer causes a negation overflow warning
     unsigned long bar = -2UL; // and so on...
 
-``post-decr-while``
+``unsigned-post-decr-while``
 
 .. code-block:: c++
 
-    /// -fsanitize-overflow-pattern-exclusion=post-decr-while
+    /// -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
     unsigned char count = 16;
     while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
 
-``add-overflow-test``
+``add-signed-overflow-test,add-unsigned-overflow-test``
 
 .. code-block:: c++
 
-    /// -fsanitize-overflow-pattern-exclusion=add-overflow-test
+    /// -fsanitize-undefined-ignore-overflow-pattern=add-(signed|unsigned)-overflow-test
     if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
-                                            // won't be instrumented (same for signed types)
+                                            // won't be instrumented (signed or unsigned types)
+
+.. list-table:: Overflow Pattern Types
+   :widths: 30 50
+   :header-rows: 1
+
+   * - Pattern
+     - Sanitizer
+   * - negated-unsigned-const
+     - unsigned-integer-overflow
+   * - unsigned-post-decr-while
+     - unsigned-integer-overflow
+   * - add-unsigned-overflow-test
+     - unsigned-integer-overflow
+   * - add-signed-overflow-test
+     - signed-integer-overflow
+
+
+
+Note: ``add-signed-overflow-test`` suppresses only the check for Undefined
+Behavior. Eager Undefined Behavior optimizations are still possible. One may
+remedy this with ``-fwrapv`` or ``-fno-strict-overflow``.
 
 You can enable all exclusions with
-``-fsanitize-overflow-pattern-exclusion=all`` or disable all exclusions with
-``-fsanitize-overflow-pattern-exclusion=none``. Specifying ``none`` has
-precedence over other values.
+``-fsanitize-undefined-ignore-overflow-pattern=all`` or disable all exclusions
+with ``-fsanitize-undefined-ignore-overflow-pattern=none``. If
+``-fsanitize-undefined-ignore-overflow-pattern`` is not specified ``none`` is
+implied. Specifying ``none`` alongside other values also implies ``none`` as
+``none`` has precedence over other values -- including ``all``.
 
 Issue Suppression
 =================

@@ -2,6 +2,8 @@
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
+declare i32 @some_val();
+
 define void @test_bindings() {
   ; RWBuffer<float4> Buf : register(u5, space3)
   %typed0 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
@@ -41,25 +43,16 @@ define void @test_bindings() {
   ; CHECK: [[BUF4:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 8, i32 8, i32 1, i8 0 }, i32 12, i1 false)
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF4]], %dx.types.ResourceProperties { i32 11, i32 0 })
 
+  ; Buffer<float4> Buf[] : register(t0)
+  ; Buffer<float4> typed3 = Buf[ix]
+  %typed3_ix = call i32 @some_val()
+  %typed3 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
+      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0t(
+          i32 0, i32 0, i32 -1, i32 %typed3_ix, i1 false)
+  ; CHECK: [[BUF5:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 0, i32 -1, i32 0, i8 0 }, i32 %typed3_ix, i1 false)
+  ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF5]], %dx.types.ResourceProperties { i32 10, i32 1033 })
+
   ret void
 }
-
-; Note: We need declarations for each handle.fromBinding in the same order as
-; they appear in source to force a deterministic ordering of record IDs.
-declare target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(
-        i32, i32, i32, i32, i1) #0
-declare target("dx.TypedBuffer", i32, 1, 0, 1)
-        @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0_1t(
-            i32, i32, i32, i32, i1) #0
-declare target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i32_0_0_0t(
-            i32, i32, i32, i32, i1) #0
-declare target("dx.RawBuffer", { <4 x float>, <4 x i32> }, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
-            i32, i32, i32, i32, i1) #0
-declare target("dx.RawBuffer", i8, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
-            i32, i32, i32, i32, i1) #0
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

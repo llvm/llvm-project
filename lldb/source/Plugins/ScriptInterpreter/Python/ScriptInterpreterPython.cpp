@@ -14,10 +14,7 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
-#include "Interfaces/OperatingSystemPythonInterface/OperatingSystemPythonInterface.h"
-#include "Interfaces/ScriptedPlatformPythonInterface/ScriptedPlatformPythonInterface.h"
-#include "Interfaces/ScriptedProcessPythonInterface/ScriptedProcessPythonInterface.h"
-#include "Interfaces/ScriptedThreadPlanPythonInterface/ScriptedThreadPlanPythonInterface.h"
+#include "Interfaces/ScriptInterpreterPythonInterfaces.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
@@ -1525,6 +1522,35 @@ lldb::ValueObjectListSP ScriptInterpreterPythonImpl::GetRecognizedArguments(
     return result;
   }
   return ValueObjectListSP();
+}
+
+bool ScriptInterpreterPythonImpl::ShouldHide(
+    const StructuredData::ObjectSP &os_plugin_object_sp,
+    lldb::StackFrameSP frame_sp) {
+  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
+
+  if (!os_plugin_object_sp)
+    return false;
+
+  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
+  if (!generic)
+    return false;
+
+  PythonObject implementor(PyRefType::Borrowed,
+                           (PyObject *)generic->GetValue());
+
+  if (!implementor.IsAllocated())
+    return false;
+
+  bool result =
+      SWIGBridge::LLDBSwigPython_ShouldHide(implementor.get(), frame_sp);
+
+  // if it fails, print the error but otherwise go on
+  if (PyErr_Occurred()) {
+    PyErr_Print();
+    PyErr_Clear();
+  }
+  return result;
 }
 
 ScriptedProcessInterfaceUP

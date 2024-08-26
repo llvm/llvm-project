@@ -13,19 +13,18 @@
 #ifndef LLVM_CLANG_SEMA_SEMAHLSL_H
 #define LLVM_CLANG_SEMA_SEMAHLSL_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
 namespace clang {
+class AttributeCommonInfo;
+class IdentifierInfo;
 class ParsedAttr;
+class Scope;
 
 class SemaHLSL : public SemaBase {
 public:
@@ -62,6 +61,9 @@ public:
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  // HLSL Type trait implementations
+  bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
 };
 
 } // namespace clang

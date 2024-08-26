@@ -193,13 +193,10 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       const uint64_t FuncAddr = BF.getAddress();
       const std::pair<uint64_t, uint64_t> &BlockRange =
           BB->getInputAddressRange();
-      const auto &BlockProbes =
-          llvm::make_range(ProbeMap.lower_bound(FuncAddr + BlockRange.first),
-                           ProbeMap.lower_bound(FuncAddr + BlockRange.second));
-      for (const auto &[_, Probes] : BlockProbes)
-        for (const MCDecodedPseudoProbe &Probe : Probes)
-          YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
-              Probe.getGuid(), Probe.getIndex(), Probe.getType()});
+      for (const MCDecodedPseudoProbe &Probe : ProbeMap.find(
+               FuncAddr + BlockRange.first, FuncAddr + BlockRange.second))
+        YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
+            Probe.getGuid(), Probe.getIndex(), Probe.getType()});
     }
 
     YamlBF.Blocks.emplace_back(YamlBB);

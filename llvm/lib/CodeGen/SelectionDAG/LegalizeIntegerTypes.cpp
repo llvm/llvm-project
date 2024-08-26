@@ -3302,7 +3302,7 @@ void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
     SDValue HiNeg =
         DAG.getSetCC(DL, CCT, LHSH, DAG.getConstant(0, DL, NVT), ISD::SETLT);
     if (N->getOpcode() == ISD::SMIN) {
-      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getConstant(-1, DL, NVT));
+      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getAllOnesConstant(DL, NVT));
     } else {
       Lo = DAG.getSelect(DL, NVT, HiNeg, DAG.getConstant(0, DL, NVT), LHSL);
     }
@@ -4390,7 +4390,7 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
 
   SDValue SatMax, SatMin;
   SDValue NVTZero = DAG.getConstant(0, dl, NVT);
-  SDValue NVTNeg1 = DAG.getConstant(-1, dl, NVT);
+  SDValue NVTNeg1 = DAG.getAllOnesConstant(dl, NVT);
   EVT BoolNVT = getSetCCResultType(NVT);
 
   if (!Signed) {

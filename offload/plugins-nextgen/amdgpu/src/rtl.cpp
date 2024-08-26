@@ -485,7 +485,7 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   findDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
 
   /// Get additional info for kernel, e.g., register spill counts
-  std::optional<utils::KernelMetaDataTy>
+  std::optional<offloading::amdgpu::AMDGPUKernelMetaData>
   getKernelInfo(StringRef Identifier) const {
     auto It = KernelInfoMap.find(Identifier);
 
@@ -499,7 +499,7 @@ private:
   /// The exectuable loaded on the agent.
   hsa_executable_t Executable;
   hsa_code_object_t CodeObject;
-  StringMap<utils::KernelMetaDataTy> KernelInfoMap;
+  StringMap<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfoMap;
   uint16_t ELFABIVersion;
 };
 
@@ -600,7 +600,7 @@ private:
   uint32_t ImplicitArgsSize;
 
   /// Additional Info for the AMD GPU Kernel
-  std::optional<utils::KernelMetaDataTy> KernelInfo;
+  std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo;
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
@@ -3188,9 +3188,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
     if (!TargeTripleAndFeaturesOrError)
       return TargeTripleAndFeaturesOrError.takeError();
-    return utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
-                                           ElfOrErr->getPlatformFlags(),
-                                           *TargeTripleAndFeaturesOrError);
+    return offloading::amdgpu::isImageCompatibleWithEnv(
+        Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
+        *TargeTripleAndFeaturesOrError);
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -3264,8 +3264,18 @@ private:
       }
       if (DeviceNode != Node)
         continue;
-
+      void *DevicePtr = (void *)Event->memory_fault.virtual_address;
+      std::string S;
+      llvm::raw_string_ostream OS(S);
+      OS << llvm::format("Memory access fault by GPU %" PRIu32
+                         " (agent 0x%" PRIx64
+                         ") at virtual address %p. Reasons: %s",
+                         Node, Event->memory_fault.agent.handle,
+                         (void *)Event->memory_fault.virtual_address,
+                         llvm::join(Reasons, ", ").c_str());
       ErrorReporter::reportKernelTraces(AMDGPUDevice, *KernelTraceInfoRecord);
+      ErrorReporter::reportMemoryAccessError(AMDGPUDevice, DevicePtr, S,
+                                             /*Abort*/ true);
     }
 
     // Abort the execution since we do not recover from this error.

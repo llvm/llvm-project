@@ -6,5 +6,7 @@ target triple = "dxil-pc-shadermodel6.3-library"
 ; CHECK: ![[SM]] = !{!"lib", i32 6, i32 3}
 
 ; ANALYSIS: Shader Model Version : 6.3
-; ANALYSIS: DXIL Version : 1.3
-; ANALYSIS: Shader Stage : library
+; ANALYSIS-NEXT: DXIL Version : 1.3
+; ANALYSIS-NEXT: Shader Stage : library
+; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-EMPTY:
