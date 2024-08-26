@@ -138,7 +138,7 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
-  list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
+  list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS} -static)
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding unit test ${fq_target_name}")
@@ -192,6 +192,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})

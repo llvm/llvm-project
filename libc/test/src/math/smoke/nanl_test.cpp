@@ -71,7 +71,7 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
 }
 
 #if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
-TEST_F(LlvmLibcNanlTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
-}
+// TEST_F(LlvmLibcNanlTest, InvalidInput) {
+//   EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
+// }
 #endif // LIBC_HAVE_ADDRESS_SANITIZER

@@ -12,6 +12,7 @@ else()
     ${CMAKE_CURRENT_BINARY_DIR}
     SOURCES
     ${LIBC_SOURCE_DIR}/utils/MPFRWrapper/check_mpfr.cpp
+    COMPILE_DEFINITIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
     LINK_LIBRARIES
       -lmpfr -lgmp -latomic
   )
