@@ -2,6 +2,8 @@
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
+declare i32 @some_val();
+
 define void @test_bindings() {
   ; RWBuffer<float4> Buf : register(u5, space3)
   %typed0 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
@@ -40,6 +42,15 @@ define void @test_bindings() {
           i32 1, i32 8, i32 1, i32 12, i1 false)
   ; CHECK: [[BUF4:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 8, i32 8, i32 1, i8 0 }, i32 12, i1 false)
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF4]], %dx.types.ResourceProperties { i32 11, i32 0 })
+
+  ; Buffer<float4> Buf[] : register(t0)
+  ; Buffer<float4> typed3 = Buf[ix]
+  %typed3_ix = call i32 @some_val()
+  %typed3 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
+      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0t(
+          i32 0, i32 0, i32 -1, i32 %typed3_ix, i1 false)
+  ; CHECK: [[BUF5:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 0, i32 -1, i32 0, i8 0 }, i32 %typed3_ix, i1 false)
+  ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF5]], %dx.types.ResourceProperties { i32 10, i32 1033 })
 
   ret void
 }

@@ -120,15 +120,8 @@ static OverloadKind getOverloadKind(Type *Ty) {
   }
   case Type::PointerTyID:
     return OverloadKind::UserDefineType;
-  case Type::StructTyID: {
-    // TODO: This is a hack. As described in DXILEmitter.cpp, we need to rework
-    // how we're handling overloads and remove the `OverloadKind` proxy enum.
-    StructType *ST = cast<StructType>(Ty);
-    if (ST->hasName() && ST->getName().starts_with("dx.types.ResRet"))
-      return getOverloadKind(ST->getElementType(0));
-
+  case Type::StructTyID:
     return OverloadKind::ObjectType;
-  }
   default:
     llvm_unreachable("invalid overload type");
     return OverloadKind::VOID;
@@ -202,11 +195,10 @@ static StructType *getOrCreateStructType(StringRef Name,
   return StructType::create(Ctx, EltTys, Name);
 }
 
-static StructType *getResRetType(Type *ElementTy) {
-  LLVMContext &Ctx = ElementTy->getContext();
-  OverloadKind Kind = getOverloadKind(ElementTy);
+static StructType *getResRetType(Type *OverloadTy, LLVMContext &Ctx) {
+  OverloadKind Kind = getOverloadKind(OverloadTy);
   std::string TypeName = constructOverloadTypeName(Kind, "dx.types.ResRet.");
-  Type *FieldTypes[5] = {ElementTy, ElementTy, ElementTy, ElementTy,
+  Type *FieldTypes[5] = {OverloadTy, OverloadTy, OverloadTy, OverloadTy,
                          Type::getInt32Ty(Ctx)};
   return getOrCreateStructType(TypeName, FieldTypes, Ctx);
 }
@@ -256,14 +248,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return Type::getInt64Ty(Ctx);
   case OpParamType::OverloadTy:
     return OverloadTy;
-  case OpParamType::ResRetHalfTy:
-    return getResRetType(Type::getHalfTy(Ctx));
-  case OpParamType::ResRetFloatTy:
-    return getResRetType(Type::getFloatTy(Ctx));
-  case OpParamType::ResRetInt16Ty:
-    return getResRetType(Type::getInt16Ty(Ctx));
-  case OpParamType::ResRetInt32Ty:
-    return getResRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::ResRetTy:
+    return getResRetType(OverloadTy, Ctx);
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
   case OpParamType::ResBindTy:
@@ -405,7 +391,6 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
       return makeOpError(OpCode, "Wrong number of arguments");
     OverloadTy = Args[ArgIndex]->getType();
   }
-
   FunctionType *DXILOpFT =
       getDXILOpFunctionType(OpCode, M.getContext(), OverloadTy);
 
@@ -464,10 +449,6 @@ CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
   if (Error E = Result.takeError())
     llvm_unreachable("Invalid arguments for operation");
   return *Result;
-}
-
-StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
-  return ::getResRetType(ElementTy);
 }
 
 StructType *DXILOpBuilder::getHandleType() {
