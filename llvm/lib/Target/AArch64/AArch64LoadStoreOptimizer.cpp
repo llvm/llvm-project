@@ -2223,7 +2223,9 @@ bool AArch64LoadStoreOpt::isMatchingMovConstInsn(MachineInstr &MemMI,
       return false;
     MBBI = prev_nodbg(MBBI, B);
     MachineInstr &MovzMI = *MBBI;
-    if (MovzMI.getOpcode() == AArch64::MOVZWi) {
+    // Make sure the MOVKWi and MOVZWi set the same register.
+    if (MovzMI.getOpcode() == AArch64::MOVZWi &&
+        MovzMI.getOperand(0).getReg() == MI.getOperand(0).getReg()) {
       unsigned Low = MovzMI.getOperand(1).getImm();
       unsigned High = MI.getOperand(2).getImm() << MI.getOperand(3).getImm();
       Offset = High + Low;
