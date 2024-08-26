@@ -981,14 +981,10 @@ define half @test_fma(half %a, half %b, half %c) #0 {
 }
 
 ; CHECK-LABEL: test_fabs(
-; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_fabs_param_0];
-; CHECK-NOFTZ:      cvt.f32.f16     [[AF:%f[0-9]+]], [[A]];
-; CHECK-NOFTZ:      abs.f32         [[RF:%f[0-9]+]], [[AF]];
-; CHECK-F16-FTZ:      cvt.ftz.f32.f16     [[AF:%f[0-9]+]], [[A]];
-; CHECK-F16-FTZ:      abs.ftz.f32         [[RF:%f[0-9]+]], [[AF]];
-; CHECK:      cvt.rn.f16.f32  [[R:%rs[0-9]+]], [[RF]];
-; CHECK:      st.param.b16    [func_retval0+0], [[R]];
-; CHECK:      ret;
+; CHECK:    ld.param.b16    [[A:%rs[0-9]+]], [test_fabs_param_0];
+; CHECK:    and.b16 [[RF:%rs[0-9]+]], [[A]], 32767;
+; CHECK:    st.param.b16 [func_retval0+0], [[RF]];
+; CHECK:    ret;
 define half @test_fabs(half %a) #0 {
   %r = call half @llvm.fabs.f16(half %a)
   ret half %r

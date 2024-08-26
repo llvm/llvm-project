@@ -1182,18 +1182,15 @@ define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
   ret <2 x half> %r
 }
 
+; TODO: This should be optimised to directly use AND on the i32 register.
 ; CHECK-LABEL: test_fabs(
-; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fabs_param_0];
-; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
-; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
-; CHECK-DAG:  abs.f32         [[RF0:%f[0-9]+]], [[AF0]];
-; CHECK-DAG:  abs.f32         [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
-; CHECK:      ret;
+; CHECK:    ld.param.b32    [[A:%r[0-9]+]], [test_fabs_param_0];
+; CHECK:    mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK:    and.b16 [[A2:%rs[0-9]+]], [[A1]], 32767;
+; CHECK:    and.b16 [[A3:%rs[0-9]+]], [[A0]], 32767;
+; CHECK:    mov.b32 [[B:%r[0-9]+]], {[[A3]], [[A2]]};
+; CHECK:    st.param.b32 [func_retval0+0], [[B]];
+; CHECK:    ret;
 define <2 x half> @test_fabs(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.fabs.f16(<2 x half> %a)
   ret <2 x half> %r
