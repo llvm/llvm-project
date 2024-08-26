@@ -4825,7 +4825,7 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       DebugLoc DL, MCRegister DestReg,
+                                       const DebugLoc &DL, MCRegister DestReg,
                                        MCRegister SrcReg, bool KillSrc,
                                        unsigned Opcode, unsigned ZeroReg,
                                        llvm::ArrayRef<unsigned> Indices) const {
