@@ -66,7 +66,7 @@ static LogicalResult runMLIRPasses(Operation *op,
   passManager.addPass(memref::createFoldMemRefAliasOpsPass());
 
   ConvertToSPIRVPassOptions convertToSPIRVOptions{};
-  convertToSPIRVOptions.runOnGPUModules = true;
+  convertToSPIRVOptions.convertGPUModules = true;
   passManager.addPass(createConvertToSPIRVPass(convertToSPIRVOptions));
   OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());

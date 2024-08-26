@@ -51,7 +51,7 @@ def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
     Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
     /*default=*/"true",
     "Run vector unrolling to convert vector types in function bodies">,
-    Option<"runOnGPUModules", "run-on-gpu-modules", "bool",
+    Option<"convertGPUModules", "convert-gpu-modules", "bool",
     /*default=*/"false",
     "Clone and convert GPU modules">
   ];

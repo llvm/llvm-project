@@ -94,30 +94,32 @@ struct ConvertToSPIRVPass final
     RewritePatternSet patterns(context);
     ScfToSPIRVContext scfToSPIRVContext;
 
-    if (runOnGPUModules) {
-      SmallVector<Operation *, 1> gpuModules;
-      OpBuilder builder(context);
-      op->walk([&](gpu::GPUModuleOp gpuModule) {
-        builder.setInsertionPoint(gpuModule);
-        gpuModules.push_back(builder.clone(*gpuModule));
-      });
-      // Run conversion for each module independently as they can have
-      // different TargetEnv attributes.
-      for (Operation *gpuModule : gpuModules) {
-        spirv::TargetEnvAttr targetAttr =
-            spirv::lookupTargetEnvOrDefault(gpuModule);
-        mapToMemRef(gpuModule, targetAttr);
-        populateConvertToSPIRVPatterns(typeConverter, scfToSPIRVContext,
-                                       patterns);
-        if (failed(
-                applyFullConversion(gpuModule, *target, std::move(patterns))))
-          return signalPassFailure();
-      }
-    } else {
+    if (!convertGPUModules) {
       mapToMemRef(op, targetAttr);
       populateConvertToSPIRVPatterns(typeConverter, scfToSPIRVContext,
                                      patterns);
       if (failed(applyPartialConversion(op, *target, std::move(patterns))))
+        return signalPassFailure();
+      return;
+    }
+
+    // Clone each GPU kernel module for conversion, given that the GPU
+    // launch op still needs the original GPU kernel module.
+    SmallVector<Operation *, 1> gpuModules;
+    OpBuilder builder(context);
+    op->walk([&](gpu::GPUModuleOp gpuModule) {
+      builder.setInsertionPoint(gpuModule);
+      gpuModules.push_back(builder.clone(*gpuModule));
+    });
+    // Run conversion for each module independently as they can have
+    // different TargetEnv attributes.
+    for (Operation *gpuModule : gpuModules) {
+      spirv::TargetEnvAttr targetAttr =
+          spirv::lookupTargetEnvOrDefault(gpuModule);
+      mapToMemRef(gpuModule, targetAttr);
+      populateConvertToSPIRVPatterns(typeConverter, scfToSPIRVContext,
+                                     patterns);
+      if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
         return signalPassFailure();
     }
   }
