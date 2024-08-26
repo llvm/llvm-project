@@ -6668,6 +6668,28 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
   }
 }
 
+static Status FinalizeCoreFileSaveRanges(Process::CoreFileMemoryRanges &ranges) {
+      Status error;
+      ranges.Sort();
+      for (size_t i = ranges.GetSize() - 1; i > 0; i--) {
+        auto region = ranges.GetMutableEntryAtIndex(i);
+        auto next_region = ranges.GetMutableEntryAtIndex(i - 1);
+        if (next_region->GetRangeEnd() >= region->GetRangeBase() 
+            && region->GetRangeBase() <= next_region->GetRangeEnd()
+            && region->data.lldb_permissions == next_region->data.lldb_permissions) {
+            const addr_t base = std::min(region->GetRangeBase(), next_region->GetRangeBase());
+            const addr_t byte_size = std::max(region->GetRangeEnd(), next_region->GetRangeEnd()) - base;
+            next_region->SetRangeBase(base);
+            next_region->SetByteSize(byte_size);
+            if (!ranges.Erase(i, i + 1)) {
+              error.SetErrorString("Core file memory ranges mutated outside of CalculateCoreFileSaveRanges");
+              return error;
+            }
+        }
+    }
+    return error;                         
+}
+
 Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
                                             CoreFileMemoryRanges &ranges) {
   lldb_private::MemoryRegionInfos regions;
@@ -6713,10 +6735,7 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
   if (ranges.IsEmpty())
     return Status("no valid address ranges found for core style");
 
-  // Sort the range data vector to dedupe ranges before returning.
-  ranges.Sort();
-
-  return Status(); // Success!
+  return FinalizeCoreFileSaveRanges(ranges);
 }
 
 std::vector<ThreadSP>

@@ -386,3 +386,48 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
+
+    def save_core_with_region(self, process, region_index):
+        try:
+            custom_file = self.getBuildArtifact("core.custom.dmp")
+            memory_region = lldb.SBMemoryRegionInfo()
+            memory_list = process.GetMemoryRegions()
+            memory_list.GetMemoryRegionAtIndex(0, memory_region)
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreFull)
+
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = target.LoadCore(one_region_file)
+            core_memory_list = core_proc.GetMemoryRegions()
+            self.assertEqual(len(core_memory_list), len(memory_list))
+        finally:
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+    
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_minidump_custom_save_style_duplicated_regions(self):
+        """Test that verifies a custom and unspecified save style fails for 
+            containing no data to save"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            memory_list = process.GetMemoryRegions()
+            # Test that we don't duplicate regions, by duplicating regions
+            # at various indices.
+            self.save_core_with_region(process, 0)
+            self.save_core_with_region(process, len(memory_list) - 1)
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
