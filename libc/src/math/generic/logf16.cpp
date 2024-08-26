@@ -10,7 +10,6 @@
 #include "expxf16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -94,7 +93,7 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
       return FPBits::zero().get_val();
 
     // When x < 0.
-    if (x_u > 0x8000) {
+    if (x_u > 0x8000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
