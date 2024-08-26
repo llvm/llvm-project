@@ -287,6 +287,11 @@ private:
                                  MachineBasicBlock::iterator AfterMI,
                                  bool SpillFP, bool SpillBP) const;
 
+  void checkInterferedAccess(MachineFunction &MF,
+                             MachineBasicBlock::reverse_iterator DefMI,
+                             MachineBasicBlock::reverse_iterator KillMI,
+                             bool SpillFP, bool SpillBP) const;
+
   // If MI uses fp/bp, but target can handle it, and doesn't want to be spilled
   // again, this function should return true, and update MI so we will not check
   // any instructions from related sequence.
