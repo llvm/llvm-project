@@ -1,5 +1,5 @@
-# This program takes in two file path arguments and returns true if the
-# file size of the first file is smaller than the file size of the second file
+# This program takes in two file path arguments in the form 'compare-file-size.py file1 file2'
+# Returns true if the file size of the file1 is smaller than the file size of file2
 
 import argparse
 import os
