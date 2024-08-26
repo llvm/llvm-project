@@ -482,7 +482,7 @@ bool lldb_private::formatters::swift::StringIndex_SummaryProvider(
   if (!success)
     return false;
 
-  stream.Printf("%llu[%s]", index.encodedOffset(), index.encodingName());
+  stream.Printf("%" PRIu64 "[%s]", index.encodedOffset(), index.encodingName());
   if (index.transcodedOffset() != 0)
     stream.Printf("+%u", index.transcodedOffset());
 

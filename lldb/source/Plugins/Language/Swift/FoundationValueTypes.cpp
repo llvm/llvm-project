@@ -472,7 +472,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
   if (count == 1)
     stream.Printf("1 byte");
   else
-    stream.Printf("%lld bytes", count);
+    stream.Printf("%" PRId64 " bytes", count);
 
   return true;
 }

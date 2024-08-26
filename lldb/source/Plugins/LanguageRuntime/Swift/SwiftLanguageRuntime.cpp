@@ -586,7 +586,7 @@ void SwiftLanguageRuntimeImpl::SetupExclusivity() {
   Log *log(GetLog(LLDBLog::Expressions));
   if (log)
     log->Printf(
-        "SwiftLanguageRuntime: _swift_disableExclusivityChecking = %llu",
+        "SwiftLanguageRuntime: _swift_disableExclusivityChecking = %" PRIu64,
         m_dynamic_exclusivity_flag_addr ? *m_dynamic_exclusivity_flag_addr : 0);
 }
 

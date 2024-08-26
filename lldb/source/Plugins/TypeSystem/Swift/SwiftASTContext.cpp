@@ -7629,7 +7629,7 @@ static std::optional<uint64_t> GetInstanceVariableOffset_Metadata(
   std::optional<uint64_t> offset =
       runtime->GetMemberVariableOffset(type, valobj, ivar_name, &error);
   if (offset)
-    LOG_PRINTF(GetLog(LLDBLog::Types), "for %s: %llu", ivar_name.str().c_str(),
+    LOG_PRINTF(GetLog(LLDBLog::Types), "for %s: %" PRIu64, ivar_name.str().c_str(),
                *offset);
   else
     LOG_PRINTF(GetLog(LLDBLog::Types), "resolver failure: %s",

@@ -1532,7 +1532,7 @@ static void LoadTypeSummariesForModule(ModuleSP module_sp) {
     if (record_size == 0) {
       LLDB_LOGF(log,
                 "Skipping empty (malformed) embedded type summary of version "
-                "%llu in %s.",
+                "%" PRIu64 " in %s.",
                 version, module_name);
       continue;
     }
@@ -1562,7 +1562,7 @@ static void LoadTypeSummariesForModule(ModuleSP module_sp) {
       offset += record_size;
       LLDB_LOGF(
           log,
-          "Skipping unsupported embedded type summary of version %llu in %s.",
+          "Skipping unsupported embedded type summary of version %" PRIu64 " in %s.",
           version, module_name);
     }
   }
