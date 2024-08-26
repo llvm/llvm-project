@@ -2060,21 +2060,10 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
-      // Because SROA historically couldn't handle speculating stores of
-      // selects, we try not to sink loads, stores or lifetime markers of
-      // allocas when we'd have to create a PHI for the address operand.
-      // TODO: SROA supports speculation for loads and stores now -- remove
-      // this hack?
-      if (isa<StoreInst>(I0) && OI == 1 &&
-          any_of(Insts, [](const Instruction *I) {
-            return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
-          }))
-        return false;
-      if (isa<LoadInst>(I0) && OI == 0 &&
-          any_of(Insts, [](const Instruction *I) {
-            return isa<AllocaInst>(I->getOperand(0)->stripPointerCasts());
-          }))
-        return false;
+      // SROA can't speculate lifetime markers of selects/phis, and the
+      // backend may handle such lifetimes incorrectly as well (#104776).
+      // Don't sink lifetimes if it would introduce a phi on the pointer
+      // argument.
       if (isLifeTimeMarker(I0) && OI == 1 &&
           any_of(Insts, [](const Instruction *I) {
             return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
