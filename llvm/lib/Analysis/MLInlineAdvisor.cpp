@@ -288,7 +288,6 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   {
     PreservedAnalyses PA = PreservedAnalyses::all();
     PA.abandon<FunctionPropertiesAnalysis>();
-    PA.abandon<DominatorTreeAnalysis>();
     PA.abandon<LoopAnalysis>();
     FAM.invalidate(*Caller, PA);
   }

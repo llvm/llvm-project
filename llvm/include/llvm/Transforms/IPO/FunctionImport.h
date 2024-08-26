@@ -42,7 +42,7 @@ public:
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
-  enum ImportFailureReason {
+  enum class ImportFailureReason {
     None,
     // We can encounter a global variable instead of a function in rare
     // situations with SamplePGO. See comments where this failure type is
@@ -96,13 +96,54 @@ public:
                std::tuple<unsigned, const GlobalValueSummary *,
                           std::unique_ptr<ImportFailureInfo>>>;
 
-  /// The map contains an entry for every module to import from, the key being
-  /// the module identifier to pass to the ModuleLoader. The value is the set of
-  /// functions to import. The module identifier strings must be owned
-  /// elsewhere, typically by the in-memory ModuleSummaryIndex the importing
-  /// decisions are made from (the module path for each summary is owned by the
-  /// index's module path string table).
-  using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
+  /// The map maintains the list of imports.  Conceptually, it is a collection
+  /// of tuples of the form:
+  ///
+  ///   (The name of the source module, GUID, Definition/Declaration)
+  ///
+  /// The name of the source module is the module identifier to pass to the
+  /// ModuleLoader.  The module identifier strings must be owned elsewhere,
+  /// typically by the in-memory ModuleSummaryIndex the importing decisions are
+  /// made from (the module path for each summary is owned by the index's module
+  /// path string table).
+  class ImportMapTy {
+  public:
+    using ImportMapTyImpl = DenseMap<StringRef, FunctionsToImportTy>;
+
+    enum class AddDefinitionStatus {
+      // No change was made to the list of imports or whether each import should
+      // be imported as a declaration or definition.
+      NoChange,
+      // Successfully added the given GUID to be imported as a definition. There
+      // was no existing entry with the same GUID as a declaration.
+      Inserted,
+      // An existing with the given GUID was changed to a definition.
+      ChangedToDefinition,
+    };
+
+    // Add the given GUID to ImportList as a definition.  If the same GUID has
+    // been added as a declaration previously, that entry is overridden.
+    AddDefinitionStatus addDefinition(StringRef FromModule,
+                                      GlobalValue::GUID GUID);
+
+    // Add the given GUID to ImportList as a declaration.  If the same GUID has
+    // been added as a definition previously, that entry takes precedence, and
+    // no change is made.
+    void maybeAddDeclaration(StringRef FromModule, GlobalValue::GUID GUID);
+
+    void addGUID(StringRef FromModule, GlobalValue::GUID GUID,
+                 GlobalValueSummary::ImportKind ImportKind) {
+      if (ImportKind == GlobalValueSummary::Definition)
+        addDefinition(FromModule, GUID);
+      else
+        maybeAddDeclaration(FromModule, GUID);
+    }
+
+    const ImportMapTyImpl &getImportMap() const { return ImportMap; }
+
+  private:
+    ImportMapTyImpl ImportMap;
+  };
 
   /// The set contains an entry for every global value that the module exports.
   /// Depending on the user context, this container is allowed to contain
@@ -221,13 +262,13 @@ void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code EmitImportsFiles(
-    StringRef ModulePath, StringRef OutputFilename,
-    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+std::error_code
+EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
+                 const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
 
 /// Based on the information recorded in the summaries during global
 /// summary-based analysis:

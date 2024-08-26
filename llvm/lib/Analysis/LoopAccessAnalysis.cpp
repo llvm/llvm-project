@@ -412,12 +412,10 @@ bool RuntimePointerChecking::needsChecking(
 /// Return nullptr in case we couldn't find an answer.
 static const SCEV *getMinFromExprs(const SCEV *I, const SCEV *J,
                                    ScalarEvolution *SE) {
-  const SCEV *Diff = SE->getMinusSCEV(J, I);
-  const SCEVConstant *C = dyn_cast<const SCEVConstant>(Diff);
-
-  if (!C)
+  std::optional<APInt> Diff = SE->computeConstantDifference(J, I);
+  if (!Diff)
     return nullptr;
-  return C->getValue()->isNegative() ? J : I;
+  return Diff->isNegative() ? J : I;
 }
 
 bool RuntimeCheckingPtrGroup::addPointer(
@@ -1599,11 +1597,11 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
     // Otherwise compute the distance with SCEV between the base pointers.
     const SCEV *PtrSCEVA = SE.getSCEV(PtrA);
     const SCEV *PtrSCEVB = SE.getSCEV(PtrB);
-    const auto *Diff =
-        dyn_cast<SCEVConstant>(SE.getMinusSCEV(PtrSCEVB, PtrSCEVA));
+    std::optional<APInt> Diff =
+        SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
     if (!Diff)
       return std::nullopt;
-    Val = Diff->getAPInt().getSExtValue();
+    Val = Diff->getSExtValue();
   }
   int Size = DL.getTypeStoreSize(ElemTyA);
   int Dist = Val / Size;
@@ -1939,27 +1937,6 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   LLVM_DEBUG(dbgs() << "LAA: Distance for " << *AInst << " to " << *BInst
                     << ": " << *Dist << "\n");
 
-  // Check if we can prove that Sink only accesses memory after Src's end or
-  // vice versa. At the moment this is limited to cases where either source or
-  // sink are loop invariant to avoid compile-time increases. This is not
-  // required for correctness.
-  if (SE.isLoopInvariant(Src, InnermostLoop) ||
-      SE.isLoopInvariant(Sink, InnermostLoop)) {
-    const auto &[SrcStart, SrcEnd] =
-        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
-    const auto &[SinkStart, SinkEnd] =
-        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
-    if (!isa<SCEVCouldNotCompute>(SrcStart) &&
-        !isa<SCEVCouldNotCompute>(SrcEnd) &&
-        !isa<SCEVCouldNotCompute>(SinkStart) &&
-        !isa<SCEVCouldNotCompute>(SinkEnd)) {
-      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
-        return MemoryDepChecker::Dependence::NoDep;
-      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
-        return MemoryDepChecker::Dependence::NoDep;
-    }
-  }
-
   // Need accesses with constant strides and the same direction for further
   // dependence analysis. We don't want to vectorize "A[B[i]] += ..." and
   // similar code or pointer arithmetic that could wrap in the address space.
@@ -2005,12 +1982,45 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                               const MemAccessInfo &B, unsigned BIdx) {
   assert(AIdx < BIdx && "Must pass arguments in program order");
 
+  // Check if we can prove that Sink only accesses memory after Src's end or
+  // vice versa. The helper is used to perform the checks only on the exit paths
+  // where it helps to improve the analysis result.
+  auto CheckCompletelyBeforeOrAfter = [&]() {
+    auto *APtr = A.getPointer();
+    auto *BPtr = B.getPointer();
+
+    Type *ATy = getLoadStoreType(InstMap[AIdx]);
+    Type *BTy = getLoadStoreType(InstMap[BIdx]);
+
+    const SCEV *Src = PSE.getSCEV(APtr);
+    const SCEV *Sink = PSE.getSCEV(BPtr);
+
+    const auto &[SrcStart, SrcEnd] =
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
+    if (isa<SCEVCouldNotCompute>(SrcStart) || isa<SCEVCouldNotCompute>(SrcEnd))
+      return false;
+
+    const auto &[SinkStart, SinkEnd] =
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
+    if (isa<SCEVCouldNotCompute>(SinkStart) ||
+        isa<SCEVCouldNotCompute>(SinkEnd))
+      return false;
+
+    auto &SE = *PSE.getSE();
+    return SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart) ||
+           SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart);
+  };
+
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res =
       getDependenceDistanceStrideAndSize(A, InstMap[AIdx], B, InstMap[BIdx]);
-  if (std::holds_alternative<Dependence::DepType>(Res))
+  if (std::holds_alternative<Dependence::DepType>(Res)) {
+    if (std::get<Dependence::DepType>(Res) == Dependence::Unknown &&
+        CheckCompletelyBeforeOrAfter())
+      return Dependence::NoDep;
     return std::get<Dependence::DepType>(Res);
+  }
 
   auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
       std::get<DepDistanceStrideAndSizeInfo>(Res);
@@ -2019,6 +2029,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   std::optional<uint64_t> CommonStride =
       StrideA == StrideB ? std::make_optional(StrideA) : std::nullopt;
   if (isa<SCEVCouldNotCompute>(Dist)) {
+    if (CheckCompletelyBeforeOrAfter())
+      return Dependence::NoDep;
+
     // TODO: Relax requirement that there is a common stride to retry with
     // non-constant distance dependencies.
     FoundNonConstantDistanceDependence |= CommonStride.has_value();
@@ -2056,8 +2069,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
-  } else
-    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
+  } else {
+    if (!LoopGuards)
+      LoopGuards.emplace(
+          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+  }
 
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
@@ -2066,6 +2083,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         // Write to the same location with the same size.
         return Dependence::Forward;
       }
+      assert(!CheckCompletelyBeforeOrAfter() &&
+             "unexpectedly proved no dependence");
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
                            "different type sizes\n");
       return Dependence::Unknown;
@@ -2087,6 +2106,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         // did not set it when strides were different but there is no inherent
         // reason to.
         FoundNonConstantDistanceDependence |= CommonStride.has_value();
+        if (CheckCompletelyBeforeOrAfter())
+          return Dependence::NoDep;
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
@@ -2106,6 +2127,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Below we only handle strictly positive distances.
   if (MinDistance <= 0) {
     FoundNonConstantDistanceDependence |= CommonStride.has_value();
+    if (CheckCompletelyBeforeOrAfter())
+      return Dependence::NoDep;
+
     return Dependence::Unknown;
   }
 
@@ -2122,13 +2146,18 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   }
 
   if (!HasSameSize) {
+    if (CheckCompletelyBeforeOrAfter())
+      return Dependence::NoDep;
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
                          "different type sizes\n");
     return Dependence::Unknown;
   }
 
-  if (!CommonStride)
+  if (!CommonStride) {
+    if (CheckCompletelyBeforeOrAfter())
+      return Dependence::NoDep;
     return Dependence::Unknown;
+  }
 
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
@@ -2176,6 +2205,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       // dependence distance and the distance may be larger at runtime (and safe
       // for vectorization). Classify it as Unknown, so we re-try with runtime
       // checks.
+      //
+      if (CheckCompletelyBeforeOrAfter())
+        return Dependence::NoDep;
+
       return Dependence::Unknown;
     }
     LLVM_DEBUG(dbgs() << "LAA: Failure because of positive minimum distance "
@@ -2188,6 +2221,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   if (MinDistanceNeeded > MinDepDistBytes) {
     LLVM_DEBUG(dbgs() << "LAA: Failure because it needs at least "
                       << MinDistanceNeeded << " size in bytes\n");
+    assert(!CheckCompletelyBeforeOrAfter() &&
+           "unexpectedly proved no dependence");
     return Dependence::Backward;
   }
 
@@ -2235,6 +2270,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for
     // vectorization). Classify it as Unknown, so we re-try with runtime checks.
+    assert(!CheckCompletelyBeforeOrAfter() &&
+           "unexpectedly proved no dependence");
     return Dependence::Unknown;
   }
 
