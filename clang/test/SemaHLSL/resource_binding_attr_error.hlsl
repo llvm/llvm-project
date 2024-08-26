@@ -1,9 +1,15 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
-// expected-error@+1 {{invalid resource class specifier 'c' used; expected 'b', 's', 't', or 'u'}}
-float a : register(c0, space1);
+template<typename T>
+struct MyTemplatedSRV {
+  [[hlsl::resource_class(SRV)]] T x;
+};
 
-// expected-error@+1 {{invalid resource class specifier 'i' used; expected 'b', 's', 't', or 'u'}}
+// valid, The register keyword in this statement isn't binding a resource, rather it is
+// specifying a constant register binding offset within the $Globals cbuffer, which is legacy behavior from DX9.
+float a : register(c0);
+
+// expected-error@+1 {{binding type 'i' ignored. The 'integer constant' binding type is no longer supported}}
 cbuffer b : register(i0) {
 
 }
@@ -33,28 +39,40 @@ cbuffer C : register(b 2) {}
 // expected-error@+1 {{wrong argument format for hlsl attribute, use space3 instead}}
 cbuffer D : register(b 2, space 3) {}
 
-// expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-static RWBuffer<float> U : register(u5);
+// expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+static MyTemplatedSRV<float> U : register(u5);
+
+// expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+static float sa : register(c1);
+
+float x[2] : register(c2); // valid
+float y[2][2] : register(c3); // valid
+float z[2][2][3] : register(c4); // valid
+
+// expected-error@+1 {{binding type 'c' only applies to numeric variables in the global scope}}
+groupshared float fa[10] : register(c5);
 
 void foo() {
-  // expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-  RWBuffer<float> U : register(u3);
+  // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+  MyTemplatedSRV<float> U : register(u3);
 }
 void foo2() {
-  // expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-  extern RWBuffer<float> U2 : register(u5);
+  // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+  extern MyTemplatedSRV<float> U2 : register(u5);
 }
-// FIXME: expect-error once fix https://github.com/llvm/llvm-project/issues/57886.
+
+// expected-error@+1 {{binding type 'u' only applies to UAV resources}}
 float b : register(u0, space1);
 
-// expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-void bar(RWBuffer<float> U : register(u3)) {
+// expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+void bar(MyTemplatedSRV<float> U : register(u3)) {
 
 }
 
-struct S {
-  // FIXME: generate better error when support semantic on struct field.
-  // See https://github.com/llvm/llvm-project/issues/57889.
-  // expected-error@+1 {{expected expression}}
-  RWBuffer<float> U : register(u3);
+struct S {  
+  // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+  MyTemplatedSRV<float> U : register(u3);
 };
+
+// expected-error@+1 {{binding type 'z' is invalid}}
+MyTemplatedSRV<float> U3 : register(z5);

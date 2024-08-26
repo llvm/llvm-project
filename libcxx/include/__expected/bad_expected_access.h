@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___EXPECTED_BAD_EXPECTED_ACCESS_H
 #define _LIBCPP___EXPECTED_BAD_EXPECTED_ACCESS_H
 
-#include <__availability>
 #include <__config>
 #include <__exception/exception.h>
 #include <__utility/move.h>

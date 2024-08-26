@@ -48,8 +48,8 @@ define signext i32 @ctz_dereferencing_pointer(ptr %b) nounwind {
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV32I-NEXT:    addi s3, a0, %lo(.LCPI0_0)
+; RV32I-NEXT:    lui s3, %hi(.LCPI0_0)
+; RV32I-NEXT:    addi s3, s3, %lo(.LCPI0_0)
 ; RV32I-NEXT:    neg a0, s4
 ; RV32I-NEXT:    and a0, s4, a0
 ; RV32I-NEXT:    mv a1, s1
@@ -511,8 +511,8 @@ define signext i32 @ctz4(i64 %b) nounwind {
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui a0, %hi(.LCPI6_0)
-; RV32I-NEXT:    addi s4, a0, %lo(.LCPI6_0)
+; RV32I-NEXT:    lui s4, %hi(.LCPI6_0)
+; RV32I-NEXT:    addi s4, s4, %lo(.LCPI6_0)
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    mv a1, s3

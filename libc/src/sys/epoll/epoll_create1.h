@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_CREATE1_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_CREATE1_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int epoll_create1(int flags);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_CREATE1_H

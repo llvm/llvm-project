@@ -106,6 +106,20 @@ void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, callee, args);
 }
 
+void fir::runtime::genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value values, mlir::Value time) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Etime)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(3));
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFuncTy, values, time, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+}
+
 void fir::runtime::genRandomInit(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value repeatable,
                                  mlir::Value imageDistinct) {
@@ -185,6 +199,24 @@ void fir::runtime::genRandomSeed(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, func, args);
 }
 
+/// generate rename runtime call
+void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value path1, mlir::Value path2,
+                             mlir::Value status) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(Rename)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(4));
+
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, path1, path2,
+                                    status, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+}
+
 /// generate runtime call to transfer intrinsic with no size argument
 void fir::runtime::genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value resultBox, mlir::Value sourceBox,
@@ -228,7 +260,8 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
     fir::IfOp ifOp{};
     const bool isOptionalArg =
         fir::valueHasFirAttribute(arg, fir::getOptionalAttrName());
-    if (type.dyn_cast<fir::PointerType>() || type.dyn_cast<fir::HeapType>()) {
+    if (mlir::dyn_cast<fir::PointerType>(type) ||
+        mlir::dyn_cast<fir::HeapType>(type)) {
       // Check for a disassociated pointer or an unallocated allocatable.
       assert(!isOptionalArg && "invalid optional argument");
       ifOp = builder.create<fir::IfOp>(loc, builder.genIsNotNullAddr(loc, arg),
@@ -242,7 +275,8 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Type kindTy = func.getFunctionType().getInput(0);
     int integerKind = 8;
-    if (auto intType = fir::unwrapRefType(type).dyn_cast<mlir::IntegerType>())
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(fir::unwrapRefType(type)))
       integerKind = intType.getWidth() / 8;
     mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
     mlir::Value res =

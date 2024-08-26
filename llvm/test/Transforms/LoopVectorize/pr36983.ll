@@ -3,8 +3,8 @@
 ; There could be more than one LCSSA PHIs in loop exit block.
 
 ; CHECK-LABEL: bb1.bb3_crit_edge:
-; CHECK: %_tmp133.lcssa1 = phi i16 [ %scalar.recur, %bb2 ], [ %vector.recur.extract.for.phi, %middle.block ]
-; CHECK: %_tmp133.lcssa = phi i16 [ %scalar.recur, %bb2 ], [ %vector.recur.extract.for.phi, %middle.block ]
+; CHECK: %_tmp133.lcssa1 = phi i16 [ %_tmp133, %bb2 ], [ %vector.recur.extract.for.phi1, %middle.block ]
+; CHECK: %_tmp133.lcssa = phi i16 [ %_tmp133, %bb2 ], [ %vector.recur.extract.for.phi, %middle.block ]
 
 define void @f1() {
 bb2.lr.ph:

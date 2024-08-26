@@ -15,9 +15,6 @@ def OpA : NS_Op<"one_normal_operand_op", []> {
 
 // CHECK-LABEL: OpA definitions
 
-// CHECK:      OpAGenericAdaptorBase::OpAGenericAdaptorBase
-// CHECK-SAME: odsAttrs(attrs)
-
 // CHECK:      void OpA::build
 // CHECK:        ::mlir::Value input
 // CHECK:        odsState.addOperands(input);

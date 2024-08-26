@@ -36,6 +36,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -69,7 +70,7 @@ struct PropertiesWithCustomPrint {
   }
 };
 
-mlir::LogicalResult setPropertiesFromAttribute(
+llvm::LogicalResult setPropertiesFromAttribute(
     PropertiesWithCustomPrint &prop, mlir::Attribute attr,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 mlir::DictionaryAttr
@@ -91,7 +92,7 @@ public:
   // These three methods are invoked through the  `MyStructProperty` wrapper
   // defined in TestOps.td
   mlir::Attribute asAttribute(mlir::MLIRContext *ctx) const;
-  static mlir::LogicalResult
+  static llvm::LogicalResult
   setFromAttr(MyPropStruct &prop, mlir::Attribute attr,
               llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
   llvm::hash_code hash() const;
@@ -100,7 +101,7 @@ public:
   }
 };
 
-mlir::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
+llvm::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
                                          MyPropStruct &prop);
 void writeToMlirBytecode(mlir::DialectBytecodeWriter &writer,
                          MyPropStruct &prop);
@@ -121,7 +122,7 @@ struct VersionedProperties {
   }
 };
 
-mlir::LogicalResult setPropertiesFromAttribute(
+llvm::LogicalResult setPropertiesFromAttribute(
     VersionedProperties &prop, mlir::Attribute attr,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 mlir::DictionaryAttr getPropertiesAsAttribute(mlir::MLIRContext *ctx,
@@ -136,7 +137,7 @@ mlir::ParseResult customParseProperties(mlir::OpAsmParser &parser,
 // Bytecode Support
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
+llvm::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
                                          llvm::MutableArrayRef<int64_t> prop);
 void writeToMlirBytecode(mlir::DialectBytecodeWriter &writer,
                          llvm::ArrayRef<int64_t> prop);

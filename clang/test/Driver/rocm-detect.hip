@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
 // UNSUPPORTED: system-windows
 
 // Make sure the appropriate device specific library is available.

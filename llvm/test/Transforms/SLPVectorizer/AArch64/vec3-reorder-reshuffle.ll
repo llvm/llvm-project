@@ -537,24 +537,18 @@ entry:
 }
 
 define void @vec3_extract(<3 x i16> %pixel.sroa.0.4.vec.insert606, ptr %call3.i536) {
-; NON-POW2-LABEL: define void @vec3_extract(
-; NON-POW2-SAME: <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606:%.*]], ptr [[CALL3_I536:%.*]]) {
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    store <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], ptr [[CALL3_I536]], align 2
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: define void @vec3_extract(
-; POW2-ONLY-SAME: <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606:%.*]], ptr [[CALL3_I536:%.*]]) {
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[PIXEL_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 2
-; POW2-ONLY-NEXT:    [[RED668:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 2
-; POW2-ONLY-NEXT:    store i16 [[PIXEL_SROA_0_4_VEC_EXTRACT]], ptr [[RED668]], align 2
-; POW2-ONLY-NEXT:    [[PIXEL_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 1
-; POW2-ONLY-NEXT:    [[GREEN670:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 1
-; POW2-ONLY-NEXT:    store i16 [[PIXEL_SROA_0_2_VEC_EXTRACT]], ptr [[GREEN670]], align 2
-; POW2-ONLY-NEXT:    [[PIXEL_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 0
-; POW2-ONLY-NEXT:    store i16 [[PIXEL_SROA_0_0_VEC_EXTRACT]], ptr [[CALL3_I536]], align 2
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: define void @vec3_extract(
+; CHECK-SAME: <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606:%.*]], ptr [[CALL3_I536:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PIXEL_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 2
+; CHECK-NEXT:    [[RED668:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 2
+; CHECK-NEXT:    store i16 [[PIXEL_SROA_0_4_VEC_EXTRACT]], ptr [[RED668]], align 2
+; CHECK-NEXT:    [[PIXEL_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 1
+; CHECK-NEXT:    [[GREEN670:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 1
+; CHECK-NEXT:    store i16 [[PIXEL_SROA_0_2_VEC_EXTRACT]], ptr [[GREEN670]], align 2
+; CHECK-NEXT:    [[PIXEL_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 0
+; CHECK-NEXT:    store i16 [[PIXEL_SROA_0_0_VEC_EXTRACT]], ptr [[CALL3_I536]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
   %pixel.sroa.0.4.vec.extract = extractelement <3 x i16> %pixel.sroa.0.4.vec.insert606, i64 2

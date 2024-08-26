@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass implements IR expansion for vector predication intrinsics, allowing
+// This file implements IR expansion for vector predication intrinsics, allowing
 // targets to enable vector predication until just before codegen.
 //
 //===----------------------------------------------------------------------===//
@@ -16,7 +16,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -24,8 +23,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -137,7 +134,6 @@ namespace {
 
 // Expansion pass state at function scope.
 struct CachingVPExpander {
-  Function &F;
   const TargetTransformInfo &TTI;
 
   /// \returns A (fixed length) vector with ascending integer indices
@@ -164,11 +160,15 @@ struct CachingVPExpander {
   Value *convertEVLToMask(IRBuilder<> &Builder, Value *EVLParam,
                           ElementCount ElemCount);
 
-  Value *foldEVLIntoMask(VPIntrinsic &VPI);
+  /// If needed, folds the EVL in the mask operand and discards the EVL
+  /// parameter. Returns a pair of the value of the intrinsic after the change
+  /// (if any) and whether the mask was actually folded.
+  std::pair<Value *, bool> foldEVLIntoMask(VPIntrinsic &VPI);
 
   /// "Remove" the %evl parameter of \p PI by setting it to the static vector
-  /// length of the operation.
-  void discardEVLParameter(VPIntrinsic &PI);
+  /// length of the operation. Returns true if the %evl (if any) was effectively
+  /// changed.
+  bool discardEVLParameter(VPIntrinsic &PI);
 
   /// Lower this VP binary operator to a unpredicated binary operator.
   Value *expandPredicationInBinaryOperator(IRBuilder<> &Builder,
@@ -207,10 +207,12 @@ struct CachingVPExpander {
   bool UsingTTIOverrides;
 
 public:
-  CachingVPExpander(Function &F, const TargetTransformInfo &TTI)
-      : F(F), TTI(TTI), UsingTTIOverrides(anyExpandVPOverridesSet()) {}
+  CachingVPExpander(const TargetTransformInfo &TTI)
+      : TTI(TTI), UsingTTIOverrides(anyExpandVPOverridesSet()) {}
 
-  bool expandVectorPredication();
+  /// Expand llvm.vp.* intrinsics as requested by \p TTI.
+  /// Returns the details of the expansion.
+  VPExpansionDetails expandVectorPredication(VPIntrinsic &VPI);
 };
 
 //// CachingVPExpander {
@@ -367,7 +369,8 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
   bool Negative = false;
   unsigned EltBits = EltTy->getScalarSizeInBits();
-  switch (VPI.getIntrinsicID()) {
+  Intrinsic::ID VID = VPI.getIntrinsicID();
+  switch (VID) {
   default:
     llvm_unreachable("Expecting a VP reduction intrinsic");
   case Intrinsic::vp_reduce_add:
@@ -387,12 +390,17 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
     return ConstantInt::get(EltTy->getContext(),
                             APInt::getSignedMinValue(EltBits));
   case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmaximum:
     Negative = true;
     [[fallthrough]];
-  case Intrinsic::vp_reduce_fmin: {
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fminimum: {
+    bool PropagatesNaN = VID == Intrinsic::vp_reduce_fminimum ||
+                         VID == Intrinsic::vp_reduce_fmaximum;
     FastMathFlags Flags = VPI.getFastMathFlags();
     const fltSemantics &Semantics = EltTy->getFltSemantics();
-    return !Flags.noNaNs() ? ConstantFP::getQNaN(EltTy, Negative)
+    return (!Flags.noNaNs() && !PropagatesNaN)
+               ? ConstantFP::getQNaN(EltTy, Negative)
            : !Flags.noInfs()
                ? ConstantFP::getInfinity(EltTy, Negative)
                : ConstantFP::get(EltTy,
@@ -480,6 +488,18 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
     Reduction =
         Builder.CreateBinaryIntrinsic(Intrinsic::minnum, Reduction, Start);
     break;
+  case Intrinsic::vp_reduce_fmaximum:
+    Reduction = Builder.CreateFPMaximumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::maximum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fminimum:
+    Reduction = Builder.CreateFPMinimumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Reduction, Start);
+    break;
   case Intrinsic::vp_reduce_fadd:
     Reduction = Builder.CreateFAddReduce(Start, RedOp);
     break;
@@ -553,7 +573,7 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                                       VPIntrinsic &VPI) {
   assert(VPI.canIgnoreVectorLengthParam());
 
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = VPI.getDataLayout();
 
   Value *MaskParam = VPI.getMaskParam();
   Value *PtrParam = VPI.getMemoryPointerParam();
@@ -631,15 +651,15 @@ Value *CachingVPExpander::expandPredicationInComparison(IRBuilder<> &Builder,
   return NewCmp;
 }
 
-void CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
+bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
   LLVM_DEBUG(dbgs() << "Discard EVL parameter in " << VPI << "\n");
 
   if (VPI.canIgnoreVectorLengthParam())
-    return;
+    return false;
 
   Value *EVLParam = VPI.getVectorLengthParam();
   if (!EVLParam)
-    return;
+    return false;
 
   ElementCount StaticElemCount = VPI.getStaticVectorLength();
   Value *MaxEVL = nullptr;
@@ -658,16 +678,17 @@ void CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     MaxEVL = ConstantInt::get(Int32Ty, StaticElemCount.getFixedValue(), false);
   }
   VPI.setVectorLengthParam(MaxEVL);
+  return true;
 }
 
-Value *CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
+std::pair<Value *, bool> CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
   LLVM_DEBUG(dbgs() << "Folding vlen for " << VPI << '\n');
 
   IRBuilder<> Builder(&VPI);
 
   // Ineffective %evl parameter and so nothing to do here.
   if (VPI.canIgnoreVectorLengthParam())
-    return &VPI;
+    return {&VPI, false};
 
   // Only VP intrinsics can have an %evl parameter.
   Value *OldMaskParam = VPI.getMaskParam();
@@ -690,7 +711,7 @@ Value *CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
          "transformation did not render the evl param ineffective!");
 
   // Reassess the modified instruction.
-  return &VPI;
+  return {&VPI, true};
 }
 
 Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
@@ -757,15 +778,6 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
 
 //// } CachingVPExpander
 
-struct TransformJob {
-  VPIntrinsic *PI;
-  TargetTransformInfo::VPLegalization Strategy;
-  TransformJob(VPIntrinsic *PI, TargetTransformInfo::VPLegalization InitStrat)
-      : PI(PI), Strategy(InitStrat) {}
-
-  bool isDone() const { return Strategy.shouldDoNothing(); }
-};
-
 void sanitizeStrategy(VPIntrinsic &VPI, VPLegalization &LegalizeStrat) {
   // Operations with speculatable lanes do not strictly need predication.
   if (maySpeculateLanes(VPI)) {
@@ -802,99 +814,50 @@ CachingVPExpander::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return VPStrat;
 }
 
-/// Expand llvm.vp.* intrinsics as requested by \p TTI.
-bool CachingVPExpander::expandVectorPredication() {
-  SmallVector<TransformJob, 16> Worklist;
+VPExpansionDetails
+CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
+  auto Strategy = getVPLegalizationStrategy(VPI);
+  sanitizeStrategy(VPI, Strategy);
 
-  // Collect all VPIntrinsics that need expansion and determine their expansion
-  // strategy.
-  for (auto &I : instructions(F)) {
-    auto *VPI = dyn_cast<VPIntrinsic>(&I);
-    if (!VPI)
-      continue;
-    auto VPStrat = getVPLegalizationStrategy(*VPI);
-    sanitizeStrategy(*VPI, VPStrat);
-    if (!VPStrat.shouldDoNothing())
-      Worklist.emplace_back(VPI, VPStrat);
-  }
-  if (Worklist.empty())
-    return false;
+  VPExpansionDetails Changed = VPExpansionDetails::IntrinsicUnchanged;
 
-  // Transform all VPIntrinsics on the worklist.
-  LLVM_DEBUG(dbgs() << "\n:::: Transforming " << Worklist.size()
-                    << " instructions ::::\n");
-  for (TransformJob Job : Worklist) {
-    // Transform the EVL parameter.
-    switch (Job.Strategy.EVLParamStrategy) {
-    case VPLegalization::Legal:
-      break;
-    case VPLegalization::Discard:
-      discardEVLParameter(*Job.PI);
-      break;
-    case VPLegalization::Convert:
-      if (foldEVLIntoMask(*Job.PI))
-        ++NumFoldedVL;
-      break;
+  // Transform the EVL parameter.
+  switch (Strategy.EVLParamStrategy) {
+  case VPLegalization::Legal:
+    break;
+  case VPLegalization::Discard:
+    if (discardEVLParameter(VPI))
+      Changed = VPExpansionDetails::IntrinsicUpdated;
+    break;
+  case VPLegalization::Convert:
+    if (auto [NewVPI, Folded] = foldEVLIntoMask(VPI); Folded) {
+      (void)NewVPI;
+      Changed = VPExpansionDetails::IntrinsicUpdated;
+      ++NumFoldedVL;
     }
-    Job.Strategy.EVLParamStrategy = VPLegalization::Legal;
+    break;
+  }
 
-    // Replace with a non-predicated operation.
-    switch (Job.Strategy.OpStrategy) {
-    case VPLegalization::Legal:
-      break;
-    case VPLegalization::Discard:
-      llvm_unreachable("Invalid strategy for operators.");
-    case VPLegalization::Convert:
-      expandPredication(*Job.PI);
+  // Replace with a non-predicated operation.
+  switch (Strategy.OpStrategy) {
+  case VPLegalization::Legal:
+    break;
+  case VPLegalization::Discard:
+    llvm_unreachable("Invalid strategy for operators.");
+  case VPLegalization::Convert:
+    if (Value *V = expandPredication(VPI); V != &VPI) {
       ++NumLoweredVPOps;
-      break;
+      Changed = VPExpansionDetails::IntrinsicReplaced;
     }
-    Job.Strategy.OpStrategy = VPLegalization::Legal;
-
-    assert(Job.isDone() && "incomplete transformation");
+    break;
   }
 
-  return true;
+  return Changed;
 }
-class ExpandVectorPredication : public FunctionPass {
-public:
-  static char ID;
-  ExpandVectorPredication() : FunctionPass(ID) {
-    initializeExpandVectorPredicationPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    const auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    CachingVPExpander VPExpander(F, *TTI);
-    return VPExpander.expandVectorPredication();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.setPreservesCFG();
-  }
-};
 } // namespace
 
-char ExpandVectorPredication::ID;
-INITIALIZE_PASS_BEGIN(ExpandVectorPredication, "expandvp",
-                      "Expand vector predication intrinsics", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ExpandVectorPredication, "expandvp",
-                    "Expand vector predication intrinsics", false, false)
-
-FunctionPass *llvm::createExpandVectorPredicationPass() {
-  return new ExpandVectorPredication();
-}
-
-PreservedAnalyses
-ExpandVectorPredicationPass::run(Function &F, FunctionAnalysisManager &AM) {
-  const auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  CachingVPExpander VPExpander(F, TTI);
-  if (!VPExpander.expandVectorPredication())
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+VPExpansionDetails
+llvm::expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
+                                       const TargetTransformInfo &TTI) {
+  return CachingVPExpander(TTI).expandVectorPredication(VPI);
 }

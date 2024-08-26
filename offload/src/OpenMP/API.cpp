@@ -597,6 +597,12 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   void *DeviceAddr = (void *)((uint64_t)DevicePtr + (uint64_t)DeviceOffset);
+
+  OMPT_IF_BUILT(InterfaceRAII(
+      RegionInterface.getCallbacks<ompt_target_data_associate>(), DeviceNum,
+      const_cast<void *>(HostPtr), const_cast<void *>(DevicePtr), Size,
+      __builtin_return_address(0)));
+
   int Rc = DeviceOrErr->getMappingInfo().associatePtr(
       const_cast<void *>(HostPtr), const_cast<void *>(DeviceAddr), Size);
   DP("omp_target_associate_ptr returns %d\n", Rc);
@@ -625,6 +631,11 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
+  OMPT_IF_BUILT(InterfaceRAII(
+      RegionInterface.getCallbacks<ompt_target_data_disassociate>(), DeviceNum,
+      const_cast<void *>(HostPtr),
+      /*DevicePtr=*/nullptr, /*Size=*/0, __builtin_return_address(0)));
+
   int Rc = DeviceOrErr->getMappingInfo().disassociatePtr(
       const_cast<void *>(HostPtr));
   DP("omp_target_disassociate_ptr returns %d\n", Rc);
@@ -642,7 +653,7 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  size_t NumDevices = omp_get_initial_device();
+  int NumDevices = omp_get_initial_device();
   if (DeviceNum == NumDevices) {
     DP("Device %d is initial device, returning Ptr " DPxMOD ".\n",
            DeviceNum, DPxPTR(Ptr));

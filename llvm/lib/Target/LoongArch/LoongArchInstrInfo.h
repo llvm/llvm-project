@@ -52,6 +52,8 @@ public:
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  bool isAsCheapAsAMove(const MachineInstr &MI) const override;
+
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -61,6 +63,10 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
+
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
 
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
@@ -89,6 +95,9 @@ protected:
 };
 
 namespace LoongArch {
+
+// Returns true if this is the sext.w pattern, addi.w rd, rs, 0.
+bool isSEXT_W(const MachineInstr &MI);
 
 // Mask assignments for floating-point.
 static constexpr unsigned FClassMaskSignalingNaN = 0x001;

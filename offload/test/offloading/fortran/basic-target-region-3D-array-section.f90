@@ -1,18 +1,13 @@
 ! Basic offloading test of a regular array explicitly
 ! passed within a target region
-! REQUIRES: flang
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
     implicit none
     integer :: inArray(3,3,3)
     integer :: outArray(3,3,3)
-    integer :: i, j, k 
+    integer :: i, j, k
     integer :: j2 = 3, k2 = 3
 
     do i = 1, 3
@@ -25,7 +20,7 @@ program main
     end do
 
 j = 1
-k = 1 
+k = 1
 !$omp target map(tofrom:inArray(1:3, 1:3, 2:2), outArray(1:3, 1:3, 1:3), j, k, j2, k2)
     do while (j <= j2)
       k = 1

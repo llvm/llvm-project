@@ -32,6 +32,9 @@ def builtin_bitcode_EQ : Joined<["--"], "builtin-bitcode=">,
 def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device linker invocation">;
+def device_compiler_args_EQ : Joined<["--"], "device-compiler=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
+  HelpText<"Arguments to pass to the device compiler invocation">;
 def clang_backend : Flag<["--"], "clang-backend">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Run the backend using clang rather than the LTO backend">;
@@ -74,6 +77,10 @@ def wrapper_jobs : Joined<["--"], "wrapper-jobs=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<number>">,
   HelpText<"Sets the number of parallel jobs to use for device linking">;
 
+def override_image : Joined<["--"], "override-image=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,
+  HelpText<"Uses the provided file as if it were the output of the device link step">;
+
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,
@@ -87,12 +94,19 @@ def whole_program : Flag<["--"], "whole-program">,
 def linker_arg_EQ : Joined<["--"], "linker-arg=">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"An extra argument to be passed to the linker">;
+def compiler_arg_EQ : Joined<["--"], "compiler-arg=">,
+  Flags<[DeviceOnlyOption, HelpHidden]>,
+  HelpText<"An extra argument to be passed to the compiler">;
 
 // Arguments for the LLVM backend.
 def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
-  MetaVarName<"<arg>">, HelpText<"Arguments passed to the LLVM invocation">;
-def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=-">, Flags<[HelpHidden, WrapperOnlyOption]>,
-  HelpText<"Options passed to LLVM">;
+  MetaVarName<"<arg>">,
+  HelpText<"Arguments passed to LLVM, including Clang invocations, for which "
+           "the '-mllvm' prefix is preserved. Use '-mllvm --help' for a list "
+           "of options.">;
+def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=">, Flags<[HelpHidden, WrapperOnlyOption]>,
+  HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
+           "'--offload-opt=--help' for a list of options.">;
 
 // Standard linker flags also used by the linker wrapper.
 def sysroot_EQ : Joined<["--"], "sysroot=">, HelpText<"Set the system root">;

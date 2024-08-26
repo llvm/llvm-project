@@ -1,6 +1,6 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=OPT %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=NOOPT,COV4 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=NOOPT,COV5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O2 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=OPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=NOOPT,COV4 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=NOOPT,COV5 %s
 
 ; Check that AMDGPUAttributor is not run with -O0.
 ; OPT: .amdhsa_user_sgpr_private_segment_buffer 1

@@ -348,6 +348,15 @@ class StmtComparer {
     return true;
   }
 
+  bool IsStmtEquivalent(const CXXDependentScopeMemberExpr *E1,
+                        const CXXDependentScopeMemberExpr *E2) {
+    if (!IsStructurallyEquivalent(Context, E1->getMember(), E2->getMember())) {
+      return false;
+    }
+    return IsStructurallyEquivalent(Context, E1->getBaseType(),
+                                    E2->getBaseType());
+  }
+
   bool IsStmtEquivalent(const UnaryExprOrTypeTraitExpr *E1,
                         const UnaryExprOrTypeTraitExpr *E2) {
     if (E1->getKind() != E2->getKind())
@@ -1997,7 +2006,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     }
     return false;
   }
-
+  if (!Context.IgnoreTemplateParmDepth && D1->getDepth() != D2->getDepth())
+    return false;
+  if (D1->getIndex() != D2->getIndex())
+    return false;
   // Check types.
   if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType())) {
     if (Context.Complain) {

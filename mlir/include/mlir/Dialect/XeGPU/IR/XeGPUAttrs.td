@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD
 
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 
 class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
@@ -96,6 +97,23 @@ def XeGPU_CacheHintAttr
   : EnumAttr<XeGPU_Dialect, XeGPU_CachePolicyEnums, "cache_hint"> {
     let summary = [{Describe the cache settings for prefetch/load/store operators}];
     let assemblyFormat = "`<` $value `>`";
+}
+
+def XeGPU_FenceScopeWorkgroup: I32EnumAttrCase<"Workgroup", 0, "workgroup">;
+def XeGPU_FenceScopeGPU: I32EnumAttrCase<"GPU", 1, "gpu">;
+def XeGPU_FenceScope: I32EnumAttr<"FenceScope",
+      "The enumeration for the scope of fence operation.",
+      [XeGPU_FenceScopeWorkgroup, XeGPU_FenceScopeGPU]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_FenceScopeAttr:
+  EnumAttr<XeGPU_Dialect, XeGPU_FenceScope, "fence_scope"> {
+    let summary = [{Describes the scope of fence.
+                    "workgroup" means that the scope is within each work group.
+                    "gpu" means the scope is across work groups within the gpu.}];
+    let assemblyFormat = "$value";
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

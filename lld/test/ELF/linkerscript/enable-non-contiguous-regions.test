@@ -1,0 +1,265 @@
+# REQUIRES: x86
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 spill.s -o spill.o
+
+## An input section spills to a later match when the region of its first match
+## would overflow. The spill uses the alignment of the later match.
+
+# RUN: ld.lld -T spill.ld spill.o -o spill --enable-non-contiguous-regions
+# RUN: llvm-readelf -S spill | FileCheck %s --check-prefix=SPILL
+
+# SPILL:      Name          Type     Address          Off    Size
+# SPILL:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-NEXT: .last_chance  PROGBITS 0000000000000008 001008 000002
+
+## A spill off the end still fails the link.
+
+# RUN: not ld.lld -T spill-fail.ld spill.o --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=SPILL-FAIL --implicit-check-not=error:
+
+# SPILL-FAIL: error: section '.last_chance' will not fit in region 'b': overflowed by 2 bytes
+
+## The above spill still occurs when the LMA would overflow, even though the
+## VMA would fit.
+
+# RUN: ld.lld -T spill-lma.ld spill.o -o spill-lma --enable-non-contiguous-regions
+# RUN: llvm-readelf -S spill-lma | FileCheck %s --check-prefix=SPILL-LMA
+
+# SPILL-LMA:      Name          Type     Address          Off    Size
+# SPILL-LMA:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-LMA-NEXT: .last_chance  PROGBITS 0000000000000003 001003 000002
+
+## A spill occurs to an additional match after the first.
+
+# RUN: ld.lld -T spill-later.ld spill.o -o spill-later --enable-non-contiguous-regions
+# RUN: llvm-readelf -S spill-later | FileCheck %s --check-prefix=SPILL-LATER
+
+# SPILL-LATER:      Name            Type     Address          Off    Size
+# SPILL-LATER:      .first_chance   PROGBITS 0000000000000000 001000 000001
+# SPILL-LATER-NEXT: .second_chance  PROGBITS 0000000000000002 001001 000000
+# SPILL-LATER-NEXT: .last_chance    PROGBITS 0000000000000003 001003 000002
+
+## A later overflow causes an earlier section to spill.
+
+# RUN: ld.lld -T spill-earlier.ld spill.o -o spill-earlier --enable-non-contiguous-regions
+# RUN: llvm-readelf -S spill-earlier | FileCheck %s --check-prefix=SPILL-EARLIER
+
+# SPILL-EARLIER:      Name          Type     Address          Off    Size
+# SPILL-EARLIER:      .first_chance PROGBITS 0000000000000000 001000 000002
+# SPILL-EARLIER-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000001
+
+## An additional match in /DISCARD/ has no effect.
+
+# RUN: not ld.lld -T no-spill-into-discard.ld spill.o --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=NO-SPILL-INTO-DISCARD --implicit-check-not=error:
+
+# NO-SPILL-INTO-DISCARD: error: section '.osec' will not fit in region 'a': overflowed by 1 bytes
+
+## An additional match after /DISCARD/ has no effect.
+
+# RUN: ld.lld -T no-spill-from-discard.ld spill.o -o no-spill-from-discard --enable-non-contiguous-regions
+# RUN: llvm-readelf -S no-spill-from-discard | FileCheck %s --check-prefix=NO-SPILL-FROM-DISCARD
+
+# NO-SPILL-FROM-DISCARD: Name          Type     Address          Off    Size
+# NO-SPILL-FROM-DISCARD-NOT: .osec
+
+## SHF_MERGEd sections are spilled according to the matches of the first merged
+## input section (the one giving the resulting section its name).
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 merge.s -o merge.o
+# RUN: ld.lld -T spill-merge.ld merge.o -o spill-merge --enable-non-contiguous-regions
+# RUN: llvm-readelf -S spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
+
+# SPILL-MERGE:      Name          Type     Address          Off    Size
+# SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
+# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
+# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
+
+## An error is reported for INSERT.
+
+# RUN: not ld.lld -T insert.ld spill.o --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=INSERT
+
+# INSERT: error: INSERT cannot be used with --enable-non-contiguous-regions
+
+## An error is reported for OVERWRITE_SECTIONS.
+
+# RUN: not ld.lld -T overwrite-sections.ld spill.o --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=OVERWRITE_SECTIONS
+
+# OVERWRITE_SECTIONS: error: OVERWRITE_SECTIONS cannot be used with --enable-non-contiguous-regions
+
+## SHF_LINK_ORDER is reordered when spilling changes relative section order.
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 link-order.s -o link-order.o
+# RUN: ld.lld -T link-order.ld link-order.o -o link-order --enable-non-contiguous-regions
+# RUN: llvm-readobj -x .order link-order | FileCheck %s --check-prefix=LINK-ORDER
+
+# LINK-ORDER: 020301
+
+#--- spill.s
+.section .one_byte_section,"a",@progbits
+.fill 1
+
+.section .two_byte_section,"a",@progbits
+.fill 2
+
+#--- spill.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 16
+}
+
+SECTIONS {
+  .first_chance : SUBALIGN(1) { *(.one_byte_section) *(.two_byte_section) } >a
+  .last_chance : SUBALIGN(8) { *(.two_byte_section) } >b
+}
+
+#--- spill-fail.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 2, LENGTH = 0
+}
+
+SECTIONS {
+  .first_chance : { *(.one_byte_section) *(.two_byte_section) } >a
+  .last_chance : { *(.two_byte_section) } >b
+}
+
+#--- spill-lma.ld
+MEMORY {
+  vma_a : ORIGIN = 0, LENGTH = 3
+  vma_b : ORIGIN = 3, LENGTH = 3
+  lma_a : ORIGIN = 6, LENGTH = 2
+  lma_b : ORIGIN = 8, LENGTH = 2
+}
+
+SECTIONS {
+  .first_chance : { *(.one_byte_section) *(.two_byte_section) } >vma_a AT>lma_a
+  .last_chance : { *(.two_byte_section) } >vma_b AT>lma_b
+}
+
+#--- spill-later.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 1
+  c : ORIGIN = 3, LENGTH = 2
+}
+
+SECTIONS {
+  .first_chance : { *(.one_byte_section) *(.two_byte_section) } >a
+  .second_chance : { *(.two_byte_section) } >b
+  .last_chance : { *(.two_byte_section) } >c
+}
+
+#--- spill-earlier.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 1
+}
+
+SECTIONS {
+  .first_chance : { *(.one_byte_section) *(.two_byte_section) } >a
+  .last_chance : { *(.one_byte_section) } >b
+}
+
+#--- no-spill-into-discard.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+}
+
+SECTIONS {
+  .osec : { *(.two_byte_section) } >a
+  /DISCARD/ : { *(.one_byte_section) *(.two_byte_section) }
+}
+
+#--- no-spill-from-discard.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+}
+
+SECTIONS {
+  /DISCARD/ : { *(.one_byte_section) *(.two_byte_section) }
+  .osec : { *(.two_byte_section) } >a
+}
+
+#--- merge.s
+.section .a,"aM",@progbits,1
+.byte 0x12, 0x34
+
+.section .b,"aM",@progbits,1
+.byte 0x12
+
+#--- spill-merge.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 1, LENGTH = 2
+  c : ORIGIN = 3, LENGTH = 2
+}
+
+SECTIONS {
+  .first : { *(.a) *(.b) } >a
+  .second : { *(.a) } >b
+  .third : { *(.b) } >c
+}
+
+#--- insert.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+}
+
+SECTIONS {
+  .a : { *(.two_byte_section) } >a
+}
+
+SECTIONS {
+  .b : { *(.one_byte_section) } >a
+} INSERT AFTER .a;
+
+#--- overwrite-sections.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+}
+
+SECTIONS {
+  .a : { *(.two_byte_section) } >a
+}
+
+OVERWRITE_SECTIONS {
+  .b : { *(.one_byte_section) } >a
+}
+
+#--- link-order.s
+.section .a,"a",@progbits
+.fill 1
+
+.section .b,"a",@progbits
+.fill 1
+
+.section .c,"a",@progbits
+.fill 1
+
+.section .link_order.a,"ao",@progbits,.a
+.byte 1
+
+.section .link_order.b,"ao",@progbits,.b
+.byte 2
+
+.section .link_order.c,"ao",@progbits,.c
+.byte 3
+
+#--- link-order.ld
+MEMORY {
+  order : ORIGIN = 0, LENGTH = 3
+  potential_a : ORIGIN = 3, LENGTH = 0
+  bc : ORIGIN = 3, LENGTH = 2
+  actual_a : ORIGIN = 5, LENGTH = 1
+}
+
+SECTIONS {
+  .order :  { *(.link_order.*) } > order
+  .potential_a : { *(.a) } >potential_a
+  .bc : { *(.b) *(.c) } >bc
+  .actual_a : { *(.a) } >actual_a
+}

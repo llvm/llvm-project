@@ -13,4 +13,4 @@ entry:
 
 declare void @foo(i32, i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct.S) align 32)
 
-; CHECK: LLVM ERROR: Pass-by-value arguments with alignment greater than register width are not supported.
+; CHECK: LLVM ERROR: Pass-by-value arguments with alignment greater than 16 are not supported.

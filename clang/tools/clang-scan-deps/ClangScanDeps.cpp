@@ -86,6 +86,8 @@ static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool PrintTiming;
+static llvm::BumpPtrAllocator Alloc;
+static llvm::StringSaver Saver{Alloc};
 static std::vector<const char *> CommandLine;
 
 #ifndef NDEBUG
@@ -99,8 +101,6 @@ static bool RoundTripArgs = DoRoundTripDefault;
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
   llvm::StringRef ToolName = argv[0];
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver{Alloc};
   llvm::opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -348,6 +348,20 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
   return Ret;
 }
 
+static llvm::json::Array
+toJSONSorted(llvm::SmallVector<Module::LinkLibrary, 2> &LinkLibs) {
+  llvm::sort(LinkLibs, [](const Module::LinkLibrary &lhs,
+                          const Module::LinkLibrary &rhs) {
+    return lhs.Library < rhs.Library;
+  });
+
+  llvm::json::Array Ret;
+  for (const Module::LinkLibrary &LL : LinkLibs)
+    Ret.push_back(llvm::json::Object(
+        {{"link-name", LL.Library}, {"isFramework", LL.IsFramework}}));
+  return Ret;
+}
+
 // Thread safe.
 class FullDeps {
 public:
@@ -439,14 +453,13 @@ public:
     Array OutModules;
     for (auto &&ModID : ModuleIDs) {
       auto &MD = Modules[ModID];
-      Object O{
-          {"name", MD.ID.ModuleName},
-          {"context-hash", MD.ID.ContextHash},
-          {"file-deps", toJSONSorted(MD.FileDeps)},
-          {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
-          {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.getBuildArguments()},
-      };
+      Object O{{"name", MD.ID.ModuleName},
+               {"context-hash", MD.ID.ContextHash},
+               {"file-deps", toJSONSorted(MD.FileDeps)},
+               {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
+               {"clang-modulemap-file", MD.ClangModuleMapFile},
+               {"command-line", MD.getBuildArguments()},
+               {"link-libraries", toJSONSorted(MD.LinkLibraries)}};
       OutModules.push_back(std::move(O));
     }
 
@@ -791,6 +804,11 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   llvm::cl::PrintOptionValues();
+
+  // Expand response files in advance, so that we can "see" all the arguments
+  // when adjusting below.
+  Compilations = expandResponseFiles(std::move(Compilations),
+                                     llvm::vfs::getRealFileSystem());
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =

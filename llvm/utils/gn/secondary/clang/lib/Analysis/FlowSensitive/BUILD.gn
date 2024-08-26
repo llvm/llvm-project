@@ -26,6 +26,7 @@ static_library("FlowSensitive") {
     "ASTOps.cpp",
     "AdornedCFG.cpp",
     "Arena.cpp",
+    "CNFFormula.cpp",
     "DataflowAnalysisContext.cpp",
     "DataflowEnvironment.cpp",
     "DebugSupport.cpp",

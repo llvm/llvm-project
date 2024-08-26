@@ -8,10 +8,11 @@
 
 #include "src/stdio/feof.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, feof, (::FILE * stream)) {
   int ret;
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, feof, (::FILE * stream)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

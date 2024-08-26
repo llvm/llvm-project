@@ -1466,6 +1466,17 @@ define <4 x i32> @add_or(<4 x i32> %v) {
   ret <4 x i32> %t3
 }
 
+define <4 x i32> @add_or_disjoint(<4 x i32> %v) {
+; CHECK-LABEL: @add_or_disjoint(
+; CHECK-NEXT:    [[T3:%.*]] = add <4 x i32> [[V:%.*]], <i32 31, i32 31, i32 65536, i32 65537>
+; CHECK-NEXT:    ret <4 x i32> [[T3]]
+;
+  %t1 = add <4 x i32> %v, <i32 65534, i32 65535, i32 65536, i32 65537>
+  %t2 = or disjoint <4 x i32> %v, <i32 31, i32 31, i32 31, i32 31>
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  ret <4 x i32> %t3
+}
+
 ; Try with 'or' as operand 0 of the shuffle.
 
 define <4 x i8> @or_add(<4 x i8> %v) {

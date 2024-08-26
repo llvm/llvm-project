@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-delicm -pass-remarks-missed=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; llvm.org/PR34485
 ; llvm.org/PR34989

@@ -2066,6 +2066,50 @@ entry:
   ret i1 %conv
 }
 
+define ppc_fp128 @test_tan_ppc_fp128(ppc_fp128 %first) #0 {
+; PC64LE-LABEL: test_tan_ppc_fp128:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mflr 0
+; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
+; PC64LE-NEXT:    bl tanl
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    addi 1, 1, 32
+; PC64LE-NEXT:    ld 0, 16(1)
+; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: test_tan_ppc_fp128:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mflr 0
+; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
+; PC64LE9-NEXT:    bl tanl
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    addi 1, 1, 32
+; PC64LE9-NEXT:    ld 0, 16(1)
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    blr
+;
+; PC64-LABEL: test_tan_ppc_fp128:
+; PC64:       # %bb.0: # %entry
+; PC64-NEXT:    mflr 0
+; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
+; PC64-NEXT:    bl tanl
+; PC64-NEXT:    nop
+; PC64-NEXT:    addi 1, 1, 112
+; PC64-NEXT:    ld 0, 16(1)
+; PC64-NEXT:    mtlr 0
+; PC64-NEXT:    blr
+entry:
+  %tan = call ppc_fp128 @llvm.experimental.constrained.tan.ppcf128(
+                    ppc_fp128 %first,
+                    metadata !"round.dynamic",
+                    metadata !"fpexcept.strict") #1
+  ret ppc_fp128 %tan
+}
+
 attributes #0 = { nounwind strictfp }
 attributes #1 = { strictfp }
 
@@ -2096,6 +2140,7 @@ declare ppc_fp128 @llvm.experimental.constrained.round.ppcf128(ppc_fp128, metada
 declare ppc_fp128 @llvm.experimental.constrained.sin.ppcf128(ppc_fp128, metadata, metadata)
 declare ppc_fp128 @llvm.experimental.constrained.sqrt.ppcf128(ppc_fp128, metadata, metadata)
 declare ppc_fp128 @llvm.experimental.constrained.fsub.ppcf128(ppc_fp128, ppc_fp128, metadata, metadata)
+declare ppc_fp128 @llvm.experimental.constrained.tan.ppcf128(ppc_fp128, metadata, metadata)
 declare ppc_fp128 @llvm.experimental.constrained.trunc.ppcf128(ppc_fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.ppcf128(ppc_fp128, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128, metadata)

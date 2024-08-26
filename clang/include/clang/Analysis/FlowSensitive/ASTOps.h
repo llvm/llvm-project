@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "llvm/ADT/DenseSet.h"
@@ -80,6 +81,56 @@ private:
   std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
 };
 
+/// Specialization of `RecursiveASTVisitor` that visits those nodes that are
+/// relevant to the dataflow analysis; generally, these are the ones that also
+/// appear in the CFG.
+/// To start the traversal, call `TraverseStmt()` on the statement or body of
+/// the function to analyze. Don't call `TraverseDecl()` on the function itself;
+/// this won't work as `TraverseDecl()` contains code to avoid traversing nested
+/// functions.
+template <class Derived>
+class AnalysisASTVisitor : public RecursiveASTVisitor<Derived> {
+public:
+  bool shouldVisitImplicitCode() { return true; }
+
+  bool shouldVisitLambdaBody() const { return false; }
+
+  bool TraverseDecl(Decl *D) {
+    // Don't traverse nested record or function declarations.
+    // - We won't be analyzing code contained in these anyway
+    // - We don't model fields that are used only in these nested declaration,
+    //   so trying to propagate a result object to initializers of such fields
+    //   would cause an error.
+    if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
+      return true;
+
+    return RecursiveASTVisitor<Derived>::TraverseDecl(D);
+  }
+
+  // Don't traverse expressions in unevaluated contexts, as we don't model
+  // fields that are only used in these.
+  // Note: The operand of the `noexcept` operator is an unevaluated operand, but
+  // nevertheless it appears in the Clang CFG, so we don't exclude it here.
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) {
+    if (TIE->isPotentiallyEvaluated())
+      return RecursiveASTVisitor<Derived>::TraverseCXXTypeidExpr(TIE);
+    return true;
+  }
+  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
+    return true;
+  }
+
+  bool TraverseBindingDecl(BindingDecl *BD) {
+    // `RecursiveASTVisitor` doesn't traverse holding variables for
+    // `BindingDecl`s by itself, so we need to tell it to.
+    if (VarDecl *HoldingVar = BD->getHoldingVar())
+      TraverseDecl(HoldingVar);
+    return RecursiveASTVisitor<Derived>::TraverseBindingDecl(BD);
+  }
+};
+
 /// A collection of several types of declarations, all referenced from the same
 /// function.
 struct ReferencedDecls {
@@ -88,6 +139,9 @@ struct ReferencedDecls {
   /// All variables with static storage duration, notably including static
   /// member variables and static variables declared within a function.
   llvm::DenseSet<const VarDecl *> Globals;
+  /// Local variables, not including parameters or static variables declared
+  /// within a function.
+  llvm::DenseSet<const VarDecl *> Locals;
   /// Free functions and member functions which are referenced (but not
   /// necessarily called).
   llvm::DenseSet<const FunctionDecl *> Functions;

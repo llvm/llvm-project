@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | \
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | \
 ; RUN:     FileCheck %s -check-prefix=NONAFFINE
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output \
-; RUN:     -polly-allow-nonaffine-branches=false < %s | \
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -disable-output \
+; RUN:     -polly-allow-nonaffine-branches=false < %s 2>&1 | \
 ; RUN:     FileCheck %s -check-prefix=NO-NONEAFFINE
 
 ; NONAFFINE:      Statements {

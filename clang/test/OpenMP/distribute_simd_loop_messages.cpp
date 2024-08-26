@@ -14,7 +14,7 @@ public:
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute simd
-    for (int k = 0; k < s.a; ++k) // expected-warning {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
+    for (int k = 0; k < s.a; ++k) // expected-warning {{type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
       ++s.a;
     return *this;
   }
@@ -490,7 +490,7 @@ int test_with_random_access_iterator() {
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (GoodIter I = begin; I < end; ++I) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I = begin; I < end; ++I) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
@@ -501,41 +501,41 @@ int test_with_random_access_iterator() {
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (GoodIter I = begin; I >= end; --I) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I = begin; I >= end; --I) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
   // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp distribute simd
-  for (GoodIter I(begin); I < end; ++I) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I(begin); I < end; ++I) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
   // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp distribute simd
-  for (GoodIter I(nullptr); I < end; ++I) // expected-warning {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I(nullptr); I < end; ++I) // expected-warning {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
   // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp distribute simd
-  for (GoodIter I(0); I < end; ++I) // expected-warning {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I(0); I < end; ++I) // expected-warning {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
   // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp distribute simd
-  for (GoodIter I(1,2); I < end; ++I) // expected-warning {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I(1,2); I < end; ++I) // expected-warning {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (begin = GoodIter(0); begin < end; ++begin) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (begin = GoodIter(0); begin < end; ++begin) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++begin;
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (begin = GoodIter(1,2); begin < end; ++begin) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (begin = GoodIter(1,2); begin < end; ++begin) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++begin;
   #pragma omp target
   #pragma omp teams
@@ -546,7 +546,7 @@ int test_with_random_access_iterator() {
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (begin = end; begin < end; ++begin) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (begin = end; begin < end; ++begin) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++begin;
   #pragma omp target
   #pragma omp teams
@@ -576,7 +576,7 @@ int test_with_random_access_iterator() {
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (GoodIter I = begin; I >= end; I = I - 1) // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (GoodIter I = begin; I >= end; I = I - 1) // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   #pragma omp target
   #pragma omp teams
@@ -600,7 +600,7 @@ int test_with_random_access_iterator() {
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (Iter0 I = begin0; I < end0; ++I) // expected-warning 2 {{Type 'Iter0' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (Iter0 I = begin0; I < end0; ++I) // expected-warning 2 {{type 'Iter0' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
 
   #pragma omp target
@@ -608,7 +608,7 @@ int test_with_random_access_iterator() {
   // Initializer is constructor without params.
   // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp distribute simd
-  for (Iter0 I; I < end0; ++I) // expected-warning {{Type 'Iter0' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (Iter0 I; I < end0; ++I) // expected-warning {{type 'Iter0' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
 
   Iter1 begin1, end1;
@@ -654,7 +654,7 @@ template <typename IT, int ST> class TC {
       // expected-note@+3 {{loop step is expected to be positive due to this condition}}
       // expected-error@+2 {{increment expression must cause 'I' to increase on each iteration of OpenMP for loop}}
       #pragma omp distribute simd
-      for (IT I = begin; I <= end; I += ST) { // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+      for (IT I = begin; I <= end; I += ST) { // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
         ++I;
       }
       #pragma omp distribute simd
@@ -697,7 +697,7 @@ template <typename IT, int ST=0> int dotest_gt(IT begin, IT end) {
   #pragma omp target
   #pragma omp teams
   #pragma omp distribute simd
-  for (IT I = begin; I < end; I+=TC<int,ST>::step()) { // expected-warning 2 {{Type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
+  for (IT I = begin; I < end; I+=TC<int,ST>::step()) { // expected-warning 2 {{type 'GoodIter' is not trivially copyable and not guaranteed to be mapped correctly}}
     ++I;
   }
 }

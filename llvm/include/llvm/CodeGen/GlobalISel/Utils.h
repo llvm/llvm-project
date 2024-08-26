@@ -22,6 +22,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+
 #include <cstdint>
 
 namespace llvm {
@@ -177,6 +178,9 @@ std::optional<APInt> getIConstantVRegVal(Register VReg,
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t returns it.
 std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
                                                const MachineRegisterInfo &MRI);
+
+/// \p VReg is defined by a G_CONSTANT, return the corresponding value.
+APInt getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
@@ -558,6 +562,36 @@ void salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI);
 /// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
 /// having only floating-point operands.
 bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
+
+/// Returns true if \p Reg can create undef or poison from non-undef &
+/// non-poison operands. \p ConsiderFlagsAndMetadata controls whether poison
+/// producing flags and metadata on the instruction are considered. This can be
+/// used to see if the instruction could still introduce undef or poison even
+/// without poison generating flags and metadata which might be on the
+/// instruction.
+bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                            bool ConsiderFlagsAndMetadata = true);
+
+/// Returns true if \p Reg can create poison from non-poison operands.
+bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
+                     bool ConsiderFlagsAndMetadata = true);
+
+/// Returns true if \p Reg cannot be poison and undef.
+bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0);
+
+/// Returns true if \p Reg cannot be poison, but may be undef.
+bool isGuaranteedNotToBePoison(Register Reg, const MachineRegisterInfo &MRI,
+                               unsigned Depth = 0);
+
+/// Returns true if \p Reg cannot be undef, but may be poison.
+bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
+                              unsigned Depth = 0);
+
+/// Get the type back from LLT. It won't be 100 percent accurate but returns an
+/// estimate of the type.
+Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
 } // End namespace llvm.
 #endif

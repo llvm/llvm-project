@@ -36,17 +36,16 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __find {
-struct __fn {
+struct __find {
   template <class _Iter, class _Sent, class _Tp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static constexpr _Iter
   __find_unwrap(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
     if constexpr (forward_iterator<_Iter>) {
       auto [__first_un, __last_un] = std::__unwrap_range(__first, std::move(__last));
       return std::__rewrap_range<_Sent>(
-          std::move(__first), std::__find_impl(std::move(__first_un), std::move(__last_un), __value, __proj));
+          std::move(__first), std::__find(std::move(__first_un), std::move(__last_un), __value, __proj));
     } else {
-      return std::__find_impl(std::move(__first), std::move(__last), __value, __proj);
+      return std::__find(std::move(__first), std::move(__last), __value, __proj);
     }
   }
 
@@ -64,10 +63,9 @@ struct __fn {
     return __find_unwrap(ranges::begin(__r), ranges::end(__r), __value, __proj);
   }
 };
-} // namespace __find
 
 inline namespace __cpo {
-inline constexpr auto find = __find::__fn{};
+inline constexpr auto find = __find{};
 } // namespace __cpo
 } // namespace ranges
 

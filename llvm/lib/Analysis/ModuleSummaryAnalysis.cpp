@@ -85,6 +85,8 @@ extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
+extern cl::opt<bool> MemProfReportHintedSizes;
+
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
@@ -95,9 +97,12 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 // global vars at all. When importing function we aren't interested if any
 // instruction in it takes an address of any basic block, because instruction
 // can only take an address of basic block located in the same function.
+// Set `RefLocalLinkageIFunc` to true if the analyzed value references a
+// local-linkage ifunc.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                          SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
-                         SmallPtrSet<const User *, 8> &Visited) {
+                         SmallPtrSet<const User *, 8> &Visited,
+                         bool &RefLocalLinkageIFunc) {
   bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
   if (Visited.insert(CurUser).second)
@@ -119,8 +124,18 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         // We have a reference to a global value. This should be added to
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
-        if (!(CB && CB->isCallee(&OI)))
+        if (!(CB && CB->isCallee(&OI))) {
+          // If an ifunc has local linkage, do not add it into ref edges, and
+          // sets `RefLocalLinkageIFunc` to true. The referencer is not eligible
+          // for import. An ifunc doesn't have summary and ThinLTO cannot
+          // promote it; importing the referencer may cause linkage errors.
+          if (auto *GI = dyn_cast_if_present<GlobalIFunc>(GV);
+              GI && GI->hasLocalLinkage()) {
+            RefLocalLinkageIFunc = true;
+            continue;
+          }
           RefEdges.insert(Index.getOrInsertValueInfo(GV));
+        }
         continue;
       }
       if (Visited.insert(Operand).second)
@@ -130,20 +145,15 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
 
   const Instruction *I = dyn_cast<Instruction>(CurUser);
   if (I) {
-    uint32_t ActualNumValueData = 0;
     uint64_t TotalCount = 0;
     // MaxNumVTableAnnotations is the maximum number of vtables annotated on
     // the instruction.
-    auto ValueDataArray =
-        getValueProfDataFromInst(*I, IPVK_VTableTarget, MaxNumVTableAnnotations,
-                                 ActualNumValueData, TotalCount);
+    auto ValueDataArray = getValueProfDataFromInst(
+        *I, IPVK_VTableTarget, MaxNumVTableAnnotations, TotalCount);
 
-    if (ValueDataArray.get()) {
-      for (uint32_t j = 0; j < ActualNumValueData; j++) {
-        RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
-                                                   ValueDataArray[j].Value));
-      }
-    }
+    for (const auto &V : ValueDataArray)
+      RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                 V.Value));
   }
   return HasBlockAddress;
 }
@@ -313,7 +323,8 @@ static void computeFunctionSummary(
 
   // Add personality function, prefix data and prologue data to function's ref
   // list.
-  findRefEdges(Index, &F, RefEdges, Visited);
+  bool HasLocalIFuncCallOrRef = false;
+  findRefEdges(Index, &F, RefEdges, Visited, HasLocalIFuncCallOrRef);
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -326,7 +337,6 @@ static void computeFunctionSummary(
 
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
-  bool HasIFuncCall = false;
   bool HasUnknownCall = false;
   bool MayThrow = false;
   for (const BasicBlock &BB : F) {
@@ -372,11 +382,11 @@ static void computeFunctionSummary(
             // of calling it we should add GV to RefEdges directly.
             RefEdges.insert(Index.getOrInsertValueInfo(GV));
           else if (auto *U = dyn_cast<User>(Stored))
-            findRefEdges(Index, U, RefEdges, Visited);
+            findRefEdges(Index, U, RefEdges, Visited, HasLocalIFuncCallOrRef);
           continue;
         }
       }
-      findRefEdges(Index, &I, RefEdges, Visited);
+      findRefEdges(Index, &I, RefEdges, Visited, HasLocalIFuncCallOrRef);
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB) {
         if (I.mayThrow())
@@ -450,7 +460,7 @@ static void computeFunctionSummary(
         // Non-local ifunc is not cloned and does not have the issue.
         if (auto *GI = dyn_cast_if_present<GlobalIFunc>(CalledValue))
           if (GI->hasLocalLinkage())
-            HasIFuncCall = true;
+            HasLocalIFuncCallOrRef = true;
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
@@ -470,11 +480,11 @@ static void computeFunctionSummary(
           }
         }
 
-        uint32_t NumVals, NumCandidates;
+        uint32_t NumCandidates;
         uint64_t TotalCount;
         auto CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(
-                &I, NumVals, TotalCount, NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
+                                                               NumCandidates);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
@@ -509,6 +519,7 @@ static void computeFunctionSummary(
       auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
+        std::vector<uint64_t> TotalSizes;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
           MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -528,8 +539,17 @@ static void computeFunctionSummary(
           }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
+          if (MemProfReportHintedSizes) {
+            auto TotalSize = getMIBTotalSize(MIBMD);
+            assert(TotalSize);
+            TotalSizes.push_back(TotalSize);
+          }
         }
         Allocs.push_back(AllocInfo(std::move(MIBs)));
+        if (MemProfReportHintedSizes) {
+          assert(Allocs.back().MIBs.size() == TotalSizes.size());
+          Allocs.back().TotalSizes = std::move(TotalSizes);
+        }
       } else if (!InstCallsite.empty()) {
         SmallVector<unsigned> StackIdIndices;
         for (auto StackId : InstCallsite)
@@ -555,7 +575,7 @@ static void computeFunctionSummary(
                            SmallPtrSet<const User *, 8> &Cache) {
       for (const auto *I : Instrs) {
         Cache.erase(I);
-        findRefEdges(Index, I, Edges, Cache);
+        findRefEdges(Index, I, Edges, Cache, HasLocalIFuncCallOrRef);
       }
     };
 
@@ -631,9 +651,9 @@ static void computeFunctionSummary(
 #endif
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
-  bool NotEligibleForImport = NonRenamableLocal ||
-                              HasInlineAsmMaybeReferencingInternal ||
-                              HasIndirBranchToBlockAddress || HasIFuncCall;
+  bool NotEligibleForImport =
+      NonRenamableLocal || HasInlineAsmMaybeReferencingInternal ||
+      HasIndirBranchToBlockAddress || HasLocalIFuncCallOrRef;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
@@ -787,7 +807,10 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    SmallVectorImpl<MDNode *> &Types) {
   SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
+  bool RefLocalIFunc = false;
+  bool HasBlockAddress =
+      findRefEdges(Index, &V, RefEdges, Visited, RefLocalIFunc);
+  const bool NotEligibleForImport = (HasBlockAddress || RefLocalIFunc);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
@@ -821,7 +844,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                                          RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
-  if (HasBlockAddress)
+  if (NotEligibleForImport)
     GVarSummary->setNotEligibleToImport();
   if (!VTableFuncs.empty())
     GVarSummary->setVTableFuncs(VTableFuncs);
@@ -1059,7 +1082,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   if (!ModuleSummaryDotFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_None);
+    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_Text);
     if (EC)
       report_fatal_error(Twine("Failed to open dot file ") +
                          ModuleSummaryDotFile + ": " + EC.message() + "\n");

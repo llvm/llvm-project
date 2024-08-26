@@ -13,18 +13,18 @@
 #ifndef LLVM_CLANG_SEMA_SEMAHLSL_H
 #define LLVM_CLANG_SEMA_SEMAHLSL_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
 namespace clang {
+class AttributeCommonInfo;
+class IdentifierInfo;
+class ParsedAttr;
+class Scope;
 
 class SemaHLSL : public SemaBase {
 public:
@@ -38,7 +38,7 @@ public:
                                           const AttributeCommonInfo &AL, int X,
                                           int Y, int Z);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                                  HLSLShaderAttr::ShaderType ShaderType);
+                                  llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
   mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
                          HLSLParamModifierAttr::Spelling Spelling);
@@ -47,8 +47,20 @@ public:
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
   void DiagnoseAttrStageMismatch(
-      const Attr *A, HLSLShaderAttr::ShaderType Stage,
-      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
+      const Attr *A, llvm::Triple::EnvironmentType Stage,
+      std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
+  void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
+  void handleShaderAttr(Decl *D, const ParsedAttr &AL);
+  void handleROVAttr(Decl *D, const ParsedAttr &AL);
+  void handleResourceClassAttr(Decl *D, const ParsedAttr &AL);
+  void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+
+  bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 };
 
 } // namespace clang

@@ -801,7 +801,8 @@ define i1 @oss_fuzz_39934(i32 %arg) {
 ; CHECK-NEXT:    ret i1 [[C10]]
 ;
   %B13 = mul nsw i32 %arg, -65536
-  %ext = zext i1 icmp eq (ptr @g, ptr null) to i32
+  %cmp = icmp eq ptr @g, null
+  %ext = zext i1 %cmp to i32
   %or = or i32 %ext, 65537
   %mul = mul i32 %or, -65536
   %C10 = icmp ne i32 %mul, %B13
@@ -1110,7 +1111,7 @@ define i1 @mul_xy_z_assumeodd_eq(i8 %x, i8 %y, i8 %z) {
 define <2 x i1> @reused_mul_nsw_xy_z_setnonzero_vec_ne(<2 x i8> %x, <2 x i8> %y, <2 x i8> %zi) {
 ; CHECK-LABEL: @reused_mul_nsw_xy_z_setnonzero_vec_ne(
 ; CHECK-NEXT:    [[Z:%.*]] = or <2 x i8> [[ZI:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[MULY:%.*]] = mul nsw <2 x i8> [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[MULY:%.*]] = mul nsw <2 x i8> [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    call void @usev2xi8(<2 x i8> [[MULY]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
@@ -1126,8 +1127,8 @@ define <2 x i1> @reused_mul_nsw_xy_z_setnonzero_vec_ne(<2 x i8> %x, <2 x i8> %y,
 define i1 @mul_mixed_nuw_nsw_xy_z_setodd_ult(i8 %x, i8 %y, i8 %zi) {
 ; CHECK-LABEL: @mul_mixed_nuw_nsw_xy_z_setodd_ult(
 ; CHECK-NEXT:    [[Z:%.*]] = or i8 [[ZI:%.*]], 1
-; CHECK-NEXT:    [[MULX:%.*]] = mul nsw i8 [[Z]], [[X:%.*]]
-; CHECK-NEXT:    [[MULY:%.*]] = mul nuw nsw i8 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[MULX:%.*]] = mul nsw i8 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[MULY:%.*]] = mul nuw nsw i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[MULX]], [[MULY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1211,7 +1212,7 @@ define i1 @reused_mul_nuw_xy_z_selectnonzero_ugt(i8 %x, i8 %y, i8 %z) {
 define <2 x i1> @mul_mixed_nsw_nuw_xy_z_setnonzero_vec_ule(<2 x i8> %x, <2 x i8> %y, <2 x i8> %zi) {
 ; CHECK-LABEL: @mul_mixed_nsw_nuw_xy_z_setnonzero_vec_ule(
 ; CHECK-NEXT:    [[Z:%.*]] = or <2 x i8> [[ZI:%.*]], <i8 1, i8 3>
-; CHECK-NEXT:    [[MULX:%.*]] = mul nuw <2 x i8> [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[MULX:%.*]] = mul nuw <2 x i8> [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[MULY:%.*]] = mul nsw <2 x i8> [[Z]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i8> [[MULY]], [[MULX]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]

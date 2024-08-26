@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
 ; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope  -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global,-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
 

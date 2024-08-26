@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
-#define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
 
 #include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -473,6 +473,10 @@ protected:
   /// have succeeded.
   ActionList Actions;
 
+  /// Combiners can sometimes just run C++ code to finish matching a rule &
+  /// mutate instructions instead of relying on MatchActions. Empty if unused.
+  std::string CustomCXXAction;
+
   using DefinedInsnVariablesMap = std::map<InstructionMatcher *, unsigned>;
 
   /// A map of instruction matchers to the local variables
@@ -563,6 +567,10 @@ public:
   /// should NOT be emitted.
   bool tryEraseInsnID(unsigned ID) { return ErasedInsnIDs.insert(ID).second; }
 
+  void setCustomCXXAction(StringRef FnEnumName) {
+    CustomCXXAction = FnEnumName.str();
+  }
+
   // Emplaces an action of the specified Kind at the end of the action list.
   //
   // Returns a reference to the newly created action.
@@ -633,6 +641,10 @@ public:
     return make_range(actions_begin(), actions_end());
   }
 
+  bool hasOperand(StringRef SymbolicName) const {
+    return DefinedOperands.contains(SymbolicName);
+  }
+
   void defineOperand(StringRef SymbolicName, OperandMatcher &OM);
 
   void definePhysRegOperand(Record *Reg, OperandMatcher &OM);
@@ -670,7 +682,6 @@ public:
   const PredicateMatcher &getFirstCondition() const override;
   LLTCodeGen getFirstConditionAsRootType();
   bool hasFirstCondition() const override;
-  unsigned getNumOperands() const;
   StringRef getOpcode() const;
 
   // FIXME: Remove this as soon as possible
@@ -798,6 +809,7 @@ public:
     IPM_MemoryAlignment,
     IPM_VectorSplatImm,
     IPM_NoUse,
+    IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
     OPM_SameOperand,
@@ -1166,7 +1178,7 @@ protected:
 public:
   CmpPredicateOperandMatcher(unsigned InsnVarID, unsigned OpIdx, std::string P)
       : OperandPredicateMatcher(OPM_CmpPredicate, InsnVarID, OpIdx),
-        PredName(P) {}
+        PredName(std::move(P)) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
@@ -1246,12 +1258,16 @@ protected:
 
   TempTypeIdx TTIdx = 0;
 
+  // TODO: has many implications, figure them all out
+  bool IsVariadic = false;
+
 public:
   OperandMatcher(InstructionMatcher &Insn, unsigned OpIdx,
                  const std::string &SymbolicName,
-                 unsigned AllocatedTemporariesBaseID)
+                 unsigned AllocatedTemporariesBaseID, bool IsVariadic = false)
       : Insn(Insn), OpIdx(OpIdx), SymbolicName(SymbolicName),
-        AllocatedTemporariesBaseID(AllocatedTemporariesBaseID) {}
+        AllocatedTemporariesBaseID(AllocatedTemporariesBaseID),
+        IsVariadic(IsVariadic) {}
 
   bool hasSymbolicName() const { return !SymbolicName.empty(); }
   StringRef getSymbolicName() const { return SymbolicName; }
@@ -1263,7 +1279,8 @@ public:
   /// Construct a new operand predicate and add it to the matcher.
   template <class Kind, class... Args>
   std::optional<Kind *> addPredicate(Args &&...args) {
-    if (isSameAsAnotherOperand())
+    // TODO: Should variadic ops support predicates?
+    if (isSameAsAnotherOperand() || IsVariadic)
       return std::nullopt;
     Predicates.emplace_back(std::make_unique<Kind>(
         getInsnVarID(), getOpIdx(), std::forward<Args>(args)...));
@@ -1272,6 +1289,8 @@ public:
 
   unsigned getOpIdx() const { return OpIdx; }
   unsigned getInsnVarID() const;
+
+  bool isVariadic() const { return IsVariadic; }
 
   /// If this OperandMatcher has not been assigned a TempTypeIdx yet, assigns it
   /// one and adds a `RecordRegisterType` predicate to this matcher. If one has
@@ -1354,8 +1373,7 @@ public:
 
   InstructionOpcodeMatcher(unsigned InsnVarID,
                            ArrayRef<const CodeGenInstruction *> I)
-      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID),
-        Insts(I.begin(), I.end()) {
+      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID), Insts(I) {
     assert((Insts.size() == 1 || Insts.size() == 2) &&
            "unexpected number of opcode alternatives");
   }
@@ -1396,20 +1414,28 @@ public:
 };
 
 class InstructionNumOperandsMatcher final : public InstructionPredicateMatcher {
+public:
+  enum class CheckKind { Eq, LE, GE };
+
+private:
   unsigned NumOperands = 0;
+  CheckKind CK;
 
 public:
-  InstructionNumOperandsMatcher(unsigned InsnVarID, unsigned NumOperands)
+  InstructionNumOperandsMatcher(unsigned InsnVarID, unsigned NumOperands,
+                                CheckKind CK = CheckKind::Eq)
       : InstructionPredicateMatcher(IPM_NumOperands, InsnVarID),
-        NumOperands(NumOperands) {}
+        NumOperands(NumOperands), CK(CK) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_NumOperands;
   }
 
   bool isIdentical(const PredicateMatcher &B) const override {
-    return InstructionPredicateMatcher::isIdentical(B) &&
-           NumOperands == cast<InstructionNumOperandsMatcher>(&B)->NumOperands;
+    if (!InstructionPredicateMatcher::isIdentical(B))
+      return false;
+    const auto &Other = *cast<InstructionNumOperandsMatcher>(&B);
+    return NumOperands == Other.NumOperands && CK == Other.CK;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -1526,7 +1552,7 @@ public:
   MemoryAddressSpacePredicateMatcher(unsigned InsnVarID, unsigned MMOIdx,
                                      ArrayRef<unsigned> AddrSpaces)
       : InstructionPredicateMatcher(IPM_MemoryAddressSpace, InsnVarID),
-        MMOIdx(MMOIdx), AddrSpaces(AddrSpaces.begin(), AddrSpaces.end()) {}
+        MMOIdx(MMOIdx), AddrSpaces(AddrSpaces) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_MemoryAddressSpace;
@@ -1683,6 +1709,28 @@ public:
   }
 };
 
+/// Generates code to check that the first result has only one use.
+class OneUsePredicateMatcher : public InstructionPredicateMatcher {
+public:
+  OneUsePredicateMatcher(unsigned InsnVarID)
+      : InstructionPredicateMatcher(IPM_OneUse, InsnVarID) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_OneUse;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B);
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckHasOneUse")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+          << MatchTable::LineBreak;
+  }
+};
+
 /// Generates code to check that a set of predicates and operands match for a
 /// particular instruction.
 ///
@@ -1698,20 +1746,32 @@ protected:
   /// The operands to match. All rendered operands must be present even if the
   /// condition is always true.
   OperandVec Operands;
-  bool NumOperandsCheck = true;
 
   std::string SymbolicName;
   unsigned InsnVarID;
+  bool AllowNumOpsCheck;
 
   /// PhysRegInputs - List list has an entry for each explicitly specified
   /// physreg input to the pattern.  The first elt is the Register node, the
   /// second is the recorded slot number the input pattern match saved it in.
   SmallVector<std::pair<Record *, unsigned>, 2> PhysRegInputs;
 
+  bool canAddNumOperandsCheck() const {
+    // Add if it's allowed, and:
+    //    - We don't have a variadic operand
+    //    - We don't already have such a check.
+    return AllowNumOpsCheck && !hasVariadicMatcher() &&
+           none_of(Predicates, [&](const auto &P) {
+             return P->getKind() ==
+                    InstructionPredicateMatcher::IPM_NumOperands;
+           });
+  }
+
 public:
   InstructionMatcher(RuleMatcher &Rule, StringRef SymbolicName,
-                     bool NumOpsCheck = true)
-      : Rule(Rule), NumOperandsCheck(NumOpsCheck), SymbolicName(SymbolicName) {
+                     bool AllowNumOpsCheck = true)
+      : Rule(Rule), SymbolicName(SymbolicName),
+        AllowNumOpsCheck(AllowNumOpsCheck) {
     // We create a new instruction matcher.
     // Get a new ID for that instruction.
     InsnVarID = Rule.implicitlyDefineInsnVar(*this);
@@ -1731,7 +1791,8 @@ public:
 
   /// Add an operand to the matcher.
   OperandMatcher &addOperand(unsigned OpIdx, const std::string &SymbolicName,
-                             unsigned AllocatedTemporariesBaseID);
+                             unsigned AllocatedTemporariesBaseID,
+                             bool IsVariadic = false);
   OperandMatcher &getOperand(unsigned OpIdx);
   OperandMatcher &addPhysRegInput(Record *Reg, unsigned OpIdx,
                                   unsigned TempOpIdx);
@@ -1741,7 +1802,12 @@ public:
   }
 
   StringRef getSymbolicName() const { return SymbolicName; }
-  unsigned getNumOperands() const { return Operands.size(); }
+
+  unsigned getNumOperandMatchers() const { return Operands.size(); }
+  bool hasVariadicMatcher() const {
+    return !Operands.empty() && Operands.back()->isVariadic();
+  }
+
   OperandVec::iterator operands_begin() { return Operands.begin(); }
   OperandVec::iterator operands_end() { return Operands.end(); }
   iterator_range<OperandVec::iterator> operands() {
@@ -1803,9 +1869,10 @@ protected:
 public:
   InstructionOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
                             RuleMatcher &Rule, StringRef SymbolicName,
-                            bool NumOpsCheck = true)
+                            bool AllowNumOpsCheck = true)
       : OperandPredicateMatcher(OPM_Instruction, InsnVarID, OpIdx),
-        InsnMatcher(new InstructionMatcher(Rule, SymbolicName, NumOpsCheck)),
+        InsnMatcher(
+            new InstructionMatcher(Rule, SymbolicName, AllowNumOpsCheck)),
         Flags(Rule.getGISelFlags()) {}
 
   static bool classof(const PredicateMatcher *P) {
@@ -1883,6 +1950,11 @@ public:
   }
 
   StringRef getSymbolicName() const { return SymbolicName; }
+
+  static void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                unsigned NewInsnID, unsigned OldInsnID,
+                                unsigned OpIdx, StringRef Name,
+                                bool ForVariadic = false);
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
@@ -2202,7 +2274,6 @@ class MatchAction {
 public:
   enum ActionKind {
     AK_DebugComment,
-    AK_CustomCXX,
     AK_BuildMI,
     AK_BuildConstantMI,
     AK_EraseInst,
@@ -2226,6 +2297,15 @@ public:
   virtual void emitActionOpcodes(MatchTable &Table,
                                  RuleMatcher &Rule) const = 0;
 
+  /// If this opcode has an overload that can call GIR_Done directly, emit that
+  /// instead of the usual opcode and return "true". Return "false" if GIR_Done
+  /// still needs to be emitted.
+  virtual bool emitActionOpcodesAndDone(MatchTable &Table,
+                                        RuleMatcher &Rule) const {
+    emitActionOpcodes(Table, Rule);
+    return false;
+  }
+
 private:
   ActionKind Kind;
 };
@@ -2246,20 +2326,6 @@ public:
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
-};
-
-class CustomCXXAction : public MatchAction {
-  std::string FnEnumName;
-
-public:
-  CustomCXXAction(StringRef FnEnumName)
-      : MatchAction(AK_CustomCXX), FnEnumName(FnEnumName.str()) {}
-
-  static bool classof(const MatchAction *A) {
-    return A->getKind() == AK_CustomCXX;
-  }
-
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Generates code to build an instruction or mutate an existing instruction
@@ -2334,13 +2400,15 @@ public:
   EraseInstAction(unsigned InsnID)
       : MatchAction(AK_EraseInst), InsnID(InsnID) {}
 
+  unsigned getInsnID() const { return InsnID; }
+
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_EraseInst;
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
-  static void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                unsigned InsnID);
+  bool emitActionOpcodesAndDone(MatchTable &Table,
+                                RuleMatcher &Rule) const override;
 };
 
 class ReplaceRegAction : public MatchAction {
@@ -2351,11 +2419,11 @@ class ReplaceRegAction : public MatchAction {
 public:
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned NewInsnId,
                    unsigned NewOpIdx)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         NewInsnId(NewInsnId), NewOpIdx(NewOpIdx) {}
 
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned TempRegID)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         TempRegID(TempRegID) {}
 
   static bool classof(const MatchAction *A) {
@@ -2381,9 +2449,14 @@ public:
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
-          << MatchTable::LineBreak;
+    if (InsnID == 0) {
+      Table << MatchTable::Opcode("GIR_RootConstrainSelectedInstOperands")
+            << MatchTable::LineBreak;
+    } else {
+      Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
+            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+            << MatchTable::LineBreak;
+    }
   }
 };
 
@@ -2431,4 +2504,4 @@ public:
 } // namespace gi
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H

@@ -29,6 +29,10 @@ SemaBase::ImmediateDiagBuilder::~ImmediateDiagBuilder() {
   SemaRef.EmitCurrentDiagnostic(DiagID);
 }
 
+PartialDiagnostic SemaBase::PDiag(unsigned DiagID) {
+  return PartialDiagnostic(DiagID, SemaRef.Context.getDiagAllocator());
+}
+
 const SemaBase::SemaDiagnosticBuilder &
 operator<<(const SemaBase::SemaDiagnosticBuilder &Diag,
            const PartialDiagnostic &PD) {

@@ -11,7 +11,6 @@
 #define _LIBCPP___FUNCTIONAL_FUNCTION_H
 
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
@@ -233,10 +232,10 @@ class _LIBCPP_TEMPLATE_VIS __base;
 
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
-  __base(const __base&);
-  __base& operator=(const __base&);
-
 public:
+  __base(const __base&)            = delete;
+  __base& operator=(const __base&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI __base() {}
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
   virtual __base* __clone() const             = 0;
@@ -517,7 +516,7 @@ struct __policy {
   }
 
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create_empty() {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         true,
@@ -544,7 +543,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         &__large_clone<_Fun>,
         &__large_destroy<_Fun>,
         false,
@@ -559,7 +558,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ true_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         false,

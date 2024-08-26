@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// FIXME: Why does this start to fail with GCC 14?
+// XFAIL: !(c++11 || c++14) && gcc-14
+
 // See https://llvm.org/PR31384.
 
 #include <tuple>

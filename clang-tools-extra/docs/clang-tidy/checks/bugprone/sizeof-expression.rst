@@ -190,6 +190,15 @@ Options
 
 .. option:: WarnOnSizeOfPointerToAggregate
 
-   When `true`, the check will warn on an expression like
-   ``sizeof(expr)`` where the expression is a pointer
-   to aggregate. Default is `true`.
+   When `true`, the check will warn when the argument of ``sizeof`` is either a
+   pointer-to-aggregate type, an expression returning a pointer-to-aggregate
+   value or an expression that returns a pointer from an array-to-pointer
+   conversion (that may be implicit or explicit, for example ``array + 2`` or
+   ``(int *)array``). Default is `true`.
+
+.. option:: WarnOnSizeOfPointer
+
+   When `true`, the check will report all expressions where the argument of
+   ``sizeof`` is an expression that produces a pointer (except for a few
+   idiomatic expressions that are probably intentional and correct).
+   This detects occurrences of CWE 467. Default is `false`.

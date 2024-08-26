@@ -9,6 +9,7 @@
 #include "flang/Runtime/numeric.h"
 #include "numeric-templates.h"
 #include "terminator.h"
+#include "tools.h"
 #include "flang/Common/float128.h"
 #include <cfloat>
 #include <climits>
@@ -18,30 +19,30 @@
 namespace Fortran::runtime {
 
 template <typename RES>
-inline RT_API_ATTRS RES getIntArgValue(const char *source, int line, void *arg,
-    int kind, std::int64_t defaultValue, int resKind) {
+inline RT_API_ATTRS RES GetIntArgValue(const char *source, int line,
+    const void *arg, int kind, std::int64_t defaultValue, int resKind) {
   RES res;
   if (!arg) {
     res = static_cast<RES>(defaultValue);
   } else if (kind == 1) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 1> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(arg));
   } else if (kind == 2) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 2> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 2> *>(arg));
   } else if (kind == 4) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 4> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 4> *>(arg));
   } else if (kind == 8) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 8> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(arg));
 #ifdef __SIZEOF_INT128__
   } else if (kind == 16) {
     if (resKind != 16) {
       Terminator{source, line}.Crash("Unexpected integer kind in runtime");
     }
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 16> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 16> *>(arg));
 #endif
   } else {
     Terminator{source, line}.Crash("Unexpected integer kind in runtime");
@@ -104,10 +105,26 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
     return 4;
   } else if (x <= 18) {
     return 8;
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !defined FLANG_RUNTIME_NO_INTEGER_16
   } else if (x <= 38) {
     return 16;
 #endif
+  }
+  return -1;
+}
+
+// SELECTED_LOGICAL_KIND (F'2023 16.9.182)
+template <typename T>
+inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedLogicalKind(
+    T x) {
+  if (x <= 8) {
+    return 1;
+  } else if (x <= 16) {
+    return 2;
+  } else if (x <= 32) {
+    return 4;
+  } else if (x <= 64) {
+    return 8;
   }
   return -1;
 }
@@ -120,40 +137,54 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
     return -5;
   }
 
+#ifndef FLANG_RUNTIME_NO_REAL_2
+  constexpr bool hasReal2{true};
+#else
+  constexpr bool hasReal2{false};
+#endif
+#ifndef FLANG_RUNTIME_NO_REAL_3
+  constexpr bool hasReal3{true};
+#else
+  constexpr bool hasReal3{false};
+#endif
+#if defined LDBL_MANT_DIG == 64 && !defined FLANG_RUNTIME_NO_REAL_10
+  constexpr bool hasReal10{true};
+#else
+  constexpr bool hasReal10{false};
+#endif
+#if (LDBL_MANT_DIG == 64 || LDBL_MANT_DIG == 113) && \
+    !defined FLANG_RUNTIME_NO_REAL_16
+  constexpr bool hasReal16{true};
+#else
+  constexpr bool hasReal16{false};
+#endif
+
   int error{0};
   int kind{0};
-  if (p <= 3) {
+  if (hasReal2 && p <= 3) {
     kind = 2;
   } else if (p <= 6) {
     kind = 4;
   } else if (p <= 15) {
     kind = 8;
-#if LDBL_MANT_DIG == 64
-  } else if (p <= 18) {
+  } else if (hasReal10 && p <= 18) {
     kind = 10;
-  } else if (p <= 33) {
+  } else if (hasReal16 && p <= 33) {
     kind = 16;
-#elif LDBL_MANT_DIG == 113
-  } else if (p <= 33) {
-    kind = 16;
-#endif
   } else {
     error -= 1;
   }
 
   if (r <= 4) {
-    kind = kind < 2 ? 2 : kind;
+    kind = kind < 2 ? (hasReal2 ? 2 : 4) : kind;
   } else if (r <= 37) {
-    kind = kind < 3 ? (p == 3 ? 4 : 3) : kind;
+    kind = kind < 3 ? (hasReal3 && p != 3 ? 3 : 4) : kind;
   } else if (r <= 307) {
     kind = kind < 8 ? 8 : kind;
-#if LDBL_MANT_DIG == 64
-  } else if (r <= 4931) {
+  } else if (hasReal10 && r <= 4931) {
     kind = kind < 10 ? 10 : kind;
-#elif LDBL_MANT_DIG == 113
-  } else if (r <= 4931) {
+  } else if (hasReal16 && r <= 4931) {
     kind = kind < 16 ? 16 : kind;
-#endif
   } else {
     error -= 2;
   }
@@ -297,6 +328,27 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Ceiling16_16)(
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTDEF(ErfcScaled4)(
+    CppTypeFor<TypeCategory::Real, 4> x) {
+  return ErfcScaled(x);
+}
+CppTypeFor<TypeCategory::Real, 8> RTDEF(ErfcScaled8)(
+    CppTypeFor<TypeCategory::Real, 8> x) {
+  return ErfcScaled(x);
+}
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTDEF(ErfcScaled10)(
+    CppTypeFor<TypeCategory::Real, 10> x) {
+  return ErfcScaled(x);
+}
+#endif
+#if LDBL_MANT_DIG == 113
+CppTypeFor<TypeCategory::Real, 16> RTDEF(ErfcScaled16)(
+    CppTypeFor<TypeCategory::Real, 16> x) {
+  return ErfcScaled(x);
+}
 #endif
 
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent4_4)(
@@ -717,18 +769,50 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Scale10)(
 }
 #endif
 
+// SELECTED_CHAR_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedCharKind)(
+    const char *source, int line, const char *x, std::size_t length) {
+  static const char *keywords[]{
+      "ASCII", "DEFAULT", "UCS-2", "ISO_10646", "UCS-4", nullptr};
+  switch (IdentifyValue(x, length, keywords)) {
+  case 0: // ASCII
+  case 1: // DEFAULT
+    return 1;
+  case 2: // UCS-2
+    return 2;
+  case 3: // ISO_10646
+  case 4: // UCS-4
+    return 4;
+  default:
+    return -1;
+  }
+}
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKind)(
     const char *source, int line, void *x, int xKind) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> r =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
 #else
-  std::int64_t r = getIntArgValue<std::int64_t>(
+  std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
 #endif
   return SelectedIntKind(r);
+}
+
+// SELECTED_LOGICAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedLogicalKind)(
+    const char *source, int line, void *x, int xKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
+#else
+  std::int64_t r = GetIntArgValue<std::int64_t>(
+      source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
+#endif
+  return SelectedLogicalKind(r);
 }
 
 // SELECTED_REAL_KIND
@@ -737,20 +821,20 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKind)(const char *source,
     int dKind) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> p =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 16);
   CppTypeFor<TypeCategory::Integer, 16> r =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 16);
   CppTypeFor<TypeCategory::Integer, 16> d =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 16);
 #else
-  std::int64_t p = getIntArgValue<std::int64_t>(
+  std::int64_t p = GetIntArgValue<std::int64_t>(
       source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 8);
-  std::int64_t r = getIntArgValue<std::int64_t>(
+  std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 8);
-  std::int64_t d = getIntArgValue<std::int64_t>(
+  std::int64_t d = GetIntArgValue<std::int64_t>(
       source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 8);
 #endif
   return SelectedRealKind(p, r, d);

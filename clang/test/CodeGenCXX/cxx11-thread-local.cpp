@@ -136,8 +136,9 @@ int f() {
 // CHECK-NEXT: store i32 %{{.*}}, ptr @c, align 4
 
 // LINUX_AIX-LABEL: define linkonce_odr hidden noundef ptr @_ZTW1b()
-// LINUX: br i1 icmp ne (ptr @_ZTH1b, ptr null),
-// AIX-NOT: br i1 icmp ne (ptr @_ZTH1b, ptr null),
+// LINUX: [[CMP:%.*]] = icmp ne ptr @_ZTH1b, null
+// LINUX: br i1 [[CMP]]
+// AIX-NOT: [[CMP:%.*]] = icmp ne ptr @_ZTH1b, null
 // not null:
 // LINUX_AIX: call void @_ZTH1b()
 // LINUX: br label
@@ -219,24 +220,27 @@ int f() {
 
 // DARWIN: declare cxx_fast_tlscc noundef ptr @_ZTWN1VIcE1mE()
 // LINUX_AIX: define linkonce_odr hidden noundef ptr @_ZTWN1VIcE1mE() {{#[0-9]+}}{{( comdat)?}} {
-// LINUX: br i1 icmp ne (ptr @_ZTHN1VIcE1mE,
-// AIX-NOT: br i1 icmp ne (ptr @_ZTHN1VIcE1mE
+// LINUX: [[CMP:%.*]] = icmp ne ptr @_ZTHN1VIcE1mE,
+// LINUX: br i1 [[CMP]]
+// AIX-NOT: [[CMP:%.*]] = icmp ne ptr @_ZTHN1VIcE1mE,
 // LINUX_AIX: call void @_ZTHN1VIcE1mE()
 // LINUX_AIX: [[VEM_ADDR:%.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN1VIcE1mE)
 // LINUX_AIX: ret ptr [[VEM_ADDR]]
 
 // DARWIN: declare cxx_fast_tlscc noundef ptr @_ZTWN1WIcE1mE()
 // LINUX_AIX: define linkonce_odr hidden noundef ptr @_ZTWN1WIcE1mE() {{#[0-9]+}}{{( comdat)?}} {
-// LINUX: br i1 icmp ne (ptr @_ZTHN1WIcE1mE,
-// AIX-NOT: br i1 icmp ne (ptr @_ZTHN1WIcE1mE,
+// LINUX: [[CMP:%.*]] = icmp ne ptr @_ZTHN1WIcE1mE,
+// LINUX: br i1 [[CMP]]
+// AIX-NOT: [[CMP:%.*]] = icmp ne ptr @_ZTHN1WIcE1mE,
 // LINUX_AIX: call void @_ZTHN1WIcE1mE()
 // LINUX_AIX: [[WEM_ADDR:%.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN1WIcE1mE)
 // LINUX_AIX: ret ptr [[WEM_ADDR]]
 
 // DARWIN: declare cxx_fast_tlscc {{.*}}ptr @_ZTWN1XIcE1mE()
 // LINUX_AIX: define linkonce_odr hidden {{.*}}ptr @_ZTWN1XIcE1mE() {{#[0-9]+}}{{( comdat)?}} {
-// LINUX: br i1 icmp ne (ptr @_ZTHN1XIcE1mE,
-// AIX-NOT: br i1 icmp ne (ptr @_ZTHN1XIcE1mE,
+// LINUX: [[CMP:%.*]] = icmp ne ptr @_ZTHN1XIcE1mE,
+// LINUX: br i1 [[CMP]]
+// AIX-NOT: [[CMP:%.*]] = icmp ne ptr @_ZTHN1XIcE1mE,
 // LINUX_AIX: call void @_ZTHN1XIcE1mE()
 // LINUX_AIX: [[XEM_ADDR:%.+]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @_ZN1XIcE1mE)
 // LINUX_AIX: ret ptr [[XEM_ADDR]]

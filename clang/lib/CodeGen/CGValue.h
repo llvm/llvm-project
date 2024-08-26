@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGVALUE_H
 
 #include "Address.h"
+#include "CGPointerAuthInfo.h"
 #include "CodeGenTBAA.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTContext.h"
@@ -233,9 +234,6 @@ class LValue {
   // this lvalue.
   bool Nontemporal : 1;
 
-  // The pointer is known not to be null.
-  bool IsKnownNonNull : 1;
-
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
 
@@ -263,7 +261,6 @@ private:
     this->ImpreciseLifetime = false;
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
-    this->IsKnownNonNull = false;
     this->BaseIvarExp = nullptr;
   }
 
@@ -349,30 +346,25 @@ public:
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
-  KnownNonNull_t isKnownNonNull() const {
-    return (KnownNonNull_t)IsKnownNonNull;
-  }
+  KnownNonNull_t isKnownNonNull() const { return Addr.isKnownNonNull(); }
   LValue setKnownNonNull() {
-    IsKnownNonNull = true;
+    Addr.setKnownNonNull();
     return *this;
   }
 
   // simple lvalue
-  llvm::Value *getPointer(CodeGenFunction &CGF) const {
-    assert(isSimple());
-    return Addr.getBasePointer();
-  }
-  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
-    assert(isSimple());
-    return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;
-  }
+  llvm::Value *getPointer(CodeGenFunction &CGF) const;
+  llvm::Value *emitResignedPointer(QualType PointeeTy,
+                                   CodeGenFunction &CGF) const;
+  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const;
 
-  Address getAddress(CodeGenFunction &CGF) const {
-    // FIXME: remove parameter.
-    return Addr;
-  }
+  Address getAddress() const { return Addr; }
 
   void setAddress(Address address) { Addr = address; }
+
+  CGPointerAuthInfo getPointerAuthInfo() const {
+    return Addr.getPointerAuthInfo();
+  }
 
   // vector elt lvalue
   Address getVectorAddress() const {
@@ -503,8 +495,8 @@ public:
     return R;
   }
 
-  RValue asAggregateRValue(CodeGenFunction &CGF) const {
-    return RValue::getAggregate(getAddress(CGF), isVolatileQualified());
+  RValue asAggregateRValue() const {
+    return RValue::getAggregate(getAddress(), isVolatileQualified());
   }
 };
 
@@ -607,11 +599,11 @@ public:
   }
 
   static AggValueSlot
-  forLValue(const LValue &LV, CodeGenFunction &CGF, IsDestructed_t isDestructed,
+  forLValue(const LValue &LV, IsDestructed_t isDestructed,
             NeedsGCBarriers_t needsGC, IsAliased_t isAliased,
             Overlap_t mayOverlap, IsZeroed_t isZeroed = IsNotZeroed,
             IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
-    return forAddr(LV.getAddress(CGF), LV.getQuals(), isDestructed, needsGC,
+    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, needsGC,
                    isAliased, mayOverlap, isZeroed, isChecked);
   }
 

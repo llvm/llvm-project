@@ -25,7 +25,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -324,8 +323,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 }
 
 bool vector::isLinearizableVector(VectorType type) {
-  auto numScalableDims = llvm::count(type.getScalableDims(), true);
-  return (type.getRank() > 1) && (numScalableDims <= 1);
+  return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
 }
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
@@ -345,7 +343,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
-  if (!useInBoundsInsteadOfMasking) {
+  if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&
@@ -359,7 +357,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(readShape, sourceShape) || !useInBoundsInsteadOfMasking)
+  if (llvm::equal(readShape, sourceShape) || useInBoundsInsteadOfMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       tensor::getMixedSizes(builder, loc, source);

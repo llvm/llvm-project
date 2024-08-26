@@ -96,7 +96,7 @@ public:
   typedef std::map<const Value *, lldb::addr_t> ValueMap;
 
   ValueMap m_values;
-  DataLayout &m_target_data;
+  const DataLayout &m_target_data;
   lldb_private::IRExecutionUnit &m_execution_unit;
   const BasicBlock *m_bb = nullptr;
   const BasicBlock *m_prev_bb = nullptr;
@@ -110,7 +110,7 @@ public:
   lldb::ByteOrder m_byte_order;
   size_t m_addr_byte_size;
 
-  InterpreterStackFrame(DataLayout &target_data,
+  InterpreterStackFrame(const DataLayout &target_data,
                         lldb_private::IRExecutionUnit &execution_unit,
                         lldb::addr_t stack_frame_bottom,
                         lldb::addr_t stack_frame_top)
@@ -264,7 +264,7 @@ public:
         lldb_private::ConstString name(constant_func->getName());
         bool missing_weak = false;
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
-        if (addr == LLDB_INVALID_ADDRESS || missing_weak)
+        if (addr == LLDB_INVALID_ADDRESS)
           return false;
         value = APInt(m_target_data.getPointerSizeInBits(), addr);
         return true;
@@ -703,7 +703,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
               s.c_str());
   }
 
-  DataLayout data_layout(&module);
+  const DataLayout &data_layout = module.getDataLayout();
 
   InterpreterStackFrame frame(data_layout, execution_unit, stack_frame_bottom,
                               stack_frame_top);

@@ -108,7 +108,7 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
 }
 
 Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
-  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
@@ -146,7 +146,7 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
 
 Status PipePosix::OpenAsReader(llvm::StringRef name,
                                bool child_process_inherit) {
-  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
 
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
@@ -335,7 +335,9 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
   return error;
 }
 
-Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
+Status PipePosix::WriteWithTimeout(const void *buf, size_t size,
+                                   const std::chrono::microseconds &timeout,
+                                   size_t &bytes_written) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
   bytes_written = 0;
   if (!CanWriteUnlocked())
@@ -343,7 +345,7 @@ Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
 
   const int fd = GetWriteFileDescriptorUnlocked();
   SelectHelper select_helper;
-  select_helper.SetTimeout(std::chrono::seconds(0));
+  select_helper.SetTimeout(timeout);
   select_helper.FDSetWrite(fd);
 
   Status error;

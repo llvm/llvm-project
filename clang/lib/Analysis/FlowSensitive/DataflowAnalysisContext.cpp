@@ -170,7 +170,7 @@ DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
 
 Solver::Result DataflowAnalysisContext::querySolver(
     llvm::SetVector<const Formula *> Constraints) {
-  return S->solve(Constraints.getArrayRef());
+  return S.solve(Constraints.getArrayRef());
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
@@ -338,10 +338,10 @@ static std::unique_ptr<Logger> makeLoggerFromCommandLine() {
   return Logger::html(std::move(StreamFactory));
 }
 
-DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
-                                                 Options Opts)
-    : S(std::move(S)), A(std::make_unique<Arena>()), Opts(Opts) {
-  assert(this->S != nullptr);
+DataflowAnalysisContext::DataflowAnalysisContext(
+    Solver &S, std::unique_ptr<Solver> &&OwnedSolver, Options Opts)
+    : S(S), OwnedSolver(std::move(OwnedSolver)), A(std::make_unique<Arena>()),
+      Opts(Opts) {
   // If the -dataflow-log command-line flag was set, synthesize a logger.
   // This is ugly but provides a uniform method for ad-hoc debugging dataflow-
   // based tools.

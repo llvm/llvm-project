@@ -63,8 +63,9 @@ define i64 @sh3add(i64 %0, ptr %1) {
 define i32 @addmul6(i32 %a, i32 %b) {
 ; RV32I-LABEL: addmul6:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a2, 6
-; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    slli a2, a0, 1
+; RV32I-NEXT:    slli a0, a0, 3
+; RV32I-NEXT:    sub a0, a0, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -99,8 +100,9 @@ define i32 @addmul10(i32 %a, i32 %b) {
 define i32 @addmul12(i32 %a, i32 %b) {
 ; RV32I-LABEL: addmul12:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a2, 12
-; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    slli a2, a0, 2
+; RV32I-NEXT:    slli a0, a0, 4
+; RV32I-NEXT:    sub a0, a0, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -153,8 +155,9 @@ define i32 @addmul20(i32 %a, i32 %b) {
 define i32 @addmul24(i32 %a, i32 %b) {
 ; RV32I-LABEL: addmul24:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a2, 24
-; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    slli a2, a0, 3
+; RV32I-NEXT:    slli a0, a0, 5
+; RV32I-NEXT:    sub a0, a0, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -225,8 +228,9 @@ define i32 @addmul72(i32 %a, i32 %b) {
 define i32 @mul96(i32 %a) {
 ; RV32I-LABEL: mul96:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 96
-; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    slli a1, a0, 5
+; RV32I-NEXT:    slli a0, a0, 7
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: mul96:
@@ -407,8 +411,8 @@ define i32 @mul25(i32 %a) {
 ;
 ; RV32ZBA-LABEL: mul25:
 ; RV32ZBA:       # %bb.0:
-; RV32ZBA-NEXT:    sh1add a1, a0, a0
-; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
 ; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 25
   ret i32 %c
@@ -455,8 +459,8 @@ define i32 @mul27(i32 %a) {
 ;
 ; RV32ZBA-LABEL: mul27:
 ; RV32ZBA:       # %bb.0:
-; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 27
   ret i32 %c
@@ -471,8 +475,8 @@ define i32 @mul45(i32 %a) {
 ;
 ; RV32ZBA-LABEL: mul45:
 ; RV32ZBA:       # %bb.0:
-; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 45
   ret i32 %c

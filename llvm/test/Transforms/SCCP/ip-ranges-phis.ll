@@ -4,7 +4,7 @@
 define internal i32 @f1(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@f1
 ; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %cmp = icmp sgt i32 %x, 300
   %res = select i1 %cmp, i32 1, i32 2

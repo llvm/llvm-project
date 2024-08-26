@@ -68,6 +68,14 @@ def SYSENTER : I<0x34, RawFrm, (outs), (ins), "sysenter", []>, TB;
 def SYSEXIT   : I<0x35, RawFrm, (outs), (ins), "sysexit{l}", []>, TB;
 def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
                   Requires<[In64BitMode]>;
+
+// FRED Instructions
+let hasSideEffects = 1, Defs = [RSP, EFLAGS] in {
+  def ERETS: I<0x01, MRM_CA, (outs), (ins), "erets",
+              []>, TB, XD, Requires<[In64BitMode]>;
+  def ERETU: I<0x01, MRM_CA, (outs), (ins), "eretu",
+              []>, TB, XS, Requires<[In64BitMode]>;
+} // hasSideEffects = 1, Defs = [RSP, EFLAGS]
 } // SchedRW
 
 def : Pat<(debugtrap),
@@ -212,6 +220,14 @@ def MOV16sm : I<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i16mem:$src),
 
 let SchedRW = [WriteSystem] in {
 def SWAPGS : I<0x01, MRM_F8, (outs), (ins), "swapgs", []>, TB;
+// LKGS instructions
+let hasSideEffects = 1 in {
+  let mayLoad = 1 in
+  def LKGS16m : I<0x00, MRM6m, (outs), (ins i16mem:$src), "lkgs\t$src",
+                  []>, TB, XD, Requires<[In64BitMode]>;
+  def LKGS16r : I<0x00, MRM6r, (outs), (ins GR16:$src), "lkgs\t$src",
+                  []>, TB, XD, Requires<[In64BitMode]>;
+} // hasSideEffects
 
 let Defs = [EFLAGS] in {
 let mayLoad = 1 in

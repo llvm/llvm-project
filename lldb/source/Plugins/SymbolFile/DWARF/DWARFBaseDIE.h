@@ -85,8 +85,6 @@ public:
   // Accessing information about a DIE
   dw_tag_t Tag() const;
 
-  const char *GetTagAsCString() const;
-
   dw_offset_t GetOffset() const;
 
   // Get the LLDB user ID for this DIE. This is often just the DIE offset,

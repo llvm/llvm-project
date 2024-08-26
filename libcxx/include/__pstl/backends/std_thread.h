@@ -9,10 +9,17 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
 #define _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
 
-#include <__assert>
 #include <__config>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
+#include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
+#include <__pstl/cpu_algos/fill.h>
+#include <__pstl/cpu_algos/find_if.h>
+#include <__pstl/cpu_algos/for_each.h>
+#include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/stable_sort.h>
+#include <__pstl/cpu_algos/transform.h>
+#include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
 #include <cstddef>
@@ -25,13 +32,15 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
-
-// This backend implementation is for testing purposes only and not meant for production use. This will be replaced
-// by a proper implementation once the PSTL implementation is somewhat stable.
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
+
+//
+// This partial backend implementation is for testing purposes only and not meant for production use. This will be
+// replaced by a proper implementation once the PSTL implementation is somewhat stable.
+//
+// This is intended to be used on top of the "default backend".
+//
 
 template <>
 struct __cpu_traits<__std_thread_backend_tag> {
@@ -77,21 +86,51 @@ struct __cpu_traits<__std_thread_backend_tag> {
   static constexpr size_t __lane_size = 64;
 };
 
+// Mandatory implementations of the computational basis
+template <class _ExecutionPolicy>
+struct __find_if<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_find_if<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __for_each<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_for_each<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __merge<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_merge<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __stable_sort<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_stable_sort<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_binary<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_binary<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_reduce<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_reduce_binary<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce_binary<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+// Not mandatory, but better optimized
+template <class _ExecutionPolicy>
+struct __any_of<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_any_of<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __fill<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_fill<__std_thread_backend_tag, _ExecutionPolicy> {};
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && && _LIBCPP_STD_VER >= 17
-
 _LIBCPP_POP_MACROS
-
-// Implement PSTL algorithms based on the __cpu_traits specialized above
-#include <__pstl/cpu_algos/any_of.h>
-#include <__pstl/cpu_algos/fill.h>
-#include <__pstl/cpu_algos/find_if.h>
-#include <__pstl/cpu_algos/for_each.h>
-#include <__pstl/cpu_algos/merge.h>
-#include <__pstl/cpu_algos/stable_sort.h>
-#include <__pstl/cpu_algos/transform.h>
-#include <__pstl/cpu_algos/transform_reduce.h>
 
 #endif // _LIBCPP___PSTL_BACKENDS_STD_THREAD_H

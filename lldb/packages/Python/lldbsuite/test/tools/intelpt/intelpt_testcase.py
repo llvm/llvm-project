@@ -134,7 +134,7 @@ class TraceIntelPTTestCaseBase(TestBase):
             self.assertSBError(trace.Start(configuration), error=error)
         else:
             command = "process trace start"
-            if processBufferSizeLimit != None:
+            if processBufferSizeLimit is not None:
                 command += " -l " + str(processBufferSizeLimit)
             if enableTsc:
                 command += " --tsc"

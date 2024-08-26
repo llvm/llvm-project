@@ -18,6 +18,20 @@ func.func @critical_block_arg() {
 
 // -----
 
+// CHECK: omp.critical.declare @[[MUTEX:.*]] hint(contended, speculative)
+omp.critical.declare @mutex hint(contended, speculative)
+
+// CHECK: llvm.func @critical_declare
+func.func @critical_declare() {
+  // CHECK: omp.critical(@[[MUTEX]])
+  omp.critical(@mutex) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @master_block_arg
 func.func @master_block_arg() {
   // CHECK: omp.master
@@ -71,15 +85,18 @@ func.func @branch_loop() {
 func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel
   omp.parallel {
-    // CHECK: omp.wsloop for (%[[ARG6:.*]], %[[ARG7:.*]]) : i64 = (%[[ARG0]], %[[ARG1]]) to (%[[ARG2]], %[[ARG3]]) step (%[[ARG4]], %[[ARG5]]) {
-    "omp.wsloop"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5) ({
-    ^bb0(%arg6: index, %arg7: index):
-      // CHECK-DAG: %[[CAST_ARG6:.*]] = builtin.unrealized_conversion_cast %[[ARG6]] : i64 to index
-      // CHECK-DAG: %[[CAST_ARG7:.*]] = builtin.unrealized_conversion_cast %[[ARG7]] : i64 to index
-      // CHECK: "test.payload"(%[[CAST_ARG6]], %[[CAST_ARG7]]) : (index, index) -> ()
-      "test.payload"(%arg6, %arg7) : (index, index) -> ()
-      omp.yield
-    }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+    // CHECK: omp.wsloop {
+    "omp.wsloop"() ({
+      // CHECK: omp.loop_nest (%[[ARG6:.*]], %[[ARG7:.*]]) : i64 = (%[[ARG0]], %[[ARG1]]) to (%[[ARG2]], %[[ARG3]]) step (%[[ARG4]], %[[ARG5]]) {
+      omp.loop_nest (%arg6, %arg7) : index = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
+        // CHECK-DAG: %[[CAST_ARG6:.*]] = builtin.unrealized_conversion_cast %[[ARG6]] : i64 to index
+        // CHECK-DAG: %[[CAST_ARG7:.*]] = builtin.unrealized_conversion_cast %[[ARG7]] : i64 to index
+        // CHECK: "test.payload"(%[[CAST_ARG6]], %[[CAST_ARG7]]) : (index, index) -> ()
+        "test.payload"(%arg6, %arg7) : (index, index) -> ()
+        omp.yield
+      }
+      omp.terminator
+    }) : () -> ()
     omp.terminator
   }
   return
@@ -171,6 +188,7 @@ func.func @loop_nest_block_arg(%val : i32, %ub : i32, %i : index) {
     ^bb3:
       omp.yield
     }
+    omp.terminator
   }
   return
 }
@@ -249,7 +267,7 @@ llvm.func @_QPomp_target_data_region(%a : !llvm.ptr, %i : !llvm.ptr) {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(64 : i32) : i32
 // CHECK:           %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
 // CHECK:           %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = ""}
-// CHECK:           omp.target   thread_limit(%[[VAL_0]] : i32) map_entries(%[[MAP1]] -> %[[BB_ARG0:.*]], %[[MAP2]] -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) {
+// CHECK:           omp.target map_entries(%[[MAP1]] -> %[[BB_ARG0:.*]], %[[MAP2]] -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) thread_limit(%[[VAL_0]] : i32) {
 // CHECK:           ^bb0(%[[BB_ARG0]]: !llvm.ptr, %[[BB_ARG1]]: !llvm.ptr):
 // CHECK:             %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             llvm.store %[[VAL_1]], %[[BB_ARG1]] : i32, !llvm.ptr
@@ -323,12 +341,14 @@ llvm.func @_QPsb() {
 // CHECK-LABEL:  @_QPsimple_reduction
 // CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %{{.*}} x i32 {bindc_name = "x", uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr
 // CHECK:    omp.parallel
-// CHECK:      omp.wsloop reduction(@eqv_reduction %{{.+}} -> %[[PRV:.+]] : !llvm.ptr) for
-// CHECK:        %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> i32
-// CHECK:        %[[CMP:.+]] = llvm.icmp "eq" %{{.*}}, %[[LPRV]] : i32
-// CHECK:        %[[ZEXT:.+]] = llvm.zext %[[CMP]] : i1 to i32
-// CHECK:        llvm.store %[[ZEXT]], %[[PRV]] : i32, !llvm.ptr
-// CHECK:        omp.yield
+// CHECK:      omp.wsloop reduction(@eqv_reduction %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+// CHECK-NEXT:   omp.loop_nest {{.*}}{
+// CHECK:          %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> i32
+// CHECK:          %[[CMP:.+]] = llvm.icmp "eq" %{{.*}}, %[[LPRV]] : i32
+// CHECK:          %[[ZEXT:.+]] = llvm.zext %[[CMP]] : i1 to i32
+// CHECK:          llvm.store %[[ZEXT]], %[[PRV]] : i32, !llvm.ptr
+// CHECK:          omp.yield
+// CHECK:        omp.terminator
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
 
@@ -354,20 +374,23 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr {fir.bindc_name = "y"}) {
   %4 = llvm.alloca %3 x i32 {bindc_name = "x", uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr
   %5 = llvm.zext %2 : i1 to i32
   llvm.store %5, %4 : i32, !llvm.ptr
-  omp.parallel   {
+  omp.parallel {
     %6 = llvm.alloca %3 x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr
-    omp.wsloop   reduction(@eqv_reduction %4 -> %prv : !llvm.ptr) for  (%arg1) : i32 = (%1) to (%0) inclusive step (%1) {
-      llvm.store %arg1, %6 : i32, !llvm.ptr
-      %7 = llvm.load %6 : !llvm.ptr -> i32
-      %8 = llvm.sext %7 : i32 to i64
-      %9 = llvm.sub %8, %3  : i64
-      %10 = llvm.getelementptr %arg0[0, %9] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<100 x i32>
-      %11 = llvm.load %10 : !llvm.ptr -> i32
-      %12 = llvm.load %prv : !llvm.ptr -> i32
-      %13 = llvm.icmp "eq" %11, %12 : i32
-      %14 = llvm.zext %13 : i1 to i32
-      llvm.store %14, %prv : i32, !llvm.ptr
-      omp.yield
+    omp.wsloop reduction(@eqv_reduction %4 -> %prv : !llvm.ptr) {
+      omp.loop_nest (%arg1) : i32 = (%1) to (%0) inclusive step (%1) {
+        llvm.store %arg1, %6 : i32, !llvm.ptr
+        %7 = llvm.load %6 : !llvm.ptr -> i32
+        %8 = llvm.sext %7 : i32 to i64
+        %9 = llvm.sub %8, %3  : i64
+        %10 = llvm.getelementptr %arg0[0, %9] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<100 x i32>
+        %11 = llvm.load %10 : !llvm.ptr -> i32
+        %12 = llvm.load %prv : !llvm.ptr -> i32
+        %13 = llvm.icmp "eq" %11, %12 : i32
+        %14 = llvm.zext %13 : i1 to i32
+        llvm.store %14, %prv : i32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }
@@ -513,4 +536,84 @@ omp.private {type = firstprivate} @y.privatizer : index alloc {
 ^bb0(%arg0: index, %arg1: index):
   // CHECK: omp.yield(%arg0 : i64)
   omp.yield(%arg0 : index)
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @omp_cancel_cancellation_point()
+func.func @omp_cancel_cancellation_point() -> () {
+  omp.parallel {
+    // CHECK: omp.cancel cancellation_construct_type(parallel)
+    omp.cancel cancellation_construct_type(parallel)
+    // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
+    omp.cancellation_point cancellation_construct_type(parallel)
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @omp_distribute(
+// CHECK-SAME:  %[[ARG0:.*]]: i64)
+func.func @omp_distribute(%arg0 : index) -> () {
+  // CHECK: omp.distribute dist_schedule_static dist_schedule_chunk_size(%[[ARG0]] : i64) {
+  omp.distribute dist_schedule_static dist_schedule_chunk_size(%arg0 : index) {
+    omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @omp_teams(
+// CHECK-SAME:  %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: i64)
+func.func @omp_teams(%arg0 : memref<i32>) -> () {
+  // CHECK: omp.teams allocate(%{{.*}} : !llvm.struct<(ptr, ptr, i64)> -> %{{.*}} : !llvm.struct<(ptr, ptr, i64)>)
+  omp.teams allocate(%arg0 : memref<i32> -> %arg0 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @omp_ordered(
+// CHECK-SAME:  %[[ARG0:.*]]: i64)
+func.func @omp_ordered(%arg0 : index) -> () {
+  omp.wsloop ordered(1) {
+    omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
+      // CHECK: omp.ordered depend_vec(%[[ARG0]] : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_vec(%arg0 : index) {doacross_num_loops = 1 : i64}
+      omp.yield
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_taskloop(
+// CHECK-SAME:  %[[ARG0:.*]]: i64, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: i64)
+func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.taskloop allocate(%{{.*}} : !llvm.struct<(ptr, ptr, i64)> -> %{{.*}} : !llvm.struct<(ptr, ptr, i64)>) {
+    omp.taskloop allocate(%arg1 : memref<i32> -> %arg1 : memref<i32>) {
+      // CHECK: omp.loop_nest (%[[IV:.*]]) : i64 = (%[[ARG0]]) to (%[[ARG0]]) step (%[[ARG0]]) {
+      omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
+        // CHECK-DAG: %[[CAST_IV:.*]] = builtin.unrealized_conversion_cast %[[IV]] : i64 to index
+        // CHECK: "test.payload"(%[[CAST_IV]]) : (index) -> ()
+        "test.payload"(%iv) : (index) -> ()
+        omp.yield
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
 }

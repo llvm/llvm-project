@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // For size_t
 #include <stdlib.h> // For malloc, free etc.
@@ -23,7 +24,7 @@ enum class align_val_t : size_t {};
 
 } // namespace std
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 class AllocChecker {
   bool success = false;
@@ -52,7 +53,7 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 LIBC_INLINE void *operator new(size_t size,
                                LIBC_NAMESPACE::AllocChecker &ac) noexcept {
@@ -73,6 +74,10 @@ LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
                                  LIBC_NAMESPACE::AllocChecker &ac) noexcept {
   return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
 }
+
+LIBC_INLINE void *operator new(size_t, void *p) { return p; }
+
+LIBC_INLINE void *operator new[](size_t, void *p) { return p; }
 
 // The ideal situation would be to define the various flavors of operator delete
 // inlinelike we do with operator new above. However, since we need operator

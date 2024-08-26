@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=aggressive}))' -split-input-file | FileCheck %s
 
 // Check the simple case of single operation blocks with a return.
 
@@ -87,7 +87,7 @@ func.func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 :
 
 // CHECK-LABEL: func @mismatch_argument_uses(
 func.func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
-  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: return {{.*}}, {{.*}}
 
   cf.cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
 
@@ -101,7 +101,7 @@ func.func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32,
 
 // CHECK-LABEL: func @mismatch_argument_types(
 func.func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
-  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg1 : i16)
 
@@ -115,7 +115,7 @@ func.func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
 
 // CHECK-LABEL: func @mismatch_argument_count(
 func.func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
-  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2
 
@@ -274,4 +274,19 @@ func.func @mismatch_dominance() -> i32 {
 
 ^bb4(%3: i32):
   return %3 : i32
+}
+
+// CHECK-LABEL: func @dead_dealloc_fold_multi_use
+func.func @dead_dealloc_fold_multi_use(%cond : i1) {
+  // CHECK-NEXT: return
+  %a = memref.alloc() : memref<4xf32>
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb1:
+  memref.dealloc %a: memref<4xf32>
+  return
+
+^bb2:
+  memref.dealloc %a: memref<4xf32>
+  return
 }

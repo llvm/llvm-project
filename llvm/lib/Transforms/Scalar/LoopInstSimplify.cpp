@@ -45,7 +45,7 @@ STATISTIC(NumSimplified, "Number of redundant instructions simplified");
 static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
                              AssumptionCache &AC, const TargetLibraryInfo &TLI,
                              MemorySSAUpdater *MSSAU) {
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   SimplifyQuery SQ(DL, &TLI, &DT, &AC);
 
   // On the first pass over the loop body we try to simplify every instruction.

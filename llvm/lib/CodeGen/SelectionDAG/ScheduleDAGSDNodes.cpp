@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -142,7 +143,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
 // Helper for AddGlue to clone node operands.
 static void CloneNodeWithValues(SDNode *N, SelectionDAG *DAG, ArrayRef<EVT> VTs,
                                 SDValue ExtraOper = SDValue()) {
-  SmallVector<SDValue, 8> Ops(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> Ops(N->ops());
   if (ExtraOper.getNode())
     Ops.push_back(ExtraOper);
 
@@ -898,6 +899,14 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
     if (MDNode *MD = DAG->getPCSections(Node))
       MI->setPCSections(MF, MD);
+
+    // Set MMRAs on _all_ added instructions.
+    if (MDNode *MMRA = DAG->getMMRAMetadata(Node)) {
+      for (MachineBasicBlock::iterator It = MI->getIterator(),
+                                       End = std::next(After);
+           It != End; ++It)
+        It->setMMRAMetadata(MF, MMRA);
+    }
 
     return MI;
   };

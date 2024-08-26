@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 int main(void) {
   int n;

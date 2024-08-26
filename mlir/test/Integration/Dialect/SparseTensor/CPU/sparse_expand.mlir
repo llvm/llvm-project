@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -86,13 +87,13 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 8, 4 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32
+    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32 )
     // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0,
-    // CHECK-SAME:            1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
+    // CHECK-SAME:            1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 )
     // CHECK-NEXT: values : ( 32.53, 34.56, 36.59, 38.62, 40.65, 42.68, 44.71, 46.74,
     // CHECK-SAME:            35.73, 37.96, 40.19, 42.42, 44.65, 46.88, 49.11, 51.34,
     // CHECK-SAME:            38.93, 41.36, 43.79, 46.22, 48.65, 51.08, 53.51, 55.94,
-    // CHECK-SAME:            42.13, 44.76, 47.39, 50.02, 52.65, 55.28, 57.91, 60.54
+    // CHECK-SAME:            42.13, 44.76, 47.39, 50.02, 52.65, 55.28, 57.91, 60.54 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %x3 : tensor<8x4xf64, #CSC>

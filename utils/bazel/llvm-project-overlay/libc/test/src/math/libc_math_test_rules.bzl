@@ -25,15 +25,17 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
         srcs = [test_name + ".cpp"] + hdrs,
         libc_function_deps = ["//libc:func_name".replace("func_name", name)],
         deps = [
+            "//libc/test/UnitTest:fp_test_helpers",
+            "//libc:__support_cpp_algorithm",
             "//libc:__support_fputil_basic_operations",
             "//libc:__support_fputil_fenv_impl",
             "//libc:__support_fputil_fp_bits",
             "//libc:__support_fputil_manipulation_functions",
             "//libc:__support_fputil_nearest_integer_operations",
             "//libc:__support_fputil_normal_float",
+            "//libc:__support_macros_properties_architectures",
             "//libc:__support_math_extras",
             "//libc:__support_uint128",
-            "//libc/test/UnitTest:fp_test_helpers",
             "//libc:hdr_math_macros",
         ] + deps,
         **kwargs
