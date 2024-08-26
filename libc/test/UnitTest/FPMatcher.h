@@ -374,4 +374,17 @@ template <typename T> struct FPTest : public Test {
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
       (expected), (actual), (expected_except), RoundingMode::TowardZero)
 
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(expected, actual,             \
+                                                 expected_except)              \
+  do {                                                                         \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST((expected), (actual),         \
+                                                 (expected_except));           \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD((expected), (actual),          \
+                                                (expected_except));            \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD((expected), (actual),        \
+                                                  (expected_except));          \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
+                                                     (expected_except));       \
+  } while (0)
+
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
