@@ -918,6 +918,8 @@ mlir::linalg::detail::getMatchConvolutionMessage(MatchConvolutionResult res) {
     return "expected all iterators used to access outputs to be parallel";
   case MatchConvolutionResult::NonOutputDimNotReduction:
     return "expected all iterators not used to access outputs to be reduction";
+  case MatchConvolutionResult::EmptyConvolvedDims:
+    return "FIXME";
   case MatchConvolutionResult::Success:
     return "";
   }
