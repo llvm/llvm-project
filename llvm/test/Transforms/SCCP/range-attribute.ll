@@ -6,25 +6,14 @@ declare void @use(i1)
 declare i32 @get_i32()
 
 define void @range_attribute(i32 range(i32 0, 10) %v) {
-; IPSCCP-LABEL: @range_attribute(
-; IPSCCP-NEXT:    call void @use(i1 true)
-; IPSCCP-NEXT:    [[C2:%.*]] = icmp ult i32 [[V:%.*]], 9
-; IPSCCP-NEXT:    call void @use(i1 [[C2]])
-; IPSCCP-NEXT:    call void @use(i1 false)
-; IPSCCP-NEXT:    [[C4:%.*]] = icmp ugt i32 [[V]], 8
-; IPSCCP-NEXT:    call void @use(i1 [[C4]])
-; IPSCCP-NEXT:    ret void
-;
-; SCCP-LABEL: @range_attribute(
-; SCCP-NEXT:    [[C1:%.*]] = icmp ult i32 [[V:%.*]], 10
-; SCCP-NEXT:    call void @use(i1 [[C1]])
-; SCCP-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
-; SCCP-NEXT:    call void @use(i1 [[C2]])
-; SCCP-NEXT:    [[C3:%.*]] = icmp ugt i32 [[V]], 9
-; SCCP-NEXT:    call void @use(i1 [[C3]])
-; SCCP-NEXT:    [[C4:%.*]] = icmp ugt i32 [[V]], 8
-; SCCP-NEXT:    call void @use(i1 [[C4]])
-; SCCP-NEXT:    ret void
+; CHECK-LABEL: @range_attribute(
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V:%.*]], 9
+; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C4:%.*]] = icmp ugt i32 [[V]], 8
+; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    ret void
 ;
   %c1 = icmp ult i32 %v, 10
   call void @use(i1 %c1)
