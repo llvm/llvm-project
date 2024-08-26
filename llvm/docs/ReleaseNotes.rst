@@ -113,6 +113,8 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+* Hot cold region splitting analysis improvements for overlapping cold regions.
+
 Changes to the AArch64 Backend
 ------------------------------
 
@@ -193,6 +195,16 @@ Changes to the MIPS Backend
 
 Changes to the PowerPC Backend
 ------------------------------
+
+* PPC big-endian Linux now supports ``-fpatchable-function-entry``.
+* PPC AIX now supports local-dynamic TLS mode.
+* PPC AIX saves the Git revision in binaries when built with LLVM_APPEND_VC_REV=ON.
+* PPC AIX now supports toc-data attribute for large code model.
+* PPC AIX now supports passing arguments by value having greater alignment than
+  the pointer size. Currently only compatible with the IBM XL C compiler.
+* Add support for the per global code model attribute on AIX.
+* Support spilling non-volatile registers for traceback table accuracy on AIX.
+* Codegen improvements and bug fixes.
 
 Changes to the RISC-V Backend
 -----------------------------
@@ -435,6 +447,8 @@ Changes to the LLVM tools
 * llvm-objcopy now verifies format of ``.note`` sections for ELF input. This can
   be disabled by ``--no-verify-note-sections``. (`#90458
   <https://github.com/llvm/llvm-project/pull/90458>`).
+
+* llvm-objdump now supports the ``--file-headers`` option for XCOFF object files.
 
 Changes to LLDB
 ---------------------------------
