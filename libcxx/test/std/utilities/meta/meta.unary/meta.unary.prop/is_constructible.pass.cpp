@@ -228,7 +228,7 @@ int main(int, char**)
     // But the rvalue to lvalue reference binding isn't allowed according to
     // [over.match.ref] despite Clang accepting it.
     test_is_constructible<int&, ExplicitTo<int&>>();
-#ifndef __clang__
+#ifndef TEST_COMPILER_CLANG
     test_is_not_constructible<const int&, ExplicitTo<int&&>>();
 #endif
 
