@@ -4,9 +4,10 @@
 define <vscale x 4 x float> @intrinsic_vfslide1down_vf_nxv4f32_nxv4f32_f32(<vscale x 4 x float> %0, <vscale x 4 x float> %false, float %1, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: intrinsic_vfslide1down_vf_nxv4f32_nxv4f32_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
-; CHECK-NEXT:    vfslide1down.vf v10, v8, fa0, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfslide1down.nxv4f32.f32(<vscale x 4 x float> undef, <vscale x 4 x float> %0, float %1, i64 4)
