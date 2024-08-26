@@ -68,7 +68,7 @@ static bool f64AssignAAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg GPRArgRegs[] = { ARM::R0, ARM::R1, ARM::R2, ARM::R3 };
 
   MCRegister Reg = State.AllocateReg(HiRegList, ShadowRegList);
-  if (Reg == 0) {
+  if (!Reg) {
 
     // If we had R3 unallocated only, now we still must to waste it.
     Reg = State.AllocateReg(GPRArgRegs);
