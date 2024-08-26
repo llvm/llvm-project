@@ -60,7 +60,7 @@ entry:
 define i32 @caller_1() {
 ; CHECK-LABEL: @caller_1(
 ; CHECK-NEXT:    [[GETS_PTR:%.*]] = call ptr @getS()
-; CHECK-NEXT:    [[GETI:%.*]] = call i32 @S_getI(ptr @g_getS)
+; CHECK-NEXT:    [[GETI:%.*]] = call i32 @S_getI(ptr [[GETS_PTR]])
 ; CHECK-NEXT:    ret i32 [[GETI]]
 ;
   %getS_ptr = call ptr @getS()
