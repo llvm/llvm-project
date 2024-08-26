@@ -19,6 +19,7 @@
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -30,6 +31,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -44,6 +46,7 @@ class LiveIntervals;
 class LiveVariables;
 class MachineLoop;
 class MachineMemOperand;
+class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCAsmInfo;
 class MCInst;
@@ -61,7 +64,6 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
-enum class MachineCombinerPattern;
 enum class MachineTraceStrategy;
 
 template <class T> class SmallVectorImpl;
@@ -204,6 +206,7 @@ public:
   /// if they exist (-1 otherwise).  Some targets use pseudo instructions in
   /// order to abstract away the difference between operating with a frame
   /// pointer and operating without, through the use of these two instructions.
+  /// A FrameSetup MI in MF implies MFI::AdjustsStack.
   ///
   unsigned getCallFrameSetupOpcode() const { return CallFrameSetupOpcode; }
   unsigned getCallFrameDestroyOpcode() const { return CallFrameDestroyOpcode; }
@@ -765,6 +768,26 @@ public:
     createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                     SmallVectorImpl<MachineOperand> &Cond) = 0;
 
+    /// Create a condition to determine if the remaining trip count for a phase
+    /// is greater than TC. Some instructions such as comparisons may be
+    /// inserted at the bottom of MBB. All instructions expanded for the
+    /// phase must be inserted in MBB before calling this function.
+    /// LastStage0Insts is the map from the original instructions scheduled at
+    /// stage#0 to the expanded instructions for the last iteration of the
+    /// kernel. LastStage0Insts is intended to obtain the instruction that
+    /// refers the latest loop counter value.
+    ///
+    /// MBB can also be a predecessor of the prologue block. Then
+    /// LastStage0Insts must be empty and the compared value is the initial
+    /// value of the trip count.
+    virtual void createRemainingIterationsGreaterCondition(
+        int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
+        DenseMap<MachineInstr *, MachineInstr *> &LastStage0Insts) {
+      llvm_unreachable(
+          "Target didn't implement "
+          "PipelinerLoopInfo::createRemainingIterationsGreaterCondition!");
+    }
+
     /// Modify the loop such that the trip count is
     /// OriginalTC + TripCountAdjust.
     virtual void adjustTripCount(int TripCountAdjust) = 0;
@@ -778,6 +801,10 @@ public:
     /// Once this function is called, no other functions on this object are
     /// valid; the loop has been removed.
     virtual void disposed() = 0;
+
+    /// Return true if the target can expand pipelined schedule with modulo
+    /// variable expansion.
+    virtual bool isMVEExpanderSupported() { return false; }
   };
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
@@ -1190,10 +1217,9 @@ public:
   /// faster sequence.
   /// \param Root - Instruction that could be combined with one of its operands
   /// \param Patterns - Vector of possible combination patterns
-  virtual bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const;
+  virtual bool getMachineCombinerPatterns(MachineInstr &Root,
+                                          SmallVectorImpl<unsigned> &Patterns,
+                                          bool DoRegPressureReduce) const;
 
   /// Return true if target supports reassociation of instructions in machine
   /// combiner pass to reduce register pressure for a given BB.
@@ -1205,13 +1231,17 @@ public:
 
   /// Fix up the placeholder we may add in genAlternativeCodeSequence().
   virtual void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const {}
 
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern
-  virtual bool isThroughputPattern(MachineCombinerPattern Pattern) const;
+  virtual bool isThroughputPattern(unsigned Pattern) const;
+
+  /// Return the objective of a combiner pattern.
+  /// \param Pattern - combiner pattern
+  virtual CombinerObjective getCombinerObjective(unsigned Pattern) const;
 
   /// Return true if the input \P Inst is part of a chain of dependent ops
   /// that are suitable for reassociation, otherwise return false.
@@ -1255,7 +1285,7 @@ public:
   /// \param InstIdxForVirtReg - map of virtual register to instruction in
   /// InsInstr that defines it
   virtual void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
@@ -1267,12 +1297,20 @@ public:
     return true;
   }
 
+  /// The returned array encodes the operand index for each parameter because
+  /// the operands may be commuted; the operand indices for associative
+  /// operations might also be target-specific. Each element specifies the index
+  /// of {Prev, A, B, X, Y}.
+  virtual void
+  getReassociateOperandIndices(const MachineInstr &Root, unsigned Pattern,
+                               std::array<unsigned, 5> &OperandIndices) const;
+
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
-  void reassociateOps(MachineInstr &Root, MachineInstr &Prev,
-                      MachineCombinerPattern Pattern,
+  void reassociateOps(MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
+                      ArrayRef<unsigned> OperandIndices,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
 
   /// Reassociation of some instructions requires inverse operations (e.g.
@@ -1280,8 +1318,7 @@ public:
   /// (new root opcode, new prev opcode) that must be used to reassociate \P
   /// Root and \P Prev accoring to \P Pattern.
   std::pair<unsigned, unsigned>
-  getReassociationOpcodes(MachineCombinerPattern Pattern,
-                          const MachineInstr &Root,
+  getReassociationOpcodes(unsigned Pattern, const MachineInstr &Root,
                           const MachineInstr &Prev) const;
 
   /// The limit on resource length extension we accept in MachineCombiner Pass.
@@ -2053,6 +2090,7 @@ public:
   /// information for a set of outlining candidates. Returns std::nullopt if the
   /// candidates are not suitable for outlining.
   virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
@@ -2067,7 +2105,8 @@ public:
 protected:
   /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MIT, unsigned Flags) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningTypeImpl!");
   }
@@ -2075,8 +2114,9 @@ protected:
 public:
   /// Returns how or if \p MIT should be outlined. \p Flags is the
   /// target-specific information returned by isMBBSafeToOutlineFrom.
-  outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const;
+  outliner::InstrType getOutliningType(const MachineModuleInfo &MMI,
+                                       MachineBasicBlock::iterator &MIT,
+                                       unsigned Flags) const;
 
   /// Optional target hook that returns true if \p MBB is safe to outline from,
   /// and returns any target-specific information in \p Flags.
@@ -2178,7 +2218,7 @@ public:
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<MIRFormatter>();
     return Formatter.get();
   }
@@ -2188,6 +2228,12 @@ public:
   /// not provided.
   virtual unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
     return OptLevel >= CodeGenOptLevel::Aggressive ? 4 : 2;
+  }
+
+  /// Returns the target-specific default value for tail merging.
+  /// This value will be used if the tail-merge-size argument is not provided.
+  virtual unsigned getTailMergeSize(const MachineFunction &MF) const {
+    return 3;
   }
 
   /// Returns the callee operand from the given \p MI.

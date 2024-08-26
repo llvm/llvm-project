@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Rewrite/Frontend/ASTConsumers.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
@@ -23,6 +22,7 @@
 #include "clang/Config/config.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Rewrite/Frontend/ASTConsumers.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -34,6 +34,7 @@
 #if CLANG_ENABLE_OBJC_REWRITER
 
 using namespace clang;
+using llvm::RewriteBuffer;
 using llvm::utostr;
 
 namespace {
@@ -273,10 +274,9 @@ namespace {
       std::string SStr;
       llvm::raw_string_ostream S(SStr);
       New->printPretty(S, nullptr, PrintingPolicy(LangOpts));
-      const std::string &Str = S.str();
 
       // If replacement succeeded or warning disabled return with no warning.
-      if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, Str)) {
+      if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, SStr)) {
         ReplacedNodes[Old] = New;
         return;
       }
@@ -465,15 +465,15 @@ namespace {
 
     std::string SynthesizeByrefCopyDestroyHelper(VarDecl *VD, int flag);
     std::string SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
-                                      StringRef funcName, std::string Tag);
-    std::string SynthesizeBlockFunc(BlockExpr *CE, int i,
-                                      StringRef funcName, std::string Tag);
-    std::string SynthesizeBlockImpl(BlockExpr *CE,
-                                    std::string Tag, std::string Desc);
-    std::string SynthesizeBlockDescriptor(std::string DescTag,
-                                          std::string ImplTag,
-                                          int i, StringRef funcName,
-                                          unsigned hasCopy);
+                                           StringRef funcName,
+                                           const std::string &Tag);
+    std::string SynthesizeBlockFunc(BlockExpr *CE, int i, StringRef funcName,
+                                    const std::string &Tag);
+    std::string SynthesizeBlockImpl(BlockExpr *CE, const std::string &Tag,
+                                    const std::string &Desc);
+    std::string SynthesizeBlockDescriptor(const std::string &DescTag,
+                                          const std::string &ImplTag, int i,
+                                          StringRef funcName, unsigned hasCopy);
     Stmt *SynthesizeBlockCall(CallExpr *Exp, const Expr* BlockExp);
     void SynthesizeBlockLiterals(SourceLocation FunLocStart,
                                  StringRef FunName);
@@ -592,7 +592,7 @@ namespace {
     }
 
     bool ImplementationIsNonLazy(const ObjCImplDecl *OD) const {
-      IdentifierInfo* II = &Context->Idents.get("load");
+      const IdentifierInfo *II = &Context->Idents.get("load");
       Selector LoadSel = Context->Selectors.getSelector(0, &II);
       return OD->getClassMethod(LoadSel) != nullptr;
     }
@@ -2581,7 +2581,7 @@ Stmt *RewriteModernObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   std::string prettyBufS;
   llvm::raw_string_ostream prettyBuf(prettyBufS);
   Exp->getString()->printPretty(prettyBuf, nullptr, PrintingPolicy(LangOpts));
-  Preamble += prettyBuf.str();
+  Preamble += prettyBufS;
   Preamble += ",";
   Preamble += utostr(Exp->getString()->getByteLength()) + "};\n";
 
@@ -4037,7 +4037,7 @@ static bool HasLocalVariableExternalStorage(ValueDecl *VD) {
 
 std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
                                                    StringRef funcName,
-                                                   std::string Tag) {
+                                                   const std::string &Tag) {
   const FunctionType *AFT = CE->getFunctionType();
   QualType RT = AFT->getReturnType();
   std::string StructRef = "struct " + Tag;
@@ -4131,9 +4131,8 @@ std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
-                                                   StringRef funcName,
-                                                   std::string Tag) {
+std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(
+    BlockExpr *CE, int i, StringRef funcName, const std::string &Tag) {
   std::string StructRef = "struct " + Tag;
   std::string S = "static void __";
 
@@ -4175,8 +4174,9 @@ std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
-                                             std::string Desc) {
+std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
+                                                   const std::string &Tag,
+                                                   const std::string &Desc) {
   std::string S = "\nstruct " + Tag;
   std::string Constructor = "  " + Tag;
 
@@ -4290,10 +4290,9 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Ta
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockDescriptor(std::string DescTag,
-                                                   std::string ImplTag, int i,
-                                                   StringRef FunName,
-                                                   unsigned hasCopy) {
+std::string RewriteModernObjC::SynthesizeBlockDescriptor(
+    const std::string &DescTag, const std::string &ImplTag, int i,
+    StringRef FunName, unsigned hasCopy) {
   std::string S = "\nstatic struct " + DescTag;
 
   S += " {\n  size_t reserved;\n";
@@ -4415,7 +4414,7 @@ void RewriteModernObjC::SynthesizeBlockLiterals(SourceLocation FunLocStart,
     llvm::raw_string_ostream constructorExprBuf(SStr);
     GlobalConstructionExp->printPretty(constructorExprBuf, nullptr,
                                        PrintingPolicy(LangOpts));
-    globalBuf += constructorExprBuf.str();
+    globalBuf += SStr;
     globalBuf += ";\n";
     InsertText(FunLocStart, globalBuf);
     GlobalConstructionExp = nullptr;

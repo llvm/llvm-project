@@ -264,23 +264,23 @@ void fir::FortranVariableFlagsAttr::print(mlir::AsmPrinter &printer) const {
 void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
                             mlir::DialectAsmPrinter &p) {
   auto &os = p.getStream();
-  if (auto exact = attr.dyn_cast<fir::ExactTypeAttr>()) {
+  if (auto exact = mlir::dyn_cast<fir::ExactTypeAttr>(attr)) {
     os << fir::ExactTypeAttr::getAttrName() << '<';
     p.printType(exact.getType());
     os << '>';
-  } else if (auto sub = attr.dyn_cast<fir::SubclassAttr>()) {
+  } else if (auto sub = mlir::dyn_cast<fir::SubclassAttr>(attr)) {
     os << fir::SubclassAttr::getAttrName() << '<';
     p.printType(sub.getType());
     os << '>';
-  } else if (attr.dyn_cast_or_null<fir::PointIntervalAttr>()) {
+  } else if (mlir::dyn_cast_or_null<fir::PointIntervalAttr>(attr)) {
     os << fir::PointIntervalAttr::getAttrName();
-  } else if (attr.dyn_cast_or_null<fir::ClosedIntervalAttr>()) {
+  } else if (mlir::dyn_cast_or_null<fir::ClosedIntervalAttr>(attr)) {
     os << fir::ClosedIntervalAttr::getAttrName();
-  } else if (attr.dyn_cast_or_null<fir::LowerBoundAttr>()) {
+  } else if (mlir::dyn_cast_or_null<fir::LowerBoundAttr>(attr)) {
     os << fir::LowerBoundAttr::getAttrName();
-  } else if (attr.dyn_cast_or_null<fir::UpperBoundAttr>()) {
+  } else if (mlir::dyn_cast_or_null<fir::UpperBoundAttr>(attr)) {
     os << fir::UpperBoundAttr::getAttrName();
-  } else if (auto a = attr.dyn_cast_or_null<fir::RealAttr>()) {
+  } else if (auto a = mlir::dyn_cast_or_null<fir::RealAttr>(attr)) {
     os << fir::RealAttr::getAttrName() << '<' << a.getFKind() << ", i x";
     llvm::SmallString<40> ss;
     a.getValue().bitcastToAPInt().toStringUnsigned(ss, 16);
@@ -296,8 +296,9 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 //===----------------------------------------------------------------------===//
 
 void FIROpsDialect::registerAttributes() {
-  addAttributes<ClosedIntervalAttr, ExactTypeAttr, FortranVariableFlagsAttr,
-                LowerBoundAttr, PointIntervalAttr, RealAttr, SubclassAttr,
-                UpperBoundAttr, CUDADataAttributeAttr, CUDAProcAttributeAttr,
-                CUDALaunchBoundsAttr, CUDAClusterDimsAttr>();
+  addAttributes<ClosedIntervalAttr, ExactTypeAttr,
+                FortranProcedureFlagsEnumAttr, FortranVariableFlagsAttr,
+                LowerBoundAttr, PointIntervalAttr, RealAttr, ReduceAttr,
+                SubclassAttr, UpperBoundAttr, LocationKindAttr,
+                LocationKindArrayAttr>();
 }

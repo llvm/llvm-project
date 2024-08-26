@@ -1,9 +1,14 @@
-// RUN: %clang_analyze_cc1 -triple=x86_64-pc-linux-gnu -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
-// RUN: %clang_analyze_cc1 -triple=armv8-none-linux-eabi -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
-// RUN: %clang_analyze_cc1 -triple=aarch64-linux-gnu -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
-// RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple=x86_64-pc-linux-gnu -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=armv8-none-linux-eabi -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=aarch64-linux-gnu -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
+#include "Inputs/system-header-simulator-for-malloc.h"
 #include "Inputs/system-header-simulator-for-valist.h"
 
 void clang_analyzer_eval(int);
@@ -375,4 +380,153 @@ void fflush_on_open_failed_stream(void) {
     return;
   }
   fclose(F);
+}
+
+void getline_null_file() {
+  char *buffer = NULL;
+  size_t n = 0;
+  getline(&buffer, &n, NULL); // expected-warning {{Stream pointer might be NULL}}
+}
+
+void getdelim_null_file() {
+  char *buffer = NULL;
+  size_t n = 0;
+  getdelim(&buffer, &n, '\n', NULL); // expected-warning {{Stream pointer might be NULL}}
+}
+
+void getline_buffer_on_error() {
+  FILE *file = fopen("file.txt", "r");
+  if (file == NULL) {
+    return;
+  }
+
+  char *line = NULL;
+  size_t len = 0;
+  if (getline(&line, &len, file) == -1) {
+    if (line[0] == '\0') {} // expected-warning {{The left operand of '==' is a garbage value}}
+  } else {
+    if (line[0] == '\0') {} // no warning
+  }
+
+  free(line);
+  fclose(file);
+}
+
+void getline_ret_value() {
+  FILE *file = fopen("file.txt", "r");
+  if (file == NULL) {
+    return;
+  }
+
+  size_t n = 0;
+  char *buffer = NULL;
+  ssize_t r = getline(&buffer, &n, file);
+
+  if (r > -1) {
+    // The return value does *not* include the terminating null byte.
+    // The buffer must be large enough to include it.
+    clang_analyzer_eval(n > r); // expected-warning{{TRUE}}
+    clang_analyzer_eval(buffer != NULL);  // expected-warning{{TRUE}}
+  }
+
+  fclose(file);
+  free(buffer);
+}
+
+
+void getline_buffer_size_negative() {
+  FILE *file = fopen("file.txt", "r");
+  if (file == NULL) {
+    return;
+  }
+
+  size_t n = -1;
+  clang_analyzer_eval((ssize_t)n >= 0); // expected-warning{{FALSE}}
+  char *buffer = NULL;
+  ssize_t r = getline(&buffer, &n, file);
+
+  if (r > -1) {
+    clang_analyzer_eval((ssize_t)n > r); // expected-warning{{TRUE}}
+    clang_analyzer_eval(buffer != NULL);  // expected-warning{{TRUE}}
+  }
+
+  free(buffer);
+  fclose(file);
+}
+
+void gh_93408_regression(void *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+typedef void VOID;
+void gh_93408_regression_typedef(VOID *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+struct FAM {
+  int data;
+  int tail[];
+};
+
+struct FAM0 {
+  int data;
+  int tail[0];
+};
+
+void gh_93408_regression_FAM(struct FAM *p) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(p->tail, 1, 1, f); // expected-warning {{Stream pointer might be NULL}}
+  fclose(f);
+}
+
+void gh_93408_regression_FAM0(struct FAM0 *p) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(p->tail, 1, 1, f); // expected-warning {{Stream pointer might be NULL}}
+  fclose(f);
+}
+
+struct ZeroSized {
+    int data[0];
+};
+
+void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+extern FILE *non_standard_stream_ptr;
+void test_fopen_does_not_alias_with_standard_streams(void) {
+  FILE *f = fopen("file", "r");
+  if (!f) return;
+  clang_analyzer_eval(f == stdin);  // expected-warning {{FALSE}} no-TRUE
+  clang_analyzer_eval(f == stdout); // expected-warning {{FALSE}} no-TRUE
+  clang_analyzer_eval(f == stderr); // expected-warning {{FALSE}} no-TRUE
+  clang_analyzer_eval(f == non_standard_stream_ptr); // expected-warning {{UNKNOWN}}
+  if (f != stdout) {
+    fclose(f);
+  }
+} // no-leak: 'fclose()' is always called because 'f' cannot be 'stdout'.
+
+void reopen_std_stream(void) {
+  FILE *oldStdout = stdout;
+  fclose(stdout);
+  FILE *fp = fopen("blah", "w");
+  if (!fp) return;
+
+  stdout = fp; // Let's make them alias.
+  clang_analyzer_eval(fp == oldStdout);     // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(fp == stdout);        // expected-warning {{TRUE}} no-FALSE
+  clang_analyzer_eval(oldStdout == stdout); // expected-warning {{UNKNOWN}}
+}
+
+void only_success_path_does_not_alias_with_stdout(void) {
+  if (stdout) return;
+  FILE *f = fopen("/tmp/foof", "r"); // no-crash
+  if (!f) return;
+  fclose(f);
 }

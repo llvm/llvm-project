@@ -376,9 +376,7 @@ define void @strided_vpstore_v2i8_allones_mask(<2 x i8> %val, ptr %ptr, i32 sign
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.v2i8.p0.i32(<2 x i8> %val, ptr %ptr, i32 %stride, <2 x i1> %b, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.v2i8.p0.i32(<2 x i8> %val, ptr %ptr, i32 %stride, <2 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -399,9 +397,7 @@ define void @strided_vpstore_v3f32_allones_mask(<3 x float> %v, ptr %ptr, i32 si
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <3 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <3 x i1> %one, <3 x i1> poison, <3 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.v3f32.p0.i32(<3 x float> %v, ptr %ptr, i32 %stride, <3 x i1> %allones, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.v3f32.p0.i32(<3 x float> %v, ptr %ptr, i32 %stride, <3 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -424,9 +420,9 @@ define void @strided_store_v32f64(<32 x double> %v, ptr %ptr, i32 signext %strid
 ; CHECK-NEXT:    addi a3, a2, -16
 ; CHECK-NEXT:    sltu a2, a2, a3
 ; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -454,9 +450,7 @@ define void @strided_store_v32f64_allones_mask(<32 x double> %v, ptr %ptr, i32 s
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <32 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <32 x i1> %one, <32 x i1> poison, <32 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.v32f64.p0.i32(<32 x double> %v, ptr %ptr, i32 %stride, <32 x i1> %allones, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.v32f64.p0.i32(<32 x double> %v, ptr %ptr, i32 %stride, <32 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 

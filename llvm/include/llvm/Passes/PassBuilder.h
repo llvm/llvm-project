@@ -17,6 +17,7 @@
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/Error.h"
@@ -26,6 +27,7 @@
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -264,12 +266,12 @@ public:
   /// the LTO run.
   ModulePassManager buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level);
 
-  /// Build an ThinLTO default optimization pipeline to a pass manager.
+  /// Build a ThinLTO default optimization pipeline to a pass manager.
   ///
   /// This provides a good default optimization pipeline for link-time
   /// optimization and code generation. It is particularly tuned to fit well
   /// when IR coming into the LTO phase was first run through \c
-  /// addPreLinkLTODefaultPipeline, and the two coordinate closely.
+  /// buildThinLTOPreLinkDefaultPipeline, and the two coordinate closely.
   ModulePassManager
   buildThinLTODefaultPipeline(OptimizationLevel Level,
                               const ModuleSummaryIndex *ImportSummary);
@@ -288,7 +290,7 @@ public:
   /// This provides a good default optimization pipeline for link-time
   /// optimization and code generation. It is particularly tuned to fit well
   /// when IR coming into the LTO phase was first run through \c
-  /// addPreLinkLTODefaultPipeline, and the two coordinate closely.
+  /// buildLTOPreLinkDefaultPipeline, and the two coordinate closely.
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
                                             ModuleSummaryIndex *ExportSummary);
 
@@ -387,6 +389,10 @@ public:
   /// the \p AA manager is unspecified if such an error is encountered and this
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
+
+  /// Parse RegAllocFilterName to get RegAllocFilterFunc.
+  std::optional<RegAllocFilterFunc>
+  parseRegAllocFilter(StringRef RegAllocFilterName);
 
   /// Print pass names.
   void printPassNames(raw_ostream &OS);
@@ -576,6 +582,14 @@ public:
   }
   /// @}}
 
+  /// Register callbacks to parse target specific filter field if regalloc pass
+  /// needs it. E.g. AMDGPU requires regalloc passes can handle sgpr and vgpr
+  /// separately.
+  void registerRegClassFilterParsingCallback(
+      const std::function<RegAllocFilterFunc(StringRef)> &C) {
+    RegClassFilterParsingCallbacks.push_back(C);
+  }
+
   /// Register a callback for a top-level pipeline entry.
   ///
   /// If the PassManager type is not given at the top level of the pipeline
@@ -626,6 +640,59 @@ public:
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
                                                     OptimizationLevel Level);
 
+  static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
+    if (!Name.consume_front(PassName))
+      return false;
+    // normal pass name w/o parameters == default parameters
+    if (Name.empty())
+      return true;
+    return Name.starts_with("<") && Name.ends_with(">");
+  }
+
+  /// This performs customized parsing of pass name with parameters.
+  ///
+  /// We do not need parametrization of passes in textual pipeline very often,
+  /// yet on a rare occasion ability to specify parameters right there can be
+  /// useful.
+  ///
+  /// \p Name - parameterized specification of a pass from a textual pipeline
+  /// is a string in a form of :
+  ///      PassName '<' parameter-list '>'
+  ///
+  /// Parameter list is being parsed by the parser callable argument, \p Parser,
+  /// It takes a string-ref of parameters and returns either StringError or a
+  /// parameter list in a form of a custom parameters type, all wrapped into
+  /// Expected<> template class.
+  ///
+  template <typename ParametersParseCallableT>
+  static auto parsePassParameters(ParametersParseCallableT &&Parser,
+                                  StringRef Name, StringRef PassName)
+      -> decltype(Parser(StringRef{})) {
+    using ParametersT = typename decltype(Parser(StringRef{}))::value_type;
+
+    StringRef Params = Name;
+    if (!Params.consume_front(PassName)) {
+      llvm_unreachable(
+          "unable to strip pass name from parametrized pass specification");
+    }
+    if (!Params.empty() &&
+        (!Params.consume_front("<") || !Params.consume_back(">"))) {
+      llvm_unreachable("invalid format for parametrized pass name");
+    }
+
+    Expected<ParametersT> Result = Parser(Params);
+    assert((Result || Result.template errorIsA<StringError>()) &&
+           "Pass parameter parser can only return StringErrors.");
+    return Result;
+  }
+
+  /// Handle passes only accept one bool-valued parameter.
+  ///
+  /// \return false when Params is empty.
+  static Expected<bool> parseSinglePassOption(StringRef Params,
+                                              StringRef OptionName,
+                                              StringRef PassName);
+
 private:
   // O1 pass pipeline
   FunctionPassManager
@@ -670,6 +737,7 @@ private:
                          bool AtomicCounterUpdate, std::string ProfileFile,
                          std::string ProfileRemappingFile,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  void addPostPGOLoopRotation(ModulePassManager &MPM, OptimizationLevel Level);
 
   // Extension Point callbacks
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
@@ -738,6 +806,9 @@ private:
                                  ArrayRef<PipelineElement>)>,
               2>
       MachineFunctionPipelineParsingCallbacks;
+  // Callbacks to parse `filter` parameter in register allocation passes
+  SmallVector<std::function<RegAllocFilterFunc(StringRef)>, 2>
+      RegClassFilterParsingCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>
@@ -856,8 +927,7 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass
-    : public MachinePassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -874,6 +944,10 @@ public:
     return Result();
   }
 };
+
+/// Common option used by multiple tools to print pipeline passes
+extern cl::opt<bool> PrintPipelinePasses;
+
 }
 
 #endif

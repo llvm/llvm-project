@@ -16,7 +16,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -30,7 +30,7 @@ protected:
   std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
 
 private:
-  bool FastUnalignedAccess;
+  bool FastScalarUnalignedAccess;
   bool HasExperimental = false;
 
 public:
@@ -110,6 +110,8 @@ public:
 
   bool hasBFloat16Type() const override { return true; }
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
@@ -120,6 +122,14 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
+
+  bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
+  bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
+  bool validateCpuSupports(StringRef Feature) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

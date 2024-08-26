@@ -1594,6 +1594,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
           }
         }
 
+        if (auto *NewEltI = dyn_cast<Instruction>(NewElt))
+          NewEltI->copyIRFlags(&I);
+
         NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, N);
       }
     } else {
@@ -1749,7 +1752,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
     // Non constant index/out of bounds index -> folding is unlikely.
     // The latter is more of a sanity check because canonical IR should just
     // have replaced those with poison.
-    if (!Idx || Idx->getSExtValue() >= FVT->getNumElements())
+    if (!Idx || Idx->getZExtValue() >= FVT->getNumElements())
       return false;
 
     const auto *VecSrc = IE->getOperand(0);
@@ -1761,7 +1764,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
       return false;
 
     CurVal = VecSrc;
-    EltsCovered.set(Idx->getSExtValue());
+    EltsCovered.set(Idx->getZExtValue());
 
     // All elements covered.
     if (EltsCovered.all())
@@ -1987,7 +1990,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     // We need to reset the build on each iteration, because getSlicedVal may
     // have inserted something into I's BB.
-    B.SetInsertPoint(I.getParent()->getFirstNonPHI());
+    B.SetInsertPoint(I.getParent()->getFirstNonPHIIt());
     S.NewPHI = B.CreatePHI(S.Ty, I.getNumIncomingValues());
 
     for (const auto &[Idx, BB] : enumerate(I.blocks())) {
@@ -2032,6 +2035,11 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
     return true;
 
+  // getUnderlyingObject may have looked through another addrspacecast, although
+  // the optimizable situations most likely folded out by now.
+  if (AS != cast<PointerType>(V->getType())->getAddressSpace())
+    return false;
+
   // TODO: Calls that return nonnull?
 
   // For all other things, use KnownBits.
@@ -2040,8 +2048,10 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   //
   // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
   // address spaces have non-zero null values.
-  auto SrcPtrKB = computeKnownBits(V, DL).trunc(DL.getPointerSizeInBits(AS));
+  auto SrcPtrKB = computeKnownBits(V, DL);
   const auto NullVal = TM.getNullPointerValue(AS);
+
+  assert(SrcPtrKB.getBitWidth() == DL.getPointerSizeInBits(AS));
   assert((NullVal == 0 || NullVal == -1) &&
          "don't know how to check for this null value!");
   return NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero();

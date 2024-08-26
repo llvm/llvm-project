@@ -15,16 +15,16 @@
 #include "dyadic_float.h"
 #include "rounding_mode.h"
 
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <math.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -143,8 +143,10 @@ LIBC_INLINE constexpr T logb(T x) {
   return static_cast<T>(normal.get_unbiased_exponent());
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T ldexp(T x, int exp) {
+template <typename T, typename U>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    cpp::is_floating_point_v<T> && cpp::is_integral_v<U>, T>
+ldexp(T x, U exp) {
   FPBits<T> bits(x);
   if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
@@ -157,6 +159,8 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
   // calculating the limit.
   constexpr int EXP_LIMIT =
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  // Make sure that we can safely cast exp to int when not returning early.
+  static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
     int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
@@ -187,7 +191,7 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
-  normal.exponent += exp;
+  normal.exponent += static_cast<int>(exp);
   return static_cast<T>(normal);
 }
 
@@ -230,11 +234,36 @@ LIBC_INLINE T nextafter(T from, U to) {
   return from_bits.get_val();
 }
 
+template <bool IsDown, typename T,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE constexpr T nextupdown(T x) {
+  constexpr Sign sign = IsDown ? Sign::NEG : Sign::POS;
+
+  FPBits<T> xbits(x);
+  if (xbits.is_nan() || xbits == FPBits<T>::max_normal(sign) ||
+      xbits == FPBits<T>::inf(sign))
+    return x;
+
+  using StorageType = typename FPBits<T>::StorageType;
+  if (x != T(0)) {
+    if (xbits.sign() == sign) {
+      xbits = FPBits<T>(StorageType(xbits.uintval() + 1));
+    } else {
+      xbits = FPBits<T>(StorageType(xbits.uintval() - 1));
+    }
+  } else {
+    xbits = FPBits<T>::min_subnormal(sign);
+  }
+
+  return xbits.get_val();
+}
+
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
+#include "x86_64/NextUpDownLongDouble.h"
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

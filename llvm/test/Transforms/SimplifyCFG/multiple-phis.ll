@@ -95,9 +95,9 @@ define i8 @merge1(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-SAME: (i8 noundef [[ARG:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 -123, label [[CASE0:%.*]]
-; CHECK-NEXT:    i8 66, label [[SUCC:%.*]]
-; CHECK-NEXT:    i8 123, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 -123, label [[CASE0:%.*]]
+; CHECK-NEXT:      i8 66, label [[SUCC:%.*]]
+; CHECK-NEXT:      i8 123, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -150,9 +150,9 @@ define i8 @merge1_unfoldable_one_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-SAME: (i8 noundef [[ARG:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 -123, label [[CASE0:%.*]]
-; CHECK-NEXT:    i8 66, label [[SUCC:%.*]]
-; CHECK-NEXT:    i8 123, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 -123, label [[CASE0:%.*]]
+; CHECK-NEXT:      i8 66, label [[SUCC:%.*]]
+; CHECK-NEXT:      i8 123, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -207,9 +207,9 @@ define i8 @merge1_unfoldable_two_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-SAME: (i8 noundef [[ARG:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 -123, label [[CASE0:%.*]]
-; CHECK-NEXT:    i8 66, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 123, label [[SUCC:%.*]]
+; CHECK-NEXT:      i8 -123, label [[CASE0:%.*]]
+; CHECK-NEXT:      i8 66, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 123, label [[SUCC:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
@@ -266,9 +266,9 @@ define i8 @merge1_unfoldable_all_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-SAME: (i8 noundef [[ARG:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i8 -123, label [[CASE0:%.*]]
-; CHECK-NEXT:    i8 66, label [[CASE1:%.*]]
-; CHECK-NEXT:    i8 123, label [[CASE2:%.*]]
+; CHECK-NEXT:      i8 -123, label [[CASE0:%.*]]
+; CHECK-NEXT:      i8 66, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 123, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable

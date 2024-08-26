@@ -85,10 +85,6 @@ TEST(RecordOpsTest, CopyRecord) {
         EXPECT_NE(Env.getValue(S1.getSyntheticField("synth_int")),
                   Env.getValue(S2.getSyntheticField("synth_int")));
 
-        auto *S1Val = cast<RecordValue>(Env.getValue(S1));
-        auto *S2Val = cast<RecordValue>(Env.getValue(S2));
-        EXPECT_NE(S1Val, S2Val);
-
         copyRecord(S1, S2, Env);
 
         EXPECT_EQ(getFieldValue(&S1, *OuterIntDecl, Env),
@@ -98,10 +94,6 @@ TEST(RecordOpsTest, CopyRecord) {
                   getFieldValue(&Inner2, *InnerIntDecl, Env));
         EXPECT_EQ(Env.getValue(S1.getSyntheticField("synth_int")),
                   Env.getValue(S2.getSyntheticField("synth_int")));
-
-        S1Val = cast<RecordValue>(Env.getValue(S1));
-        S2Val = cast<RecordValue>(Env.getValue(S2));
-        EXPECT_NE(S1Val, S2Val);
       });
 }
 
@@ -198,7 +190,7 @@ TEST(RecordOpsTest, RecordsEqual) {
       });
 }
 
-TEST(TransferTest, CopyRecordFromDerivedToBase) {
+TEST(TransferTest, CopyRecordBetweenDerivedAndBase) {
   std::string Code = R"(
     struct A {
       int i;
@@ -212,8 +204,23 @@ TEST(TransferTest, CopyRecordFromDerivedToBase) {
       // [[p]]
     }
   )";
+  auto SyntheticFieldCallback = [](QualType Ty) -> llvm::StringMap<QualType> {
+    CXXRecordDecl *ADecl = nullptr;
+    if (Ty.getAsString() == "A")
+      ADecl = Ty->getAsCXXRecordDecl();
+    else if (Ty.getAsString() == "B")
+      ADecl = Ty->getAsCXXRecordDecl()
+                  ->bases_begin()
+                  ->getType()
+                  ->getAsCXXRecordDecl();
+    else
+      return {};
+    QualType IntTy = getFieldNamed(ADecl, "i")->getType();
+    return {{"synth_int", IntTy}};
+  };
+  // Test copying derived to base class.
   runDataflow(
-      Code, /*SyntheticFieldCallback=*/{},
+      Code, SyntheticFieldCallback,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
@@ -224,11 +231,38 @@ TEST(TransferTest, CopyRecordFromDerivedToBase) {
 
         EXPECT_NE(Env.getValue(*A.getChild(*IDecl)),
                   Env.getValue(*B.getChild(*IDecl)));
+        EXPECT_NE(Env.getValue(A.getSyntheticField("synth_int")),
+                  Env.getValue(B.getSyntheticField("synth_int")));
 
         copyRecord(B, A, Env);
 
         EXPECT_EQ(Env.getValue(*A.getChild(*IDecl)),
                   Env.getValue(*B.getChild(*IDecl)));
+        EXPECT_EQ(Env.getValue(A.getSyntheticField("synth_int")),
+                  Env.getValue(B.getSyntheticField("synth_int")));
+      });
+  // Test copying base to derived class.
+  runDataflow(
+      Code, SyntheticFieldCallback,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "i");
+        auto &A = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "a");
+        auto &B = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "b");
+
+        EXPECT_NE(Env.getValue(*A.getChild(*IDecl)),
+                  Env.getValue(*B.getChild(*IDecl)));
+        EXPECT_NE(Env.getValue(A.getSyntheticField("synth_int")),
+                  Env.getValue(B.getSyntheticField("synth_int")));
+
+        copyRecord(A, B, Env);
+
+        EXPECT_EQ(Env.getValue(*A.getChild(*IDecl)),
+                  Env.getValue(*B.getChild(*IDecl)));
+        EXPECT_EQ(Env.getValue(A.getSyntheticField("synth_int")),
+                  Env.getValue(B.getSyntheticField("synth_int")));
       });
 }
 

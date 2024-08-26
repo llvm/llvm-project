@@ -32,6 +32,9 @@ struct ExpensiveToCopyType {
 
 template <typename T>
 struct Container {
+  using reference = T&;
+  using const_reference = const T&;
+
   bool empty() const;
   const T& operator[](int) const;
   const T& operator[](int);
@@ -42,8 +45,8 @@ struct Container {
   void nonConstMethod();
   bool constMethod() const;
 
-  const T& at(int) const;
-  T& at(int);
+  reference at(int) const;
+  const_reference at(int);
 
 };
 
@@ -204,6 +207,28 @@ void PositiveOperatorCallConstValueParam(const Container<ExpensiveToCopyType> C)
   const ExpensiveToCopyType VarCopyConstructed(C[42]);
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C[42]);
+  VarCopyConstructed.constMethod();
+}
+
+void PositiveOperatorValueParam(Container<ExpensiveToCopyType> C) {
+  const auto AutoAssigned = C[42];
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = C[42];
+  AutoAssigned.constMethod();
+
+  const auto AutoCopyConstructed(C[42]);
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
+  // CHECK-FIXES: const auto& AutoCopyConstructed(C[42]);
+  AutoCopyConstructed.constMethod();
+
+  const ExpensiveToCopyType VarAssigned = C.at(42);
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = C.at(42);
+  VarAssigned.constMethod();
+
+  const ExpensiveToCopyType VarCopyConstructed(C.at(42));
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C.at(42));
   VarCopyConstructed.constMethod();
 }
 
@@ -879,5 +904,14 @@ void negativeNonConstMemberExpr() {
     auto Copy = Orig;
     mutate(&Copy.Member);
   }
+}
+
+
+bool operator==(ExpensiveToCopyType, ExpensiveToCopyType);
+
+template<typename T> bool OperatorWithNoDirectCallee(T t) {
+  ExpensiveToCopyType a1;
+  ExpensiveToCopyType a2 = a1;
+  return a1 == t;
 }
 

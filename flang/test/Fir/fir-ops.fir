@@ -460,6 +460,13 @@ fir.type_info @dispatch_tbl : !fir.type<dispatch_tbl{i:i32}> dispatch_table {
 // CHECK-LABEL: fir.type_info @test_type_info noinit nodestroy nofinal extends !fir.type<parent{i:i32}> : !fir.type<test_type_info{i:i32,j:f32}>
 fir.type_info @test_type_info noinit nodestroy nofinal extends !fir.type<parent{i:i32}> : !fir.type<test_type_info{i:i32,j:f32}>
 
+// CHECK-LABEL: fir.type_info @cpinfo : !fir.type<cpinfo{comp_i:!fir.array<10x20xi32>}> component_info {
+// CHECK: fir.dt_component "component_info" lbs [2, 3]
+// CHECK: }
+fir.type_info @cpinfo : !fir.type<cpinfo{comp_i:!fir.array<10x20xi32>}> component_info {
+  fir.dt_component "component_info" lbs [2, 3]
+}
+
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: !fir.complex<16>, [[VAL_152:%.*]]: !fir.complex<16>) {
 func.func @compare_complex(%a : !fir.complex<16>, %b : !fir.complex<16>) {
@@ -900,3 +907,26 @@ fir.global @t1 {keep_my_attr = "data"} : i32 {
 }
 
 // CHECK-LABEL: fir.global @t1 {keep_my_attr = "data"} : i32
+
+func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  %2 = fir.rebox_assumed_rank %arg0 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  %3 = fir.rebox_assumed_rank %arg0 lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  return
+}
+// CHECK-LABEL: func.func @test_rebox_assumed_rank(
+// CHECK-SAME: %[[A:.*]]: !fir.box<!fir.array<*:f32>>)
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+
+func.func @test_is_assumed_size(%arg0: !fir.class<!fir.array<*:none>>, %arg1 : !fir.box<!fir.array<?xf32>>) {
+  %1 = fir.is_assumed_size %arg0 : (!fir.class<!fir.array<*:none>>) -> i1
+  %2 = fir.is_assumed_size %arg1 : (!fir.box<!fir.array<?xf32>>) -> i1
+  return
+}
+// CHECK-LABEL: func.func @test_is_assumed_size(
+// CHECK-SAME: %[[A:.*]]: !fir.class<!fir.array<*:none>>,
+// CHECK-SAME: %[[B:.*]]: !fir.box<!fir.array<?xf32>>)
+  // CHECK: fir.is_assumed_size %[[A]] : (!fir.class<!fir.array<*:none>>) -> i1
+  // CHECK: fir.is_assumed_size %[[B]] : (!fir.box<!fir.array<?xf32>>) -> i1

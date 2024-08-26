@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/Utils.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/TextAPI/TextAPIError.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -151,4 +153,92 @@ bool llvm::MachO::isPrivateLibrary(StringRef Path, bool IsSymLink) {
               (IsSymLink && Rest.ends_with("Current"))));
   }
   return false;
+}
+
+static StringLiteral RegexMetachars = "()^$|+.[]\\{}";
+
+llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
+  SmallString<128> RegexString("^");
+  unsigned NumWildcards = 0;
+  for (unsigned i = 0; i < Glob.size(); ++i) {
+    char C = Glob[i];
+    switch (C) {
+    case '?':
+      RegexString += '.';
+      break;
+    case '*': {
+      const char *PrevChar = i > 0 ? Glob.data() + i - 1 : nullptr;
+      NumWildcards = 1;
+      ++i;
+      while (i < Glob.size() && Glob[i] == '*') {
+        ++NumWildcards;
+        ++i;
+      }
+      const char *NextChar = i < Glob.size() ? Glob.data() + i : nullptr;
+
+      if ((NumWildcards > 1) && (PrevChar == nullptr || *PrevChar == '/') &&
+          (NextChar == nullptr || *NextChar == '/')) {
+        RegexString += "(([^/]*(/|$))*)";
+      } else
+        RegexString += "([^/]*)";
+      break;
+    }
+    default:
+      if (RegexMetachars.contains(C))
+        RegexString.push_back('\\');
+      RegexString.push_back(C);
+    }
+  }
+  RegexString.push_back('$');
+  if (NumWildcards == 0)
+    return make_error<StringError>("not a glob", inconvertibleErrorCode());
+
+  llvm::Regex Rule = Regex(RegexString);
+  std::string Error;
+  if (!Rule.isValid(Error))
+    return make_error<StringError>(Error, inconvertibleErrorCode());
+
+  return std::move(Rule);
+}
+
+Expected<AliasMap>
+llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
+  SmallVector<StringRef, 16> Lines;
+  AliasMap Aliases;
+  Buffer->getBuffer().split(Lines, "\n", /*MaxSplit=*/-1,
+                            /*KeepEmpty=*/false);
+  for (const StringRef Line : Lines) {
+    StringRef L = Line.trim();
+    if (L.empty())
+      continue;
+    // Skip comments.
+    if (L.starts_with("#"))
+      continue;
+    StringRef Symbol, Remain, Alias;
+    // Base symbol is separated by whitespace.
+    std::tie(Symbol, Remain) = getToken(L);
+    // The Alias symbol ends before a comment or EOL.
+    std::tie(Alias, Remain) = getToken(Remain, "#");
+    Alias = Alias.trim();
+    if (Alias.empty())
+      return make_error<TextAPIError>(
+          TextAPIError(TextAPIErrorCode::InvalidInputFormat,
+                       ("missing alias for: " + Symbol).str()));
+    SimpleSymbol AliasSym = parseSymbol(Alias);
+    SimpleSymbol BaseSym = parseSymbol(Symbol);
+    Aliases[{AliasSym.Name.str(), AliasSym.Kind}] = {BaseSym.Name.str(),
+                                                     BaseSym.Kind};
+  }
+
+  return Aliases;
+}
+
+PathSeq llvm::MachO::getPathsForPlatform(const PathToPlatformSeq &Paths,
+                                         PlatformType Platform) {
+  PathSeq Result;
+  for (const auto &[Path, CurrP] : Paths) {
+    if (!CurrP.has_value() || CurrP.value() == Platform)
+      Result.push_back(Path);
+  }
+  return Result;
 }

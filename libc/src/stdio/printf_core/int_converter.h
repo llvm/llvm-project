@@ -12,6 +12,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
@@ -19,7 +20,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 // These functions only work on characters that are already known to be in the
@@ -71,7 +72,6 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   uintmax_t num = static_cast<uintmax_t>(to_conv.conv_val_raw);
   bool is_negative = false;
   FormatFlags flags = to_conv.flags;
-
   const char a = is_lower(to_conv.conv_name) ? 'a' : 'A';
 
   // If the conversion is signed, then handle negative values.
@@ -89,8 +89,8 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
                         ~(FormatFlags::FORCE_SIGN | FormatFlags::SPACE_PREFIX));
   }
 
-  num = apply_length_modifier(num, to_conv.length_modifier);
-
+  num =
+      apply_length_modifier(num, {to_conv.length_modifier, to_conv.bit_width});
   cpp::array<char, details::num_buf_size()> buf;
   auto str = details::num_to_strview(num, buf, to_conv.conv_name);
   if (!str)
@@ -210,6 +210,6 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H

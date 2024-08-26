@@ -23,7 +23,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -252,17 +251,6 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
-
-CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
-                             BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                             std::string Suffix)
-    : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
-      Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
-                                     /* AllowVarArgs */ false,
-                                     /* AllowAlloca */ false)),
-      Suffix(Suffix) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -644,14 +632,17 @@ bool CodeExtractor::isEligible() const {
 }
 
 void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
-                                      const ValueSet &SinkCands) const {
+                                      const ValueSet &SinkCands,
+                                      bool CollectGlobalInputs) const {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
     for (Instruction &II : *BB) {
       for (auto &OI : II.operands()) {
         Value *V = OI;
-        if (!SinkCands.count(V) && definedInCaller(Blocks, V))
+        if (!SinkCands.count(V) &&
+            (definedInCaller(Blocks, V) ||
+             (CollectGlobalInputs && llvm::isa<llvm::GlobalVariable>(V))))
           Inputs.insert(V);
       }
 
@@ -745,7 +736,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 /// and other with remaining incoming blocks; then first PHIs are placed in
 /// outlined region.
 void CodeExtractor::severSplitPHINodesOfExits(
-    const SmallPtrSetImpl<BasicBlock *> &Exits) {
+    const SetVector<BasicBlock *> &Exits) {
   for (BasicBlock *ExitBB : Exits) {
     BasicBlock *NewBB = nullptr;
 
@@ -932,6 +923,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::DisableSanitizerInstrumentation:
       case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
+      case Attribute::HybridPatchable:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:
       case Attribute::MinSize:
@@ -954,9 +946,11 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::ShadowCallStack:
       case Attribute::SanitizeAddress:
       case Attribute::SanitizeMemory:
+      case Attribute::SanitizeNumericalStability:
       case Attribute::SanitizeThread:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
+      case Attribute::SanitizeRealtime:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:
@@ -1000,6 +994,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::Writable:
       case Attribute::DeadOnUnwind:
       case Attribute::Range:
+      case Attribute::Initializes:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1010,6 +1005,18 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
 
     newFunction->addFnAttr(Attr);
   }
+
+  if (NumExitBlocks == 0) {
+    // Mark the new function `noreturn` if applicable. Terminators which resume
+    // exception propagation are treated as returning instructions. This is to
+    // avoid inserting traps after calls to outlined functions which unwind.
+    if (none_of(Blocks, [](const BasicBlock *BB) {
+          const Instruction *Term = BB->getTerminator();
+          return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
+        }))
+      newFunction->setDoesNotReturn();
+  }
+
   newFunction->insert(newFunction->end(), newRootNode);
 
   // Create scalar and aggregate iterators to name all of the arguments we
@@ -1392,19 +1399,23 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   case 0:
     // There are no successors (the block containing the switch itself), which
     // means that previously this was the last part of the function, and hence
-    // this should be rewritten as a `ret'
-
-    // Check if the function should return a value
-    if (OldFnRetTy->isVoidTy()) {
-      ReturnInst::Create(Context, nullptr, TheSwitch->getIterator());  // Return void
+    // this should be rewritten as a `ret` or `unreachable`.
+    if (newFunction->doesNotReturn()) {
+      // If fn is no return, end with an unreachable terminator.
+      (void)new UnreachableInst(Context, TheSwitch->getIterator());
+    } else if (OldFnRetTy->isVoidTy()) {
+      // We have no return value.
+      ReturnInst::Create(Context, nullptr,
+                         TheSwitch->getIterator()); // Return void
     } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
       // return what we have
-      ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch->getIterator());
+      ReturnInst::Create(Context, TheSwitch->getCondition(),
+                         TheSwitch->getIterator());
     } else {
       // Otherwise we must have code extracted an unwind or something, just
       // return whatever we want.
-      ReturnInst::Create(Context,
-                         Constant::getNullValue(OldFnRetTy), TheSwitch->getIterator());
+      ReturnInst::Create(Context, Constant::getNullValue(OldFnRetTy),
+                         TheSwitch->getIterator());
     }
 
     TheSwitch->eraseFromParent();
@@ -1508,14 +1519,14 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
 static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   for (Instruction &I : instructions(F)) {
     SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
-    SmallVector<DPValue *, 4> DPValues;
-    findDbgUsers(DbgUsers, &I, &DPValues);
+    SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+    findDbgUsers(DbgUsers, &I, &DbgVariableRecords);
     for (DbgVariableIntrinsic *DVI : DbgUsers)
       if (DVI->getFunction() != &F)
         DVI->eraseFromParent();
-    for (DPValue *DPV : DPValues)
-      if (DPV->getFunction() != &F)
-        DPV->eraseFromParent();
+    for (DbgVariableRecord *DVR : DbgVariableRecords)
+      if (DVR->getFunction() != &F)
+        DVR->eraseFromParent();
   }
 }
 
@@ -1569,7 +1580,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   //     point to a variable in the wrong scope.
   SmallDenseMap<DINode *, DINode *> RemappedMetadata;
   SmallVector<Instruction *, 4> DebugIntrinsicsToDelete;
-  SmallVector<DPValue *, 4> DPVsToDelete;
+  SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
   DenseMap<const MDNode *, MDNode *> Cache;
 
   auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar) {
@@ -1602,25 +1613,25 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   };
 
   auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
-    for (DbgRecord &DR : I.getDbgValueRange()) {
-      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-        UpdateDbgLabel(DPL);
+    for (DbgRecord &DR : I.getDbgRecordRange()) {
+      if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+        UpdateDbgLabel(DLR);
         continue;
       }
 
-      DPValue &DPV = cast<DPValue>(DR);
+      DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
       // Apply the two updates that dbg.values get: invalid operands, and
       // variable metadata fixup.
-      if (any_of(DPV.location_ops(), IsInvalidLocation)) {
-        DPVsToDelete.push_back(&DPV);
+      if (any_of(DVR.location_ops(), IsInvalidLocation)) {
+        DVRsToDelete.push_back(&DVR);
         continue;
       }
-      if (DPV.isDbgAssign() && IsInvalidLocation(DPV.getAddress())) {
-        DPVsToDelete.push_back(&DPV);
+      if (DVR.isDbgAssign() && IsInvalidLocation(DVR.getAddress())) {
+        DVRsToDelete.push_back(&DVR);
         continue;
       }
-      if (!DPV.getDebugLoc().getInlinedAt())
-        DPV.setVariable(GetUpdatedDIVariable(DPV.getVariable()));
+      if (!DVR.getDebugLoc().getInlinedAt())
+        DVR.setVariable(GetUpdatedDIVariable(DVR.getVariable()));
     }
   };
 
@@ -1658,17 +1669,18 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   for (auto *DII : DebugIntrinsicsToDelete)
     DII->eraseFromParent();
-  for (auto *DPV : DPVsToDelete)
-    DPV->getMarker()->MarkedInstr->dropOneDbgValue(DPV);
+  for (auto *DVR : DVRsToDelete)
+    DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);
 
-  // Fix up the scope information attached to the line locations in the new
-  // function.
+  // Fix up the scope information attached to the line locations and the
+  // debug assignment metadata in the new function.
+  DenseMap<DIAssignID *, DIAssignID *> AssignmentIDMap;
   for (Instruction &I : instructions(NewFunc)) {
     if (const DebugLoc &DL = I.getDebugLoc())
       I.setDebugLoc(
           DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
-    for (DbgRecord &DR : I.getDbgValueRange())
+    for (DbgRecord &DR : I.getDbgRecordRange())
       DR.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DR.getDebugLoc(),
                                                           *NewSP, Ctx, Cache));
 
@@ -1679,6 +1691,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       return MD;
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
+    at::remapAssignID(AssignmentIDMap, I);
   }
   if (!TheCall.getDebugLoc())
     TheCall.setDebugLoc(DILocation::get(Ctx, 0, 0, OldSP));
@@ -1735,7 +1748,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // Calculate the exit blocks for the extracted region and the total exit
   // weights for each of those blocks.
   DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
-  SmallPtrSet<BasicBlock *, 1> ExitBlocks;
+  SetVector<BasicBlock *> ExitBlocks;
   for (BasicBlock *Block : Blocks) {
     for (BasicBlock *Succ : successors(Block)) {
       if (!Blocks.count(Succ)) {
@@ -1894,16 +1907,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
-
-  // Mark the new function `noreturn` if applicable. Terminators which resume
-  // exception propagation are treated as returning instructions. This is to
-  // avoid inserting traps after calls to outlined functions which unwind.
-  bool doesNotReturn = none_of(*newFunction, [](const BasicBlock &BB) {
-    const Instruction *Term = BB.getTerminator();
-    return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
-  });
-  if (doesNotReturn)
-    newFunction->setDoesNotReturn();
 
   LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
     newFunction->dump();

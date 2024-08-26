@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AsmWriterInst.h"
-#include "CodeGenInstAlias.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "SequenceToOffsetTable.h"
-#include "Types.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/AsmWriterInst.h"
+#include "Common/CodeGenInstAlias.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1162,8 +1162,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                        PatternCount - PatternStart);
   }
 
-  if (OpcodeO.str().empty()) {
-    O << HeaderO.str();
+  if (PatternsForOpcode.empty()) {
+    O << Header;
     O << "  return false;\n";
     O << "}\n\n";
     O << "#endif // PRINT_ALIAS_INSTR\n";
@@ -1177,15 +1177,15 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       << "                  const MCSubtargetInfo &STI,\n"
       << "                  unsigned PredicateIndex);\n";
 
-  O << HeaderO.str();
+  O << Header;
   O.indent(2) << "static const PatternsForOpcode OpToPatterns[] = {\n";
-  O << OpcodeO.str();
+  O << PatternsForOpcode;
   O.indent(2) << "};\n\n";
   O.indent(2) << "static const AliasPattern Patterns[] = {\n";
-  O << PatternO.str();
+  O << Patterns;
   O.indent(2) << "};\n\n";
   O.indent(2) << "static const AliasPatternCond Conds[] = {\n";
-  O << CondO.str();
+  O << Conds;
   O.indent(2) << "};\n\n";
   O.indent(2) << "static const char AsmStrings[] =\n";
   for (const auto &P : AsmStrings) {

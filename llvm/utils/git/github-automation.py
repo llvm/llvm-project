@@ -11,6 +11,7 @@
 import argparse
 from git import Repo  # type: ignore
 import html
+import json
 import github
 import os
 import re
@@ -24,18 +25,19 @@ Hi!
 
 This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
 
-1. In the comments of the issue, request for it to be assigned to you.
-2. Fix the issue locally.
-3. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
-4. Create a Git commit.
-5. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
-6. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
+1. Check that no other contributor has already been assigned to this issue. If you believe that no one is actually working on it despite an assignment, ping the person. After one week without a response, the assignee may be changed.
+1. In the comments of this issue, request for it to be assigned to you, or just create a [pull request](https://github.com/llvm/llvm-project/pulls) after following the steps below. [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
+1. Fix the issue locally.
+1. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
+1. Create a Git commit.
+1. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
+1. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
 
 If you have any further questions about this issue, don't hesitate to ask via a comment in the thread below.
 """
 
 
-def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+def _get_current_team(team_name, teams) -> Optional[github.Team.Team]:
     for team in teams:
         if team_name == team.name.lower():
             return team
@@ -69,7 +71,7 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -124,7 +126,7 @@ class PRSubscriber:
 
     def run(self) -> bool:
         patch = None
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -200,7 +202,7 @@ Author: {self.pr.user.name} ({self.pr.user.login})
             )
         return True
 
-    def _get_curent_team(self) -> Optional[github.Team.Team]:
+    def _get_current_team(self) -> Optional[github.Team.Team]:
         for team in self.org.get_teams():
             if self.team_name == team.name.lower():
                 return team
@@ -224,18 +226,13 @@ class PRGreeter:
 {PRGreeter.COMMENT_TAG}
 Thank you for submitting a Pull Request (PR) to the LLVM Project!
 
-This PR will be automatically labeled and the relevant teams will be
-notified.
+This PR will be automatically labeled and the relevant teams will be notified.
 
 If you wish to, you can add reviewers by using the "Reviewers" section on this page.
 
-If this is not working for you, it is probably because you do not have write
-permissions for the repository. In which case you can instead tag reviewers by
-name in a comment by using `@` followed by their GitHub username.
+If this is not working for you, it is probably because you do not have write permissions for the repository. In which case you can instead tag reviewers by name in a comment by using `@` followed by their GitHub username.
 
-If you have received no comments on your PR for a week, you can request a review
-by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate
-is once a week. Please remember that you are asking for valuable time from other developers.
+If you have received no comments on your PR for a week, you can request a review by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate is once a week. Please remember that you are asking for valuable time from other developers.
 
 If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
 
@@ -279,18 +276,13 @@ class PRBuildbotInformation:
 {PRBuildbotInformation.COMMENT_TAG}
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
-Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may recieve a report in an email or a comment on this PR.
+Your changes will be combined with recent changes from other authors, then tested by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
 
-Please check whether problems have been caused by your change specifically, as
-the builds can include changes from many authors. It is not uncommon for your
-change to be included in a build that fails due to someone else's changes, or
-infrastructure issues.
+Please check whether problems have been caused by your change specifically, as the builds can include changes from many authors. It is not uncommon for your change to be included in a build that fails due to someone else's changes, or infrastructure issues.
 
 How to do this, and the rest of the post-merge process, is covered in detail [here](https://llvm.org/docs/MyFirstTypoFix.html#myfirsttypofix-issues-after-landing-your-pr).
 
-If your change does cause a problem, it may be reverted, or you can revert it yourself.
-This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
+If your change does cause a problem, it may be reverted, or you can revert it yourself. This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
 
 If you don't get any reports, no action is required from you. Your changes are working as expected, well done!
 """
@@ -636,9 +628,34 @@ class ReleaseWorkflow:
         return False
 
 
+def request_release_note(token: str, repo_name: str, pr_number: int):
+    repo = github.Github(token).get_repo(repo_name)
+    pr = repo.get_issue(pr_number).as_pull_request()
+    submitter = pr.user.login
+    if submitter == "llvmbot":
+        m = re.search("Requested by: @(.+)$", pr.body)
+        if not m:
+            submitter = None
+            print("Warning could not determine user who requested backport.")
+        submitter = m.group(1)
+
+    mention = ""
+    if submitter:
+        mention = f"@{submitter}"
+
+    comment = f"{mention} (or anyone else). If you would like to add a note about this fix in the release notes (completely optional). Please reply to this comment with a one or two sentence description of the fix.  When you are done, please add the release:note label to this PR. "
+    try:
+        pr.as_issue().create_comment(comment)
+    except:
+        # Failed to create comment so emit file instead
+        with open("comments", "w") as file:
+            data = [{"body": comment}]
+            json.dump(data, file)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--token", type=str, required=True, help="GitHub authentiation token"
+    "--token", type=str, required=True, help="GitHub authentication token"
 )
 parser.add_argument(
     "--repo",
@@ -668,7 +685,7 @@ release_workflow_parser.add_argument(
     "--llvm-project-dir",
     type=str,
     default=".",
-    help="directory containing the llvm-project checout",
+    help="directory containing the llvm-project checkout",
 )
 release_workflow_parser.add_argument(
     "--issue-number", type=int, required=True, help="The issue number to update"
@@ -701,6 +718,18 @@ release_workflow_parser.add_argument(
     required=True,
     help="The user that requested this backport",
 )
+
+request_release_note_parser = subparsers.add_parser(
+    "request-release-note",
+    help="Request a release note for a pull request",
+)
+request_release_note_parser.add_argument(
+    "--pr-number",
+    type=int,
+    required=True,
+    help="The pull request to request the release note",
+)
+
 
 args = parser.parse_args()
 
@@ -742,3 +771,5 @@ elif args.command == "release-workflow":
             sys.exit(1)
 elif args.command == "setup-llvmbot-git":
     setup_llvmbot_git()
+elif args.command == "request-release-note":
+    request_release_note(args.token, args.repo, args.pr_number)

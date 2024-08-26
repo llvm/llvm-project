@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
 // REQUIRES: zlib
 
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=sm_52 -nogpulib -nogpuinc -c %s -g -gz 2>&1 \

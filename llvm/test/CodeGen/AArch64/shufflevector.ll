@@ -202,7 +202,7 @@ define i32 @shufflevector_v4i8(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-NEXT:    ext v0.8b, v1.8b, v0.8b, #6
 ; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
@@ -390,7 +390,7 @@ define i32 @shufflevector_v4i8_zeroes(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret

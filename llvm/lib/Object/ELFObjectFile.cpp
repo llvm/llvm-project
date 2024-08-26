@@ -20,10 +20,11 @@
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -287,6 +288,81 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   return Features;
 }
 
+static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
+  switch (Attr) {
+  case 5:
+    return "v5";
+  case 55:
+    return "v55";
+  case 60:
+    return "v60";
+  case 62:
+    return "v62";
+  case 65:
+    return "v65";
+  case 67:
+    return "v67";
+  case 68:
+    return "v68";
+  case 69:
+    return "v69";
+  case 71:
+    return "v71";
+  case 73:
+    return "v73";
+  default:
+    return {};
+  }
+}
+
+SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
+  SubtargetFeatures Features;
+  HexagonAttributeParser Parser;
+  if (Error E = getBuildAttributes(Parser)) {
+    // Return no attributes if none can be read.
+    // This behavior is important for backwards compatibility.
+    consumeError(std::move(E));
+    return Features;
+  }
+  std::optional<unsigned> Attr;
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH))) {
+    if (std::optional<std::string> FeatureString =
+            hexagonAttrToFeatureString(*Attr))
+      Features.AddFeature(*FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH))) {
+    std::optional<std::string> FeatureString =
+        hexagonAttrToFeatureString(*Attr);
+    // There is no corresponding hvx arch for v5 and v55.
+    if (FeatureString && *Attr >= 60)
+      Features.AddFeature("hvx" + *FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXIEEEFP)))
+    if (*Attr)
+      Features.AddFeature("hvx-ieee-fp");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXQFLOAT)))
+    if (*Attr)
+      Features.AddFeature("hvx-qfloat");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ZREG)))
+    if (*Attr)
+      Features.AddFeature("zreg");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::AUDIO)))
+    if (*Attr)
+      Features.AddFeature("audio");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::CABAC)))
+    if (*Attr)
+      Features.AddFeature("cabac");
+
+  return Features;
+}
+
 Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   SubtargetFeatures Features;
   unsigned PlatformFlags = getPlatformFlags();
@@ -349,6 +425,8 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getFeatures() const {
     return getRISCVFeatures();
   case ELF::EM_LOONGARCH:
     return getLoongArchFeatures();
+  case ELF::EM_HEXAGON:
+    return getHexagonFeatures();
   default:
     return SubtargetFeatures();
   }
@@ -363,6 +441,8 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
+  case ELF::EM_BPF:
+    return StringRef("v4");
   default:
     return std::nullopt;
   }
@@ -508,6 +588,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1150";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151:
     return "gfx1151";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152:
+    return "gfx1152";
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
@@ -524,6 +606,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx10-3-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:
     return "gfx11-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:
+    return "gfx12-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
@@ -930,4 +1014,15 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
                            TextSectionIndex, PGOAnalyses);
+}
+
+StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
+  auto Data = Sec.getRawDataRefImpl();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
 }

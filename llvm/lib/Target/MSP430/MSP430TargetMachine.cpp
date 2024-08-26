@@ -26,7 +26,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Target() {
   // Register the target.
   RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeMSP430DAGToDAGISelPass(PR);
+  initializeMSP430DAGToDAGISelLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {

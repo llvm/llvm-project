@@ -25,7 +25,7 @@ define <4 x half> @vuitofp_v4f16_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x half> %v
 }
 
@@ -52,7 +52,7 @@ define <4 x float> @vuitofp_v4f32_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <4 x float> @llvm.vp.uitofp.v4f32.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x float> @llvm.vp.uitofp.v4f32.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x float> %v
 }
 
@@ -79,6 +79,6 @@ define <4 x double> @vuitofp_v4f64_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
-  %v = call <4 x double> @llvm.vp.uitofp.v4f64.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x double> @llvm.vp.uitofp.v4f64.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x double> %v
 }

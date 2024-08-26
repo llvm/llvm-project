@@ -534,7 +534,7 @@ TEST(WalkAST, Enums) {
 TEST(WalkAST, InitializerList) {
   testWalk(R"cpp(
        namespace std {
-        template <typename T> struct $implicit^initializer_list {};
+        template <typename T> struct $implicit^initializer_list { const T *a, *b; };
        })cpp",
            R"cpp(
        const char* s = "";
@@ -548,14 +548,19 @@ TEST(WalkAST, Concepts) {
   testWalk(Concept, "template<typename T> requires ^Foo<T> void func() {}");
   testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
   testWalk(Concept, "void func(^Foo auto x) {}");
-  // FIXME: Foo should be explicitly referenced.
-  testWalk("template<typename T> concept Foo = true;",
-           "void func() { ^Foo auto x = 1; }");
+  testWalk(Concept, "void func() { ^Foo auto x = 1; }");
 }
 
 TEST(WalkAST, FriendDecl) {
   testWalk("void $explicit^foo();", "struct Bar { friend void ^foo(); };");
   testWalk("struct $explicit^Foo {};", "struct Bar { friend struct ^Foo; };");
+}
+
+TEST(WalkAST, OperatorNewDelete) {
+  testWalk("void* $ambiguous^operator new(decltype(sizeof(int)), void*);",
+           "struct Bar { void foo() { Bar b; ^new (&b) Bar; } };");
+  testWalk("struct A { static void $ambiguous^operator delete(void*); };",
+           "void foo() { A a; ^delete &a; }");
 }
 } // namespace
 } // namespace clang::include_cleaner

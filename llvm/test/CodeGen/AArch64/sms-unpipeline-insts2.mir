@@ -1,9 +1,12 @@
 # RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -pipeliner-enable-copytophi=0 -debug-only=pipeliner 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# An acceptable loop by pipeliner TBB == LoopBB, FBB == ExitBB, Compare and branch
-# CHECK: SU([[SU0:[0-9]+]]):   [[V0:%[0-9]+]]:gpr64common = SUBXri [[V1:%[0-9]+]]:gpr64common, 1, 0
-# CHECK: Do not pipeline SU([[SU0:[0-9]+]])
+# Compare and branch instructions are not supported now.
+# CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+
+# (if supported) Check that instructions for loop control are not pipelined when compare and branch is used.
+# CHECK(if supported): SU([[SU0:[0-9]+]]):   [[V0:%[0-9]+]]:gpr64common = SUBXri [[V1:%[0-9]+]]:gpr64common, 1, 0
+# CHECK(if supported): Do not pipeline SU([[SU0:[0-9]+]])
 
 --- |
   define dso_local void @func(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, i32 noundef %n) local_unnamed_addr #0 {

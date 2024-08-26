@@ -15,11 +15,12 @@
 #define LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 
 #include "CGBuilder.h"
-#include "CodeGenModule.h"
 #include "CGValue.h"
+#include "CodeGenModule.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SyncScope.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -84,12 +85,18 @@ public:
   /// Provides a convenient hook to handle extra target-specific globals.
   virtual void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const {}
 
+  /// Any further codegen related checks that need to be done on a function
+  /// signature in a target specific manner.
+  virtual void checkFunctionABI(CodeGenModule &CGM,
+                                const FunctionDecl *Decl) const {}
+
   /// Any further codegen related checks that need to be done on a function call
   /// in a target specific manner.
   virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                                     const FunctionDecl *Caller,
                                     const FunctionDecl *Callee,
-                                    const CallArgList &Args) const {}
+                                    const CallArgList &Args,
+                                    QualType ReturnType) const {}
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
@@ -290,6 +297,11 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
+  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
+                               LangAS SrcAddr, LangAS DestAddr,
+                               llvm::Type *DestTy,
+                               bool IsNonNull = false) const;
+
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the LLVM value to be casted to another address space.
   /// \param SrcAddr is the language address space of \p V.
@@ -321,6 +333,10 @@ public:
                                                  SyncScope Scope,
                                                  llvm::AtomicOrdering Ordering,
                                                  llvm::LLVMContext &Ctx) const;
+
+  /// Allow the target to apply other metadata to an atomic instruction
+  virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                                       llvm::AtomicRMWInst &RMW) const {}
 
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
@@ -402,6 +418,22 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
+  // Set the Branch Protection Attributes of the Function accordingly to the
+  // BPI. Remove attributes that contradict with current BPI.
+  static void
+  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                  llvm::Function &F);
+
+  // Add the Branch Protection Attributes of the FuncAttrs.
+  static void
+  initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                   llvm::AttrBuilder &FuncAttrs);
+
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
 
@@ -416,6 +448,8 @@ enum class AArch64ABIKind {
   AAPCS = 0,
   DarwinPCS,
   Win64,
+  AAPCSSoft,
+  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>

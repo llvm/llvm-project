@@ -23,23 +23,19 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <errno.h>
-
-// #define DEBUGDEBUG
-
-#ifdef DEBUGDEBUG
-#include <iomanip>
-#include <iostream>
+#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
+#define LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
-using Sign = fputil::Sign;
+
 using LIBC_NAMESPACE::operator""_u128;
 
 // log2(e)
@@ -51,7 +47,7 @@ constexpr double LOG2_E = 0x1.71547652b82fep+0;
 constexpr uint64_t ERR_D = 0x3c08000000000000;
 // Errors when using double-double precision.
 // 0x1.0p-99
-constexpr uint64_t ERR_DD = 0x39c0000000000000;
+[[maybe_unused]] constexpr uint64_t ERR_DD = 0x39c0000000000000;
 
 // -2^-12 * log(2)
 // > a = -2^-12 * log(2);
@@ -108,7 +104,7 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return (exp(dx) - 1)/dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-Float128 poly_approx_f128(const Float128 &dx) {
+[[maybe_unused]] Float128 poly_approx_f128(const Float128 &dx) {
   constexpr Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
@@ -127,13 +123,14 @@ Float128 poly_approx_f128(const Float128 &dx) {
 
 #ifdef DEBUGDEBUG
 std::ostream &operator<<(std::ostream &OS, const Float128 &r) {
-  OS << (r.sign ? "-(" : "(") << r.mantissa.val[0] << " + " << r.mantissa.val[1]
-     << " * 2^64) * 2^" << r.exponent << "\n";
+  OS << (r.sign == Sign::NEG ? "-(" : "(") << r.mantissa.val[0] << " + "
+     << r.mantissa.val[1] << " * 2^64) * 2^" << r.exponent << "\n";
   return OS;
 }
 
 std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
-  OS << std::hexfloat << r.hi << " + " << r.lo << std::defaultfloat << "\n";
+  OS << std::hexfloat << "(" << r.hi << " + " << r.lo << ")"
+     << std::defaultfloat << "\n";
   return OS;
 }
 #endif
@@ -141,7 +138,7 @@ std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 // Compute exp(x) - 1 using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
+[[maybe_unused]] Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -182,9 +179,10 @@ Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
 #ifdef DEBUGDEBUG
   std::cout << "=== VERY SLOW PASS ===\n"
             << "        kd: " << kd << "\n"
-            << "        dx: " << dx << "exp_mid_m1: " << exp_mid_m1
-            << "   exp_mid: " << exp_mid << "         p: " << p
-            << "         r: " << r << std::endl;
+            << "        hi: " << hi << "\n"
+            << " minus_one: " << minus_one << "        dx: " << dx
+            << "exp_mid_m1: " << exp_mid_m1 << "   exp_mid: " << exp_mid
+            << "         p: " << p << "         r: " << r << std::endl;
 #endif
 
   return r;
@@ -276,7 +274,7 @@ double set_exceptional(double x) {
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
 
   bool x_is_neg = xbits.is_neg();
@@ -479,6 +477,12 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   // Use double-double
   DoubleDouble r_dd = exp_double_double(x, kd, exp_mid, hi_part);
 
+#ifdef LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
+  int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+  double r =
+      cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(r_dd.hi + r_dd.lo));
+  return r;
+#else
   double err_dd = cpp::bit_cast<double>(ERR_DD + err);
 
   double upper_dd = r_dd.hi + (r_dd.lo + err_dd);
@@ -494,6 +498,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   Float128 r_f128 = expm1_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
+#endif // LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -1745,13 +1745,7 @@ define half @fcvt_h_d(double %a) nounwind strictfp {
 ;
 ; RV32IZDINXZHINX-LABEL: fcvt_h_d:
 ; RV32IZDINXZHINX:       # %bb.0:
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINX-NEXT:    sw a0, 8(sp)
-; RV32IZDINXZHINX-NEXT:    sw a1, 12(sp)
-; RV32IZDINXZHINX-NEXT:    lw a0, 8(sp)
-; RV32IZDINXZHINX-NEXT:    lw a1, 12(sp)
 ; RV32IZDINXZHINX-NEXT:    fcvt.h.d a0, a0
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINX-NEXT:    ret
 ;
 ; RV64IZDINXZHINX-LABEL: fcvt_h_d:
@@ -1807,13 +1801,7 @@ define half @fcvt_h_d(double %a) nounwind strictfp {
 ;
 ; CHECK32-IZDINXZHINXMIN-LABEL: fcvt_h_d:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
-; CHECK32-IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a0, 8(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a1, 12(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a1, 12(sp)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.h.d a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_h_d:
@@ -1878,13 +1866,7 @@ define double @fcvt_d_h(half %a) nounwind strictfp {
 ;
 ; RV32IZDINXZHINX-LABEL: fcvt_d_h:
 ; RV32IZDINXZHINX:       # %bb.0:
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, -16
 ; RV32IZDINXZHINX-NEXT:    fcvt.d.h a0, a0
-; RV32IZDINXZHINX-NEXT:    sw a0, 8(sp)
-; RV32IZDINXZHINX-NEXT:    sw a1, 12(sp)
-; RV32IZDINXZHINX-NEXT:    lw a0, 8(sp)
-; RV32IZDINXZHINX-NEXT:    lw a1, 12(sp)
-; RV32IZDINXZHINX-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINX-NEXT:    ret
 ;
 ; RV64IZDINXZHINX-LABEL: fcvt_d_h:
@@ -1944,13 +1926,7 @@ define double @fcvt_d_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZDINXZHINXMIN-LABEL: fcvt_d_h:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
-; CHECK32-IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.d.h a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a0, 8(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a1, 12(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a1, 12(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_d_h:
@@ -1987,11 +1963,9 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ;
 ; RV64IZHINX-LABEL: fcvt_h_w_demanded_bits:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    addiw a2, a0, 1
-; RV64IZHINX-NEXT:    addi a0, a0, 1
-; RV64IZHINX-NEXT:    fcvt.h.w a0, a0
-; RV64IZHINX-NEXT:    sh a0, 0(a1)
-; RV64IZHINX-NEXT:    mv a0, a2
+; RV64IZHINX-NEXT:    addiw a0, a0, 1
+; RV64IZHINX-NEXT:    fcvt.h.w a2, a0
+; RV64IZHINX-NEXT:    sh a2, 0(a1)
 ; RV64IZHINX-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_h_w_demanded_bits:
@@ -2017,11 +1991,9 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ;
 ; RV64IZDINXZHINX-LABEL: fcvt_h_w_demanded_bits:
 ; RV64IZDINXZHINX:       # %bb.0:
-; RV64IZDINXZHINX-NEXT:    addiw a2, a0, 1
-; RV64IZDINXZHINX-NEXT:    addi a0, a0, 1
-; RV64IZDINXZHINX-NEXT:    fcvt.h.w a0, a0
-; RV64IZDINXZHINX-NEXT:    sh a0, 0(a1)
-; RV64IZDINXZHINX-NEXT:    mv a0, a2
+; RV64IZDINXZHINX-NEXT:    addiw a0, a0, 1
+; RV64IZDINXZHINX-NEXT:    fcvt.h.w a2, a0
+; RV64IZDINXZHINX-NEXT:    sh a2, 0(a1)
 ; RV64IZDINXZHINX-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_w_demanded_bits:

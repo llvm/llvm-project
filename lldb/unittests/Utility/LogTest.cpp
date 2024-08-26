@@ -200,6 +200,18 @@ TEST(LogHandlerTest, RotatingLogHandler) {
   EXPECT_EQ(GetDumpAsString(handler), "bazquxquux");
 }
 
+TEST(LogHandlerTest, TeeLogHandler) {
+  auto handler1 = std::make_shared<RotatingLogHandler>(2);
+  auto handler2 = std::make_shared<RotatingLogHandler>(2);
+  TeeLogHandler handler(handler1, handler2);
+
+  handler.Emit("foo");
+  handler.Emit("bar");
+
+  EXPECT_EQ(GetDumpAsString(*handler1), "foobar");
+  EXPECT_EQ(GetDumpAsString(*handler2), "foobar");
+}
+
 TEST_F(LogChannelTest, Enable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
   std::string message;

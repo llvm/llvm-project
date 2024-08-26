@@ -17,9 +17,15 @@
 #include <tmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("sse4.1,no-evex512"), __min_vector_width__(128)))
+#else
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("sse4.1"),         \
+                 __min_vector_width__(128)))
+#endif
 
 /* SSE4 Rounding macros. */
 #define _MM_FROUND_TO_NEAREST_INT 0x00
@@ -1188,7 +1194,7 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
 /// Compares each of the corresponding 64-bit values of the 128-bit
 ///    integer vectors for equality.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2303,7 +2309,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
 ///    integer vectors to determine if the values in the first operand are
 ///    greater than those in the second operand.
 ///
-///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///

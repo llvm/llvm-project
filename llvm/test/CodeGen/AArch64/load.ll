@@ -159,7 +159,8 @@ define <2 x i16> @load_v2i16(ptr %ptr){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr h0, [x0]
 ; CHECK-GI-NEXT:    ldr h1, [x0, #2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %a = load <2 x i16>, ptr %ptr

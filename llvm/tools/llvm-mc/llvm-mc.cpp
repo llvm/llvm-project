@@ -104,6 +104,10 @@ static cl::opt<bool>
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::cat(MCCategory));
 
+static cl::opt<unsigned> CommentColumn("comment-column",
+                                       cl::desc("Asm comments indentation"),
+                                       cl::init(40));
+
 enum OutputFileType {
   OFT_Null,
   OFT_AssemblyFile,
@@ -182,10 +186,6 @@ static cl::opt<std::string> MainFileName(
     "main-file-name",
     cl::desc("Specifies the name we should consider the input file"),
     cl::cat(MCCategory));
-
-static cl::opt<bool> SaveTempLabels("save-temp-labels",
-                                    cl::desc("Don't discard temporary labels"),
-                                    cl::cat(MCCategory));
 
 static cl::opt<bool> LexMasmIntegers(
     "masm-integers",
@@ -360,6 +360,9 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
+  MCOptions.ShowMCInst = ShowInst;
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
@@ -406,6 +409,7 @@ int main(int argc, char **argv) {
     }
   }
   MAI->setPreserveAsmComments(PreserveComments);
+  MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
   std::string FeaturesStr;
@@ -427,9 +431,6 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
-
-  if (SaveTempLabels)
-    Ctx.setAllowTemporaryLabels(false);
 
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
@@ -541,15 +542,8 @@ int main(int argc, char **argv) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
-    // are (incorrectly) written directly to the unbuffered raw_ostream wrapped
-    // by the formatted_raw_ostream.
-    if (Action == AC_CDisassemble)
-      FOut->SetUnbuffered();
-    Str.reset(
-        TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
-                                     /*useDwarfDirectory*/ true, IP,
-                                     std::move(CE), std::move(MAB), ShowInst));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+                                           std::move(CE), std::move(MAB)));
 
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
@@ -567,15 +561,12 @@ int main(int argc, char **argv) {
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
                : MAB->createObjectWriter(*OS),
-        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
-        MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
       Str->initSections(true, *STI);
+    Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
+                              VersionTuple());
   }
-
-  // Use Assembler information for parsing.
-  Str->setUseAssemblerInfoForParsing(true);
 
   int Res = 1;
   bool disassemble = false;

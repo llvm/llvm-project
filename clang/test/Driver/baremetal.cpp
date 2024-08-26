@@ -9,13 +9,14 @@
 // RUN:     -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-C %s
-// CHECK-V6M-C:      "-cc1" "-triple" "thumbv6m-none-unknown-eabi"
+// CHECK-V6M-C:      "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
 // CHECK-V6M-C-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-C-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECk-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
+// CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
 // CHECK-V6M-C-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-V6M-C-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-V6M-C-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
 // CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
 // CHECK-V6M-C-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a" "--target2=rel" "-o" "{{.*}}.tmp.out"
@@ -26,6 +27,21 @@
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBINC %s
 // CHECK-V6M-LIBINC-NOT: "-internal-isystem"
 
+// RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_baremetal_tree/bin \
+// RUN:   | FileCheck --check-prefix=CHECK-V6M-TREE %s
+// CHECK-V6M-TREE:      InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK-V6M-TREE:      "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
+// CHECK-V6M-TREE-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}armv6m-unknown-none-eabi{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-V6M-TREE-SAME: {{^}} "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}armv6m-unknown-none-eabi"
+// CHECK-V6M-TREE-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
+// CHECK-V6M-TREE-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-V6M-TREE-SAME: "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}armv6m-unknown-none-eabi{{[/\\]+}}crt0.o"
+// CHECK-V6M-TREE-SAME: "-L[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}armv6m-unknown-none-eabi"
+// CHECK-V6M-TREE-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a" "--target2=rel" "-o" "{{.*}}.tmp.out"
+
 // RUN: %clang %s -### --target=armv7m-vendor-none-eabi -rtlib=compiler-rt 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
@@ -34,6 +50,7 @@
 // CHECK-ARMV7M-PER-TARGET: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-ARMV7M-PER-TARGET: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-ARMV7M-PER-TARGET: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-ARMV7M-PER_TARGET: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
 // CHECK-ARMV7M-PER-TARGET: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
 // CHECK-ARMV7M-PER-TARGET: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}armv7m-vendor-none-eabi
 // CHECK-ARMV7M-PER-TARGET: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a"
@@ -42,6 +59,7 @@
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-DEFAULTCXX %s
 // CHECK-V6M-DEFAULTCXX: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-DEFAULTCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-V6M-DEFAULTCXX-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
 // CHECK-V6M-DEFAULTCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 // CHECK-V6M-DEFAULTCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
 // CHECK-V6M-DEFAULTCXX-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a" "--target2=rel" "-o" "a.out"
@@ -102,6 +120,10 @@
 // RUN: %clangxx --target=arm-none-eabi -mthread-model posix -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-POSIX
 // CHECK-THREAD-MODEL-POSIX: Thread model: posix
+
+// RUN: %clangxx -### --target=arm-none-eabi -nostartfiles -v %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NOSTARTFILES
+// CHECK-NOSTARTFILES-NOT: "crt0.o"
 
 // RUN: %clang -### --target=arm-none-eabi -rtlib=libgcc -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC

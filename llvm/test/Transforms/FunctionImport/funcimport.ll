@@ -166,7 +166,8 @@ declare void @variadic_va_start(...)
 ; GUID-DAG: GUID {{.*}} is linkoncefunc
 
 ; DUMP:       Module [[M1:.*]] imports from 1 module
-; DUMP-NEXT:  15 functions imported from [[M2:.*]]
+; DUMP-NEXT:  15 function definitions and 0 function declarations imported from [[M2:.*]]
 ; DUMP-NEXT:  4 vars imported from [[M2]]
+
 ; DUMP:       Imported 15 functions for Module [[M1]]
 ; DUMP-NEXT:  Imported 4 global variables for Module [[M1]]

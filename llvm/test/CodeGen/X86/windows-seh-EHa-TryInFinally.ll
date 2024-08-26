@@ -3,7 +3,7 @@
 ; CHECK-LABEL: "?fin$0@0@main@@"
 ; CHECK:      .seh_handlerdata
 ; CHECK:      .set ".L?fin$0@0@main@@$parent_frame_offset", 48
-; CHECK-NEXT:        .long   (.Llsda_end1-.Llsda_begin1)/16 
+; CHECK-NEXT:        .long   (.Llsda_end1-.Llsda_begin1)/16
 ; CHECK-NEXT: .Llsda_begin1:
 ; CHECK-NEXT:        .long   .Ltmp
 ; CHECK-NEXT:        .long   .Ltmp

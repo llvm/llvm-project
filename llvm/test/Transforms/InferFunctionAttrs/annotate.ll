@@ -717,6 +717,15 @@ declare float @modff(float, ptr)
 ; CHECK: declare x86_fp80 @modfl(x86_fp80, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @modfl(x86_fp80, ptr)
 
+; CHECK: declare double @nan(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+declare double @nan(ptr)
+
+; CHECK: declare float @nanf(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare float @nanf(ptr)
+
+; CHECK: declare x86_fp80 @nanl(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare x86_fp80 @nanl(ptr)
+
 ; CHECK: declare double @nearbyint(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @nearbyint(double)
 
@@ -800,8 +809,26 @@ declare ptr @vec_realloc(ptr, i64)
 ; CHECK: declare noundef ptr @realpath(ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
 declare ptr @realpath(ptr, ptr)
 
+; CHECK: declare double @remainder(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @remainder(double, double)
+
+; CHECK: declare float @remainderf(float, float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @remainderf(float, float)
+
+; CHECK: declare x86_fp80 @remainderl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
+
 ; CHECK: declare noundef i32 @remove(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @remove(ptr)
+
+; CHECK: declare double @remquo(double, double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @remquo(double, double, ptr)
+
+; CHECK: declare float @remquof(float, float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @remquof(float, float, ptr)
+
+; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
 
 ; CHECK: declare noundef i32 @rename(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @rename(ptr, ptr)
@@ -938,7 +965,7 @@ declare ptr @strncpy(ptr, ptr, i64)
 ; CHECK: declare noalias ptr @strndup(ptr nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
 declare ptr @strndup(ptr, i64)
 
-; CHECK: declare i64 @strnlen(ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+; CHECK: declare i64 @strnlen(ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare i64 @strnlen(ptr, i64)
 
 ; CHECK: declare ptr @strpbrk(ptr, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
@@ -1070,6 +1097,14 @@ declare i32 @vsscanf(ptr, ptr, ptr)
 ; CHECK: declare noundef i64 @write(i32 noundef, ptr nocapture noundef readonly, i64 noundef) [[NOFREE]]
 declare i64 @write(i32, ptr, i64)
 
+; CHECK: declare void @abort() [[NOFREE_COLD:#[0-9]+]]
+declare void @abort()
+
+; CHECK: declare void @__cxa_throw(ptr, ptr, ptr) [[COLD_NORETURN:#[0-9]+]]
+declare void @__cxa_throw(ptr, ptr, ptr)
+
+; CHECK: declare void @_ZSt9terminatev() [[NOFREE_COLD_NORETURN:#[0-9]+]]
+declare void @_ZSt9terminatev()
 
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
@@ -1096,6 +1131,9 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nofree nounwind memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[NOFREE_COLD]] = { cold nofree }
+; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
+; CHECK-DAG: attributes [[COLD_NORETURN]] = { cold noreturn }
 
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind memory(none) }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -S -triple armv7-none-eabi -fmerge-all-constants -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple armv7-none-eabi -fmerge-all-constants -emit-llvm -o - %s | FileCheck %s
 
 // This creates and lifetime-extends a 'const char[5]' temporary.
 // CHECK: @_ZGR19extended_string_ref_ = internal constant [5 x i8] c"hi\00\00\00",
@@ -52,11 +52,10 @@ namespace reference {
     // CHECK-NEXT: store ptr %{{.*}}, ptr %{{.*}}, align
     const A &ra1{1, i};
 
-    // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr %{{.*}}, i{{32|64}} 0, i{{32|64}} 0
     // CHECK-NEXT: store i32 1
     // CHECK-NEXT: getelementptr inbounds i32, ptr %{{.*}}, i{{32|64}} 1
     // CHECK-NEXT: store i32 2
-    // CHECK-NEXT: getelementptr inbounds i32, ptr %{{.*}}, i{{32|64}} 1
+    // CHECK-NEXT: getelementptr inbounds i32, ptr %{{.*}}, i{{32|64}} 2
     // CHECK-NEXT: %[[I2:.*]] = load i32, ptr
     // CHECK-NEXT: store i32 %[[I2]]
     // CHECK-NEXT: store ptr %{{.*}}, ptr %{{.*}}, align

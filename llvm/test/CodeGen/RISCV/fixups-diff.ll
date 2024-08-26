@@ -27,7 +27,7 @@ entry:
 ; CHECK:      }
 
 ; CHECK:      Section {{.*}} .rela.eh_frame {
-; CHECK-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
+; CHECK-NEXT:   0x1C R_RISCV_32_PCREL .L0  0x0
 ; CHECK-NEXT: }
 
 !llvm.dbg.cu = !{!0}

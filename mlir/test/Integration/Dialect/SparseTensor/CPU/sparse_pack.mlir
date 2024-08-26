@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -231,7 +232,7 @@ module {
     %od = tensor.empty() : tensor<3xf64>
     %op = tensor.empty() : tensor<2xi32>
     %oi = tensor.empty() : tensor<3x2xi32>
-    %p, %i, %d, %dl, %pl, %il = sparse_tensor.disassemble %s5 : tensor<10x10xf64, #SortedCOOI32>
+    %p, %i, %d, %pl, %il, %dl = sparse_tensor.disassemble %s5 : tensor<10x10xf64, #SortedCOOI32>
                  out_lvls(%op, %oi : tensor<2xi32>, tensor<3x2xi32>)
                  out_vals(%od : tensor<3xf64>)
                  -> (tensor<2xi32>, tensor<3x2xi32>), tensor<3xf64>, (i32, i64), index
@@ -244,10 +245,13 @@ module {
     %vi = vector.transfer_read %i[%c0, %c0], %i0 : tensor<3x2xi32>, vector<3x2xi32>
     vector.print %vi : vector<3x2xi32>
 
+    // CHECK-NEXT: 3
+    vector.print %dl : index
+
     %d_csr = tensor.empty() : tensor<4xf64>
     %p_csr = tensor.empty() : tensor<3xi32>
     %i_csr = tensor.empty() : tensor<3xi32>
-    %rp_csr, %ri_csr, %rd_csr, %ld_csr, %lp_csr, %li_csr = sparse_tensor.disassemble %csr : tensor<2x2xf64, #CSR>
+    %rp_csr, %ri_csr, %rd_csr, %lp_csr, %li_csr, %ld_csr = sparse_tensor.disassemble %csr : tensor<2x2xf64, #CSR>
                  out_lvls(%p_csr, %i_csr : tensor<3xi32>, tensor<3xi32>)
                  out_vals(%d_csr : tensor<4xf64>)
                  -> (tensor<3xi32>, tensor<3xi32>), tensor<4xf64>, (i32, i64), index
@@ -255,6 +259,9 @@ module {
     // CHECK-NEXT: ( 1, 2, 3 )
     %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 : tensor<4xf64>, vector<3xf64>
     vector.print %vd_csr : vector<3xf64>
+
+    // CHECK-NEXT: 3
+    vector.print %ld_csr : index
 
     %bod = tensor.empty() : tensor<6xf64>
     %bop = tensor.empty() : tensor<4xindex>
@@ -278,6 +285,30 @@ module {
     // CHECK-NEXT: 10
     %si = tensor.extract %li[] : tensor<i64>
     vector.print %si : i64
+
+    // TODO: This check is no longer needed once the codegen path uses the
+    // buffer deallocation pass. "dealloc_tensor" turn into a no-op in the
+    // codegen path.
+    %has_runtime = sparse_tensor.has_runtime_library
+    scf.if %has_runtime {
+      // sparse_tensor.assemble copies buffers when running with the runtime
+      // library. Deallocations are not needed when running in codegen mode.
+      bufferization.dealloc_tensor %s4 : tensor<10x10xf64, #SortedCOO>
+      bufferization.dealloc_tensor %s5 : tensor<10x10xf64, #SortedCOOI32>
+      bufferization.dealloc_tensor %csr : tensor<2x2xf64, #CSR>
+      bufferization.dealloc_tensor %bs : tensor<2x10x10xf64, #BCOO>
+    }
+
+    bufferization.dealloc_tensor %li : tensor<i64>
+    bufferization.dealloc_tensor %od : tensor<3xf64>
+    bufferization.dealloc_tensor %op : tensor<2xi32>
+    bufferization.dealloc_tensor %oi : tensor<3x2xi32>
+    bufferization.dealloc_tensor %d_csr : tensor<4xf64>
+    bufferization.dealloc_tensor %p_csr : tensor<3xi32>
+    bufferization.dealloc_tensor %i_csr : tensor<3xi32>
+    bufferization.dealloc_tensor %bod : tensor<6xf64>
+    bufferization.dealloc_tensor %bop : tensor<4xindex>
+    bufferization.dealloc_tensor %boi : tensor<6x2xindex>
 
     return
   }

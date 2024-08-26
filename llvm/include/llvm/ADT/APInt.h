@@ -17,6 +17,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/float128.h"
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -29,6 +30,7 @@ class StringRef;
 class hash_code;
 class raw_ostream;
 struct Align;
+class DynamicAPInt;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
@@ -77,13 +79,11 @@ class [[nodiscard]] APInt {
 public:
   typedef uint64_t WordType;
 
-  /// This enum is used to hold the constants we needed for APInt.
-  enum : unsigned {
-    /// Byte size of a word.
-    APINT_WORD_SIZE = sizeof(WordType),
-    /// Bits in a word.
-    APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
-  };
+  /// Byte size of a word.
+  static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
+
+  /// Bits in a word.
+  static constexpr unsigned APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT;
 
   enum class Rounding {
     DOWN,
@@ -997,6 +997,12 @@ public:
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
   APInt ushl_ov(unsigned Amt, bool &Overflow) const;
 
+  /// Signed integer floor division operation.
+  ///
+  /// Rounds towards negative infinity, i.e. 5 / -2 = -3. Iff minimum value
+  /// divided by -1 set Overflow to true.
+  APInt sfloordiv_ov(const APInt &RHS, bool &Overflow) const;
+
   // Operations that saturate
   APInt sadd_sat(const APInt &RHS) const;
   APInt uadd_sat(const APInt &RHS) const;
@@ -1392,6 +1398,13 @@ public:
     *this &= Keep;
   }
 
+  /// Set top hiBits bits to 0.
+  void clearHighBits(unsigned hiBits) {
+    assert(hiBits <= BitWidth && "More bits than bitwidth");
+    APInt Keep = getLowBitsSet(BitWidth, BitWidth - hiBits);
+    *this &= Keep;
+  }
+
   /// Set the sign bit to 0.
   void clearSignBit() { clearBit(BitWidth - 1); }
 
@@ -1664,6 +1677,13 @@ public:
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
 
+#ifdef HAS_IEE754_FLOAT128
+  float128 bitsToQuad() const {
+    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
+    return llvm::bit_cast<float128>(ul);
+  }
+#endif
+
   /// Converts APInt bits to a float
   ///
   /// The conversion does not do a translation from integer to float, it just
@@ -1734,8 +1754,8 @@ public:
     return *this;
   }
 
-  /// \returns the multiplicative inverse for a given modulo.
-  APInt multiplicativeInverse(const APInt &modulo) const;
+  /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
+  APInt multiplicativeInverse() const;
 
   /// @}
   /// \name Building-block Operations for APInt and APFloat
@@ -1873,6 +1893,9 @@ private:
 
   friend struct DenseMapInfo<APInt, void>;
   friend class APSInt;
+
+  // Make DynamicAPInt a friend so it can access BitWidth directly.
+  friend DynamicAPInt;
 
   /// This constructor is used only internally for speed of construction of
   /// temporaries. It is unsafe since it takes ownership of the pointer, so it
@@ -2197,6 +2220,26 @@ inline const APInt abds(const APInt &A, const APInt &B) {
 inline const APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
+
+/// Compute the floor of the signed average of C1 and C2
+APInt avgFloorS(const APInt &C1, const APInt &C2);
+
+/// Compute the floor of the unsigned average of C1 and C2
+APInt avgFloorU(const APInt &C1, const APInt &C2);
+
+/// Compute the ceil of the signed average of C1 and C2
+APInt avgCeilS(const APInt &C1, const APInt &C2);
+
+/// Compute the ceil of the unsigned average of C1 and C2
+APInt avgCeilU(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+/// Returns the high N bits of the multiplication result.
+APInt mulhs(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+/// Returns the high N bits of the multiplication result.
+APInt mulhu(const APInt &C1, const APInt &C2);
 
 /// Compute GCD of two unsigned APInt values.
 ///

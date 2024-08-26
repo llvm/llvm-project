@@ -288,8 +288,8 @@ bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
   else
     line_entry.range.SetByteSize(0);
 
-  line_entry.file =
-      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
+  line_entry.file_sp = std::make_shared<SupportFile>(
+      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx));
   line_entry.original_file_sp =
       m_comp_unit->GetSupportFiles().GetSupportFileAtIndex(entry.file_idx);
   line_entry.line = entry.line;
@@ -360,7 +360,7 @@ void LineTable::Dump(Stream *s, Target *target, Address::DumpStyle style,
   SupportFileSP prev_file;
   for (size_t idx = 0; idx < count; ++idx) {
     ConvertEntryAtIndexToLineEntry(idx, line_entry);
-    line_entry.Dump(s, target, *prev_file != *line_entry.original_file_sp,
+    line_entry.Dump(s, target, !prev_file->Equal(*line_entry.original_file_sp),
                     style, fallback_style, show_line_ranges);
     s->EOL();
     prev_file = line_entry.original_file_sp;

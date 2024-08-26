@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/MathExtras.h"
@@ -315,24 +316,16 @@ public:
   Defined *dyldPrivate = nullptr;
 };
 
-class ObjCSelRefsSection final : public SyntheticSection {
+class ObjCSelRefsHelper {
 public:
-  ObjCSelRefsSection();
-  void initialize();
+  static void initialize();
+  static void cleanup();
 
-  // This SyntheticSection does not do directly write data to the output, it is
-  // just a placeholder for easily creating SyntheticInputSection's which will
-  // be inserted into inputSections and handeled by the default writing
-  // mechanism.
-  uint64_t getSize() const override { return 0; }
-  bool isNeeded() const override { return false; }
-  void writeTo(uint8_t *buf) const override {}
-
-  ConcatInputSection *getSelRef(StringRef methname);
-  ConcatInputSection *makeSelRef(StringRef methname);
+  static ConcatInputSection *getSelRef(StringRef methname);
+  static ConcatInputSection *makeSelRef(StringRef methname);
 
 private:
-  llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
+  static llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
       methnameToSelref;
 };
 
@@ -692,6 +685,54 @@ private:
   std::vector<ConcatInputSection *> sections;
 };
 
+// This SyntheticSection is for the __objc_methlist section, which contains
+// relative method lists if the -objc_relative_method_lists option is enabled.
+class ObjCMethListSection final : public SyntheticSection {
+public:
+  ObjCMethListSection();
+
+  static bool isMethodList(const ConcatInputSection *isec);
+  void addInput(ConcatInputSection *isec) { inputs.push_back(isec); }
+  std::vector<ConcatInputSection *> getInputs() { return inputs; }
+
+  void setUp();
+  void finalize() override;
+  bool isNeeded() const override { return !inputs.empty(); }
+  uint64_t getSize() const override { return sectionSize; }
+  void writeTo(uint8_t *bufStart) const override;
+
+private:
+  void readMethodListHeader(const uint8_t *buf, uint32_t &structSizeAndFlags,
+                            uint32_t &structCount) const;
+  void writeMethodListHeader(uint8_t *buf, uint32_t structSizeAndFlags,
+                             uint32_t structCount) const;
+  uint32_t computeRelativeMethodListSize(uint32_t absoluteMethodListSize) const;
+  void writeRelativeOffsetForIsec(const ConcatInputSection *isec, uint8_t *buf,
+                                  uint32_t &inSecOff, uint32_t &outSecOff,
+                                  bool useSelRef) const;
+  uint32_t writeRelativeMethodList(const ConcatInputSection *isec,
+                                   uint8_t *buf) const;
+
+  static constexpr uint32_t methodListHeaderSize =
+      /*structSizeAndFlags*/ sizeof(uint32_t) +
+      /*structCount*/ sizeof(uint32_t);
+  // Relative method lists are supported only for 3-pointer method lists
+  static constexpr uint32_t pointersPerStruct = 3;
+  // The runtime identifies relative method lists via this magic value
+  static constexpr uint32_t relMethodHeaderFlag = 0x80000000;
+  // In the method list header, the first 2 bytes are the size of struct
+  static constexpr uint32_t structSizeMask = 0x0000FFFF;
+  // In the method list header, the last 2 bytes are the flags for the struct
+  static constexpr uint32_t structFlagsMask = 0xFFFF0000;
+  // Relative method lists have 4 byte alignment as all data in the InputSection
+  // is 4 byte
+  static constexpr uint32_t relativeOffsetSize = sizeof(uint32_t);
+
+  // The output size of the __objc_methlist section, computed during finalize()
+  uint32_t sectionSize = 0;
+  std::vector<ConcatInputSection *> inputs;
+};
+
 // Chained fixups are a replacement for classic dyld opcodes. In this format,
 // most of the metadata necessary for binding symbols and rebasing addresses is
 // stored directly in the memory location that will have the fixup applied.
@@ -813,12 +854,12 @@ struct InStruct {
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
-  ObjCSelRefsSection *objcSelRefs = nullptr;
   ObjCStubsSection *objcStubs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;
   InitOffsetsSection *initOffsets = nullptr;
+  ObjCMethListSection *objcMethList = nullptr;
   ChainedFixupsSection *chainedFixups = nullptr;
 };
 

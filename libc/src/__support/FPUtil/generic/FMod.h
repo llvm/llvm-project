@@ -14,10 +14,10 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/math/generic/math_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace generic {
 
@@ -161,7 +161,8 @@ template <typename T> struct FModDivisionInvMultHelper {
 template <typename T, typename U = typename FPBits<T>::StorageType,
           typename DivisionHelper = FModDivisionSimpleHelper<U>>
 class FMod {
-  static_assert(cpp::is_floating_point_v<T> && cpp::is_unsigned_v<U> &&
+  static_assert(cpp::is_floating_point_v<T> &&
+                    is_unsigned_integral_or_big_int_v<U> &&
                     (sizeof(U) * CHAR_BIT > FPBits<T>::FRACTION_LEN),
                 "FMod instantiated with invalid type.");
 
@@ -211,7 +212,9 @@ private:
                     e_x - e_y <= int(FPB::EXP_LEN))) {
       StorageType m_x = sx.get_explicit_mantissa();
       StorageType m_y = sy.get_explicit_mantissa();
-      StorageType d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
+      StorageType d = (e_x == e_y)
+                          ? (m_x - m_y)
+                          : static_cast<StorageType>(m_x << (e_x - e_y)) % m_y;
       if (d == 0)
         return FPB::zero();
       // iy - 1 because of "zero power" for number with power 1
@@ -288,6 +291,6 @@ public:
 
 } // namespace generic
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H

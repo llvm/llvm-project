@@ -923,12 +923,31 @@ SVal AnyCXXConstructorCall::getCXXThisVal() const {
   return UnknownVal();
 }
 
+static bool isWithinStdNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  while (DC) {
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
+        NS && NS->isStdNamespace())
+      return true;
+    DC = DC->getParent();
+  }
+  return false;
+}
+
 void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
                            RegionAndSymbolInvalidationTraits *ETraits) const {
   SVal V = getCXXThisVal();
   if (SymbolRef Sym = V.getAsSymbol(true))
     ETraits->setTrait(Sym,
                       RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+
+  // Standard classes don't reinterpret-cast and modify super regions.
+  const bool IsStdClassCtor = isWithinStdNamespace(getDecl());
+  if (const MemRegion *Obj = V.getAsRegion(); Obj && IsStdClassCtor) {
+    ETraits->setTrait(
+        Obj, RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
+  }
+
   Values.push_back(V);
 }
 
@@ -1408,9 +1427,12 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee)) {
       if (MD->isImplicitObjectMemberFunction())
         return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
+      if (MD->isStatic())
+        return create<CXXStaticOperatorCall>(OpCE, State, LCtx, ElemRef);
+    }
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
     return create<BlockCall>(CE, State, LCtx, ElemRef);

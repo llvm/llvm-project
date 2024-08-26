@@ -71,7 +71,7 @@ define i32 @my_access_global_store_d() #0 {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (d@GOTPCREL,%pc), %a0
 ; CHECK-NEXT:    move.l #2, (%a0)
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 entry:
  store i32 2, ptr @d, align 4
@@ -105,7 +105,7 @@ define linkonce_odr i32 @bar() comdat {
 ; CHECK-LABEL: bar:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 entry:
  ret i32 0

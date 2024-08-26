@@ -73,6 +73,20 @@ CppTypeFor<TypeCategory::Integer, 16> RTDECL(Ceiling16_16)(
 #endif
 #endif
 
+// ERFC_SCALED
+CppTypeFor<TypeCategory::Real, 4> RTDECL(ErfcScaled4)(
+    CppTypeFor<TypeCategory::Real, 4>);
+CppTypeFor<TypeCategory::Real, 8> RTDECL(ErfcScaled8)(
+    CppTypeFor<TypeCategory::Real, 8>);
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTDECL(ErfcScaled10)(
+    CppTypeFor<TypeCategory::Real, 10>);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTDECL(ErfcScaled16)(
+    CppTypeFor<TypeCategory::Real, 16>);
+#endif
+
 // EXPONENT is defined to return default INTEGER; support INTEGER(4 & 8)
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent4_4)(
     CppTypeFor<TypeCategory::Real, 4>);
@@ -356,13 +370,25 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(Scale16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
 
+// SELECTED_CHAR_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedCharKind)(
+    const char *, int, const char *, std::size_t);
+
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKind)(
+    const char *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKindMasked)(
+    const char *, int, void *, int, int);
+
+// SELECTED_LOGICAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
     const char *, int, void *, int);
 
 // SELECTED_REAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKind)(
     const char *, int, void *, int, void *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKindMasked)(
+    const char *, int, void *, int, void *, int, void *, int, int);
 
 // SPACING
 CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing4)(

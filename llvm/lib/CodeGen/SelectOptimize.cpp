@@ -130,7 +130,11 @@ public:
   class SelectLike {
     SelectLike(Instruction *I) : I(I) {}
 
+    /// The select (/or) instruction.
     Instruction *I;
+    /// Whether this select is inverted, "not(cond), FalseVal, TrueVal", as
+    /// opposed to the original condition.
+    bool Inverted = false;
 
   public:
     /// Match a select or select-like instruction, returning a SelectLike.
@@ -153,14 +157,22 @@ public:
     bool isValid() { return I; }
     operator bool() { return isValid(); }
 
+    /// Invert the select by inverting the condition and switching the operands.
+    void setInverted() {
+      assert(!Inverted && "Trying to invert an inverted SelectLike");
+      assert(isa<Instruction>(getCondition()) &&
+             cast<Instruction>(getCondition())->getOpcode() ==
+                 Instruction::Xor);
+      Inverted = true;
+    }
+    bool isInverted() const { return Inverted; }
+
     Instruction *getI() { return I; }
     const Instruction *getI() const { return I; }
 
     Type *getType() const { return I->getType(); }
 
-    /// Return the condition for the SelectLike instruction. For example the
-    /// condition of a select or c in `or(zext(c), x)`
-    Value *getCondition() const {
+    Value *getNonInvertedCondition() const {
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getCondition();
       // Or(zext) case
@@ -177,11 +189,24 @@ public:
       llvm_unreachable("Unhandled case in getCondition");
     }
 
+    /// Return the condition for the SelectLike instruction. For example the
+    /// condition of a select or c in `or(zext(c), x)`
+    Value *getCondition() const {
+      Value *CC = getNonInvertedCondition();
+      // For inverted conditions the CC is checked when created to be a not
+      // (xor) instruction.
+      if (Inverted)
+        return cast<Instruction>(CC)->getOperand(0);
+      return CC;
+    }
+
     /// Return the true value for the SelectLike instruction. Note this may not
     /// exist for all SelectLike instructions. For example, for `or(zext(c), x)`
     /// the true value would be `or(x,1)`. As this value does not exist, nullptr
     /// is returned.
-    Value *getTrueValue() const {
+    Value *getTrueValue(bool HonorInverts = true) const {
+      if (Inverted && HonorInverts)
+        return getFalseValue(/*HonorInverts=*/false);
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getTrueValue();
       // Or(zext) case - The true value is Or(X), so return nullptr as the value
@@ -195,7 +220,9 @@ public:
     /// Return the false value for the SelectLike instruction. For example the
     /// getFalseValue of a select or `x` in `or(zext(c), x)` (which is
     /// `select(c, x|1, x)`)
-    Value *getFalseValue() const {
+    Value *getFalseValue(bool HonorInverts = true) const {
+      if (Inverted && HonorInverts)
+        return getTrueValue(/*HonorInverts=*/false);
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getFalseValue();
       // Or(zext) case - return the operand which is not the zext.
@@ -216,8 +243,8 @@ public:
     /// InstCostMap. This may need to be generated for select-like instructions.
     Scaled64 getTrueOpCost(DenseMap<const Instruction *, CostInfo> &InstCostMap,
                            const TargetTransformInfo *TTI) {
-      if (auto *Sel = dyn_cast<SelectInst>(I))
-        if (auto *I = dyn_cast<Instruction>(Sel->getTrueValue()))
+      if (isa<SelectInst>(I))
+        if (auto *I = dyn_cast<Instruction>(getTrueValue()))
           return InstCostMap.contains(I) ? InstCostMap[I].NonPredCost
                                          : Scaled64::getZero();
 
@@ -242,8 +269,8 @@ public:
     Scaled64
     getFalseOpCost(DenseMap<const Instruction *, CostInfo> &InstCostMap,
                    const TargetTransformInfo *TTI) {
-      if (auto *Sel = dyn_cast<SelectInst>(I))
-        if (auto *I = dyn_cast<Instruction>(Sel->getFalseValue()))
+      if (isa<SelectInst>(I))
+        if (auto *I = dyn_cast<Instruction>(getFalseValue()))
           return InstCostMap.contains(I) ? InstCostMap[I].NonPredCost
                                          : Scaled64::getZero();
 
@@ -510,9 +537,10 @@ getTrueOrFalseValue(SelectOptimizeImpl::SelectLike SI, bool isTrue,
   for (SelectInst *DefSI = dyn_cast<SelectInst>(SI.getI());
        DefSI != nullptr && Selects.count(DefSI);
        DefSI = dyn_cast<SelectInst>(V)) {
-    assert(DefSI->getCondition() == SI.getCondition() &&
-           "The condition of DefSI does not match with SI");
-    V = (isTrue ? DefSI->getTrueValue() : DefSI->getFalseValue());
+    if (DefSI->getCondition() == SI.getCondition())
+      V = (isTrue ? DefSI->getTrueValue() : DefSI->getFalseValue());
+    else // Handle inverted SI
+      V = (!isTrue ? DefSI->getTrueValue() : DefSI->getFalseValue());
   }
 
   if (isa<BinaryOperator>(SI.getI())) {
@@ -624,34 +652,36 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // With RemoveDIs turned off, SplitPt can be a dbg.* intrinsic. With
     // RemoveDIs turned on, SplitPt would instead point to the next
     // instruction. To match existing dbg.* intrinsic behaviour with RemoveDIs,
-    // tell splitBasicBlock that we want to include any DPValues attached to
-    // SplitPt in the splice.
+    // tell splitBasicBlock that we want to include any DbgVariableRecords
+    // attached to SplitPt in the splice.
     SplitPt.setHeadBit(true);
     BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
     BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
-    // Move any debug/pseudo instructions that were in-between the select
-    // group to the newly-created end block.
-    SmallVector<Instruction *, 2> DebugPseudoINS;
+    // Move any debug/pseudo instructions and not's that were in-between the
+    // select group to the newly-created end block.
+    SmallVector<Instruction *, 2> SinkInstrs;
     auto DIt = SI.getI()->getIterator();
     while (&*DIt != LastSI.getI()) {
       if (DIt->isDebugOrPseudoInst())
-        DebugPseudoINS.push_back(&*DIt);
+        SinkInstrs.push_back(&*DIt);
+      if (match(&*DIt, m_Not(m_Specific(SI.getCondition()))))
+        SinkInstrs.push_back(&*DIt);
       DIt++;
     }
-    for (auto *DI : DebugPseudoINS) {
+    for (auto *DI : SinkInstrs)
       DI->moveBeforePreserving(&*EndBlock->getFirstInsertionPt());
-    }
 
-    // Duplicate implementation for DPValues, the non-instruction debug-info
-    // record. Helper lambda for moving DPValues to the end block.
-    auto TransferDPValues = [&](Instruction &I) {
-      for (auto &DPValue : llvm::make_early_inc_range(I.getDbgValueRange())) {
-        DPValue.removeFromParent();
-        EndBlock->insertDPValueBefore(&DPValue,
-                                      EndBlock->getFirstInsertionPt());
+    // Duplicate implementation for DbgRecords, the non-instruction debug-info
+    // format. Helper lambda for moving DbgRecords to the end block.
+    auto TransferDbgRecords = [&](Instruction &I) {
+      for (auto &DbgRecord :
+           llvm::make_early_inc_range(I.getDbgRecordRange())) {
+        DbgRecord.removeFromParent();
+        EndBlock->insertDbgRecordBefore(&DbgRecord,
+                                        EndBlock->getFirstInsertionPt());
       }
     };
 
@@ -660,7 +690,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // middle" of the select group.
     auto R = make_range(std::next(SI.getI()->getIterator()),
                         std::next(LastSI.getI()->getIterator()));
-    llvm::for_each(R, TransferDPValues);
+    llvm::for_each(R, TransferDbgRecords);
 
     // These are the new basic blocks for the conditional branch.
     // At least one will become an actual new basic block.
@@ -764,6 +794,13 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
           ++BBIt;
           continue;
         }
+
+        // Skip not(select(..)), if the not is part of the same select group
+        if (match(NI, m_Not(m_Specific(SI.getCondition())))) {
+          ++BBIt;
+          continue;
+        }
+
         // We only allow selects in the same group, not other select-like
         // instructions.
         if (!isa<SelectInst>(NI))
@@ -771,6 +808,10 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
         SelectLike NSI = SelectLike::match(NI);
         if (NSI && SI.getCondition() == NSI.getCondition()) {
+          SIGroup.push_back(NSI);
+        } else if (NSI && match(NSI.getCondition(),
+                                m_Not(m_Specific(SI.getCondition())))) {
+          NSI.setInverted();
           SIGroup.push_back(NSI);
         } else
           break;
@@ -781,6 +822,12 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       // Instruction selection will take care of it.
       if (!isSelectKindSupported(SI))
         continue;
+
+      LLVM_DEBUG({
+        dbgs() << "New Select group with\n";
+        for (auto SI : SIGroup)
+          dbgs() << "  " << *SI.getI() << "\n";
+      });
 
       SIGroups.push_back(SIGroup);
     }
@@ -1024,8 +1071,8 @@ void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
     Slice.push(II);
 
     // Explore all the operands of the current instruction to expand the slice.
-    for (unsigned k = 0; k < II->getNumOperands(); ++k)
-      if (auto *OpI = dyn_cast<Instruction>(II->getOperand(k)))
+    for (Value *Op : II->operand_values())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
         Worklist.push(OpI);
   }
 }

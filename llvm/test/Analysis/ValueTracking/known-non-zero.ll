@@ -1202,7 +1202,6 @@ define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_wpoison(<2 x i8> %a, <2 x i
   ret <2 x i1> %r
 }
 
-
 define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_fail(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @cmp_excludes_zero_with_nonsplat_vec_fail(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i8> [[A:%.*]], <i8 0, i8 4>
@@ -1292,4 +1291,259 @@ true:
 false:
   ret i1 %ne
 }
+
+define <2 x i1> @range_metadata_vec(ptr %p, <2 x i32> %x) {
+; CHECK-LABEL: @range_metadata_vec(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %v = load <2 x i32>, ptr %p, !range !{i32 1, i32 100}
+  %or = or <2 x i32> %v, %x
+  %cmp = icmp ne <2 x i32> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @range_attr(i8 range(i8 1, 0) %x, i8 %y) {
+; CHECK-LABEL: @range_attr(
+; CHECK-NEXT:    ret i1 false
+;
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_range_attr(i8 range(i8 -1, 1) %x, i8 %y) {
+; CHECK-LABEL: @neg_range_attr(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+declare range(i8 1, 0) i8 @returns_non_zero_range_helper()
+declare range(i8 -1, 1) i8 @returns_contain_zero_range_helper()
+
+define i1 @range_return(i8 %y) {
+; CHECK-LABEL: @range_return(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @returns_non_zero_range_helper()
+; CHECK-NEXT:    ret i1 false
+;
+  %x = call i8 @returns_non_zero_range_helper()
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_range_return(i8 %y) {
+; CHECK-LABEL: @neg_range_return(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @returns_contain_zero_range_helper()
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call i8 @returns_contain_zero_range_helper()
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+declare i8 @returns_i8_helper()
+
+define i1 @range_call(i8 %y) {
+; CHECK-LABEL: @range_call(
+; CHECK-NEXT:    [[X:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
+; CHECK-NEXT:    ret i1 false
+;
+  %x = call range(i8 1, 0) i8 @returns_i8_helper()
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_range_call(i8 %y) {
+; CHECK-LABEL: @neg_range_call(
+; CHECK-NEXT:    [[X:%.*]] = call range(i8 -1, 1) i8 @returns_i8_helper()
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call range(i8 -1, 1) i8 @returns_i8_helper()
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @range_attr_vec(<2 x i8> range(i8 1, 0) %x, <2 x i8> %y) {
+; CHECK-LABEL: @range_attr_vec(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @neg_range_attr_vec(<2 x i8> range(i8 -1, 1) %x, <2 x i8> %y) {
+; CHECK-LABEL: @neg_range_attr_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+declare range(i8 1, 0) <2 x i8> @returns_non_zero_range_helper_vec()
+declare range(i8 -1, 1) <2 x i8> @returns_contain_zero_range_helper_vec()
+
+define <2 x i1> @range_return_vec(<2 x i8> %y) {
+; CHECK-LABEL: @range_return_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @returns_non_zero_range_helper_vec()
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %x = call <2 x i8> @returns_non_zero_range_helper_vec()
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @neg_range_return_vec(<2 x i8> %y) {
+; CHECK-LABEL: @neg_range_return_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @returns_contain_zero_range_helper_vec()
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = call <2 x i8> @returns_contain_zero_range_helper_vec()
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+declare <2 x i8> @returns_i8_helper_vec()
+
+define <2 x i1> @range_call_vec(<2 x i8> %y) {
+; CHECK-LABEL: @range_call_vec(
+; CHECK-NEXT:    [[X:%.*]] = call range(i8 1, 0) <2 x i8> @returns_i8_helper_vec()
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %x = call range(i8 1, 0) <2 x i8> @returns_i8_helper_vec()
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @neg_range_call_vec(<2 x i8> %y) {
+; CHECK-LABEL: @neg_range_call_vec(
+; CHECK-NEXT:    [[X:%.*]] = call range(i8 -1, 1) <2 x i8> @returns_i8_helper_vec()
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = call range(i8 -1, 1) <2 x i8> @returns_i8_helper_vec()
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @trunc_nsw_non_zero(i8 %x) {
+; CHECK-LABEL: @trunc_nsw_non_zero(
+; CHECK-NEXT:    [[X_NE_Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_Z]])
+; CHECK-NEXT:    ret i1 true
+;
+  %x_ne_z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %x_ne_z)
+  %v = trunc nsw i8 %x to i4
+  %r = icmp ne i4 %v, 0
+  ret i1 %r
+}
+
+define i1 @trunc_nuw_non_zero(i8 %xx) {
+; CHECK-LABEL: @trunc_nuw_non_zero(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = add nuw i8 %xx, 1
+  %v = trunc nuw i8 %x to i4
+  %r = icmp eq i4 %v, 0
+  ret i1 %r
+}
+
+define i1 @trunc_non_zero_fail(i8 %x) {
+; CHECK-LABEL: @trunc_non_zero_fail(
+; CHECK-NEXT:    [[X_NE_Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_Z]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_ne_z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %x_ne_z)
+  %r = trunc i8 %x to i1
+  ret i1 %r
+}
+
+define i1 @trunc_nsw_nuw_non_zero_fail(i8 %xx) {
+; CHECK-LABEL: @trunc_nsw_nuw_non_zero_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nsw i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[V:%.*]] = trunc nuw nsw i8 [[X]] to i4
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i4 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = add nsw i8 %xx, 1
+  %v = trunc nsw nuw i8 %x to i4
+  %r = icmp eq i4 %v, 0
+  ret i1 %r
+}
+
+define <4 x i1> @vec_reverse_non_zero(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %r = icmp eq <4 x i8> %rev, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @vec_reverse_non_zero_fail(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[REV]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 1, i8 1>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %r = icmp eq <4 x i8> %rev, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define i1 @vec_reverse_non_zero_demanded(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero_demanded(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 0, i8 0>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %ele = extractelement <4 x i8> %rev, i64 3
+  %r = icmp eq i8 %ele, 0
+  ret i1 %r
+}
+
+define i1 @vec_reverse_non_zero_demanded_fail(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero_demanded_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 0, i8 0, i8 0>
+; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
+; CHECK-NEXT:    [[ELE:%.*]] = extractelement <4 x i8> [[REV]], i64 2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ELE]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 0, i8 0>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %ele = extractelement <4 x i8> %rev, i64 2
+  %r = icmp eq i8 %ele, 0
+  ret i1 %r
+}
+
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)

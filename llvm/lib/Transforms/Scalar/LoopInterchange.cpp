@@ -383,7 +383,7 @@ struct LoopInterchange {
   }
 
   bool run(LoopNest &LN) {
-    SmallVector<Loop *, 8> LoopList(LN.getLoops().begin(), LN.getLoops().end());
+    SmallVector<Loop *, 8> LoopList(LN.getLoops());
     for (unsigned I = 1; I < LoopList.size(); ++I)
       if (LoopList[I]->getParentLoop() != LoopList[I - 1])
         return false;
@@ -976,7 +976,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
       }
 
   if (!findInductions(InnerLoop, InnerLoopInductions)) {
-    LLVM_DEBUG(dbgs() << "Cound not find inner loop induction variables.\n");
+    LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
     return false;
   }
 

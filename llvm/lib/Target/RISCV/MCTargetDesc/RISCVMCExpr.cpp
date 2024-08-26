@@ -15,7 +15,6 @@
 #include "MCTargetDesc/RISCVAsmBackend.h"
 #include "RISCVFixupKinds.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -62,7 +61,7 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 
   uint64_t Offset = AUIPCSymbol->getOffset();
   if (DF->getContents().size() == Offset) {
-    DF = dyn_cast_or_null<MCDataFragment>(DF->getNextNode());
+    DF = dyn_cast_or_null<MCDataFragment>(DF->getNext());
     if (!DF)
       return nullptr;
     Offset = 0;
@@ -90,7 +89,7 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 }
 
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAsmLayout *Layout,
+                                            const MCAssembler *Asm,
                                             const MCFixup *Fixup) const {
   // Explicitly drop the layout and assembler to prevent any symbolic folding in
   // the expression handling.  This is required to preserve symbolic difference
@@ -207,8 +206,6 @@ void RISCVMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   case VK_RISCV_TLS_GOT_HI:
   case VK_RISCV_TLS_GD_HI:
   case VK_RISCV_TLSDESC_HI:
-  case VK_RISCV_TLSDESC_ADD_LO:
-  case VK_RISCV_TLSDESC_LOAD_LO:
     break;
   }
 

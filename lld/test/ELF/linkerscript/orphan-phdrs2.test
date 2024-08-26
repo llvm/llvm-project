@@ -12,7 +12,7 @@
 # CHECK-NEXT:   Type {{.*}} Flg Align
 # CHECK-NEXT:   LOAD {{.*}} R E 0x
 # CHECK-NEXT:   LOAD {{.*}} RW  0x
-# CHECK-MEXT:   LOAD {{.*}} R   0x
+# CHECK-NEXT:   LOAD {{.*}} R   0x
 
 # CHECK:      Segment Sections...
 # CHECK-NEXT:   00 .text {{$}}

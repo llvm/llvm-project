@@ -41,8 +41,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    xtn v1.8b, v1.8h
-; CHECK-NEXT:    xtn v2.8b, v2.8h
+; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-NEXT:    stur d1, [x12, #-4]
 ; CHECK-NEXT:    add x12, x12, #8

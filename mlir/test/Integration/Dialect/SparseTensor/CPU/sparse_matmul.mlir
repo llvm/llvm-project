@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -146,9 +147,9 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
-    // CHECK-NEXT: values : ( 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 1.3, 2.3, 3.3, 4.3, 5.3, 6.3, 7.3, 8.3, 1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4
+    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 )
+    // CHECK-NEXT: values : ( 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 1.3, 2.3, 3.3, 4.3, 5.3, 6.3, 7.3, 8.3, 1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %a1 : tensor<4x8xf64, #CSR>
@@ -158,11 +159,11 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
-    // CHECK-NEXT: values : ( 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 1.3, 2.3, 3.3, 4.3, 5.3, 6.3, 7.3, 8.3, 1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 8, 16, 24, 32 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 )
+    // CHECK-NEXT: values : ( 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 1.3, 2.3, 3.3, 4.3, 5.3, 6.3, 7.3, 8.3, 1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %a2 : tensor<4x8xf64, #DCSR>
@@ -172,9 +173,9 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 4
-    // CHECK-NEXT: crd[1] : ( 1, 5, 1, 7
-    // CHECK-NEXT: values : ( 2.1, 6.1, 2.3, 1
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 4 )
+    // CHECK-NEXT: crd[1] : ( 1, 5, 1, 7 )
+    // CHECK-NEXT: values : ( 2.1, 6.1, 2.3, 1 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %a3 : tensor<4x8xf64, #CSR>
@@ -184,11 +185,11 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4
-    // CHECK-NEXT: crd[1] : ( 1, 5, 1, 7
-    // CHECK-NEXT: values : ( 2.1, 6.1, 2.3, 1
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4 )
+    // CHECK-NEXT: crd[1] : ( 1, 5, 1, 7 )
+    // CHECK-NEXT: values : ( 2.1, 6.1, 2.3, 1 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %a4 : tensor<4x8xf64, #DCSR>
@@ -198,9 +199,9 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 8, 4 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16, 20, 24, 28, 32
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 10.1, 11.1, 12.1, 13.1, 10.2, 11.2, 12.2, 13.2, 10.3, 11.3, 12.3, 13.3, 10.4, 11.4, 12.4, 13.4, 10.5, 11.5, 12.5, 13.5, 10.6, 11.6, 12.6, 13.6, 10.7, 11.7, 12.7, 13.7, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16, 20, 24, 28, 32 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 10.1, 11.1, 12.1, 13.1, 10.2, 11.2, 12.2, 13.2, 10.3, 11.3, 12.3, 13.3, 10.4, 11.4, 12.4, 13.4, 10.5, 11.5, 12.5, 13.5, 10.6, 11.6, 12.6, 13.6, 10.7, 11.7, 12.7, 13.7, 10.8, 11.8, 12.8, 13.8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %b1 : tensor<8x4xf64, #CSR>
@@ -210,11 +211,11 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 8, 4 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 8
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16, 20, 24, 28, 32
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 10.1, 11.1, 12.1, 13.1, 10.2, 11.2, 12.2, 13.2, 10.3, 11.3, 12.3, 13.3, 10.4, 11.4, 12.4, 13.4, 10.5, 11.5, 12.5, 13.5, 10.6, 11.6, 12.6, 13.6, 10.7, 11.7, 12.7, 13.7, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: pos[0] : ( 0, 8 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7 )
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16, 20, 24, 28, 32 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 10.1, 11.1, 12.1, 13.1, 10.2, 11.2, 12.2, 13.2, 10.3, 11.3, 12.3, 13.3, 10.4, 11.4, 12.4, 13.4, 10.5, 11.5, 12.5, 13.5, 10.6, 11.6, 12.6, 13.6, 10.7, 11.7, 12.7, 13.7, 10.8, 11.8, 12.8, 13.8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %b2 : tensor<8x4xf64, #DCSR>
@@ -224,9 +225,9 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 8, 4 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 3, 4, 4, 5, 6, 8
-    // CHECK-NEXT: crd[1] : ( 3, 2, 1, 0, 1, 2, 2, 3
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 3, 4, 4, 5, 6, 8 )
+    // CHECK-NEXT: crd[1] : ( 3, 2, 1, 0, 1, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %b3 : tensor<8x4xf64, #CSR>
@@ -236,11 +237,11 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 8, 4 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 7
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 5, 6, 7
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 3, 4, 5, 6, 8
-    // CHECK-NEXT: crd[1] : ( 3, 2, 1, 0, 1, 2, 2, 3
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: pos[0] : ( 0, 7 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 5, 6, 7 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 3, 4, 5, 6, 8 )
+    // CHECK-NEXT: crd[1] : ( 3, 2, 1, 0, 1, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %b4 : tensor<8x4xf64, #DCSR>
@@ -289,9 +290,9 @@ module {
     // CHECK-NEXT: nse = 16
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 388.76, 425.56, 462.36, 499.16, 397.12, 434.72, 472.32, 509.92, 405.48, 443.88, 482.28, 520.68, 413.84, 453.04, 492.24, 531.44
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 388.76, 425.56, 462.36, 499.16, 397.12, 434.72, 472.32, 509.92, 405.48, 443.88, 482.28, 520.68, 413.84, 453.04, 492.24, 531.44 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %1 : tensor<4x4xf64, #CSR>
@@ -301,11 +302,11 @@ module {
     // CHECK-NEXT: nse = 16
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 388.76, 425.56, 462.36, 499.16, 397.12, 434.72, 472.32, 509.92, 405.48, 443.88, 482.28, 520.68, 413.84, 453.04, 492.24, 531.44
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 388.76, 425.56, 462.36, 499.16, 397.12, 434.72, 472.32, 509.92, 405.48, 443.88, 482.28, 520.68, 413.84, 453.04, 492.24, 531.44 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %2 : tensor<4x4xf64, #DCSR>
@@ -324,9 +325,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 4, 4, 8, 12
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 86.08, 94.28, 102.48, 110.68, 23.46, 25.76, 28.06, 30.36, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: pos[1] : ( 0, 4, 4, 8, 12 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 86.08, 94.28, 102.48, 110.68, 23.46, 25.76, 28.06, 30.36, 10.8, 11.8, 12.8, 13.8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %4 : tensor<4x4xf64, #CSR>
@@ -336,11 +337,11 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 86.08, 94.28, 102.48, 110.68, 23.46, 25.76, 28.06, 30.36, 10.8, 11.8, 12.8, 13.8
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 86.08, 94.28, 102.48, 110.68, 23.46, 25.76, 28.06, 30.36, 10.8, 11.8, 12.8, 13.8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %5 : tensor<4x4xf64, #DCSR>
@@ -359,9 +360,9 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5
-    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
-    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %7 : tensor<4x4xf64, #CSR>
@@ -371,11 +372,11 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5
-    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
-    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3 )
+    // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %8 : tensor<4x4xf64, #DCSR>

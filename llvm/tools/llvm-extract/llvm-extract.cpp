@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
   SMDiagnostic Err;
   std::unique_ptr<Module> M = getLazyIRFileModule(InputFilename, Err, Context);
 
-  if (!M.get()) {
+  if (!M) {
     Err.print(argv[0], errs());
     return 1;
   }
@@ -357,7 +357,7 @@ int main(int argc, char **argv) {
         // The function has been materialized, so add its matching basic blocks
         // to the block extractor list, or fail if a name is not found.
         auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
-          return BB.getName().equals(BBName);
+          return BB.getName() == BBName;
         });
         if (Res == P.first->end()) {
           errs() << argv[0] << ": function " << P.first->getName()

@@ -67,6 +67,8 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
                                          cl::init(""), cl::cat(AsCat));
+extern cl::opt<bool> UseNewDbgInfoFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
 
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
@@ -135,16 +137,23 @@ int main(int argc, char **argv) {
                                                 nullptr, SetDataLayout);
   }
   std::unique_ptr<Module> M = std::move(ModuleAndIndex.Mod);
-  if (!M.get()) {
+  if (!M) {
     Err.print(argv[0], errs());
     return 1;
   }
+
+  // Convert to new debug format if requested.
+  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat &&
+                           WriteNewDbgInfoFormatToBitcode);
+  if (M->IsNewDbgInfoFormat)
+    M->removeDebugIntrinsicDeclarations();
+
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 
   if (!DisableVerify) {
     std::string ErrorStr;
     raw_string_ostream OS(ErrorStr);
-    if (verifyModule(*M.get(), &OS)) {
+    if (verifyModule(*M, &OS)) {
       errs() << argv[0]
              << ": assembly parsed, but does not verify as correct!\n";
       errs() << OS.str();
@@ -154,7 +163,7 @@ int main(int argc, char **argv) {
   }
 
   if (DumpAsm) {
-    errs() << "Here's the assembly:\n" << *M.get();
+    errs() << "Here's the assembly:\n" << *M;
     if (Index.get() && Index->begin() != Index->end())
       Index->print(errs());
   }

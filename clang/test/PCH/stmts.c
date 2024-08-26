@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -include %S/stmts.h -fsyntax-only -emit-llvm -o - %s
+// RUN: %clang_cc1 -include %S/stmts.h -emit-llvm -o - %s
 
 // Test with pch.
 // RUN: %clang_cc1 -emit-pch -o %t %S/stmts.h
-// RUN: %clang_cc1 -include-pch %t -fsyntax-only -emit-llvm -o - %s 
+// RUN: %clang_cc1 -include-pch %t -emit-llvm -o - %s 
 
 void g0(void) { f0(5); }
 int g1(int x) { return f1(x); }

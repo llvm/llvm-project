@@ -20,46 +20,54 @@
 // GNU-NEXT:   Owner                Data size 	Description
 // GNU-NEXT:   XYZ                  0x00000000	func
 
-// LLVM:      Notes [
+// LLVM:      NoteSections [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.version
 // LLVM-NEXT:     Offset: 0x40
 // LLVM-NEXT:     Size: 0x10
-// LLVM-NEXT:     Note {
-// LLVM-NEXT:       Owner: XYZ
-// LLVM-NEXT:       Data size: 0x0
-// LLVM-NEXT:       Type: NT_VERSION (version)
-// LLVM-NEXT:     }
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:		{
+// LLVM-NEXT:			Owner: XYZ
+// LLVM-NEXT:			Data size: 0x0
+// LLVM-NEXT:			Type: NT_VERSION (version)
+// LLVM-NEXT:		}
+// LLVM-NEXT:	  ]
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.arch
 // LLVM-NEXT:     Offset: 0x50
 // LLVM-NEXT:     Size: 0x10
-// LLVM-NEXT:     Note {
-// LLVM-NEXT:       Owner: XYZ
-// LLVM-NEXT:       Data size: 0x0
-// LLVM-NEXT:       Type: NT_ARCH (architecture)
-// LLVM-NEXT:     }
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:		{
+// LLVM-NEXT:			Owner: XYZ
+// LLVM-NEXT:			Data size: 0x0
+// LLVM-NEXT:			Type: NT_ARCH (architecture)
+// LLVM-NEXT:		}
+// LLVM-NEXT:	  ]
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.open
 // LLVM-NEXT:     Offset: 0x60
 // LLVM-NEXT:     Size: 0x10
-// LLVM-NEXT:     Note {
-// LLVM-NEXT:       Owner: XYZ
-// LLVM-NEXT:       Data size: 0x0
-// LLVM-NEXT:       Type: OPEN
-// LLVM-NEXT:     }
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:		{
+// LLVM-NEXT:			Owner: XYZ
+// LLVM-NEXT:			Data size: 0x0
+// LLVM-NEXT:			Type: OPEN
+// LLVM-NEXT:		}
+// LLVM-NEXT:	  ]
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.func
 // LLVM-NEXT:     Offset: 0x70
 // LLVM-NEXT:     Size: 0x10
-// LLVM-NEXT:     Note {
-// LLVM-NEXT:       Owner: XYZ
-// LLVM-NEXT:       Data size: 0x0
-// LLVM-NEXT:       Type: func
-// LLVM-NEXT:     }
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:		{
+// LLVM-NEXT:			Owner: XYZ
+// LLVM-NEXT:			Data size: 0x0
+// LLVM-NEXT:			Type: func
+// LLVM-NEXT:		}
+// LLVM-NEXT:	 ]
 // LLVM-NEXT:   }
 // LLVM-NEXT: ]
 

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Flang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -81,12 +82,13 @@ if (FLANG_STANDALONE_BUILD)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
-  # We need a pre-built/installed version of LLVM.
-  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
-  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR} REALPATH)
+  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
+    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
+  # We need a pre-built/installed version of LLVM.
+  find_package(LLVM REQUIRED HINTS "${LLVM_DIR_ABSOLUTE}")
 
   # Users might specify a path to CLANG_DIR that's:
   #   * a full path, or
@@ -97,7 +99,7 @@ if (FLANG_STANDALONE_BUILD)
     CLANG_DIR_ABSOLUTE
     ${CLANG_DIR}
     REALPATH
-    ${CMAKE_CURRENT_SOURCE_DIR})
+    BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
   list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
 
   # TODO: Remove when libclangDriver is lifted out of Clang
@@ -124,13 +126,14 @@ if (FLANG_STANDALONE_BUILD)
   include(AddClang)
 
   include(TableGen)
-  find_package(MLIR REQUIRED CONFIG)
-  # Use SYSTEM for the same reasons as for LLVM includes
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   # If the user specifies a relative path to MLIR_DIR, the calls to include
   # MLIR modules fail. Append the absolute path to MLIR_DIR instead.
-  get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR} REALPATH)
+  get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
+    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
   list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+  find_package(MLIR REQUIRED CONFIG HINTS ${MLIR_DIR_ABSOLUTE})
+  # Use SYSTEM for the same reasons as for LLVM includes
+  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include(AddMLIR)
   find_program(MLIR_TABLEGEN_EXE "mlir-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
@@ -334,7 +337,7 @@ endif()
 
 if (FLANG_RUNTIME_F128_MATH_LIB)
   add_compile_definitions(
-    -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
+    FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
     )
 endif()
 
@@ -458,6 +461,13 @@ option(FLANG_BUILD_TOOLS
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
+
+option(FLANG_CUF_RUNTIME
+  "Compile CUDA Fortran runtime sources" OFF)
+if (FLANG_CUF_RUNTIME)
+  find_package(CUDAToolkit REQUIRED)
+endif()
+
 add_subdirectory(runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
@@ -479,7 +489,7 @@ endif()
 
 # Custom target to install Flang libraries.
 add_custom_target(flang-libraries)
-set_target_properties(flang-libraries PROPERTIES FOLDER "Misc")
+set_target_properties(flang-libraries PROPERTIES FOLDER "Flang/Meta")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-flang-libraries
@@ -535,3 +545,4 @@ get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
 install(
   FILES include/flang/ISO_Fortran_binding.h
   DESTINATION ${HEADER_INSTALL_DIR} )
+

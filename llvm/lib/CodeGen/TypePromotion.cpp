@@ -643,7 +643,7 @@ void IRPromoter::ConvertTruncs() {
     ConstantInt *Mask =
         ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
-    if (SrcTy != ExtTy)
+    if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
       Masked = Builder.CreateTrunc(Masked, ExtTy);
 
     if (auto *I = dyn_cast<Instruction>(Masked))
@@ -665,8 +665,8 @@ void IRPromoter::Mutate() {
     } else if (auto *Switch = dyn_cast<SwitchInst>(I))
       TruncTysMap[I].push_back(Switch->getCondition()->getType());
     else {
-      for (unsigned i = 0; i < I->getNumOperands(); ++i)
-        TruncTysMap[I].push_back(I->getOperand(i)->getType());
+      for (const Value *Op : I->operands())
+        TruncTysMap[I].push_back(Op->getType());
     }
   }
   for (auto *V : Visited) {
@@ -834,11 +834,10 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     // the tree has already been explored.
     // TODO: This could limit the transform, ie if we try to promote something
     // from an i8 and fail first, before trying an i16.
-    if (AllVisited.count(V))
+    if (!AllVisited.insert(V).second)
       return false;
 
     CurrentVisited.insert(V);
-    AllVisited.insert(V);
 
     // Calls can be both sources and sinks.
     if (isSink(V))
@@ -924,12 +923,12 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   SafeToPromote.clear();
   SafeWrap.clear();
   bool MadeChange = false;
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const TargetSubtargetInfo *SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
-  Ctx = &F.getParent()->getContext();
+  Ctx = &F.getContext();
 
   // Return the preferred integer width of the instruction, or zero if we
   // shouldn't try.

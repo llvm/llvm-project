@@ -49,7 +49,7 @@ define i1 @test3(i32 %arg) {
 ; Negative test for when we know nothing
 define i1 @test4(i8 %arg) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[ARG:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[ARG:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[CNT]], 2
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -118,7 +118,7 @@ define <2 x i32> @mask_one_bit_splat(<2 x i32> %x, ptr %p) {
 
 define i32 @_parity_of_not(i32 %x) {
 ; CHECK-LABEL: @_parity_of_not(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -133,7 +133,7 @@ define i32 @_parity_of_not(i32 %x) {
 define i7 @_parity_of_not_odd_type(i7 %x) {
 ; CHECK-LABEL: @_parity_of_not_odd_type(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i7 [[X:%.*]], -1
-; CHECK-NEXT:    [[CNT:%.*]] = tail call i7 @llvm.ctpop.i7(i7 [[NEG]]), !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = tail call range(i7 0, 8) i7 @llvm.ctpop.i7(i7 [[NEG]])
 ; CHECK-NEXT:    [[R:%.*]] = and i7 [[CNT]], 1
 ; CHECK-NEXT:    ret i7 [[R]]
 ;
@@ -145,7 +145,7 @@ define i7 @_parity_of_not_odd_type(i7 %x) {
 
 define <2 x i32> @_parity_of_not_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @_parity_of_not_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -155,28 +155,27 @@ define <2 x i32> @_parity_of_not_vec(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @_parity_of_not_undef(<2 x i32> %x) {
-; CHECK-LABEL: @_parity_of_not_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG1]]
+define <2 x i32> @_parity_of_not_poison(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = xor <2 x i32> %x, <i32 undef ,i32 -1>
+  %neg = xor <2 x i32> %x, <i32 poison ,i32 -1>
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
   %r = and <2 x i32> %cnt, <i32 1 ,i32 1>
   ret <2 x i32> %r
 }
 
-define <2 x i32> @_parity_of_not_undef2(<2 x i32> %x) {
-; CHECK-LABEL: @_parity_of_not_undef2(
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[NEG]]), !range [[RNG1]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 undef>
+define <2 x i32> @_parity_of_not_poison2(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_poison2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %neg = xor <2 x i32> %x, <i32 -1 ,i32 -1>
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
-  %r = and <2 x i32> %cnt, <i32 1 ,i32 undef>
+  %r = and <2 x i32> %cnt, <i32 1 ,i32 poison>
   ret <2 x i32> %r
 }
 
@@ -201,7 +200,7 @@ define i32 @ctpop_add(i32 %a, i32 %b) {
 define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 16)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %shl16 = shl i32 %a, 16
@@ -215,7 +214,7 @@ define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 define <2 x i32> @ctpop_add_no_common_bits_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> <i32 16, i32 16>)
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %shl16 = shl <2 x i32> %a, <i32 16, i32 16>
@@ -229,9 +228,9 @@ define <2 x i32> @ctpop_add_no_common_bits_vec(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @ctpop_add_no_common_bits_vec_use(<2 x i32> %a, <2 x i32> %b, ptr %p) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_vec_use(
 ; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]]), !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
 ; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]]), !range [[RNG3]]
+; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
 ; CHECK-NEXT:    store <2 x i32> [[CTPOP2]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
@@ -248,10 +247,10 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use(<2 x i32> %a, <2 x i32> %b, p
 define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, ptr %p) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_vec_use2(
 ; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]]), !range [[RNG3]]
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
 ; CHECK-NEXT:    store <2 x i32> [[CTPOP1]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]]), !range [[RNG3]]
+; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
@@ -266,7 +265,7 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
 
 define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_left(
-; CHECK-NEXT:    [[RES:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %rotl = tail call i8 @llvm.fshl.i8(i8 %a, i8 %a, i8 %amt)
@@ -276,7 +275,7 @@ define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
 
 define i8 @ctpop_rotate_right(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_right(
-; CHECK-NEXT:    [[RES:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %rotr = tail call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 %amt)
@@ -290,7 +289,7 @@ declare i8 @llvm.fshr.i8(i8, i8, i8)
 define i8 @sub_ctpop(i8 %a)  {
 ; CHECK-LABEL: @sub_ctpop(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[A:%.*]], -1
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[TMP1]])
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
@@ -300,7 +299,7 @@ define i8 @sub_ctpop(i8 %a)  {
 
 define i8 @sub_ctpop_wrong_cst(i8 %a)  {
 ; CHECK-LABEL: @sub_ctpop_wrong_cst(
-; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CNT:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = sub nsw i8 5, [[CNT]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
@@ -311,7 +310,7 @@ define i8 @sub_ctpop_wrong_cst(i8 %a)  {
 
 define i8 @sub_ctpop_unknown(i8 %a, i8 %b)  {
 ; CHECK-LABEL: @sub_ctpop_unknown(
-; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CNT:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[B:%.*]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
@@ -323,7 +322,7 @@ define i8 @sub_ctpop_unknown(i8 %a, i8 %b)  {
 define <2 x i32> @sub_ctpop_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @sub_ctpop_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
@@ -333,7 +332,7 @@ define <2 x i32> @sub_ctpop_vec(<2 x i32> %a) {
 
 define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, ptr %p) {
 ; CHECK-LABEL: @sub_ctpop_vec_extra_use(
-; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[CNT:%.*]] = tail call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A:%.*]])
 ; CHECK-NEXT:    store <2 x i32> [[CNT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[CNT]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
@@ -346,7 +345,7 @@ define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, ptr %p) {
 
 define i32 @zext_ctpop(i16 %x) {
 ; CHECK-LABEL: @zext_ctpop(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X:%.*]]), !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 [[X:%.*]])
 ; CHECK-NEXT:    [[P:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
@@ -357,7 +356,7 @@ define i32 @zext_ctpop(i16 %x) {
 
 define <2 x i32> @zext_ctpop_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @zext_ctpop_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i7> @llvm.ctpop.v2i7(<2 x i7> [[X:%.*]]), !range [[RNG2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i7 0, 8) <2 x i7> @llvm.ctpop.v2i7(<2 x i7> [[X:%.*]])
 ; CHECK-NEXT:    [[P:%.*]] = zext nneg <2 x i7> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[P]]
 ;
@@ -370,7 +369,7 @@ define i32 @zext_ctpop_extra_use(i16 %x, ptr %q) {
 ; CHECK-LABEL: @zext_ctpop_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    [[P:%.*]] = call i32 @llvm.ctpop.i32(i32 [[Z]]), !range [[RNG3]]
+; CHECK-NEXT:    [[P:%.*]] = call range(i32 0, 17) i32 @llvm.ctpop.i32(i32 [[Z]])
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
   %z = zext i16 %x to i32
@@ -382,7 +381,7 @@ define i32 @zext_ctpop_extra_use(i16 %x, ptr %q) {
 define i32 @parity_xor(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @parity_xor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[I4:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
@@ -396,8 +395,8 @@ define i32 @parity_xor(i32 %arg, i32 %arg1) {
 define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 ; CHECK-LABEL: @parity_xor_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]]), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[I4:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[I4:%.*]] = trunc nuw nsw i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I4]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
@@ -412,7 +411,7 @@ define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 define <2 x i32> @parity_xor_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @parity_xor_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[I4:%.*]] = and <2 x i32> [[TMP2]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[I4]]
 ;
@@ -425,8 +424,8 @@ define <2 x i32> @parity_xor_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 
 define i32 @parity_xor_wrong_cst(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @parity_xor_wrong_cst(
-; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[I2:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[I:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[I2:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]])
 ; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[I2]], [[I]]
 ; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 3
 ; CHECK-NEXT:    ret i32 [[I4]]
@@ -440,11 +439,11 @@ define i32 @parity_xor_wrong_cst(i32 %arg, i32 %arg1) {
 
 define i32 @parity_xor_extra_use(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @parity_xor_extra_use(
-; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[I:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 1
 ; CHECK-NEXT:    tail call void @use(i32 [[I2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1:%.*]], [[ARG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
@@ -459,11 +458,11 @@ define i32 @parity_xor_extra_use(i32 %arg, i32 %arg1) {
 
 define i32 @parity_xor_extra_use2(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @parity_xor_extra_use2(
-; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[I:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]])
 ; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 1
 ; CHECK-NEXT:    tail call void @use(i32 [[I2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
@@ -478,11 +477,29 @@ define i32 @parity_xor_extra_use2(i32 %arg, i32 %arg1) {
 
 define i32 @select_ctpop_zero(i32 %x) {
 ; CHECK-LABEL: @select_ctpop_zero(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %x, 0
   %res = select i1 %cmp, i32 0, i32 %ctpop
   ret i32 %res
+}
+
+define i32 @ctpop_non_zero(i32 range(i32 1, 255) %x) {
+; CHECK-LABEL: @ctpop_non_zero(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[CTPOP]]
+;
+  %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
+  ret i32 %ctpop
+}
+
+define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
+; CHECK-LABEL: @ctpop_non_zero_with_existing_range_attr(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[CTPOP]]
+;
+  %ctpop = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 %x)
+  ret i32 %ctpop
 }

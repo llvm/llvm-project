@@ -12,7 +12,7 @@ func:
 	.cfi_endproc
 
 # CHECK:   Section (4) .rela.eh_frame {
-# CHECK-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
+# CHECK-NEXT:   0x1C R_RISCV_32_PCREL .L0  0x0
 # CHECK-NEXT: }
 # CHECK:      Hex dump of section '.eh_frame':
 # CHECK-NEXT: 0x00000000 10000000 00000000 017a5200 017c0101

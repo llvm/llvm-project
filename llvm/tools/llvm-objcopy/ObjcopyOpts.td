@@ -1,5 +1,10 @@
 include "CommonOpts.td"
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 defm binary_architecture
     : Eq<"binary-architecture", "Ignored for compatibility">;
 def B : JoinedOrSeparate<["-"], "B">,
@@ -35,6 +40,12 @@ def : Flag<["--"], "compress-debug-sections">, Alias<compress_debug_sections>,
       AliasArgs<["zlib"]>;
 def decompress_debug_sections : Flag<["--"], "decompress-debug-sections">,
                                 HelpText<"Decompress DWARF debug sections">;
+defm compress_sections
+    : Eq<"compress-sections",
+         "Compress or decompress sections using specified format. Supported "
+         "formats: zlib, zstd. Specify 'none' for decompression">,
+      MetaVarName<"<section-glob>=<format>">;
+
 defm split_dwo
     : Eq<"split-dwo", "Equivalent to --extract-dwo and <dwo-file> as the output file and no other options, "
                       "and then --strip-dwo on the input file">,
@@ -170,6 +181,10 @@ def G : JoinedOrSeparate<["-"], "G">,
         Alias<keep_global_symbol>,
         HelpText<"Alias for --keep-global-symbol">;
 
+defm verify_note_sections : B<"verify-note-sections",
+                              "Validate note sections",
+                              "Don't validate note sections">;
+
 defm keep_global_symbols
     : Eq<"keep-global-symbols",
          "Read a list of symbols from <filename> and run as if "
@@ -206,6 +221,20 @@ defm keep_symbols
          "be repeated to read symbols from many files">,
       MetaVarName<"filename">;
 
+defm skip_symbol : Eq<"skip-symbol", "Do not change parameters of symbol <symbol> "
+                        "when executing other options that can change the symbol's "
+                        "name, binding or visibility">,
+                     MetaVarName<"symbol">;
+
+defm skip_symbols
+    : Eq<"skip-symbols",
+         "Read a list of symbols from <filename> and run as if "
+         "--skip-symbol=<symbol> is set for each one. <filename> "
+         "contains one symbol per line and may contain comments beginning with "
+         "'#'. Leading and trailing whitespace is stripped from each line. May "
+         "be repeated to read symbols from many files">,
+      MetaVarName<"filename">;
+
 defm dump_section
     : Eq<"dump-section",
          "Dump contents of section named <section> into file <file>">,
@@ -233,6 +262,17 @@ defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be 
 def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
                    Alias<change_start>,
                    HelpText<"Alias for --change-start">;
+
+defm change_section_lma
+    : Eq<"change-section-lma", "Shift LMA of non-zero-sized sections in the program header by <val>">,
+      MetaVarName<"*{+|-}val">;
+
+defm change_section_address
+    : Eq<"change-section-address", "Set the address of the <section> to, or adjust it by, <val>">,
+      MetaVarName<"sectionpattern{=|+|-}val">;
+def adjust_section_vma : JoinedOrSeparate<["--"], "adjust-section-vma">,
+                   Alias<change_section_address>,
+                   HelpText<"Alias for --change-section-address">;
 
 defm add_symbol
     : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "

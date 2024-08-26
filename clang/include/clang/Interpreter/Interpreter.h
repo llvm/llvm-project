@@ -30,6 +30,7 @@
 namespace llvm {
 namespace orc {
 class LLJIT;
+class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -109,9 +110,9 @@ class Interpreter {
   RuntimeInterfaceBuilder::TransformExprFunction *AddPrintValueCall = nullptr;
 
 protected:
-  // Derived classes can make use an extended interface of the Interpreter.
-  // That's useful for testing and out-of-tree clients.
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
+  // Derived classes can use an extended interface of the Interpreter.
+  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err,
+              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
@@ -181,6 +182,8 @@ private:
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
   llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
 };
 } // namespace clang
 

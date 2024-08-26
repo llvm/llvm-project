@@ -28,6 +28,8 @@ def RawFrmImm8    : Format<7>;
 def RawFrmImm16   : Format<8>;
 def AddCCFrm      : Format<9>;
 def PrefixByte    : Format<10>;
+def MRMDestRegCC  : Format<18>;
+def MRMDestMemCC  : Format<19>;
 def MRMDestMem4VOp3CC : Format<20>;
 def MRMr0          : Format<21>;
 def MRMSrcMemFSIB  : Format<22>;
@@ -280,6 +282,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
 
   ExplicitOpPrefix explicitOpPrefix = NoExplicitOpPrefix;
   bits<2> explicitOpPrefixBits = explicitOpPrefix.Value;
+  bit hasEVEX_U = 0;       // Does this inst set the EVEX_U field?
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;
   let TSFlags{8-7}   = OpSizeBits;
@@ -307,4 +310,5 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{51-50} = explicitOpPrefixBits;
   let TSFlags{52}    = hasEVEX_NF;
   let TSFlags{53}    = hasTwoConditionalOps;
+  let TSFlags{54}    = hasEVEX_U;
 }

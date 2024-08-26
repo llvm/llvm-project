@@ -59,18 +59,25 @@ void TestAccessAnalysis::runOnOperation() {
       enclosingOps.clear();
       getAffineForIVs(*memOp, &enclosingOps);
       for (unsigned d = 0, e = enclosingOps.size(); d < e; d++) {
+        AffineForOp loop = enclosingOps[d];
         int memRefDim;
-        bool isContiguous;
+        bool isContiguous, isInvariant;
         if (auto read = dyn_cast<AffineReadOpInterface>(memOp)) {
-          isContiguous = isContiguousAccess(enclosingOps[d].getInductionVar(),
-                                            read, &memRefDim);
+          isContiguous =
+              isContiguousAccess(loop.getInductionVar(), read, &memRefDim);
+          isInvariant = isInvariantAccess(read, loop);
         } else {
-          isContiguous = isContiguousAccess(enclosingOps[d].getInductionVar(),
-                                            cast<AffineWriteOpInterface>(memOp),
-                                            &memRefDim);
+          auto write = cast<AffineWriteOpInterface>(memOp);
+          isContiguous =
+              isContiguousAccess(loop.getInductionVar(), write, &memRefDim);
+          isInvariant = isInvariantAccess(write, loop);
         }
+        // Check for contiguity for the innermost memref dimension to avoid
+        // emitting too many diagnostics.
         if (isContiguous && memRefDim == 0)
           memOp->emitRemark("contiguous along loop ") << d << '\n';
+        if (isInvariant)
+          memOp->emitRemark("invariant along loop ") << d << '\n';
       }
     }
   }

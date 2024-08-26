@@ -22,7 +22,7 @@
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -196,7 +196,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
       auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
       if (!extract)
         return std::nullopt;
-      auto vecType = extract.getResult().getType().cast<VectorType>();
+      auto vecType = cast<VectorType>(extract.getResult().getType());
       if (sliceType && sliceType != vecType)
         return std::nullopt;
       sliceType = vecType;
@@ -204,7 +204,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
     return llvm::to_vector(sliceType.getShape());
   }
   if ((OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)) {
-    if (auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>()) {
+    if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
       // TODO: The condition for unrolling elementwise should be restricted
       // only to operations that need unrolling (connected to the contract).
       if (vecType.getRank() < 2)
@@ -219,7 +219,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
         auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
         if (!extract)
           return std::nullopt;
-        auto vecType = extract.getResult().getType().cast<VectorType>();
+        auto vecType = cast<VectorType>(extract.getResult().getType());
         if (sliceType && sliceType != vecType)
           return std::nullopt;
         sliceType = vecType;
@@ -296,22 +296,14 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
                                  "scf.forall op requires a mapping attribute");
   }
 
-  bool hasBlockMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUBlockMappingAttr>(attr);
-      });
-  bool hasWarpgroupMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUWarpgroupMappingAttr>(attr);
-      });
-  bool hasWarpMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUWarpMappingAttr>(attr);
-      });
-  bool hasThreadMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUThreadMappingAttr>(attr);
-      });
+  bool hasBlockMapping = llvm::any_of(forallOp.getMapping().value(),
+                                      llvm::IsaPred<GPUBlockMappingAttr>);
+  bool hasWarpgroupMapping = llvm::any_of(
+      forallOp.getMapping().value(), llvm::IsaPred<GPUWarpgroupMappingAttr>);
+  bool hasWarpMapping = llvm::any_of(forallOp.getMapping().value(),
+                                     llvm::IsaPred<GPUWarpMappingAttr>);
+  bool hasThreadMapping = llvm::any_of(forallOp.getMapping().value(),
+                                       llvm::IsaPred<GPUThreadMappingAttr>);
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
   countMappingTypes += hasWarpgroupMapping ? 1 : 0;
@@ -932,6 +924,8 @@ class GPUTransformDialectExtension
     : public transform::TransformDialectExtension<
           GPUTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GPUTransformDialectExtension)
+
   GPUTransformDialectExtension() {
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<arith::ArithDialect>();

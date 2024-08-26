@@ -18,10 +18,10 @@ include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -331,7 +331,10 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   }];
 
   let arguments = (ins
-    TransformHandleTypeInterface:$target, UnitAttr:$apply_cse);
+    TransformHandleTypeInterface:$target,
+    UnitAttr:$apply_cse,
+    DefaultValuedAttr<I64Attr, "static_cast<uint64_t>(-1)">:$max_iterations,
+    DefaultValuedAttr<I64Attr, "static_cast<uint64_t>(-1)">:$max_num_rewrites);
   let results = (outs);
   let regions = (region MaxSizedRegion<1>:$patterns);
 
@@ -509,7 +512,10 @@ def CollectMatchingOp : TransformDialectOp<"collect_matching", [
 def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-    DeclareOpInterfaceMethods<TransformOpInterface>]> {
+    DeclareOpInterfaceMethods<TransformOpInterface,
+                              ["allowsRepeatedHandleOperands"]>,
+    DeclareOpInterfaceMethods<OpAsmOpInterface,
+                              ["getAsmResultNames"]>]> {
   let summary = "Applies named sequences when a named matcher succeeds";
   let description = [{
     Given a pair of co-indexed lists of transform dialect symbols (such as
@@ -525,25 +531,31 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     the following matchers are not applied to the same payload operation. If the
     action succeeds, the next payload operation in walk order is matched. If it
     fails, both silenceable and definite errors are propagated as the result of
-    this op.
+    this op; propagation of silenceable errors is postponed until the end of the
+    walk.
 
-    The matcher symbol must take one operand of a type that implements the same
-    transform dialect interface as the `root` operand (a check is performed at
-    application time to see if the associated payload satisfies the constraints
-    of the actual type). It must not consume the operand as multiple matchers
+    The matcher symbol must take at least one operand of a type that implements
+    the same transform dialect interface as the `root` operand (a check is
+    performed at application time to see if the associated payload satisfies the
+    constraints of the actual type), and may take additional operands with a
+    similar type requirement. It must not consume operands as multiple matchers
     may be applied. The matcher may produce any number of results. The action
     symbol paired with the matcher must take the same number of arguments as the
     matcher has results, and these arguments must implement the same transform
     dialect interfaces, but not necessarily have the exact same type (again, a
     check is performed at application time to see if the associated payload
-    satisfies the constraints of actual types on both sides). The action symbol
-    may not have results. The actions are expected to only modify payload
-    operations nested in the `root` payload operations associated with the
-    operand of this transform operation. Furhermore, the actions may not modify
-    operations outside of the currently matched payload operation, e.g., they
-    may not modify sibling or parent operations. If such behavior is desired,
-    the parent must be matched first and the nested operations obtained by
-    traversing the IR from the parent. This is due to the matching being
+    satisfies the constraints of actual types on both sides).
+
+    The action symbol may have results that are accumulated from all actions and
+    returned from the `foreach_match` operation on success. Unless the
+    `flatten_results` attribute is present, each action result must be
+    associated with exactly one payload entity. The actions are expected to only
+    modify payload operations nested in the `root` payload operations associated
+    with the operand of this transform operation. Furthermore, the actions may
+    not modify operations outside of the currently matched payload operation,
+    e.g., they may not modify sibling or parent operations. If such behavior is
+    desired, the parent must be matched first and the nested operations obtained
+    by traversing the IR from the parent. This is due to the matching being
     performed as a post-order IR walk.
 
     This operation consumes the operand and produces a new handle associated
@@ -570,19 +582,26 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     produced a definite failure.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$root,
-                       UnitAttr:$restrict_root,
-                       SymbolRefArrayAttr:$matchers,
-                       SymbolRefArrayAttr:$actions);
-  let results = (outs TransformHandleTypeInterface:$updated);
+  let arguments =
+      (ins TransformHandleTypeInterface:$root,
+           Variadic<Transform_AnyHandleOrParamType>:$forwarded_inputs,
+           UnitAttr:$restrict_root,
+           UnitAttr:$flatten_results,
+           SymbolRefArrayAttr:$matchers,
+           SymbolRefArrayAttr:$actions);
+  let results =
+      (outs TransformHandleTypeInterface:$updated,
+            Variadic<Transform_AnyHandleOrParamType>:$forwarded_outputs);
 
   let assemblyFormat = [{
-    (`restrict_root` $restrict_root^)?
+    oilist( `restrict_root` $restrict_root
+          | `flatten_results` $flatten_results
+          )
     `in`
-    $root
+    $root (`,` $forwarded_inputs^)?
     custom<ForeachMatchSymbols>($matchers, $actions)
     attr-dict
-    `:` functional-type($root, $updated)
+    `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -595,42 +614,52 @@ def ForeachOp : TransformDialectOp<"foreach",
          "getSuccessorRegions", "getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
-  let summary = "Executes the body for each payload op";
+  let summary = "Executes the body for each element of the payload";
   let description = [{
-    This op has exactly one region with exactly one block ("body"). The body is
-    executed for each payload op that is associated to the target operand in an
-    unbatched fashion. I.e., the block argument ("iteration variable") is always
-    mapped to exactly one payload op.
+    Execute the op's body - its single region block - exactly once per
+    element of the payload associated to a target handle. The body's
+    transformations are applied in order of appearance until reaching the
+    (implicit) YieldOp terminator.
 
-    This op always reads the target handle. Furthermore, it consumes the handle
-    if there is a transform op in the body that consumes the iteration variable.
-    This op does not return anything.
+    Each iteration gets executed by co-indexing the payloads of the arguments
+    and mapping the body's arguments to these tuples, as though iterating over
+    the zipped together `targets`. As such, in each iteration, the size of the
+    payload of each of the body's block arguments is exactly one. The attribute
+    `zip_shortest` can be used if the targets vary in their number of payloads;
+    this will limit the iterations to only the number of payloads found in the
+    shortest target.
 
-    The transformations inside the body are applied in order of their
-    appearance. During application, if any transformation in the sequence fails,
-    the entire sequence fails immediately leaving the payload IR in potentially
-    invalid state, i.e., this operation offers no transformation rollback
-    capabilities.
+    This op always reads the target handles. Furthermore, it consumes a handle
+    if there is a transform op in the body that consumes the corresponding
+    block argument. Handles can point to ops, values, or parameters.
 
-    This op generates as many handles as the terminating YieldOp has operands.
-    For each result, the payload ops of the corresponding YieldOp operand are
-    merged and mapped to the same resulting handle.
+    #### Return Modes
+
+    This op produces as many result handles as the body's terminating YieldOp
+    has operands. For each result, the payloads of the corresponding YieldOp
+    operand are merged and mapped to the same resulting handle.
+
+    If the target handles do not associate payloads of the same size, a
+    silencable failure will be generated.
+
+    During application, if any transformation in the sequence fails, the entire
+    sequence fails immediately with the same failure, leaving the payload IR in
+    a potentially invalid state, i.e., this operation offers no transformation
+    rollback capabilities.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets,
+                       UnitAttr:$with_zip_shortest);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$target `:` type($target) (`->` type($results)^)? $body attr-dict";
+    "$targets oilist(`with_zip_shortest` $with_zip_shortest) `:` "
+    "type($targets) (`->` type($results)^)? $body attr-dict";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Allow the dialect prefix to be omitted.
     static StringRef getDefaultDialect() { return "transform"; }
-
-    BlockArgument getIterationVariable() {
-      return getBody().front().getArgument(0);
-    }
 
     transform::YieldOp getYieldOp();
   }];
@@ -1098,15 +1127,28 @@ def PrintOp : TransformDialectOp<"print",
      MatchOpInterface]> {
   let summary = "Dump each payload op";
   let description = [{
-    This op dumps each payload op that is associated with the `target` operand
-    to stderr. It also prints the `name` string attribute. If no target is
+    Prints each payload op that is associated with the `target` operand to
+    `stdout`. It also prints the `name` string attribute. If no target is
     specified, the top-level op is dumped.
 
     This op is useful for printf-style debugging.
+
+    Supported printing flag attributes:
+    * `assume_verified` -- skips verification when the unit attribute is
+      specified. This improves performace but may lead to crashes and
+      unexpected behavior when the printed payload op is invalid.
+    * `use_local_scope` -- prints in local scope when the unit attribute is
+      specified. This improves performance but may not be identical to
+      printing within the full module.
+    * `skip_regions` -- does not print regions of operations when the unit
+      attribute is specified.
   }];
 
   let arguments = (ins Optional<TransformHandleTypeInterface>:$target,
-                       OptionalAttr<StrAttr>:$name);
+                       OptionalAttr<StrAttr>:$name,
+                       OptionalAttr<UnitAttr>:$assume_verified,
+                       OptionalAttr<UnitAttr>:$use_local_scope,
+                       OptionalAttr<UnitAttr>:$skip_regions);
   let results = (outs);
 
   let builders = [

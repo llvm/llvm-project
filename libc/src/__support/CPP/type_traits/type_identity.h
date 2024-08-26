@@ -8,13 +8,17 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
 
-namespace LIBC_NAMESPACE::cpp {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // type_identity
 template <typename T> struct type_identity {
   using type = T;
 };
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H

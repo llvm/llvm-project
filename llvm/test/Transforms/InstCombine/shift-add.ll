@@ -505,7 +505,7 @@ define i2 @ashr_2_add_zext_basic(i1 %a, i1 %b) {
 define i32 @lshr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
@@ -566,7 +566,7 @@ define i32 @lshr_16_add_not_known_16_leading_zeroes(i32 %a, i32 %b) {
 define i64 @lshr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lshr_32_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i32 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -623,7 +623,7 @@ define i64 @lshr_33_i32_add_zext_basic(i32 %a, i32 %b) {
 define i64 @lshr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_to_64_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -668,7 +668,7 @@ define i64 @lshr_32_add_not_known_32_leading_zeroes(i64 %a, i64 %b) {
 define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
@@ -682,7 +682,7 @@ define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ashr_32_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i32 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -696,7 +696,7 @@ define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 define i64 @ashr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_to_64_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -742,7 +742,7 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <3 x i32> [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 32
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc nuw nsw i64 [[TMP15]] to i32
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP14]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <3 x i32> poison, i32 [[ADD_NARROWED]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP11]] to i32
@@ -774,4 +774,33 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
   %24 = insertelement <3 x i32> %22, i32 %23, i32 1
   %25 = insertelement <3 x i32> %24, i32 %20, i32 2
   ret <3 x i32> %25
+}
+
+define i8 @shl_fold_or_disjoint_cnt(i8 %x) {
+; CHECK-LABEL: @shl_fold_or_disjoint_cnt(
+; CHECK-NEXT:    [[R:%.*]] = shl i8 16, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or disjoint i8 %x, 3
+  %r = shl i8 2, %a
+  ret i8 %r
+}
+
+define <2 x i8> @ashr_fold_or_disjoint_cnt(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_fold_or_disjoint_cnt(
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> <i8 0, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = or disjoint <2 x i8> %x, <i8 3, i8 1>
+  %r = ashr <2 x i8> <i8 2, i8 3>, %a
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_fold_or_disjoint_cnt_out_of_bounds(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_fold_or_disjoint_cnt_out_of_bounds(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %a = or disjoint <2 x i8> %x, <i8 3, i8 8>
+  %r = lshr <2 x i8> <i8 2, i8 3>, %a
+  ret <2 x i8> %r
 }
