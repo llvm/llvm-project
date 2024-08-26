@@ -1730,6 +1730,14 @@ Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                InsertAtEnd, Ctx, Name);
 }
 
+void PossiblyDisjointInst::setIsDisjoint(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyDisjointInst::isDisjoint,
+                                       &PossiblyDisjointInst::setIsDisjoint>>(
+          this);
+  cast<llvm::PossiblyDisjointInst>(Val)->setIsDisjoint(B);
+}
+
 void AtomicRMWInst::setAlignment(Align Align) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&AtomicRMWInst::getAlign,
