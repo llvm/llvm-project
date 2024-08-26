@@ -9,7 +9,7 @@
 #include "TodoCommentCheck.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
-#include <list>
+#include <array>
 #include <optional>
 
 namespace clang::tidy::google::readability {
