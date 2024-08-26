@@ -145,6 +145,16 @@ using broken4 = decltype(Pred.template operator()<42>(Pred));
 
 broken4<non_default>* boom4;
 
-}
+} // namespace GH89853
+
+namespace GH105885 {
+
+template<int>
+using test = decltype([](auto...) {
+}());
+
+static_assert(__is_same(test<0>, void));
+
+} // namespace GH105885
 
 } // namespace lambda_calls
