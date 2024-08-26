@@ -1443,22 +1443,17 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   bool RelocateWithSymbol =
       shouldRelocateWithSymbol(Asm, Target, SymA, C, Type) ||
       (Parent->getType() == ELF::SHT_LLVM_CALL_GRAPH_PROFILE);
-  uint64_t Addend = 0;
-
-  FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
-                   ? C + Asm.getSymbolOffset(*SymA)
-                   : C;
-  if (usesRela(TO, FixupSection)) {
-    Addend = FixedValue;
-    FixedValue = 0;
-  }
+  uint64_t Addend = !RelocateWithSymbol && SymA && !SymA->isUndefined()
+                        ? C + Asm.getSymbolOffset(*SymA)
+                        : C;
+  FixedValue = usesRela(TO, FixupSection) ? 0 : Addend;
 
   if (!RelocateWithSymbol) {
     const auto *SectionSymbol =
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
     if (SectionSymbol)
       SectionSymbol->setUsedInReloc();
-    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA, C);
+    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend);
     Relocations[&FixupSection].push_back(Rec);
     return;
   }
@@ -1473,7 +1468,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     else
       RenamedSymA->setUsedInReloc();
   }
-  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA, C);
+  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend);
   Relocations[&FixupSection].push_back(Rec);
 }
 

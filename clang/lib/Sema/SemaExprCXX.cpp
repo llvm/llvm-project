@@ -1646,12 +1646,23 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     return ExprError(Diag(TyBeginLoc, diag::err_init_for_function_type)
                        << Ty << FullRange);
 
-  // C++17 [expr.type.conv]p2:
-  //   If the type is cv void and the initializer is (), the expression is a
-  //   prvalue of the specified type that performs no initialization.
-  if (!Ty->isVoidType() &&
-      RequireCompleteType(TyBeginLoc, ElemTy,
-                          diag::err_invalid_incomplete_type_use, FullRange))
+  // C++17 [expr.type.conv]p2, per DR2351:
+  //   If the type is cv void and the initializer is () or {}, the expression is
+  //   a prvalue of the specified type that performs no initialization.
+  if (Ty->isVoidType()) {
+    if (Exprs.empty())
+      return new (Context) CXXScalarValueInitExpr(
+          Ty.getUnqualifiedType(), TInfo, Kind.getRange().getEnd());
+    if (ListInitialization &&
+        cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
+      return CXXFunctionalCastExpr::Create(
+          Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
+          Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
+          Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
+    }
+  } else if (RequireCompleteType(TyBeginLoc, ElemTy,
+                                 diag::err_invalid_incomplete_type_use,
+                                 FullRange))
     return ExprError();
 
   //   Otherwise, the expression is a prvalue of the specified type whose
@@ -4948,6 +4959,20 @@ static bool DiagnoseVLAInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
   return true;
 }
 
+/// Checks that type T is not an atomic type (_Atomic).
+///
+/// @returns @c true if @p T is VLA and a diagnostic was emitted,
+/// @c false otherwise.
+static bool DiagnoseAtomicInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
+                                         clang::tok::TokenKind TypeTraitID) {
+  if (!T->getType()->isAtomicType())
+    return false;
+
+  S.Diag(T->getTypeLoc().getBeginLoc(), diag::err_atomic_unsupported)
+      << TypeTraitID;
+  return true;
+}
+
 /// Check the completeness of a type in a unary type trait.
 ///
 /// If the particular type trait requires a complete type, tries to complete
@@ -5038,6 +5063,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
 
   // LWG3823: T shall be an array type, a complete type, or cv void.
   case UTT_IsAggregate:
+  case UTT_IsImplicitLifetime:
     if (ArgTy->isArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5634,6 +5660,40 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return false;
   case UTT_IsTriviallyEqualityComparable:
     return isTriviallyEqualityComparableType(Self, T, KeyLoc);
+  case UTT_IsImplicitLifetime: {
+    DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                              tok::kw___builtin_is_implicit_lifetime);
+    DiagnoseAtomicInCXXTypeTrait(Self, TInfo,
+                                 tok::kw___builtin_is_implicit_lifetime);
+
+    // [basic.types.general] p9
+    // Scalar types, implicit-lifetime class types ([class.prop]),
+    // array types, and cv-qualified versions of these types
+    // are collectively called implicit-lifetime types.
+    QualType UnqualT = T->getCanonicalTypeUnqualified();
+    if (UnqualT->isScalarType())
+      return true;
+    if (UnqualT->isArrayType() || UnqualT->isVectorType())
+      return true;
+    const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
+    if (!RD)
+      return false;
+
+    // [class.prop] p9
+    // A class S is an implicit-lifetime class if
+    //   - it is an aggregate whose destructor is not user-provided or
+    //   - it has at least one trivial eligible constructor and a trivial,
+    //     non-deleted destructor.
+    const CXXDestructorDecl *Dtor = RD->getDestructor();
+    if (UnqualT->isAggregateType())
+      if (Dtor && !Dtor->isUserProvided())
+        return true;
+    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted()))
+      if (RD->hasTrivialDefaultConstructor() ||
+          RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
+        return true;
+    return false;
+  }
   }
 }
 

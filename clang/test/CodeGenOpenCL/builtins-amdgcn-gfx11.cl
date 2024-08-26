@@ -49,7 +49,7 @@ void test_s_wait_event_export_ready() {
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// CHECK: {{.*}}call{{.*}} float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %{{.*}}, float %{{.*}})
+// CHECK: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
 void test_global_add_f32(float *rtn, global float *addr, float x) {
   *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }

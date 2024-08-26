@@ -79,6 +79,7 @@ FUNCTION_PASS("win-eh-prepare", WinEHPreparePass())
 #define LOOP_PASS(NAME, CREATE_PASS)
 #endif
 LOOP_PASS("loop-reduce", LoopStrengthReducePass())
+LOOP_PASS("loop-term-fold", LoopTermFoldPass())
 #undef LOOP_PASS
 
 #ifndef MACHINE_MODULE_PASS

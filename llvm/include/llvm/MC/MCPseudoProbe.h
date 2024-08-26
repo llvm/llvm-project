@@ -237,7 +237,7 @@ public:
   // Returns range of probes with given \p Address.
   auto find(uint64_t Address) const {
     auto FromIt = getIt(Address);
-    if (FromIt == end())
+    if (FromIt == end() || FromIt->get().getAddress() != Address)
       return llvm::make_range(end(), end());
     auto ToIt = getIt(Address + 1);
     return llvm::make_range(FromIt, ToIt);

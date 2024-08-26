@@ -1700,7 +1700,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
   LogicalResult matchAndRewrite(ForallOp op,
                                 PatternRewriter &rewriter) const override {
     // Do not fold dimensions if they are mapped to processing units.
-    if (op.getMapping().has_value())
+    if (op.getMapping().has_value() && !op.getMapping()->empty())
       return failure();
     Location loc = op.getLoc();
 
@@ -1729,16 +1729,17 @@ struct ForallOpSingleOrZeroIterationDimsFolder
       newMixedUpperBounds.push_back(ub);
       newMixedSteps.push_back(step);
     }
-    // Exit if none of the loop dimensions perform a single iteration.
-    if (newMixedLowerBounds.size() == static_cast<unsigned>(op.getRank())) {
-      return rewriter.notifyMatchFailure(
-          op, "no dimensions have 0 or 1 iterations");
-    }
 
     // All of the loop dimensions perform a single iteration. Inline loop body.
     if (newMixedLowerBounds.empty()) {
       promote(rewriter, op);
       return success();
+    }
+
+    // Exit if none of the loop dimensions perform a single iteration.
+    if (newMixedLowerBounds.size() == static_cast<unsigned>(op.getRank())) {
+      return rewriter.notifyMatchFailure(
+          op, "no dimensions have 0 or 1 iterations");
     }
 
     // Replace the loop by a lower-dimensional loop.
@@ -4322,7 +4323,7 @@ struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
 
     rewriter.inlineBlockBefore(&source, op);
     rewriter.eraseOp(terminator);
-    // Repalce the operation with a potentially empty list of results.
+    // Replace the operation with a potentially empty list of results.
     // Fold mechanism doesn't support the case where the result list is empty.
     rewriter.replaceOp(op, results);
 
