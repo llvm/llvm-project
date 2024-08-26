@@ -63,7 +63,6 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/ErrorOr.h"
 #include <functional>
-#include <map>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -103,10 +102,6 @@ using MCPseudoProbeInlineStack = SmallVector<InlineSite, 8>;
 // GUID to PseudoProbeFuncDesc map
 using GUIDProbeFunctionMap =
     std::unordered_map<uint64_t, MCPseudoProbeFuncDesc>;
-// Address to pseudo probes map.
-using AddressProbesMap =
-    std::map<uint64_t,
-             std::vector<std::reference_wrapper<MCDecodedPseudoProbe>>>;
 
 class MCDecodedPseudoProbeInlineTree;
 
@@ -211,6 +206,31 @@ public:
   // Print pseudo probe while disassembling
   void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
              bool ShowName) const;
+};
+
+// Address to pseudo probes map.
+class AddressProbesMap
+    : public std::vector<std::reference_wrapper<MCDecodedPseudoProbe>> {
+  auto getIt(uint64_t Addr) const {
+    auto CompareProbe = [](const MCDecodedPseudoProbe &Probe, uint64_t Addr) {
+      return Probe.getAddress() < Addr;
+    };
+    return llvm::lower_bound(*this, Addr, CompareProbe);
+  }
+
+public:
+  // Returns range of probes within [\p From, \p To) address range.
+  auto find(uint64_t From, uint64_t To) const {
+    return llvm::make_range(getIt(From), getIt(To));
+  }
+  // Returns range of probes with given \p Address.
+  auto find(uint64_t Address) const {
+    auto FromIt = getIt(Address);
+    if (FromIt == end() || FromIt->get().getAddress() != Address)
+      return llvm::make_range(end(), end());
+    auto ToIt = getIt(Address + 1);
+    return llvm::make_range(FromIt, ToIt);
+  }
 };
 
 template <typename ProbesType, typename DerivedProbeInlineTreeType,
