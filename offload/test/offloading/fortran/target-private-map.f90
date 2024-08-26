@@ -25,7 +25,7 @@ subroutine target_private(r)
   implicit none
   integer, dimension(2) :: simple_vars
   integer :: a, r
-  ! set a to 10
+  ! set a to 5
   a = 5
   simple_vars(1) = a
   simple_vars(2) = a

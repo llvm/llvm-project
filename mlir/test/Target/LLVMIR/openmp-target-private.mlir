@@ -25,6 +25,7 @@ llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarge
   llvm.return
 }
 // CHECK: define internal void @__omp_offloading_fd00
+// CHECK-NOT: define {{.*}}
 // CHECK-DAG: %[[PRIV_ALLOC:.*]] = alloca i32, i64 1, align 4
 // CHECK-DAG: %[[ADD:.*]] = add i32 {{.*}}, 10
 // CHECK-DAG: store i32 %[[ADD]], ptr %[[PRIV_ALLOC]], align 4
@@ -38,10 +39,8 @@ omp.private {type = private} @n.privatizer : !llvm.ptr alloc {
 llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_map_2_privates"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var"} : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.constant(1 : i64) : i64
-  %3 = llvm.alloca %2 x f32 {bindc_name = "n"} : (i64) -> !llvm.ptr
-  %4 = llvm.mlir.constant(1 : i64) : i64
-  %5 = llvm.alloca %4 x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
+  %3 = llvm.alloca %0 x f32 {bindc_name = "n"} : (i64) -> !llvm.ptr
+  %5 = llvm.alloca %0 x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
   %6 = llvm.mlir.constant(2 : i32) : i32
   llvm.store %6, %5 : i32, !llvm.ptr
   %7 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
