@@ -144,6 +144,7 @@ class CatchSwitchInst;
 class SwitchInst;
 class UnaryOperator;
 class BinaryOperator;
+class PossiblyDisjointInst;
 class AtomicRMWInst;
 class AtomicCmpXchgInst;
 
@@ -2374,6 +2375,7 @@ public:
 };
 
 class BinaryOperator : public SingleLLVMInstructionImpl<llvm::BinaryOperator> {
+protected:
   static Opcode getBinOpOpcode(llvm::Instruction::BinaryOps BinOp) {
     switch (BinOp) {
     case llvm::Instruction::Add:
@@ -2451,6 +2453,22 @@ public:
     return From->getSubclassID() == ClassID::BinaryOperator;
   }
   void swapOperands() { swapOperandsInternal(0, 1); }
+};
+
+/// An or instruction, which can be marked as "disjoint", indicating that the
+/// inputs don't have a 1 in the same bit position. Meaning this instruction
+/// can also be treated as an add.
+class PossiblyDisjointInst : public BinaryOperator {
+public:
+  void setIsDisjoint(bool B);
+  bool isDisjoint() const {
+    return cast<llvm::PossiblyDisjointInst>(Val)->isDisjoint();
+  }
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) &&
+           cast<Instruction>(From)->getOpcode() == Opcode::Or;
+  }
 };
 
 class AtomicRMWInst : public SingleLLVMInstructionImpl<llvm::AtomicRMWInst> {
