@@ -178,7 +178,7 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
         break;
       if (Idx > 0)
         Ret.Values.push_back(ValuesStr.slice(0, Idx));
-      ValuesStr = ValuesStr.slice(Idx + 1, StringRef::npos);
+      ValuesStr = ValuesStr.substr(Idx + 1);
     }
     if (!ValuesStr.empty())
       Ret.Values.push_back(ValuesStr);

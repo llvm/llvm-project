@@ -423,42 +423,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
   return OS;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
-  switch (MR) {
-  case ModRefInfo::NoModRef:
-    OS << "NoModRef";
-    break;
-  case ModRefInfo::Ref:
-    OS << "Ref";
-    break;
-  case ModRefInfo::Mod:
-    OS << "Mod";
-    break;
-  case ModRefInfo::ModRef:
-    OS << "ModRef";
-    break;
-  }
-  return OS;
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (IRMemLocation Loc : MemoryEffects::locations()) {
-    switch (Loc) {
-    case IRMemLocation::ArgMem:
-      OS << "ArgMem: ";
-      break;
-    case IRMemLocation::InaccessibleMem:
-      OS << "InaccessibleMem: ";
-      break;
-    case IRMemLocation::Other:
-      OS << "Other: ";
-      break;
-    }
-    OS << ME.getModRef(Loc) << ", ";
-  }
-  return OS;
-}
-
 //===----------------------------------------------------------------------===//
 // Helper method implementation
 //===----------------------------------------------------------------------===//

@@ -90,6 +90,9 @@ public:
   bool hasMemoryOrdering() const { return SmVersion >= 70 && PTXVersion >= 60; }
   // Does SM & PTX support atomic relaxed MMIO operations ?
   bool hasRelaxedMMIO() const { return SmVersion >= 70 && PTXVersion >= 82; }
+  bool hasDotInstructions() const {
+    return SmVersion >= 61 && PTXVersion >= 50;
+  }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   // GPUs with "a" suffix have include architecture-accelerated features that

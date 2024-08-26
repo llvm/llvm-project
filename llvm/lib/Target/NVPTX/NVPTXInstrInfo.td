@@ -159,6 +159,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
+def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -722,6 +723,35 @@ let hasSideEffects = false in {
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Int32Regs>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_SM80<"bf16x2", Int32Regs>;
+
+  // FP8 conversions.
+  multiclass CVT_TO_F8X2<string F8Name> {
+    def _f32 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F8Name, "x2.f32 \t$dst, $src1, $src2;"), []>,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+    def _f16x2 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Int32Regs:$src, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F8Name, "x2.f16x2 \t$dst, $src;"), []>,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+  }
+
+  defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
+  defm CVT_e5m2x2 : CVT_TO_F8X2<"e5m2">;
+
+  class CVT_f16x2_fp8<string F8Name> :
+    NVPTXInst<(outs Int32Regs:$dst),
+              (ins Int16Regs:$src, CvtMode:$mode),
+              !strconcat("cvt${mode:base}${mode:relu}.f16x2.",
+              F8Name, "x2 \t$dst, $src;"), []>,
+    Requires<[hasPTX<81>, hasSM<89>]>;
+
+  def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
+  def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
 }
 
 //-----------------------------------
@@ -3844,6 +3874,8 @@ def Callseq_End :
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
 // This won't be necessary in a future version of ptxas.
 def trapinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>;
+// brkpt instruction
+def debugtrapinst : NVPTXInst<(outs), (ins), "brkpt;", [(debugtrap)]>;
 
 // Call prototype wrapper
 def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
@@ -3919,6 +3951,33 @@ let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in
     }
 }
 
+
+foreach a_type = ["s", "u"] in {
+  foreach b_type = ["s", "u"] in {
+
+    def DOT4_ # a_type # b_type :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                "dp4a." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                [(set Int32Regs:$dst,
+                    (!cast<Intrinsic>("int_nvvm_idp4a_" # a_type # "_" # b_type)
+                     (i32 Int32Regs:$a), (i32 Int32Regs:$b), (i32 Int32Regs:$c)))]>,
+                Requires<[hasDotInstructions]>;
+
+    foreach is_hi = [0, -1] in {
+      defvar lohi_suffix = !if(is_hi, "hi", "lo");
+
+      def DOT2_ # lohi_suffix # _ # a_type # b_type :
+        NVPTXInst<(outs Int32Regs:$dst),
+                  (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                  "dp2a." # lohi_suffix # "." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                  [(set Int32Regs:$dst,
+                      (!cast<Intrinsic>("int_nvvm_idp2a_" # a_type # "_" # b_type)
+                       (i32 Int32Regs:$a), (i32 Int32Regs:$b), is_hi, (i32 Int32Regs:$c)))]>,
+                  Requires<[hasDotInstructions]>;
+    }
+  }
+}
 
 include "NVPTXIntrinsics.td"
 

@@ -1741,6 +1741,10 @@ def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
   InGroup<MicrosoftUnqualifiedFriend>;
 def err_pure_friend : Error<"friend declaration cannot have a pure-specifier">;
+def err_friend_template_decl_multiple_specifiers: Error<
+  "a friend declaration that befriends a template must contain exactly one type-specifier">;
+def friend_template_decl_malformed_pack_expansion : Error<
+  "friend declaration expands pack %0 that is declared it its own template parameter list">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
@@ -3012,6 +3016,8 @@ def err_concept_no_parameters : Error<
   "specialization of concepts is not allowed">;
 def err_concept_extra_headers : Error<
   "extraneous template parameter list in concept definition">;
+def err_recursive_concept : Error<
+  "a concept definition cannot refer to itself">;
 def err_concept_no_associated_constraints : Error<
   "concept cannot have associated constraints">;
 def err_non_constant_constraint_expression : Error<
@@ -5426,7 +5432,8 @@ def err_template_spec_extra_headers : Error<
   "extraneous template parameter list in template specialization or "
   "out-of-line template definition">;
 def ext_template_spec_extra_headers : ExtWarn<
-  "extraneous template parameter list in template specialization">;
+  "extraneous template parameter list in template specialization">,
+   InGroup<DiagGroup<"extraneous-template-head">>, DefaultError;
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
   "declared here">;
@@ -5660,6 +5667,8 @@ def err_explicit_instantiation_internal_linkage : Error<
 def err_explicit_instantiation_not_known : Error<
   "explicit instantiation of %0 does not refer to a function template, "
   "variable template, member function, member class, or static data member">;
+def err_explicit_instantiation_no_candidate : Error<
+    "no viable candidate for explicit instantiation of %0">;
 def note_explicit_instantiation_here : Note<
   "explicit instantiation refers here">;
 def err_explicit_instantiation_data_member_not_instantiated : Error<
@@ -8968,6 +8977,8 @@ def err_atomic_op_has_invalid_synch_scope : Error<
 def warn_atomic_implicit_seq_cst : Warning<
   "implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary">,
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
+def err_atomic_unsupported : Error<
+  "atomic types are not supported in '%0'">;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -9354,9 +9365,6 @@ let CategoryName = "Inline Assembly Issue" in {
     "invalid input size for constraint '%0'">;
   def err_asm_invalid_output_size : Error<
     "invalid output size for constraint '%0'">;
-  def err_invalid_asm_cast_lvalue : Error<
-    "invalid use of a cast in a inline asm context requiring an lvalue: "
-    "remove the cast or build with -fheinous-gnu-extensions">;
   def err_invalid_asm_value_for_constraint
       : Error <"value '%0' out of range for constraint '%1'">;
   def err_asm_non_addr_value_in_memory_constraint : Error <
@@ -9370,9 +9378,8 @@ let CategoryName = "Inline Assembly Issue" in {
   def warn_asm_label_on_auto_decl : Warning<
     "ignored asm label '%0' on automatic variable">;
   def warn_invalid_asm_cast_lvalue : Warning<
-    "invalid use of a cast in an inline asm context requiring an lvalue: "
-    "accepted due to -fheinous-gnu-extensions, but clang may remove support "
-    "for this in the future">;
+    "invalid use of a cast in an inline asm context requiring an lvalue">,
+    InGroup<DiagGroup<"invalid-gnu-asm-cast">>, DefaultError;
   def warn_asm_mismatched_size_modifier : Warning<
     "value size does not match register size specified by the constraint "
     "and modifier">,
@@ -9747,7 +9754,7 @@ def err_defaulted_special_member_quals : Error<
   "have 'const'%select{, 'constexpr'|}1 or 'volatile' qualifiers">;
 def err_defaulted_special_member_explicit_object_mismatch : Error<
   "the type of the explicit object parameter of an explicitly-defaulted "
-  "%select{copy|move}0 assignment operator should match the type of the class %1">;
+  "%select{copy|move}0 assignment operator should be reference to %1">;
 def err_defaulted_special_member_volatile_param : Error<
   "the parameter for an explicitly-defaulted %sub{select_special_member_kind}0 "
   "may not be volatile">;
@@ -10057,8 +10064,9 @@ def warn_null_ret : Warning<
   InGroup<NonNull>;
 
 def err_lifetimebound_no_object_param : Error<
-  "'lifetimebound' attribute cannot be applied; %select{static |non-}0member "
-  "function has no implicit object parameter">;
+  "'lifetimebound' attribute cannot be applied; "
+  "%select{non-|static |explicit object }0"
+  "member function has no implicit object parameter">;
 def err_lifetimebound_ctor_dtor : Error<
   "'lifetimebound' attribute cannot be applied to a "
   "%select{constructor|destructor}0">;
@@ -11155,6 +11163,8 @@ def err_omp_loop_diff_cxx : Error<
   "upper and lower loop bounds">;
 def err_omp_loop_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP for loop">;
+def err_omp_loop_bad_collapse_var : Error<
+  "cannot use variable %1 in collapsed imperfectly-nested loop %select{init|condition|increment}0 statement">;
 def err_omp_simd_region_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
@@ -12338,7 +12348,13 @@ def err_hlsl_missing_semantic_annotation : Error<
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
-def err_hlsl_unsupported_register_type : Error<"invalid resource class specifier '%0' used; expected 'b', 's', 't', or 'u'">;
+def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
+def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;
+def err_hlsl_binding_type_invalid: Error<"binding type '%0' is invalid">;
+def err_hlsl_duplicate_register_annotation: Error<"binding type '%select{t|u|b|s|c|i}0' cannot be applied more than once">;
+def warn_hlsl_register_type_c_packoffset: Warning<"binding type 'c' ignored in buffer declaration. Did you mean 'packoffset'?">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
+def warn_hlsl_deprecated_register_type_b: Warning<"binding type 'b' only applies to constant buffers. The 'bool constant' binding type is no longer supported">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
+def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The 'integer constant' binding type is no longer supported">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
@@ -12381,7 +12397,8 @@ def warn_unsafe_buffer_variable : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data|"
+  "field %1 prone to unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;

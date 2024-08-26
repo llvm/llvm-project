@@ -294,4 +294,59 @@ define float @no_unsafe(ptr %addr, float %val) {
   ret float %res
 }
 
+define float @flat_atomicrmw_fadd_f32__align32(ptr %addr, float %val) {
+; GFX908-LABEL: @flat_atomicrmw_fadd_f32__align32(
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 32
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 32
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP5]]
+;
+; GFX90A-LABEL: @flat_atomicrmw_fadd_f32__align32(
+; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR:%.*]])
+; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
+; GFX90A:       atomicrmw.shared:
+; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL:%.*]] seq_cst, align 32, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX90A:       atomicrmw.check.private:
+; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[ADDR]])
+; GFX90A-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX90A:       atomicrmw.private:
+; GFX90A-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
+; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP3]], align 32
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VAL]]
+; GFX90A-NEXT:    store float [[NEW]], ptr addrspace(5) [[TMP3]], align 32
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX90A:       atomicrmw.global:
+; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] seq_cst, align 32, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX90A:       atomicrmw.phi:
+; GFX90A-NEXT:    [[RES:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[RES]]
+;
+; GFX940-LABEL: @flat_atomicrmw_fadd_f32__align32(
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float [[VAL:%.*]] seq_cst, align 32, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX940-NEXT:    ret float [[RES]]
+;
+; GFX1100-LABEL: @flat_atomicrmw_fadd_f32__align32(
+; GFX1100-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float [[VAL:%.*]] seq_cst, align 32, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX1100-NEXT:    ret float [[RES]]
+;
+  %res = atomicrmw fadd ptr %addr, float %val seq_cst, align 32, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  ret float %res
+}
+
 !0 = !{}

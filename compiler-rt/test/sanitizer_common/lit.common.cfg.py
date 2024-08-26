@@ -18,6 +18,9 @@ elif config.tool_name == "hwasan":
     tool_options = "HWASAN_OPTIONS"
     if not config.has_lld:
         config.unsupported = True
+elif config.tool_name == "rtsan":
+    tool_cflags = ["-fsanitize=realtime"]
+    tool_options = "RTSAN_OPTIONS"
 elif config.tool_name == "tsan":
     tool_cflags = ["-fsanitize=thread"]
     tool_options = "TSAN_OPTIONS"

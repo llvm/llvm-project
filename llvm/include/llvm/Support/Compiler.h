@@ -39,10 +39,6 @@
 # define __has_builtin(x) 0
 #endif
 
-#ifndef __has_include
-# define __has_include(x) 0
-#endif
-
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef LLVM_HAS_CPP_ATTRIBUTE

@@ -1047,6 +1047,11 @@ enum NodeType {
   FMINIMUM,
   FMAXIMUM,
 
+  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
+  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  FMINIMUMNUM,
+  FMAXIMUMNUM,
+
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
@@ -1514,7 +1519,7 @@ std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-unsigned getVPForBaseOpcode(unsigned Opcode);
+std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
