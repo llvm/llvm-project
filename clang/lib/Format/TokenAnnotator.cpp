@@ -250,7 +250,7 @@ private:
         if (Precedence > prec::Conditional && Precedence < prec::Relational)
           return false;
       }
-      if (Prev.is(TT_ConditionalExpr))
+      if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
       updateParameterCount(Left, CurrentToken);
       if (Style.Language == FormatStyle::LK_Proto) {
@@ -2875,6 +2875,8 @@ private:
     // Search for unexpected tokens.
     for (auto *Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous) {
       if (Prev->is(tok::r_paren)) {
+        if (Prev->is(TT_CastRParen))
+          return false;
         Prev = Prev->MatchingParen;
         if (!Prev)
           return false;
@@ -5476,6 +5478,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
       Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&
       Left.ParameterCount > 0) {
+    return true;
+  }
+
+  // Ignores the first parameter as this will be handled separately by
+  // BreakFunctionDefinitionParameters or AlignAfterOpenBracket.
+  if (Style.BinPackParameters == FormatStyle::BPPS_AlwaysOnePerLine &&
+      Line.MightBeFunctionDecl && !Left.opensScope() &&
+      startsNextParameter(Right, Style)) {
     return true;
   }
 
