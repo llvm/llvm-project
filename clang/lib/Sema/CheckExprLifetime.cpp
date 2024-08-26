@@ -461,7 +461,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
        I != N; ++I) {
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
-    else if (EnableGSLAnalysis && I == 0) { // GSL
+    else if (EnableGSLAnalysis && I == 0) {
       if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0],
                            !Callee->getReturnType()->isReferenceType());
