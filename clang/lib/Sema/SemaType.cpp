@@ -50,6 +50,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <bitset>
 #include <optional>
 
@@ -9582,6 +9583,33 @@ QualType Sema::BuiltinEnumUnderlyingType(QualType BaseType,
   }
 
   return GetEnumUnderlyingType(*this, BaseType, Loc);
+}
+
+QualType Sema::BuiltinDedupTemplateArgs(QualType BaseType, SourceLocation Loc) {
+  llvm::TimeTraceScope TimeTrace("BuiltinDedupTemplateArgs");
+  if (RequireCompleteType(Loc, BaseType,
+                          diag::err_incomplete_type_used_in_type_trait_expr))
+    return QualType();
+  const ElaboratedType *ET = cast<ElaboratedType>(BaseType);
+  auto *TST = ET->getNamedType()->castAs<TemplateSpecializationType>();
+  if (!TST) {
+    Diag(Loc, diag::err_incomplete_type_used_in_type_trait_expr) << BaseType;
+    return QualType();
+  }
+  TemplateArgumentListInfo Args(Loc, Loc);
+  llvm::DenseSet<QualType> SeenArgTypes;
+  for (const auto &Arg : TST->template_arguments()) {
+    if (!SeenArgTypes.insert(Arg.getAsType().getCanonicalType()).second)
+      continue;
+    Args.addArgument(TemplateArgumentLoc(
+        Arg, Context.getTrivialTypeSourceInfo(Arg.getAsType(), Loc)));
+  }
+  QualType DedupedTypes =
+      CheckTemplateIdType(TST->getTemplateName(), Loc, Args);
+  if (RequireCompleteType(Loc, DedupedTypes,
+                          diag::err_incomplete_type_used_in_type_trait_expr))
+    return QualType();
+  return DedupedTypes;
 }
 
 QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {

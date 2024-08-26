@@ -40,6 +40,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -8043,33 +8044,6 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
   }
 
   return false;
-}
-
-QualType Sema::BuiltinDedupTemplateArgs(QualType BaseType, SourceLocation Loc) {
-  llvm::TimeTraceScope TimeTrace("BuiltinDedupTemplateArgs");
-  if (RequireCompleteType(Loc, BaseType,
-                          diag::err_incomplete_type_used_in_type_trait_expr))
-    return QualType();
-  const ElaboratedType *ET = cast<ElaboratedType>(BaseType);
-  auto *TST = ET->getNamedType()->castAs<TemplateSpecializationType>();
-  if (!TST) {
-    Diag(Loc, diag::err_incomplete_type_used_in_type_trait_expr) << BaseType;
-    return QualType();
-  }
-  TemplateArgumentListInfo Args(Loc, Loc);
-  llvm::DenseSet<const Type *> SeenArgTypes;
-  for (const auto &Arg : TST->template_arguments()) {
-    if (!SeenArgTypes.insert(Arg.getAsType().getTypePtr()).second)
-      continue;
-    Args.addArgument(TemplateArgumentLoc(
-        Arg, Context.getTrivialTypeSourceInfo(Arg.getAsType(), Loc)));
-  }
-  QualType DedupedTypes =
-      CheckTemplateIdType(TST->getTemplateName(), Loc, Args);
-  if (RequireCompleteType(Loc, DedupedTypes,
-                          diag::err_incomplete_type_used_in_type_trait_expr))
-    return QualType();
-  return DedupedTypes;
 }
 
 bool Sema::CheckTemplatePartialSpecializationArgs(

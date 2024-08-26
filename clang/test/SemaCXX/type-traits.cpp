@@ -5018,6 +5018,6 @@ void remove_all_extents() {
 template <class T> using dedup_template_args_t = __dedup_template_args(T);
 template <typename... T> struct TypeList{};
 void dedup_types() {
-  static_assert(__is_same(dedup_template_args_t<TypeList<int, int, double, int>>, 
+  static_assert(__is_same(dedup_template_args_t<TypeList<int, int, double, int>>,
                           TypeList<int,double>));
 }
