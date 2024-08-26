@@ -6,25 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSPOINTERARITHMETICSSIZEOFCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSPOINTERARITHMETICSSIZEOFCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSPOINTERARITHMETICSUSINGSIZEOFCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSPOINTERARITHMETICSUSINGSIZEOFCHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::bugprone {
 
-/// Find suspicious calls to string compare functions.
+/// Finds suspicious pointer arithmetic calculations where the pointer is
+/// offset by a sizeof() expression.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-pointer-arithmetics-sizeof.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-pointer-arithmetics-using-sizeof.html
 class SuspiciousPointerArithmeticsUsingSizeofCheck : public ClangTidyCheck {
 public:
-  SuspiciousPointerArithmeticsUsingSizeofCheck(StringRef Name, ClangTidyContext *Context);
-//  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  SuspiciousPointerArithmeticsUsingSizeofCheck(StringRef Name,
+                                               ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSPOINTERARITHMETICSSIZEOFCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSPOINTERARITHMETICSUSINGSIZEOFCHECK_H
