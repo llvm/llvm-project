@@ -45,7 +45,7 @@ char CPPLanguageRuntime::ID = 0;
 /// A frame recognizer that is installed to hide libc++ implementation
 /// details from the backtrace.
 class LibCXXFrameRecognizer : public StackFrameRecognizer {
-  std::array<RegularExpression, 3> m_hidden_regex;
+  std::array<RegularExpression, 4> m_hidden_regex;
   RecognizedStackFrameSP m_hidden_frame;
 
   struct LibCXXHiddenFrame : public RecognizedStackFrame {
@@ -64,6 +64,13 @@ public:
               R"(__function::.*::operator\(\))"
               R"((\[.*\])?)"    // ABI tag.
               R"(( const)?$)"}, // const.
+            // internal implementation details of std::function in ABI v2
+            //    std::__2::__function::__policy_invoker<void (int, int)>::__call_impl[abi:ne200000]<std::__2::__function::__default_alloc_func<int (*)(int, int), int (int, int)>>
+            RegularExpression{""
+              R"(^std::__[^:]*::)" // Namespace.
+              R"(__function::.*::__call_impl)"
+              R"((\[.*\])?)"  // ABI tag.
+              R"(<.*>)"},     // template argument.
             // internal implementation details of std::invoke
             //   std::__1::__invoke[abi:ne200000]<void (*&)()>
             RegularExpression{
