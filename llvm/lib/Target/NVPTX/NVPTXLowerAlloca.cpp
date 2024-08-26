@@ -72,12 +72,21 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         Changed = true;
         auto ETy = allocaInst->getAllocatedType();
         auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
-        auto NewASCToLocal = new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
-        auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
-        auto NewASCToGeneric =
-            new AddrSpaceCastInst(NewASCToLocal, GenericAddrTy, "");
-        NewASCToLocal->insertAfter(allocaInst);
-        NewASCToGeneric->insertAfter(NewASCToLocal);
+        PointerType *allocInstPtrTy = dyn_cast_or_null<PointerType>(allocaInst->getType()->getScalarType());
+        assert(allocInstPtrTy && "AllocInst scalar type is not a PointerType.");
+        Instruction* NewASCToGeneric = allocaInst;
+        if(allocInstPtrTy->getAddressSpace() != ADDRESS_SPACE_LOCAL) {
+          // Only insert a new AddrSpaceCastInst if
+          // allocaInst is not already in ADDRESS_SPACE_LOCAL.
+          auto NewASCToLocal =
+              new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
+          auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
+          NewASCToGeneric =
+              new AddrSpaceCastInst(NewASCToLocal, GenericAddrTy, "");
+          NewASCToLocal->insertAfter(allocaInst);
+          NewASCToGeneric->insertAfter(NewASCToLocal);
+        }
+
         for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
           // Check Load, Store, GEP, and BitCast Uses on alloca and make them
           // use the converted generic address, in order to expose non-generic
