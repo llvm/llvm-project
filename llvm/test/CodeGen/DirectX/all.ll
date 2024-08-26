@@ -6,12 +6,7 @@
 ; CHECK: icmp ne i1 %{{.*}}, false
 define noundef i1 @all_bool(i1 noundef %p0) {
 entry:
-  %p0.addr = alloca i8, align 1
-  %frombool = zext i1 %p0 to i8
-  store i8 %frombool, ptr %p0.addr, align 1
-  %0 = load i8, ptr %p0.addr, align 1
-  %tobool = trunc i8 %0 to i1
-  %dx.all = call i1 @llvm.dx.all.i1(i1 %tobool)
+  %dx.all = call i1 @llvm.dx.all.i1(i1 %p0)
   ret i1 %dx.all
 }
 
@@ -19,10 +14,7 @@ entry:
 ; CHECK: icmp ne i64 %{{.*}}, 0
 define noundef i1 @all_int64_t(i64 noundef %p0) {
 entry:
-  %p0.addr = alloca i64, align 8
-  store i64 %p0, ptr %p0.addr, align 8
-  %0 = load i64, ptr %p0.addr, align 8
-  %dx.all = call i1 @llvm.dx.all.i64(i64 %0)
+  %dx.all = call i1 @llvm.dx.all.i64(i64 %p0)
   ret i1 %dx.all
 }
 
@@ -30,10 +22,7 @@ entry:
 ; CHECK: icmp ne i32 %{{.*}}, 0
 define noundef i1 @all_int(i32 noundef %p0) {
 entry:
-  %p0.addr = alloca i32, align 4
-  store i32 %p0, ptr %p0.addr, align 4
-  %0 = load i32, ptr %p0.addr, align 4
-  %dx.all = call i1 @llvm.dx.all.i32(i32 %0)
+  %dx.all = call i1 @llvm.dx.all.i32(i32 %p0)
   ret i1 %dx.all
 }
 
@@ -41,10 +30,7 @@ entry:
 ; CHECK: icmp ne i16 %{{.*}}, 0
 define noundef i1 @all_int16_t(i16 noundef %p0) {
 entry:
-  %p0.addr = alloca i16, align 2
-  store i16 %p0, ptr %p0.addr, align 2
-  %0 = load i16, ptr %p0.addr, align 2
-  %dx.all = call i1 @llvm.dx.all.i16(i16 %0)
+  %dx.all = call i1 @llvm.dx.all.i16(i16 %p0)
   ret i1 %dx.all
 }
 
@@ -52,10 +38,7 @@ entry:
 ; CHECK: fcmp une double %{{.*}}, 0.000000e+00
 define noundef i1 @all_double(double noundef %p0) {
 entry:
-  %p0.addr = alloca double, align 8
-  store double %p0, ptr %p0.addr, align 8
-  %0 = load double, ptr %p0.addr, align 8
-  %dx.all = call i1 @llvm.dx.all.f64(double %0)
+  %dx.all = call i1 @llvm.dx.all.f64(double %p0)
   ret i1 %dx.all
 }
 
@@ -63,10 +46,7 @@ entry:
 ; CHECK: fcmp une float %{{.*}}, 0.000000e+00
 define noundef i1 @all_float(float noundef %p0) {
 entry:
-  %p0.addr = alloca float, align 4
-  store float %p0, ptr %p0.addr, align 4
-  %0 = load float, ptr %p0.addr, align 4
-  %dx.all = call i1 @llvm.dx.all.f32(float %0)
+  %dx.all = call i1 @llvm.dx.all.f32(float %p0)
   ret i1 %dx.all
 }
 
@@ -74,15 +54,12 @@ entry:
 ; CHECK: fcmp une half %{{.*}}, 0xH0000
 define noundef i1 @all_half(half noundef %p0) {
 entry:
-  %p0.addr = alloca half, align 2
-  store half %p0, ptr %p0.addr, align 2
-  %0 = load half, ptr %p0.addr, align 2
-  %dx.all = call i1 @llvm.dx.all.f16(half %0)
+  %dx.all = call i1 @llvm.dx.all.f16(half %p0)
   ret i1 %dx.all
 }
 
 ; CHECK-LABEL: all_bool4
-; CHECK: icmp ne <4 x i1> %extractvec, zeroinitialize
+; CHECK: icmp ne <4 x i1> %{{.*}}, zeroinitialize
 ; CHECK: extractelement <4 x i1> %{{.*}}, i64 0
 ; CHECK: extractelement <4 x i1> %{{.*}}, i64 1
 ; CHECK: and i1  %{{.*}}, %{{.*}}
@@ -92,14 +69,7 @@ entry:
 ; CHECK: and i1  %{{.*}}, %{{.*}}
 define noundef i1 @all_bool4(<4 x i1> noundef %p0) {
 entry:
-  %p0.addr = alloca i8, align 1
-  %insertvec = shufflevector <4 x i1> %p0, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-  %0 = bitcast <8 x i1> %insertvec to i8
-  store i8 %0, ptr %p0.addr, align 1
-  %load_bits = load i8, ptr %p0.addr, align 1
-  %1 = bitcast i8 %load_bits to <8 x i1>
-  %extractvec = shufflevector <8 x i1> %1, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %dx.all = call i1 @llvm.dx.all.v4i1(<4 x i1> %extractvec)
+  %dx.all = call i1 @llvm.dx.all.v4i1(<4 x i1> %p0)
   ret i1 %dx.all
 }
 
