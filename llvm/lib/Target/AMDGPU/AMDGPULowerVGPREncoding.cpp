@@ -163,8 +163,10 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
   if (CurrentModeKnown) {
     auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
 
-    if ((Delta & Mask.raw_bits()).none())
+    if ((Delta & Mask.raw_bits()).none()) {
+      CurrentMask |= Mask;
       return false;
+    }
 
     if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
       CurrentMode |= NewMode;
