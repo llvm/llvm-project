@@ -1278,8 +1278,6 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                        Expr *Init) {
-  bool EnableLifetimeWarnings = !SemaRef.getDiagnostics().isIgnored(
-      diag::warn_dangling_lifetime_pointer, SourceLocation());
   bool EnableDanglingPointerAssignment = !SemaRef.getDiagnostics().isIgnored(
       diag::warn_dangling_pointer_assignment, SourceLocation());
   bool RunAnalysis = (EnableDanglingPointerAssignment &&
