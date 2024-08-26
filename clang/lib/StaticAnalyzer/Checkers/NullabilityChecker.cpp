@@ -713,7 +713,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
                                   Nullness == NullConstraint::IsNull);
   if (ChecksEnabled[CK_NullReturnedFromNonnull] && NullReturnedFromNonNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
-      !InSuppressedMethodFamily && C.getLocationContext()->inTopFrame()) {
+      !InSuppressedMethodFamily) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)

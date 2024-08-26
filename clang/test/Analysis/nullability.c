@@ -58,7 +58,7 @@ void exit(int);
 
 __attribute__((returns_nonnull)) int *passthrough2(int *p);
 int *passthrough2(int *p) {
-  return p; // FIXME: no-warning  Explicitly disabled to avoid FPs
+  return p; // expected-warning{{Null returned from a function that is expected to return a non-null value}}
 }
 
 void call_with_null(void) {
