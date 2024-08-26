@@ -254,7 +254,8 @@ struct vars  {
 };
 
 void f() {
-    types<void>::x<0>(); // Error
-    vars<0>::x<0>(); // Error
+    types<void>::x<0>();
+    vars<0>::x<0>();
 }
+
 }
