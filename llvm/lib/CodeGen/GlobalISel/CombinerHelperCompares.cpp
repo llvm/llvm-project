@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdlib>
@@ -45,42 +46,7 @@ bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
   APInt LHS = LHSCst.getScalarValue();
   APInt RHS = RHSCst.getScalarValue();
 
-  bool Result;
-
-  switch (Pred) {
-  case CmpInst::Predicate::ICMP_EQ:
-    Result = LHS.eq(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_NE:
-    Result = LHS.ne(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_UGT:
-    Result = LHS.ugt(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_UGE:
-    Result = LHS.uge(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_ULT:
-    Result = LHS.ult(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_ULE:
-    Result = LHS.ule(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_SGT:
-    Result = LHS.sgt(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_SGE:
-    Result = LHS.sge(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_SLT:
-    Result = LHS.slt(RHS);
-    break;
-  case CmpInst::Predicate::ICMP_SLE:
-    Result = LHS.sle(RHS);
-    break;
-  default:
-    llvm_unreachable("Unexpected predicate");
-  }
+  bool Result = ICmpInst::compare(LHS, RHS, Pred);
 
   MatchInfo = [=](MachineIRBuilder &B) {
     if (Result)
