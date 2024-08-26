@@ -193,25 +193,19 @@ TEST_F(RtsanFileTest, OpenatDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(func);
 }
 
-// FIXME: This fails on the build machines, but not locally!
-// see https://github.com/llvm/llvm-project/pull/105732#issuecomment-2310286530
-// Value of: st.st_mode & 0777
-// Expected: is equal to 420
-// Actual: 384
-// TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
-//   const int mode = S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR;
-//
-//   const int fd = open(GetTemporaryFilePath(), O_CREAT | O_WRONLY, mode);
-//   ASSERT_THAT(fd, Ne(-1));
-//   close(fd);
-//
-//   struct stat st;
-//   ASSERT_THAT(stat(GetTemporaryFilePath(), &st), Eq(0));
-//
-//   // Mask st_mode to get permission bits only
-//
-//   //ASSERT_THAT(st.st_mode & 0777, Eq(mode)); FAILED ASSERTION
-// }
+TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
+  const int mode = S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR;
+
+  const int fd = open(GetTemporaryFilePath(), O_CREAT | O_WRONLY, mode);
+  ASSERT_THAT(fd, Ne(-1));
+  close(fd);
+
+  struct stat st;
+  ASSERT_THAT(stat(GetTemporaryFilePath(), &st), Eq(0));
+
+  // Mask st_mode to get permission bits only
+  ASSERT_THAT(st.st_mode & 0777, Eq(mode));
+}
 
 TEST_F(RtsanFileTest, CreatDiesWhenRealtime) {
   auto func = [this]() { creat(GetTemporaryFilePath(), S_IWOTH | S_IROTH); };
