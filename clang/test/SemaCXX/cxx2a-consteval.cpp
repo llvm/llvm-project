@@ -1233,3 +1233,26 @@ consteval void immediate() {
 
 
 }
+
+namespace GH105558 {
+
+consteval int* alloc() { return new int(0); }
+consteval void f(int* p) { delete p; }
+consteval void g1(int*&& p) { delete p; }
+consteval void g2(const int* p) { delete p; }
+consteval void g3(int*const& p) { delete p; }
+struct X {
+  int* p;
+  explicit(false) constexpr X(int* p) : p(p) {}
+};
+consteval void g4(X x) { delete x.p; }
+
+void test() {
+  f(alloc());
+  g1(alloc());
+  g2(alloc());
+  g3(alloc());
+  g4(alloc());
+}
+
+}

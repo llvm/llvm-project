@@ -17464,11 +17464,22 @@ static void RemoveNestedImmediateInvocation(
     ExprResult TransformInitializer(Expr *Init, bool NotCopyInit) {
       if (!Init)
         return Init;
+
+      // We cannot use IgnoreImpCasts because we need to preserve
+      // full expressions.
+      while (true) {
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(Init))
+          Init = ICE->getSubExpr();
+        else if (auto *ICE = dyn_cast<MaterializeTemporaryExpr>(Init))
+          Init = ICE->getSubExpr();
+        else
+          break;
+      }
       /// ConstantExpr are the first layer of implicit node to be removed so if
       /// Init isn't a ConstantExpr, no ConstantExpr will be skipped.
-      if (auto *CE = dyn_cast<ConstantExpr>(Init))
-        if (CE->isImmediateInvocation())
-          RemoveImmediateInvocation(CE);
+      if (auto *CE = dyn_cast<ConstantExpr>(Init);
+          CE && CE->isImmediateInvocation())
+        RemoveImmediateInvocation(CE);
       return Base::TransformInitializer(Init, NotCopyInit);
     }
     ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
