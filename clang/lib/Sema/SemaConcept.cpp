@@ -983,9 +983,9 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       // otherwise reference the AssociatedDecl of the template arguments, which
       // is, in this case, the template declaration.
       //
-      // However, as we are in the process of comparing potential re-declarations,
-      // the canonical declaration is the declaration itself at this point.
-      // moment. So if we didn't expand these packs, we would end up with an
+      // However, as we are in the process of comparing potential
+      // re-declarations, the canonical declaration is the declaration itself at
+      // this point. So if we didn't expand these packs, we would end up with an
       // incorrect profile difference because we will be profiling the
       // canonical types!
       //
