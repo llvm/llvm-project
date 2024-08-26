@@ -7380,7 +7380,18 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
   // FIXME: dependent operand expressions?
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
-    // Do not transform the equivalent type if it is equal to the modified type.
+    // If the equivalent type is equal to the modified type, we don't want to
+    // transform it as well because:
+    //
+    //   1. The transformation would yield the same result and is therefore
+    //      superfluous, and
+    //
+    //   2. Transforming the same type twice can cause problems, e.g. if it
+    //      is a FunctionProtoType, we may end up instantiating the function
+    //      parameters twice, which causes an assertion since the parameters
+    //      are already bound to their counterparts in the template for this
+    //      instantiation.
+    //
     QualType equivalentType = modifiedType;
     if (TL.getModifiedLoc().getType() != TL.getEquivalentTypeLoc().getType()) {
       TypeLocBuilder AuxiliaryTLB;
