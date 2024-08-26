@@ -260,7 +260,7 @@ def testOdsEquallySizedAccessorMultipleSegments():
 
             op = TestOpMultiResultSegments.build_generic(
                 results=[ts[0], [ts[1], ts[2], ts[3]], [ts[4], ts[5], ts[6]]],
-                operands=[v]
+                operands=[v],
             )
             start, pg = equally_sized_accessor(op.results, 2, 1, 0)
             # CHECK: start: 1, pg: 3

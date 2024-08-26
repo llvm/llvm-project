@@ -211,6 +211,8 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   )
 endif()
 
+set(MLIR_TEST_DEPENDS MLIRPythonModules)
+
 # This target can be used to just build the dependencies
 # for the check-mlir target without executing the tests.
 # This is useful for bots when splitting the build step
