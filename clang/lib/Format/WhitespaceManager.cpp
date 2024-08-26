@@ -470,7 +470,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
         CurrentChange.Spaces != 0 &&
-        !CurrentChange.Tok->isOneOf(tok::equal, TT_TemplateCloser)) {
+        !CurrentChange.Tok->isOneOf(tok::equal, tok::r_paren,
+                                    TT_TemplateCloser)) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
