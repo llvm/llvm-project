@@ -69,8 +69,6 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // Default FP mode for the current function.
   SIModeRegisterDefaults Mode;
 
-  bool EnableLateStructurizeCFG;
-
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.
   bool fp16SrcZerosHighBits(unsigned Opc) const;

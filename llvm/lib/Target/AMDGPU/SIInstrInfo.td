@@ -1596,6 +1596,7 @@ def HWREG {
   int FLAT_SCR_HI = 21;
   int XNACK_MASK = 22;
   int POPS_PACKER = 25;
+  int SCHED_MODE = 26;
   int SHADER_CYCLES = 29;
 }
 
@@ -3261,15 +3262,6 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ValueCols = [["1"]];
 }
 
-def FP8DstByteSelTable : GenericTable {
-  let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP8DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP8DstByteSel"];
-
-  let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP8DstByteSelHelper";
-}
-
 // Map encoded mfma(_scale)?_f8f6f4 instructions depending on the
 // number of registers required for the used format.
 def getMFMA_F8F6F4_WithSize : GenericTable {
@@ -3289,17 +3281,13 @@ def isMFMA_F8F6F4Table : GenericTable {
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
-class CvtScaleF32_F32F16ToF8F4_Table<Instruction Instr> {
-  Instruction Opcode = Instr;
-}
+def FP8DstByteSelTable : GenericTable {
+  let FilterClass = "VOP3_Pseudo";
+  let CppTypeName = "FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel"];
 
-// Tabulate cvt_scalef32 instructions which require dst forwarding hazard resolution.
-def isCvtScaleF32_F32F16ToF8F4Table : GenericTable {
-  let FilterClass = "CvtScaleF32_F32F16ToF8F4_Table";
-  let CppTypeName = "CvtScaleF32_F32F16ToF8F4_Info";
-  let Fields = [ "Opcode" ];
-  let PrimaryKey = [ "Opcode" ];
-  let PrimaryKeyName = "isCvtScaleF32_F32F16ToF8F4";
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getFP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

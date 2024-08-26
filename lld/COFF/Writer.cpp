@@ -298,6 +298,9 @@ private:
   CVDebugRecordChunk *buildId = nullptr;
   ArrayRef<uint8_t> sectionTable;
 
+  // List of Arm64EC export thunks.
+  std::vector<std::pair<Chunk *, Defined *>> exportThunks;
+
   uint64_t fileSize;
   uint32_t pointerToSymbolTable = 0;
   uint64_t sizeOfImage;
@@ -312,6 +315,7 @@ private:
   OutputSection *idataSec;
   OutputSection *edataSec;
   OutputSection *didatSec;
+  OutputSection *a64xrmSec;
   OutputSection *rsrcSec;
   OutputSection *relocSec;
   OutputSection *ctorsSec;
@@ -995,6 +999,8 @@ void Writer::createSections() {
   idataSec = createSection(".idata", data | r);
   edataSec = createSection(".edata", data | r);
   didatSec = createSection(".didat", data | r);
+  if (isArm64EC(ctx.config.machine))
+    a64xrmSec = createSection(".a64xrm", data | r);
   rsrcSec = createSection(".rsrc", data | r);
   relocSec = createSection(".reloc", data | discardable | r);
   ctorsSec = createSection(".ctors", data | r | w);
@@ -2053,8 +2059,10 @@ void Writer::createECChunks() {
     auto sym = dyn_cast<Defined>(s);
     if (!sym || !sym->getChunk())
       continue;
-    if (auto thunk = dyn_cast<ECExportThunkChunk>(sym->getChunk()))
+    if (auto thunk = dyn_cast<ECExportThunkChunk>(sym->getChunk())) {
       hexpthkSec->addChunk(thunk);
+      exportThunks.push_back({thunk, thunk->target});
+    }
   }
 
   auto codeMapChunk = make<ECCodeMapChunk>(codeMap);
@@ -2062,6 +2070,19 @@ void Writer::createECChunks() {
   Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
   replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
                                   codeMapChunk);
+
+  CHPECodeRangesChunk *ranges = make<CHPECodeRangesChunk>(exportThunks);
+  rdataSec->addChunk(ranges);
+  Symbol *rangesSym =
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points");
+  replaceSymbol<DefinedSynthetic>(rangesSym, rangesSym->getName(), ranges);
+
+  CHPERedirectionChunk *entryPoints = make<CHPERedirectionChunk>(exportThunks);
+  a64xrmSec->addChunk(entryPoints);
+  Symbol *entryPointsSym =
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
+  replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
+                                  entryPoints);
 }
 
 // MinGW specific. Gather all relocations that are imported from a DLL even
@@ -2154,6 +2175,11 @@ void Writer::setECSymbols() {
   if (!isArm64EC(ctx.config.machine))
     return;
 
+  llvm::stable_sort(exportThunks, [](const std::pair<Chunk *, Defined *> &a,
+                                     const std::pair<Chunk *, Defined *> &b) {
+    return a.first->getRVA() < b.first->getRVA();
+  });
+
   Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
                                   pdata.first);
@@ -2165,6 +2191,14 @@ void Writer::setECSymbols() {
         ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
                 pdata.first->getRVA());
   }
+
+  Symbol *rangesCountSym =
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points_count");
+  cast<DefinedAbsolute>(rangesCountSym)->setVA(exportThunks.size());
+
+  Symbol *entryPointCountSym =
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
+  cast<DefinedAbsolute>(entryPointCountSym)->setVA(exportThunks.size());
 }
 
 // Write section contents to a mmap'ed file.

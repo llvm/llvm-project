@@ -722,13 +722,15 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_REDUCTION_SEQ_VP is already defined!"
 #endif
-#define HELPER_REGISTER_REDUCTION_SEQ_VP(VPID, VPSD, SEQ_VPSD, INTRIN)         \
+#define HELPER_REGISTER_REDUCTION_SEQ_VP(VPID, VPSD, SEQ_VPSD, SDOPC, SEQ_SDOPC, INTRIN) \
   BEGIN_REGISTER_VP_INTRINSIC(VPID, 2, 3)                                      \
   BEGIN_REGISTER_VP_SDNODE(VPSD, 1, VPID, 2, 3)                                \
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   END_REGISTER_VP_SDNODE(VPSD)                                                 \
   BEGIN_REGISTER_VP_SDNODE(SEQ_VPSD, 1, VPID, 2, 3)                            \
   HELPER_MAP_VPID_TO_VPSD(VPID, SEQ_VPSD)                                      \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SEQ_SDOPC)                                      \
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
   END_REGISTER_VP_SDNODE(SEQ_VPSD)                                             \
   VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN)                                     \
@@ -736,13 +738,13 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
 
 // llvm.vp.reduce.fadd(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fadd, VP_REDUCE_FADD,
-                                 VP_REDUCE_SEQ_FADD,
-                                 vector_reduce_fadd)
+                                 VP_REDUCE_SEQ_FADD, VECREDUCE_FADD,
+                                 VECREDUCE_SEQ_FADD, vector_reduce_fadd)
 
 // llvm.vp.reduce.fmul(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
-                                 VP_REDUCE_SEQ_FMUL,
-                                 vector_reduce_fmul)
+                                 VP_REDUCE_SEQ_FMUL, VECREDUCE_FMUL,
+                                 VECREDUCE_SEQ_FMUL, vector_reduce_fmul)
 
 #undef HELPER_REGISTER_REDUCTION_SEQ_VP
 

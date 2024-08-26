@@ -2130,6 +2130,10 @@ def int_amdgcn_s_setreg :
   [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]
 >;
 
+def int_amdgcn_set_wmma_scheduling :
+  DefaultAttrsIntrinsic<[], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects]
+>;
+
 // int_amdgcn_s_getpc is provided to allow a specific style of position
 // independent code to determine the high part of its address when it is
 // known (through convention) that the code and any data of interest does
