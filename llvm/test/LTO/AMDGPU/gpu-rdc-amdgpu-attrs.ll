@@ -2,6 +2,7 @@
 ; RUN: opt -passes="lto<O3>" -debug-only=amdgpu-attributor -S -o - %s 2>&1 | FileCheck %s --check-prefix=POST-LINK
 
 ; REQUIRES: amdgpu-registered-target
+; REQUIRES: asserts
 
 target triple = "amdgcn-amd-amdhsa"
 
