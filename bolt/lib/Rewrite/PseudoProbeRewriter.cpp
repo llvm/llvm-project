@@ -143,7 +143,6 @@ void PseudoProbeRewriter::parsePseudoProbe() {
   if (!ProbeDecoder.buildAddress2ProbeMap(
           reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
           GuidFilter, FuncStartAddrs)) {
-    ProbeDecoder.getAddress2ProbesMap().clear();
     errs() << "BOLT-WARNING: fail in building Address2ProbeMap\n";
     return;
   }
