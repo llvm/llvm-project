@@ -4,21 +4,35 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # ctype.h entrypoints
     libc.src.ctype.isalnum
+    libc.src.ctype.isalnum_l
     libc.src.ctype.isalpha
+    libc.src.ctype.isalpha_l
     libc.src.ctype.isascii
     libc.src.ctype.isblank
+    libc.src.ctype.isblank_l
     libc.src.ctype.iscntrl
+    libc.src.ctype.iscntrl_l
     libc.src.ctype.isdigit
+    libc.src.ctype.isdigit_l
     libc.src.ctype.isgraph
+    libc.src.ctype.isgraph_l
     libc.src.ctype.islower
+    libc.src.ctype.islower_l
     libc.src.ctype.isprint
+    libc.src.ctype.isprint_l
     libc.src.ctype.ispunct
+    libc.src.ctype.ispunct_l
     libc.src.ctype.isspace
+    libc.src.ctype.isspace_l
     libc.src.ctype.isupper
+    libc.src.ctype.isupper_l
     libc.src.ctype.isxdigit
+    libc.src.ctype.isxdigit_l
     libc.src.ctype.toascii
     libc.src.ctype.tolower
+    libc.src.ctype.tolower_l
     libc.src.ctype.toupper
+    libc.src.ctype.toupper_l
 
     # string.h entrypoints
     libc.src.string.bcmp
@@ -192,6 +206,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsprintf
     libc.src.stdio.asprintf
     libc.src.stdio.vasprintf
+    libc.src.stdio.scanf
+    libc.src.stdio.fscanf
     libc.src.stdio.sscanf
     libc.src.stdio.vsscanf
     libc.src.stdio.feof
@@ -231,6 +247,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.wctob
 
+    # locale.h entrypoints
+    libc.src.locale.localeconv
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
+
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
 )
@@ -248,6 +273,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2l
     libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
@@ -424,13 +450,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rint
     libc.src.math.rintf
     libc.src.math.rintl
-    libc.src.math.round
     libc.src.math.roundeven
     libc.src.math.roundevenf
     libc.src.math.roundevenl
+    libc.src.math.round
     libc.src.math.roundf
+    libc.src.math.roundl
     libc.src.math.scalbln
     libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -458,6 +486,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tgammaf
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl

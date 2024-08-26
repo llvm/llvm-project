@@ -328,7 +328,7 @@ void StringRef::split(SmallVectorImpl<StringRef> &A,
       A.push_back(S.slice(0, Idx));
 
     // Jump forward.
-    S = S.slice(Idx + Separator.size(), npos);
+    S = S.substr(Idx + Separator.size());
   }
 
   // Push the tail.
@@ -354,7 +354,7 @@ void StringRef::split(SmallVectorImpl<StringRef> &A, char Separator,
       A.push_back(S.slice(0, Idx));
 
     // Jump forward.
-    S = S.slice(Idx + 1, npos);
+    S = S.substr(Idx + 1);
   }
 
   // Push the tail.

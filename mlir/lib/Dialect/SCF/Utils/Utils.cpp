@@ -864,6 +864,18 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
 
     Operation *innerTerminator = innerLoop.getBody()->getTerminator();
     auto yieldedVals = llvm::to_vector(innerTerminator->getOperands());
+    assert(llvm::equal(outerLoop.getRegionIterArgs(), innerLoop.getInitArgs()));
+    for (Value &yieldedVal : yieldedVals) {
+      // The yielded value may be an iteration argument of the inner loop
+      // which is about to be inlined.
+      auto iter = llvm::find(innerLoop.getRegionIterArgs(), yieldedVal);
+      if (iter != innerLoop.getRegionIterArgs().end()) {
+        unsigned iterArgIndex = iter - innerLoop.getRegionIterArgs().begin();
+        // `outerLoop` iter args identical to the `innerLoop` init args.
+        assert(iterArgIndex < innerLoop.getInitArgs().size());
+        yieldedVal = innerLoop.getInitArgs()[iterArgIndex];
+      }
+    }
     rewriter.eraseOp(innerTerminator);
 
     SmallVector<Value> innerBlockArgs;

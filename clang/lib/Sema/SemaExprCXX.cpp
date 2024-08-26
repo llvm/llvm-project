@@ -1647,12 +1647,23 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     return ExprError(Diag(TyBeginLoc, diag::err_init_for_function_type)
                        << Ty << FullRange);
 
-  // C++17 [expr.type.conv]p2:
-  //   If the type is cv void and the initializer is (), the expression is a
-  //   prvalue of the specified type that performs no initialization.
-  if (!Ty->isVoidType() &&
-      RequireCompleteType(TyBeginLoc, ElemTy,
-                          diag::err_invalid_incomplete_type_use, FullRange))
+  // C++17 [expr.type.conv]p2, per DR2351:
+  //   If the type is cv void and the initializer is () or {}, the expression is
+  //   a prvalue of the specified type that performs no initialization.
+  if (Ty->isVoidType()) {
+    if (Exprs.empty())
+      return new (Context) CXXScalarValueInitExpr(
+          Ty.getUnqualifiedType(), TInfo, Kind.getRange().getEnd());
+    if (ListInitialization &&
+        cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
+      return CXXFunctionalCastExpr::Create(
+          Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
+          Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
+          Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
+    }
+  } else if (RequireCompleteType(TyBeginLoc, ElemTy,
+                                 diag::err_invalid_incomplete_type_use,
+                                 FullRange))
     return ExprError();
 
   //   Otherwise, the expression is a prvalue of the specified type whose
@@ -6246,6 +6257,23 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     return Self.DeduceTemplateArgumentsFromType(
                TSTToBeDeduced->getTemplateName().getAsTemplateDecl(), RhsT,
                Info) == TemplateDeductionResult::Success;
+  }
+  case BTT_IsScalarizedLayoutCompatible: {
+    if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType() &&
+        Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
+                                 diag::err_incomplete_type))
+      return true;
+    if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
+        Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                 diag::err_incomplete_type))
+      return true;
+
+    DiagnoseVLAInCXXTypeTrait(
+        Self, Lhs, tok::kw___builtin_hlsl_is_scalarized_layout_compatible);
+    DiagnoseVLAInCXXTypeTrait(
+        Self, Rhs, tok::kw___builtin_hlsl_is_scalarized_layout_compatible);
+
+    return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
   default:
     llvm_unreachable("not a BTT");
