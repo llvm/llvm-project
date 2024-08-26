@@ -6855,20 +6855,18 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
       // Strengthen the range if the underlying IR value is a
       // global/alloca/heap allocation using the size of the object.
-      ObjectSizeOpts Opts;
-      Opts.RoundToAlign = false;
-      Opts.NullIsUnknownSize = true;
-      uint64_t ObjSize;
-      if ((isa<GlobalVariable>(V) || isa<AllocaInst>(V) ||
-           isAllocationFn(V, &TLI)) &&
-          getObjectSize(V, ObjSize, DL, &TLI, Opts) && ObjSize > 1) {
-        // The highest address the object can start is ObjSize bytes before the
-        // end (unsigned max value). If this value is not a multiple of the
+      bool CanBeNull, CanBeFreed;
+      uint64_t DerefBytes =
+          V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      if (DerefBytes > 1) {
+        // The highest address the object can start is DerefBytes bytes before
+        // the end (unsigned max value). If this value is not a multiple of the
         // alignment, the last possible start value is the next lowest multiple
         // of the alignment. Note: The computations below cannot overflow,
         // because if they would there's no possible start address for the
         // object.
-        APInt MaxVal = APInt::getMaxValue(BitWidth) - APInt(BitWidth, ObjSize);
+        APInt MaxVal =
+            APInt::getMaxValue(BitWidth) - APInt(BitWidth, DerefBytes);
         uint64_t Align = U->getValue()->getPointerAlignment(DL).value();
         uint64_t Rem = MaxVal.urem(Align);
         MaxVal -= APInt(BitWidth, Rem);
