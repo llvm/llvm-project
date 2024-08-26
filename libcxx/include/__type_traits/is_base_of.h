@@ -30,8 +30,7 @@ inline constexpr bool is_base_of_v = __is_base_of(_Bp, _Dp);
 #  if __has_builtin(__builtin_is_virtual_base_of)
 
 template <class _Base, class _Derived>
-struct _LIBCPP_TEMPLATE_VIS is_virtual_base_of
-    : public integral_constant<bool, __builtin_is_virtual_base_of(_Base, _Derived)> {};
+struct _LIBCPP_TEMPLATE_VIS is_virtual_base_of : public bool_constant<__builtin_is_virtual_base_of(_Base, _Derived)> {};
 
 template <class _Base, class _Derived>
 inline constexpr bool is_virtual_base_of_v = __builtin_is_virtual_base_of(_Base, _Derived);
