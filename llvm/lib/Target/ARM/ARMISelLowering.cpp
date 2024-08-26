@@ -7968,7 +7968,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMOVIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Try an immediate VMVN.

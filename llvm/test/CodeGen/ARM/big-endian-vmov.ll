@@ -177,7 +177,6 @@ define arm_aapcs_vfpcc <4 x i32> @and_v4i32_b(<4 x i32> %a) {
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    vmov.i64 q8, #0xffff00ff0000ff
 ; CHECK-BE-NEXT:    vrev64.32 q9, q0
-; CHECK-BE-NEXT:    vrev64.32 q8, q8
 ; CHECK-BE-NEXT:    vand q8, q9, q8
 ; CHECK-BE-NEXT:    vrev64.32 q0, q8
 ; CHECK-BE-NEXT:    bx lr
