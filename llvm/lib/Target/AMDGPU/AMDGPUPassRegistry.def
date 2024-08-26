@@ -22,9 +22,9 @@ MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
 MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
-MODULE_PASS("amdgpu-perf-hint",
-            AMDGPUPerfHintAnalysisPass(
-              *static_cast<const GCNTargetMachine *>(this)))
+MODULE_PASS(
+    "amdgpu-perf-hint",
+    AMDGPUPerfHintAnalysisPass(*static_cast<const GCNTargetMachine *>(this)))
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-unify-metadata", AMDGPUUnifyMetadataPass())
 #undef MODULE_PASS
@@ -47,9 +47,9 @@ FUNCTION_PASS("amdgpu-annotate-uniform", AMDGPUAnnotateUniformValuesPass())
 FUNCTION_PASS("amdgpu-codegenprepare", AMDGPUCodeGenPreparePass(*this))
 FUNCTION_PASS("amdgpu-image-intrinsic-opt",
               AMDGPUImageIntrinsicOptimizerPass(*this))
-FUNCTION_PASS("amdgpu-late-codegenprepare",
-              AMDGPULateCodeGenPreparePass(
-                *static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS(
+    "amdgpu-late-codegenprepare",
+    AMDGPULateCodeGenPreparePass(*static_cast<const GCNTargetMachine *>(this)))
 FUNCTION_PASS("amdgpu-lower-kernel-arguments",
               AMDGPULowerKernelArgumentsPass(*this))
 FUNCTION_PASS("amdgpu-lower-kernel-attributes",
@@ -64,7 +64,9 @@ FUNCTION_PASS("amdgpu-rewrite-undef-for-phi", AMDGPURewriteUndefForPHIPass())
 FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
-FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS(
+    "si-annotate-control-flow",
+    SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -83,8 +85,7 @@ FUNCTION_ALIAS_ANALYSIS("amdgpu-aa", AMDGPUAA())
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 FUNCTION_PASS_WITH_PARAMS(
-    "amdgpu-atomic-optimizer",
-    "AMDGPUAtomicOptimizerPass",
+    "amdgpu-atomic-optimizer", "AMDGPUAtomicOptimizerPass",
     [=](ScanOptions Strategy) {
       return AMDGPUAtomicOptimizerPass(*this, Strategy);
     },
@@ -97,4 +98,5 @@ FUNCTION_PASS_WITH_PARAMS(
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
+MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
 #undef MACHINE_FUNCTION_PASS
