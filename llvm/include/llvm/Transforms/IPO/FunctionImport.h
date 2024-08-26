@@ -139,6 +139,10 @@ public:
         maybeAddDeclaration(FromModule, GUID);
     }
 
+    // Return the list of source modules sorted in the ascending alphabetical
+    // order.
+    SmallVector<StringRef, 0> getSourceModules() const;
+
     const ImportMapTyImpl &getImportMap() const { return ImportMap; }
 
   private:
@@ -262,13 +266,13 @@ void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code EmitImportsFiles(
-    StringRef ModulePath, StringRef OutputFilename,
-    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+std::error_code
+EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
+                 const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
 
 /// Based on the information recorded in the summaries during global
 /// summary-based analysis:

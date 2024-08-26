@@ -21,18 +21,18 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
             substrs=["frame", "foo", "frame", "main"],
         )
         self.expect(
-            "thread backtrace", matching=False, patterns=["frame.*std::__1::__function"]
+            "thread backtrace", matching=False, patterns=["frame.*std::__.*::__function"]
         )
         # Unfiltered.
         self.expect(
             "thread backtrace -u",
             ordered=True,
-            patterns=["frame.*foo", "frame.*std::__1::__function", "frame.*main"],
+            patterns=["frame.*foo", "frame.*std::__.*::__function", "frame.*main"],
         )
         self.expect(
             "thread backtrace --unfiltered",
             ordered=True,
-            patterns=["frame.*foo", "frame.*std::__1::__function", "frame.*main"],
+            patterns=["frame.*foo", "frame.*std::__.*::__function", "frame.*main"],
         )
 
     @add_test_categories(["libc++"])

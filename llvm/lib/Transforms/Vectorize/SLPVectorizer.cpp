@@ -3011,7 +3011,8 @@ private:
     }
 
     bool isOperandGatherNode(const EdgeInfo &UserEI) const {
-      return isGather() && UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
+      return isGather() && (Idx > 0 || !UserTreeIndices.empty()) &&
+             UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
              UserTreeIndices.front().UserTE == UserEI.UserTE;
     }
 
@@ -15973,6 +15974,10 @@ void BoUpSLP::computeMinimumValueSizes() {
                         UserTE->Scalars.front()->getType());
                     auto It = MinBWs.find(TE);
                     if (It != MinBWs.end() && It->second.first > UserTESz)
+                      return true;
+                    // The size of icmp is always 1 and should not be
+                    // considered.
+                    if (TE->getOpcode() == Instruction::ICmp)
                       return true;
                     return DL->getTypeSizeInBits(U->getType()) > UserTESz;
                   }));

@@ -3130,7 +3130,7 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
                                                  void *MainAddr) {
   std::string ClangExecutable =
       llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return Driver::GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
+  return Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
@@ -4274,9 +4274,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           llvm::StringSwitch<unsigned>(A->getValue(i))
               .Case("none", LangOptionsBase::None)
               .Case("all", LangOptionsBase::All)
-              .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+              .Case("add-unsigned-overflow-test",
+                    LangOptionsBase::AddUnsignedOverflowTest)
+              .Case("add-signed-overflow-test",
+                    LangOptionsBase::AddSignedOverflowTest)
               .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
-              .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+              .Case("unsigned-post-decr-while",
+                    LangOptionsBase::PostDecrInWhile)
               .Default(0);
     }
   }

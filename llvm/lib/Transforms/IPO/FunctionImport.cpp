@@ -352,6 +352,13 @@ void FunctionImporter::ImportMapTy::maybeAddDeclaration(
   ImportMap[FromModule].try_emplace(GUID, GlobalValueSummary::Declaration);
 }
 
+SmallVector<StringRef, 0>
+FunctionImporter::ImportMapTy::getSourceModules() const {
+  SmallVector<StringRef, 0> Modules(make_first_range(ImportMap));
+  llvm::sort(Modules);
+  return Modules;
+}
+
 /// Import globals referenced by a function or other globals that are being
 /// imported, if importing such global is possible.
 class GlobalsImporter final {
@@ -1485,7 +1492,7 @@ void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
@@ -1511,7 +1518,7 @@ void llvm::gatherImportedSummariesForModule(
 /// Emit the files \p ModulePath will import from into \p OutputFilename.
 std::error_code llvm::EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
-    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex) {
   std::error_code EC;
   raw_fd_ostream ImportsOS(OutputFilename, EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
@@ -1770,11 +1777,6 @@ Expected<bool> FunctionImporter::importFunctions(
   unsigned ImportedCount = 0, ImportedGVCount = 0;
 
   IRMover Mover(DestModule);
-  // Do the actual import of functions now, one Module at a time
-  std::set<StringRef> ModuleNameOrderedList;
-  for (const auto &FunctionsToImportPerModule : ImportList.getImportMap()) {
-    ModuleNameOrderedList.insert(FunctionsToImportPerModule.first);
-  }
 
   auto getImportType = [&](const FunctionsToImportTy &GUIDToImportType,
                            GlobalValue::GUID GUID)
@@ -1785,7 +1787,8 @@ Expected<bool> FunctionImporter::importFunctions(
     return Iter->second;
   };
 
-  for (const auto &Name : ModuleNameOrderedList) {
+  // Do the actual import of functions now, one Module at a time
+  for (const auto &Name : ImportList.getSourceModules()) {
     // Get the module for the import
     const auto &FunctionsToImportPerModule =
         ImportList.getImportMap().find(Name);

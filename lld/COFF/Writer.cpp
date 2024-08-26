@@ -2062,6 +2062,24 @@ void Writer::createECChunks() {
     if (auto thunk = dyn_cast<ECExportThunkChunk>(sym->getChunk())) {
       hexpthkSec->addChunk(thunk);
       exportThunks.push_back({thunk, thunk->target});
+    } else if (auto def = dyn_cast<DefinedRegular>(sym)) {
+      // Allow section chunk to be treated as an export thunk if it looks like
+      // one.
+      SectionChunk *chunk = def->getChunk();
+      if (!chunk->live || chunk->getMachine() != AMD64)
+        continue;
+      assert(sym->getName().starts_with("EXP+"));
+      StringRef targetName = sym->getName().substr(strlen("EXP+"));
+      // If EXP+#foo is an export thunk of a hybrid patchable function,
+      // we should use the #foo$hp_target symbol as the redirection target.
+      // First, try to look up the $hp_target symbol. If it can't be found,
+      // assume it's a regular function and look for #foo instead.
+      Symbol *targetSym = ctx.symtab.find((targetName + "$hp_target").str());
+      if (!targetSym)
+        targetSym = ctx.symtab.find(targetName);
+      Defined *t = dyn_cast_or_null<Defined>(targetSym);
+      if (t && isArm64EC(t->getChunk()->getMachine()))
+        exportThunks.push_back({chunk, t});
     }
   }
 
@@ -2070,6 +2088,12 @@ void Writer::createECChunks() {
   Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
   replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
                                   codeMapChunk);
+
+  CHPECodeRangesChunk *ranges = make<CHPECodeRangesChunk>(exportThunks);
+  rdataSec->addChunk(ranges);
+  Symbol *rangesSym =
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points");
+  replaceSymbol<DefinedSynthetic>(rangesSym, rangesSym->getName(), ranges);
 
   CHPERedirectionChunk *entryPoints = make<CHPERedirectionChunk>(exportThunks);
   a64xrmSec->addChunk(entryPoints);
@@ -2185,6 +2209,10 @@ void Writer::setECSymbols() {
         ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
                 pdata.first->getRVA());
   }
+
+  Symbol *rangesCountSym =
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points_count");
+  cast<DefinedAbsolute>(rangesCountSym)->setVA(exportThunks.size());
 
   Symbol *entryPointCountSym =
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
