@@ -7075,15 +7075,23 @@ private:
 class HLSLOutArgExpr : public Expr {
   friend class ASTStmtReader;
 
-  Expr *Base;
-  Expr *Writeback;
-  OpaqueValueExpr *OpaqueVal;
+  enum {
+    BaseLValue,
+    CastedTemporary,
+    WritebackCast,
+    NumSubExprs,
+  };
+
+  Stmt *SubExprs[NumSubExprs];
   bool IsInOut;
 
-  HLSLOutArgExpr(QualType Ty, Expr *B, Expr *WB, OpaqueValueExpr *OpV,
-                 bool IsInOut)
-      : Expr(HLSLOutArgExprClass, Ty, VK_LValue, OK_Ordinary), Base(B),
-        Writeback(WB), OpaqueVal(OpV), IsInOut(IsInOut) {
+  HLSLOutArgExpr(QualType Ty, OpaqueValueExpr *B, OpaqueValueExpr *OpV,
+                 Expr *WB, bool IsInOut)
+      : Expr(HLSLOutArgExprClass, Ty, VK_LValue, OK_Ordinary),
+        IsInOut(IsInOut) {
+    SubExprs[BaseLValue] = B;
+    SubExprs[CastedTemporary] = OpV;
+    SubExprs[WritebackCast] = WB;
     assert(!Ty->isDependentType() && "HLSLOutArgExpr given a dependent type!");
   }
 
@@ -7091,26 +7099,44 @@ class HLSLOutArgExpr : public Expr {
       : Expr(HLSLOutArgExprClass, Shell) {}
 
 public:
-  static HLSLOutArgExpr *Create(const ASTContext &C, QualType Ty, Expr *Base,
-                                bool IsInOut, Expr *WB, OpaqueValueExpr *OpV);
+  static HLSLOutArgExpr *Create(const ASTContext &C, QualType Ty,
+                                OpaqueValueExpr *Base, OpaqueValueExpr *OpV,
+                                Expr *WB, bool IsInOut);
   static HLSLOutArgExpr *CreateEmpty(const ASTContext &Ctx);
 
-  const Expr *getBase() const { return Base; }
-  Expr *getBase() { return Base; }
+  const OpaqueValueExpr *getOpaqueArgLValue() const {
+    return cast<OpaqueValueExpr>(SubExprs[BaseLValue]);
+  }
+  OpaqueValueExpr *getOpaqueArgLValue() {
+    return cast<OpaqueValueExpr>(SubExprs[BaseLValue]);
+  }
 
-  const Expr *getWriteback() const { return Writeback; }
-  Expr *getWriteback() { return Writeback; }
+  const Expr *getArgLValue() const {
+    return getOpaqueArgLValue()->getSourceExpr();
+  }
+  Expr *getArgLValue() { return getOpaqueArgLValue()->getSourceExpr(); }
 
-  const OpaqueValueExpr *getOpaqueValue() const { return OpaqueVal; }
-  OpaqueValueExpr *getOpaqueValue() { return OpaqueVal; }
+  const Expr *getWritebackCast() const {
+    return cast<Expr>(SubExprs[WritebackCast]);
+  }
+  Expr *getWritebackCast() { return cast<Expr>(SubExprs[WritebackCast]); }
+
+  const OpaqueValueExpr *getCastedTemporary() const {
+    return cast<OpaqueValueExpr>(SubExprs[CastedTemporary]);
+  }
+  OpaqueValueExpr *getCastedTemporary() {
+    return cast<OpaqueValueExpr>(SubExprs[CastedTemporary]);
+  }
 
   bool isInOut() const { return IsInOut; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    return Base->getBeginLoc();
+    return SubExprs[BaseLValue]->getBeginLoc();
   }
 
-  SourceLocation getEndLoc() const LLVM_READONLY { return Base->getEndLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SubExprs[BaseLValue]->getEndLoc();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == HLSLOutArgExprClass;
@@ -7118,7 +7144,7 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range((Stmt **)&Base, ((Stmt **)&Writeback) + 1);
+    return child_range(&SubExprs[BaseLValue], &SubExprs[NumSubExprs]);
   }
 };
 

@@ -5739,12 +5739,9 @@ recurse:
     Out << "E";
     break;
   }
-  case Expr::HLSLOutArgExprClass: {
-    const auto *OAE = cast<clang::HLSLOutArgExpr>(E);
-    Out << (OAE->isInOut() ? "_inout_" : "_out_");
-    mangleType(E->getType());
-    break;
-  }
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable(
+        "cannot mangle hlsl temporary value; mangling wrong thing?");
   }
 
   if (AsTemplateArg && !IsPrimaryExpr)

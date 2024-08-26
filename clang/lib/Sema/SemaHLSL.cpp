@@ -15,6 +15,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1214,35 +1215,33 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
     return ExprError();
   }
 
-  bool RequiresConversion =
-      Ty.getUnqualifiedType() != Arg->getType().getUnqualifiedType();
+  auto *ArgOpV = new (Ctx) OpaqueValueExpr(Param->getBeginLoc(), Arg->getType(),
+                                           VK_LValue, OK_Ordinary, Arg);
 
-  // If the unqualified types mismatch we may have some casting. Since this
-  // results in a copy we can ignore qualifiers.
-  if (RequiresConversion) {
-    ExprResult Res =
-        SemaRef.PerformImplicitConversion(Arg, Ty, Sema::AA_Passing);
-    if (Res.isInvalid())
-      return ExprError();
-    Expr *Base = Res.get();
-    // After the cast, drop the reference type when creating the exprs.
-    Ty = Ty.getNonLValueExprType(Ctx);
-    auto *OpV = new (Ctx)
-        OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
-    Res = SemaRef.PerformImplicitConversion(OpV, Arg->getType(),
-                                            Sema::AA_Passing);
-    if (Res.isInvalid())
-      return ExprError();
-    Expr *Writeback = Res.get();
-    auto *OutExpr =
-        HLSLOutArgExpr::Create(Ctx, Ty, Base, IsInOut, Writeback, OpV);
-
-    return ExprResult(OutExpr);
-  }
-
+  InitializedEntity Entity =
+    InitializedEntity::InitializeParameter(Ctx, Ty, false);
+  ExprResult Res =
+    SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), ArgOpV);
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Base = Res.get();
+  // After the cast, drop the reference type when creating the exprs.
+  Ty = Ty.getNonLValueExprType(Ctx);
   auto *OpV = new (Ctx)
-      OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Arg);
-  return ExprResult(HLSLOutArgExpr::Create(Ctx, Ty, Arg, IsInOut, OpV, OpV));
+      OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
+
+  // TODO: Revisit this to use ActOnBinOp so that writebacks are assignments.
+  Entity =
+    InitializedEntity::InitializeParameter(Ctx, Arg->getType(), false);
+  Res = SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), OpV);
+
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Writeback = Res.get();
+  auto *OutExpr =
+      HLSLOutArgExpr::Create(Ctx, Ty, ArgOpV, OpV, Writeback, IsInOut);
+
+  return ExprResult(OutExpr);
 }
 
 QualType SemaHLSL::getInoutParameterType(QualType Ty) {

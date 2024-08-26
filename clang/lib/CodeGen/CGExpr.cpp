@@ -1673,7 +1673,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::PackIndexingExprClass:
     return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr());
   case Expr::HLSLOutArgExprClass:
-    return EmitHLSLOutArgExpr(cast<HLSLOutArgExpr>(E));
+    llvm_unreachable("cannot emit a HLSL out argument directly");
   }
 }
 
@@ -5426,24 +5426,52 @@ LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
 LValue CodeGenFunction::BindHLSLOutArgExpr(const HLSLOutArgExpr *E,
                                            Address OutTemp) {
   LValue Result = MakeAddrLValue(OutTemp, E->getType());
-  OpaqueValueMappingData::bind(*this, E->getOpaqueValue(), Result);
+  OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), Result);
   return Result;
 }
 
-LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
-  if (!E->isInOut())
-    return BindHLSLOutArgExpr(E, CreateIRTemp(E->getType()));
+void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                         CallArgList &Args, QualType Ty) {
 
-  RValue InVal = EmitAnyExprToTemp(E->getBase());
-  if (!InVal.isScalar())
-    return BindHLSLOutArgExpr(E, InVal.getAggregateAddress());
+  // Emitting the casted temporary through an opaque value.
+  LValue BaseLV = EmitLValue(E->getArgLValue());
+  OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
 
-  Address OutTemp = CreateIRTemp(E->getType());
-  llvm::Value *V = InVal.getScalarVal();
-  if (V->getType()->getScalarType()->isIntegerTy(1))
-    V = Builder.CreateZExt(V, ConvertTypeForMem(E->getType()), "frombool");
-  (void)Builder.CreateStore(V, OutTemp);
-  return BindHLSLOutArgExpr(E, OutTemp);
+  LValue TempLV;
+
+  if (E->isInOut()) {
+    RValue InitVal = EmitAnyExprToTemp(E->getCastedTemporary()->getSourceExpr());
+    assert(!InitVal.isComplex() &&
+           "HLSL does not support complex values in output expressions.");
+    if (InitVal.isScalar()) {
+      Address OutTemp = CreateIRTemp(E->getType());
+      llvm::Value *V = InitVal.getScalarVal();
+      if (V->getType()->getScalarType()->isIntegerTy(1))
+        V = Builder.CreateZExt(V, ConvertTypeForMem(E->getType()), "frombool");
+      (void)Builder.CreateStore(V, OutTemp);
+      TempLV = MakeAddrLValue(OutTemp, E->getType());
+    } else {
+      Address OutTemp = InitVal.getAggregateAddress();
+      TempLV = MakeAddrLValue(OutTemp, E->getType());
+    }
+  } else {
+    Address OutTemp = CreateIRTemp(E->getType());
+    TempLV = MakeAddrLValue(OutTemp, E->getType());
+  }
+
+  OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
+
+  llvm::Value *Addr = TempLV.getAddress().getBasePointer();
+  llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
+
+  llvm::TypeSize Sz = CGM.getDataLayout().getTypeAllocSize(ElTy);
+
+  llvm::Value *LifetimeSize = EmitLifetimeStart(Sz, Addr);
+
+  Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
+  Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast(),
+                    LifetimeSize);
+  Args.add(RValue::get(TmpAddr, *this), Ty);
 }
 
 LValue

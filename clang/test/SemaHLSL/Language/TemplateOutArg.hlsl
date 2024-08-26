@@ -31,11 +31,16 @@ void fn(out double F) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}} 'void (inout int)' lvalue Function {{.*}} 'fn' 'void (inout int)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// CHECK-NEXT:   ImplicitCastExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT:     DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'V' 'int'
-// CHECK-NEXT:   ImplicitCastExpr {{.*}} <col:6> 'int' <LValueToRValue>
-// CHECK-NEXT:     OpaqueValueExpr {{.*}} <col:6> 'int' lvalue
-// CHECK-NEXT:       ImplicitCastExpr [[BaseExpr]] {{.*}} 'int' <LValueToRValue>
+
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'V' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+
+// CHECK: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
+
 
 // Verify that the float instantiation has an out argument expression
 // containing casts to and from double.
@@ -45,13 +50,16 @@ void fn(out double F) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(out double)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}}'void (out double)' lvalue Function {{.*}} 'fn' 'void (out double)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'double' lvalue out
-// CHECK-NEXT: ImplicitCastExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'double'
-// CHECK-NEXT:   ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
-// CHECK-NEXT:     DeclRefExpr {{.*}}'float' lvalue ParmVar {{.*}} 'V' 'float'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
-// CHECK-NEXT:   ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
-// CHECK-NEXT:     OpaqueValueExpr {{.*}} 'double' lvalue
-// CHECK-NEXT:       ImplicitCastExpr [[BaseExpr]] {{.*}} 'double' <FloatingCast>
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'float' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'V' 'float'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'double' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double' <FloatingCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'float' lvalue
+// CHECK: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'double' lvalue
+
 
 // Verify that the double instantiation is just an out expression.
 
@@ -60,11 +68,14 @@ void fn(out double F) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(out double)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}}'void (out double)' lvalue Function {{.*}} 'fn' 'void (out double)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'double' lvalue out
-// CHECK-NEXT: ImplicitCastExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'double' <LValueToRValue>
-// CHECK-NEXT:   DeclRefExpr {{.*}}'double' lvalue ParmVar {{.*}} 'V' 'double'
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'double' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'double' lvalue ParmVar {{.*}} 'V' 'double'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'double' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
-// CHECK-NEXT:   OpaqueValueExpr {{.*}} 'double' lvalue
-// CHECK-NEXT:     ImplicitCastExpr [[BaseExpr]] {{.*}} 'double' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'double' lvalue
+
+// CHECK: ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'double' lvalue
 
 template <typename T>
 T wrapper(T V) {
@@ -112,27 +123,42 @@ void fizz(inout T V) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}} 'void (inout int)' lvalue Function {{.*}} 'fn' 'void (inout int)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// CHECK-NEXT:   DeclRefExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
-// CHECK-NEXT:   OpaqueValueExpr {{.*}} 'int' lvalue
-// CHECK-NEXT:     DeclRefExpr [[BaseExpr]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   DeclRefExpr  {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
+
+
 
 // CHECK-LABEL: FunctionDecl {{.*}} used buzz 'int (int, int)' implicit_instantiation
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}} 'void (inout int)' lvalue Function {{.*}} 'fn' 'void (inout int)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// CHECK-NEXT:   DeclRefExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
-// CHECK-NEXT:   OpaqueValueExpr {{.*}} 'int' lvalue
-// CHECK-NEXT:     DeclRefExpr [[BaseExpr]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   DeclRefExpr  {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
+
 
 // CHECK-LABEL: FunctionDecl {{.*}} used buzz 'float (int, float)' implicit_instantiation
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}} 'void (inout int)' lvalue Function {{.*}} 'fn' 'void (inout int)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// CHECK-NEXT:   DeclRefExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
-// CHECK-NEXT:   OpaqueValueExpr {{.*}} 'int' lvalue
-// CHECK-NEXT:     DeclRefExpr [[BaseExpr]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   DeclRefExpr  {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
 
 // CHECK-LABEL: FunctionDecl {{.*}} used buzz 'double (int, double)' implicit_instantiation
@@ -140,9 +166,13 @@ void fizz(inout T V) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // CHECK-NEXT:   DeclRefExpr {{.*}} 'void (inout int)' lvalue Function {{.*}} 'fn' 'void (inout int)'
 // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// CHECK-NEXT:   DeclRefExpr [[BaseExpr:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
-// CHECK-NEXT:   OpaqueValueExpr {{.*}} 'int' lvalue
-// CHECK-NEXT:     DeclRefExpr [[BaseExpr]] {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   DeclRefExpr  {{.*}} 'int' lvalue ParmVar {{.*}} 'X' 'int'
+// CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
 template <typename T>
 T buzz(int X, T Y) {

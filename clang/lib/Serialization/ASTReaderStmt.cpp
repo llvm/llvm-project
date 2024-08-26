@@ -2843,14 +2843,10 @@ void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 
 void ASTStmtReader::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
   VisitExpr(S);
-  S->Base = Record.readSubExpr();
-  S->Writeback = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::BaseLValue] = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::CastedTemporary] = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::WritebackCast] = Record.readSubExpr();
   S->IsInOut = Record.readBool();
-  Expr::child_iterator Child = S->getWriteback()->child_begin();
-  while (!isa<OpaqueValueExpr>(*Child))
-    Child = Child->child_begin();
-  assert(isa<OpaqueValueExpr>(*Child) && "Writeback must end in an OVE.");
-  S->OpaqueVal = cast<OpaqueValueExpr>(*Child);
 }
 
 //===----------------------------------------------------------------------===//

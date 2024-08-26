@@ -155,13 +155,7 @@ void init(out S s) {
 // CHECK: [[S:%.*]] = alloca %struct.S
 // CHECK: [[Tmp:%.*]] = alloca %struct.S
 // CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
-// CHECK: [[RetVal:%.*]] = load %struct.S, ptr [[Tmp]]
-// CHECK: [[XAddr:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 0
-// CHECK: [[XVal:%.*]] = extractvalue %struct.S [[RetVal]], 0
-// CHECK: store i32 [[XVal]], ptr [[XAddr]]
-// CHECK: [[YAddr:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 1
-// CHECK: [[YVal:%.*]] = extractvalue %struct.S [[RetVal]], 1
-// CHECK: store float [[YVal]], ptr [[YAddr]]
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 4 [[Tmp]], i32 8, i1 false)
 
 // OPT: ret i32 7
 export int case6() {
@@ -170,12 +164,40 @@ export int case6() {
   return s.X + s.Y;
 }
 
-// Case 7: Non-scalars with a cast expression.
+// Case 7: Aggregate inout parameters.
+struct R {
+  int X;
+  float Y;
+};
+
+// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) {{%.*}})
+void init(inout R s) {
+  s.X = 3;
+  s.Y = 4;
+}
+
+// ALL-LABEL: define noundef i32 {{.*}}case7
+
+// CHECK: [[S:%.*]] = alloca %struct.R
+// CHECK: [[Tmp:%.*]] = alloca %struct.R
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[S]], i32 8, i1 false)
+// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 4 [[Tmp]], i32 8, i1 false)
+
+// OPT: ret i32 7
+export int case7() {
+  R s;
+  init(s);
+  return s.X + s.Y;
+}
+
+
+// Case 8: Non-scalars with a cast expression.
 
 // CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
-// ALL-LABEL: define noundef <3 x float> {{.*}}case7
+// ALL-LABEL: define noundef <3 x float> {{.*}}case8
 
 // CHECK: [[V:%.*]] = alloca <3 x float>
 // CHECK: [[Tmp:%.*]] = alloca <3 x i32>
@@ -191,7 +213,116 @@ void trunc_vec(inout int3 V) {}
 // OPT: [[FVal:%.*]] = sitofp <3 x i32> [[IVal]] to <3 x float>
 // OPT: ret <3 x float> [[FVal]]
 
-export float3 case7(float3 V) {
+export float3 case8(float3 V) {
   trunc_vec(V);
+  return V;
+}
+
+// Case 9: Side-effecting lvalue argument expression!
+
+void do_nothing(inout int V) {}
+
+// ALL-LABEL: define noundef i32 {{.*}}case9
+// CHECK: [[V:%.*]] = alloca i32
+// CHECK: [[Tmp:%.*]] = alloca i32
+// CHECK: store i32 0, ptr [[V]]
+// CHECK: [[VVal:%.*]] = load i32, ptr [[V]]
+// CHECK: [[VInc:%.*]] = add nsw i32 [[VVal]], 1
+// CHECK: store i32 [[VInc]], ptr [[V]]
+// CHECK: [[VArg:%.*]] = load i32, ptr [[V]]
+// CHECK-NOT: add
+// CHECK: store i32 [[VArg]], ptr [[Tmp]]
+// CHECK: call void {{.*}}do_nothing{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp]])
+// CHECK: [[RetVal:%.*]] = load i32, ptr [[Tmp]]
+// CHECK: store i32 [[RetVal]], ptr [[V]]
+
+// OPT: ret i32 1
+export int case9() {
+  int V = 0;
+  do_nothing(++V);
+  return V;
+}
+
+// Case 10: Verify argument writeback ordering for aliasing arguments.
+
+void order_matters(inout int X, inout int Y) {
+  Y = 2;
+  X = 1;
+}
+
+// ALL-LABEL: define noundef i32 {{.*}}case10
+
+// CHECK: [[V:%.*]] = alloca i32
+// CHECK: [[Tmp0:%.*]] = alloca i32
+// CHECK: [[Tmp1:%.*]] = alloca i32
+// CHECK: store i32 0, ptr [[V]]
+// CHECK: [[VVal:%.*]] = load i32, ptr [[V]]
+// CHECK: store i32 [[VVal]], ptr [[Tmp0]]
+// CHECK: [[VVal:%.*]] = load i32, ptr [[V]]
+// CHECK: store i32 [[VVal]], ptr [[Tmp1]]
+// CHECK: call void {{.*}}order_matters{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp1]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp0]])
+// CHECK: [[Arg1Val:%.*]] = load i32, ptr [[Tmp1]]
+// CHECK: store i32 [[Arg1Val]], ptr [[V]]
+// CHECK: [[Arg2Val:%.*]] = load i32, ptr [[Tmp0]]
+// CHECK: store i32 [[Arg2Val]], ptr [[V]]
+
+// OPT: ret i32 2
+export int case10() {
+  int V = 0;
+  order_matters(V, V);
+  return V;
+}
+
+// Case 11: Verify inout on bitfield lvalues
+
+struct B {
+  int X : 8;
+  int Y : 8;
+};
+
+void setFour(inout int I) {
+  I = 4;
+}
+
+// ALL-LABEL: define {{.*}} i32 {{.*}}case11
+
+// CHECK: [[B:%.*]] = alloca %struct.B
+// CHECK: [[Tmp:%.*]] = alloca i32
+
+// CHECK: [[BFLoad:%.*]] = load i32, ptr [[B]]
+// CHECK: [[BFshl:%.*]] = shl i32 [[BFLoad]], 24
+// CHECK: [[BFashr:%.*]] = ashr i32 [[BFshl]], 24
+// CHECK: store i32 [[BFashr]], ptr [[Tmp]]
+// CHECK: call void {{.*}}setFour{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp]])
+// CHECK: [[RetVal:%.*]] = load i32, ptr [[Tmp]]
+// CHECK: [[BFLoad:%.*]] = load i32, ptr [[B]]
+// CHECK: [[BFValue:%.*]] = and i32 [[RetVal]], 255
+// CHECK: [[ZerodField:%.*]] = and i32 [[BFLoad]], -256
+// CHECK: [[BFSet:%.*]] = or i32 [[ZerodField]], [[BFValue]]
+// CHECK: store i32 [[BFSet]], ptr [[B]]
+
+// OPT: ret i32 8
+export int case11() {
+  B b = {1 , 2};
+  setFour(b.X);
+  return b.X * b.Y;
+}
+
+// Case 12: Uninitialized out parameters are undefined
+
+void oops(out int X) {}
+// ALL-LABEL: define {{.*}} i32 {{.*}}case12
+
+// CHECK: [[V:%.*]] = alloca i32
+// CHECK: [[Tmp:%.*]] = alloca i32
+// CHECK-NOT: store {{.*}}, ptr [[Tmp]]
+// CHECK: call void {{.*}}oops{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp]])
+// CHECK: [[ArgVal:%.*]] = load i32, ptr [[Tmp]]
+// CHECK: store i32 [[ArgVal]], ptr [[V]]
+
+// OPT:  ret i32 undef
+export int case12() {
+  int V = 0;
+  oops(V);
   return V;
 }

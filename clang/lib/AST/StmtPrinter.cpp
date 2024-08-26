@@ -2805,7 +2805,7 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
 }
 
 void StmtPrinter::VisitHLSLOutArgExpr(HLSLOutArgExpr *Node) {
-  PrintExpr(Node->getBase());
+  PrintExpr(Node->getArgLValue());
 }
 
 //===----------------------------------------------------------------------===//

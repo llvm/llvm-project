@@ -4136,35 +4136,23 @@ static void emitWriteback(CodeGenFunction &CGF,
          "shouldn't have writeback for provably null argument");
 
   if (CGF.getLangOpts().HLSL) {
-    if (!isa<OpaqueValueExpr>(writeback.CastExpr)) {
+    assert(!srcLV.isMatrixElt() &&
+           "Matrix element expressions not yet supported.");
+    assert((srcLV.isSimple() || srcLV.isBitField() || srcLV.isExtVectorElt()) &&
+           "Argument expressions should only be simple, bitfield, or "
+           "vector/matrix element expressions.");
+    // For vector element or bitfield lvalues, we need to emit the store through
+    // the lvalue, otherwise we won't get the correct component masking. This
+    // will also need to be used for matrices once we support them.
+    if (srcLV.isExtVectorElt() || srcLV.isBitField()) {
       RValue TmpVal = CGF.EmitAnyExprToTemp(writeback.CastExpr);
-      if (TmpVal.isScalar())
-        CGF.EmitStoreThroughLValue(TmpVal, srcLV);
-      else {
-        llvm::Value *Val = CGF.Builder.CreateLoad(TmpVal.getAggregateAddress());
-        CGF.CreateCoercedStore(
-            Val, srcLV.getAddress(),
-            llvm::TypeSize::getFixed(
-                CGF.getContext()
-                    .getTypeSizeInChars(writeback.CastExpr->getType())
-                    .getQuantity()),
-            false);
-      }
-    } else {
-      llvm::Value *Val = CGF.Builder.CreateLoad(writeback.Temporary);
-      if (srcLV.isSimple()) {
-        CGF.CreateCoercedStore(
-            Val, srcLV.getAddress(),
-            llvm::TypeSize::getFixed(
-                CGF.getContext()
-                    .getTypeSizeInChars(writeback.CastExpr->getType())
-                    .getQuantity()),
-            false);
-      } else {
-        RValue TmpVal = RValue::get(Val);
-        CGF.EmitStoreThroughLValue(TmpVal, srcLV);
-      }
-    }
+      assert(TmpVal.isScalar() &&
+             "a vector lvalue sould only be assigned from a scalar rvalue.");
+      CGF.EmitStoreThroughLValue(TmpVal, srcLV);
+    } else
+      CGF.EmitAnyExprToMem(writeback.CastExpr, srcLV.getAddress(),
+                           writeback.CastExpr->getType().getQualifiers(), true);
+
     if (writeback.LifetimeSz)
       CGF.EmitLifetimeEnd(writeback.LifetimeSz,
                           writeback.Temporary.getBasePointer());
@@ -4717,27 +4705,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
 
   // Add writeback for HLSLOutParamExpr.
   if (const HLSLOutArgExpr *OE = dyn_cast<HLSLOutArgExpr>(E)) {
-    LValue LV = EmitLValue(E);
-    llvm::Type *ElTy = ConvertTypeForMem(LV.getType());
-    llvm::Value *Addr, *BaseAddr;
-    if (LV.isExtVectorElt()) {
-      llvm::Constant *VecElts = LV.getExtVectorElts();
-      BaseAddr = LV.getExtVectorAddress().getBasePointer();
-      Addr = Builder.CreateGEP(
-          ElTy, BaseAddr,
-          {Builder.getInt32(0), VecElts->getAggregateElement((unsigned)0)});
-    } else // LV.getAddress() will assert if this is not a simple LValue.
-      Addr = BaseAddr = LV.getAddress().getBasePointer();
-
-    llvm::TypeSize Sz =
-        CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(LV.getType()));
-
-    llvm::Value *LifetimeSize = EmitLifetimeStart(Sz, BaseAddr);
-
-    Address TmpAddr(Addr, ElTy, LV.getAlignment());
-    args.addWriteback(EmitLValue(OE->getBase()->IgnoreImpCasts()), TmpAddr,
-                      nullptr, OE->getWriteback(), LifetimeSize);
-    return args.add(RValue::get(TmpAddr, *this), type);
+    EmitHLSLOutArgExpr(OE, args, type);
+    return;
   }
 
   if (E->isGLValue()) {

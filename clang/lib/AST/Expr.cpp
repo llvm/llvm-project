@@ -5321,9 +5321,9 @@ OMPIteratorExpr *OMPIteratorExpr::CreateEmpty(const ASTContext &Context,
 }
 
 HLSLOutArgExpr *HLSLOutArgExpr::Create(const ASTContext &C, QualType Ty,
-                                       Expr *Base, bool IsInOut, Expr *WB,
-                                       OpaqueValueExpr *OpV) {
-  return new (C) HLSLOutArgExpr(Ty, Base, WB, OpV, IsInOut);
+                                       OpaqueValueExpr *Base, OpaqueValueExpr *OpV,
+                                       Expr *WB, bool IsInOut) {
+  return new (C) HLSLOutArgExpr(Ty, Base, OpV, WB, IsInOut);
 }
 
 HLSLOutArgExpr *HLSLOutArgExpr::CreateEmpty(const ASTContext &C) {

@@ -2915,8 +2915,9 @@ void ASTStmtWriter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 
 void ASTStmtWriter::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
   VisitExpr(S);
-  Record.AddStmt(S->getBase());
-  Record.AddStmt(S->getWriteback());
+  Record.AddStmt(S->getOpaqueArgLValue());
+  Record.AddStmt(S->getCastedTemporary());
+  Record.AddStmt(S->getWritebackCast());
   Record.writeBool(S->isInOut());
   Code = serialization::EXPR_HLSL_OUT_ARG;
 }

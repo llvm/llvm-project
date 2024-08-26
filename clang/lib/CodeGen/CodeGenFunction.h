@@ -4293,7 +4293,7 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
-  LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E);
+  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args, QualType Ty);
   LValue BindHLSLOutArgExpr(const HLSLOutArgExpr *E, Address OutTemp);
 
   Address EmitExtVectorElementLValue(LValue V);

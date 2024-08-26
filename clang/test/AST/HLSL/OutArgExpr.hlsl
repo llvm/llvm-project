@@ -25,23 +25,27 @@ void trunc_Param(inout int X) {}
 // AST-NEXT: HLSLParamModifierAttr {{.*}} out
 void zero(out int Z) { Z = 0; }
 
-// AST: FunctionDecl {{.*}} imported used fn 'void (uint)'
+// AST-LABEL: FunctionDecl {{.*}} imported used fn 'void (uint)'
 // AST: CallExpr {{.*}} 'void'
 // AST-NEXT: ImplicitCastExpr {{.*}} 'void (*)(inout int)' <FunctionToPointerDecay>
 // AST-NEXT: DeclRefExpr {{.*}} 'void (inout int)' lvalue Function
 // AST-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue inout
-// AST-NEXT: ImplicitCastExpr [[BaseCast:0x[0-9a-fA-F]+]] <{{.*}}> 'int' <FloatingToIntegral>
-// AST-NEXT: ImplicitCastExpr {{.*}}  'float' <LValueToRValue>
+// AST-NEXT: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'float' lvalue
 // AST-NEXT: CXXOperatorCallExpr {{.*}} 'float' lvalue '[]'
 // AST-NEXT: ImplicitCastExpr {{.*}} 'float &(*)(unsigned int)' <FunctionToPointerDecay>
 // AST-NEXT: DeclRefExpr {{.*}} 'float &(unsigned int)' lvalue CXXMethod {{.*}} 'operator[]' 'float &(unsigned int)'
-// AST-NEXT: DeclRefExpr {{.*}}  'RWBuffer<float>':'hlsl::RWBuffer<float>' lvalue Var
+// AST-NEXT: DeclRefExpr {{.*}} 'RWBuffer<float>':'hlsl::RWBuffer<float>' lvalue Var {{.*}} 'Buf' 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // AST-NEXT: ImplicitCastExpr {{.*}} 'uint':'unsigned int' <LValueToRValue>
 // AST-NEXT: DeclRefExpr {{.*}} 'uint':'unsigned int' lvalue ParmVar {{.*}} 'GI' 'uint':'unsigned int'
-// AST-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+
+// AST-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// AST-NEXT: ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral>
+// AST-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// AST-NEXT: OpaqueValueExpr [[LVOpV]] <col:15, col:21> 'float' lvalue
+
+// AST: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // AST-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// AST-NEXT: OpaqueValueExpr {{.*}} 'int' lvalue
-// AST-NEXT: ImplicitCastExpr [[BaseCast]] <{{.*}}> 'int' <FloatingToIntegral>
+// AST-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
 // CHECK: void fn(uint GI) {
 // CHECK:     trunc_Param(Buf[GI]);
@@ -51,12 +55,24 @@ void fn(uint GI) {
 
 #else
 
-// AST: FunctionDecl {{.*}} main 'void (uint)'
+// AST-LABEL: FunctionDecl {{.*}} main 'void (uint)'
 // AST: CallExpr {{.*}} 'void'
 // AST-NEXT: ImplicitCastExpr {{.*}} 'void (*)(out int)' <FunctionToPointerDecay>
 // AST-NEXT: DeclRefExpr {{.*}} 'void (out int)' lvalue Function {{.*}} 'zero' 'void (out int)'
 // AST-NEXT: HLSLOutArgExpr {{.*}} 'int' lvalue out
+
+// AST: OpaqueValueExpr [[LVOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
 // AST-NEXT: DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'I' 'int'
+
+// AST-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
+// AST-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// AST-NEXT: OpaqueValueExpr [[LVOpV]] <col:8> 'int' lvalue
+
+
+// AST: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// AST-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
+
+
 [numthreads(8,1,1)]
 void main(uint GI : SV_GroupIndex) {
   int I;
