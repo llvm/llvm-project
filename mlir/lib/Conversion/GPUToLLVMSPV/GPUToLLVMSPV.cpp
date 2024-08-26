@@ -34,6 +34,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#define DEBUG_TYPE "gpu-to-llvm-spv"
+
 using namespace mlir;
 
 namespace mlir {
