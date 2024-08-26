@@ -43,8 +43,8 @@ static int call_vfscanf(::FILE *stream, const char *__restrict format, ...) {
   return ret;
 }
 
-TEST(LlvmLibcFScanfTest, WriteToFile) {
-  const char *FILENAME = "fscanf_output.test";
+TEST(LlvmLibcVFScanfTest, WriteToFile) {
+  const char *FILENAME = "vfscanf_output.test";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
   ::FILE *file = scanf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);
