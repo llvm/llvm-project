@@ -63,19 +63,13 @@ entry:
 }
 
 define i1 @i64_i64_sext(i32 %a, i32 %b) {
-; CHECK-SD-LABEL: i64_i64_sext:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    cmp x8, w1, sxtw
-; CHECK-SD-NEXT:    cset w0, lt
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: i64_i64_sext:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmp w0, w1
-; CHECK-GI-NEXT:    cset w0, lt
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: i64_i64_sext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    cmp x8, w1, sxtw
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
 entry:
   %sextedlhs = sext i32 %a to i64
   %sextedrhs = sext i32 %b to i64
@@ -84,18 +78,12 @@ entry:
 }
 
 define i1 @i64_i64_zext(i32 %a, i32 %b) {
-; CHECK-SD-LABEL: i64_i64_zext:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, w0
-; CHECK-SD-NEXT:    cmp x8, w1, uxtw
-; CHECK-SD-NEXT:    cset w0, lt
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: i64_i64_zext:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmp w0, w1
-; CHECK-GI-NEXT:    cset w0, lo
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: i64_i64_zext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    cmp x8, w1, uxtw
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
 entry:
   %zextedlhs = zext i32 %a to i64
   %zextedrhs = zext i32 %b to i64

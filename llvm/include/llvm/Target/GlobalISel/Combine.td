@@ -1887,22 +1887,6 @@ def visit_icmp : GICombineRule<
          [{ return Helper.visitICmp(*${cmp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
 
-def sext_icmp : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (G_SEXT $rhs, $inputR),
-         (G_SEXT $lhs, $inputL),
-         (G_ICMP $root, $pred, $lhs, $rhs):$cmp,
-         [{ return Helper.matchSextOfICmp(*${cmp}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
-
-def zext_icmp : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (G_ZEXT $rhs, $inputR),
-         (G_ZEXT $lhs, $inputL),
-         (G_ICMP $root, $pred, $lhs, $rhs):$cmp,
-         [{ return Helper.matchZextOfICmp(*${cmp}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
-
 def icmp_of_zero : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_CONSTANT $zero, 0),
@@ -1912,8 +1896,6 @@ def icmp_of_zero : GICombineRule<
 
 def icmp_combines: GICombineGroup<[
   visit_icmp,
-  sext_icmp,
-  zext_icmp,
   icmp_of_zero,
   icmp_to_true_false_known_bits,
   icmp_to_lhs_known_bits,

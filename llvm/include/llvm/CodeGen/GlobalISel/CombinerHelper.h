@@ -301,8 +301,6 @@ public:
   bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
 
   bool visitICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
-  bool matchSextOfICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
-  bool matchZextOfICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
   /// Try hard to fold icmp with zero RHS because this is a common case.
   bool matchCmpOfZero(const MachineInstr &MI, BuildFnTy &MatchInfo);
 

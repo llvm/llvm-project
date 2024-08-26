@@ -68,7 +68,9 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_of_zext_and_zext
     ; CHECK: %lhs1:_(s32) = COPY $w0
     ; CHECK-NEXT: %rhs1:_(s32) = COPY $w0
-    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ugt), %lhs1(s32), %rhs1
+    ; CHECK-NEXT: %lhs:_(s64) = G_ZEXT %lhs1(s32)
+    ; CHECK-NEXT: %rhs:_(s64) = G_ZEXT %rhs1(s32)
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(sgt), %lhs(s64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs1:_(s32) = COPY $w0
     %rhs1:_(s32) = COPY $w0
@@ -84,7 +86,9 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_of_sext_and_sext
     ; CHECK: %lhs1:_(s32) = COPY $w0
     ; CHECK-NEXT: %rhs1:_(s32) = COPY $w0
-    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(sgt), %lhs1(s32), %rhs1
+    ; CHECK-NEXT: %lhs:_(s64) = G_SEXT %lhs1(s32)
+    ; CHECK-NEXT: %rhs:_(s64) = G_SEXT %rhs1(s32)
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(sgt), %lhs(s64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs1:_(s32) = COPY $w0
     %rhs1:_(s32) = COPY $w0
@@ -100,7 +104,9 @@ body:             |
     ; CHECK-LABEL: name: test_ugt_icmp_of_sext_and_sext
     ; CHECK: %lhs1:_(s32) = COPY $w0
     ; CHECK-NEXT: %rhs1:_(s32) = COPY $w0
-    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ugt), %lhs1(s32), %rhs1
+    ; CHECK-NEXT: %lhs:_(s64) = G_SEXT %lhs1(s32)
+    ; CHECK-NEXT: %rhs:_(s64) = G_SEXT %rhs1(s32)
+    ; CHECK-NEXT: %res:_(s32) = G_ICMP intpred(ugt), %lhs(s64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(s32)
     %lhs1:_(s32) = COPY $w0
     %rhs1:_(s32) = COPY $w0

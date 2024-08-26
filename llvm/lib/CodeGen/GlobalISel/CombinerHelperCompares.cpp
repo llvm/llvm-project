@@ -111,69 +111,6 @@ bool CombinerHelper::visitICmp(const MachineInstr &MI, BuildFnTy &MatchInfo) {
   return false;
 }
 
-bool CombinerHelper::matchSextOfICmp(const MachineInstr &MI,
-                                     BuildFnTy &MatchInfo) {
-  const GICmp *Cmp = cast<GICmp>(&MI);
-
-  Register Dst = Cmp->getReg(0);
-  LLT DstTy = MRI.getType(Dst);
-  Register LHS = Cmp->getLHSReg();
-  Register RHS = Cmp->getRHSReg();
-  CmpInst::Predicate Pred = Cmp->getCond();
-
-  GSext *SL = cast<GSext>(MRI.getVRegDef(LHS));
-  GSext *SR = cast<GSext>(MRI.getVRegDef(RHS));
-
-  LLT SLTy = MRI.getType(SL->getSrcReg());
-  LLT SRTy = MRI.getType(SR->getSrcReg());
-
-  // Turn icmp (sext X), (sext Y) into a compare of X and Y if they have the
-  // same type.
-  if (SLTy != SRTy)
-    return false;
-
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ICMP, {DstTy, SLTy}}))
-    return false;
-
-  // Compare X and Y. Note that the predicate does not change.
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildICmp(Pred, Dst, SL->getSrcReg(), SR->getSrcReg());
-  };
-  return true;
-}
-
-bool CombinerHelper::matchZextOfICmp(const MachineInstr &MI,
-                                     BuildFnTy &MatchInfo) {
-  const GICmp *Cmp = cast<GICmp>(&MI);
-
-  Register Dst = Cmp->getReg(0);
-  LLT DstTy = MRI.getType(Dst);
-  Register LHS = Cmp->getLHSReg();
-  Register RHS = Cmp->getRHSReg();
-  CmpInst::Predicate Pred = Cmp->getCond();
-
-  GZext *ZL = cast<GZext>(MRI.getVRegDef(LHS));
-  GZext *ZR = cast<GZext>(MRI.getVRegDef(RHS));
-
-  LLT ZLTy = MRI.getType(ZL->getSrcReg());
-  LLT ZRTy = MRI.getType(ZR->getSrcReg());
-
-  // Turn icmp (zext X), (zext Y) into a compare of X and Y if they have
-  // the same type.
-  if (ZLTy != ZRTy)
-    return false;
-
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ICMP, {DstTy, ZLTy}}))
-    return false;
-
-  // Compare X and Y. Note that signed predicates become unsigned.
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildICmp(ICmpInst::getUnsignedPredicate(Pred), Dst, ZL->getSrcReg(),
-                ZR->getSrcReg());
-  };
-  return true;
-}
-
 bool CombinerHelper::matchCmpOfZero(const MachineInstr &MI,
                                     BuildFnTy &MatchInfo) {
   const GICmp *Cmp = cast<GICmp>(&MI);
