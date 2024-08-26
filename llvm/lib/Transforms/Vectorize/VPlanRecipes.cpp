@@ -2121,33 +2121,40 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
-  Instruction *I = getInstructionForCost(this);
-  Type *Ty = ToVectorTy(getElementType(), VF);
-  const Align Alignment = getLoadStoreAlignment(const_cast<Instruction *>(I));
-  const Value *Ptr = getLoadStorePointerOperand(I);
-  unsigned AS = getLoadStoreAddressSpace(const_cast<Instruction *>(I));
+  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment =
+      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  unsigned AS =
+      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  if (Consecutive) {
-    InstructionCost Cost = 0;
-    if (IsMasked) {
-      Cost += Ctx.TTI.getMaskedMemoryOpCost(I->getOpcode(), Ty, Alignment, AS,
-                                            CostKind);
-    } else {
-      TTI::OperandValueInfo OpInfo = Ctx.TTI.getOperandInfo(I->getOperand(0));
-      Cost += Ctx.TTI.getMemoryOpCost(I->getOpcode(), Ty, Alignment, AS,
-                                      CostKind, OpInfo, I);
-    }
-    if (Reverse)
-      Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                     cast<VectorType>(Ty), std::nullopt,
-                                     CostKind, 0);
-
-    return Cost;
+  if (!Consecutive) {
+    // TODO: Using the original IR may not be accurate.
+    // Currently, ARM will use the underlying IR to calculate gather/scatter
+    // instruction cost.
+    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    return Ctx.TTI.getAddressComputationCost(Ty) +
+           Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
+                                          IsMasked, Alignment, CostKind,
+                                          &Ingredient);
   }
-  return Ctx.TTI.getAddressComputationCost(Ty) +
-         Ctx.TTI.getGatherScatterOpCost(I->getOpcode(), Ty, Ptr, IsMasked,
-                                        Alignment, CostKind, I);
+
+  InstructionCost Cost = 0;
+  if (IsMasked) {
+    Cost += Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                          AS, CostKind);
+  } else {
+    TTI::OperandValueInfo OpInfo =
+        Ctx.TTI.getOperandInfo(Ingredient.getOperand(0));
+    Cost += Ctx.TTI.getMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment, AS,
+                                    CostKind, OpInfo, &Ingredient);
+  }
+  if (Reverse)
+    Cost +=
+        Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                               cast<VectorType>(Ty), std::nullopt, CostKind, 0);
+
+  return Cost;
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
