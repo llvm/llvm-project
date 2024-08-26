@@ -147,7 +147,7 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
 #else
   constexpr bool hasReal3{false};
 #endif
-#if defined LDBL_MANT_DIG == 64 && !defined FLANG_RUNTIME_NO_REAL_10
+#if LDBL_MANT_DIG == 64 && !defined FLANG_RUNTIME_NO_REAL_10
   constexpr bool hasReal10{true};
 #else
   constexpr bool hasReal10{false};
