@@ -460,9 +460,11 @@ public:
       if (!callOp.isIndirect())
         symbol = callOp.getCalleeAttr();
       rewriter.setInsertionPointToEnd(callBlock);
+      mlir::Type resTy = nullptr;
+      if (callOp.getNumResults() > 0)
+        resTy = callOp.getResult().getType();
       auto tryCall = rewriter.replaceOpWithNewOp<mlir::cir::TryCallOp>(
-          callOp, symbol, callOp.getResult().getType(), cont, landingPad,
-          callOp.getOperands());
+          callOp, symbol, resTy, cont, landingPad, callOp.getOperands());
       tryCall.setExtraAttrsAttr(extraAttrs);
       if (ast)
         tryCall.setAstAttr(*ast);
@@ -470,9 +472,11 @@ public:
 
     // Quick block cleanup: no indirection to the post try block.
     auto brOp = dyn_cast<mlir::cir::BrOp>(afterTry->getTerminator());
-    mlir::Block *srcBlock = brOp.getDest();
-    rewriter.eraseOp(brOp);
-    rewriter.mergeBlocks(srcBlock, afterTry);
+    if (brOp) {
+      mlir::Block *srcBlock = brOp.getDest();
+      rewriter.eraseOp(brOp);
+      rewriter.mergeBlocks(srcBlock, afterTry);
+    }
     return mlir::success();
   }
 };

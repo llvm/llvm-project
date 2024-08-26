@@ -405,6 +405,57 @@ public:
   static bool classof(const EHScope *Scope) {
     return (Scope->getKind() == Cleanup);
   }
+
+  /// Erases auxillary allocas and their usages for an unused cleanup.
+  /// Cleanups should mark these allocas as 'used' if the cleanup is
+  /// emitted, otherwise these instructions would be erased.
+  struct AuxillaryAllocas {
+    llvm::SmallVector<mlir::Operation *, 1> auxAllocas;
+    bool used = false;
+
+    // Records a potentially unused instruction to be erased later.
+    void add(mlir::cir::AllocaOp allocaOp) { auxAllocas.push_back(allocaOp); }
+
+    // Mark all recorded instructions as used. These will not be erased later.
+    void markUsed() {
+      used = true;
+      auxAllocas.clear();
+    }
+
+    ~AuxillaryAllocas() {
+      if (used)
+        return;
+      llvm::SetVector<mlir::Operation *> uses;
+      for (auto *Inst : llvm::reverse(auxAllocas))
+        collectuses(Inst, uses);
+      // Delete uses in the reverse order of insertion.
+      for (auto *I : llvm::reverse(uses))
+        I->erase();
+    }
+
+  private:
+    void collectuses(mlir::Operation *op,
+                     llvm::SetVector<mlir::Operation *> &uses) {
+      if (!op || !uses.insert(op))
+        return;
+      for (auto *User : op->getUsers())
+        collectuses(llvm::cast<mlir::Operation *>(User), uses);
+    }
+  };
+  mutable struct AuxillaryAllocas *auxAllocas = nullptr;
+
+  void markEmitted() {
+    if (!auxAllocas)
+      return;
+    getAuxillaryAllocas().markUsed();
+  }
+
+  AuxillaryAllocas &getAuxillaryAllocas() {
+    if (!auxAllocas) {
+      auxAllocas = new struct AuxillaryAllocas();
+    }
+    return *auxAllocas;
+  }
 };
 // NOTE: there's a bunch of different data classes tacked on after an
 // EHCleanupScope. It is asserted (in EHScopeStack::pushCleanup*) that

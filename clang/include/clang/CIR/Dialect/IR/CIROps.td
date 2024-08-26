@@ -3482,28 +3482,28 @@ def TryOp : CIR_Op<"try",
     Holds the lexical scope of `try {}`. Note that resources used on catch
     clauses are usually allocated in the same parent as `cir.try`.
 
-    Example:
-    %5 = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"]
-    ...
-    %10 = cir.try {
-      %11 = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["__exception_ptr"]
-      ... // cir.try_call's
-      %20 = cir.load %11 : !cir.ptr<!cir.ptr<!cir.eh.info>>, !cir.ptr<!cir.eh.info>
-      cir.yield %20 : !cir.ptr<!cir.eh.info>
-    } : () -> !cir.ptr<!cir.eh.info>
+    `synthetic`: use `cir.try` to represent try/catches not originally
+    present in the source code (e.g. `g = new Class` under `-fexceptions`).
+
+    Example: TBD
     ```
   }];
 
-  let arguments = (ins OptionalAttr<ArrayAttr>:$catch_types);
+  let arguments = (ins UnitAttr:$synthetic,
+                       OptionalAttr<ArrayAttr>:$catch_types);
   let regions = (region AnyRegion:$try_region,
                         AnyRegion:$cleanup_region,
                         VariadicRegion<AnyRegion>:$catch_regions);
 
   let assemblyFormat = [{
-    $try_region
+    (`synthetic` $synthetic^)? $try_region
     `cleanup` $cleanup_region
     custom<CatchRegions>($catch_regions, $catch_types)
     attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    bool isCleanupActive() { return !getCleanupRegion().empty(); }
   }];
 
   // Everything already covered elsewhere.

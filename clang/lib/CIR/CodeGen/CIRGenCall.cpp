@@ -447,11 +447,27 @@ static mlir::cir::CIRCallOpInterface
 buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
                 mlir::cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                 mlir::cir::FuncOp directFuncOp,
-                SmallVectorImpl<mlir::Value> &CIRCallArgs, bool InvokeDest,
+                SmallVectorImpl<mlir::Value> &CIRCallArgs,
+                mlir::Operation *InvokeDest,
                 mlir::cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
 
   if (InvokeDest) {
+    // This call can throw, few options:
+    //  - If this call does not have an associated cir.try, use the
+    //    one provided by InvokeDest,
+    //  - User written try/catch clauses require calls to handle
+    //    exceptions under cir.try.
+    auto tryOp = dyn_cast_if_present<mlir::cir::TryOp>(InvokeDest);
+    mlir::OpBuilder::InsertPoint ip = builder.saveInsertionPoint();
+    bool changeInsertion = tryOp && tryOp.getSynthetic();
+    if (changeInsertion) {
+      mlir::Block *lastBlock = &tryOp.getTryRegion().back();
+      builder.setInsertionPointToStart(lastBlock);
+    } else {
+      assert(builder.getInsertionBlock() && "expected valid basic block");
+    }
+
     mlir::cir::CallOp tryCallOp;
     if (indirectFuncTy) {
       tryCallOp = builder.createIndirectTryCallOp(callLoc, indirectFuncVal,
@@ -460,9 +476,15 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
       tryCallOp = builder.createTryCallOp(callLoc, directFuncOp, CIRCallArgs);
     }
     tryCallOp->setAttr("extra_attrs", extraFnAttrs);
+
+    if (changeInsertion) {
+      builder.create<mlir::cir::YieldOp>(tryOp.getLoc());
+      builder.restoreInsertionPoint(ip);
+    }
     return tryCallOp;
   }
 
+  assert(builder.getInsertionBlock() && "expected valid basic block");
   if (indirectFuncTy)
     return builder.createIndirectCallOp(
         callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs, extraFnAttrs);
@@ -699,7 +721,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
               noThrowAttr.getMnemonic()))
         CannotThrow = true;
   }
-  auto InvokeDest = CannotThrow ? false : getInvokeDest();
+  auto InvokeDest = CannotThrow ? nullptr : getInvokeDest();
 
   // TODO: UnusedReturnSizePtr
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
@@ -707,10 +729,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // TODO: alignment attributes
 
-  // Emit the actual call op.
   auto callLoc = loc;
-  assert(builder.getInsertionBlock() && "expected valid basic block");
-
   mlir::cir::CIRCallOpInterface theCall = [&]() {
     mlir::cir::FuncType indirectFuncTy;
     mlir::Value indirectFuncVal;
