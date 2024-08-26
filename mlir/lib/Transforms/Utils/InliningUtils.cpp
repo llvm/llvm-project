@@ -25,8 +25,8 @@
 
 using namespace mlir;
 
-/// Remap all locations from the inlined blocks with CallSiteLoc locations with
-/// the provided caller location.
+/// Remap all locations reachable from the inlined blocks with CallSiteLoc
+/// locations with the provided caller location.
 static void
 remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
                       Location callerLoc) {
