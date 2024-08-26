@@ -446,7 +446,7 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   const InternalFT check_shadow = Shadow;
 
   // We only check for NaNs in the value, not the shadow.
-  if (flags().check_nan && isnan(check_value)) {
+  if (flags().check_nan && isnan(value)) {
     GET_CALLER_PC_BP;
     BufferedStackTrace stack;
     stack.Unwind(pc, bp, nullptr, false);
