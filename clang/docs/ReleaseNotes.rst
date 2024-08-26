@@ -173,6 +173,13 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- The ``-fc++-static-destructors={all,thread-local,none}`` flag was
+  added to control which C++ variables have static destructors
+  registered: all (the default) does so for all variables, thread-local
+  only for thread-local variables, and none (which corresponds to the
+  existing ``-fno-c++-static-destructors`` flag) skips all static
+  destructors registration.
+
 Deprecated Compiler Flags
 -------------------------
 
