@@ -382,7 +382,7 @@ static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
   if (!Op.isReg())
     return false;
 
-  unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+  MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
   auto Reg = Sub ? Sub : Op.getReg();
   return Reg >= AMDGPU::AGPR0 && Reg <= AMDGPU::AGPR255;
 }
