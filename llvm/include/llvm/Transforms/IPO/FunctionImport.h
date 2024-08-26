@@ -139,6 +139,10 @@ public:
         maybeAddDeclaration(FromModule, GUID);
     }
 
+    // Return the list of source modules sorted in the ascending alphabetical
+    // order.
+    SmallVector<StringRef, 0> getSourceModules() const;
+
     const ImportMapTyImpl &getImportMap() const { return ImportMap; }
 
   private:
