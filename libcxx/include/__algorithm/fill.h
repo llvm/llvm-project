@@ -48,7 +48,7 @@ struct __fill_segment {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __fill_segment(const _Tp& __value) : __value_(__value) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void operator()(_Tp& __val) const { __val = __value_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()(_Tp& __val) const { __val = __value_; }
 };
 
 template <class _SegmentedIterator,
