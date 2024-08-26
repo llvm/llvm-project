@@ -354,10 +354,7 @@ void FunctionImporter::ImportMapTy::maybeAddDeclaration(
 
 SmallVector<StringRef, 0>
 FunctionImporter::ImportMapTy::getSourceModules() const {
-  SetVector<StringRef> ModuleSet;
-  for (const auto &[SrcMod, GUID] : ImportMap)
-    ModuleSet.insert(SrcMod);
-  SmallVector<StringRef, 0> Modules = ModuleSet.takeVector();
+  SmallVector<StringRef, 0> Modules(make_first_range(ImportMap));
   llvm::sort(Modules);
   return Modules;
 }
