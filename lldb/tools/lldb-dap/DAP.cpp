@@ -998,7 +998,6 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
-
   for (auto &bp : instruction_breakpoints) {
     if (bp.second.id == bp_id)
       return &bp.second;
