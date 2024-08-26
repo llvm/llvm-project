@@ -107,21 +107,10 @@ ifeq "$(CC)" ""
 $(error "C compiler is not specified. Please run tests through lldb-dotest or lit")
 endif
 
-# Remove all " and ' characters from the path. Also remove surrounding space chars.
-cstrip = $(strip $(subst ",,$(subst ',,$(1))))
-override CC := $(call cstrip,$(CC))
-override CCC := $(call cstrip,$(CCC))
-override CXX := $(call cstrip,$(CXX))
 # Always override the linker. Assign already normalized CC.
-override LD := $(call cstrip,$(CC))
+override LD := $(CC)
 # A kind of linker. It always gets retrieved from CC.
-override LDC := $(call cstrip,$(CCC))
-override OBJCOPY := $(call cstrip,$(OBJCOPY))
-override STRIP := $(call cstrip,$(STRIP))
-override ARCHIVER := $(call cstrip,$(ARCHIVER))
-override AR := $(call cstrip,$(AR))
-override DWP := $(call cstrip,$(DWP))
-override LLVM_AR := $(call cstrip,$(LLVM_AR))
+override LDC := $(CCC)
 
 ifeq "$(HOST_OS)" "Windows_NT"
        # This function enframes the full path with the platform specific quotes. This is necessary to run the c++ executable
