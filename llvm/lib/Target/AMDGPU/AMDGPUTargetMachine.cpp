@@ -417,6 +417,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
+  initializeAMDGPUSwLowerLDSLegacyPass(*PR);
   initializeAMDGPUAttributorLegacyPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
