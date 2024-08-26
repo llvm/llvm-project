@@ -580,6 +580,35 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, FreezeInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  freeze i8 %arg
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Freeze = cast<sandboxir::FreezeInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Freeze));
+  EXPECT_EQ(Freeze->getOperand(0), Arg);
+
+  // Check create().
+  auto *NewFreeze = sandboxir::FreezeInst::create(
+      Arg, Ret->getIterator(), Ret->getParent(), Ctx, "NewFreeze");
+  EXPECT_EQ(NewFreeze->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewFreeze->getName(), "NewFreeze");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FenceInst) {
   parseIR(C, R"IR(
 define void @foo() {
