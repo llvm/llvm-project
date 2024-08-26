@@ -259,7 +259,8 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
   return Unknown;
 }
 
-std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel(ScalarEvolution &SE) {
+std::optional<unsigned>
+PhiAnalyzer::calculateIterationsToPeel(ScalarEvolution &SE) {
   unsigned Iterations = 0;
   for (auto &PHI : L.getHeader()->phis()) {
     PeelCounter ToInvariance = calculate(PHI, SE);
