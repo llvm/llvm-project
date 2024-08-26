@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=all %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=all -fwrapv %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=add-overflow-test %s -emit-llvm -o - | FileCheck %s --check-prefix=ADD
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test,add-unsigned-overflow-test %s -emit-llvm -o - | FileCheck %s --check-prefix=ADD
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const %s -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=post-decr-while %s -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while %s -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
 
 // Ensure some common overflow-dependent or overflow-prone code patterns don't
 // trigger the overflow sanitizers. In many cases, overflow warnings caused by
@@ -25,6 +25,7 @@
 // CHECK-NOT: handle{{.*}}overflow
 
 extern unsigned a, b, c;
+extern int u, v;
 extern unsigned some(void);
 
 // ADD-LABEL: @basic_commutativity
@@ -49,6 +50,8 @@ void basic_commutativity(void) {
   if (b > a + b)
     c = 9;
   if (b > b + a)
+    c = 9;
+  if (u + v < u)
     c = 9;
 }
 

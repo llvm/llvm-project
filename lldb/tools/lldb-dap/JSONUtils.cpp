@@ -763,6 +763,9 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     object.try_emplace("instructionPointerReference", formatted_addr);
   }
 
+  if (frame.IsArtificial() || frame.IsHidden())
+    object.try_emplace("presentationHint", "subtle");
+
   return llvm::json::Value(std::move(object));
 }
 

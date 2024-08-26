@@ -142,6 +142,11 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
 #else
   constexpr bool hasReal2{false};
 #endif
+#ifndef FLANG_RUNTIME_NO_REAL_3
+  constexpr bool hasReal3{true};
+#else
+  constexpr bool hasReal3{false};
+#endif
 #if defined LDBL_MANT_DIG == 64 && !defined FLANG_RUNTIME_NO_REAL_10
   constexpr bool hasReal10{true};
 #else
@@ -171,9 +176,9 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
   }
 
   if (r <= 4) {
-    kind = kind < 2 ? 2 : kind;
+    kind = kind < 2 ? (hasReal2 ? 2 : 4) : kind;
   } else if (r <= 37) {
-    kind = kind < 3 ? (p == 3 ? 4 : 3) : kind;
+    kind = kind < 3 ? (hasReal3 && p != 3 ? 3 : 4) : kind;
   } else if (r <= 307) {
     kind = kind < 8 ? 8 : kind;
   } else if (hasReal10 && r <= 4931) {
