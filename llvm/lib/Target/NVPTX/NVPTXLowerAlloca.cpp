@@ -72,9 +72,8 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         Changed = true;
         auto ETy = allocaInst->getAllocatedType();
         auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
-        PointerType *AllocInstPtrTy = dyn_cast_or_null<PointerType>(
+        PointerType *AllocInstPtrTy = cast<PointerType>(
             allocaInst->getType()->getScalarType());
-        assert(AllocInstPtrTy && "AllocInst scalar type is not a PointerType.");
         Instruction *NewASCToGeneric = allocaInst;
         if (AllocInstPtrTy->getAddressSpace() != ADDRESS_SPACE_LOCAL) {
           // Only insert a new AddrSpaceCastInst if
