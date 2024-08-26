@@ -1,4 +1,4 @@
-//===-- Implementation of log2f16 function --------------------------------===//
+//===-- Half-precision log2(x) function -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,6 +30,7 @@ static constexpr size_t N_LOG2F16_EXCEPTS = 9;
 
 static constexpr fputil::ExceptValues<float16, N_LOG2F16_EXCEPTS>
     LOG2F16_EXCEPTS = {{
+// (input, RZ output, RU offset, RD offset, RN offset)
 #ifndef LIBC_TARGET_CPU_HAS_FMA
         // x = 0x1.224p-1, log2f16(x) = -0x1.a34p-1 (RZ)
         {0x3889U, 0xba8dU, 0U, 1U, 0U},
