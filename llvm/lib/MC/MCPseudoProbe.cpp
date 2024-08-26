@@ -18,6 +18,7 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
@@ -429,17 +430,11 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     Index = Cur->getChildren().size();
   } else {
     // Read inline site for inlinees
-    auto ErrorOrIndex = readUnsignedNumber<uint32_t>();
-    if (!ErrorOrIndex)
-      return false;
-    Index = std::move(*ErrorOrIndex);
+    Index = cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
   }
 
   // Read guid
-  auto ErrorOrCurGuid = readUnencodedNumber<uint64_t>();
-  if (!ErrorOrCurGuid)
-    return false;
-  uint64_t Guid = std::move(*ErrorOrCurGuid);
+  uint64_t Guid = cantFail(errorOrToExpected(readUnencodedNumber<uint64_t>()));
 
   // Decide if top-level node should be disgarded.
   if (IsTopLevelFunc && !GuidFilter.empty() && !GuidFilter.count(Guid))
@@ -457,41 +452,27 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   }
 
   // Read number of probes in the current node.
-  auto ErrorOrNodeCount = readUnsignedNumber<uint32_t>();
-  if (!ErrorOrNodeCount)
-    return false;
-  uint32_t NodeCount = std::move(*ErrorOrNodeCount);
+  uint32_t NodeCount =
+      cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
   // Read number of direct inlinees
-  auto ErrorOrCurChildrenToProcess = readUnsignedNumber<uint32_t>();
-  if (!ErrorOrCurChildrenToProcess)
-    return false;
+  uint32_t ChildrenToProcess =
+      cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
   // Read all probes in this node
   for (std::size_t I = 0; I < NodeCount; I++) {
     // Read index
-    auto ErrorOrIndex = readUnsignedNumber<uint32_t>();
-    if (!ErrorOrIndex)
-      return false;
-    uint32_t Index = std::move(*ErrorOrIndex);
+    uint32_t Index =
+        cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
     // Read type | flag.
-    auto ErrorOrValue = readUnencodedNumber<uint8_t>();
-    if (!ErrorOrValue)
-      return false;
-    uint8_t Value = std::move(*ErrorOrValue);
+    uint8_t Value = cantFail(errorOrToExpected(readUnencodedNumber<uint8_t>()));
     uint8_t Kind = Value & 0xf;
     uint8_t Attr = (Value & 0x70) >> 4;
     // Read address
     uint64_t Addr = 0;
     if (Value & 0x80) {
-      auto ErrorOrOffset = readSignedNumber<int64_t>();
-      if (!ErrorOrOffset)
-        return false;
-      int64_t Offset = std::move(*ErrorOrOffset);
+      int64_t Offset = cantFail(errorOrToExpected(readSignedNumber<int64_t>()));
       Addr = LastAddr + Offset;
     } else {
-      auto ErrorOrAddr = readUnencodedNumber<int64_t>();
-      if (!ErrorOrAddr)
-        return false;
-      Addr = std::move(*ErrorOrAddr);
+      Addr = cantFail(errorOrToExpected(readUnencodedNumber<int64_t>()));
       if (isSentinelProbe(Attr)) {
         // For sentinel probe, the addr field actually stores the GUID of the
         // split function. Convert it to the real address.
@@ -508,10 +489,8 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
 
     uint32_t Discriminator = 0;
     if (hasDiscriminator(Attr)) {
-      auto ErrorOrDiscriminator = readUnsignedNumber<uint32_t>();
-      if (!ErrorOrDiscriminator)
-        return false;
-      Discriminator = std::move(*ErrorOrDiscriminator);
+      Discriminator =
+          cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
     }
 
     if (Cur && !isSentinelProbe(Attr)) {
@@ -524,17 +503,109 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     LastAddr = Addr;
   }
 
-  uint32_t ChildrenToProcess = std::move(*ErrorOrCurChildrenToProcess);
   for (uint32_t I = 0; I < ChildrenToProcess; I++) {
     buildAddress2ProbeMap(Cur, LastAddr, GuidFilter, FuncStartAddrs);
   }
+  return true;
+}
 
+template <bool IsTopLevelFunc>
+bool MCPseudoProbeDecoder::countRecords(bool &Discard, uint32_t &ProbeCount,
+                                        uint32_t &InlinedCount,
+                                        const Uint64Set &GuidFilter) {
+  if (!IsTopLevelFunc)
+    // Read inline site for inlinees
+    if (!readUnsignedNumber<uint32_t>())
+      return false;
+
+  // Read guid
+  auto ErrorOrCurGuid = readUnencodedNumber<uint64_t>();
+  if (!ErrorOrCurGuid)
+    return false;
+  uint64_t Guid = std::move(*ErrorOrCurGuid);
+
+  // Decide if top-level node should be disgarded.
+  if (IsTopLevelFunc) {
+    Discard = !GuidFilter.empty() && !GuidFilter.count(Guid);
+    if (!Discard)
+      // Allocate an entry for top-level function record.
+      ++InlinedCount;
+  }
+
+  // Read number of probes in the current node.
+  auto ErrorOrNodeCount = readUnsignedNumber<uint32_t>();
+  if (!ErrorOrNodeCount)
+    return false;
+  uint32_t NodeCount = std::move(*ErrorOrNodeCount);
+  uint32_t CurrentProbeCount = 0;
+
+  // Read number of direct inlinees
+  auto ErrorOrCurChildrenToProcess = readUnsignedNumber<uint32_t>();
+  if (!ErrorOrCurChildrenToProcess)
+    return false;
+  uint32_t ChildrenToProcess = std::move(*ErrorOrCurChildrenToProcess);
+
+  // Read all probes in this node
+  for (std::size_t I = 0; I < NodeCount; I++) {
+    // Read index
+    if (!readUnsignedNumber<uint32_t>())
+      return false;
+
+    // Read type | flag.
+    auto ErrorOrValue = readUnencodedNumber<uint8_t>();
+    if (!ErrorOrValue)
+      return false;
+    uint8_t Value = std::move(*ErrorOrValue);
+
+    uint8_t Attr = (Value & 0x70) >> 4;
+    if (Value & 0x80) {
+      // Offset
+      if (!readSignedNumber<int64_t>())
+        return false;
+    } else {
+      // Addr
+      if (!readUnencodedNumber<int64_t>())
+        return false;
+    }
+
+    if (hasDiscriminator(Attr))
+      // Discriminator
+      if (!readUnsignedNumber<uint32_t>())
+        return false;
+
+    if (!Discard && !isSentinelProbe(Attr))
+      ++CurrentProbeCount;
+  }
+
+  if (!Discard) {
+    ProbeCount += CurrentProbeCount;
+    InlinedCount += ChildrenToProcess;
+  }
+
+  for (uint32_t I = 0; I < ChildrenToProcess; I++)
+    if (!countRecords<false>(Discard, ProbeCount, InlinedCount, GuidFilter))
+      return false;
   return true;
 }
 
 bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     const uint8_t *Start, std::size_t Size, const Uint64Set &GuidFilter,
     const Uint64Map &FuncStartAddrs) {
+  // For function records in the order of their appearance in the encoded data
+  // (DFS), count the number of contained probes and inlined function records.
+  uint32_t ProbeCount = 0;
+  uint32_t InlinedCount = 0;
+  uint32_t TopLevelFuncs = 0;
+  Data = Start;
+  End = Data + Size;
+  bool Discard = false;
+  while (Data < End) {
+    if (!countRecords<true>(Discard, ProbeCount, InlinedCount, GuidFilter))
+      return false;
+    TopLevelFuncs += !Discard;
+  }
+  assert(Data == End && "Have unprocessed data in pseudo_probe section");
+
   Data = Start;
   End = Data + Size;
   uint64_t LastAddr = 0;
