@@ -399,7 +399,7 @@ void SendProcessEvent(LaunchMethod launch_method) {
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(lldb::SBProcess &process) {
-  char buffer[1024];
+  char buffer[OutputBufferSize];
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
     g_dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
@@ -701,6 +701,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -1627,12 +1629,12 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", &g_dap.start_debugging_request_handler,
+        "startDebugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", &g_dap.repl_mode_request_handler,
+      "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
@@ -1677,6 +1679,9 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the disassembly request.
   body.try_emplace("supportsDisassembleRequest", true);
+  // The debug adapter supports stepping granularities (argument `granularity`)
+  // for the stepping requests.
+  body.try_emplace("supportsSteppingGranularity", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -1922,6 +1927,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -1985,6 +1992,14 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SendJSON(CreateEventObject("initialized"));
 }
 
+// Check if the step-granularity is `instruction`
+static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
+  if (std::optional<llvm::StringRef> value =
+          requestArgs.getString("granularity"))
+    return value == "instruction";
+  return false;
+}
+
 // "NextRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -2012,6 +2027,11 @@ void request_launch(const llvm::json::Object &request) {
 //     "threadId": {
 //       "type": "integer",
 //       "description": "Execute 'next' for this thread."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -2032,7 +2052,11 @@ void request_next(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepOver();
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/true);
+    } else {
+      thread.StepOver();
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
@@ -3091,8 +3115,9 @@ void request_stackTrace(const llvm::json::Object &request) {
     // This will always return an invalid thread when
     // libBacktraceRecording.dylib is not loaded or if there is no extended
     // backtrace.
-    lldb::SBThread queue_backtrace_thread =
-        thread.GetExtendedBacktraceThread("libdispatch");
+    lldb::SBThread queue_backtrace_thread;
+    if (g_dap.enable_display_extended_backtrace)
+      queue_backtrace_thread = thread.GetExtendedBacktraceThread("libdispatch");
     if (queue_backtrace_thread.IsValid()) {
       // One extra frame as a label to mark the enqueued thread.
       totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
@@ -3100,8 +3125,10 @@ void request_stackTrace(const llvm::json::Object &request) {
 
     // This will always return an invalid thread when there is no exception in
     // the current thread.
-    lldb::SBThread exception_backtrace_thread =
-        thread.GetCurrentExceptionBacktrace();
+    lldb::SBThread exception_backtrace_thread;
+    if (g_dap.enable_display_extended_backtrace)
+      exception_backtrace_thread = thread.GetCurrentExceptionBacktrace();
+
     if (exception_backtrace_thread.IsValid()) {
       // One extra frame as a label to mark the exception thread.
       totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
@@ -3193,6 +3220,11 @@ void request_stackTrace(const llvm::json::Object &request) {
 //     "targetId": {
 //       "type": "integer",
 //       "description": "Optional id of the target to step into."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -3223,7 +3255,11 @@ void request_stepIn(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepInto(step_in_target.c_str(), run_mode);
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/false);
+    } else {
+      thread.StepInto(step_in_target.c_str(), run_mode);
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }

@@ -424,8 +424,7 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
       const uint32_t *RegMask = MO.getRegMask();
       std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
       return hash_combine(MO.getType(), MO.getTargetFlags(),
-                          stable_hash_combine_array(RegMaskHashes.data(),
-                                                    RegMaskHashes.size()));
+                          stable_hash_combine(RegMaskHashes));
     }
 
     assert(0 && "MachineOperand not associated with any MachineFunction");

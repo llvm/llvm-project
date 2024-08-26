@@ -80,7 +80,7 @@ static inline bool checkIfSupported(GlobalVariable &G) {
     << G.getName();
 
   Instruction *I = nullptr;
-  SmallVector<User *> Tmp(G.user_begin(), G.user_end());
+  SmallVector<User *> Tmp(G.users());
   SmallPtrSet<User *, 5> Visited;
   do {
     auto U = std::move(Tmp.back());

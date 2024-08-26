@@ -25,6 +25,14 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   MMDAI.DXILVersion = TT.getDXILVersion();
   MMDAI.ShaderModelVersion = TT.getOSVersion();
   MMDAI.ShaderStage = TT.getEnvironment();
+  NamedMDNode *ValidatorVerNode = M.getNamedMetadata("dx.valver");
+  if (ValidatorVerNode) {
+    auto *ValVerMD = cast<MDNode>(ValidatorVerNode->getOperand(0));
+    auto *MajorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(0));
+    auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
+    MMDAI.ValidatorVersion =
+        VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
+  }
   return MMDAI;
 }
 
@@ -33,6 +41,7 @@ void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "DXIL Version : " << DXILVersion.getAsString() << "\n";
   OS << "Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
+  OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
 }
 
 //===----------------------------------------------------------------------===//
