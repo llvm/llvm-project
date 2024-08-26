@@ -1,3 +1,32 @@
+// RUN: %check_clang_tidy %s bugprone-suspicious-pointer-arithmetics-using-sizeof %t
+
+enum { BufferSize = 1024 };
+
+void bad1(void) {
+  int Buffer[BufferSize];
+
+  int *P = &Buffer[0];
+  int *Q = P;
+  while (Q < P + sizeof(Buffer)) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof()'; this distance will be scaled again by the '+' operator [bugprone-suspicious-pointer-arithemetics-using-sizeof]
+    // CHECK-MESSAGES: :[[@LINE-2]]:18: note: 'sizeof(int)' == {{[0-9]+}}
+    *Q++ = 0;
+  }
+}
+
+void good1(void) {
+  int Buffer[BufferSize];
+
+  int *P = &Buffer[0];
+  int *Q = P;
+  while (Q < P + BufferSize) {
+    *Q++ = 0;
+  }
+}
+
+
+// ----------------------------------------------------------------------------
+
 
 struct mystruct {
   long a;
@@ -6,38 +35,20 @@ struct mystruct {
 };
 void noncompliant_f1(void);
 void compliant_f1(void);
-void noncompliant_f3(struct mystruct *msptr); 
+void noncompliant_f3(struct mystruct *msptr);
 void compliant_f3(struct mystruct *msptr);
 extern void sink(const char *);
 
 enum { bufsize = 1024 };
 
-void noncompliant_f1(void) {
-  int buffer[bufsize]; 
-
-  int *bptr = &buffer[0]; 
-  int *ptr  = bptr; 
-  while ( ptr < bptr + sizeof(buffer) ) { // noncompliant
-    *ptr++ = 0;	// compliant  
-  }
-}
 void noncompliant_f1a(void) {
-  typedef int my_int_t;	
-  my_int_t buffer[bufsize]; 
+  typedef int my_int_t;
+  my_int_t buffer[bufsize];
 
-  my_int_t *bptr = &buffer[0]; 
-  my_int_t *ptr  = bptr; 
+  my_int_t *bptr = &buffer[0];
+  my_int_t *ptr  = bptr;
   while ( ptr < bptr + sizeof(buffer) ) { // noncompliant
-    *ptr++ = 0;	// compliant  
-  }
-}
-void compliant_f1(void) {
-  int buffer[bufsize]; 
-
-  int *bptr = &buffer[0]; 
-  int *ptr  = bptr; 
-  while ( ptr < bptr + bufsize ) { // compliant
-    *ptr++ = 0;	// compliant  
+    *ptr++ = 0;	// compliant
   }
 }
 
@@ -52,10 +63,10 @@ void noncompliant_f2(void) {
 
 void compliant_f2(void) {
   int buffer[bufsize];
-  int *ptr  = buffer; 
+  int *ptr  = buffer;
 
   while ( ptr < buffer + bufsize ) { // compliant
-    *ptr++ = 0;	// compliant  
+    *ptr++ = 0;	// compliant
   }
 }
 
@@ -64,7 +75,7 @@ void memset2(void*, int, unsigned int);
 void noncompliant_f3(struct mystruct *msptr) {
   const unsigned int skip = sizeof(long); // why offsetof is declared?
   struct mystruct *ptr = msptr;
-  
+
   memset2(ptr + skip, // noncompliant, impossible with tidy
                      0, sizeof(struct mystruct) - skip);
 }
@@ -74,136 +85,135 @@ void compliant_f3(struct mystruct *msptr) {
   char *ptr = (char*)msptr;
 
   memset2(ptr + skip, // compliant
-                     0, sizeof(struct mystruct) - skip); 
+                     0, sizeof(struct mystruct) - skip);
 }
 
 void noncompliant_f4(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
-  int *ptr  = bptr; 
+  int *bptr = &buffer[0];
+  int *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    *ptr = 0;	  
+    *ptr = 0;
     ptr += sizeof(*ptr); // noncompliant
   }
 }
 void noncompliant_f4w(void) { /* accidentally good */
-  char buffer[bufsize]; 
+  char buffer[bufsize];
 
-  char *bptr = &buffer[0]; 
-  char *ptr  = bptr; 
+  char *bptr = &buffer[0];
+  char *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    *ptr = 0;	  
+    *ptr = 0;
     ptr += sizeof(*ptr);  // silenced
   }
 }
 void compliant_f4w(void) {
-  char buffer[bufsize]; 
+  char buffer[bufsize];
 
-  char *bptr = &buffer[0]; 
-  char *ptr  = bptr; 
+  char *bptr = &buffer[0];
+  char *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    *ptr = 0;	  
+    *ptr = 0;
     ptr += 1;  // compliant
   }
 }
 
 void noncompliant_f5(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
-  int *ptr  = bptr; 
+  int *bptr = &buffer[0];
+  int *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    *ptr = 0;	  
+    *ptr = 0;
     ptr = ptr + sizeof(*ptr); // noncompliant
   }
 }
 void noncompliant_f5w(void) {
-  char buffer[bufsize]; 
+  char buffer[bufsize];
 
-  char*bptr = &buffer[0]; 
-  char *ptr  = bptr; 
+  char*bptr = &buffer[0];
+  char *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    *ptr = 0;	  
+    *ptr = 0;
     ptr = ptr + sizeof(*ptr); // silenced
   }
 }
 void noncompliant_f5c(void) {
-  char buffer[bufsize]; 
+  char buffer[bufsize];
 
-  char*bptr = &buffer[0]; 
-  const char *ptr  = bptr; 
+  char*bptr = &buffer[0];
+  const char *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    sink(ptr);	  
+    sink(ptr);
     ptr = ptr + sizeof(*ptr); // silenced
   }
 }
 void compliant_f5c(void) {
-  char buffer[bufsize]; 
+  char buffer[bufsize];
 
-  char *bptr = &buffer[0]; 
-  const char *ptr  = bptr; 
+  char *bptr = &buffer[0];
+  const char *ptr  = bptr;
   while ( ptr < bptr + bufsize ) { // compliant
-    sink(ptr);	  
+    sink(ptr);
     ptr = ptr + 1;  // compliant
   }
 }
 
 void noncompliant_f6(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
+  int *bptr = &buffer[0];
   int *ptr  = bptr + bufsize; // compliant
   while ( ptr >= bptr ) {
-    *ptr = 0;	  
+    *ptr = 0;
     ptr = ptr - sizeof(*ptr); // noncompliant
   }
 }
 void noncompliant_f6w(void) {
-  char buffer[bufsize]; 
+  char buffer[bufsize];
 
-  char *bptr = &buffer[0]; 
+  char *bptr = &buffer[0];
   char *ptr  = bptr + bufsize; // compliant
   while ( ptr >= bptr ) {
-    *ptr = 0;	  
+    *ptr = 0;
     ptr = ptr - sizeof(*ptr); // silenced
   }
 }
 void compliant_f6(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
+  int *bptr = &buffer[0];
   int *ptr  = bptr + bufsize; // compliant
   while ( ptr >= bptr ) {
-    *ptr = 0;	  
+    *ptr = 0;
     ptr = ptr - 1; // compliant
   }
 }
 
 void compliant_f7(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
+  int *bptr = &buffer[0];
   int *ptr  = bptr + bufsize; // compliant
   int i = ptr - bptr; // compliant
   while ( i >= 0 ) {
-    ptr[i] = 0;	  
+    ptr[i] = 0;
     i = i - 1; // compliant
   }
 }
 
 void compliant_f8(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
+  int *bptr = &buffer[0];
   int *ptr  = bptr + bufsize; // compliant
   int i = sizeof(*ptr) - sizeof(*bptr); // compliant
 }
 void compliant_f9(void) {
-  int buffer[bufsize]; 
+  int buffer[bufsize];
 
-  int *bptr = &buffer[0]; 
+  int *bptr = &buffer[0];
   int *ptr  = bptr + bufsize; // compliant
   int i = sizeof(ptr) - sizeof(*bptr); // compliant
 }
-
