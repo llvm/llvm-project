@@ -671,11 +671,10 @@ private:
 
 public:
   IndexedMemProfReader() = default;
-  virtual ~IndexedMemProfReader() = default;
 
   Error deserialize(const unsigned char *Start, uint64_t MemProfOffset);
 
-  virtual Expected<memprof::MemProfRecord>
+  Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;
 };
 
@@ -770,13 +769,10 @@ public:
                      uint64_t *MismatchedFuncSum = nullptr);
 
   /// Return the memprof record for the function identified by
-  /// llvm::md5(Name). Marked virtual so that unit tests can mock this function.
+  /// llvm::md5(Name).
   Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
     return MemProfReader.getMemProfRecord(FuncNameHash);
   }
-
-  /// Return the underlying memprof reader.
-  IndexedMemProfReader &getIndexedMemProfReader() { return MemProfReader; }
 
   /// Fill Counts with the profile data for the given function name.
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
