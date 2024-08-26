@@ -942,7 +942,7 @@ module attributes {transform.with_named_sequence} {
         use_bare_ptr_call_conv = false}
     } {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
-      legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
+      legal_ops = ["func.func", "gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.fma", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",

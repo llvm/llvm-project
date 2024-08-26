@@ -875,7 +875,6 @@ public:
     if (DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
         ELFRefKind == AArch64MCExpr::VK_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_GOT_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
@@ -987,20 +986,19 @@ public:
     int64_t Addend;
     if (AArch64AsmParser::classifySymbolRef(Expr, ELFRefKind,
                                           DarwinRefKind, Addend)) {
-      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
-             DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF ||
-             (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0) ||
-             ELFRefKind == AArch64MCExpr::VK_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
+      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF
+          || DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF
+          || (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0)
+          || ELFRefKind == AArch64MCExpr::VK_LO12
+          || ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12
+          || ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12
+          || ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC
+          || ELFRefKind == AArch64MCExpr::VK_TPREL_HI12
+          || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12
+          || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC
+          || ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12
+          || ELFRefKind == AArch64MCExpr::VK_SECREL_HI12
+          || ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
 
     // If it's a constant, it should be a real immediate in range.
@@ -3252,7 +3250,6 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
                DarwinRefKind != MCSymbolRefExpr::VK_TLVPPAGE &&
                ELFRefKind != AArch64MCExpr::VK_ABS_PAGE_NC &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
                ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE) {
@@ -3677,13 +3674,13 @@ static const struct Extension {
     {"rcpc", {AArch64::FeatureRCPC}},
     {"rng", {AArch64::FeatureRandGen}},
     {"sve", {AArch64::FeatureSVE}},
+    {"sve-b16b16", {AArch64::FeatureSVEB16B16}},
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve2-aes", {AArch64::FeatureSVE2AES}},
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
     {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
     {"sve2p1", {AArch64::FeatureSVE2p1}},
-    {"b16b16", {AArch64::FeatureB16B16}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
     {"pauth", {AArch64::FeaturePAuth}},
@@ -3695,6 +3692,7 @@ static const struct Extension {
     {"sme-i16i64", {AArch64::FeatureSMEI16I64}},
     {"sme2", {AArch64::FeatureSME2}},
     {"sme2p1", {AArch64::FeatureSME2p1}},
+    {"sme-b16b16", {AArch64::FeatureSMEB16B16}},
     {"hbc", {AArch64::FeatureHBC}},
     {"mops", {AArch64::FeatureMOPS}},
     {"mec", {AArch64::FeatureMEC}},
@@ -4185,7 +4183,7 @@ ParseStatus AArch64AsmParser::tryParseVectorRegister(MCRegister &Reg,
 
   if (RegNum) {
     if (Next != StringRef::npos) {
-      Kind = Name.slice(Next, StringRef::npos);
+      Kind = Name.substr(Next);
       if (!isValidVectorKind(Kind, MatchKind))
         return TokError("invalid vector kind qualifier");
     }
@@ -4337,8 +4335,6 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("got", AArch64MCExpr::VK_GOT_PAGE)
                   .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
                   .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
-                  .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
-                  .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
                   .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
                   .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
                   .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
@@ -5713,7 +5709,6 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
 
         // Only allow these with ADDXri/ADDWri
         if ((ELFRefKind == AArch64MCExpr::VK_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||

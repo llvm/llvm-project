@@ -679,11 +679,11 @@ static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
   Value *X, *Y;
   unsigned Bitwidth = CmpRHS->getType()->getScalarSizeInBits();
   if ((Pred != ICmpInst::ICMP_SGT ||
-       !match(CmpRHS,
-              m_SpecificInt_ICMP(ICmpInst::ICMP_SGE, APInt(Bitwidth, -1)))) &&
+       !match(CmpRHS, m_SpecificInt_ICMP(ICmpInst::ICMP_SGE,
+                                         APInt::getAllOnes(Bitwidth)))) &&
       (Pred != ICmpInst::ICMP_SLT ||
-       !match(CmpRHS,
-              m_SpecificInt_ICMP(ICmpInst::ICMP_SGE, APInt(Bitwidth, 0)))))
+       !match(CmpRHS, m_SpecificInt_ICMP(ICmpInst::ICMP_SGE,
+                                         APInt::getZero(Bitwidth)))))
     return nullptr;
 
   // Canonicalize so that ashr is in FalseVal.
@@ -974,14 +974,7 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   Value *Cmp1 = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
   Value *X;
-  const APInt *C, *CmpC;
-  if (Pred == ICmpInst::ICMP_ULT &&
-      match(TVal, m_Add(m_Value(X), m_APInt(C))) && X == Cmp0 &&
-      match(FVal, m_AllOnes()) && match(Cmp1, m_APInt(CmpC)) && *CmpC == ~*C) {
-    // (X u< ~C) ? (X + C) : -1 --> uadd.sat(X, C)
-    return Builder.CreateBinaryIntrinsic(
-        Intrinsic::uadd_sat, X, ConstantInt::get(X->getType(), *C));
-  }
+  const APInt *C;
 
   // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
   // There are 8 commuted variants.
@@ -992,6 +985,46 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   }
   if (!match(TVal, m_AllOnes()))
     return nullptr;
+
+  // uge -1 is canonicalized to eq -1 and requires special handling
+  // (a == -1) ? -1 : a + 1 -> uadd.sat(a, 1)
+  if (Pred == ICmpInst::ICMP_EQ) {
+    if (match(FVal, m_Add(m_Specific(Cmp0), m_One())) &&
+        match(Cmp1, m_AllOnes())) {
+      return Builder.CreateBinaryIntrinsic(
+          Intrinsic::uadd_sat, Cmp0, ConstantInt::get(Cmp0->getType(), 1));
+    }
+    return nullptr;
+  }
+
+  if ((Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_UGT) &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(~*C))) {
+    // (X u> ~C) ? -1 : (X + C) --> uadd.sat(X, C)
+    // (X u>= ~C)? -1 : (X + C) --> uadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  // Negative one does not work here because X u> -1 ? -1, X + -1 is not a
+  // saturated add.
+  if (Pred == ICmpInst::ICMP_UGT &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(~*C - 1)) && !C->isAllOnes()) {
+    // (X u> ~C - 1) ? -1 : (X + C) --> uadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  // Zero does not work here because X u>= 0 ? -1 : X -> is always -1, which is
+  // not a saturated add.
+  if (Pred == ICmpInst::ICMP_UGE &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(-*C)) && !C->isZero()) {
+    // (X u >= -C) ? -1 : (X + C) --> uadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
 
   // Canonicalize predicate to less-than or less-or-equal-than.
   if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
@@ -2353,7 +2386,7 @@ static Instruction *foldSelectCmpBitcasts(SelectInst &Sel,
   } else {
     return nullptr;
   }
-  return CastInst::CreateBitOrPointerCast(NewSel, Sel.getType());
+  return new BitCastInst(NewSel, Sel.getType());
 }
 
 /// Try to eliminate select instructions that test the returned flag of cmpxchg
@@ -3525,6 +3558,64 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
                                 Masked);
 }
 
+// This function tries to fold the following operations:
+//   (x < y) ? -1 : zext(x != y)
+//   (x < y) ? -1 : zext(x > y)
+//   (x > y) ? 1 : sext(x != y)
+//   (x > y) ? 1 : sext(x < y)
+// Into ucmp/scmp(x, y), where signedness is determined by the signedness
+// of the comparison in the original sequence.
+Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
+  Value *TV = SI.getTrueValue();
+  Value *FV = SI.getFalseValue();
+
+  ICmpInst::Predicate Pred;
+  Value *LHS, *RHS;
+  if (!match(SI.getCondition(), m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
+    return nullptr;
+
+  if (!LHS->getType()->isIntOrIntVectorTy())
+    return nullptr;
+
+  // Try to swap operands and the predicate. We need to be careful when doing
+  // so because two of the patterns have opposite predicates, so use the
+  // constant inside select to determine if swapping operands would be
+  // beneficial to us.
+  if ((ICmpInst::isGT(Pred) && match(TV, m_AllOnes())) ||
+      (ICmpInst::isLT(Pred) && match(TV, m_One()))) {
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+    std::swap(LHS, RHS);
+  }
+
+  Intrinsic::ID IID =
+      ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
+
+  bool Replace = false;
+  ICmpInst::Predicate ExtendedCmpPredicate;
+  // (x < y) ? -1 : zext(x != y)
+  // (x < y) ? -1 : zext(x > y)
+  if (ICmpInst::isLT(Pred) && match(TV, m_AllOnes()) &&
+      match(FV, m_ZExt(m_c_ICmp(ExtendedCmpPredicate, m_Specific(LHS),
+                                m_Specific(RHS)))) &&
+      (ExtendedCmpPredicate == ICmpInst::ICMP_NE ||
+       ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
+    Replace = true;
+
+  // (x > y) ? 1 : sext(x != y)
+  // (x > y) ? 1 : sext(x < y)
+  if (ICmpInst::isGT(Pred) && match(TV, m_One()) &&
+      match(FV, m_SExt(m_c_ICmp(ExtendedCmpPredicate, m_Specific(LHS),
+                                m_Specific(RHS)))) &&
+      (ExtendedCmpPredicate == ICmpInst::ICMP_NE ||
+       ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
+    Replace = true;
+
+  if (Replace)
+    return replaceInstUsesWith(
+        SI, Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS}));
+  return nullptr;
+}
+
 bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                                         const Instruction *CtxI) const {
   KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
@@ -4028,6 +4119,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = foldBitCeil(SI, Builder))
     return I;
 
+  if (Instruction *I = foldSelectToCmp(SI))
+    return I;
+
   // Fold:
   // (select A && B, T, F) -> (select A, (select B, T, F), F)
   // (select A || B, T, F) -> (select A, T, (select B, T, F))
@@ -4105,6 +4199,25 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                 ConstantInt::get(SelType, Known.getConstant()));
       }
     }
+  }
+
+  // select (trunc nuw X to i1), X, Y --> select (trunc nuw X to i1), 1, Y
+  // select (trunc nuw X to i1), Y, X --> select (trunc nuw X to i1), Y, 0
+  // select (trunc nsw X to i1), X, Y --> select (trunc nsw X to i1), -1, Y
+  // select (trunc nsw X to i1), Y, X --> select (trunc nsw X to i1), Y, 0
+  Value *Trunc;
+  if (match(CondVal, m_NUWTrunc(m_Value(Trunc)))) {
+    if (TrueVal == Trunc)
+      return replaceOperand(SI, 1, ConstantInt::get(TrueVal->getType(), 1));
+    if (FalseVal == Trunc)
+      return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
+  }
+  if (match(CondVal, m_NSWTrunc(m_Value(Trunc)))) {
+    if (TrueVal == Trunc)
+      return replaceOperand(SI, 1,
+                            Constant::getAllOnesValue(TrueVal->getType()));
+    if (FalseVal == Trunc)
+      return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
   }
 
   return nullptr;

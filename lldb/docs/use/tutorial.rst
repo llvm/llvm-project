@@ -168,6 +168,10 @@ is more convenient to make the basic commands unique down to a letter or two,
 and then learn these sequences than to fill the namespace with lots of aliases,
 and then have to type them all the way out.
 
+If the alias abbreviation or the full alias command collides with another
+existing command, the command resolver will prefer to use the alias over any
+other command as far as there is only one alias command match.
+
 However, users are free to customize LLDB's command set however they like, and
 since LLDB reads the file ``~/.lldbinit`` at startup, you can store all your
 aliases there and they will be generally available to you. Your aliases are

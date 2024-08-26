@@ -460,7 +460,7 @@ static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
     LLVMContext &Ctx = LI->getContext();
     new StoreInst(ConstantInt::getTrue(Ctx),
                   PoisonValue::get(PointerType::getUnqual(Ctx)),
-                  /*isVolatile=*/false, Align(1), LI);
+                  /*isVolatile=*/false, Align(1), LI->getIterator());
     return;
   }
 
@@ -595,6 +595,10 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
     for (auto *DbgItem : Container) {
       if (DbgItem->isAddressOfVariable()) {
         ConvertDebugDeclareToDebugValue(DbgItem, Info.OnlyStore, DIB);
+        DbgItem->eraseFromParent();
+      } else if (DbgItem->isValueOfVariable() &&
+                 DbgItem->getExpression()->startsWithDeref()) {
+        InsertDebugValueAtStoreLoc(DbgItem, Info.OnlyStore, DIB);
         DbgItem->eraseFromParent();
       } else if (DbgItem->getExpression()->startsWithDeref()) {
         DbgItem->eraseFromParent();

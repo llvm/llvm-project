@@ -26,6 +26,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Utility/Timer.h"
@@ -40,8 +41,49 @@ static ConstString g_coro_frame = ConstString("__coro_frame");
 
 char CPPLanguageRuntime::ID = 0;
 
+/// A frame recognizer that is installed to hide libc++ implementation
+/// details from the backtrace.
+class LibCXXFrameRecognizer : public StackFrameRecognizer {
+  RegularExpression m_hidden_function_regex;
+  RecognizedStackFrameSP m_hidden_frame;
+
+  struct LibCXXHiddenFrame : public RecognizedStackFrame {
+    bool ShouldHide() override { return true; }
+  };
+
+public:
+  LibCXXFrameRecognizer()
+      : m_hidden_function_regex(
+            R"(^std::__.*::(__function.*::operator\(\)|__invoke))"
+            R"((\[.*\])?)"    // ABI tag.
+            R"(( const)?$)"), // const.
+        m_hidden_frame(new LibCXXHiddenFrame()) {}
+
+  std::string GetName() override { return "libc++ frame recognizer"; }
+
+  lldb::RecognizedStackFrameSP
+  RecognizeFrame(lldb::StackFrameSP frame_sp) override {
+    if (!frame_sp)
+      return {};
+    const auto &sc = frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+    if (!sc.function)
+      return {};
+
+    if (m_hidden_function_regex.Execute(sc.function->GetNameNoArguments()))
+      return m_hidden_frame;
+
+    return {};
+  }
+};
+
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
-    : LanguageRuntime(process) {}
+    : LanguageRuntime(process) {
+  if (process)
+    process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+        StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
+        std::make_shared<RegularExpression>("^std::__.*::"),
+        /*first_instruction_only*/ false);
+}
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
   return name == g_this || name == g_promise || name == g_coro_frame;

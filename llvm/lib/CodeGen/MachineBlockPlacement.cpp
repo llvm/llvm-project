@@ -3649,7 +3649,11 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
-  MPDT->updateBlockNumbers();
+  // At this point, we possibly removed blocks from the function, so we can't
+  // renumber the domtree. At this point, we don't need it anymore, though.
+  // TODO: move this to the point where the dominator tree is actually
+  // invalidated (i.e., where blocks are removed without updating the domtree).
+  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {

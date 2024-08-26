@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSaveCoreOptions.h"
-#include "lldb/API/SBError.h"
-#include "lldb/API/SBFileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -28,6 +26,8 @@ SBSaveCoreOptions::SBSaveCoreOptions(const SBSaveCoreOptions &rhs) {
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
+
+SBSaveCoreOptions::~SBSaveCoreOptions() = default;
 
 const SBSaveCoreOptions &
 SBSaveCoreOptions::operator=(const SBSaveCoreOptions &rhs) {
@@ -73,6 +73,21 @@ SBFileSpec SBSaveCoreOptions::GetOutputFile() const {
 lldb::SaveCoreStyle SBSaveCoreOptions::GetStyle() const {
   LLDB_INSTRUMENT_VA(this);
   return m_opaque_up->GetStyle();
+}
+
+SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
+  LLDB_INSTRUMENT_VA(this, process);
+  return m_opaque_up->SetProcess(process.GetSP());
+}
+
+SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
+  LLDB_INSTRUMENT_VA(this, thread);
+  return m_opaque_up->AddThread(thread.GetSP());
+}
+
+bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
+  LLDB_INSTRUMENT_VA(this, thread);
+  return m_opaque_up->RemoveThread(thread.GetSP());
 }
 
 void SBSaveCoreOptions::Clear() {

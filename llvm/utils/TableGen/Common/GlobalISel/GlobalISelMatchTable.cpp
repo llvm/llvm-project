@@ -1314,7 +1314,7 @@ void IntrinsicIDOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
   Table << MatchTable::Opcode("GIM_CheckIntrinsicID")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -1706,9 +1706,8 @@ OperandMatcher &
 InstructionMatcher::addOperand(unsigned OpIdx, const std::string &SymbolicName,
                                unsigned AllocatedTemporariesBaseID,
                                bool IsVariadic) {
-  assert(Operands.empty() ||
-         !Operands.back()->isVariadic() &&
-             "Cannot add more operands after a variadic operand");
+  assert((Operands.empty() || !Operands.back()->isVariadic()) &&
+         "Cannot add more operands after a variadic operand");
   Operands.emplace_back(new OperandMatcher(
       *this, OpIdx, SymbolicName, AllocatedTemporariesBaseID, IsVariadic));
   if (!SymbolicName.empty())
@@ -2104,7 +2103,7 @@ void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_AddIntrinsicID") << MatchTable::Comment("MI")
         << MatchTable::ULEB128Value(InsnID)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
