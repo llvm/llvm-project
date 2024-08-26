@@ -1020,6 +1020,8 @@ static bool allSameType(ArrayRef<Value *> VL) {
 /// possible scalar operand in vectorized instruction.
 static bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
                                         TargetLibraryInfo *TLI) {
+  if (!UserInst)
+    return false;
   unsigned Opcode = UserInst->getOpcode();
   switch (Opcode) {
   case Instruction::Load: {
@@ -2809,6 +2811,11 @@ private:
   /// \ returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
 
+  /// Gets the root instruction for the given node. If the node is a strided
+  /// load/store node with the reverse order, the root instruction is the last
+  /// one.
+  Instruction *getRootEntryInstruction(const TreeEntry &Entry) const;
+
   /// \returns Cast context for the given graph node.
   TargetTransformInfo::CastContextHint
   getCastContextHint(const TreeEntry &TE) const;
@@ -3004,7 +3011,8 @@ private:
     }
 
     bool isOperandGatherNode(const EdgeInfo &UserEI) const {
-      return isGather() && UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
+      return isGather() && (Idx > 0 || !UserTreeIndices.empty()) &&
+             UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
              UserTreeIndices.front().UserTE == UserEI.UserTE;
     }
 
@@ -5987,6 +5995,15 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     VectorizableTree.front()->ReorderIndices.clear();
 }
 
+Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
+  if ((Entry.getOpcode() == Instruction::Store ||
+       Entry.getOpcode() == Instruction::Load) &&
+      Entry.State == TreeEntry::StridedVectorize &&
+      !Entry.ReorderIndices.empty() && isReverseOrder(Entry.ReorderIndices))
+    return dyn_cast<Instruction>(Entry.Scalars[Entry.ReorderIndices.front()]);
+  return dyn_cast<Instruction>(Entry.Scalars.front());
+}
+
 void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   DenseMap<Value *, unsigned> ScalarToExtUses;
@@ -6036,7 +6053,7 @@ void BoUpSLP::buildExternalUses(
           // be used.
           if (UseEntry->State == TreeEntry::ScatterVectorize ||
               !doesInTreeUserNeedToExtract(
-                  Scalar, cast<Instruction>(UseEntry->Scalars.front()), TLI)) {
+                  Scalar, getRootEntryInstruction(*UseEntry), TLI)) {
             LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
                               << ".\n");
             assert(!UseEntry->isGather() && "Bad state");
@@ -8450,8 +8467,8 @@ void BoUpSLP::transformNodes() {
             Instruction::Store, VecTy, BaseSI->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind, BaseSI);
         if (StridedCost < OriginalVecCost)
-          // Strided load is more profitable than consecutive load + reverse -
-          // transform the node to strided load.
+          // Strided store is more profitable than reverse + consecutive store -
+          // transform the node to strided store.
           E.State = TreeEntry::StridedVectorize;
       }
       break;
@@ -9297,7 +9314,25 @@ public:
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
-      for (const auto &[E, Idx] : SubVectors) {
+      for (auto [E, Idx] : SubVectors) {
+        Type *EScalarTy = E->Scalars.front()->getType();
+        bool IsSigned = true;
+        if (auto It = R.MinBWs.find(E); It != R.MinBWs.end()) {
+          EScalarTy =
+              IntegerType::get(EScalarTy->getContext(), It->second.first);
+          IsSigned = It->second.second;
+        }
+        if (ScalarTy != EScalarTy) {
+          unsigned CastOpcode = Instruction::Trunc;
+          unsigned DstSz = R.DL->getTypeSizeInBits(ScalarTy);
+          unsigned SrcSz = R.DL->getTypeSizeInBits(EScalarTy);
+          if (DstSz > SrcSz)
+            CastOpcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
+          Cost += TTI.getCastInstrCost(
+              CastOpcode, getWidenedType(ScalarTy, E->getVectorFactor()),
+              getWidenedType(EScalarTy, E->getVectorFactor()),
+              TTI::CastContextHint::Normal, CostKind);
+        }
         Cost += ::getShuffleCost(
             TTI, TTI::SK_InsertSubvector,
             FixedVectorType::get(ScalarTy, CommonMask.size()), std::nullopt,
@@ -12455,9 +12490,10 @@ public:
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
-      for (const auto &[E, Idx] : SubVectors) {
-        Vec = Builder.CreateInsertVector(
-            Vec->getType(), Vec, E->VectorizedValue, Builder.getInt64(Idx));
+      for (auto [E, Idx] : SubVectors) {
+        Value *V = castToScalarTyElem(E->VectorizedValue);
+        Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
+                                         Builder.getInt64(Idx));
         if (!CommonMask.empty()) {
           std::iota(std::next(CommonMask.begin(), Idx),
                     std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
@@ -12636,7 +12672,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                        E->ReuseShuffleIndices.end());
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
   // Clear values, to be replaced by insertvector instructions.
-  for (const auto &[EIdx, Idx] : E->CombinedEntriesWithIndices)
+  for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
     for_each(MutableArrayRef(GatheredScalars)
                  .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
              [&](Value *&V) { V = PoisonValue::get(V->getType()); });
@@ -13073,7 +13109,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 }
 
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
-  for (const auto &[EIdx, _] : E->CombinedEntriesWithIndices)
+  for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
     (void)vectorizeTree(VectorizableTree[EIdx].get(), /*PostponedPHIs=*/false);
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
@@ -13757,7 +13793,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         ST = Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
       } else {
         assert(E->State == TreeEntry::StridedVectorize &&
-               "Expected either strided or conseutive stores.");
+               "Expected either strided or consecutive stores.");
         if (!E->ReorderIndices.empty()) {
           SI = cast<StoreInst>(E->Scalars[E->ReorderIndices.front()]);
           Ptr = SI->getPointerOperand();
@@ -14361,8 +14397,7 @@ Value *BoUpSLP::vectorizeTree(
                               (E->State == TreeEntry::Vectorize ||
                                E->State == TreeEntry::StridedVectorize) &&
                               doesInTreeUserNeedToExtract(
-                                  Scalar,
-                                  cast<Instruction>(UseEntry->Scalars.front()),
+                                  Scalar, getRootEntryInstruction(*UseEntry),
                                   TLI);
                      })) &&
              "Scalar with nullptr User must be registered in "
@@ -15939,6 +15974,10 @@ void BoUpSLP::computeMinimumValueSizes() {
                         UserTE->Scalars.front()->getType());
                     auto It = MinBWs.find(TE);
                     if (It != MinBWs.end() && It->second.first > UserTESz)
+                      return true;
+                    // The size of icmp is always 1 and should not be
+                    // considered.
+                    if (TE->getOpcode() == Instruction::ICmp)
                       return true;
                     return DL->getTypeSizeInBits(U->getType()) > UserTESz;
                   }));

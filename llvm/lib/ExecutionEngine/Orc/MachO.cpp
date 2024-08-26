@@ -17,7 +17,7 @@
 namespace llvm {
 namespace orc {
 
-static std::string objDesc(MemoryBuffer &Obj, const Triple &TT,
+static std::string objDesc(const MemoryBufferRef &Obj, const Triple &TT,
                            bool ObjIsSlice) {
   std::string Desc;
   if (ObjIsSlice)
@@ -27,11 +27,10 @@ static std::string objDesc(MemoryBuffer &Obj, const Triple &TT,
 }
 
 template <typename HeaderType>
-static Expected<std::unique_ptr<MemoryBuffer>>
-checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj,
-                            bool SwapEndianness, const Triple &TT,
-                            bool ObjIsSlice) {
-  StringRef Data = Obj->getBuffer();
+static Error checkMachORelocatableObject(MemoryBufferRef Obj,
+                                         bool SwapEndianness, const Triple &TT,
+                                         bool ObjIsSlice) {
+  StringRef Data = Obj.getBuffer();
 
   HeaderType Hdr;
   memcpy(&Hdr, Data.data(), sizeof(HeaderType));
@@ -40,28 +39,27 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj,
     swapStruct(Hdr);
 
   if (Hdr.filetype != MachO::MH_OBJECT)
-    return make_error<StringError>(objDesc(*Obj, TT, ObjIsSlice) +
+    return make_error<StringError>(objDesc(Obj, TT, ObjIsSlice) +
                                        " is not a MachO relocatable object",
                                    inconvertibleErrorCode());
 
   auto ObjArch = object::MachOObjectFile::getArch(Hdr.cputype, Hdr.cpusubtype);
   if (ObjArch != TT.getArch())
     return make_error<StringError>(
-        objDesc(*Obj, TT, ObjIsSlice) + Triple::getArchTypeName(ObjArch) +
+        objDesc(Obj, TT, ObjIsSlice) + Triple::getArchTypeName(ObjArch) +
             ", cannot be loaded into " + TT.str() + " process",
         inconvertibleErrorCode());
 
-  return std::move(Obj);
+  return Error::success();
 }
 
-Expected<std::unique_ptr<MemoryBuffer>>
-checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
-                            bool ObjIsSlice) {
-  StringRef Data = Obj->getBuffer();
+Error checkMachORelocatableObject(MemoryBufferRef Obj, const Triple &TT,
+                                  bool ObjIsSlice) {
+  StringRef Data = Obj.getBuffer();
 
   if (Data.size() < 4)
     return make_error<StringError>(
-        objDesc(*Obj, TT, ObjIsSlice) +
+        objDesc(Obj, TT, ObjIsSlice) +
             " is not a valid MachO relocatable object file (truncated header)",
         inconvertibleErrorCode());
 
@@ -79,10 +77,19 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
         std::move(Obj), Magic == MachO::MH_CIGAM_64, TT, ObjIsSlice);
   default:
     return make_error<StringError>(
-        objDesc(*Obj, TT, ObjIsSlice) +
+        objDesc(Obj, TT, ObjIsSlice) +
             " is not a valid MachO relocatable object (bad magic value)",
         inconvertibleErrorCode());
   }
+}
+
+Expected<std::unique_ptr<MemoryBuffer>>
+checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
+                            bool ObjIsSlice) {
+  if (auto Err =
+          checkMachORelocatableObject(Obj->getMemBufferRef(), TT, ObjIsSlice))
+    return std::move(Err);
+  return std::move(Obj);
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
