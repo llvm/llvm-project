@@ -61,6 +61,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
 #include <functional>
 #include <memory>
@@ -86,7 +87,7 @@ enum class MCPseudoProbeFlag {
 struct MCPseudoProbeFuncDesc {
   uint64_t FuncGUID = 0;
   uint64_t FuncHash = 0;
-  std::string FuncName;
+  StringRef FuncName;
 
   MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, StringRef Name)
       : FuncGUID(GUID), FuncHash(Hash), FuncName(Name){};
@@ -100,8 +101,18 @@ class MCDecodedPseudoProbe;
 using InlineSite = std::tuple<uint64_t, uint32_t>;
 using MCPseudoProbeInlineStack = SmallVector<InlineSite, 8>;
 // GUID to PseudoProbeFuncDesc map
-using GUIDProbeFunctionMap =
-    std::unordered_map<uint64_t, MCPseudoProbeFuncDesc>;
+class GUIDProbeFunctionMap : public std::vector<MCPseudoProbeFuncDesc> {
+public:
+  auto find(uint64_t GUID) const {
+    auto CompareDesc = [](const MCPseudoProbeFuncDesc &Desc, uint64_t GUID) {
+      return Desc.FuncGUID < GUID;
+    };
+    auto It = llvm::lower_bound(*this, GUID, CompareDesc);
+    if (It->FuncGUID != GUID)
+      return end();
+    return It;
+  }
+};
 
 class MCDecodedPseudoProbeInlineTree;
 
@@ -388,6 +399,8 @@ class MCPseudoProbeDecoder {
 
   // GUID to PseudoProbeFuncDesc map.
   GUIDProbeFunctionMap GUID2FuncDescMap;
+
+  BumpPtrAllocator FuncNameAllocator;
 
   // Address to probes map.
   AddressProbesMap Address2ProbesMap;
