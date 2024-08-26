@@ -226,6 +226,15 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
     }
 
     // If Induction PHI, register as a starting point.
+    // For patterns that include induction variables in Phi's chain.
+    // The example looks like:
+    // for.body:
+    //   %i = phi(0, %inc)
+    //   %x = phi(0, %y)
+    //   %a = phi(0, %add)
+    //   %y = phi(0, %a)
+    //   %add = %i + 2
+    //   %inc = %i + 1
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(Phi, &L, &SE, ID))
       return (IterationsToInvariance[&V] = 0);
