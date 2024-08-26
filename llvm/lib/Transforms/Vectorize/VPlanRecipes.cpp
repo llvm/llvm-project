@@ -1267,6 +1267,11 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
 }
 
 void VPWidenEVLRecipe::execute(VPTransformState &State) {
+  unsigned Opcode = getOpcode();
+  // TODO: Support other opcodes
+  if (!Instruction::isBinaryOp(Opcode) && !Instruction::isUnaryOp(Opcode))
+    llvm_unreachable("Unsupported opcode in VPWidenEVLRecipe::execute");
+
   State.setDebugLocFrom(getDebugLoc());
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
@@ -1277,34 +1282,23 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
 
   VPValue *EVL = getEVL();
   Value *EVLArg = State.get(EVL, 0, /*NeedsScalar=*/true);
-  unsigned Opcode = getOpcode();
-  Instruction *I = getUnderlyingInstr();
   IRBuilderBase &BuilderIR = State.Builder;
   VectorBuilder Builder(BuilderIR);
   Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
-  Value *VPInst = nullptr;
 
-  //===------------------- Binary and Unary Ops ---------------------===//
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isUnaryOp(Opcode)) {
-    // Just widen unops and binops.
-
-    SmallVector<Value *, 4> Ops;
-    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
-      VPValue *VPOp = getOperand(I);
-      Ops.push_back(State.get(VPOp, 0));
-    }
-
-    Builder.setMask(Mask).setEVL(EVLArg);
-    VPInst = Builder.createVectorInstruction(Opcode, Ops[0]->getType(), Ops,
-                                             "vp.op");
-
-    if (auto *VecOp = dyn_cast_or_null<Instruction>(VPInst))
-      VecOp->copyIRFlags(I);
-  } else {
-    llvm_unreachable("Unsupported opcode in VPWidenEVLRecipe::execute");
+  SmallVector<Value *, 4> Ops;
+  for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
+    VPValue *VPOp = getOperand(I);
+    Ops.push_back(State.get(VPOp, 0));
   }
+
+  Builder.setMask(Mask).setEVL(EVLArg);
+  Value *VPInst =
+      Builder.createVectorInstruction(Opcode, Ops[0]->getType(), Ops, "vp.op");
+
   State.set(this, VPInst, 0);
-  State.addMetadata(VPInst, I);
+  State.addMetadata(VPInst,
+                    dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
