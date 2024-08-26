@@ -52,3 +52,15 @@ int *cannot_return_null() {
 __attribute__((returns_nonnull)) int *passthrough(int *p) {
   return p; // no-warning: we have no evidence that `p` is null, i.e., violating the contract
 }
+
+__attribute__((noreturn))
+void exit(int);
+
+__attribute__((returns_nonnull)) int *passthrough2(int *p);
+int *passthrough2(int *p) {
+  return p; // FIXME: no-warning  Explicitly disabled to avoid FPs
+}
+
+void call_with_null(void) {
+  passthrough2(0);
+}
