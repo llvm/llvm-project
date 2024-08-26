@@ -130,13 +130,24 @@ private:
 class BinaryExpr : public ScriptExpr {
 public:
   enum class Opcode { LNot, Minus, Not, Plus };
-  static const BinaryExpr *create();
+  BinaryExpr(StringRef op, const ExprValue LHS, const ExprValue RHS,
+             const std::string loc)
+      : ScriptExpr(ExprKind::Binary), op_(op), LHS(LHS), RHS(RHS), loc_(loc) {}
+
+  uint64_t evaluateSymbolAssignment();
+  // Some operations only support one non absolute value. Move the
+  // absolute one to the right hand side for convenience.
+  static void moveAbsRight(ExprValue &a, ExprValue &b);
+  static ExprValue add(ExprValue a, ExprValue b);
+  static ExprValue sub(ExprValue a, ExprValue b);
+  static ExprValue bitAnd(ExprValue a, ExprValue b);
+  static ExprValue bitXor(ExprValue a, ExprValue b);
+  static ExprValue bitOr(ExprValue a, ExprValue b);
 
 private:
-  BinaryExpr(const ExprValue *LHS, const ExprValue *RHS)
-      : ScriptExpr(ExprKind::Binary), LHS(LHS), RHS(RHS) {}
-
-  const ExprValue *LHS, *RHS;
+  StringRef op_;
+  const ExprValue LHS, RHS;
+  std::string loc_;
 };
 
 // This enum is used to implement linker script SECTIONS command.

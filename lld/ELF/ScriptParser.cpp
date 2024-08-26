@@ -139,46 +139,6 @@ static StringRef unquote(StringRef s) {
   return s;
 }
 
-// Some operations only support one non absolute value. Move the
-// absolute one to the right hand side for convenience.
-static void moveAbsRight(ExprValue &a, ExprValue &b) {
-  if (a.sec == nullptr || (a.forceAbsolute && !b.isAbsolute()))
-    std::swap(a, b);
-  if (!b.isAbsolute())
-    script->recordError(
-        a.loc + ": at least one side of the expression must be absolute");
-}
-
-static ExprValue add(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
-  return {a.sec, a.forceAbsolute, a.getSectionOffset() + b.getValue(), a.loc};
-}
-
-static ExprValue sub(ExprValue a, ExprValue b) {
-  // The distance between two symbols in sections is absolute.
-  if (!a.isAbsolute() && !b.isAbsolute())
-    return a.getValue() - b.getValue();
-  return {a.sec, false, a.getSectionOffset() - b.getValue(), a.loc};
-}
-
-static ExprValue bitAnd(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
-  return {a.sec, a.forceAbsolute,
-          (a.getValue() & b.getValue()) - a.getSecAddr(), a.loc};
-}
-
-static ExprValue bitXor(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
-  return {a.sec, a.forceAbsolute,
-          (a.getValue() ^ b.getValue()) - a.getSecAddr(), a.loc};
-}
-
-static ExprValue bitOr(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
-  return {a.sec, a.forceAbsolute,
-          (a.getValue() | b.getValue()) - a.getSecAddr(), a.loc};
-}
-
 void ScriptParser::readDynamicList() {
   expect("{");
   SmallVector<SymbolVersion, 0> locals;
@@ -1203,6 +1163,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
     std::string loc = getCurrentLocation();
     e = make<DynamicExpr>([=, c = op[0]]() -> ExprValue {
       ExprValue lhs = script->getSymbolValue(name, loc);
+      BinaryExpr *expr = make<BinaryExpr>(op, lhs, e->getExprValue(), loc);
       switch (c) {
       case '*':
         return lhs.getValue() * e->getExprValueAlignValue();
@@ -1212,9 +1173,9 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
         error(loc + ": division by zero");
         return 0;
       case '+':
-        return add(lhs, e->getExprValue());
+        return BinaryExpr::add(lhs, e->getExprValue());
       case '-':
-        return sub(lhs, e->getExprValue());
+        return BinaryExpr::sub(lhs, e->getExprValue());
       case '<':
         return lhs.getValue() << e->getExprValueAlignValue() % 64;
       case '>':
@@ -1247,10 +1208,10 @@ ScriptExpr *ScriptParser::readExpr() {
 ScriptExpr *ScriptParser::combine(StringRef op, ScriptExpr *l, ScriptExpr *r) {
   if (op == "+")
     return make<DynamicExpr>(
-        [=] { return add(l->getExprValue(), r->getExprValue()); });
+        [=] { return BinaryExpr::add(l->getExprValue(), r->getExprValue()); });
   if (op == "-")
     return make<DynamicExpr>(
-        [=] { return sub(l->getExprValue(), r->getExprValue()); });
+        [=] { return BinaryExpr::sub(l->getExprValue(), r->getExprValue()); });
   if (op == "*")
     return make<DynamicExpr>([=] {
       return l->getExprValueAlignValue() * r->getExprValueAlignValue();
@@ -1314,14 +1275,17 @@ ScriptExpr *ScriptParser::combine(StringRef op, ScriptExpr *l, ScriptExpr *r) {
       return l->getExprValueAlignValue() && r->getExprValueAlignValue();
     });
   if (op == "&")
-    return make<DynamicExpr>(
-        [=] { return bitAnd(l->getExprValue(), r->getExprValue()); });
+    return make<DynamicExpr>([=] {
+      return BinaryExpr::bitAnd(l->getExprValue(), r->getExprValue());
+    });
   if (op == "^")
-    return make<DynamicExpr>(
-        [=] { return bitXor(l->getExprValue(), r->getExprValue()); });
+    return make<DynamicExpr>([=] {
+      return BinaryExpr::bitXor(l->getExprValue(), r->getExprValue());
+    });
   if (op == "|")
-    return make<DynamicExpr>(
-        [=] { return bitOr(l->getExprValue(), r->getExprValue()); });
+    return make<DynamicExpr>([=] {
+      return BinaryExpr::bitOr(l->getExprValue(), r->getExprValue());
+    });
   llvm_unreachable("invalid operator");
 }
 

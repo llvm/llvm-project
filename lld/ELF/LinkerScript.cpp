@@ -132,8 +132,6 @@ uint64_t ExprValue::getSectionOffset() const {
 }
 
 std::function<ExprValue()> ScriptExpr::getExpr() const {
-  // llvm::errs() << "getExpr: " << static_cast<int>(kind_) << ", " <<
-  // reinterpret_cast<uintptr_t>(this) << "\n";
   switch (kind_) {
   case ExprKind::Constant:
     return static_cast<const ConstantExpr *>(this)->getConstantExpr();
@@ -147,8 +145,6 @@ std::function<ExprValue()> ScriptExpr::getExpr() const {
 }
 
 ExprValue ScriptExpr::getExprValue() const {
-  // llvm::errs() << "getExprValue: " << static_cast<int>(kind_) << ", " <<
-  // reinterpret_cast<uintptr_t>(this) << "\n";
   switch (kind_) {
   case ExprKind::Constant:
     return static_cast<const ConstantExpr *>(this)->getConstantExprValue();
@@ -162,6 +158,58 @@ ExprValue ScriptExpr::getExprValue() const {
 uint64_t ScriptExpr::getExprValueAlignValue() const {
   auto e = getExprValue();
   return e.getValue();
+}
+
+uint64_t BinaryExpr::evaluateSymbolAssignment() {
+  switch (op_[0]) {
+  case '*':
+    return LHS.getValue() * RHS.getValue();
+  case '/':
+    if (uint64_t rv = RHS.getValue())
+      return LHS.getValue() / rv;
+    error(loc_ + ": division by zero");
+    return 0;
+    // case '+':
+  }
+  return 0;
+}
+
+void BinaryExpr::moveAbsRight(ExprValue &a, ExprValue &b) {
+  if (a.sec == nullptr || (a.forceAbsolute && !b.isAbsolute()))
+    std::swap(a, b);
+  if (!b.isAbsolute())
+    script->recordError(
+        a.loc + ": at least one side of the expression must be absolute");
+}
+
+ExprValue BinaryExpr::add(ExprValue a, ExprValue b) {
+  moveAbsRight(a, b);
+  return {a.sec, a.forceAbsolute, a.getSectionOffset() + b.getValue(), a.loc};
+}
+
+ExprValue BinaryExpr::sub(ExprValue a, ExprValue b) {
+  // The distance between two symbols in sections is absolute.
+  if (!a.isAbsolute() && !b.isAbsolute())
+    return a.getValue() - b.getValue();
+  return {a.sec, false, a.getSectionOffset() - b.getValue(), a.loc};
+}
+
+ExprValue BinaryExpr::bitAnd(ExprValue a, ExprValue b) {
+  moveAbsRight(a, b);
+  return {a.sec, a.forceAbsolute,
+          (a.getValue() & b.getValue()) - a.getSecAddr(), a.loc};
+}
+
+ExprValue BinaryExpr::bitXor(ExprValue a, ExprValue b) {
+  moveAbsRight(a, b);
+  return {a.sec, a.forceAbsolute,
+          (a.getValue() ^ b.getValue()) - a.getSecAddr(), a.loc};
+}
+
+ExprValue BinaryExpr::bitOr(ExprValue a, ExprValue b) {
+  moveAbsRight(a, b);
+  return {a.sec, a.forceAbsolute,
+          (a.getValue() | b.getValue()) - a.getSecAddr(), a.loc};
 }
 
 OutputDesc *LinkerScript::createOutputSection(StringRef name,
