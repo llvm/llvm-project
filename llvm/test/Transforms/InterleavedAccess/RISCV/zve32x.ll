@@ -13,10 +13,10 @@ define <4 x i1> @load_large_vector(ptr %p) {
 ; ZVE32X-NEXT:    ret <4 x i1> [[RET]]
 ;
 ; ZVE64X-LABEL: @load_large_vector(
-; ZVE64X-NEXT:    [[L:%.*]] = load <12 x ptr>, ptr [[P:%.*]], align 128
-; ZVE64X-NEXT:    [[S1:%.*]] = shufflevector <12 x ptr> [[L]], <12 x ptr> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; ZVE64X-NEXT:    [[S2:%.*]] = shufflevector <12 x ptr> [[L]], <12 x ptr> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; ZVE64X-NEXT:    [[RET:%.*]] = icmp ne <4 x ptr> [[S1]], [[S2]]
+; ZVE64X-NEXT:    [[TMP1:%.*]] = call { <4 x ptr>, <4 x ptr>, <4 x ptr> } @llvm.riscv.seg3.load.v4p0.p0.i64(ptr [[P:%.*]], i64 4)
+; ZVE64X-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x ptr>, <4 x ptr>, <4 x ptr> } [[TMP1]], 1
+; ZVE64X-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x ptr>, <4 x ptr>, <4 x ptr> } [[TMP1]], 0
+; ZVE64X-NEXT:    [[RET:%.*]] = icmp ne <4 x ptr> [[TMP3]], [[TMP2]]
 ; ZVE64X-NEXT:    ret <4 x i1> [[RET]]
 ;
   %l = load <12 x ptr>, ptr %p
