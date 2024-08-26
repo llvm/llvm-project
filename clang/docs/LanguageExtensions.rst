@@ -3774,6 +3774,66 @@ type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
 ``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
 as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
+``__builtin_get_counted_by``
+----------------------------
+
+``__builtin_get_counted_by`` returns a pointer to the count field from the
+``counted_by`` attribute.
+
+the argument must be a pointer to a flexible array member. If the argument
+isn't a flexible array member or doesn't have the ``counted_by`` attribute, it
+returns ``(size_t *)0``.
+
+**Syntax**:
+
+.. code-block:: c
+
+  T *__builtin_get_counted_by(void *array)
+
+**Examples**:
+
+.. code-block:: c
+
+  #define alloc(P, FAM, COUNT) ({ \
+     typeof(P) __p = NULL;                                        \
+     __p = malloc(MAX(sizeof(*__p),                               \
+                      sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
+     if (__builtin_get_counted_by(__p->FAM))                      \
+       *__builtin_get_counted_by(__p->FAM) = COUNT;               \
+     __p;                                                         \
+  })
+
+**Description**:
+
+the ``__builtin_get_counted_by`` builtin allows the programmer to prevent a
+common error associated with the ``counted_by`` attribute. When using the
+``counted_by`` attribute, the ``count`` field **must** be set before the
+flexible array member can be accessed. Otherwise, the sanitizers may view such
+accesses as false positives. For instance, it's not uncommon for programmers to
+initialize the flexible array before setting the ``count`` field:
+
+.. code-block:: c
+
+  struct s {
+    int dummy;
+    short count;
+    long array[];
+  };
+
+  struct s *ptr = malloc(sizeof(struct s) + sizeof(long) * COUNT);
+
+  for (int i = 0; i < COUNT; ++i)
+    ptr->array[i] = i;
+
+  ptr->count = COUNT;
+
+Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
+allocation of a struct with a flexible array member that has the ``counted_by``
+attribute is prone to failure in large code bases.
+
+This builtin works best with allocators that are implemented via macros (like
+in Linux) where the assignment happens automatically.
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
