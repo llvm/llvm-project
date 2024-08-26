@@ -601,6 +601,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_void.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <stdexcept>
@@ -1024,6 +1027,13 @@ template <class _Key,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS unordered_map {
+  static_assert(!is_reference<_Key>::value || !is_function<typename remove_reference<_Key>::type>::value, "'std::unordered_map::key_type' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_Key>::value, "'std::unordered_map::key_type' can only hold object types; references are not objects");
+  static_assert(!is_function<_Key>::value, "'std::unordered_map::key_type' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Key>::value, "'std::unordered_map::key_type' can only hold object types; 'void' is not an object");
+
+  static_assert(!is_function<_Tp>::value, "'std::unordered_map::mapped_type' can only hold object or reference types; functions are neither (consider using a function pointer or reference)");
+  static_assert(!is_void<_Tp>::value, "'std::unordered_map::mapped_type' can only hold object types; 'void' is not an object");
 public:
   // types
   typedef _Key key_type;
@@ -1827,6 +1837,13 @@ template <class _Key,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS unordered_multimap {
+  static_assert(!is_reference<_Key>::value || !is_function<typename remove_reference<_Key>::type>::value, "'std::unordered_multimap::key_type' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_Key>::value, "'std::unordered_multimap::key_type' can only hold object types; references are not objects");
+  static_assert(!is_function<_Key>::value, "'std::unordered_multimap::key_type' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Key>::value, "'std::unordered_multimap::key_type' can only hold object types; 'void' is not an object");
+
+  static_assert(!is_function<_Tp>::value, "'std::unordered_multimap::mapped_type' can only hold object or reference types; functions are neither (consider using a function pointer or reference)");
+  static_assert(!is_void<_Tp>::value, "'std::unordered_multimap::mapped_type' can only hold object types; 'void' is not an object");
 public:
   // types
   typedef _Key key_type;

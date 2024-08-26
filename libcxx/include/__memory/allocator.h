@@ -16,9 +16,12 @@
 #include <__memory/allocator_traits.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <cstddef>
 #include <new>
@@ -76,8 +79,16 @@ struct __non_trivial_if<true, _Unique> {
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
-  static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
-  static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
+  static_assert(!is_const<_Tp>::value, "'std::allocator' can only allocate non-const object types");
+  static_assert(!is_volatile<_Tp>::value, "'std::allocator' can only allocate non-volatile object types");
+  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value,
+                "'std::allocator' can only allocate object types; function references are not objects (consider using "
+                "a function pointer)");
+  static_assert(!is_reference<_Tp>::value,
+                "'std::allocator' can only allocate object types; references are not objects");
+  static_assert(
+      !is_function<_Tp>::value,
+      "'std::allocator' can only allocate object types; functions are not objects (consider using a function pointer)");
 
 public:
   typedef size_t size_type;

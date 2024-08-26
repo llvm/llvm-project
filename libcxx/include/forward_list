@@ -220,11 +220,16 @@ template <class T, class Allocator, class Predicate>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -635,8 +640,136 @@ void __forward_list_base<_Tp, _Alloc>::clear() _NOEXCEPT {
   __before_begin()->__next_ = nullptr;
 }
 
+// begin-diagnostic-helpers
+// std::forward_list can only have non-cv-qualified object types as its value type, which we diagnose.
+// In order to short-cirucit redundant (and cryptic) diagnostics, std::forward_list must be the one
+// to fire the static_assert. Since std::forward_list inherits from __forward_list_base, we also need
+// to create specialisations for the rejected types, so that everything appears "good" to std::forward_list
+// (otherwise we'll get lots of unhelpful diagnostics that suppress the one std::forward_list offers).
+template <class _Tp, class _Alloc>
+class _LIBCPP_TEMPLATE_VIS __forward_list_base<_Tp const, _Alloc> {
+public:
+  using __node_allocator = void*;
+  using __node_alloc_traits = void*;
+  using __node_pointer = void*;
+  using __node_type = void*;
+  using __node_base = void*;
+  using __node_base_pointer = void*;
+  using __link_pointer = void*;
+
+  using pointer = int*;
+  using const_pointer = int const*;
+  using size_type = unsigned int;
+  using difference_type = int;
+  using iterator = int*;
+  using const_iterator = int const*;
+};
+
+template <class _Tp, class _Alloc>
+class _LIBCPP_TEMPLATE_VIS __forward_list_base<_Tp volatile, _Alloc> {
+public:
+  using __node_allocator = void*;
+  using __node_alloc_traits = void*;
+  using __node_pointer = void*;
+  using __node_type = void*;
+  using __node_base = void*;
+  using __node_base_pointer = void*;
+  using __link_pointer = void*;
+
+  using pointer = int*;
+  using const_pointer = int const*;
+  using size_type = unsigned int;
+  using difference_type = int;
+  using iterator = int*;
+  using const_iterator = int const*;
+};
+
+template <class _Tp, class _Alloc>
+class _LIBCPP_TEMPLATE_VIS __forward_list_base<_Tp&, _Alloc> {
+public:
+  using __node_allocator = void*;
+  using __node_alloc_traits = void*;
+  using __node_pointer = void*;
+  using __node_type = void*;
+  using __node_base = void*;
+  using __node_base_pointer = void*;
+  using __link_pointer = void*;
+
+  using pointer = int*;
+  using const_pointer = int const*;
+  using size_type = unsigned int;
+  using difference_type = int;
+  using iterator = int*;
+  using const_iterator = int const*;
+};
+
+template <class _Tp, class _Alloc>
+class _LIBCPP_TEMPLATE_VIS __forward_list_base<_Tp&&, _Alloc> {
+public:
+  using __node_allocator = void*;
+  using __node_alloc_traits = void*;
+  using __node_pointer = void*;
+  using __node_type = void*;
+  using __node_base = void*;
+  using __node_base_pointer = void*;
+  using __link_pointer = void*;
+
+  using pointer = int*;
+  using const_pointer = int const*;
+  using size_type = unsigned int;
+  using difference_type = int;
+  using iterator = int*;
+  using const_iterator = int const*;
+};
+
+template <class _Tp, class... _Args, class _Alloc>
+class _LIBCPP_TEMPLATE_VIS __forward_list_base<_Tp(_Args...), _Alloc> {
+public:
+  using __node_allocator = void*;
+  using __node_alloc_traits = void*;
+  using __node_pointer = void*;
+  using __node_type = void*;
+  using __node_base = void*;
+  using __node_base_pointer = void*;
+  using __link_pointer = void*;
+
+  using pointer = int*;
+  using const_pointer = int const*;
+  using size_type = unsigned int;
+  using difference_type = int;
+  using iterator = int*;
+  using const_iterator = int const*;
+};
+
+template <class _Alloc>
+class _LIBCPP_TEMPLATE_VIS __forward_list_base<void, _Alloc> {
+public:
+  using __node_allocator = void*;
+  using __node_alloc_traits = void*;
+  using __node_pointer = void*;
+  using __node_type = void*;
+  using __node_base = void*;
+  using __node_base_pointer = void*;
+  using __link_pointer = void*;
+
+  using pointer = int*;
+  using const_pointer = int const*;
+  using size_type = unsigned int;
+  using difference_type = int;
+  using iterator = int*;
+  using const_iterator = int const*;
+};
+// end-diagnostic-helpers
+
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS forward_list : private __forward_list_base<_Tp, _Alloc> {
+  static_assert(!is_const<_Tp>::value, "'std::forward_list' can only hold non-const types");
+  static_assert(!is_volatile<_Tp>::value, "'std::forward_list' can only hold non-volatile types");
+  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value, "'std::forward_list' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_Tp>::value, "'std::forward_list' can only hold object types; references are not objects");
+  static_assert(!is_function<_Tp>::value, "'std::forward_list' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Tp>::value, "'std::forward_list' can only hold object types; 'void' is not an object");
+
   typedef __forward_list_base<_Tp, _Alloc> base;
   typedef typename base::__node_allocator __node_allocator;
   typedef typename base::__node_type __node_type;

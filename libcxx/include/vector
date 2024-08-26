@@ -346,8 +346,14 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__ranges/size.h>
 #include <__split_buffer>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_reference.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
@@ -387,6 +393,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
 private:
+  static_assert(!is_const<_Tp>::value, "'std::vector' can only hold non-const types");
+  static_assert(!is_volatile<_Tp>::value, "'std::vector' can only hold non-volatile types");
+  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value, "'std::vector' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_Tp>::value, "'std::vector' can only hold object types; references are not objects");
+  static_assert(!is_function<_Tp>::value, "'std::vector' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Tp>::value, "'std::vector' can only hold object types; 'void' is not an object");
+
   typedef allocator<_Tp> __default_allocator_type;
 
 public:

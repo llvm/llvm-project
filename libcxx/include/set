@@ -531,6 +531,12 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__ranges/from_range.h>
 #include <__tree>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_const.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <version>
 
@@ -561,6 +567,12 @@ class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set {
+  static_assert(!is_const<_Key>::value, "'std::set' can only hold non-const types");
+  static_assert(!is_volatile<_Key>::value, "'std::set' can only hold non-volatile types");
+  static_assert(!is_reference<_Key>::value || !is_function<typename remove_reference<_Key>::type>::value, "'std::set' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_Key>::value, "'std::set' can only hold object types; references are not objects");
+  static_assert(!is_function<_Key>::value, "'std::set' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Key>::value, "'std::set' can only hold object types; 'void' is not an object");
 public:
   // types:
   typedef _Key key_type;
@@ -1015,6 +1027,12 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
+  static_assert(!is_const<_Key>::value, "'std::multiset' can only hold non-const types");
+  static_assert(!is_volatile<_Key>::value, "'std::multiset' can only hold non-volatile types");
+  static_assert(!is_reference<_Key>::value || !is_function<typename remove_reference<_Key>::type>::value, "'std::multiset' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_Key>::value, "'std::multiset' can only hold object types; references are not objects");
+  static_assert(!is_function<_Key>::value, "'std::multiset' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Key>::value, "'std::multiset' can only hold object types; 'void' is not an object");
 public:
   // types:
   typedef _Key key_type;

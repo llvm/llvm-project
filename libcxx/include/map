@@ -592,6 +592,9 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__ranges/from_range.h>
 #include <__tree>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_void.h>
 #include <__utility/forward.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
@@ -962,6 +965,13 @@ public:
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS map {
+  static_assert(!is_lvalue_reference<_Key>::value || !is_function<typename remove_reference<_Key>::type>::value, "'std::map::key_type' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_lvalue_reference<_Key>::value, "'std::map::key_type' can only hold object types; references are not objects");
+  static_assert(!is_function<_Key>::value, "'std::map::key_type' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Key>::value, "'std::map::key_type' can only hold object types; 'void' is not an object");
+
+  static_assert(!is_function<_Tp>::value, "'std::map::mapped_type' can only hold object or reference types; functions are neither (consider using a function pointer or reference)");
+  static_assert(!is_void<_Tp>::value, "'std::map::mapped_type' can only hold object types; 'void' is not an object");
 public:
   // types:
   typedef _Key key_type;
@@ -1639,6 +1649,13 @@ erase_if(map<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred) {
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS multimap {
+  static_assert(!is_lvalue_reference<_Key>::value || !is_function<typename remove_reference<_Key>::type>::value, "'std::multimap::key_type' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_lvalue_reference<_Key>::value, "'std::multimap::key_type' can only hold object types; references are not objects");
+  static_assert(!is_function<_Key>::value, "'std::multimap::key_type' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_Key>::value, "'std::multimap::key_type' can only hold object types; 'void' is not an object");
+
+  static_assert(!is_function<_Tp>::value, "'std::multimap::mapped_type' can only hold object or reference types; functions are neither (consider using a function pointer or reference)");
+  static_assert(!is_void<_Tp>::value, "'std::multimap::mapped_type' can only hold object types; 'void' is not an object");
 public:
   // types:
   typedef _Key key_type;

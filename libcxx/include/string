@@ -622,15 +622,21 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
 #include <__type_traits/is_trivially_relocatable.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/is_volatile.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__type_traits/void_t.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
@@ -751,6 +757,13 @@ struct __init_with_sentinel_tag {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
+  static_assert(!is_const<_CharT>::value, "'std::basic_string' can only hold non-const types");
+  static_assert(!is_volatile<_CharT>::value, "'std::basic_string' can only hold non-volatile types");
+  static_assert(!is_reference<_CharT>::value || !is_function<typename remove_reference<_CharT>::type>::value, "'std::basic_string' can only hold object types; function references are not objects (consider using a function pointer)");
+  static_assert(!is_reference<_CharT>::value, "'std::basic_string' can only hold object types; references are not objects");
+  static_assert(!is_function<_CharT>::value, "'std::basic_string' can only hold object types; functions are not objects (consider using a function pointer)");
+  static_assert(!is_void<_CharT>::value, "'std::basic_string' can only hold object types; 'void' is not an object");
+
   using __default_allocator_type = allocator<_CharT>;
 
 public:
