@@ -326,7 +326,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   auto IsConstType = [&S](const VarDecl *VD) -> bool {
     QualType T = VD->getType();
 
-    if (T.isConstant(S.getCtx()))
+    if (T.isConstant(S.getASTContext()))
       return true;
 
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
@@ -523,9 +523,9 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(S.getLangOpts().CPlusPlus);
   const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
   if ((!VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(S.getCtx())) ||
+       VD->mightBeUsableInConstantExpressions(S.getASTContext())) ||
       (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
-       !VD->hasICEInitializer(S.getCtx()))) {
+       !VD->hasICEInitializer(S.getASTContext()))) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
     S.Note(VD->getLocation(), diag::note_declared_at);
@@ -797,7 +797,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
   // but we want to get the array size right.
   if (D->isArray()) {
     QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getCtx().getConstantArrayType(
+    TypeToDiagnose = S.getASTContext().getConstantArrayType(
         ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
         nullptr, ArraySizeModifier::Normal, 0);
   } else
@@ -819,7 +819,7 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
   // Whatever this is, we didn't heap allocate it.
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
-      << Ptr.toDiagnosticString(S.getCtx());
+      << Ptr.toDiagnosticString(S.getASTContext());
 
   if (Ptr.isTemporary())
     S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
