@@ -849,14 +849,14 @@ parseTwoOperandConstraint(StringRef S, ArrayRef<SMLoc> Loc) {
   size_t start = Ops.first.find_first_of('$');
   if (start == std::string::npos)
     PrintFatalError(Loc, "expected '$' prefix on asm operand name");
-  Ops.first = Ops.first.slice(start + 1, std::string::npos);
+  Ops.first = Ops.first.substr(start + 1);
   size_t end = Ops.first.find_last_of(" \t");
   Ops.first = Ops.first.slice(0, end);
   // Now the second operand.
   start = Ops.second.find_first_of('$');
   if (start == std::string::npos)
     PrintFatalError(Loc, "expected '$' prefix on asm operand name");
-  Ops.second = Ops.second.slice(start + 1, std::string::npos);
+  Ops.second = Ops.second.substr(start + 1);
   end = Ops.second.find_last_of(" \t");
   Ops.first = Ops.first.slice(0, end);
   return Ops;
@@ -2871,7 +2871,7 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
 static void
 emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
                          const AsmMatcherInfo &Info, StringRef ClassName,
-                         StringToOffsetTable &StringTable,
+                         const StringToOffsetTable &StringTable,
                          unsigned MaxMnemonicIndex, unsigned MaxFeaturesIndex,
                          bool HasMnemonicFirst, const Record &AsmParser) {
   unsigned MaxMask = 0;
@@ -2924,8 +2924,8 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
     // Store a pascal-style length byte in the mnemonic.
     std::string LenMnemonic = char(II.Mnemonic.size()) + II.Mnemonic.lower();
-    OS << StringTable.GetOrAddStringOffset(LenMnemonic, false) << " /* "
-       << II.Mnemonic << " */, ";
+    OS << *StringTable.GetStringOffset(LenMnemonic) << " /* " << II.Mnemonic
+       << " */, ";
 
     OS << OMI.OperandMask;
     OS << " /* ";
@@ -3554,8 +3554,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       // Store a pascal-style length byte in the mnemonic.
       std::string LenMnemonic =
           char(MI->Mnemonic.size()) + MI->Mnemonic.lower();
-      OS << "  { " << StringTable.GetOrAddStringOffset(LenMnemonic, false)
-         << " /* " << MI->Mnemonic << " */, " << Target.getInstNamespace()
+      OS << "  { " << *StringTable.GetStringOffset(LenMnemonic) << " /* "
+         << MI->Mnemonic << " */, " << Target.getInstNamespace()
          << "::" << MI->getResultInst()->TheDef->getName() << ", "
          << MI->ConversionFnKind << ", ";
 

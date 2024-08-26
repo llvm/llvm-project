@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueLattice.h"
@@ -418,7 +419,7 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   DenseMap<Function *, std::unique_ptr<PredicateInfo>> FnPredicateInfo;
 
-  DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
+  DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
   LLVMContext &Ctx;
 
@@ -1363,7 +1364,7 @@ void SCCPInstVisitor::visitInsertValueInst(InsertValueInst &IVI) {
 
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (SCCPSolver::isOverdefined(ValueState[&IVI]))
+  if (ValueState[&IVI].isOverdefined())
     return (void)markOverdefined(&IVI);
 
   // If this has more than one index, we can't handle it, drive all results to
@@ -1435,7 +1436,7 @@ void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
   ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (SCCPSolver::isOverdefined(IV))
+  if (IV.isOverdefined())
     return (void)markOverdefined(&I);
 
   // If something is unknown/undef, wait for it to resolve.
@@ -1460,7 +1461,7 @@ void SCCPInstVisitor::visitFreezeInst(FreezeInst &I) {
   ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (SCCPSolver::isOverdefined(IV))
+  if (IV.isOverdefined())
     return (void)markOverdefined(&I);
 
   // If something is unknown/undef, wait for it to resolve.
@@ -1540,7 +1541,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
 void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
   // Do not cache this lookup, getValueState calls later in the function might
   // invalidate the reference.
-  if (SCCPSolver::isOverdefined(ValueState[&I]))
+  if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
   Value *Op1 = I.getOperand(0);
@@ -1570,7 +1571,7 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
 // Handle getelementptr instructions.  If all operands are constants then we
 // can turn this into a getelementptr ConstantExpr.
 void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
-  if (SCCPSolver::isOverdefined(ValueState[&I]))
+  if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
   SmallVector<Constant *, 8> Operands;
@@ -1580,9 +1581,6 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     ValueLatticeElement State = getValueState(I.getOperand(i));
     if (State.isUnknownOrUndef())
       return; // Operands are not resolved yet.
-
-    if (SCCPSolver::isOverdefined(State))
-      return (void)markOverdefined(&I);
 
     if (Constant *C = getConstant(State, I.getOperand(i)->getType())) {
       Operands.push_back(C);

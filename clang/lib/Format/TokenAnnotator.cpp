@@ -250,7 +250,7 @@ private:
         if (Precedence > prec::Conditional && Precedence < prec::Relational)
           return false;
       }
-      if (Prev.is(TT_ConditionalExpr))
+      if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
       updateParameterCount(Left, CurrentToken);
       if (Style.Language == FormatStyle::LK_Proto) {
@@ -2875,6 +2875,8 @@ private:
     // Search for unexpected tokens.
     for (auto *Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous) {
       if (Prev->is(tok::r_paren)) {
+        if (Prev->is(TT_CastRParen))
+          return false;
         Prev = Prev->MatchingParen;
         if (!Prev)
           return false;
