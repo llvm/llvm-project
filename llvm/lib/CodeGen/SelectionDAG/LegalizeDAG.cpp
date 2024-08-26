@@ -5576,6 +5576,27 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp2.getValue(1));
     break;
   }
+  case ISD::FABS: {
+    // if we can convert to a same sized int value, we bitcast to it,
+    // clear the sign bit and bitcast back to the original type.
+    EVT IntVT = OVT.changeTypeToInteger();
+    if (TLI.isTypeLegal(IntVT)) {
+      SDValue Cast = DAG.getNode(ISD::BITCAST, dl, IntVT, Node->getOperand(0));
+
+      APInt SignMask = APInt::getSignMask(IntVT.getScalarSizeInBits());
+
+      // Mask = ~(1 << (Size-1))
+      SDValue Mask = DAG.getConstant(SignMask, dl, IntVT);
+
+      SDValue And = DAG.getNode(ISD::AND, dl, IntVT, Cast, Mask);
+
+      SDValue Result = DAG.getNode(ISD::BITCAST, dl, OVT, And);
+      Results.push_back(Result);
+      break;
+    }
+
+    [[fallthrough]];
+  }
   case ISD::FFLOOR:
   case ISD::FCEIL:
   case ISD::FRINT:
@@ -5597,7 +5618,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FLOG:
   case ISD::FLOG2:
   case ISD::FLOG10:
-  case ISD::FABS:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
