@@ -575,6 +575,18 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+FreezeInst *FreezeInst::create(Value *V, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::FreezeInst>(Builder.CreateFreeze(V->Val, Name));
+  return Ctx.createFreezeInst(LLVMI);
+}
+
 FenceInst *FenceInst::create(AtomicOrdering Ordering, BBIterator WhereIt,
                              BasicBlock *WhereBB, Context &Ctx,
                              SyncScope::ID SSID) {
@@ -1718,6 +1730,14 @@ Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                InsertAtEnd, Ctx, Name);
 }
 
+void PossiblyDisjointInst::setIsDisjoint(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyDisjointInst::isDisjoint,
+                                       &PossiblyDisjointInst::setIsDisjoint>>(
+          this);
+  cast<llvm::PossiblyDisjointInst>(Val)->setIsDisjoint(B);
+}
+
 void AtomicRMWInst::setAlignment(Align Align) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&AtomicRMWInst::getAlign,
@@ -2209,6 +2229,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
   switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
+  case llvm::Instruction::Freeze: {
+    auto *LLVMFreeze = cast<llvm::FreezeInst>(LLVMV);
+    It->second = std::unique_ptr<FreezeInst>(new FreezeInst(LLVMFreeze, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Fence: {
     auto *LLVMFence = cast<llvm::FenceInst>(LLVMV);
     It->second = std::unique_ptr<FenceInst>(new FenceInst(LLVMFence, *this));
@@ -2410,6 +2435,11 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   // Create SandboxIR for BB's body.
   BB->buildBasicBlockFromLLVMIR(LLVMBB);
   return BB;
+}
+
+FreezeInst *Context::createFreezeInst(llvm::FreezeInst *SI) {
+  auto NewPtr = std::unique_ptr<FreezeInst>(new FreezeInst(SI, *this));
+  return cast<FreezeInst>(registerValue(std::move(NewPtr)));
 }
 
 FenceInst *Context::createFenceInst(llvm::FenceInst *SI) {
