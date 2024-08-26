@@ -2714,3 +2714,31 @@ join:
   %cmp = icmp slt i32 %13, 0
   ret i1 %cmp
 }
+
+define void @phi_op_in_loop(i1 %c, i32 %x) {
+; CHECK-LABEL: @phi_op_in_loop(
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[IF]] ], [ 0, [[LOOP]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PHI]], 1
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+  br label %loop
+
+loop:
+  br i1 %c, label %if, label %loop.latch
+
+if:
+  br label %loop.latch
+
+loop.latch:
+  %phi = phi i32 [ %x, %if ], [ 0, %loop ]
+  %and = and i32 %phi, 1
+  call void @use(i32 %and)
+  br label %loop
+}
