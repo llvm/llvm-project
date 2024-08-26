@@ -34,6 +34,10 @@ void IncorrectEnableSharedFromThisCheck::check(
         : Check(Check) {}
 
     bool VisitCXXRecordDecl(CXXRecordDecl *RDecl) {
+      if (!RDecl->hasDefinition()) {
+        return true;
+      }
+
       if (isStdEnableSharedFromThis(RDecl))
         EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
 
