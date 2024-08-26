@@ -759,7 +759,24 @@ relationship must hold even after any of these related variables are updated. To
 this end, the model requires that assignments to ``buf`` and ``count`` must be
 side by side, with no side effects between them. This prevents ``buf`` and
 ``count`` from temporarily falling out of sync due to updates happening at a
-distance.
+distance. In addition, taking address of ``count`` is not allowed in order to 
+prevent the programmers from updating the ``count`` through the pointer, which
+will evade the necessary checks to make ``count`` and ``buf`` in sync.
+
+.. code-block:: c
+
+   struct counted_buf {
+      int *__counted_by(count) buf;
+      size_t count;
+   };
+
+   void foo(struct counted_buf *p) {
+      int *pointer_to_count = &p->count; // error: variable referred to by
+      // '__counted_by' cannot be pointed to by any other variable; exception is
+      // when the pointer is passed as a compatible argument to a function.
+      *pointer_to_count = SIZE_MAX; // Without reporting the error above, the
+      // compiler cannot prevent count from getting an invalid value.   
+   }
 
 The example below shows a function ``alloc_buf`` that initializes a struct that
 members that use the ``__counted_by`` annotation. The compiler allows these
