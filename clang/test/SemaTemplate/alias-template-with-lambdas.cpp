@@ -157,4 +157,18 @@ static_assert(__is_same(test<0>, void));
 
 } // namespace GH105885
 
+namespace GH102760 {
+
+auto make_tuple = []< class Tag, class... Captures>(Tag, Captures...) {
+  return []< class _Fun >( _Fun) -> void requires requires { 0; }
+  {};
+};
+
+template < class, class... _As >
+using Result = decltype(make_tuple(0)(_As{}...));
+
+using T = Result<int, int>;
+
+} // namespace GH102760
+
 } // namespace lambda_calls
