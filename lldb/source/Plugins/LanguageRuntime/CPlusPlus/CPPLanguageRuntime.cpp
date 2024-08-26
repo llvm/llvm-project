@@ -54,7 +54,7 @@ class LibCXXFrameRecognizer : public StackFrameRecognizer {
 public:
   LibCXXFrameRecognizer()
       : m_hidden_function_regex(
-            R"(^std::__1::(__function.*::operator\(\)|__invoke))"
+            R"(^std::__.*::(__function.*::operator\(\)|__invoke))"
             R"((\[.*\])?)"    // ABI tag.
             R"(( const)?$)"), // const.
         m_hidden_frame(new LibCXXHiddenFrame()) {}
@@ -81,7 +81,7 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
   if (process)
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
-        std::make_shared<RegularExpression>("^std::__1::"),
+        std::make_shared<RegularExpression>("^std::__.*::"),
         /*first_instruction_only*/ false);
 }
 
