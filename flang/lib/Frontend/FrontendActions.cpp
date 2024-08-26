@@ -79,6 +79,10 @@
 
 #include "flang/Tools/CLOptions.inc"
 
+namespace llvm {
+extern cl::opt<bool> PrintPipelinePasses;
+} // namespace llvm
+
 using namespace Fortran::frontend;
 
 // Declare plugin extension function declarations.
@@ -1014,6 +1018,18 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     mpm.addPass(llvm::BitcodeWriterPass(os));
   else if (action == BackendActionTy::Backend_EmitLL)
     mpm.addPass(llvm::PrintModulePass(os));
+
+  // Print a textual, '-passes=' compatible, representation of pipeline if
+  // requested. In this case, don't run the passes. This mimics the behavior of
+  // clang.
+  if (llvm::PrintPipelinePasses) {
+    mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
+      auto passName = pic.getPassNameForClassName(className);
+      return passName.empty() ? className : passName;
+    });
+    llvm::outs() << "\n";
+    return;
+  }
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
