@@ -259,19 +259,20 @@ def testOdsEquallySizedAccessorMultipleSegments():
             ts = [IntegerType.get_signless(i * 8) for i in range(7)]
 
             op = TestOpMultiResultSegments.build_generic(
-                results=[ts[0], [ts[1], ts[2], ts[3]], [ts[4], ts[5], ts[6]]], operands=[v]
+                results=[ts[0], [ts[1], ts[2], ts[3]], [ts[4], ts[5], ts[6]]],
+                operands=[v]
             )
             start, pg = equally_sized_accessor(op.results, 2, 1, 0)
             # CHECK: start: 1, pg: 3
             print(f"start: {start}, pg: {pg}")
             # CHECK: [IntegerType(i8), IntegerType(i16), IntegerType(i24)]
-            print(types(op.results[start:start + pg]))
+            print(types(op.results[start : start + pg]))
 
             start, pg = equally_sized_accessor(op.results, 2, 1, 1)
             # CHECK: start: 4, pg: 3
             print(f"start: {start}, pg: {pg}")
             # CHECK: [IntegerType(i32), IntegerType(i40), IntegerType(i48)]
-            print(types(op.results[start:start + pg]))
+            print(types(op.results[start : start + pg]))
 
 
 run(testOdsEquallySizedAccessorMultipleSegments)
