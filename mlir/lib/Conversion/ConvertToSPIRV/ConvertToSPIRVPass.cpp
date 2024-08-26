@@ -114,7 +114,8 @@ struct ConvertToSPIRVPass final
     // Run conversion for each module independently as they can have
     // different TargetEnv attributes.
     for (Operation *gpuModule : gpuModules) {
-      spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(gpuModule);
+      spirv::TargetEnvAttr targetAttr =
+          spirv::lookupTargetEnvOrDefault(gpuModule);
       std::unique_ptr<ConversionTarget> target =
           SPIRVConversionTarget::get(targetAttr);
       SPIRVTypeConverter typeConverter(targetAttr);
