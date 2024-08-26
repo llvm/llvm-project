@@ -1099,6 +1099,20 @@ class DebugCommunication(object):
         self.send.close()
         # self.recv.close()
 
+    def request_setInstructionBreakpoints(self, memory_reference=[]):
+        breakpoints = []
+        for i in memory_reference:
+            args_dict = {
+                "instructionReference": i,
+            }
+            breakpoints.append(args_dict)
+        args_dict = {"breakpoints": breakpoints}
+        command_dict = {
+            "command": "setInstructionBreakpoints",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
 
 class DebugAdaptorServer(DebugCommunication):
     def __init__(
