@@ -98,8 +98,18 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-suspicious-pointer-arithmetics-using-sizeof
+  <clang-tidy/checks/bugprone/suspicious-pointer-arithmetics-using-sizeof>`
+  check that finds suspicious pointer arithmetic calculations where the pointer
+  is offset by a ``sizeof()`` expression.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-arr39-c <clang-tidy/checks/cert/arr39-c>` to
+  :doc:`bugprone-suspicious-pointer-arithmetics-using-sizeof
+  <clang-tidy/checks/bugprone/suspicious-pointer-arithmetics-using-sizeof>`
+  was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
