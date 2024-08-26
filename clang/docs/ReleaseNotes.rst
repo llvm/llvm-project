@@ -249,6 +249,11 @@ Improvements to Clang's diagnostics
   a warning which defaults to being an error, is enabled by default, and is
   also controlled by the now-deprecated ``-fheinous-gnu-extensions`` flag.
 
+- Added the ``-Wdecls-in-multiple-modules`` option to assist users to identify
+  multiple declarations in different modules, which is the major reason of the slow
+  compilation speed with modules. This warning is disabled by default and it needs
+  to be explicitly enabled or by ``-Weverything``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
