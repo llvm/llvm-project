@@ -2055,6 +2055,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   bool PreferSVE = !PreferNEON && Subtarget->isSVEAvailable();
 
   // Lower fixed length vector operations to scalable equivalents.
+  setOperationAction(ISD::ABDS, VT, Default);
+  setOperationAction(ISD::ABDU, VT, Default);
   setOperationAction(ISD::ABS, VT, Default);
   setOperationAction(ISD::ADD, VT, Default);
   setOperationAction(ISD::AND, VT, Default);
@@ -6095,20 +6097,25 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, MaskAsInt,
                        DAG.getVectorIdxConstant(0, dl));
   }
+  case Intrinsic::aarch64_neon_saddlv:
   case Intrinsic::aarch64_neon_uaddlv: {
     EVT OpVT = Op.getOperand(1).getValueType();
     EVT ResVT = Op.getValueType();
-    if (ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8 ||
-                              OpVT == MVT::v8i16 || OpVT == MVT::v4i16)) {
-      // In order to avoid insert_subvector, used v4i32 than v2i32.
-      SDValue UADDLV =
-          DAG.getNode(AArch64ISD::UADDLV, dl, MVT::v4i32, Op.getOperand(1));
-      SDValue EXTRACT_VEC_ELT =
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, UADDLV,
-                      DAG.getConstant(0, dl, MVT::i64));
-      return EXTRACT_VEC_ELT;
-    }
-    return SDValue();
+    assert(
+        ((ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8 ||
+                                OpVT == MVT::v8i16 || OpVT == MVT::v4i16)) ||
+         (ResVT == MVT::i64 && (OpVT == MVT::v4i32 || OpVT == MVT::v2i32))) &&
+        "Unexpected aarch64_neon_u/saddlv type");
+    (void)OpVT;
+    // In order to avoid insert_subvector, use v4i32 rather than v2i32.
+    SDValue ADDLV = DAG.getNode(
+        IntNo == Intrinsic::aarch64_neon_uaddlv ? AArch64ISD::UADDLV
+                                                : AArch64ISD::SADDLV,
+        dl, ResVT == MVT::i32 ? MVT::v4i32 : MVT::v2i64, Op.getOperand(1));
+    SDValue EXTRACT_VEC_ELT = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, dl, ResVT == MVT::i32 ? MVT::i32 : MVT::i64,
+        ADDLV, DAG.getConstant(0, dl, MVT::i64));
+    return EXTRACT_VEC_ELT;
   }
   case Intrinsic::experimental_cttz_elts: {
     SDValue CttzOp = Op.getOperand(1);
@@ -18014,6 +18021,23 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
     auto *C1 = dyn_cast<ConstantSDNode>(N->getOperand(0).getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
     return (!C1 || !C2 || C1->getZExtValue() >= C2->getZExtValue());
+  }
+
+  // We do not need to fold when this shifting used in specific load case:
+  // (ldr x, (add x, (shl (srl x, c1) 2)))
+  if (N->getOpcode() == ISD::SHL && N->hasOneUse()) {
+    if (auto C2 = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+      unsigned ShlAmt = C2->getZExtValue();
+      if (auto ShouldADD = *N->use_begin();
+          ShouldADD->getOpcode() == ISD::ADD && ShouldADD->hasOneUse()) {
+        if (auto ShouldLOAD = dyn_cast<LoadSDNode>(*ShouldADD->use_begin())) {
+          unsigned ByteVT = ShouldLOAD->getMemoryVT().getSizeInBits() / 8;
+          if ((1ULL << ShlAmt) == ByteVT &&
+              isIndexedLoadLegal(ISD::PRE_INC, ShouldLOAD->getMemoryVT()))
+            return false;
+        }
+      }
+    }
   }
 
   return true;

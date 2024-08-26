@@ -3,13 +3,16 @@
 
 ; CHECK-PRETTY:       Type  Format         Dim      ID      HLSL Bind     Count
 ; CHECK-PRETTY: ---------- ------- ----------- ------- -------------- ---------
-; CHECK-PRETTY:        SRV    byte         r/o      T0      t8,space1         1
-; CHECK-PRETTY:        SRV  struct         r/o      T1      t2,space4         1
-; CHECK-PRETTY:        SRV     u32         buf      T2      t3,space5        24
+; CHECK-PRETTY:        SRV     f32         buf      T0      t0        unbounded
+; CHECK-PRETTY:        SRV    byte         r/o      T1      t8,space1         1
+; CHECK-PRETTY:        SRV  struct         r/o      T2      t2,space4         1
+; CHECK-PRETTY:        SRV     u32         buf      T3      t3,space5        24
 ; CHECK-PRETTY:        UAV     i32         buf      U0      u7,space2         1
 ; CHECK-PRETTY:        UAV     f32         buf      U1      u5,space3         1
 
 target triple = "dxil-pc-shadermodel6.6-compute"
+
+declare i32 @some_val();
 
 define void @test_bindings() {
   ; RWBuffer<float4> Buf : register(u5, space3)
@@ -50,6 +53,15 @@ define void @test_bindings() {
   ; CHECK: [[BUF4:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 8, i32 8, i32 1, i8 0 }, i32 12, i1 false)
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF4]], %dx.types.ResourceProperties { i32 11, i32 0 })
 
+  ; Buffer<float4> Buf[] : register(t0)
+  ; Buffer<float4> typed3 = Buf[ix]
+  %typed3_ix = call i32 @some_val()
+  %typed3 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
+      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0t(
+          i32 0, i32 0, i32 -1, i32 %typed3_ix, i1 false)
+  ; CHECK: [[BUF5:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 0, i32 -1, i32 0, i8 0 }, i32 %typed3_ix, i1 false)
+  ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF5]], %dx.types.ResourceProperties { i32 10, i32 1033 })
+
   ret void
 }
 
@@ -58,7 +70,7 @@ define void @test_bindings() {
 ;
 ; CHECK: !dx.resources = !{[[RESMD:![0-9]+]]}
 ; CHECK: [[RESMD]] = !{[[SRVMD:![0-9]+]], [[UAVMD:![0-9]+]], null, null}
-; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
+; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 ; CHECK-DAG: [[UAVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

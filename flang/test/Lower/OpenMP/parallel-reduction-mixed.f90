@@ -24,11 +24,11 @@ end subroutine proc
 !CHECK:  %[[TID_LOCAL:.*]] = alloca i32
 !CHECK:  %[[TID:.*]] = load i32, ptr %[[TID_ADDR]]
 !CHECK:  store i32 %[[TID]], ptr %[[TID_LOCAL]]
-!CHECK:  %[[I_priv:.*]] = alloca i32
 !CHECK:  %[[F_priv:.*]] = alloca ptr
+!CHECK:  %[[I_priv:.*]] = alloca i32
+!CHECK:  store ptr %{{.*}}, ptr %[[F_priv]]
 
 !CHECK: omp.reduction.init:
-!CHECK: store ptr %{{.*}}, ptr %[[F_priv]]
 !CHECK: store i32 0, ptr %[[I_priv]]
 
 !CHECK: omp.par.region:

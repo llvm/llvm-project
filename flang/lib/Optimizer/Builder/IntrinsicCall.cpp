@@ -819,8 +819,8 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
 
     llvm::SmallVector<mlir::Value, 3> operands{funcPointer};
     operands.append(args.begin(), args.end());
-    libCall = builder.create<fir::CallOp>(loc, libFuncType.getResults(),
-                                          nullptr, operands);
+    libCall = builder.create<fir::CallOp>(loc, mlir::SymbolRefAttr{},
+                                          libFuncType.getResults(), operands);
   }
 
   LLVM_DEBUG(libCall.dump(); llvm::dbgs() << "\n");

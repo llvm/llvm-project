@@ -284,11 +284,6 @@ void dxil::createEntryMD(Module &M, const uint64_t ShaderFlags) {
     EntryList.emplace_back(&F);
   }
 
-  // If there are no entries, do nothing. This is mostly to allow for writing
-  // tests with no actual entry functions.
-  if (EntryList.empty())
-    return;
-
   auto &Ctx = M.getContext();
   // FIXME: generate metadata for resource.
   // See https://github.com/llvm/llvm-project/issues/57926.

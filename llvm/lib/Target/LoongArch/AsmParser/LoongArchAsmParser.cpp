@@ -1314,8 +1314,8 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcaddu18i $rj, %call36(sym)
   //   jirl      $r0, $rj, 0
-  unsigned ScratchReg =
-      IsTailCall ? Inst.getOperand(0).getReg() : (unsigned)LoongArch::R1;
+  MCRegister ScratchReg =
+      IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
   const LoongArchMCExpr *LE = LoongArchMCExpr::create(
@@ -1326,7 +1326,7 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
       getSTI());
   Out.emitInstruction(
       MCInstBuilder(LoongArch::JIRL)
-          .addReg(IsTailCall ? (unsigned)LoongArch::R0 : ScratchReg)
+          .addReg(IsTailCall ? MCRegister(LoongArch::R0) : ScratchReg)
           .addReg(ScratchReg)
           .addImm(0),
       getSTI());

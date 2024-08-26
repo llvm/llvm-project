@@ -149,7 +149,7 @@ struct FormatResourceDimension
       OS << getTextureDimName(RK);
       if (Item.isMultiSample())
         OS << Item.getMultiSample().Count;
-      break;;
+      break;
     }
     case dxil::ResourceKind::RawBuffer:
     case dxil::ResourceKind::StructuredBuffer:
@@ -214,11 +214,11 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
                                  const dxil::Resources &MDResources) {
   // Column widths are arbitrary but match the widths DXC uses.
   OS << ";\n; Resource Bindings:\n;\n";
-  OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n",
-                "Name", "Type", "Format", "Dim", "ID", "HLSL Bind", "Count");
+  OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n", "Name",
+                "Type", "Format", "Dim", "ID", "HLSL Bind", "Count");
   OS << formatv(
-      "; {0,-+30} {1,-+10} {2,-+7} {3,-+11} {4,-+7} {5,-+14} {6,-+9}\n", "",
-      "", "", "", "", "", "");
+      "; {0,-+30} {1,-+10} {2,-+7} {3,-+11} {4,-+7} {5,-+14} {6,-+9}\n", "", "",
+      "", "", "", "", "");
 
   // TODO: Do we want to sort these by binding or something like that?
   for (const dxil::ResourceInfo &RI : DRM) {
@@ -235,8 +235,8 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
     FormatBindingID ID(RI);
     FormatBindingLocation Bind(RI);
     FormatBindingSize Count(RI);
-    OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n",
-                  Name, Type, Format, Dim, ID, Bind, Count);
+    OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n", Name,
+                  Type, Format, Dim, ID, Bind, Count);
   }
 
   if (MDResources.hasCBuffers())

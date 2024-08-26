@@ -78,7 +78,6 @@ class OpLowerer {
   DXILOpBuilder OpBuilder;
   DXILResourceMap &DRM;
   SmallVector<CallInst *> CleanupCasts;
-  bool HasErrors = false;
 
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
@@ -95,7 +94,6 @@ public:
         DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
                                        CI->getDebugLoc());
         M.getContext().diagnose(Diag);
-        HasErrors = true;
         continue;
       }
     }
@@ -125,6 +123,11 @@ public:
     });
   }
 
+  /// Create a cast between a `target("dx")` type and `dx.types.Handle`, which
+  /// is intended to be removed by the end of lowering. This is used to allow
+  /// lowering of ops which need to change their return or argument types in a
+  /// piecemeal way - we can add the casts in to avoid updating all of the uses
+  /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
     Function *CastFn = Intrinsic::getDeclaration(&M, Intrinsic::dx_cast_handle,
                                                  {Ty, V->getType()});
@@ -138,10 +141,14 @@ public:
     SmallVector<Function *> CastFns;
 
     for (CallInst *Cast : CleanupCasts) {
+      // These casts were only put in to ease the move from `target("dx")` types
+      // to `dx.types.Handle in a piecemeal way. At this point, all of the
+      // non-cast uses should now be `dx.types.Handle`, and remaining casts
+      // should all form pairs to and from the now unused `target("dx")` type.
       CastFns.push_back(Cast->getCalledFunction());
-      // All of the ops should be using `dx.types.Handle` at this point, so if
-      // we're not producing that we should be part of a pair. Track this so we
-      // can remove it at the end.
+
+      // If the cast is not to `dx.types.Handle`, it should be the first part of
+      // the pair. Keep track so we can remove it once it has no more uses.
       if (Cast->getType() != OpBuilder.getHandleType()) {
         ToRemove.push_back(Cast);
         continue;
@@ -158,6 +165,8 @@ public:
       assert(Cast->user_empty() && "Temporary handle cast still has users");
       Cast->eraseFromParent();
     }
+
+    // Deduplicate the cast functions so that we only erase each one once.
     llvm::sort(CastFns);
     CastFns.erase(llvm::unique(CastFns), CastFns.end());
     for (Function *F : CastFns)
@@ -209,9 +218,14 @@ public:
       const auto &Binding = RI.getBinding();
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
+      // For `CreateHandleFromBinding` we need the upper bound rather than the
+      // size, so we need to be careful about the difference for "unbounded".
+      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
+      uint32_t UpperBound = Binding.Size == Unbounded
+                                ? Unbounded
+                                : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
-          Binding.LowerBound, Binding.LowerBound + Binding.Size - 1,
-          Binding.Space, RI.getResourceClass());
+          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
       std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
                                       CI->getArgOperand(4)};
       Expected<CallInst *> OpBind =
@@ -235,107 +249,14 @@ public:
     });
   }
 
+  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
+  /// taking into account binding information from DXILResourceAnalysis.
   void lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       lowerToCreateHandle(F);
     else
       lowerToBindAndAnnotateHandle(F);
-  }
-
-  void lowerTypedBufferLoad(Function &F) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *Int32Ty = IRB.getInt32Ty();
-
-    replaceFunction(F, [&](CallInst *CI) -> Error {
-      IRB.SetInsertPoint(CI);
-
-      Value *Handle =
-          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
-      Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      Type *RetTy = OpBuilder.getResRetType(CI->getType()->getScalarType());
-
-      std::array<Value *, 3> Args{Handle, Index0, Index1};
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferLoad, Args, RetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-
-      std::array<Value *, 4> Extracts = {};
-
-      // We've switched the return type from a vector to a struct, but at this
-      // point most vectors have probably already been scalarized. Try to
-      // forward arguments directly rather than inserting into and immediately
-      // extracting from a vector.
-      for (Use &U : make_early_inc_range(CI->uses()))
-        if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser()))
-          if (auto *Index = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
-            size_t IndexVal = Index->getZExtValue();
-            assert(IndexVal < 4 && "Index into buffer load out of range");
-            if (!Extracts[IndexVal])
-              Extracts[IndexVal] = IRB.CreateExtractValue(*OpCall, IndexVal);
-            EEI->replaceAllUsesWith(Extracts[IndexVal]);
-            EEI->eraseFromParent();
-          }
-
-      // If there are still uses then we need to create a vector.
-      if (!CI->use_empty()) {
-        for (int I = 0, E = 4; I != E; ++I)
-          if (!Extracts[I])
-            Extracts[I] = IRB.CreateExtractValue(*OpCall, I);
-
-        Value *Vec = UndefValue::get(CI->getType());
-        for (int I = 0, E = 4; I != E; ++I)
-          Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
-        CI->replaceAllUsesWith(Vec);
-      }
-
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
-  void lowerTypedBufferStore(Function &F) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *Int8Ty = IRB.getInt8Ty();
-    Type *Int32Ty = IRB.getInt32Ty();
-
-    replaceFunction(F, [&](CallInst *CI) -> Error {
-      IRB.SetInsertPoint(CI);
-
-      Value *Handle =
-          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
-      Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      // For typed stores, the mask must always cover all four elements.
-      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
-
-      Value *Data = CI->getArgOperand(2);
-      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
-      if (!DataTy || DataTy->getNumElements() != 4)
-        return make_error<StringError>(
-            "typedBufferStore data must be a vector of 4 elements",
-            inconvertibleErrorCode());
-      Value *Data0 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
-      Value *Data1 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
-      Value *Data2 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
-      Value *Data3 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
-
-      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
-                                  Data1,  Data2,  Data3,  Mask};
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args);
-      if (Error E = OpCall.takeError())
-        return E;
-
-      CI->eraseFromParent();
-      return Error::success();
-    });
   }
 
   bool lowerIntrinsics() {
@@ -355,17 +276,10 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
         lowerHandleFromBinding(F);
-        break;
-      case Intrinsic::dx_typedBufferLoad:
-        lowerTypedBufferLoad(F);
-        break;
-      case Intrinsic::dx_typedBufferStore:
-        lowerTypedBufferStore(F);
-        break;
       }
       Updated = true;
     }
-    if (Updated && !HasErrors)
+    if (Updated)
       cleanupHandleCasts();
 
     return Updated;

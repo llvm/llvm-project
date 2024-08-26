@@ -827,8 +827,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  typedef __bounded_iter<__wrap_iter<pointer>> iterator;
-  typedef __bounded_iter<__wrap_iter<const_pointer>> const_iterator;
+  typedef __bounded_iter<__wrap_iter<pointer> > iterator;
+  typedef __bounded_iter<__wrap_iter<const_pointer> > const_iterator;
 #else
   typedef __wrap_iter<pointer> iterator;
   typedef __wrap_iter<const_pointer> const_iterator;
@@ -1213,7 +1213,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
-    return __self_view(data(), size());
+    return __self_view(typename __self_view::__assume_valid(), data(), size());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string&
@@ -1822,7 +1822,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
   constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(__self_view __sv) const noexcept {
-    return __self_view(data(), size()).starts_with(__sv);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).starts_with(__sv);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(value_type __c) const noexcept {
@@ -1834,7 +1834,7 @@ public:
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(__self_view __sv) const noexcept {
-    return __self_view(data(), size()).ends_with(__sv);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).ends_with(__sv);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(value_type __c) const noexcept {
@@ -1848,15 +1848,15 @@ public:
 
 #if _LIBCPP_STD_VER >= 23
   constexpr _LIBCPP_HIDE_FROM_ABI bool contains(__self_view __sv) const noexcept {
-    return __self_view(data(), size()).contains(__sv);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).contains(__sv);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool contains(value_type __c) const noexcept {
-    return __self_view(data(), size()).contains(__c);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).contains(__c);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool contains(const value_type* __s) const {
-    return __self_view(data(), size()).contains(__s);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).contains(__s);
   }
 #endif
 
