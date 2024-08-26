@@ -3576,7 +3576,7 @@ const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
 QualType ASTContext::adjustFunctionResultType(QualType FunctionType,
                                               QualType ResultType) {
   return adjustType(FunctionType, [&](QualType Orig) {
-    if (const auto* FNPT = Orig->getAs<FunctionNoProtoType>())
+    if (const auto *FNPT = Orig->getAs<FunctionNoProtoType>())
       return getFunctionNoProtoType(ResultType, FNPT->getExtInfo());
 
     const auto *FPT = Orig->castAs<FunctionProtoType>();
