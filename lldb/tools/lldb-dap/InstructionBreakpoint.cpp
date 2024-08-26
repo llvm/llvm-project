@@ -14,14 +14,15 @@ namespace lldb_dap {
 
 // Instruction Breakpoint
 InstructionBreakpoint::InstructionBreakpoint(const llvm::json::Object &obj)
-    : Breakpoint(obj), instructionReference(LLDB_INVALID_ADDRESS), id(0),
+    : Breakpoint(obj), instructionAddressReference(LLDB_INVALID_ADDRESS), id(0),
       offset(GetSigned(obj, "offset", 0)) {
-  GetString(obj, "instructionReference").getAsInteger(0, instructionReference);
-  instructionReference += offset;
+  GetString(obj, "instructionReference")
+      .getAsInteger(0, instructionAddressReference);
+  instructionAddressReference += offset;
 }
 
 void InstructionBreakpoint::SetInstructionBreakpoint() {
-  bp = g_dap.target.BreakpointCreateByAddress(instructionReference);
+  bp = g_dap.target.BreakpointCreateByAddress(instructionAddressReference);
   id = bp.GetID();
 }
 } // namespace lldb_dap

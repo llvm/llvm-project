@@ -18,12 +18,12 @@ namespace lldb_dap {
 // Instruction Breakpoint
 struct InstructionBreakpoint : public Breakpoint {
 
-  lldb::addr_t instructionReference;
+  lldb::addr_t instructionAddressReference;
   int32_t id;
   int32_t offset;
 
   InstructionBreakpoint()
-      : Breakpoint(), instructionReference(LLDB_INVALID_ADDRESS), id(0),
+      : Breakpoint(), instructionAddressReference(LLDB_INVALID_ADDRESS), id(0),
         offset(0) {}
   InstructionBreakpoint(const llvm::json::Object &obj);
 

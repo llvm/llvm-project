@@ -4291,13 +4291,13 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
         // Read instruction breakpoint request.
         InstructionBreakpoint inst_bp(*bp_obj);
         // Store them into map for reference.
-        request_ibp[inst_bp.instructionReference] = std::move(inst_bp);
+        request_ibp[inst_bp.instructionAddressReference] = std::move(inst_bp);
       }
     }
 
-    // Iterate previouse active instruction breakpoint list.
+    // Iterate previous active instruction breakpoint list.
     for (auto &prev_ibp : g_dap.instruction_breakpoints) {
-      // Find previouse instruction breakpoint reference address in newly
+      // Find previous instruction breakpoint reference address in newly
       // received instruction breakpoint list.
       auto inst_reference = request_ibp.find(prev_ibp.first);
       // Request for remove and delete the breakpoint, if the prev instruction
