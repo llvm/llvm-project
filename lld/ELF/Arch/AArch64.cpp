@@ -784,7 +784,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   write32le(buf + adrpRel.offset, 0xd503201f);
   // adr x_<dest_reg>
   write32le(buf + adrRel.offset, 0x10000000 | adrpDestReg);
-  target->relocate(buf + adrRel.offset, adrRel, val);
+  ctx.target->relocate(buf + adrRel.offset, adrRel, val);
   return true;
 }
 
@@ -854,11 +854,13 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // add x_<dest reg>, x_<dest reg>
   write32le(buf + addRel.offset, 0x91000000 | adrpDestReg | (adrpDestReg << 5));
 
-  target->relocate(buf + adrpSymRel.offset, adrpSymRel,
-                   SignExtend64(getAArch64Page(sym.getVA()) -
-                                    getAArch64Page(secAddr + adrpSymRel.offset),
-                                64));
-  target->relocate(buf + addRel.offset, addRel, SignExtend64(sym.getVA(), 64));
+  ctx.target->relocate(
+      buf + adrpSymRel.offset, adrpSymRel,
+      SignExtend64(getAArch64Page(sym.getVA()) -
+                       getAArch64Page(secAddr + adrpSymRel.offset),
+                   64));
+  ctx.target->relocate(buf + addRel.offset, addRel,
+                       SignExtend64(sym.getVA(), 64));
   tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
 }

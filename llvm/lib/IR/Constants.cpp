@@ -681,9 +681,8 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   }
 
   PossibleRelocationsTy Result = NoRelocation;
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    Result =
-        std::max(cast<Constant>(getOperand(i))->getRelocationInfo(), Result);
+  for (const Value *Op : operands())
+    Result = std::max(cast<Constant>(Op)->getRelocationInfo(), Result);
 
   return Result;
 }

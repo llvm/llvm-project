@@ -1797,6 +1797,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     }
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
+  } else if (symbol.GetIsExplicitBindName()) {
+    // don't try to override explicit binding name with default
+    return;
   } else if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
     // BIND(C) does not give an implicit binding label to internal procedures.
     return;

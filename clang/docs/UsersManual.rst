@@ -2068,6 +2068,8 @@ are listed below.
       integrity.
    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
       protection against stack-based memory corruption errors.
+   -  ``-fsanitize=realtime``: :doc:`RealtimeSanitizer`,
+      a real-time safety checker.
 
    There are more fine-grained checks available: see
    the :ref:`list <ubsan-checks>` of specific kinds of
