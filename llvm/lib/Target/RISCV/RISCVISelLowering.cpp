@@ -19106,8 +19106,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
 
   const RISCVSubtarget &Subtarget = TLI.getSubtarget();
 
-  if (LocVT == MVT::f16 &&
-      (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZfhmin())) {
+  if (LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
@@ -19144,8 +19143,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
   }
 
   // Check if there is an available GPR before hitting the stack.
-  if ((LocVT == MVT::f16 &&
-       (Subtarget.hasStdExtZhinx() || Subtarget.hasStdExtZhinxmin())) ||
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) ||
       (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.is64Bit() &&
        Subtarget.hasStdExtZdinx())) {
