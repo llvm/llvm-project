@@ -464,6 +464,16 @@ void CIRGenFunction::LexicalScope::buildImplicitReturn() {
   (void)buildReturn(localScope->EndLoc);
 }
 
+mlir::cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
+  auto *scope = this;
+  while (scope) {
+    if (scope->isTry())
+      return getTry();
+    scope = ParentScope;
+  }
+  return nullptr;
+}
+
 void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
   // CIRGen doesn't use a BreakContinueStack or evaluates OnlySimpleReturnStmts.
 

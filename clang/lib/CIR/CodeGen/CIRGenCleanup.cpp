@@ -128,6 +128,7 @@ static void buildCleanup(CIRGenFunction &CGF, EHScopeStack::Cleanup *Fn,
   }
 
   // Ask the cleanup to emit itself.
+  assert(CGF.HaveInsertPoint() && "expected insertion point");
   Fn->Emit(CGF, flags);
   assert(CGF.HaveInsertPoint() && "cleanup ended with no insertion point?");
 
@@ -143,8 +144,7 @@ static void buildCleanup(CIRGenFunction &CGF, EHScopeStack::Cleanup *Fn,
 void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   assert(!EHStack.empty() && "cleanup stack is empty!");
   assert(isa<EHCleanupScope>(*EHStack.begin()) && "top not a cleanup!");
-  [[maybe_unused]] EHCleanupScope &Scope =
-      cast<EHCleanupScope>(*EHStack.begin());
+  EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.begin());
   assert(Scope.getFixupDepth() <= EHStack.getNumBranchFixups());
 
   // Remember activation information.
@@ -152,9 +152,9 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   Address NormalActiveFlag = Scope.shouldTestFlagInNormalCleanup()
                                  ? Scope.getActiveFlag()
                                  : Address::invalid();
-  [[maybe_unused]] Address EHActiveFlag = Scope.shouldTestFlagInEHCleanup()
-                                              ? Scope.getActiveFlag()
-                                              : Address::invalid();
+  Address EHActiveFlag = Scope.shouldTestFlagInEHCleanup()
+                             ? Scope.getActiveFlag()
+                             : Address::invalid();
 
   // Check whether we need an EH cleanup. This is only true if we've
   // generated a lazy EH cleanup block.
@@ -246,7 +246,17 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   bool IsEHa = getLangOpts().EHAsynch && !Scope.isLifetimeMarker();
   // const EHPersonality &Personality = EHPersonality::get(*this);
   if (!RequiresNormalCleanup) {
-    llvm_unreachable("NYI");
+    // Mark CPP scope end for passed-by-value Arg temp
+    //   per Windows ABI which is "normally" Cleanup in callee
+    if (IsEHa && getInvokeDest()) {
+      // If we are deactivating a normal cleanup then we don't have a
+      // fallthrough. Restore original IP to emit CPP scope ends in the correct
+      // block.
+      llvm_unreachable("NYI");
+    }
+    destroyOptimisticNormalEntry(*this, Scope);
+    Scope.markEmitted();
+    EHStack.popCleanup();
   } else {
     // If we have a fallthrough and no other need for the cleanup,
     // emit it directly.
@@ -273,8 +283,16 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // Emit the EH cleanup if required.
   if (RequiresEHCleanup) {
-    // FIXME(cir): should we guard insertion point here?
-    auto *NextAction = getEHDispatchBlock(EHParent);
+    mlir::cir::TryOp tryOp = nullptr;
+    if (CGM.globalOpContext) {
+      SmallVector<mlir::cir::TryOp> trys;
+      CGM.globalOpContext.walk(
+          [&](mlir::cir::TryOp op) { trys.push_back(op); });
+      assert(trys.size() == 1 && "unknow global initialization style");
+      tryOp = trys[0];
+    }
+
+    auto *NextAction = getEHDispatchBlock(EHParent, tryOp);
     (void)NextAction;
 
     // Push a terminate scope or cleanupendpad scope around the potentially
@@ -301,6 +319,16 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // active or was used before it was deactivated.
     if (EHActiveFlag.isValid() || IsActive) {
       cleanupFlags.setIsForEHCleanup();
+      assert(tryOp.isCleanupActive() && "expected active cleanup");
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      mlir::Block *cleanup = &tryOp.getCleanupRegion().back();
+      if (cleanup->empty()) {
+        builder.setInsertionPointToEnd(cleanup);
+        builder.createYield(tryOp.getLoc());
+      }
+
+      auto yield = cast<YieldOp>(cleanup->getTerminator());
+      builder.setInsertionPoint(yield);
       buildCleanup(*this, Fn, cleanupFlags, EHActiveFlag);
     }
 

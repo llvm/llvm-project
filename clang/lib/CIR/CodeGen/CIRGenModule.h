@@ -161,6 +161,10 @@ public:
   /// Emit the function that initializes C++ globals.
   void buildCXXGlobalInitFunc();
 
+  /// Track whether the CIRGenModule is currently building an initializer
+  /// for a global (e.g. as opposed to a regular cir.func).
+  mlir::cir::GlobalOp globalOpContext = nullptr;
+
   /// When a C++ decl with an initializer is deferred, null is
   /// appended to CXXGlobalInits, and the index of that null is placed
   /// here so that the initializer will be performed in the correct

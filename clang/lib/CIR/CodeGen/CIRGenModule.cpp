@@ -1323,8 +1323,11 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
 
   // TODO(cir):
   // Emit the initializer function if necessary.
-  if (NeedsGlobalCtor || NeedsGlobalDtor)
+  if (NeedsGlobalCtor || NeedsGlobalDtor) {
+    globalOpContext = GV;
     buildCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
+    globalOpContext = nullptr;
+  }
 
   // TODO(cir): sanitizers (reportGlobalToASan) and global variable debug
   // information.

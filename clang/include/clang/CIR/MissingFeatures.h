@@ -122,7 +122,6 @@ struct MissingFeatures {
   static bool fastMathFuncAttributes() { return false; }
 
   // Exception handling
-  static bool setLandingPadCleanup() { return false; }
   static bool isSEHTryScope() { return false; }
   static bool ehStack() { return false; }
   static bool emitStartEHSpec() { return false; }

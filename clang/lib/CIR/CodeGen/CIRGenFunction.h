@@ -1696,21 +1696,24 @@ public:
   };
 
   /// Emits try/catch information for the current EH stack.
-  mlir::Operation *buildLandingPad();
-  mlir::Block *getEHResumeBlock(bool isCleanup);
-  mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
+  mlir::Operation *buildLandingPad(mlir::cir::TryOp tryOp);
+  mlir::Block *getEHResumeBlock(bool isCleanup, mlir::cir::TryOp tryOp);
+  mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope,
+                                  mlir::cir::TryOp tryOp);
+  /// Unified block containing a call to cir.resume
+  mlir::Block *ehResumeBlock = nullptr;
 
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator PrologueCleanupDepth;
 
   mlir::Operation *getInvokeDestImpl();
-  bool getInvokeDest() {
+  mlir::Operation *getInvokeDest() {
     if (!EHStack.requiresLandingPad())
-      return false;
-    // cir.try_call does not require a block destination, but keep the
-    // overall traditional LLVM codegen names, and just ignore the result.
-    return (bool)getInvokeDestImpl();
+      return nullptr;
+    // Return the respective cir.try, this can be used to compute
+    // any other relevant information.
+    return getInvokeDestImpl();
   }
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
@@ -2009,6 +2012,7 @@ public:
       assert(isTry());
       return tryOp;
     }
+    mlir::cir::TryOp getClosestTryParent();
 
     void setAsSwitch() { ScopeKind = Kind::Switch; }
     void setAsTernary() { ScopeKind = Kind::Ternary; }

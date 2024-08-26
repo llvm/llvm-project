@@ -1218,12 +1218,15 @@ void TryOp::build(
   assert(tryBodyBuilder && "expected builder callback for 'cir.try' body");
 
   OpBuilder::InsertionGuard guard(builder);
+
+  // Try body region
   Region *tryBodyRegion = result.addRegion();
-  mlir::Block *tryBodyBlock = builder.createBlock(tryBodyRegion);
 
-  Region *cleanupRegion = result.addRegion();
+  // Try cleanup region
+  result.addRegion();
 
-  builder.setInsertionPointToStart(tryBodyBlock);
+  // Create try body region and set insertion point
+  builder.createBlock(tryBodyRegion);
   tryBodyBuilder(builder, result.location);
   catchBuilder(builder, result.location, result);
 }
