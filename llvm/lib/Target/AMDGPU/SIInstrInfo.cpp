@@ -9763,7 +9763,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
     if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
           return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::LANE_SHARED;
         })) {
       // At least one MMO in a non-global address space.
       return InstructionUniformity::NeverUniform;
@@ -9832,6 +9833,9 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
     return InstructionUniformity::Default;
   }
+
+  if (MI.getOpcode() == AMDGPU::V_LOAD_IDX)
+    return InstructionUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();

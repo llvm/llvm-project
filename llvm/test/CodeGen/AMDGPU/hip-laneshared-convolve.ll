@@ -34,7 +34,15 @@ define dso_local amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v()
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[SCRATCH_LOAD_DWORDX4_SADDR1]].sub1
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[SCRATCH_LOAD_DWORDX4_SADDR1]].sub0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_288_align2 = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1, killed [[COPY5]], %subreg.sub2, killed [[COPY4]], %subreg.sub3, killed [[COPY3]], %subreg.sub4, killed [[COPY2]], %subreg.sub5, killed [[COPY1]], %subreg.sub6, killed [[COPY]], %subreg.sub7, [[SCRATCH_LOAD_DWORD_SADDR]], %subreg.sub8
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_288_align2 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5, [[COPY1]], %subreg.sub6, [[COPY]], %subreg.sub7, [[SCRATCH_LOAD_DWORD_SADDR]], %subreg.sub8
   ; CHECK-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_6]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_6]]
