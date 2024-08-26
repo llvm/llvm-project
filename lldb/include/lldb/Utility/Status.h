@@ -181,11 +181,12 @@ public:
   bool Success() const;
 
 protected:
-  /// Member variables
-  ValueType m_code = 0; ///< Status code as an integer value.
-  lldb::ErrorType m_type =
-      lldb::eErrorTypeInvalid;  ///< The type of the above error code.
-  mutable std::string m_string; ///< A string representation of the error code.
+  /// Status code as an integer value.
+  ValueType m_code = 0;
+  /// The type of the above error code.
+  lldb::ErrorType m_type = lldb::eErrorTypeInvalid;
+  /// A string representation of the error code.
+  mutable std::string m_string;
 private:
   explicit Status(const llvm::formatv_object_base &payload) {
     SetErrorToGenericError();

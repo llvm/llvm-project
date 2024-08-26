@@ -75,6 +75,11 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Removed ``llvm.amdgcn.flat.atomic.fadd`` and
+  ``llvm.amdgcn.global.atomic.fadd`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd` and
+  addrspace(0) or addrspace(1) instead.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -114,6 +119,7 @@ Changes to the RISC-V Backend
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
+* Added ``Smctr`` and ``Ssctr`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------

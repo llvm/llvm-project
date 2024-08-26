@@ -40,10 +40,7 @@ def Int64Ty : DXILOpParamType;
 def HalfTy : DXILOpParamType;
 def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
-def ResRetHalfTy : DXILOpParamType;
-def ResRetFloatTy : DXILOpParamType;
-def ResRetInt16Ty : DXILOpParamType;
-def ResRetInt32Ty : DXILOpParamType;
+def ResRetTy : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
@@ -657,7 +654,7 @@ def UMad :  DXILOp<49, tertiary> {
 
 def Dot2 :  DXILOp<54, dot2> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 1";
+            "a[n]*b[n] where n is 0 to 1 inclusive";
   let LLVMIntrinsic = int_dx_dot2;
   let arguments = !listsplat(OverloadTy, 4);
   let result = OverloadTy;
@@ -668,7 +665,7 @@ def Dot2 :  DXILOp<54, dot2> {
 
 def Dot3 :  DXILOp<55, dot3> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 2";
+            "a[n]*b[n] where n is 0 to 2 inclusive";
   let LLVMIntrinsic = int_dx_dot3;
   let arguments = !listsplat(OverloadTy, 6);
   let result = OverloadTy;
@@ -679,7 +676,7 @@ def Dot3 :  DXILOp<55, dot3> {
 
 def Dot4 :  DXILOp<56, dot4> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 3";
+            "a[n]*b[n] where n is 0 to 3 inclusive";
   let LLVMIntrinsic = int_dx_dot4;
   let arguments = !listsplat(OverloadTy, 8);
   let result = OverloadTy;
@@ -693,30 +690,7 @@ def CreateHandle : DXILOp<57, createHandle> {
   // ResourceClass, RangeID, Index, NonUniform
   let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
   let result = HandleTy;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-}
-
-def BufferLoad : DXILOp<68, bufferLoad> {
-  let Doc = "reads from a TypedBuffer";
-  // Handle, Coord0, Coord1
-  let arguments = [HandleTy, Int32Ty, Int32Ty];
-  let result = OverloadTy;
-  let overloads =
-      [Overloads<DXIL1_0,
-                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-}
-
-def BufferStore : DXILOp<69, bufferStore> {
-  let Doc = "writes to an RWTypedBuffer";
-  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask
-  let arguments = [
-    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
-    Int8Ty
-  ];
-  let result = VoidTy;
-  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {
