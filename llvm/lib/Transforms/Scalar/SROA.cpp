@@ -198,7 +198,9 @@ class SROA {
   SmallSetVector<AllocaInst *, 16> PostPromotionWorklist;
 
   /// A collection of alloca instructions we can directly promote.
-  SmallPtrSet<AllocaInst *, 16> PromotableAllocas;
+  SetVector<AllocaInst *, SmallVector<AllocaInst *>,
+            SmallPtrSet<AllocaInst *, 16>, 16>
+      PromotableAllocas;
 
   /// A worklist of PHIs to speculate prior to promoting allocas.
   ///
@@ -4799,8 +4801,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
   // Finally, don't try to promote any allocas that new require re-splitting.
   // They have already been added to the worklist above.
-  for (auto *RPA : ResplitPromotableAllocas)
-    PromotableAllocas.erase(RPA);
+  PromotableAllocas.set_subtract(ResplitPromotableAllocas);
 
   return true;
 }
@@ -5597,9 +5598,7 @@ bool SROA::promoteAllocas(Function &F) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
-    PromoteMemToReg(
-        std::vector(PromotableAllocas.begin(), PromotableAllocas.end()),
-        DTU->getDomTree(), AC);
+    PromoteMemToReg(PromotableAllocas.getArrayRef(), DTU->getDomTree(), AC);
   }
 
   PromotableAllocas.clear();
@@ -5642,8 +5641,7 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
       if (!DeletedAllocas.empty()) {
         Worklist.set_subtract(DeletedAllocas);
         PostPromotionWorklist.set_subtract(DeletedAllocas);
-        for (auto *DA : DeletedAllocas)
-          PromotableAllocas.erase(DA);
+        PromotableAllocas.set_subtract(DeletedAllocas);
         DeletedAllocas.clear();
       }
     }
