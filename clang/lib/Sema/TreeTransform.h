@@ -7453,6 +7453,13 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
   llvm_unreachable("Unexpected TreeTransform for BTFTagAttributedType");
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
+    TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
+  llvm_unreachable(
+      "Unexpected TreeTransform for HLSLAttributedResourceTypeLoc");
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,

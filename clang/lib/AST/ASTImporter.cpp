@@ -1832,6 +1832,22 @@ ExpectedType clang::ASTNodeImporter::VisitBTFTagAttributedType(
                                                          ToWrappedType);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
+    const clang::HLSLAttributedResourceType *T) {
+  // FIXME:
+  llvm_unreachable(
+      "ASTNodeImporter::VisitHLSLAttributedResourceType not yet implemented");
+
+  // Error Err = Error::success();
+  // const SmallVector<Attr*,4> *ToAttrs = importChecked(Err, T->getAttrs());
+  // QualType ToWrappedType = importChecked(Err, T->getWrappedType());
+  // if (Err)
+  //   return std::move(Err);
+
+  // return Importer.getToContext().getHLSLAttributedResourceType(ToAttrs,
+  //                                                        ToWrappedType);
+}
+
 ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     const clang::ConstantMatrixType *T) {
   ExpectedType ToElementTypeOrErr = import(T->getElementType());

@@ -67,6 +67,7 @@ class ValueDecl;
 class TagDecl;
 class TemplateParameterList;
 class Type;
+class Attr;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -6150,6 +6151,60 @@ public:
   }
 };
 
+class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
+public:
+  struct Attributes {
+    union {
+      struct {
+        uint8_t ResourceClass; // maps to llvm::dxil::ResourceClass
+        uint8_t IsROV : 1;
+        uint8_t Dimension : 2;
+        uint8_t IsArray : 1;
+        uint8_t IsMultisample : 1;
+        uint8_t IsFeedback : 1;
+      };
+      unsigned Data;
+    };
+    Attributes() : Data() {}
+  };
+  static_assert(sizeof(Attributes) == sizeof(Attributes::Data));
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  QualType ContainedType;
+  const Attributes Attrs;
+
+  HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
+                             QualType Contained, const Attributes &Attrs)
+      : Type(HLSLAttributedResource, Canon, Wrapped->getDependence()),
+        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  QualType getContainedType() const { return ContainedType; }
+  const Attributes &getAttrs() const { return Attrs; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, ContainedType, Attrs);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      QualType Contained, const Attributes &Attrs) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(Contained.getAsOpaquePtr());
+    ID.AddInteger(Attrs.Data);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLAttributedResource;
+  }
+};
+
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
@@ -8572,6 +8627,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
     if (const auto *A = dyn_cast<AttributedType>(Ty))
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
       Ty = E->desugar().getTypePtr();

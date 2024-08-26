@@ -687,6 +687,21 @@ let Class = BTFTagAttributedType in {
   }]>;
 }
 
+let Class = HLSLAttributedResourceType in {
+  // def : Property<"attrs", SmallVector<Attr*, 4>> {
+  //   let Read = [{ node->getAttr() }];
+  // }
+  def : Property<"wrappedType", QualType> {
+    let Read = [{ node->getWrappedType() }];
+  }
+
+  def : Creator<[{
+    llvm_unreachable("FIXME");
+    (void)ctx;
+    //return ctx.getHLSLAttributedResourceType(attrs, wrappedType);
+  }]>;
+}
+
 let Class = DependentAddressSpaceType in {
   def : Property<"pointeeType", QualType> {
     let Read = [{ node->getPointeeType() }];

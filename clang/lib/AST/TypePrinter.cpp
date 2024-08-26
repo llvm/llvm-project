@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -247,6 +249,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
+    case Type::HLSLAttributedResource:
       CanPrefixQualifiers = true;
       break;
 
@@ -1927,6 +1930,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::HLSLResourceClass:
+  case attr::HLSLROV:
+    llvm_unreachable("HLSL resource attributes handled separately");
+
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -2045,6 +2052,23 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
                                              raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printHLSLAttributedResourceBefore(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
+  printBefore(T->getWrappedType(), OS);
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  OS << " [[hlsl::resource_class("
+     << HLSLResourceClassAttr::ConvertResourceClassToStr(
+            static_cast<llvm::dxil::ResourceClass>(Attrs.ResourceClass))
+     << "]]";
+  if (Attrs.IsROV)
+    OS << " [[hlsl::is_rov()]]";
+}
+
+void TypePrinter::printHLSLAttributedResourceAfter(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
 }
 

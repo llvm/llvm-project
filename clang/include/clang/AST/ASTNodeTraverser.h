@@ -439,6 +439,11 @@ public:
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
   }
+  void VisitHLSLAttributedResourceType(const HLSLAttributedResourceType *T) {
+    QualType Contained = T->getContainedType();
+    if (!Contained.isNull())
+      Visit(Contained);
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
