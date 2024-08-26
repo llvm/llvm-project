@@ -271,15 +271,17 @@ static int computeUTCDiff(const tm &localTime, bool *err) {
   auto dayDiff{localTime.tm_mday - utcTime.tm_mday};
   auto localHr{localTime.tm_hour};
   if (dayDiff > 0) {
-    if (dayDiff == 1)
+    if (dayDiff == 1) {
       localHr += 24;
-    else
+    } else {
       utcTime.tm_hour += 24;
+    }
   } else if (dayDiff < 0) {
-    if (dayDiff == -1)
+    if (dayDiff == -1) {
       utcTime.tm_hour += 24;
-    else
+    } else {
       localHr += 24;
+    }
   }
   return (localHr * 60 + localTime.tm_min) -
       (utcTime.tm_hour * 60 + utcTime.tm_min);
@@ -316,13 +318,19 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   // tm.tm_gmtoff is not available, there may be platform dependent alternatives
   // (such as using timezone from <time.h> when available), but so far just
   // return -HUGE to report that this information is not available.
+  const auto negHuge{-std::numeric_limits<Fortran::runtime::CppTypeFor<
+      Fortran::common::TypeCategory::Integer, KIND>>::max()};
+#ifdef _AIX
   bool err{false};
   auto diff{computeUTCDiff(tm, &err)};
-  if (err)
-    return -std::numeric_limits<Fortran::runtime::CppTypeFor<
-        Fortran::common::TypeCategory::Integer, KIND>>::max();
-
-  return diff;
+  if (err) {
+    return negHuge;
+  } else {
+    return diff;
+  }
+#else
+  return negHuge;
+#endif
 }
 template <typename TM = struct tm> struct GmtOffsetHelper {
   template <int KIND> struct StoreGmtOffset {
