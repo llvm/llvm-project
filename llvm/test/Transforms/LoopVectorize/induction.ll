@@ -5504,11 +5504,11 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; INTERLEAVE-NEXT:    br i1 [[VAR2]], label [[FOR_INC]], label [[FOR_COND:%.*]]
 ; INTERLEAVE:       for.cond:
 ; INTERLEAVE-NEXT:    [[VAR3:%.*]] = urem i16 [[B]], [[VAR1]]
+; INTERLEAVE-NEXT:    [[TMP50:%.*]] = sext i16 [[VAR3]] to i32
 ; INTERLEAVE-NEXT:    br label [[FOR_INC]]
 ; INTERLEAVE:       for.inc:
-; INTERLEAVE-NEXT:    [[VAR4:%.*]] = phi i16 [ [[VAR3]], [[FOR_COND]] ], [ 0, [[FOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[VAR5:%.*]] = sext i16 [[VAR4]] to i32
-; INTERLEAVE-NEXT:    [[VAR6]] = or i32 [[VAR0]], [[VAR5]]
+; INTERLEAVE-NEXT:    [[VAR4:%.*]] = phi i32 [ [[TMP50]], [[FOR_COND]] ], [ 0, [[FOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[VAR6]] = or i32 [[VAR0]], [[VAR4]]
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; INTERLEAVE-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], 0
 ; INTERLEAVE-NEXT:    br i1 [[COND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP49:![0-9]+]]
