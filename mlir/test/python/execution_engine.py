@@ -560,6 +560,7 @@ def testBF16Memref():
 
 run(testBF16Memref)
 
+
 # Test f8E5M2 memrefs
 # CHECK-LABEL: TEST: testF8E5M2Memref
 def testF8E5M2Memref():
