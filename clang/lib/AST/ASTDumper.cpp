@@ -393,11 +393,3 @@ LLVM_DUMP_METHOD void TemplateArgument::dump(llvm::raw_ostream &OS,
   ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
   Dumper.Visit(*this);
 }
-
-//===----------------------------------------------------------------------===//
-// Attr method implementations
-//===----------------------------------------------------------------------===//
-LLVM_DUMP_METHOD void Attr::dump() const {
-  ASTDumper P(llvm::errs(), /*ShowColors=*/false);
-  P.Visit(this);
-}
