@@ -1849,10 +1849,12 @@ struct DSEState {
   bool tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
     Instruction *DefI = Def->getMemoryInst();
     MemSetInst *MemSet = dyn_cast<MemSetInst>(DefI);
-    if (!MemSet)
-      // TODO: Could handle zero store to small allocation as well.
+    StoreInst *Store = dyn_cast<StoreInst>(DefI);
+    if (!MemSet && !Store)
       return false;
-    Constant *StoredConstant = dyn_cast<Constant>(MemSet->getValue());
+    Constant *StoredConstant =
+        MemSet ? dyn_cast<Constant>(MemSet->getValue())
+               : dyn_cast<Constant>(Store->getValueOperand());
     if (!StoredConstant || !StoredConstant->isNullValue())
       return false;
 
@@ -1880,14 +1882,15 @@ struct DSEState {
     if (!MallocDef)
       return false;
 
-    auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
+    auto shouldCreateCalloc = [](CallInst *Malloc, Instruction *MI) {
       // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
       // of malloc block
-      auto *MallocBB = Malloc->getParent(),
-        *MemsetBB = Memset->getParent();
+      auto *MallocBB = Malloc->getParent(), *MemsetBB = MI->getParent();
       if (MallocBB == MemsetBB)
         return true;
-      auto *Ptr = Memset->getArgOperand(0);
+      auto *Ptr = dyn_cast<CallInst>(MI)
+                      ? dyn_cast<CallInst>(MI)->getArgOperand(0)
+                      : dyn_cast<StoreInst>(MI)->getPointerOperand();
       auto *TI = MallocBB->getTerminator();
       BasicBlock *TrueBB, *FalseBB;
       if (!match(TI, m_Br(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(Ptr),
@@ -1899,12 +1902,30 @@ struct DSEState {
       return true;
     };
 
-    if (Malloc->getOperand(0) != MemSet->getLength())
-      return false;
-    if (!shouldCreateCalloc(Malloc, MemSet) ||
-        !DT.dominates(Malloc, MemSet) ||
-        !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
-      return false;
+    if (MemSet) {
+      if (Malloc->getOperand(0) != MemSet->getLength())
+        return false;
+      if (!shouldCreateCalloc(Malloc, MemSet) ||
+          !DT.dominates(Malloc, MemSet) ||
+          !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
+        return false;
+    } else {
+      // Handle zero store to small allocation.
+      assert(Store && "Expected Store");
+      ConstantInt *MallocSize = dyn_cast<ConstantInt>(Malloc->getOperand(0));
+      if (!MallocSize)
+        return false;
+      // Allow folding of stores of 1/2/4/8 bytes. The malloc size must match
+      // the store size.
+      uint64_t Size = MallocSize->getLimitedValue();
+      uint64_t StoreSize =
+          DL.getTypeStoreSize(Store->getValueOperand()->getType());
+      if (Size > 8 || (Size & (Size - 1)) || Size != StoreSize)
+        return false;
+      if (!shouldCreateCalloc(Malloc, Store) || !DT.dominates(Malloc, Store) ||
+          !memoryIsNotModifiedBetween(Malloc, Store, BatchAA, DL, &DT))
+        return false;
+    }
     IRBuilder<> IRB(Malloc);
     Type *SizeTTy = Malloc->getArgOperand(0)->getType();
     auto *Calloc = emitCalloc(ConstantInt::get(SizeTTy, 1),

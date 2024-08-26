@@ -350,6 +350,16 @@ define ptr @zero_memset_after_malloc_with_different_sizes(i64 %size) {
   ret ptr %call
 }
 
+define ptr @zero_store_after_malloc() {
+; CHECK-LABEL: @zero_store_after_malloc(
+; CHECK-NEXT:    [[CALLOC:%.*]] = call ptr @calloc(i64 1, i64 8)
+; CHECK-NEXT:    ret ptr [[CALLOC]]
+;
+  %call = call ptr @malloc(i64 8) inaccessiblememonly
+  store i64 0, ptr %call
+  ret ptr %call
+}
+
 ; based on pr25892_lite
 define ptr @zero_memset_after_new(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_new(
