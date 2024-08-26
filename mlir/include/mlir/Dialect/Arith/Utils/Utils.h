@@ -93,6 +93,8 @@ Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   int64_t value);
 Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   const APFloat &value);
+Value createIntOrIndexConstant(OpBuilder &builder, Location loc, Type type,
+                               int64_t value);
 
 /// Returns the int type of the integer in ofr.
 /// Other attribute types are not supported.

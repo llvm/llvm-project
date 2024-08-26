@@ -264,11 +264,13 @@ bool mlir::getInnermostParallelLoops(Operation *rootOp,
 static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
                              int64_t divisor) {
   assert(divisor > 0 && "expected positive divisor");
-  assert(dividend.getType().isIndex() && "expected index-typed value");
+  assert(dividend.getType().isIntOrIndex() &&
+         "expected integer or index-typed value");
 
   Value divisorMinusOneCst =
-      builder.create<arith::ConstantIndexOp>(loc, divisor - 1);
-  Value divisorCst = builder.create<arith::ConstantIndexOp>(loc, divisor);
+      createIntOrIndexConstant(builder, loc, dividend.getType(), divisor - 1);
+  Value divisorCst =
+      createIntOrIndexConstant(builder, loc, dividend.getType(), divisor);
   Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOneCst);
   return builder.create<arith::DivUIOp>(loc, sum, divisorCst);
 }
@@ -279,9 +281,9 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 // where divis is rounding-to-zero division.
 static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
                              Value divisor) {
-  assert(dividend.getType().isIndex() && "expected index-typed value");
-
-  Value cstOne = builder.create<arith::ConstantIndexOp>(loc, 1);
+  assert(dividend.getType().isIntOrIndex() &&
+         "expected integer or index-typed value");
+  Value cstOne = createIntOrIndexConstant(builder, loc, dividend.getType(), 1);
   Value divisorMinusOne = builder.create<arith::SubIOp>(loc, divisor, cstOne);
   Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOne);
   return builder.create<arith::DivUIOp>(loc, sum, divisor);
@@ -388,16 +390,17 @@ LogicalResult mlir::loopUnrollByFactor(
     // Create constant for 'upperBoundUnrolled' and set epilogue loop flag.
     generateEpilogueLoop = upperBoundUnrolledCst < ubCst;
     if (generateEpilogueLoop)
-      upperBoundUnrolled = boundsBuilder.create<arith::ConstantIndexOp>(
-          loc, upperBoundUnrolledCst);
+      upperBoundUnrolled = createIntOrIndexConstant(
+          boundsBuilder, loc, forOp.getUpperBound().getType(), upperBoundUnrolledCst);
     else
       upperBoundUnrolled = forOp.getUpperBound();
 
     // Create constant for 'stepUnrolled'.
-    stepUnrolled = stepCst == stepUnrolledCst
-                       ? step
-                       : boundsBuilder.create<arith::ConstantIndexOp>(
-                             loc, stepUnrolledCst);
+    stepUnrolled =
+        stepCst == stepUnrolledCst
+            ? step
+            : createIntOrIndexConstant(boundsBuilder, loc, step.getType(),
+                                       stepUnrolledCst);
   } else {
     // Dynamic loop bounds computation.
     // TODO: Add dynamic asserts for negative lb/ub/step, or
@@ -407,8 +410,8 @@ LogicalResult mlir::loopUnrollByFactor(
     Value diff =
         boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
-    Value unrollFactorCst =
-        boundsBuilder.create<arith::ConstantIndexOp>(loc, unrollFactor);
+    Value unrollFactorCst = createIntOrIndexConstant(
+        boundsBuilder, loc, tripCount.getType(), unrollFactor);
     Value tripCountRem =
         boundsBuilder.create<arith::RemSIOp>(loc, tripCount, unrollFactorCst);
     // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
@@ -455,7 +458,7 @@ LogicalResult mlir::loopUnrollByFactor(
       [&](unsigned i, Value iv, OpBuilder b) {
         // iv' = iv + step * i;
         auto stride = b.create<arith::MulIOp>(
-            loc, step, b.create<arith::ConstantIndexOp>(loc, i));
+            loc, step, createIntOrIndexConstant(b, loc, iv.getType(), i));
         return b.create<arith::AddIOp>(loc, iv, stride);
       },
       annotateFn, iterArgs, yieldedValues);
