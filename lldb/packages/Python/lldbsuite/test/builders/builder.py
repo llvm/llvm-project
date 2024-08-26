@@ -120,7 +120,7 @@ class Builder:
             #  [<tool>] <compiler>    - such as 'xrun clang', 'xrun /usr/bin/clang' & etc
             #
             # Where <compiler> could contain the following parts:
-            #   <simple-name>[.<exe-ext>]                           - sucn as 'clang', 'clang.exe' ('clamg-cl.exe'?)
+            #   <simple-name>[.<exe-ext>]                           - sucn as 'clang', 'clang.exe' ('clang-cl.exe'?)
             #   <target-triple>-<simple-name>[.<exe-ext>]           - such as 'armv7-linux-gnueabi-gcc'
             #   <path>/<simple-name>[.<exe-ext>]                    - such as '/usr/bin/clang', 'c:\path\to\compiler\clang,exe'
             #   <path>/<target-triple>-<simple-name>[.<exe-ext>]    - such as '/usr/bin/clang', 'c:\path\to\compiler\clang,exe'
