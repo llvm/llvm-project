@@ -8,6 +8,17 @@
 
 namespace std { struct type_info; }
 
+namespace cwg1900 { // cwg1900: 2.7
+namespace N {
+struct A {
+  friend int f();
+};
+}
+int N::f() { return 0; }
+int N::g() { return 0; } 
+// expected-error@-1 {{out-of-line definition of 'g' does not match any declaration in namespace 'cwg1900::N'}}
+} // namespace cwg1900
+
 namespace cwg1902 { // cwg1902: 3.7
   struct A {};
   struct B {
