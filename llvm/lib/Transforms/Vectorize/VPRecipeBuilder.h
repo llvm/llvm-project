@@ -168,7 +168,7 @@ public:
   iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
   mapToVPValues(User::op_range Operands);
 
-  VPValue *getVPValueOrAddLiveIn(Value *V, VPlan &Plan) {
+  VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
