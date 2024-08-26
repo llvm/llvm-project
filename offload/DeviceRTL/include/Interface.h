@@ -227,6 +227,9 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
 
 void __kmpc_target_deinit();
 
+// Initializer for a specialized kernel. No finalizer is provided currently.
+void __kmpc_specialized_kernel_init();
+
 ///}
 
 /// Reduction

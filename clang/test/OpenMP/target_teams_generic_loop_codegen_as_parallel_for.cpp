@@ -108,6 +108,7 @@ int main()
 // IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    call void @__kmpc_specialized_kernel_init()
 // IR-GPU-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -205,6 +206,7 @@ int main()
 // IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    call void @__kmpc_specialized_kernel_init()
 // IR-GPU-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4

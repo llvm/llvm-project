@@ -2596,6 +2596,11 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {
       CGM.getModule(), OMPRTL___kmpc_get_hardware_num_blocks));
 }
 
+llvm::Value *CGOpenMPRuntimeGPU::initSpecializedKernel(CodeGenFunction &CGF) {
+  return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+      CGM.getModule(), OMPRTL___kmpc_specialized_kernel_init));
+}
+
 std::pair<llvm::Value *, llvm::Value *>
 CGOpenMPRuntimeGPU::getXteamRedFunctionPtrs(CodeGenFunction &CGF,
                                             llvm::Type *RedVarType) {

@@ -153,6 +153,8 @@ void __kmpc_target_deinit() {
   }
 }
 
+void __kmpc_specialized_kernel_init() { mapping::init(/*IsSPMD=*/true); }
+
 #ifndef FORTRAN_NO_LONGER_NEEDS
 int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t UseGenericStateMachine,

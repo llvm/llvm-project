@@ -42,6 +42,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store ptr [[APTR]], ptr [[APTR_ADDR_ASCAST]], align 8
+// CHECK-AMD-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-AMD-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // CHECK-AMD-NEXT:    store i32 [[TMP0]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4

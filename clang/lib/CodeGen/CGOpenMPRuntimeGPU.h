@@ -165,6 +165,9 @@ public:
   /// Get the number of blocks on the GPU
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
 
+  /// Initialization for a specialized kernel.
+  llvm::Value *initSpecializedKernel(CodeGenFunction &CGF);
+
   std::pair<llvm::Value *, llvm::Value *>
   getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType);
 

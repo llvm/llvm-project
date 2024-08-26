@@ -74,6 +74,7 @@ int main()
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM1_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP5:%.*]] = alloca half, align 2, addrspace(5)
 // CHECK-NEXT:    store half 0xH0000, ptr addrspace(5) [[TMP5]], align 2
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
@@ -175,6 +176,7 @@ int main()
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM2_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP5:%.*]] = alloca bfloat, align 2, addrspace(5)
 // CHECK-NEXT:    store bfloat 0xR0000, ptr addrspace(5) [[TMP5]], align 2
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
@@ -277,6 +279,7 @@ int main()
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM3_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP5:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    store i16 0, ptr addrspace(5) [[TMP5]], align 2
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4

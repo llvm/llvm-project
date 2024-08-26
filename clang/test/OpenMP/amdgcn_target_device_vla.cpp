@@ -215,6 +215,7 @@ int main() {
 // CHECK-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[M_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4

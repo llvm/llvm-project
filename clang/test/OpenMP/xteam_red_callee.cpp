@@ -727,9 +727,9 @@ int main()
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 [[TMP5]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP7]], align 8
-// CHECK-NEXT:    store double [[TMP9]], ptr [[SUM]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP7]], align 8
+// CHECK-NEXT:    store double [[TMP10]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    ret void
 //
 //
@@ -751,10 +751,10 @@ int main()
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 [[TMP4]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l34_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP7]]) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l34_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP8]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -776,9 +776,9 @@ int main()
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 [[TMP5]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[SUM]], align 8
-// CHECK-NEXT:    store double [[TMP9]], ptr [[TMP7]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP9]], align 8
+// CHECK-NEXT:    store double [[TMP10]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    ret void
 //
 //
@@ -800,10 +800,10 @@ int main()
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP3]], i32 [[TMP4]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l34_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP7]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l34_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP8]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -846,6 +846,7 @@ int main()
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM2_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP5:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
@@ -1587,10 +1588,10 @@ int main()
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 [[TMP5]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP7]], align 8
-// CHECK-NEXT:    store double [[TMP9]], ptr [[SUM]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP7]], align 8
+// CHECK-NEXT:    store double [[TMP10]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    ret void
 //
 //
@@ -1611,11 +1612,11 @@ int main()
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP3]], i32 [[TMP4]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP6]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l42_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP7]]) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l42_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP8]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -1636,10 +1637,10 @@ int main()
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP4]], i32 [[TMP5]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[SUM]], align 8
-// CHECK-NEXT:    store double [[TMP9]], ptr [[TMP7]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP9]], align 8
+// CHECK-NEXT:    store double [[TMP10]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    ret void
 //
 //
@@ -1660,11 +1661,11 @@ int main()
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], ptr [[TMP3]], i32 [[TMP4]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0]], ptr [[TMP6]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l42_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP7]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_1]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l42_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP8]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -2315,10 +2316,10 @@ int main()
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 [[TMP5]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP7]], align 8
-// CHECK-NEXT:    store double [[TMP9]], ptr [[SUM]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP7]], align 8
+// CHECK-NEXT:    store double [[TMP10]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    ret void
 //
 //
@@ -2339,11 +2340,11 @@ int main()
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP3]], i32 [[TMP4]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP6]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP7]]) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined_omp$reduction$reduction_func"(ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr [[TMP8]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -2364,10 +2365,10 @@ int main()
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP4]], i32 [[TMP5]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[SUM]], align 8
-// CHECK-NEXT:    store double [[TMP9]], ptr [[TMP7]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4:%.*]], ptr [[TMP4]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP9]], align 8
+// CHECK-NEXT:    store double [[TMP10]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    ret void
 //
 //
@@ -2388,11 +2389,11 @@ int main()
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTADDR1_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2:%.*]], ptr [[TMP3]], i32 [[TMP4]]
-// CHECK-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_2]], ptr [[TMP6]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[SUM]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
-// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP7]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4:%.*]], ptr [[TMP3]], i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_4]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR2_ASCAST]], align 8
+// CHECK-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP8]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -2435,6 +2436,7 @@ int main()
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP5:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4

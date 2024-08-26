@@ -319,15 +319,18 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
                                      const ForStmt *CapturedForStmt,
                                      SourceLocation Loc) {
   assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
+
   const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+
+  // Initialize a specialized kernel.
+  RT.initSpecializedKernel(*this);
 
   auto IVPair = EmitNoLoopIV(LD);
   const VarDecl *IVDecl = IVPair.first;
   Address IvAddr = IVPair.second;
 
   // Generate myid = workgroup_id * workgroup_size + workitem_id
-  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-
   // workitem_id
   llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
@@ -385,6 +388,9 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
 void CodeGenFunction::EmitBigJumpLoopCode(const OMPExecutableDirective &D,
                                           const ForStmt *CapturedForStmt,
                                           SourceLocation Loc) {
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+  // Initialize a specialized kernel.
+  RT.initSpecializedKernel(*this);
   EmitStmt(CapturedForStmt);
 }
 
@@ -395,6 +401,11 @@ void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,
   // This is the top level ForStmt for which Xteam reduction code is being
   // generated
   CGM.setCurrentXteamRedStmt(CapturedForStmt);
+
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+
+  // Initialize a specialized kernel.
+  RT.initSpecializedKernel(*this);
 
   EmitXteamLocalAggregator(CapturedForStmt);
 
