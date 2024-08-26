@@ -463,9 +463,9 @@ void Watchpoint::SetCondition(const char *condition) {
   } else {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
     Status error;
-    m_condition_up.reset(m_target.GetUserExpressionForLanguage(
+    m_condition_up = m_target.GetUserExpressionForLanguage(
         condition, {}, {}, UserExpression::eResultTypeAny,
-        EvaluateExpressionOptions(), nullptr, error));
+        EvaluateExpressionOptions(), nullptr, error);
     if (error.Fail()) {
       // FIXME: Log something...
       m_condition_up.reset();

@@ -1174,7 +1174,7 @@ public:
   // parameters have the same meaning as for the UserExpression constructor.
   // Returns a new-ed object which the caller owns.
 
-  UserExpression *
+  std::unique_ptr<UserExpression>
   GetUserExpressionForLanguage(llvm::StringRef expr, llvm::StringRef prefix,
                                SourceLanguage language,
                                Expression::ResultType desired_type,

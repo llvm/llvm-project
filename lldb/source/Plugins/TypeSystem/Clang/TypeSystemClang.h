@@ -1299,12 +1299,10 @@ public:
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output) override;
 
-  UserExpression *GetUserExpression(llvm::StringRef expr,
-                                    llvm::StringRef prefix,
-                                    SourceLanguage language,
-                                    Expression::ResultType desired_type,
-                                    const EvaluateExpressionOptions &options,
-                                    ValueObject *ctx_obj) override;
+  std::unique_ptr<UserExpression> GetUserExpression(
+      llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
+      Expression::ResultType desired_type,
+      const EvaluateExpressionOptions &options, ValueObject *ctx_obj) override;
 
   FunctionCaller *GetFunctionCaller(const CompilerType &return_type,
                                     const Address &function_address,
