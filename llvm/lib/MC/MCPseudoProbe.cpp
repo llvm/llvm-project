@@ -274,7 +274,7 @@ static StringRef getProbeFNameForGUID(const GUIDProbeFunctionMap &GUID2FuncMAP,
   auto It = GUID2FuncMAP.find(GUID);
   assert(It != GUID2FuncMAP.end() &&
          "Probe function must exist for a valid GUID");
-  return It->second.FuncName;
+  return It->FuncName;
 }
 
 void MCPseudoProbeFuncDesc::print(raw_ostream &OS) {
@@ -390,32 +390,46 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
   Data = Start;
   End = Data + Size;
 
+  uint32_t FuncDescCount = 0;
   while (Data < End) {
-    auto ErrorOrGUID = readUnencodedNumber<uint64_t>();
-    if (!ErrorOrGUID)
+    // GUID
+    if (!readUnencodedNumber<uint64_t>())
       return false;
-
-    auto ErrorOrHash = readUnencodedNumber<uint64_t>();
-    if (!ErrorOrHash)
+    // Hash
+    if (!readUnencodedNumber<uint64_t>())
       return false;
 
     auto ErrorOrNameSize = readUnsignedNumber<uint32_t>();
     if (!ErrorOrNameSize)
       return false;
-    uint32_t NameSize = std::move(*ErrorOrNameSize);
-
-    auto ErrorOrName = readString(NameSize);
-    if (!ErrorOrName)
+    // Function name
+    if (!readString(*ErrorOrNameSize))
       return false;
-
-    uint64_t GUID = std::move(*ErrorOrGUID);
-    uint64_t Hash = std::move(*ErrorOrHash);
-    StringRef Name = std::move(*ErrorOrName);
-
-    // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
-    GUID2FuncDescMap.emplace(GUID, MCPseudoProbeFuncDesc(GUID, Hash, Name));
+    ++FuncDescCount;
   }
   assert(Data == End && "Have unprocessed data in pseudo_probe_desc section");
+  GUID2FuncDescMap.reserve(FuncDescCount);
+
+  Data = Start;
+  End = Data + Size;
+  while (Data < End) {
+    uint64_t GUID =
+        cantFail(errorOrToExpected(readUnencodedNumber<uint64_t>()));
+    uint64_t Hash =
+        cantFail(errorOrToExpected(readUnencodedNumber<uint64_t>()));
+    uint32_t NameSize =
+        cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
+    StringRef Name = cantFail(errorOrToExpected(readString(NameSize)));
+
+    // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
+    GUID2FuncDescMap.emplace_back(GUID, Hash, Name.copy(FuncNameAllocator));
+  }
+  assert(Data == End && "Have unprocessed data in pseudo_probe_desc section");
+  assert(GUID2FuncDescMap.size() == FuncDescCount &&
+         "Mismatching function description count pre- and post-parsing");
+  llvm::sort(GUID2FuncDescMap, [](const auto &LHS, const auto &RHS) {
+    return LHS.FuncGUID < RHS.FuncGUID;
+  });
   return true;
 }
 
@@ -648,12 +662,8 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
 
 void MCPseudoProbeDecoder::printGUID2FuncDescMap(raw_ostream &OS) {
   OS << "Pseudo Probe Desc:\n";
-  // Make the output deterministic
-  std::map<uint64_t, MCPseudoProbeFuncDesc> OrderedMap(GUID2FuncDescMap.begin(),
-                                                       GUID2FuncDescMap.end());
-  for (auto &I : OrderedMap) {
-    I.second.print(OS);
-  }
+  for (auto &I : GUID2FuncDescMap)
+    I.print(OS);
 }
 
 void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
@@ -705,7 +715,7 @@ const MCPseudoProbeFuncDesc *
 MCPseudoProbeDecoder::getFuncDescForGUID(uint64_t GUID) const {
   auto It = GUID2FuncDescMap.find(GUID);
   assert(It != GUID2FuncDescMap.end() && "Function descriptor doesn't exist");
-  return &It->second;
+  return &*It;
 }
 
 void MCPseudoProbeDecoder::getInlineContextForProbe(

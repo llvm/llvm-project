@@ -155,7 +155,8 @@ void PseudoProbeRewriter::parsePseudoProbe() {
     ProbeDecoder.printProbesForAllAddresses(outs());
   }
 
-  for (const auto &[GUID, FuncDesc] : ProbeDecoder.getGUID2FuncDescMap()) {
+  for (const auto &FuncDesc : ProbeDecoder.getGUID2FuncDescMap()) {
+    uint64_t GUID = FuncDesc.FuncGUID;
     if (!FuncStartAddrs.contains(GUID))
       continue;
     BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncStartAddrs[GUID]);
