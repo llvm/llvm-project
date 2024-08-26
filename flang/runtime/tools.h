@@ -99,6 +99,15 @@ template <int KIND> struct StoreIntegerAt {
   }
 };
 
+// Helper to store floating value in result[at].
+template <int KIND> struct StoreFloatingPointAt {
+  RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
+      std::size_t at, std::double_t value) const {
+    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
+        Fortran::common::TypeCategory::Real, KIND>>(at) = value;
+  }
+};
+
 // Validate a KIND= argument
 RT_API_ATTRS void CheckIntegerKind(
     Terminator &, int kind, const char *intrinsic);

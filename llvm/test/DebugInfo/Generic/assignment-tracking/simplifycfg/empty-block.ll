@@ -33,10 +33,10 @@
 
 ; CHECK: entry:
 ;; -- alloca dbg.assign
-; CHECK: call void @llvm.dbg.assign(metadata i1 undef
+; CHECK: #dbg_assign(i1 undef
 ;; -- sunk dbg.assigns
-; CHECK: call void @llvm.dbg.assign(metadata float undef, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr %h, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata float undef, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %h, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float undef, ![[var:[0-9]+]], !DIExpression(), ![[id:[0-9]+]], ptr %h, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(float undef, ![[var]], !DIExpression(), ![[id]], ptr %h, !DIExpression(),
 ; CHECK-NEXT: %storemerge.in = getelementptr
 ; CHECK-NEXT: %storemerge = load float
 ; CHECK-NEXT: store float %storemerge, ptr %h, align 4{{.+}}!DIAssignID ![[id]]

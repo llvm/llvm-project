@@ -480,7 +480,7 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     tblgen::FmtContext verifyCtx;
     verifyCtx.addSubst("_op", "op");
     os << llvm::formatv(
-              "    static ::mlir::LogicalResult {0}(::mlir::Operation *op) ",
+              "    static ::llvm::LogicalResult {0}(::mlir::Operation *op) ",
               (interface.verifyWithRegions() ? "verifyRegionTrait"
                                              : "verifyTrait"))
        << "{\n      " << tblgen::tgfmt(verify->trim(), &verifyCtx)

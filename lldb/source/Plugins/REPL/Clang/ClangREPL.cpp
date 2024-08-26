@@ -95,7 +95,9 @@ bool ClangREPL::PrintOneVariable(Debugger &debugger,
     if (m_implicit_expr_result_regex.Execute(var->GetName().GetStringRef()))
       return true;
   }
-  valobj_sp->Dump(*output_sp);
+  if (llvm::Error error = valobj_sp->Dump(*output_sp))
+    *output_sp << "error: " << toString(std::move(error));
+
   return true;
 }
 

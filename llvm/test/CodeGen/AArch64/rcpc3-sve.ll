@@ -8,8 +8,8 @@
 define hidden <vscale x 2 x i64> @test_load_sve_lane0(ptr nocapture noundef readonly %a, <vscale x 2 x i64> noundef %b) local_unnamed_addr {
 ; CHECK-LABEL: test_load_sve_lane0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    ldapr x8, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
 ; CHECK-NEXT:    ret
   %1 = load atomic i64, ptr %a acquire, align 8
@@ -20,9 +20,9 @@ define hidden <vscale x 2 x i64> @test_load_sve_lane0(ptr nocapture noundef read
 define hidden <vscale x 2 x i64> @test_load_sve_lane1(ptr nocapture noundef readonly %a, <vscale x 2 x i64> noundef %b) local_unnamed_addr {
 ; CHECK-LABEL: test_load_sve_lane1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    index z1.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, x8
 ; CHECK-NEXT:    ldapr x8, [x0]
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d

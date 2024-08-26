@@ -355,6 +355,8 @@ public:
   // be able to get at any of the address ranges in a block.
   bool GetRangeAtIndex(uint32_t range_idx, AddressRange &range);
 
+  AddressRanges GetRanges();
+
   bool GetStartAddress(Address &addr);
 
   void SetDidParseVariables(bool b, bool set_children);

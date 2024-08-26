@@ -141,9 +141,6 @@
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #define HAVE_PTHREAD_SETNAME_NP 1
 
-/* Define to 1 if you have the <link.h> header file. */
-/* HAVE_LINK_H defined in Bazel */
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 /* HAVE_MACH_MACH_H defined in Bazel */
 
@@ -221,9 +218,6 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
-
-/* Define if the setupterm() function is supported this platform. */
-/* LLVM_ENABLE_TERMINFO defined in Bazel */
 
 /* Define to 1 if you have the <termios.h> header file. */
 #define HAVE_TERMIOS_H 1

@@ -174,7 +174,7 @@ define i1 @shl_to_shr_eq_i64_s44(i64 %x) {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq $44, %rax
 ; CHECK-NEXT:    andl $1048575, %edi # imm = 0xFFFFF
-; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %shl = shl i64 %x, 44
@@ -186,9 +186,9 @@ define i1 @shl_to_shr_eq_i64_s44(i64 %x) {
 define i1 @shr_to_shl_ne_i64_s32(i64 %x) {
 ; CHECK-NOBMI-LABEL: shr_to_shl_ne_i64_s32:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movl %edi, %eax
-; CHECK-NOBMI-NEXT:    shrq $32, %rdi
-; CHECK-NOBMI-NEXT:    cmpq %rdi, %rax
+; CHECK-NOBMI-NEXT:    movq %rdi, %rax
+; CHECK-NOBMI-NEXT:    shrq $32, %rax
+; CHECK-NOBMI-NEXT:    cmpl %eax, %edi
 ; CHECK-NOBMI-NEXT:    setne %al
 ; CHECK-NOBMI-NEXT:    retq
 ;
@@ -244,7 +244,7 @@ define i1 @shl_to_shr_eq_i64_s63(i64 %x) {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq $63, %rax
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %shl = shl i64 %x, 63

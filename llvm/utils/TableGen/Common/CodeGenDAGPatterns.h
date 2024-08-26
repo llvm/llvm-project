@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENDAGPATTERNS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENDAGPATTERNS_H
 
 #include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
@@ -48,15 +48,12 @@ class CodeGenDAGPatterns;
 using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 
 /// This represents a set of MVTs. Since the underlying type for the MVT
-/// is uint8_t, there are at most 256 values. To reduce the number of memory
+/// is uint16_t, there are at most 65536 values. To reduce the number of memory
 /// allocations and deallocations, represent the set as a sequence of bits.
 /// To reduce the allocations even further, make MachineValueTypeSet own
 /// the storage and use std::array as the bit container.
 struct MachineValueTypeSet {
-  static_assert(std::is_same<std::underlying_type_t<MVT::SimpleValueType>,
-                             uint8_t>::value,
-                "Change uint8_t here to the SimpleValueType's type");
-  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max() + 1;
+  static unsigned constexpr Capacity = 512;
   using WordType = uint64_t;
   static unsigned constexpr WordWidth = CHAR_BIT * sizeof(WordType);
   static unsigned constexpr NumWords = Capacity / WordWidth;
@@ -84,9 +81,11 @@ struct MachineValueTypeSet {
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   unsigned count(MVT T) const {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     return (Words[T.SimpleTy / WordWidth] >> (T.SimpleTy % WordWidth)) & 1;
   }
   std::pair<MachineValueTypeSet &, bool> insert(MVT T) {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     bool V = count(T.SimpleTy);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
     return {*this, V};
@@ -98,6 +97,7 @@ struct MachineValueTypeSet {
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   void erase(MVT T) {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     Words[T.SimpleTy / WordWidth] &= ~(WordType(1) << (T.SimpleTy % WordWidth));
   }
 
@@ -193,8 +193,6 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
   TypeSetByHwMode(MVT::SimpleValueType VT)
       : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
-  TypeSetByHwMode(ValueTypeByHwMode VT)
-      : TypeSetByHwMode(ArrayRef<ValueTypeByHwMode>(&VT, 1)) {}
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
@@ -264,7 +262,8 @@ struct TypeInfer {
   bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) const {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out,
+                       const ValueTypeByHwMode &InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
 
@@ -533,6 +532,8 @@ public:
 
   // Check if the HasNoUse predicate is set.
   bool hasNoUse() const;
+  // Check if the HasOneUse predicate is set.
+  bool hasOneUse() const;
 
   // Is the desired predefined predicate for a load?
   bool isLoad() const;
@@ -839,7 +840,8 @@ public: // Higher level manipulation routines.
                       TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
                       TreePattern &TP);
-  bool UpdateNodeType(unsigned ResNo, ValueTypeByHwMode InTy, TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, const ValueTypeByHwMode &InTy,
+                      TreePattern &TP);
 
   // Update node type with types inferred from an instruction operand or result
   // def from the ins/outs lists.
@@ -994,7 +996,7 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
 }
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
-                                            ValueTypeByHwMode InTy,
+                                            const ValueTypeByHwMode &InTy,
                                             TreePattern &TP) {
   TypeSetByHwMode VTS(InTy);
   TP.getInfer().expandOverloads(VTS);
@@ -1057,17 +1059,19 @@ class PatternToMatch {
   TreePatternNodePtr DstPattern; // Resulting pattern.
   std::vector<Record *> Dstregs; // Physical register defs being matched.
   std::string HwModeFeatures;
-  int AddedComplexity; // Add to matching pattern complexity.
-  unsigned ID;         // Unique ID for the record.
+  int AddedComplexity;    // Add to matching pattern complexity.
+  bool GISelShouldIgnore; // Should GlobalISel ignore importing this pattern.
+  unsigned ID;            // Unique ID for the record.
 
 public:
   PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
                  TreePatternNodePtr dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid, const Twine &hwmodefeatures = "")
+                 int complexity, unsigned uid, bool ignore,
+                 const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
         DstPattern(dst), Dstregs(std::move(dstregs)),
         HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
-        ID(uid) {}
+        GISelShouldIgnore(ignore), ID(uid) {}
 
   Record *getSrcRecord() const { return SrcRecord; }
   ListInit *getPredicates() const { return Predicates; }
@@ -1078,6 +1082,7 @@ public:
   const std::vector<Record *> &getDstRegs() const { return Dstregs; }
   StringRef getHwModeFeatures() const { return HwModeFeatures; }
   int getAddedComplexity() const { return AddedComplexity; }
+  bool getGISelShouldIgnore() const { return GISelShouldIgnore; }
   unsigned getID() const { return ID; }
 
   std::string getPredicateCheck() const;
@@ -1240,7 +1245,8 @@ private:
 
   void ParseOnePattern(Record *TheDef, TreePattern &Pattern,
                        TreePattern &Result,
-                       const std::vector<Record *> &InstImpResults);
+                       const std::vector<Record *> &InstImpResults,
+                       bool ShouldIgnore = false);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(
       TreePattern &I, TreePatternNodePtr Pat,
@@ -1260,4 +1266,4 @@ inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENDAGPATTERNS_H

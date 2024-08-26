@@ -1,4 +1,4 @@
-# Check that we don't accidentally optimize out a tail call.
+## Check that we don't accidentally optimize out a tail call.
 
 RUN: %clang %cflags %S/Inputs/sctc_bug.s -o %t
 RUN: llvm-bolt %t -o %t.null --funcs=main --print-after-lowering \

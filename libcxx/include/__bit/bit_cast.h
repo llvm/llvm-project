@@ -33,7 +33,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr _ToType __bit_cast(const _From
 template <class _ToType, class _FromType>
   requires(sizeof(_ToType) == sizeof(_FromType) && is_trivially_copyable_v<_ToType> &&
            is_trivially_copyable_v<_FromType>)
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _ToType bit_cast(const _FromType& __from) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _ToType bit_cast(const _FromType& __from) noexcept {
   return __builtin_bit_cast(_ToType, __from);
 }
 

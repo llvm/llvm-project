@@ -76,10 +76,9 @@ void DfaEmitter::visitDfaState(const DfaState &DS) {
       continue;
     // Sort and unique.
     sort(NewStates);
-    NewStates.erase(std::unique(NewStates.begin(), NewStates.end()),
-                    NewStates.end());
+    NewStates.erase(llvm::unique(NewStates), NewStates.end());
     sort(TI);
-    TI.erase(std::unique(TI.begin(), TI.end()), TI.end());
+    TI.erase(llvm::unique(TI), TI.end());
     unsigned ToId = DfaStates.insert(NewStates);
     DfaTransitions.emplace(std::pair(FromId, A), std::pair(ToId, TI));
   }

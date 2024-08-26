@@ -430,9 +430,9 @@ define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
   %y = mul <3 x i5> %p, <i5 1, i5 2, i5 3> ; thwart complexity-based-canonicalization
-  %s = sub <3 x i5> <i5 0, i5 0, i5 undef>, %x
+  %s = sub <3 x i5> <i5 0, i5 0, i5 poison>, %x
   %o = or <3 x i5> %y, %s
-  %not = xor <3 x i5> %o, <i5 -1, i5 undef, i5 -1>
+  %not = xor <3 x i5> %o, <i5 -1, i5 poison, i5 -1>
   ret <3 x i5> %not
 }
 
@@ -442,7 +442,7 @@ define i8 @not_or_neg_use1(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @not_or_neg_use1(
 ; CHECK-NEXT:    [[S:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], [[S]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[O]], -1
 ; CHECK-NEXT:    ret i8 [[NOT]]
 ;
@@ -458,7 +458,7 @@ define i8 @not_or_neg_use1(i8 %x, i8 %y)  {
 define i8 @not_or_neg_use2(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @not_or_neg_use2(
 ; CHECK-NEXT:    [[S:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], [[S]]
 ; CHECK-NEXT:    call void @use8(i8 [[O]])
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[O]], -1
 ; CHECK-NEXT:    ret i8 [[NOT]]
@@ -850,7 +850,7 @@ define i32 @test_zext(i32 %a, i32 %b){
 ; CHECK-LABEL: @test_zext(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[SEXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SEXT]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[B:%.*]], [[SEXT]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[ADD]], -1
 ; CHECK-NEXT:    ret i32 [[NOT]]
 ;
@@ -864,11 +864,11 @@ define i32 @test_zext(i32 %a, i32 %b){
 define void @test_invert_demorgan_or(i32 %a, i32 %b, i1 %cond) {
 ; CHECK-LABEL: @test_invert_demorgan_or(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B1:%.*]], 0
-; CHECK-NEXT:    [[OR_NOT1:%.*]] = and i1 [[CMP2]], [[CMP3]]
-; CHECK-NEXT:    [[MERGE:%.*]] = and i1 [[OR_NOT1]], [[COND:%.*]]
-; CHECK-NEXT:    br i1 [[MERGE]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[OR_NOT1:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[MERGE_NOT:%.*]] = and i1 [[OR_NOT1]], [[COND:%.*]]
+; CHECK-NEXT:    br i1 [[MERGE_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    unreachable
@@ -897,8 +897,8 @@ define i1 @test_invert_demorgan_or2(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[B:%.*]], 60
 ; CHECK-NEXT:    [[OR1_NOT1:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i64 [[C:%.*]], 60
-; CHECK-NEXT:    [[NOT:%.*]] = and i1 [[OR1_NOT1]], [[CMP3]]
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[OR2_NOT:%.*]] = and i1 [[OR1_NOT1]], [[CMP3]]
+; CHECK-NEXT:    ret i1 [[OR2_NOT]]
 ;
   %cmp1 = icmp ugt i64 %a, 23
   %cmp2 = icmp ugt i64 %b, 59
@@ -920,8 +920,8 @@ define i1 @test_invert_demorgan_or3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[TMP3]], -196112
 ; CHECK-NEXT:    [[OR1_NOT2:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    [[OR2_NOT1:%.*]] = and i1 [[OR1_NOT2]], [[CMP3]]
-; CHECK-NEXT:    [[NOT:%.*]] = and i1 [[OR2_NOT1]], [[CMP4]]
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[OR3_NOT:%.*]] = and i1 [[OR2_NOT1]], [[CMP4]]
+; CHECK-NEXT:    ret i1 [[OR3_NOT]]
 ;
   %cmp1 = icmp eq i32 %a, 178206
   %v1 = add i32 %b, -195102
@@ -943,8 +943,8 @@ define i1 @test_invert_demorgan_logical_or(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[SEL_NOT1:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[X]], 0
-; CHECK-NEXT:    [[NOT:%.*]] = and i1 [[CMP3]], [[SEL_NOT1]]
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[OR_NOT:%.*]] = and i1 [[CMP3]], [[SEL_NOT1]]
+; CHECK-NEXT:    ret i1 [[OR_NOT]]
 ;
   %cmp1 = icmp eq i64 %x, 27
   %cmp2 = icmp eq i64 %y, 0
@@ -958,11 +958,11 @@ define i1 @test_invert_demorgan_logical_or(i64 %x, i64 %y) {
 define i1 @test_invert_demorgan_and(i32 %a, i32 %b, i1 %cond) {
 ; CHECK-LABEL: @test_invert_demorgan_and(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B1:%.*]], 0
-; CHECK-NEXT:    [[AND_NOT1:%.*]] = or i1 [[CMP2]], [[CMP3]]
-; CHECK-NEXT:    [[MERGE:%.*]] = or i1 [[AND_NOT1]], [[COND:%.*]]
-; CHECK-NEXT:    br i1 [[MERGE]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[AND_NOT1:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[MERGE_NOT:%.*]] = or i1 [[AND_NOT1]], [[COND:%.*]]
+; CHECK-NEXT:    br i1 [[MERGE_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    unreachable
@@ -999,9 +999,9 @@ define i64 @test_invert_demorgan_and2(i64 %x) {
 
 define i1 @test_invert_demorgan_and3(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_invert_demorgan_and3(
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 4095
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 4095
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 4095
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 4095
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %not = xor i32 %a, -1
@@ -1017,8 +1017,8 @@ define i1 @test_invert_demorgan_logical_and(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[SEL_NOT1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[X]], 0
-; CHECK-NEXT:    [[NOT:%.*]] = and i1 [[CMP3]], [[SEL_NOT1]]
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[OR_NOT:%.*]] = and i1 [[CMP3]], [[SEL_NOT1]]
+; CHECK-NEXT:    ret i1 [[OR_NOT]]
 ;
   %cmp1 = icmp eq i64 %x, 27
   %cmp2 = icmp eq i64 %y, 0

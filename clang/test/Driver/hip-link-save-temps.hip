@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // -fgpu-rdc link with output
 // RUN: rm -rf %t && mkdir %t
 // RUN: touch %t/obj1.o

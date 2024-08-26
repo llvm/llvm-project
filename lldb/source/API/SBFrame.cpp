@@ -1024,10 +1024,10 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     options.SetFetchDynamicValue(fetch_dynamic_value);
     options.SetUnwindOnError(true);
     options.SetIgnoreBreakpoints(true);
-    if (target->GetLanguage() != eLanguageTypeUnknown)
-      options.SetLanguage(target->GetLanguage());
-    else
-      options.SetLanguage(frame->GetLanguage());
+    SourceLanguage language = target->GetLanguage();
+    if (!language)
+      language = frame->GetLanguage();
+    options.SetLanguage((SBSourceLanguageName)language.name, language.version);
     return EvaluateExpression(expr, options);
   } else {
     Status error;
@@ -1053,10 +1053,12 @@ SBFrame::EvaluateExpression(const char *expr,
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   Target *target = exe_ctx.GetTargetPtr();
-  if (target && target->GetLanguage() != eLanguageTypeUnknown)
-    options.SetLanguage(target->GetLanguage());
-  else if (frame)
-    options.SetLanguage(frame->GetLanguage());
+  SourceLanguage language;
+  if (target)
+    language = target->GetLanguage();
+  if (!language && frame)
+    language = frame->GetLanguage();
+  options.SetLanguage((SBSourceLanguageName)language.name, language.version);
   return EvaluateExpression(expr, options);
 }
 
@@ -1074,10 +1076,12 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
   options.SetIgnoreBreakpoints(true);
   StackFrame *frame = exe_ctx.GetFramePtr();
   Target *target = exe_ctx.GetTargetPtr();
-  if (target && target->GetLanguage() != eLanguageTypeUnknown)
-    options.SetLanguage(target->GetLanguage());
-  else if (frame)
-    options.SetLanguage(frame->GetLanguage());
+  SourceLanguage language;
+  if (target)
+    language = target->GetLanguage();
+  if (!language && frame)
+    language = frame->GetLanguage();
+  options.SetLanguage((SBSourceLanguageName)language.name, language.version);
   return EvaluateExpression(expr, options);
 }
 
@@ -1191,9 +1195,20 @@ bool SBFrame::IsArtificial() const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame)
+  if (StackFrame *frame = exe_ctx.GetFramePtr())
     return frame->IsArtificial();
+
+  return false;
+}
+
+bool SBFrame::IsHidden() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  if (StackFrame *frame = exe_ctx.GetFramePtr())
+    return frame->IsHidden();
 
   return false;
 }
@@ -1218,7 +1233,7 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
-        return frame->GuessLanguage();
+        return frame->GuessLanguage().AsLanguageType();
       }
     }
   }

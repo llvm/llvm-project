@@ -936,7 +936,8 @@ property <uniformity-analysis>` of static instances in the convergence region of
      1. Both threads executed converged dynamic instances of every token
         definition ``D`` such that ``X`` is in the convergence region of ``D``,
         and,
-     2. For every cycle ``C`` with header ``H`` that contains ``X``:
+     2. Either ``X`` is not contained in any cycle, or, for every cycle ``C``
+        with header ``H`` that contains ``X``:
 
         - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in the
           respective thread is convergence-before ``X2``, and,

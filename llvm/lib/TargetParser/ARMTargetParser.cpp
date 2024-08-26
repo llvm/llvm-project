@@ -610,7 +610,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     return StringRef();
 
   StringRef CPU = llvm::ARM::getDefaultCPU(MArch);
-  if (!CPU.empty() && !CPU.equals("invalid"))
+  if (!CPU.empty() && CPU != "invalid")
     return CPU;
 
   // If no specific architecture version is requested, return the minimum CPU

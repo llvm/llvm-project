@@ -90,9 +90,8 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                            uint64_t Value) const override;
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
@@ -483,9 +482,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 }
 
 bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                             uint64_t Value,
-                                             const MCRelaxableFragment *DF,
-                                             const MCAsmLayout &Layout) const {
+                                             uint64_t Value) const {
   // FIXME:  This isn't correct for AArch64. Just moving the "generic" logic
   // into the targets for now.
   //
@@ -602,7 +599,7 @@ public:
   }
 
   /// Generate the compact unwind encoding from the CFI directives.
-  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty())
@@ -612,10 +609,10 @@ public:
       return CU::UNWIND_ARM64_MODE_DWARF;
 
     bool HasFP = false;
-    unsigned StackSize = 0;
+    uint64_t StackSize = 0;
 
-    uint32_t CompactUnwindEncoding = 0;
-    int CurOffset = 0;
+    uint64_t CompactUnwindEncoding = 0;
+    int64_t CurOffset = 0;
     for (size_t i = 0, e = Instrs.size(); i != e; ++i) {
       const MCCFIInstruction &Inst = Instrs[i];
 

@@ -115,10 +115,13 @@ public:
   bool isExplicitBindName() const { return isExplicitBindName_; }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
   void set_isExplicitBindName(bool yes) { isExplicitBindName_ = yes; }
+  bool isCDefined() const { return isCDefined_; }
+  void set_isCDefined(bool yes) { isCDefined_ = yes; }
 
 private:
   std::optional<std::string> bindName_;
   bool isExplicitBindName_{false};
+  bool isCDefined_{false};
 };
 
 // Device type specific OpenACC routine information
@@ -435,12 +438,17 @@ public:
   void set_init(std::nullptr_t) { init_ = nullptr; }
   bool isCUDAKernel() const { return isCUDAKernel_; }
   void set_isCUDAKernel(bool yes = true) { isCUDAKernel_ = yes; }
+  std::optional<SourceName> usedAsProcedureHere() const {
+    return usedAsProcedureHere_;
+  }
+  void set_usedAsProcedureHere(SourceName here) { usedAsProcedureHere_ = here; }
 
 private:
   const Symbol *rawProcInterface_{nullptr};
   const Symbol *procInterface_{nullptr};
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
+  std::optional<SourceName> usedAsProcedureHere_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ProcEntityDetails &);
 };
@@ -452,15 +460,19 @@ private:
 // and specialized for each distinct set of type parameter values.
 class DerivedTypeDetails {
 public:
-  const std::list<SourceName> &paramNames() const { return paramNames_; }
-  const SymbolVector &paramDecls() const { return paramDecls_; }
+  const SymbolVector &paramNameOrder() const { return paramNameOrder_; }
+  const SymbolVector &paramDeclOrder() const { return paramDeclOrder_; }
   bool sequence() const { return sequence_; }
   bool isDECStructure() const { return isDECStructure_; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
   const std::map<SourceName, SymbolRef> &finals() const { return finals_; }
   bool isForwardReferenced() const { return isForwardReferenced_; }
-  void add_paramName(const SourceName &name) { paramNames_.push_back(name); }
-  void add_paramDecl(const Symbol &symbol) { paramDecls_.push_back(symbol); }
+  void add_paramNameOrder(const Symbol &symbol) {
+    paramNameOrder_.push_back(symbol);
+  }
+  void add_paramDeclOrder(const Symbol &symbol) {
+    paramDeclOrder_.push_back(symbol);
+  }
   void add_component(const Symbol &);
   void set_sequence(bool x = true) { sequence_ = x; }
   void set_isDECStructure(bool x = true) { isDECStructure_ = x; }
@@ -483,12 +495,12 @@ public:
   const Symbol *GetFinalForRank(int) const;
 
 private:
-  // These are (1) the names of the derived type parameters in the order
+  // These are (1) the symbols of the derived type parameters in the order
   // in which they appear on the type definition statement(s), and (2) the
   // symbols that correspond to those names in the order in which their
   // declarations appear in the derived type definition(s).
-  std::list<SourceName> paramNames_;
-  SymbolVector paramDecls_;
+  SymbolVector paramNameOrder_;
+  SymbolVector paramDeclOrder_;
   // These are the names of the derived type's components in component
   // order.  A parent component, if any, appears first in this list.
   std::list<SourceName> componentNames_;
@@ -557,18 +569,19 @@ private:
 
 class TypeParamDetails {
 public:
-  explicit TypeParamDetails(common::TypeParamAttr attr) : attr_{attr} {}
+  TypeParamDetails() = default;
   TypeParamDetails(const TypeParamDetails &) = default;
-  common::TypeParamAttr attr() const { return attr_; }
+  std::optional<common::TypeParamAttr> attr() const { return attr_; }
+  TypeParamDetails &set_attr(common::TypeParamAttr);
   MaybeIntExpr &init() { return init_; }
   const MaybeIntExpr &init() const { return init_; }
   void set_init(MaybeIntExpr &&expr) { init_ = std::move(expr); }
   const DeclTypeSpec *type() const { return type_; }
-  void set_type(const DeclTypeSpec &);
+  TypeParamDetails &set_type(const DeclTypeSpec &);
   void ReplaceType(const DeclTypeSpec &);
 
 private:
-  common::TypeParamAttr attr_;
+  std::optional<common::TypeParamAttr> attr_;
   MaybeIntExpr init_;
   const DeclTypeSpec *type_{nullptr};
 };
@@ -709,6 +722,7 @@ public:
       CrayPointer, CrayPointee,
       LocalityLocal, // named in LOCAL locality-spec
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
+      LocalityReduce, // named in REDUCE locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
@@ -740,7 +754,8 @@ public:
       OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
       OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
       OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
+      OmpImplicit, OmpFromStmtFunction);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -807,8 +822,10 @@ public:
   void SetBindName(std::string &&);
   bool GetIsExplicitBindName() const;
   void SetIsExplicitBindName(bool);
+  void SetIsCDefined(bool);
   bool IsFuncResult() const;
   bool IsObjectArray() const;
+  const ArraySpec *GetShape() const;
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {

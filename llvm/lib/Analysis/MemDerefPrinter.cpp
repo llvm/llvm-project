@@ -26,7 +26,7 @@ PreservedAnalyses MemDerefPrinterPass::run(Function &F,
   SmallVector<Value *, 4> Deref;
   SmallPtrSet<Value *, 4> DerefAndAligned;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   for (auto &I : instructions(F)) {
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       Value *PO = LI->getPointerOperand();

@@ -101,7 +101,7 @@ public:
     std::map<std::string, vfs::Status>::iterator I;
     std::string Path;
     bool isInPath(StringRef S) {
-      if (Path.size() < S.size() && S.find(Path) == 0) {
+      if (Path.size() < S.size() && S.starts_with(Path)) {
         auto LastSep = S.find_last_of('/');
         if (LastSep == Path.size() || LastSep == Path.size() - 1)
           return true;
@@ -766,7 +766,7 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
 template <typename DirIter>
 static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   std::error_code EC;
-  SmallVector<StringRef, 4> Expected(ExpectedOut.begin(), ExpectedOut.end());
+  SmallVector<StringRef, 4> Expected(ExpectedOut);
   SmallVector<std::string, 4> InputToCheck;
 
   // Do not rely on iteration order to check for contents, sort both
@@ -1138,6 +1138,11 @@ TEST_F(InMemoryFileSystemTest, DuplicatedFile) {
   ASSERT_FALSE(FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("a")));
   ASSERT_TRUE(FS.addFile("/a", 0, MemoryBuffer::getMemBuffer("a")));
   ASSERT_FALSE(FS.addFile("/a", 0, MemoryBuffer::getMemBuffer("b")));
+  ASSERT_TRUE(FS.addFile("/b/c/d", 0, MemoryBuffer::getMemBuffer("a")));
+  ASSERT_FALSE(FS.addFile("/b/c", 0, MemoryBuffer::getMemBuffer("a")));
+  ASSERT_TRUE(FS.addFile(
+      "/b/c", 0, MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
+      /*Group=*/std::nullopt, sys::fs::file_type::directory_file));
 }
 
 TEST_F(InMemoryFileSystemTest, DirectoryIteration) {

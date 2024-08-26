@@ -16,6 +16,31 @@
 
 #include "test_macros.h"
 
+// Tests whether the pointer p is in the range [first, last).
+//
+// Precondition: The range [first, last) is a valid range.
+//
+// Typically the pointers are compared with less than. This is not allowed when
+// the pointers belong to different ranges, which is UB. Typically, this is
+// benign at run-time, however since UB is not allowed during constant
+// evaluation this does not compile. This function does the validation without
+// UB.
+//
+// When p is in the range [first, last) the data can be copied from the
+// beginning to the end. Otherwise it needs to be copied from the end to the
+// beginning.
+template <class CharT>
+TEST_CONSTEXPR_CXX14 bool is_pointer_in_range(const CharT* first, const CharT* last, const CharT* p) {
+  if (first == p) // Needed when n == 0
+    return true;
+
+  for (; first != last; ++first)
+    if (first == p)
+      return true;
+
+  return false;
+}
+
 template <class CharT>
 struct constexpr_char_traits
 {
@@ -98,23 +123,21 @@ constexpr_char_traits<CharT>::find(const char_type* s, std::size_t n, const char
 }
 
 template <class CharT>
-TEST_CONSTEXPR_CXX14 CharT*
-constexpr_char_traits<CharT>::move(char_type* s1, const char_type* s2, std::size_t n)
-{
-    char_type* r = s1;
-    if (s1 < s2)
-    {
-        for (; n; --n, ++s1, ++s2)
-            assign(*s1, *s2);
-    }
-    else if (s2 < s1)
-    {
-        s1 += n;
-        s2 += n;
-        for (; n; --n)
-            assign(*--s1, *--s2);
-    }
-    return r;
+TEST_CONSTEXPR_CXX14 CharT* constexpr_char_traits<CharT>::move(char_type* s1, const char_type* s2, std::size_t n) {
+  if (s1 == s2)
+    return s1;
+
+  char_type* r = s1;
+  if (is_pointer_in_range(s1, s1 + n, s2)) {
+    for (; n; --n)
+      assign(*s1++, *s2++);
+  } else {
+    s1 += n;
+    s2 += n;
+    for (; n; --n)
+      assign(*--s1, *--s2);
+  }
+  return r;
 }
 
 template <class CharT>

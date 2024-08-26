@@ -496,16 +496,16 @@ uint64_t APInt::extractBitsAsZExtValue(unsigned numBits,
   if (isSingleWord())
     return (U.VAL >> bitPosition) & maskBits;
 
+  static_assert(APINT_BITS_PER_WORD >= 64,
+                "This code assumes only two words affected");
   unsigned loBit = whichBit(bitPosition);
   unsigned loWord = whichWord(bitPosition);
   unsigned hiWord = whichWord(bitPosition + numBits - 1);
   if (loWord == hiWord)
     return (U.pVal[loWord] >> loBit) & maskBits;
 
-  static_assert(8 * sizeof(WordType) <= 64, "This code assumes only two words affected");
-  unsigned wordBits = 8 * sizeof(WordType);
   uint64_t retBits = U.pVal[loWord] >> loBit;
-  retBits |= U.pVal[hiWord] << (wordBits - loBit);
+  retBits |= U.pVal[hiWord] << (APINT_BITS_PER_WORD - loBit);
   retBits &= maskBits;
   return retBits;
 }
@@ -2663,7 +2663,7 @@ int APInt::tcDivide(WordType *lhs, const WordType *rhs,
   return false;
 }
 
-/// Shift a bignum left Cound bits in-place. Shifted in bits are zero. There are
+/// Shift a bignum left Count bits in-place. Shifted in bits are zero. There are
 /// no restrictions on Count.
 void APInt::tcShiftLeft(WordType *Dst, unsigned Words, unsigned Count) {
   // Don't bother performing a no-op shift.

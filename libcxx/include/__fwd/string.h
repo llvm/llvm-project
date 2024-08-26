@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___FWD_STRING_H
 #define _LIBCPP___FWD_STRING_H
 
-#include <__availability>
 #include <__config>
 #include <__fwd/memory.h>
 #include <__fwd/memory_resource.h>

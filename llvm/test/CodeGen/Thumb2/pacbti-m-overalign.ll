@@ -14,7 +14,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ;   return s;
 ; }
 
-define hidden i32 @_Z1fv() local_unnamed_addr {
+define hidden i32 @_Z1fv() local_unnamed_addr "sign-return-address"="non-leaf" {
 entry:
   %a = alloca [4 x i32], align 32
   %call = call i32 @_Z1giPi(i32 4, ptr nonnull %a)

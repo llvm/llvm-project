@@ -60,7 +60,7 @@ MLIR_CAPI_EXPORTED void
 mlirTransformOptionsDestroy(MlirTransformOptions transformOptions);
 
 //----------------------------------------------------------------------------//
-// Transform interpreter.
+// Transform interpreter and utilities.
 //----------------------------------------------------------------------------//
 
 /// Applies the transformation script starting at the given transform root
@@ -71,6 +71,16 @@ mlirTransformOptionsDestroy(MlirTransformOptions transformOptions);
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirTransformApplyNamedSequence(
     MlirOperation payload, MlirOperation transformRoot,
     MlirOperation transformModule, MlirTransformOptions transformOptions);
+
+/// Merge the symbols from `other` into `target`, potentially renaming them to
+/// avoid conflicts. Private symbols may be renamed during the merge, public
+/// symbols must have at most one declaration. A name conflict in public symbols
+/// is reported as an error before returning a failure.
+///
+/// Note that this clones the `other` operation unlike the C++ counterpart that
+/// takes ownership.
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirMergeSymbolsIntoFromClone(MlirOperation target, MlirOperation other);
 
 #ifdef __cplusplus
 }

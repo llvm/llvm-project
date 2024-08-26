@@ -38,7 +38,8 @@ public:
 
 private:
   const BugType Bug{this, "DescriptiveNameBug"};
-  const CallDescription HandlerFn = {{"reportDescriptiveName"}, 1};
+  const CallDescription HandlerFn = {
+      CDM::SimpleFunc, {"reportDescriptiveName"}, 1};
 };
 
 void addDescriptiveNameChecker(AnalysisASTConsumer &AnalysisConsumer,
@@ -89,7 +90,7 @@ void reportDescriptiveName(int *p);
 extern int* ptr;
 extern int array[3];
 void top() {
-  reportDescriptiveName(&array[(long)ptr]);
+  reportDescriptiveName(&array[(long long)ptr]);
 })cpp";
 
   std::string Output;

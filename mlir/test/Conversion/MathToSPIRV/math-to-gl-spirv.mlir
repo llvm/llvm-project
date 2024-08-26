@@ -6,65 +6,85 @@ module attributes {
 
 // CHECK-LABEL: @float32_unary_scalar
 func.func @float32_unary_scalar(%arg0: f32) {
+  // CHECK: spirv.GL.Atan %{{.*}}: f32
+  %0 = math.atan %arg0 : f32
   // CHECK: spirv.GL.Cos %{{.*}}: f32
-  %0 = math.cos %arg0 : f32
+  %1 = math.cos %arg0 : f32
   // CHECK: spirv.GL.Exp %{{.*}}: f32
-  %1 = math.exp %arg0 : f32
+  %2 = math.exp %arg0 : f32
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
-  %2 = math.expm1 %arg0 : f32
+  %3 = math.expm1 %arg0 : f32
   // CHECK: spirv.GL.Log %{{.*}}: f32
-  %3 = math.log %arg0 : f32
+  %4 = math.log %arg0 : f32
   // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
-  %4 = math.log1p %arg0 : f32
+  %5 = math.log1p %arg0 : f32
+  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
+  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  %6 = math.log2 %arg0 : f32
+  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
+  // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  %7 = math.log10 %arg0 : f32
   // CHECK: spirv.GL.RoundEven %{{.*}}: f32
-  %5 = math.roundeven %arg0 : f32
+  %8 = math.roundeven %arg0 : f32
   // CHECK: spirv.GL.InverseSqrt %{{.*}}: f32
-  %6 = math.rsqrt %arg0 : f32
+  %9 = math.rsqrt %arg0 : f32
   // CHECK: spirv.GL.Sqrt %{{.*}}: f32
-  %7 = math.sqrt %arg0 : f32
+  %10 = math.sqrt %arg0 : f32
   // CHECK: spirv.GL.Tanh %{{.*}}: f32
-  %8 = math.tanh %arg0 : f32
+  %11 = math.tanh %arg0 : f32
   // CHECK: spirv.GL.Sin %{{.*}}: f32
-  %9 = math.sin %arg0 : f32
+  %12 = math.sin %arg0 : f32
   // CHECK: spirv.GL.FAbs %{{.*}}: f32
-  %10 = math.absf %arg0 : f32
+  %13 = math.absf %arg0 : f32
   // CHECK: spirv.GL.Ceil %{{.*}}: f32
-  %11 = math.ceil %arg0 : f32
+  %14 = math.ceil %arg0 : f32
   // CHECK: spirv.GL.Floor %{{.*}}: f32
-  %12 = math.floor %arg0 : f32
+  %15 = math.floor %arg0 : f32
   return
 }
 
 // CHECK-LABEL: @float32_unary_vector
 func.func @float32_unary_vector(%arg0: vector<3xf32>) {
+  // CHECK: spirv.GL.Atan %{{.*}}: vector<3xf32>
+  %0 = math.atan %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Cos %{{.*}}: vector<3xf32>
-  %0 = math.cos %arg0 : vector<3xf32>
+  %1 = math.cos %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Exp %{{.*}}: vector<3xf32>
-  %1 = math.exp %arg0 : vector<3xf32>
+  %2 = math.exp %arg0 : vector<3xf32>
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant dense<1.000000e+00> : vector<3xf32>
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
-  %2 = math.expm1 %arg0 : vector<3xf32>
+  %3 = math.expm1 %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Log %{{.*}}: vector<3xf32>
-  %3 = math.log %arg0 : vector<3xf32>
+  %4 = math.log %arg0 : vector<3xf32>
   // CHECK: %[[ONE:.+]] = spirv.Constant dense<1.000000e+00> : vector<3xf32>
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
-  %4 = math.log1p %arg0 : vector<3xf32>
+  %5 = math.log1p %arg0 : vector<3xf32>
+  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
+  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  %6 = math.log2 %arg0 : vector<3xf32>
+  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
+  // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  %7 = math.log10 %arg0 : vector<3xf32>
   // CHECK: spirv.GL.RoundEven %{{.*}}: vector<3xf32>
-  %5 = math.roundeven %arg0 : vector<3xf32>
+  %8 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.GL.InverseSqrt %{{.*}}: vector<3xf32>
-  %6 = math.rsqrt %arg0 : vector<3xf32>
+  %9 = math.rsqrt %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sqrt %{{.*}}: vector<3xf32>
-  %7 = math.sqrt %arg0 : vector<3xf32>
+  %10 = math.sqrt %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Tanh %{{.*}}: vector<3xf32>
-  %8 = math.tanh %arg0 : vector<3xf32>
+  %11 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sin %{{.*}}: vector<3xf32>
-  %9 = math.sin %arg0 : vector<3xf32>
+  %12 = math.sin %arg0 : vector<3xf32>
   return
 }
 
@@ -229,18 +249,20 @@ module attributes {
 
 // CHECK-LABEL: @vector_2d
 func.func @vector_2d(%arg0: vector<2x2xf32>) {
+  // CHECK-NEXT: math.atan {{.+}} : vector<2x2xf32>
+  %0 = math.atan %arg0 : vector<2x2xf32>
   // CHECK-NEXT: math.cos {{.+}} : vector<2x2xf32>
-  %0 = math.cos %arg0 : vector<2x2xf32>
+  %1 = math.cos %arg0 : vector<2x2xf32>
   // CHECK-NEXT: math.exp {{.+}} : vector<2x2xf32>
-  %1 = math.exp %arg0 : vector<2x2xf32>
+  %2 = math.exp %arg0 : vector<2x2xf32>
   // CHECK-NEXT: math.absf {{.+}} : vector<2x2xf32>
-  %2 = math.absf %arg0 : vector<2x2xf32>
+  %3 = math.absf %arg0 : vector<2x2xf32>
   // CHECK-NEXT: math.ceil {{.+}} : vector<2x2xf32>
-  %3 = math.ceil %arg0 : vector<2x2xf32>
+  %4 = math.ceil %arg0 : vector<2x2xf32>
   // CHECK-NEXT: math.floor {{.+}} : vector<2x2xf32>
-  %4 = math.floor %arg0 : vector<2x2xf32>
+  %5 = math.floor %arg0 : vector<2x2xf32>
   // CHECK-NEXT: math.powf {{.+}}, {{%.+}} : vector<2x2xf32>
-  %5 = math.powf %arg0, %arg0 : vector<2x2xf32>
+  %6 = math.powf %arg0, %arg0 : vector<2x2xf32>
   // CHECK-NEXT: return
   return
 }
@@ -249,18 +271,20 @@ func.func @vector_2d(%arg0: vector<2x2xf32>) {
 
 // CHECK-LABEL: @tensor_1d
 func.func @tensor_1d(%arg0: tensor<2xf32>) {
+  // CHECK-NEXT: math.atan {{.+}} : tensor<2xf32>
+  %0 = math.atan %arg0 : tensor<2xf32>
   // CHECK-NEXT: math.cos {{.+}} : tensor<2xf32>
-  %0 = math.cos %arg0 : tensor<2xf32>
+  %1 = math.cos %arg0 : tensor<2xf32>
   // CHECK-NEXT: math.exp {{.+}} : tensor<2xf32>
-  %1 = math.exp %arg0 : tensor<2xf32>
+  %2 = math.exp %arg0 : tensor<2xf32>
   // CHECK-NEXT: math.absf {{.+}} : tensor<2xf32>
-  %2 = math.absf %arg0 : tensor<2xf32>
+  %3 = math.absf %arg0 : tensor<2xf32>
   // CHECK-NEXT: math.ceil {{.+}} : tensor<2xf32>
-  %3 = math.ceil %arg0 : tensor<2xf32>
+  %4 = math.ceil %arg0 : tensor<2xf32>
   // CHECK-NEXT: math.floor {{.+}} : tensor<2xf32>
-  %4 = math.floor %arg0 : tensor<2xf32>
+  %5 = math.floor %arg0 : tensor<2xf32>
   // CHECK-NEXT: math.powf {{.+}}, {{%.+}} : tensor<2xf32>
-  %5 = math.powf %arg0, %arg0 : tensor<2xf32>
+  %6 = math.powf %arg0, %arg0 : tensor<2xf32>
   // CHECK-NEXT: return
   return
 }

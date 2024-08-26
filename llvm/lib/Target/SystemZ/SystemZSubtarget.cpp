@@ -116,7 +116,7 @@ bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
   //
   // FIXME: Explicitly check for functions: the datalayout is currently
   // missing information about function pointers.
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   if (GV->getPointerAlignment(DL) == 1 && !GV->getValueType()->isFunctionTy())
     return false;
 

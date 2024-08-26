@@ -21,8 +21,10 @@
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/TypedPointerType.h"
 
 namespace llvm {
+class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
 
 class SPIRVGlobalRegistry {
@@ -49,6 +51,10 @@ class SPIRVGlobalRegistry {
   // Maps Functions to their calls (in a form of the machine instruction,
   // OpFunctionCall) that happened before the definition is available
   DenseMap<const Function *, SmallPtrSet<MachineInstr *, 8>> ForwardCalls;
+  // map a Function to its original return type before the clone function was
+  // created during substitution of aggregate arguments
+  // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
+  DenseMap<Value *, Type *> MutatedAggRet;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -57,6 +63,9 @@ class SPIRVGlobalRegistry {
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
+
+  // if a function returns a pointer, this is to map it into TypedPointerType
+  DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
 
   // Number of bits pointers and size_t integers require.
   const unsigned PointerSize;
@@ -68,8 +77,11 @@ class SPIRVGlobalRegistry {
   // untyped pointers.
   DenseMap<Value *, Type *> DeducedElTys;
   // Maps composite values to deduced types where untyped pointers are replaced
-  // with typed ones
+  // with typed ones.
   DenseMap<Value *, Type *> DeducedNestedTys;
+  // Maps values to "assign type" calls, thus being a registry of created
+  // Intrinsic::spv_assign_ptr_type instructions.
+  DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -133,6 +145,37 @@ public:
 
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
+
+  // Add a record to the map of function return pointer types.
+  void addReturnType(const Function *ArgF, TypedPointerType *DerivedTy) {
+    FunResPointerTypes[ArgF] = DerivedTy;
+  }
+  // Find a record in the map of function return pointer types.
+  const TypedPointerType *findReturnType(const Function *ArgF) {
+    auto It = FunResPointerTypes.find(ArgF);
+    return It == FunResPointerTypes.end() ? nullptr : It->second;
+  }
+
+  // A registry of "assign type" records:
+  // - Add a record.
+  void addAssignPtrTypeInstr(Value *Val, CallInst *AssignPtrTyCI) {
+    AssignPtrTypeInstr[Val] = AssignPtrTyCI;
+  }
+  // - Find a record.
+  CallInst *findAssignPtrTypeInstr(const Value *Val) {
+    auto It = AssignPtrTypeInstr.find(Val);
+    return It == AssignPtrTypeInstr.end() ? nullptr : It->second;
+  }
+
+  // A registry of mutated values
+  // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`):
+  // - Add a record.
+  void addMutated(Value *Val, Type *Ty) { MutatedAggRet[Val] = Ty; }
+  // - Find a record.
+  Type *findMutated(const Value *Val) {
+    auto It = MutatedAggRet.find(Val);
+    return It == MutatedAggRet.end() ? nullptr : It->second;
+  }
 
   // Deduced element types of untyped pointers and composites:
   // - Add a record to the map of deduced element types.
@@ -263,6 +306,8 @@ public:
     return Res->second;
   }
 
+  // Return a pointee's type, or nullptr otherwise.
+  SPIRVType *getPointeeType(SPIRVType *PtrType);
   // Return a pointee's type op code, or 0 otherwise.
   unsigned getPointeeTypeOp(Register PtrReg);
 
@@ -276,8 +321,12 @@ public:
           SPIRV::AccessQualifier::ReadWrite);
 
   // Return the SPIR-V type instruction corresponding to the given VReg, or
-  // nullptr if no such type instruction exists.
-  SPIRVType *getSPIRVTypeForVReg(Register VReg) const;
+  // nullptr if no such type instruction exists. The second argument MF
+  // allows to search for the association in a context of the machine functions
+  // than the current one, without switching between different "current" machine
+  // functions.
+  SPIRVType *getSPIRVTypeForVReg(Register VReg,
+                                 const MachineFunction *MF = nullptr) const;
 
   // Whether the given VReg has a SPIR-V type mapped to it yet.
   bool hasSPIRVTypeForVReg(Register VReg) const {
@@ -292,6 +341,12 @@ public:
     MachineFunction *Ret = CurMF;
     CurMF = &MF;
     return Ret;
+  }
+
+  // Return true if the type is an aggregate type.
+  bool isAggregateType(SPIRVType *Type) const {
+    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct &&
+                    Type->getOpcode() == SPIRV::OpTypeArray);
   }
 
   // Whether the given VReg has an OpTypeXXX instruction mapped to it with the
@@ -338,7 +393,10 @@ public:
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeInt(uint32_t Width, MachineIRBuilder &MIRBuilder,
+  const Type *adjustIntTypeByWidth(const Type *Ty) const;
+  unsigned adjustOpTypeIntWidth(unsigned Width) const;
+
+  SPIRVType *getOpTypeInt(unsigned Width, MachineIRBuilder &MIRBuilder,
                           bool IsSigned = false);
 
   SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
@@ -372,7 +430,7 @@ private:
   getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                          SPIRV::AccessQualifier::AccessQualifier AccQual);
 
-  std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
+  std::tuple<Register, ConstantInt *, bool, unsigned> getOrCreateConstIntReg(
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
@@ -381,8 +439,8 @@ private:
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
   Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
                                    SPIRVType *SpvType,
-                                   const SPIRVInstrInfo &TII,
-                                   unsigned BitWidth);
+                                   const SPIRVInstrInfo &TII, unsigned BitWidth,
+                                   bool ZeroAsNull);
   Register getOrCreateCompositeOrNull(Constant *Val, MachineInstr &I,
                                       SPIRVType *SpvType,
                                       const SPIRVInstrInfo &TII, Constant *CA,
@@ -397,7 +455,7 @@ private:
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType = nullptr, bool EmitIR = true);
+                            SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
@@ -413,13 +471,11 @@ public:
   Register getOrCreateConstVector(APFloat Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
-  Register getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
-                                   SPIRVType *SpvType,
-                                   const SPIRVInstrInfo &TII);
+  Register getOrCreateConstIntArray(uint64_t Val, size_t Num, MachineInstr &I,
+                                    SPIRVType *SpvType,
+                                    const SPIRVInstrInfo &TII);
   Register getOrCreateConsIntVector(uint64_t Val, MachineIRBuilder &MIRBuilder,
                                     SPIRVType *SpvType, bool EmitIR = true);
-  Register getOrCreateConsIntArray(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                                   SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
@@ -478,7 +534,11 @@ public:
 
   SPIRVType *getOrCreateOpTypeSampledImage(SPIRVType *ImageType,
                                            MachineIRBuilder &MIRBuilder);
-
+  SPIRVType *getOrCreateOpTypeCoopMatr(MachineIRBuilder &MIRBuilder,
+                                       const TargetExtType *ExtensionType,
+                                       const SPIRVType *ElemType,
+                                       uint32_t Scope, uint32_t Rows,
+                                       uint32_t Columns, uint32_t Use);
   SPIRVType *
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
@@ -490,6 +550,9 @@ public:
   SPIRVType *getOrCreateOpTypeByOpcode(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode);
+
+  const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
+  LLT getRegType(SPIRVType *SpvType) const;
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

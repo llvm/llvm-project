@@ -85,10 +85,6 @@ TEST(RecordOpsTest, CopyRecord) {
         EXPECT_NE(Env.getValue(S1.getSyntheticField("synth_int")),
                   Env.getValue(S2.getSyntheticField("synth_int")));
 
-        auto *S1Val = cast<RecordValue>(Env.getValue(S1));
-        auto *S2Val = cast<RecordValue>(Env.getValue(S2));
-        EXPECT_NE(S1Val, S2Val);
-
         copyRecord(S1, S2, Env);
 
         EXPECT_EQ(getFieldValue(&S1, *OuterIntDecl, Env),
@@ -98,10 +94,6 @@ TEST(RecordOpsTest, CopyRecord) {
                   getFieldValue(&Inner2, *InnerIntDecl, Env));
         EXPECT_EQ(Env.getValue(S1.getSyntheticField("synth_int")),
                   Env.getValue(S2.getSyntheticField("synth_int")));
-
-        S1Val = cast<RecordValue>(Env.getValue(S1));
-        S2Val = cast<RecordValue>(Env.getValue(S2));
-        EXPECT_NE(S1Val, S2Val);
       });
 }
 

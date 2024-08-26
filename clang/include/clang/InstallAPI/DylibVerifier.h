@@ -78,10 +78,12 @@ public:
   DylibVerifier() = default;
 
   DylibVerifier(llvm::MachO::Records &&Dylib, ReexportedInterfaces &&Reexports,
-                DiagnosticsEngine *Diag, VerificationMode Mode, bool Zippered,
-                bool Demangle, StringRef DSYMPath)
-      : Dylib(std::move(Dylib)), Reexports(std::move(Reexports)), Mode(Mode),
-        Zippered(Zippered), Demangle(Demangle), DSYMPath(DSYMPath),
+                AliasMap Aliases, DiagnosticsEngine *Diag,
+                VerificationMode Mode, bool Zippered, bool Demangle,
+                StringRef DSYMPath)
+      : Dylib(std::move(Dylib)), Reexports(std::move(Reexports)),
+        Aliases(std::move(Aliases)), Mode(Mode), Zippered(Zippered),
+        Demangle(Demangle), DSYMPath(DSYMPath),
         Exports(std::make_unique<SymbolSet>()), Ctx(VerifierContext{Diag}) {}
 
   Result verify(GlobalRecord *R, const FrontendAttrs *FA);
@@ -104,7 +106,7 @@ public:
   void setTarget(const Target &T);
 
   /// Release ownership over exports.
-  std::unique_ptr<SymbolSet> getExports() { return std::move(Exports); }
+  std::unique_ptr<SymbolSet> takeExports();
 
   /// Get result of verification.
   Result getState() const { return Ctx.FrontendState; }
@@ -133,7 +135,7 @@ private:
 
   // Check if an internal declaration in zippered library has an
   // external declaration for a different platform. This results
-  // in the symbol being in a "seperate" platform slice.
+  // in the symbol being in a "separate" platform slice.
   bool shouldIgnoreInternalZipperedSymbol(const Record *R,
                                           const SymbolContext &SymCtx) const;
 
@@ -188,6 +190,9 @@ private:
 
   // Reexported interfaces apart of the library.
   ReexportedInterfaces Reexports;
+
+  // Symbol aliases.
+  AliasMap Aliases;
 
   // Controls what class of violations to report.
   VerificationMode Mode = VerificationMode::Invalid;

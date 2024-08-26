@@ -5,23 +5,23 @@
 # Test that a DBG_INSTR_REF that refers to a DBG_PHI, will be translated into a
 # DBG_VALUE of the value read at that DBG_PHI -- in this test, when the value
 # is on the stack.
-# 
+#
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   define dso_local i32 @foo(i64 %bar, i64 %baz) !dbg !7 {
     ret i32 0
   }
-  
+
   declare dso_local void @ext(i64)
-  
+
   declare dso_local i64 @getlong()
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/tmp/out.c")
   !2 = !{}
@@ -70,7 +70,7 @@ body:             |
   bb.0:
     liveins: $rdi, $rsi, $r14, $rbx
     ; CHECK-LABEL: bb.0:
-  
+
     $r14 = MOV64rr $rsi
     $rbx = MOV64rr $rdi
     $rax = MOV64ri 0

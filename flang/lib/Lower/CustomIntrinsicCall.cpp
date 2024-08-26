@@ -227,22 +227,23 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
   args.push_back(getOperand(1, loadOperand));
   auto iPC = isPresentCheck(2);
   assert(iPC.has_value());
-  args.push_back(builder
-                     .genIfOp(loc, {resultType}, *iPC,
-                              /*withElseRegion=*/true)
-                     .genThen([&]() {
-                       fir::ExtendedValue sizeExv = getOperand(2, loadOperand);
-                       mlir::Value size = builder.createConvert(
-                           loc, resultType, fir::getBase(sizeExv));
-                       builder.create<fir::ResultOp>(loc, size);
-                     })
-                     .genElse([&]() {
-                       mlir::Value bitSize = builder.createIntegerConstant(
-                           loc, resultType,
-                           resultType.cast<mlir::IntegerType>().getWidth());
-                       builder.create<fir::ResultOp>(loc, bitSize);
-                     })
-                     .getResults()[0]);
+  args.push_back(
+      builder
+          .genIfOp(loc, {resultType}, *iPC,
+                   /*withElseRegion=*/true)
+          .genThen([&]() {
+            fir::ExtendedValue sizeExv = getOperand(2, loadOperand);
+            mlir::Value size =
+                builder.createConvert(loc, resultType, fir::getBase(sizeExv));
+            builder.create<fir::ResultOp>(loc, size);
+          })
+          .genElse([&]() {
+            mlir::Value bitSize = builder.createIntegerConstant(
+                loc, resultType,
+                mlir::cast<mlir::IntegerType>(resultType).getWidth());
+            builder.create<fir::ResultOp>(loc, bitSize);
+          })
+          .getResults()[0]);
   return genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx);
 }
 
@@ -282,7 +283,7 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
       builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), targetBase);
   mlir::Type targetType = fir::unwrapRefType(targetBase.getType());
   mlir::Type targetValueType = fir::unwrapPassByRefType(targetType);
-  mlir::Type boxType = targetType.isa<fir::BaseBoxType>()
+  mlir::Type boxType = mlir::isa<fir::BaseBoxType>(targetType)
                            ? targetType
                            : fir::BoxType::get(targetValueType);
   fir::BoxValue targetBox =

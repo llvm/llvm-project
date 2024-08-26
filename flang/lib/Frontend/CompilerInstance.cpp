@@ -212,7 +212,6 @@ getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
                                            const llvm::Triple triple) {
   llvm::StringRef cpu = targetOpts.cpu;
   llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
   // Get the set of implicit target features
   llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
 
@@ -222,11 +221,12 @@ getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
     implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
   }
 
-  if (!llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap,
-                                           errorMsg)) {
+  auto HasError =
+      llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap);
+  if (HasError.first) {
     unsigned diagID = diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                             "Unsupported feature ID: %0");
-    diags.Report(diagID) << errorMsg.data();
+    diags.Report(diagID) << HasError.second;
     return std::string();
   }
 
@@ -321,11 +321,19 @@ bool CompilerInstance::setUpTargetMachine() {
   assert(OptLevelOrNone && "Invalid optimization level!");
   llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
   std::string featuresStr = getTargetFeatures();
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(CGOpts.CodeModel);
   targetMachine.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, llvm::TargetOptions(),
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
-      /*CodeModel::Model=*/std::nullopt, OptLevel));
+      /*CodeModel::Model=*/cm, OptLevel));
   assert(targetMachine && "Failed to create TargetMachine");
+  if (cm.has_value()) {
+    const llvm::Triple triple(theTriple);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      targetMachine->setLargeDataThreshold(CGOpts.LargeDataThreshold);
+    }
+  }
   return true;
 }

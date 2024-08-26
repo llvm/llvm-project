@@ -91,12 +91,13 @@ struct BadRelation5 {
 };
 static_assert(!std::indirect_equivalence_relation<BadRelation5, It1, It2>);
 
-// Should fail when the function can't be called with (iter_common_reference_t, iter_common_reference_t)
-struct BadRelation6 {
-    template <class T, class U> bool operator()(T const&, U const&) const;
-    bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
+// This case was made valid by P2997R1.
+struct GoodRelation6 {
+  template <class T, class U>
+  bool operator()(T const&, U const&) const;
+  bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
-static_assert(!std::indirect_equivalence_relation<BadRelation6, It1, It2>);
+static_assert(std::indirect_equivalence_relation<GoodRelation6, It1, It2>);
 
 // Test ADL-proofing (P2538R1)
 #if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)

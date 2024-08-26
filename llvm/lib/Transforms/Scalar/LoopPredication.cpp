@@ -677,7 +677,7 @@ LoopPredication::widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
     LLVM_DEBUG(dbgs() << "Range check IV is not affine!\n");
     return std::nullopt;
   }
-  auto *Step = RangeCheckIV->getStepRecurrence(*SE);
+  const SCEV *Step = RangeCheckIV->getStepRecurrence(*SE);
   // We cannot just compare with latch IV step because the latch and range IVs
   // may have different types.
   if (!isSupportedStep(Step)) {
@@ -845,7 +845,7 @@ std::optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
     return std::nullopt;
   }
 
-  auto *Step = Result->IV->getStepRecurrence(*SE);
+  const SCEV *Step = Result->IV->getStepRecurrence(*SE);
   if (!isSupportedStep(Step)) {
     LLVM_DEBUG(dbgs() << "Unsupported loop stride(" << *Step << ")!\n");
     return std::nullopt;

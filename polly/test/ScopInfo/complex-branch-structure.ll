@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-print-scops \
+; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s
 
 ; We build a scop of the following form to check that the domain construction

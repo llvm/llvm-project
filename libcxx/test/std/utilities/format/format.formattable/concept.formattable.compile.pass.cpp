@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -176,10 +177,12 @@ void test_P1361() {
 
   assert_is_formattable<std::chrono::hh_mm_ss<std::chrono::microseconds>, CharT>();
 
-  //assert_is_formattable<std::chrono::sys_info, CharT>();
-  //assert_is_formattable<std::chrono::local_info, CharT>();
+#  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
+  assert_is_formattable<std::chrono::sys_info, CharT>();
+  assert_is_formattable<std::chrono::local_info, CharT>();
 
   //assert_is_formattable<std::chrono::zoned_time, CharT>();
+#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }

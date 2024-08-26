@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -14,6 +15,7 @@
 
 #include <format>
 #include <cassert>
+#include <limits>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -80,13 +82,7 @@ void test_string_view(From value) {
 
 template <class CharT>
 void test() {
-  using Context = std::basic_format_context<CharT*, CharT>;
-  {
-    const std::basic_format_args<Context> format_args{};
-    ASSERT_NOEXCEPT(format_args.get(0));
-    assert(!format_args.get(0));
-  }
-
+  using Context   = std::basic_format_context<CharT*, CharT>;
   using char_type = typename Context::char_type;
   std::basic_string<char_type> empty;
   std::basic_string<char_type> str = MAKE_STRING(char_type, "abc");

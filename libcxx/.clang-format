@@ -43,7 +43,6 @@ AttributeMacros: [
                   '_LIBCPP_NO_SANITIZE',
                   '_LIBCPP_NO_UNIQUE_ADDRESS',
                   '_LIBCPP_NOALIAS',
-                  '_LIBCPP_NODISCARD_EXT',
                   '_LIBCPP_NODISCARD',
                   '_LIBCPP_NORETURN',
                   '_LIBCPP_OVERRIDABLE_FUNC_VIS',

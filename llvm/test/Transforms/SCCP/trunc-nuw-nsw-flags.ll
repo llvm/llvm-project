@@ -16,7 +16,7 @@ entry:
 }
 
 define i8 @range_from_or_nsw(i16 %a) {
-; CHECK-LABEL: define i8 @range_from_or_nsw(
+; CHECK-LABEL: define range(i8 -128, 0) i8 @range_from_or_nsw(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = or i16 [[A]], -128
@@ -30,7 +30,7 @@ entry:
 }
 
 define i16 @range_from_and_nuw_nsw(i32 %a) {
-; CHECK-LABEL: define i16 @range_from_and_nuw_nsw(
+; CHECK-LABEL: define range(i16 0, -32768) i16 @range_from_and_nuw_nsw(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 32767
@@ -48,7 +48,7 @@ define <4 x i16> @range_from_and_nuw_vec(<4 x i32> %a) {
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[A]], <i32 65535, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc <4 x i32> [[AND1]] to <4 x i16>
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw <4 x i32> [[AND1]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[TRUNC1]]
 ;
 entry:

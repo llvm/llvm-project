@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 \
-// RUN:   -S -disable-O0-optnone -Werror -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +bf16 -target-feature +sme -target-feature +sme2 \
+// RUN:   -disable-O0-optnone -Werror -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | opt -S -passes=inline \
 // RUN: | FileCheck %s

@@ -856,8 +856,7 @@ define <16 x i8> @oddelts_v32i16_shuffle_v16i16_to_v16i8(<32 x i16> %n2) nounwin
 ; AVX512VBMI-LABEL: oddelts_v32i16_shuffle_v16i16_to_v16i8:
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,6,10,14,18,22,26,30,34,38,42,46,50,54,58,62]
-; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512VBMI-NEXT:    vpermt2b %ymm2, %ymm1, %ymm0
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm1, %zmm0
 ; AVX512VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq

@@ -8,10 +8,10 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 define i32 @b() local_unnamed_addr !dbg !12 {
 ; CHECK-LABEL: entry
-; CHECK:       call void @llvm.dbg.value(metadata i32 0, metadata ![[IVAR:[0-9]+]],
+; CHECK:       #dbg_value(i32 0, ![[IVAR:[0-9]+]],
 ; CHECK-LABEL: for.end:
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 undef, metadata ![[IVAR]], metadata !DIExpression()), !dbg !17
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 undef, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg !17
+; CHECK-NEXT:  #dbg_value(i32 undef, ![[IVAR]], !DIExpression(), !17
+; CHECK-NEXT:  #dbg_value(i32 undef, ![[JVAR:[0-9]+]], !DIExpression(), !17
 ; CHECK-NEXT:  %call = tail call i32 {{.*}} @patatino()
 entry:
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !DIExpression()), !dbg !17
@@ -40,7 +40,6 @@ entry:
   ret i32 0, !dbg !36
 }
 
-; CHECK: declare void @llvm.dbg.value(metadata,
 
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i",
 ; CHECK: ![[JVAR]] = !DILocalVariable(name: "j",

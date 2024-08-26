@@ -131,8 +131,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Program)
         continue;
       dxbc::ProgramHeader Header;
-      Header.MajorVersion = P.Program->MajorVersion;
-      Header.MinorVersion = P.Program->MinorVersion;
+      Header.Version = dxbc::ProgramHeader::getVersion(P.Program->MajorVersion,
+                                                       P.Program->MinorVersion);
       Header.Unused = 0;
       Header.ShaderKind = P.Program->ShaderKind;
       memcpy(Header.Bitcode.Magic, "DXIL", 4);

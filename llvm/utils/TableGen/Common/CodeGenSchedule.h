@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
-#define LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENSCHEDULE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENSCHEDULE_H
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -277,6 +277,9 @@ struct CodeGenProcModel {
 
   bool isUnsupported(const CodeGenInstruction &Inst) const;
 
+  // Return true if the given write record is referenced by a ReadAdvance.
+  bool hasReadOfWrite(Record *WriteDef) const;
+
 #ifndef NDEBUG
   void dump() const;
 #endif
@@ -536,9 +539,6 @@ public:
 
   unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
 
-  // Return true if the given write record is referenced by a ReadAdvance.
-  bool hasReadOfWrite(Record *WriteDef) const;
-
   // Get a SchedClass from its index.
   CodeGenSchedClass &getSchedClass(unsigned Idx) {
     assert(Idx < SchedClasses.size() && "bad SchedClass index");
@@ -651,4 +651,4 @@ private:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENSCHEDULE_H

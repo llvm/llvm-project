@@ -252,13 +252,11 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
       // introduced by interval transition.
       SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
 
-      if (value == 0) {
-        // Will set the release values to their minimum values.
-        value = INT32_MIN;
-      } else {
-        // Will set the release values to their maximum values.
+      // The values allowed on Android are {-1, 0, 1}. "1" means the longest
+      // interval.
+      CHECK(value >= -1 && value <= 1);
+      if (value == 1)
         value = INT32_MAX;
-      }
     }
 
     SCUDO_ALLOCATOR.setOption(scudo::Option::ReleaseInterval,
