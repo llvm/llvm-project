@@ -2007,8 +2007,8 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
 
   // Handle the vector case.  The base must be a vector, the index must be an
   // integer value.
-  Value *RowIdx = Visit(E->getRowIdx());
-  Value *ColumnIdx = Visit(E->getColumnIdx());
+  Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
+  Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   unsigned NumRows = MatrixTy->getNumRows();
@@ -2785,7 +2785,7 @@ static bool matchesPostDecrInWhile(const UnaryOperator *UO, bool isInc,
   if (isInc || isPre)
     return false;
 
-  // -fsanitize-overflow-pattern-exclusion=post-decr-while
+  // -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
   if (!Ctx.getLangOpts().isOverflowPatternExcluded(
           LangOptions::OverflowPatternExclusionKind::PostDecrInWhile))
     return false;

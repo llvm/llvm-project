@@ -51,7 +51,7 @@ static bool CC_X86_32_RegCall_Assign2Regs(unsigned &ValNo, MVT &ValVT,
   for (unsigned I = 0; I < RequiredGprsUponSplit; I++) {
 
     // Marking the register as located.
-    unsigned Reg = State.AllocateReg(AvailableRegs[I]);
+    MCRegister Reg = State.AllocateReg(AvailableRegs[I]);
 
     // Since we previously made sure that 2 registers are available
     // we expect that a real register number will be returned.
@@ -102,7 +102,7 @@ static bool CC_X86_VectorCallAssignRegister(unsigned &ValNo, MVT &ValVT,
   for (auto Reg : RegList) {
     // If the register is not marked as allocated - assign to it.
     if (!State.isAllocated(Reg)) {
-      unsigned AssigedReg = State.AllocateReg(Reg);
+      MCRegister AssigedReg = State.AllocateReg(Reg);
       assert(AssigedReg == Reg && "Expecting a valid register allocation");
       State.addLoc(
           CCValAssign::getReg(ValNo, ValVT, AssigedReg, LocVT, LocInfo));
@@ -158,7 +158,7 @@ static bool CC_X86_64_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     (void)State.AllocateReg(CC_X86_64_VectorCallGetGPRs());
 
     // Assign XMM register - (shadow for HVA and non-shadow for non HVA).
-    if (unsigned Reg = State.AllocateReg(CC_X86_VectorCallGetSSEs(ValVT))) {
+    if (MCRegister Reg = State.AllocateReg(CC_X86_VectorCallGetSSEs(ValVT))) {
       // In Vectorcall Calling convention, additional shadow stack can be
       // created on top of the basic 32 bytes of win64.
       // It can happen if the fifth or sixth argument is vector type or HVA.
@@ -209,7 +209,7 @@ static bool CC_X86_32_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     return true; // If this is an HVA - Stop the search.
 
   // Assign XMM register.
-  if (unsigned Reg = State.AllocateReg(CC_X86_VectorCallGetSSEs(ValVT))) {
+  if (MCRegister Reg = State.AllocateReg(CC_X86_VectorCallGetSSEs(ValVT))) {
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return true;
   }
@@ -259,7 +259,7 @@ static bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // If there are no pending members, we are not in the middle of a split,
   // so do the usual inreg stuff.
   if (PendingMembers.empty()) {
-    if (unsigned Reg = State.AllocateReg(RegList)) {
+    if (MCRegister Reg = State.AllocateReg(RegList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return true;
     }

@@ -21,8 +21,8 @@ static void prettyPrintResources(raw_ostream &OS,
                                  const dxil::Resources &MDResources) {
   // Column widths are arbitrary but match the widths DXC uses.
   OS << ";\n; Resource Bindings:\n;\n";
-  OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,16}\n",
-                "Name", "Type", "Format", "Dim", "ID", "HLSL Bind", "Count");
+  OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,16}\n", "Name",
+                "Type", "Format", "Dim", "ID", "HLSL Bind", "Count");
   OS << formatv(
       "; {0,-+30} {1,-+10} {2,-+7} {3,-+11} {4,-+7} {5,-+14} {6,-+16}\n", "",
       "", "", "", "", "", "");

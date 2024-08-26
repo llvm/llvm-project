@@ -8,15 +8,18 @@ define i64 @src(i32 %a) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i32> [[TMP3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i32> [[TMP5]] to <4 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[TMP3]], <i64 4294967297, i64 4294967297, i64 4294967297, i64 4294967297>
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i64> [[TMP4]], <i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP6]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], [[TMP16]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i64 [[TMP19]], 4294967297
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[OP_RDX1]], [[TMP17]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP8]], i64 [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> <i64 poison, i64 4294967297>, i64 [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    ret i64 [[TMP21]]
 ;
 entry:

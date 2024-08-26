@@ -4521,20 +4521,7 @@ AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
-  case AArch64::LDRBroX:
   case AArch64::LDRBBroX:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSBWroX:
-  case AArch64::LDRHroX:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSHWroX:
-  case AArch64::LDRWroX:
-  case AArch64::LDRSroX:
-  case AArch64::LDRSWroX:
-  case AArch64::LDRDroX:
-  case AArch64::LDRXroX:
-  case AArch64::LDRQroX:
     return MI.getOperand(4);
   }
 }
@@ -4791,7 +4778,7 @@ bool AArch64InstrInfo::shouldClusterMemOps(
 }
 
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
-                                            unsigned Reg, unsigned SubIdx,
+                                            MCRegister Reg, unsigned SubIdx,
                                             unsigned State,
                                             const TargetRegisterInfo *TRI) {
   if (!SubIdx)
@@ -4838,8 +4825,8 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       DebugLoc DL, unsigned DestReg,
-                                       unsigned SrcReg, bool KillSrc,
+                                       const DebugLoc &DL, MCRegister DestReg,
+                                       MCRegister SrcReg, bool KillSrc,
                                        unsigned Opcode, unsigned ZeroReg,
                                        llvm::ArrayRef<unsigned> Indices) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -9074,8 +9061,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // link register.
     outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
     bool ModStackToSaveLR = false;
-    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
-                    [](const MachineInstr &MI) { return MI.isCall(); }))
+    if (any_of(drop_end(FirstCand),
+               [](const MachineInstr &MI) { return MI.isCall(); }))
       ModStackToSaveLR = true;
 
     // Handle the last instruction separately. If this is a tail call, then the

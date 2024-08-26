@@ -1066,6 +1066,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
+  LLVM_DEBUG(dbgs() << "Module " << M.getName() << " is "
+                    << (AC.IsClosedWorldModule ? "" : "not ")
+                    << "assumed to be a closed world.\n");
+
   for (Function &F : M) {
     if (F.isIntrinsic())
       continue;

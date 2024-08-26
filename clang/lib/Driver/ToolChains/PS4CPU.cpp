@@ -237,7 +237,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (Args.hasArg(options::OPT_pie))
+  // Default to PIE for non-static executables.
+  const bool PIE =
+      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
     CmdArgs.push_back("-pie");
 
   if (Args.hasArg(options::OPT_static))

@@ -63,6 +63,13 @@ void initializeDXContainerGlobalsPass(PassRegistry &);
 
 /// Pass for generating DXContainer part globals.
 ModulePass *createDXContainerGlobalsPass();
+
+/// Initializer for DXILFinalizeLinkage pass.
+void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
+
+/// Pass to finalize linkage of functions.
+ModulePass *createDXILFinalizeLinkageLegacyPass();
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
