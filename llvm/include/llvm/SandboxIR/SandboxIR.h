@@ -111,6 +111,7 @@ class ConstantInt;
 class Context;
 class Function;
 class Instruction;
+class FenceInst;
 class SelectInst;
 class ExtractElementInst;
 class InsertElementInst;
@@ -249,6 +250,7 @@ protected:
   friend class Context;               // For getting `Val`.
   friend class User;                  // For getting `Val`.
   friend class Use;                   // For getting `Val`.
+  friend class FenceInst;             // For getting `Val`.
   friend class SelectInst;            // For getting `Val`.
   friend class ExtractElementInst;    // For getting `Val`.
   friend class InsertElementInst;     // For getting `Val`.
@@ -678,6 +680,7 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class FenceInst;          // For getTopmostLLVMInstruction().
   friend class SelectInst;         // For getTopmostLLVMInstruction().
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
   friend class InsertElementInst;  // For getTopmostLLVMInstruction().
@@ -880,6 +883,33 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+class FenceInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
+  FenceInst(llvm::FenceInst *FI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Fence, Opcode::Fence, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static FenceInst *create(AtomicOrdering Ordering, BBIterator WhereIt,
+                           BasicBlock *WhereBB, Context &Ctx,
+                           SyncScope::ID SSID = SyncScope::System);
+  /// Returns the ordering constraint of this fence instruction.
+  AtomicOrdering getOrdering() const {
+    return cast<llvm::FenceInst>(Val)->getOrdering();
+  }
+  /// Sets the ordering constraint of this fence instruction.  May only be
+  /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
+  void setOrdering(AtomicOrdering Ordering);
+  /// Returns the synchronization scope ID of this fence instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::FenceInst>(Val)->getSyncScopeID();
+  }
+  /// Sets the synchronization scope ID of this fence instruction.
+  void setSyncScopeID(SyncScope::ID SSID);
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Fence;
+  }
 };
 
 class SelectInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
@@ -2854,6 +2884,8 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  FenceInst *createFenceInst(llvm::FenceInst *SI);
+  friend FenceInst; // For createFenceInst()
   SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
   InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
