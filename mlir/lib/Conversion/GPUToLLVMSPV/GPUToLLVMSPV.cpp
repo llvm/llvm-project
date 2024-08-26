@@ -344,10 +344,7 @@ private:
   std::optional<gpu::AddressSpace> memorySpaceMap(Attribute memSpaceAttr) {
     if (!memSpaceAttr)
       return gpu::AddressSpace::Global;
-    auto gpuAddrSpace = dyn_cast<gpu::AddressSpaceAttr>(memSpaceAttr);
-    if (!gpuAddrSpace)
-      return std::nullopt;
-    return gpuAddrSpace.getValue();
+    return std::nullopt;
   }
 };
 
