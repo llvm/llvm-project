@@ -11,7 +11,7 @@
 
 #include <algorithm> // for std::max
 #include <cassert>
-#include <cmath>     // for std::abs
+#include <cmath> // for std::abs
 
 #include "test_macros.h"
 
