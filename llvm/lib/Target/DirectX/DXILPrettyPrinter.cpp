@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-static constexpr StringRef getRCName(dxil::ResourceClass RC) {
+static StringRef getRCName(dxil::ResourceClass RC) {
   switch (RC) {
   case dxil::ResourceClass::SRV:
     return "SRV";
@@ -34,7 +34,7 @@ static constexpr StringRef getRCName(dxil::ResourceClass RC) {
   llvm_unreachable("covered switch");
 }
 
-static constexpr StringRef getRCPrefix(dxil::ResourceClass RC) {
+static StringRef getRCPrefix(dxil::ResourceClass RC) {
   switch (RC) {
   case dxil::ResourceClass::SRV:
     return "t";
@@ -47,7 +47,7 @@ static constexpr StringRef getRCPrefix(dxil::ResourceClass RC) {
   }
 }
 
-static constexpr StringRef getFormatName(const dxil::ResourceInfo &RI) {
+static StringRef getFormatName(const dxil::ResourceInfo &RI) {
   if (RI.isTyped()) {
     switch (RI.getTyped().ElementTy) {
     case dxil::ElementType::I1:
@@ -97,7 +97,7 @@ static constexpr StringRef getFormatName(const dxil::ResourceInfo &RI) {
   return "byte";
 }
 
-static constexpr StringRef getTextureDimName(dxil::ResourceKind RK) {
+static StringRef getTextureDimName(dxil::ResourceKind RK) {
   switch (RK) {
   case dxil::ResourceKind::Texture1D:
     return "1d";
