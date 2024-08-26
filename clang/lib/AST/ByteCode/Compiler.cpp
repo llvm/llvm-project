@@ -4992,7 +4992,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
   if (SubExpr->getType()->isVectorType())
-    return this->VisitVectorUnaryOp(E);
+    return this->VisitVectorUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -5315,22 +5315,20 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
+bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   assert(SubExpr->getType()->isVectorType());
 
   if (DiscardResult)
     return this->discard(SubExpr);
 
-  std::optional<PrimType> ResT = classify(E);
   auto prepareResult = [=]() -> bool {
-    if (!ResT && !Initializing) {
+    if (!Initializing) {
       std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       return this->emitGetPtrLocal(*LocalIndex, E);
     }
-
     return true;
   };
 
@@ -5343,7 +5341,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
     return this->emitSetLocal(PT_Ptr, SubExprOffset, E);
   };
 
-  const auto *VecT = SubExpr->getType()->getAs<VectorType>();
+  const auto *VecTy = SubExpr->getType()->getAs<VectorType>();
   PrimType ElemT = classifyVectorElementType(SubExpr->getType());
   auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
@@ -5359,7 +5357,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
       return false;
     if (!createTemp())
       return false;
-    for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
       if (!this->emitNeg(ElemT, E))
@@ -5381,7 +5379,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
         Ctx.getASTContext().GetSignedVectorType(SubExpr->getType());
     PrimType SignedElemT =
         classifyPrim(SignedVecT->getAs<VectorType>()->getElementType());
-    for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
 
@@ -5391,7 +5389,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
           return false;
         if (!this->emitInv(E))
           return false;
-        if (!this->emitPrimCast(PT_Bool, ElemT, VecT->getElementType(), E))
+        if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
           return false;
         if (!this->emitNeg(ElemT, E))
           return false;
@@ -5401,7 +5399,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
       } else {
         // Float types result in an int of the same size, but -1 for true, or 0
         // for false.
-        auto &FpSemantics = Ctx.getFloatSemantics(VecT->getElementType());
+        auto &FpSemantics = Ctx.getFloatSemantics(VecTy->getElementType());
         unsigned NumBits =
             Ctx.getBitWidth(SignedVecT->getAs<VectorType>()->getElementType());
         auto Zero = APFloat::getZero(FpSemantics);
@@ -5436,7 +5434,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOp(const UnaryOperator *E) {
       return false;
     if (!createTemp())
       return false;
-    for (unsigned I = 0; I != VecT->getNumElements(); ++I) {
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
       if (ElemT == PT_Bool) {
