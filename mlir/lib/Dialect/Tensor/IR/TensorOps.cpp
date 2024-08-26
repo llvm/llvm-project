@@ -4439,7 +4439,7 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
   /// pack(unpack(x)) -> x
   if (PackOp packOp = unPackOp.getSource().getDefiningOp<tensor::PackOp>()) {
-    if (packOp.getDestType() != unPackOp.getSourceType())
+    if (packOp.getSourceType() != unPackOp.getDestType())
       return failure();
     if (packOp.getPaddingValue() ||
         !hasSameInnerOuterAttribute(packOp, unPackOp) ||
