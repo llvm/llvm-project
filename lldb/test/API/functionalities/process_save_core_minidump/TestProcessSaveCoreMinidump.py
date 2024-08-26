@@ -329,13 +329,13 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             options.SetOutputFile(file_spec)
             options.SetPluginName("minidump")
             options.AddMemoryRegionToSave(memory_region)
-            options.SetStyle(lldb.eSaveCoreCustom)
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
             error = process.SaveCore(options)
             print (f"Error: {error.GetCString()}")
             self.assertTrue(error.Success(), error.GetCString())
 
             core_target = self.dbg.CreateTarget(None)
-            core_proc = target.LoadCore(one_region_file)
+            core_proc = core_target.LoadCore(one_region_file)
             core_memory_list = core_proc.GetMemoryRegions()
             # Note because the /proc/pid maps are included on linux, we can't
             # depend on size for validation, so we'll ensure the first region
@@ -376,7 +376,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             options = lldb.SBSaveCoreOptions()
             options.SetOutputFile(lldb.SBFileSpec(custom_file))
             options.SetPluginName("minidump")
-            options.SetStyle(lldb.eSaveCoreCustom)
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
 
             error = process.SaveCore(options)
             self.assertTrue(error.Fail())
@@ -401,9 +401,18 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             error = process.SaveCore(options)
             self.assertTrue(error.Success())
             core_target = self.dbg.CreateTarget(None)
-            core_proc = target.LoadCore(one_region_file)
+            core_proc = core_target.LoadCore(custom_file)
             core_memory_list = core_proc.GetMemoryRegions()
-            self.assertEqual(len(core_memory_list), len(memory_list))
+            # proc/pid/ maps are included on linux, so we can't depend on size
+            # for validation, we make a set of all the ranges,
+            # and ensure no duplicates!
+            range_set = set()
+            for x in range(core_memory_list.GetSize()):
+                core_memory_region = lldb.SBMemoryRegionInfo()
+                core_memory_list.GetMemoryRegionAtIndex(x, core_memory_region)
+                mem_tuple = (core_memory_region.GetRegionBase(), core_memory_region.GetRegionEnd())
+                self.assertTrue(mem_tuple not in range_set, "Duplicate memory region found")
+                range_set.add(mem_tuple)
         finally:
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)

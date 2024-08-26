@@ -45,6 +45,7 @@ protected:
 
 private:
   friend class SBProcess;
+
   lldb_private::MemoryRegionInfos &ref();
 
   const lldb_private::MemoryRegionInfos &ref() const;

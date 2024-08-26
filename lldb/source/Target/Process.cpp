@@ -6708,12 +6708,12 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
   std::set<addr_t> stack_ends;
   // For fully custom set ups, we don't want to even look at threads if there
   // are no threads specified.
-  if (core_style != lldb::eSaveCoreCustom || options.HasSpecifiedThreads())
+  if (core_style != lldb::eSaveCoreCustomOnly || options.HasSpecifiedThreads())
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges, stack_ends);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
-  case eSaveCoreCustom:
+  case eSaveCoreCustomOnly:
     break;
 
   case eSaveCoreFull:
