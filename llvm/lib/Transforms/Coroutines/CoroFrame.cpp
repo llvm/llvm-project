@@ -1113,7 +1113,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // neither.
   if (!DIS || !DIS->getUnit() ||
       !dwarf::isCPlusPlus(
-          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()))
+          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()) ||
+      DIS->getUnit()->getEmissionKind() != DICompileUnit::DebugEmissionKind::FullDebug)
     return;
 
   assert(Shape.ABI == coro::ABI::Switch &&
@@ -1121,30 +1122,11 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 
   DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
 
-  AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
-  assert(PromiseAlloca &&
+  assert(Shape.getPromiseAlloca() &&
          "Coroutine with switch ABI should own Promise alloca");
 
-  TinyPtrVector<DbgDeclareInst *> DIs = findDbgDeclares(PromiseAlloca);
-  TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(PromiseAlloca);
-
-  DILocalVariable *PromiseDIVariable = nullptr;
-  DILocation *DILoc = nullptr;
-  if (!DIs.empty()) {
-    DbgDeclareInst *PromiseDDI = DIs.front();
-    PromiseDIVariable = PromiseDDI->getVariable();
-    DILoc = PromiseDDI->getDebugLoc().get();
-  } else if (!DVRs.empty()) {
-    DbgVariableRecord *PromiseDVR = DVRs.front();
-    PromiseDIVariable = PromiseDVR->getVariable();
-    DILoc = PromiseDVR->getDebugLoc().get();
-  } else {
-    return;
-  }
-
-  DILocalScope *PromiseDIScope = PromiseDIVariable->getScope();
-  DIFile *DFile = PromiseDIScope->getFile();
-  unsigned LineNum = PromiseDIVariable->getLine();
+  DIFile *DFile = DIS->getFile();
+  unsigned LineNum = DIS->getLine();
 
   DICompositeType *FrameDITy = DBuilder.createStructType(
       DIS->getUnit(), Twine(F.getName() + ".coro_frame_ty").str(),
@@ -1254,10 +1236,9 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 
   DBuilder.replaceArrays(FrameDITy, DBuilder.getOrCreateArray(Elements));
 
-  auto *FrameDIVar = DBuilder.createAutoVariable(PromiseDIScope, "__coro_frame",
-                                                 DFile, LineNum, FrameDITy,
-                                                 true, DINode::FlagArtificial);
-  assert(FrameDIVar->isValidLocationForIntrinsic(DILoc));
+  auto *FrameDIVar =
+      DBuilder.createAutoVariable(DIS, "__coro_frame", DFile, LineNum,
+                                  FrameDITy, true, DINode::FlagArtificial);
 
   // Subprogram would have ContainedNodes field which records the debug
   // variables it contained. So we need to add __coro_frame to the
@@ -1266,14 +1247,17 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // If we don't add __coro_frame to the RetainedNodes, user may get
   // `no symbol __coro_frame in context` rather than `__coro_frame`
   // is optimized out, which is more precise.
-  if (auto *SubProgram = dyn_cast<DISubprogram>(PromiseDIScope)) {
-    auto RetainedNodes = SubProgram->getRetainedNodes();
-    SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
-                                                 RetainedNodes.end());
-    RetainedNodesVec.push_back(FrameDIVar);
-    SubProgram->replaceOperandWith(
-        7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
-  }
+  auto RetainedNodes = DIS->getRetainedNodes();
+  SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
+                                               RetainedNodes.end());
+  RetainedNodesVec.push_back(FrameDIVar);
+  DIS->replaceOperandWith(7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
+
+  // Construct the location for the frame debug variable. The column number
+  // is fake but it should be fine.
+  DILocation *DILoc =
+      DILocation::get(DIS->getContext(), LineNum, /*Column=*/1, DIS);
+  assert(FrameDIVar->isValidLocationForIntrinsic(DILoc));
 
   if (UseNewDbgInfoFormat) {
     DbgVariableRecord *NewDVR =
