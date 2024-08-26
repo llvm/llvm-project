@@ -580,6 +580,35 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, FreezeInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  freeze i8 %arg
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Freeze = cast<sandboxir::FreezeInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Freeze));
+  EXPECT_EQ(Freeze->getOperand(0), Arg);
+
+  // Check create().
+  auto *NewFreeze = sandboxir::FreezeInst::create(
+      Arg, Ret->getIterator(), Ret->getParent(), Ctx, "NewFreeze");
+  EXPECT_EQ(NewFreeze->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewFreeze->getName(), "NewFreeze");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FenceInst) {
   parseIR(C, R"IR(
 define void @foo() {
@@ -2930,6 +2959,31 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
         /*InsertBefore=*/Ret, Ctx, "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
+}
+
+TEST_F(SandboxIRTest, PossiblyDisjointInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint(), isDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  PDI->setIsDisjoint(OrigIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
 }
 
 TEST_F(SandboxIRTest, AtomicRMWInst) {
