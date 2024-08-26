@@ -2008,26 +2008,20 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   return true;
 }
 
-Instruction *InstCombinerImpl::foldAddLike(Value *LHS, Value *RHS, bool NSW,
-                                           bool NUW) {
-  Value *A, *B, *C, *D;
+Instruction *InstCombinerImpl::foldAddLikeCommutative(Value *LHS, Value *RHS,
+                                                      bool NSW, bool NUW) {
+  Value *A, *B, *C;
   if (match(LHS, m_Sub(m_Value(A), m_Value(B))) &&
-      match(RHS, m_Sub(m_Value(C), m_Value(D)))) {
-    Instruction *R = nullptr;
-    if (A == D)
-      R = BinaryOperator::CreateSub(C, B);
-    else if (C == B)
-      R = BinaryOperator::CreateSub(A, D);
-    if (R) {
-      bool NSWOut = NSW && match(LHS, m_NSWSub(m_Value(), m_Value())) &&
-                    match(RHS, m_NSWSub(m_Value(), m_Value()));
+      match(RHS, m_Sub(m_Value(C), m_Specific(A)))) {
+    Instruction *R = BinaryOperator::CreateSub(C, B);
+    bool NSWOut = NSW && match(LHS, m_NSWSub(m_Value(), m_Value())) &&
+                  match(RHS, m_NSWSub(m_Value(), m_Value()));
 
-      bool NUWOut = match(LHS, m_NUWSub(m_Value(), m_Value())) &&
-                    match(RHS, m_NUWSub(m_Value(), m_Value()));
-      R->setHasNoSignedWrap(NSWOut);
-      R->setHasNoUnsignedWrap(NUWOut);
-      return R;
-    }
+    bool NUWOut = match(LHS, m_NUWSub(m_Value(), m_Value())) &&
+                  match(RHS, m_NUWSub(m_Value(), m_Value()));
+    R->setHasNoSignedWrap(NSWOut);
+    R->setHasNoUnsignedWrap(NUWOut);
+    return R;
   }
   return nullptr;
 }

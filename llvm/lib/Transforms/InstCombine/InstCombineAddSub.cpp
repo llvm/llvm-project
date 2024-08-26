@@ -1521,8 +1521,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return R;
 
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  if (Instruction *R =
-          foldAddLike(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap()))
+  if (Instruction *R = foldAddLikeCommutative(LHS, RHS, I.hasNoSignedWrap(),
+                                              I.hasNoUnsignedWrap()))
+    return R;
+  if (Instruction *R = foldAddLikeCommutative(RHS, LHS, I.hasNoSignedWrap(),
+                                              I.hasNoUnsignedWrap()))
     return R;
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1))

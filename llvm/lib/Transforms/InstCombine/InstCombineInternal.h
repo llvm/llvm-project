@@ -586,7 +586,8 @@ public:
                                unsigned Depth = 0);
 
   /// Common transforms for add / disjoint or
-  Instruction *foldAddLike(Value *LHS, Value *RHS, bool NSW, bool NUW);
+  Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
+                                      bool NUW);
 
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
