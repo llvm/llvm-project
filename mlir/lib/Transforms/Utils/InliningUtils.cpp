@@ -30,12 +30,13 @@ using namespace mlir;
 static void
 remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
                       Location callerLoc) {
-  DenseMap<Location, Location> mappedLocations;
+  DenseMap<Location, LocationAttr> mappedLocations;
   auto remapLoc = [&](Location loc) {
-    auto it = mappedLocations.find(loc);
-    if (it == mappedLocations.end()) {
+    auto [it, inserted] = mappedLocations.try_emplace(loc);
+    // Only query the attribute uniquer once per callsite attribute.
+    if (inserted) {
       auto newLoc = CallSiteLoc::get(loc, callerLoc);
-      it = mappedLocations.try_emplace(loc, newLoc).first;
+      it->getSecond() = newLoc;
     }
     return it->second;
   };
