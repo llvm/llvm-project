@@ -7,15 +7,13 @@ define i1 @test(i32 %g, i16 %d) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i16 [[D]], 1
 ; CHECK-NEXT:    [[XOR_I_I:%.*]] = xor i32 [[G]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[G]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> poison, i8 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[XOR_I_I]] to i8
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> [[TMP2]], i8 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[G]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[XOR_I_I]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP9]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i8> [[TMP4]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i8> [[TMP5]], <i8 -9, i8 -9, i8 -1, i8 -1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i8> [[TMP6]], <i8 -3, i8 -3, i8 -3, i8 -3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP7]] to <4 x i8>
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i8> [[TMP4]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i8> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt <4 x i32> [[TMP10]], [[TMP11]]
