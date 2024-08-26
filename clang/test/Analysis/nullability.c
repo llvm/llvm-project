@@ -39,8 +39,9 @@ int *cannot_return_null() {
   int *x = produce_nonnull_ptr();
   if (!x) {
     clang_analyzer_warnIfReached();
-    // Incorrect: expected-warning@-1 {{REACHABLE}}
-    // According to produce_nonnull_ptr contract, x cannot be null.
+    // expected-warning@-1 {{REACHABLE}}
+    // TODO: This warning is a false positive, according to the contract of
+    // produce_nonnull_ptr, x cannot be null.
   }
   // Regardless of the potential state split above, x cannot be nullptr
   // according to the produce_nonnull_ptr annotation.
