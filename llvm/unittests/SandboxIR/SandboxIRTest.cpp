@@ -3682,6 +3682,48 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   }
 }
 
+TEST_F(SandboxIRTest, PossiblyNonNegInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
+  %zext = zext i32 %arg to i64
+  %uitofp = uitofp i32 %arg to float
+
+  %sext = sext i32 %arg to i64
+  %fptoui = fptoui float %farg to i32
+  %fptosi = fptosi float %farg to i32
+  %fpext = fpext float %farg to double
+  %ptrtoint = ptrtoint ptr %ptr to i32
+  %inttoptr = inttoptr i32 %arg to ptr
+  %sitofp = sitofp i32 %arg to float
+  %trunc = trunc i32 %arg to i16
+  %fptrunc = fptrunc double %darg to float
+  %bitcast = bitcast i32 %arg to float
+  %addrspacecast = addrspacecast ptr %ptr to ptr addrspace(1)
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *PNNI0 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  auto *PNNI1 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  for (auto ItE = BB->end(); It != ItE; ++It)
+    EXPECT_FALSE(isa<sandboxir::PossiblyNonNegInst>(&*It++));
+
+  for (auto *PNNI : {PNNI0, PNNI1}) {
+    // Check setNonNeg(), hasNonNeg().
+    auto OrigNonNeg = PNNI->hasNonNeg();
+    auto NewNonNeg = true;
+    EXPECT_NE(NewNonNeg, OrigNonNeg);
+    PNNI->setNonNeg(NewNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+    PNNI->setNonNeg(OrigNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
+  }
+}
+
 /// CastInst's subclasses are very similar so we can use a common test function
 /// for them.
 template <typename SubclassT, sandboxir::Instruction::Opcode OpcodeT>

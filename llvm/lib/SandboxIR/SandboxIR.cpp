@@ -1991,6 +1991,13 @@ bool CastInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Cast;
 }
 
+void PossiblyNonNegInst::setNonNeg(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyNonNegInst::hasNonNeg,
+                                       &PossiblyNonNegInst::setNonNeg>>(this);
+  cast<llvm::PossiblyNonNegInst>(Val)->setNonNeg(B);
+}
+
 Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
                                  Instruction *InsertBefore, Context &Ctx,
                                  const Twine &Name) {
