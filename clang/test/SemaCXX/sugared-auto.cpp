@@ -112,6 +112,12 @@ N t6 = [] { // expected-error {{rvalue of type 'void'}}
   return;
 }();
 
+N t7 = [] { // expected-error {{rvalue of type 'Virus' (aka 'void')}}
+  if (true)
+    return Ebola();
+  return SARS{};
+}();
+
 } // namespace function_multiple_basic
 
 #define TEST_AUTO(X, A, B) \

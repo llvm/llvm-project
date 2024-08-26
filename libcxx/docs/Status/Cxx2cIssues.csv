@@ -76,6 +76,6 @@
 "`LWG4105 <https://wg21.link/LWG4105>`__","``ranges::ends_with``\`s Returns misses difference casting","2024-06 (St. Louis)","","","|ranges|"
 "`LWG4106 <https://wg21.link/LWG4106>`__","``basic_format_args`` should not be default-constructible","2024-06 (St. Louis)","|Complete|","19.0","|format|"
 "","","","","",""
-"`LWG3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""
-"XXXX","The sys_info range should be affected by save","Not Yet Adopted","|Complete|","19.0",""
+"`LWG3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Adopted Yet","|Complete|","16.0",""
+"`LWG4139 <https://wg21.link/LWG4139>`__","§[time.zone.leap] recursive constraint in <=>","Not Adopted Yet","|Complete|","20.0",""
 "","","","","",""

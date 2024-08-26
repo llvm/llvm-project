@@ -16,7 +16,6 @@
 #define LLVM_ADT_SMALLPTRSET_H
 
 #include "llvm/ADT/EpochTracker.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
@@ -186,8 +185,8 @@ protected:
       return false;
     }
 
-    auto *Bucket = FindBucketFor(Ptr);
-    if (*Bucket != Ptr)
+    auto *Bucket = doFind(Ptr);
+    if (!Bucket)
       return false;
 
     *const_cast<const void **>(Bucket) = getTombstoneMarker();
@@ -212,8 +211,7 @@ protected:
     }
 
     // Big set case.
-    auto *Bucket = FindBucketFor(Ptr);
-    if (*Bucket == Ptr)
+    if (auto *Bucket = doFind(Ptr))
       return Bucket;
     return EndPointer();
   }
@@ -223,6 +221,7 @@ protected:
 private:
   std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
+  const void *const *doFind(const void *Ptr) const;
   const void * const *FindBucketFor(const void *Ptr) const;
   void shrink_and_clear();
 

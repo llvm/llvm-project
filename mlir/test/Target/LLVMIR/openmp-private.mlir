@@ -222,11 +222,13 @@ omp.private {type = private} @privatizer.part : !llvm.ptr alloc {
   omp.yield(%1 : !llvm.ptr)
 }
 
-omp.declare_reduction @reducer.part : !llvm.ptr init {
-^bb0(%arg0: !llvm.ptr):
+omp.declare_reduction @reducer.part : !llvm.ptr alloc {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
   omp.yield(%1 : !llvm.ptr)
+} init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  omp.yield(%alloc : !llvm.ptr)
 } combiner {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
