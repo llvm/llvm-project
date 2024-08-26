@@ -25,4 +25,4 @@
 // TODO (b/12345): allow spaces before parentheses
 // TODO(asdf) allow missing semicolon
 // TODO: b/12345 - solve the collatz conjecture
-// TODO: foo - barW
+// TODO: foo - bar
