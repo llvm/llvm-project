@@ -72,7 +72,8 @@ class PseudoProbeRewriter final : public MetadataRewriter {
 
   /// Parse .pseudo_probe_desc section and .pseudo_probe section
   /// Setup Pseudo probe decoder
-  void parsePseudoProbe();
+  /// If \p ProfiledOnly is set, only parse records for functions with profile.
+  void parsePseudoProbe(bool ProfiledOnly = false);
 
   /// PseudoProbe decoder
   std::shared_ptr<MCPseudoProbeDecoder> ProbeDecoderPtr;
@@ -92,7 +93,7 @@ public:
 
 Error PseudoProbeRewriter::preCFGInitializer() {
   if (opts::ProfileWritePseudoProbes)
-    parsePseudoProbe();
+    parsePseudoProbe(true);
 
   return Error::success();
 }
@@ -105,7 +106,7 @@ Error PseudoProbeRewriter::postEmitFinalizer() {
   return Error::success();
 }
 
-void PseudoProbeRewriter::parsePseudoProbe() {
+void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
   MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
   PseudoProbeDescSection = BC.getUniqueSectionByName(".pseudo_probe_desc");
   PseudoProbeSection = BC.getUniqueSectionByName(".pseudo_probe");
@@ -136,6 +137,7 @@ void PseudoProbeRewriter::parsePseudoProbe() {
   MCPseudoProbeDecoder::Uint64Map FuncStartAddrs;
   SmallVector<StringRef, 3> Suffixes({".destroy", ".resume", ".llvm."});
   for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
+    bool HasProfile = F->hasProfileAvailable();
     for (const MCSymbol *Sym : F->getSymbols()) {
       StringRef SymName = NameResolver::restore(Sym->getName());
       if (std::optional<StringRef> CommonName =
@@ -144,6 +146,23 @@ void PseudoProbeRewriter::parsePseudoProbe() {
       }
       uint64_t GUID = Function::getGUID(SymName);
       FuncStartAddrs[GUID] = F->getAddress();
+      if (ProfiledOnly && HasProfile)
+        GuidFilter.insert(GUID);
+      std::optional<StringRef> CommonName =
+          getCommonName(SymName, false, Suffixes);
+      if (!CommonName)
+        continue;
+      GUID = Function::getGUID(*CommonName);
+      FuncStartAddrs.try_emplace(GUID, F->getAddress());
+      if (ProfiledOnly && HasProfile)
+        GuidFilter.insert(GUID);
+    }
+  }
+  if (ProfiledOnly) {
+    for (const auto &FuncDesc : ProbeDecoder.getGUID2FuncDescMap()) {
+      uint64_t GUID = FuncDesc.FuncGUID;
+      if (!FuncStartAddrs.contains(GUID))
+        GuidFilter.insert(GUID);
     }
   }
   Contents = PseudoProbeSection->getContents();
