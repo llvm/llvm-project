@@ -827,41 +827,9 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
 //   },
 //   "required": [ "id", "verified", "line"]
 // }
-llvm::json::Value CreateInstructionBreakpoint(lldb::SBBreakpoint &bp) {
+llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp) {
   llvm::json::Object object;
-  if (!bp.IsValid()) {
-    return llvm::json::Value(std::move(object));
-  }
-  object.try_emplace("verified", bp.GetNumResolvedLocations() > 0);
-  object.try_emplace("id", bp.GetID());
-
-  lldb::SBBreakpointLocation bp_loc;
-  const auto num_locs = bp.GetNumLocations();
-  for (size_t i = 0; i < num_locs; ++i) {
-    bp_loc = bp.GetLocationAtIndex(i);
-    if (bp_loc.IsResolved())
-      break;
-  }
-  // If not locations are resolved, use the first location.
-  if (!bp_loc.IsResolved())
-    bp_loc = bp.GetLocationAtIndex(0);
-  auto bp_addr = bp_loc.GetAddress();
-
-  lldb::addr_t address_load = bp_addr.GetLoadAddress(g_dap.target);
-  std::string address_hex;
-  llvm::raw_string_ostream addr_strm(address_hex);
-  if (address_load != LLDB_INVALID_ADDRESS) {
-    addr_strm << llvm::format_hex(address_load, 0);
-    addr_strm.flush();
-    object.try_emplace("instructionReference", address_hex);
-  }
-
-  if (bp_addr.IsValid()) {
-    auto line_entry = bp_addr.GetLineEntry();
-    const auto line = line_entry.GetLine();
-    if (line != UINT32_MAX)
-      object.try_emplace("line", line);
-  }
+  ibp->CreateJsonObject(object);
   return llvm::json::Value(std::move(object));
 }
 

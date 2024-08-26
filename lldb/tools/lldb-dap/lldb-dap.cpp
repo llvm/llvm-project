@@ -4295,9 +4295,6 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
       }
     }
 
-    // Store removed instruction breakpoint list to delete them further.
-    std::vector<lldb::addr_t> removed_ibp;
-
     // Iterate previouse active instruction breakpoint list.
     for (auto &prev_ibp : g_dap.instruction_breakpoints) {
       // Find previouse instruction breakpoint reference address in newly
@@ -4308,19 +4305,16 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
       // Means delete removed breakpoint instance.
       if (inst_reference == request_ibp.end()) {
         g_dap.target.BreakpointDelete(prev_ibp.second.id);
-        removed_ibp.push_back(prev_ibp.first);
+        // Update Prev instruction breakpoint list.
+        g_dap.instruction_breakpoints.erase(prev_ibp.first);
       } else {
         // Instead of recreating breakpoint instance, update the breakpoint if
         // there are any conditional changes.
         prev_ibp.second.UpdateBreakpoint(inst_reference->second);
         request_ibp.erase(inst_reference);
         response_breakpoints.emplace_back(
-            CreateInstructionBreakpoint(prev_ibp.second.bp));
+            CreateInstructionBreakpoint(&prev_ibp.second));
       }
-    }
-    // Update Prev instruction breakpoint list.
-    for (const auto &name : removed_ibp) {
-      g_dap.instruction_breakpoints.erase(name);
     }
 
     for (auto &req_bpi : request_ibp) {
@@ -4329,7 +4323,7 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
       InstructionBreakpoint &new_bp =
           g_dap.instruction_breakpoints[req_bpi.first];
       new_bp.SetInstructionBreakpoint();
-      response_breakpoints.emplace_back(CreateInstructionBreakpoint(new_bp.bp));
+      response_breakpoints.emplace_back(CreateInstructionBreakpoint(&new_bp));
     }
   }
 

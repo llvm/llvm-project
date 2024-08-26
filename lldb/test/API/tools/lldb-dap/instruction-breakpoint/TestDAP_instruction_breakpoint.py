@@ -77,9 +77,9 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         instruction_addr_list = list(disassembled_instruction_list.keys())
         index = instruction_addr_list.index(intstructionPointerReference[0])
         if len(instruction_addr_list) >= (index + 1):
-            next_inst_addr = int(instruction_addr_list[index + 1], 16)
-            if next_inst_addr is not 0:
-                setIntstructionBreakpoints.append(hex(next_inst_addr))
+            next_inst_addr = instruction_addr_list[index + 1]
+            if len(next_inst_addr) > 2:
+                setIntstructionBreakpoints.append(next_inst_addr)
                 instruction_breakpoint_response = (
                     self.dap_server.request_setInstructionBreakpoints(
                         setIntstructionBreakpoints
@@ -90,7 +90,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
                 ]
                 self.assertEqual(
                     inst_breakpoints[0]["instructionReference"],
-                    hex(next_inst_addr),
+                    next_inst_addr,
                     "Instruction breakpoint has not been resolved or failed to relocate the instruction breakpoint",
                 )
                 self.dap_server.request_continue()

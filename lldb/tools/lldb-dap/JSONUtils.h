@@ -331,7 +331,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 /// \return
 ///     A "Scope" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateInstructionBreakpoint(lldb::SBBreakpoint &bp);
+llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp);
 
 /// Create a "Thread" object for a LLDB thread object.
 ///
