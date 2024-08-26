@@ -270,6 +270,10 @@ static std::optional<std::pair<unsigned, unsigned>> getMaskedTypeForICmpPair(
       E = R2;
       Ok = true;
     }
+
+    // Avoid matching against the -1 value we created for unmasked operand.
+    if (Ok && match(A, m_AllOnes()))
+      Ok = false;
   }
 
   // Bail if RHS was a icmp that can't be decomposed into an equality.
