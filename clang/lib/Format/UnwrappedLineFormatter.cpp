@@ -32,6 +32,26 @@ bool isRecordLBrace(const FormatToken &Tok) {
                      TT_StructLBrace, TT_UnionLBrace);
 }
 
+bool LineStartsNamespaceScope(const AnnotatedLine *Line,
+                              const AnnotatedLine *PreviousLine,
+                              const AnnotatedLine *PrevPrevLine) {
+  return PreviousLine &&
+         ((PreviousLine->Last->is(tok::l_brace) &&
+           PreviousLine->startsWithNamespace()) ||
+          (PrevPrevLine && PrevPrevLine->startsWithNamespace() &&
+           PreviousLine->startsWith(tok::l_brace)));
+}
+
+bool LineEndsNamespaceScope(const AnnotatedLine *Line,
+                            const SmallVectorImpl<AnnotatedLine *> &Lines) {
+  if (!Line)
+    return false;
+  const FormatToken *tok = Line->First;
+  if (!tok || tok->isNot(tok::r_brace))
+    return false;
+  return getNamespaceToken(Line, Lines) != nullptr;
+}
+
 /// Tracks the indent level of \c AnnotatedLines across levels.
 ///
 /// \c nextLine must be called for each \c AnnotatedLine, after which \c
@@ -1582,6 +1602,28 @@ static auto computeNewlines(const AnnotatedLine &Line,
         PreviousLine->startsWith(tok::l_brace)) &&
       !startsExternCBlock(*PreviousLine)) {
     Newlines = 1;
+  }
+
+  // Modify empty lines after "{" that opens namespace scope.
+  if (Style.WrapNamespaceBodyWithEmptyLines != FormatStyle::WNBWELS_Leave &&
+      LineStartsNamespaceScope(&Line, PreviousLine, PrevPrevLine)) {
+    if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
+      Newlines = std::min(Newlines, 1u);
+    else if (!Line.startsWithNamespace())
+      Newlines = std::max(Newlines, 2u);
+    else
+      Newlines = std::min(Newlines, 1u);
+  }
+
+  // Modify empty lines before "}" that closes namespace scope.
+  if (Style.WrapNamespaceBodyWithEmptyLines != FormatStyle::WNBWELS_Leave &&
+      LineEndsNamespaceScope(&Line, Lines)) {
+    if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
+      Newlines = std::min(Newlines, 1u);
+    else if (!LineEndsNamespaceScope(PreviousLine, Lines))
+      Newlines = std::max(Newlines, 2u);
+    else
+      Newlines = std::min(Newlines, 1u);
   }
 
   // Insert or remove empty line before access specifiers.

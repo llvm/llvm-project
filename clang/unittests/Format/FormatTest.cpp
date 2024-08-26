@@ -28427,6 +28427,211 @@ TEST_F(FormatTest, ShortNamespacesOption) {
       Style);
 }
 
+TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesNever) {
+  FormatStyle Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Style.ShortNamespaceLines = 0;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Never;
+  Style.CompactNamespaces = false;
+
+  // Empty namespace
+  verifyNoChange("namespace N {};", Style);
+
+  // Single namespace
+  verifyNoChange("namespace N {\n"
+                 "int f1(int a) { return 2 * a; }\n"
+                 "};",
+                 Style);
+
+  // Nested namespace
+  verifyNoChange("namespace N1 {\n"
+                 "namespace N2 {\n"
+                 "namespace N3 {\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n"
+                 "}\n"
+                 "}\n"
+                 "}",
+                 Style);
+
+  Style.CompactNamespaces = true;
+
+  // Empty namespace
+  verifyNoChange("namespace N {\n};", Style);
+
+  // Single namespace
+  verifyNoChange("namespace N {\n"
+                 "int f1(int a) { return 2 * a; }\n"
+                 "};",
+                 Style);
+
+  // Nested namespace
+  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n"
+                 "}}}",
+                 Style);
+}
+
+TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
+  FormatStyle Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Style.ShortNamespaceLines = 0;
+  Style.MaxEmptyLinesToKeep = 0;
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Always;
+  Style.CompactNamespaces = false;
+
+  // Empty namespace
+  verifyNoChange("namespace N {};", Style);
+
+  // Single namespace
+  verifyNoChange("namespace N {\n\n"
+                 "int f1(int a) { return 2 * a; }\n\n"
+                 "};",
+                 Style);
+
+  // Nested namespace
+  verifyNoChange("namespace N1 {\n"
+                 "namespace N2 {\n"
+                 "namespace N3 {\n\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n\n"
+                 "}\n"
+                 "}\n"
+                 "}",
+                 Style);
+
+  Style.CompactNamespaces = true;
+
+  // Nested namespace
+  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n\n"
+                 "}}}",
+                 Style);
+
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.CompactNamespaces = false;
+
+  // Empty namespace
+  verifyNoChange("namespace N {};", Style);
+
+  // Single namespace
+  verifyNoChange("namespace N {\n\n\n"
+                 "void function()\n\n\n"
+                 "};",
+                 Style);
+
+  // Nested namespace
+  verifyFormat("namespace N1 {\n"
+               "namespace N2 {\n"
+               "namespace N3 {\n\n\n"
+               "int f1() {\n"
+               "  int a = 1;\n"
+               "  return a;\n"
+               "}\n\n\n"
+               "}\n"
+               "}\n"
+               "}",
+               "namespace N1 {\n"
+               "namespace N2 {\n\n"
+               "namespace N3 {\n\n\n"
+               "int f1() {\n"
+               "  int a = 1;\n"
+               "  return a;\n"
+               "}\n\n\n"
+               "}\n\n"
+               "}\n"
+               "}",
+               Style);
+
+  Style.CompactNamespaces = true;
+
+  // Nested namespace
+  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n\n\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n\n\n"
+                 "}}}",
+                 Style);
+}
+
+TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesLeave) {
+  FormatStyle Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Style.ShortNamespaceLines = 0;
+  Style.MaxEmptyLinesToKeep = 0;
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Leave;
+  Style.CompactNamespaces = false;
+
+  // Empty namespace
+  verifyNoChange("namespace N {};", Style);
+
+  // Single namespace
+  verifyNoChange("namespace N {\n"
+                 "int f1(int a) { return 2 * a; }\n"
+                 "};",
+                 Style);
+
+  // Nested namespace
+  verifyNoChange("namespace N1 {\n"
+                 "namespace N2 {\n"
+                 "namespace N3 {\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n"
+                 "}\n"
+                 "}\n"
+                 "}",
+                 Style);
+
+  Style.MaxEmptyLinesToKeep = 2;
+
+  // Single namespace
+  verifyNoChange("namespace N {\n\n\n"
+                 "int f1(int a) { return 2 * a; }\n\n\n"
+                 "};",
+                 Style);
+
+  // Nested namespace
+  verifyNoChange("namespace N1 {\n"
+                 "namespace N2 {\n\n"
+                 "namespace N3 {\n\n\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n\n\n"
+                 "}\n\n"
+                 "}\n"
+                 "}",
+                 Style);
+
+  Style.CompactNamespaces = true;
+
+  // Empty namespace
+  verifyNoChange("namespace N {\n};", Style);
+
+  // Nested namespace
+  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n\n\n"
+                 "int f1() {\n"
+                 "  int a = 1;\n"
+                 "  return a;\n"
+                 "}\n\n\n"
+                 "}}}",
+                 Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
