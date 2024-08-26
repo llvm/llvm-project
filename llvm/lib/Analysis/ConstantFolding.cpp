@@ -54,7 +54,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/float128.h"
 #include <cassert>
 #include <cerrno>
 #include <cfenv>
@@ -1742,7 +1741,7 @@ Constant *GetConstantFoldFPValue(double V, Type *Ty) {
   llvm_unreachable("Can only constant fold half/float/double");
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
   if (Ty->isFP128Ty())
     return ConstantFP::get(Ty, V);
@@ -1782,25 +1781,11 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
   return GetConstantFoldFPValue(Result, Ty);
 }
 
-#if defined(HAS_IEE754_FLOAT128)
-float128 ConvertToQuad(const APFloat &Apf) {
-  APInt Api = Apf.bitcastToAPInt();
-  __uint128_t Uint128 =
-      ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
-      Api.extractBitsAsZExtValue(64, 0);
-  return llvm::bit_cast<float128>(Uint128);
-}
-#endif
-
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
                             Type *Ty) {
   llvm_fenv_clearexcept();
-  if (!V.isValidIEEEQuad())
-    return nullptr;
-
-  float128 Result = NativeFP(ConvertToQuad(V));
-
+  float128 Result = NativeFP(V.convertToQuad());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
     return nullptr;
@@ -2129,18 +2114,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
       if (IntrinsicID == Intrinsic::log) {
-        APFloat Value = Op->getValueAPF();
-        if (!Value.isValidIEEEQuad())
-          return nullptr;
-
-        float128 Result = logf128(ConvertToQuad(Value));
+        float128 Result = logf128(Op->getValueAPF().convertToQuad());
         return GetConstantFoldFPValue128(Result, Ty);
       }
+
       LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
