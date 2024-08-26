@@ -288,6 +288,23 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   EmitStackError(C, R, RetE);
 }
 
+static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
+  assert(R);
+  if (const auto *MemSpace = R->getMemorySpace()) {
+    if (const auto *SSR = MemSpace->getAs<StackSpaceRegion>())
+      return SSR;
+    if (const auto *GSR = MemSpace->getAs<GlobalsSpaceRegion>())
+      return GSR;
+  }
+  // If R describes a lambda capture, it will be a symbolic region
+  // referring to a field region of another symbolic region.
+  if (const auto *SymReg = R->getBaseRegion()->getAs<SymbolicRegion>()) {
+    if (const auto *OriginReg = SymReg->getSymbol()->getOriginRegion())
+      return getStackOrGlobalSpaceRegion(OriginReg);
+  }
+  return nullptr;
+}
+
 std::optional<std::string> printReferrer(const MemRegion *Referrer) {
   assert(Referrer);
   const StringRef ReferrerMemorySpace = [](const MemSpaceRegion *Space) {
@@ -297,20 +314,31 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
       return "global";
     assert(isa<StackSpaceRegion>(Space));
     return "stack";
-  }(Referrer->getMemorySpace());
+  }(getStackOrGlobalSpaceRegion(Referrer));
 
-  // We should really only have VarRegions here.
-  // Anything else is really surprising, and we should get notified if such
-  // ever happens.
-  const auto *ReferrerVar = dyn_cast<VarRegion>(Referrer);
-  if (!ReferrerVar) {
-    assert(false && "We should have a VarRegion here");
-    return std::nullopt; // Defensively skip this one.
+  while (!Referrer->canPrintPretty()) {
+    if (const auto *SymReg = dyn_cast<SymbolicRegion>(Referrer);
+        SymReg && SymReg->getSymbol()->getOriginRegion()) {
+      Referrer = SymReg->getSymbol()->getOriginRegion()->getBaseRegion();
+    } else if (isa<CXXThisRegion>(Referrer)) {
+      // Skip members of a class, it is handled in CheckExprLifetime.cpp as
+      // warn_bind_ref_member_to_parameter or
+      // warn_init_ptr_member_to_parameter_addr
+      return std::nullopt;
+    } else {
+      Referrer->dump();
+      assert(false && "Unexpected referrer region type.");
+      return std::nullopt;
+    }
   }
-  const std::string ReferrerVarName =
-      ReferrerVar->getDecl()->getDeclName().getAsString();
+  assert(Referrer);
+  assert(Referrer->canPrintPretty());
 
-  return (ReferrerMemorySpace + " variable '" + ReferrerVarName + "'").str();
+  std::string buf;
+  llvm::raw_string_ostream os(buf);
+  os << ReferrerMemorySpace << " variable ";
+  Referrer->printPretty(os);
+  return buf;
 }
 
 void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
@@ -332,16 +360,20 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     /// referred by an other stack variable from different stack frame.
     bool checkForDanglingStackVariable(const MemRegion *Referrer,
                                        const MemRegion *Referred) {
-      const auto *ReferrerMemSpace =
-          Referrer->getMemorySpace()->getAs<StackSpaceRegion>();
+      const auto *ReferrerMemSpace = getStackOrGlobalSpaceRegion(Referrer);
       const auto *ReferredMemSpace =
           Referred->getMemorySpace()->getAs<StackSpaceRegion>();
 
       if (!ReferrerMemSpace || !ReferredMemSpace)
         return false;
 
+      const auto *ReferrerStackSpace =
+          ReferrerMemSpace->getAs<StackSpaceRegion>();
+      if (!ReferrerStackSpace)
+        return false;
+
       if (ReferredMemSpace->getStackFrame() == PoppedFrame &&
-          ReferrerMemSpace->getStackFrame()->isParentOf(PoppedFrame)) {
+          ReferrerStackSpace->getStackFrame()->isParentOf(PoppedFrame)) {
         V.emplace_back(Referrer, Referred);
         return true;
       }
@@ -387,7 +419,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   if (!BT_stackleak)
     BT_stackleak =
         std::make_unique<BugType>(CheckNames[CK_StackAddrEscapeChecker],
-                                  "Stack address stored into global variable");
+                                  "Stack address leaks outside of stack frame");
 
   for (const auto &P : Cb.V) {
     const MemRegion *Referrer = P.first->getBaseRegion();
