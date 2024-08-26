@@ -446,7 +446,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg,
+                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc))
         .addImm(0);
     return;
   }
