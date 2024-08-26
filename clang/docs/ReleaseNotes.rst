@@ -317,7 +317,7 @@ Bug Fixes to C++ Support
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
   of the current instantiation in all cases.
 - Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
-
+- Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
