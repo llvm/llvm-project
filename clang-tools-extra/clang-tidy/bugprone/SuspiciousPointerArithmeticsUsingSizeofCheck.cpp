@@ -1,4 +1,4 @@
-//===--- SuspiciousPointerArithmeticsUsingSizeofCheck.cpp - clang-tidy --===//
+//===--- SuspiciousPointerArithmeticsUsingSizeofCheck.cpp - clang-tidy ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,9 +68,10 @@ static CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
 
 void SuspiciousPointerArithmeticsUsingSizeofCheck::check(const MatchFinder::MatchResult &Result) {
     const ASTContext &Ctx = *Result.Context;
-    const BinaryOperator* Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
-    const QualType* SuspiciousQualTypePtr = Result.Nodes.getNodeAs<QualType>(PointedType);
-    const Type* SuspiciousTypePtr = SuspiciousQualTypePtr->getTypePtr();
+    const auto *Matched = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
+    const auto *SuspiciousQualTypePtr =
+        Result.Nodes.getNodeAs<QualType>(PointedType);
+    const auto *SuspiciousTypePtr = SuspiciousQualTypePtr->getTypePtr();
 
     std::size_t sz = getSizeOfType(Ctx,SuspiciousTypePtr).getQuantity();
     if ( sz > 1 )
