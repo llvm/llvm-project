@@ -47,7 +47,9 @@ void IncorrectEnableSharedFromThisCheck::check(
 
         if (EnableSharedClassSet.contains(BaseRecord) ||
             isStdEnableSharedFromThis(BaseRecord)) {
-          if (Base.getAccessSpecifier() != clang::AS_public) {
+
+          if (isStdEnableSharedFromThis(BaseRecord) &&
+              Base.getAccessSpecifier() != clang::AS_public) {
             const SourceRange ReplacementRange = Base.getSourceRange();
             const std::string ReplacementString =
                 // Base.getType().getAsString() results in
@@ -63,7 +65,24 @@ void IncorrectEnableSharedFromThisCheck::check(
                 "on shared_from_this. fix this by making it public inheritance",
                 DiagnosticIDs::Warning)
                 << Hint;
+          } else if (EnableSharedClassSet.contains(BaseRecord) &&
+                     Base.getAccessSpecifier() != clang::AS_public) {
+            // actually the same FixItHint, just different diag
+            const SourceRange ReplacementRange = Base.getSourceRange();
+            const std::string ReplacementString =
+                "public " + Base.getType().getAsString();
+            const FixItHint Hint = FixItHint::CreateReplacement(
+                ReplacementRange, ReplacementString);
+            Check.diag(
+                RDecl->getLocation(),
+                "this is not publicly inheriting from %0 "
+                "which inherits from std::enable_shared_from_this, "
+                "will cause unintended behaviour "
+                "on shared_from_this. fix this by making it public inheritance",
+                DiagnosticIDs::Warning)
+                << BaseRecord->getNameAsString() << Hint;
           }
+
           EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
         }
       }

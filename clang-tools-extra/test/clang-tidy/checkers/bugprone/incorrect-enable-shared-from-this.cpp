@@ -41,18 +41,18 @@ class BadMultiClass3Example : dummy_class1, dummy_class2, std::enable_shared_fro
 
 class ClassBase : public std::enable_shared_from_this<ClassBase> {};
 class PrivateInheritClassBase : private ClassBase {};
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: this is not publicly inheriting from std::enable_shared_from_this, will cause unintended behaviour on shared_from_this. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: this is not publicly inheriting from ClassBase which inherits from std::enable_shared_from_this, will cause unintended behaviour on shared_from_this. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class PrivateInheritClassBase : public ClassBase {};
 
 class DefaultInheritClassBase : ClassBase {};
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: this is not publicly inheriting from std::enable_shared_from_this, will cause unintended behaviour on shared_from_this. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: this is not publicly inheriting from ClassBase which inherits from std::enable_shared_from_this, will cause unintended behaviour on shared_from_this. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class DefaultInheritClassBase : public ClassBase {};
 
 class PublicInheritClassBase : public ClassBase {};
 
 struct StructBase : public std::enable_shared_from_this<StructBase> {};
 struct PrivateInheritStructBase : private StructBase {};
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: this is not publicly inheriting from std::enable_shared_from_this, will cause unintended behaviour on shared_from_this. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: this is not publicly inheriting from StructBase which inherits from std::enable_shared_from_this, will cause unintended behaviour on shared_from_this. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: struct PrivateInheritStructBase : public StructBase {};
 
 struct DefaultInheritStructBase : StructBase {};
