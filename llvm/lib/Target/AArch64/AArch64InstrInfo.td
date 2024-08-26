@@ -7196,17 +7196,6 @@ multiclass SIMDAcrossLaneLongPairIntrinsicGISel<string Opc, SDPatternOperator ad
 defm : SIMDAcrossLaneLongPairIntrinsicGISel<"UADDLV", AArch64uaddlp>;
 defm : SIMDAcrossLaneLongPairIntrinsicGISel<"SADDLV", AArch64saddlp>;
 
-// Patterns for uaddlv(uaddlp(x)) ==> uaddlv
-def : Pat<(i64 (int_aarch64_neon_uaddlv (v4i32 (AArch64uaddlp (v8i16 V128:$op))))),
-          (i64 (EXTRACT_SUBREG
-            (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$op), ssub)),
-            dsub))>;
-
-def : Pat<(i32 (int_aarch64_neon_uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op))))),
-          (i32 (EXTRACT_SUBREG
-            (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub)),
-            ssub))>;
-
 def : Pat<(v2i64 (AArch64uaddlv (v4i32 (AArch64uaddlp (v8i16 V128:$op))))),
           (v2i64 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$op), ssub))>;
 
@@ -7427,82 +7416,12 @@ defm : SIMDAcrossLanesVecReductionIntrinsic<"SMAXV", vecreduce_smax>;
 def : Pat<(i32 (vecreduce_smax (v2i32 V64:$Rn))), 
           (i32 (EXTRACT_SUBREG (SMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
-multiclass SIMDAcrossLanesSignedLongIntrinsic<string baseOpc, Intrinsic intOp> {
-  def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
-        (i32 (SMOVvi16to32
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), hsub),
-          (i64 0)))>;
-def : Pat<(i32 (intOp (v16i8 V128:$Rn))),
-        (i32 (SMOVvi16to32
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), hsub),
-          (i64 0)))>;
-
-def : Pat<(i32 (intOp (v4i16 V64:$Rn))),
-          (i32 (EXTRACT_SUBREG
-           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), ssub),
-           ssub))>;
-def : Pat<(i32 (intOp (v8i16 V128:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), ssub),
-          ssub))>;
-
-def : Pat<(i64 (intOp (v4i32 V128:$Rn))),
-        (i64 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), dsub),
-          dsub))>;
-}
-
-multiclass SIMDAcrossLanesUnsignedLongIntrinsic<string baseOpc,
-                                                Intrinsic intOp> {
-  def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), hsub),
-          ssub))>;
-def : Pat<(i32 (intOp (v16i8 V128:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), hsub),
-          ssub))>;
-
-def : Pat<(i32 (intOp (v4i16 V64:$Rn))),
-          (i32 (EXTRACT_SUBREG
-            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), ssub),
-            ssub))>;
-def : Pat<(i32 (intOp (v8i16 V128:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), ssub),
-          ssub))>;
-
-def : Pat<(i64 (intOp (v4i32 V128:$Rn))),
-        (i64 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), dsub),
-          dsub))>;
-}
-
-defm : SIMDAcrossLanesSignedLongIntrinsic<"SADDLV", int_aarch64_neon_saddlv>;
-defm : SIMDAcrossLanesUnsignedLongIntrinsic<"UADDLV", int_aarch64_neon_uaddlv>;
-
-// The vaddlv_s32 intrinsic gets mapped to SADDLP.
-def : Pat<(i64 (int_aarch64_neon_saddlv (v2i32 V64:$Rn))),
-          (i64 (EXTRACT_SUBREG
-            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (SADDLPv2i32_v1i64 V64:$Rn), dsub),
-            dsub))>;
-// The vaddlv_u32 intrinsic gets mapped to UADDLP.
-def : Pat<(i64 (int_aarch64_neon_uaddlv (v2i32 V64:$Rn))),
-          (i64 (EXTRACT_SUBREG
-            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (UADDLPv2i32_v1i64 V64:$Rn), dsub),
-            dsub))>;
+// The SADDLV v2i32 gets mapped to SADDLP.
+def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
+          (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (SADDLPv2i32_v1i64 V64:$Rn), dsub))>;
+// The UADDLV v2i32 gets mapped to UADDLP.
+def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
+          (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
 
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions

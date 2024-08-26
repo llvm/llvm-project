@@ -1193,6 +1193,10 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
   }
 
+  // Avoid infinite loops
+  if (BAA.isMustAlias(M->getSource(), CopySource))
+    return false;
+
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
   //    memcpy(a <- b)

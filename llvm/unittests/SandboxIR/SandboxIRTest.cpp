@@ -801,7 +801,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   // isValidOperands
   auto *LLVMArgV1 = LLVMF.getArg(0);
   auto *LLVMArgV2 = LLVMF.getArg(1);
-  ArrayRef<int> Mask({1, 2});
+  SmallVector<int, 2> Mask({1, 2});
   EXPECT_EQ(
       sandboxir::ShuffleVectorInst::isValidOperands(ArgV1, ArgV2, Mask),
       llvm::ShuffleVectorInst::isValidOperands(LLVMArgV1, LLVMArgV2, Mask));
@@ -815,8 +815,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     I->commute();
     EXPECT_EQ(I->getOperand(0), ArgV2);
     EXPECT_EQ(I->getOperand(1), ArgV1);
-    EXPECT_THAT(I->getShuffleMask(),
-                testing::ContainerEq(ArrayRef<int>({2, 0})));
+    EXPECT_THAT(I->getShuffleMask(), testing::ElementsAre(2, 0));
   }
 
   // getType
@@ -828,17 +827,16 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
 
   // getShuffleMask / getShuffleMaskForBitcode
   {
-    EXPECT_THAT(SVI->getShuffleMask(),
-                testing::ContainerEq(ArrayRef<int>({0, 2})));
+    EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAre(0, 2));
 
     SmallVector<int, 2> Result;
     SVI->getShuffleMask(Result);
-    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({0, 2})));
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
 
     Result.clear();
     sandboxir::ShuffleVectorInst::getShuffleMask(
         SVI->getShuffleMaskForBitcode(), Result);
-    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({0, 2})));
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
   }
 
   // convertShuffleMaskForBitcode
@@ -847,15 +845,14 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         ArrayRef<int>({2, 3}), ArgV1->getType(), Ctx);
     SmallVector<int, 2> Result;
     sandboxir::ShuffleVectorInst::getShuffleMask(C, Result);
-    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({2, 3})));
+    EXPECT_THAT(Result, testing::ElementsAre(2, 3));
   }
 
   // setShuffleMask
   {
     auto *I = CreateShuffleWithMask(0, 1);
     I->setShuffleMask(ArrayRef<int>({2, 3}));
-    EXPECT_THAT(I->getShuffleMask(),
-                testing::ContainerEq(ArrayRef<int>({2, 3})));
+    EXPECT_THAT(I->getShuffleMask(), testing::ElementsAre(2, 3));
   }
 
   // The following functions check different mask properties. Note that most
@@ -1107,7 +1104,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   {
     SmallVector<int, 4> M = {0, 2, 1, 3};
     ShuffleVectorInst::commuteShuffleMask(M, 2);
-    EXPECT_THAT(M, testing::ContainerEq(ArrayRef<int>({2, 0, 3, 1})));
+    EXPECT_THAT(M, testing::ElementsAre(2, 0, 3, 1));
   }
 
   // isInterleave / isInterleaveMask
@@ -1119,7 +1116,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     SmallVector<unsigned, 4> StartIndexes;
     EXPECT_TRUE(sandboxir::ShuffleVectorInst::isInterleaveMask(
         I->getShuffleMask(), 2, 4, StartIndexes));
-    EXPECT_THAT(StartIndexes, testing::ContainerEq(ArrayRef<unsigned>({0, 2})));
+    EXPECT_THAT(StartIndexes, testing::ElementsAre(0, 2));
   }
   {
     auto *I = CreateShuffleWithMask(0, 3, 1, 2);
@@ -1868,6 +1865,232 @@ define void @foo(i8 %arg) {
     EXPECT_EQ(NewCallBr->getNextNode(), nullptr);
     EXPECT_EQ(NewCallBr->getParent(), BB0);
   }
+}
+
+TEST_F(SandboxIRTest, FuncletPadInst_CatchPadInst_CleanupPadInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %handler0] unwind to caller
+handler0:
+  %catchpad = catchpad within %cs [ptr @foo]
+  ret void
+handler1:
+  %cleanuppad = cleanuppad within %cs [ptr @foo]
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMDispatch = getBasicBlockByName(LLVMF, "dispatch");
+  BasicBlock *LLVMHandler0 = getBasicBlockByName(LLVMF, "handler0");
+  BasicBlock *LLVMHandler1 = getBasicBlockByName(LLVMF, "handler1");
+  auto *LLVMCP = cast<llvm::CatchPadInst>(&*LLVMHandler0->begin());
+  auto *LLVMCLP = cast<llvm::CleanupPadInst>(&*LLVMHandler1->begin());
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Dispatch = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMDispatch));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMHandler0));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMHandler1));
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb")));
+  auto *BBRet = cast<sandboxir::ReturnInst>(&*BB->begin());
+  auto *CS = cast<sandboxir::CatchSwitchInst>(&*Dispatch->begin());
+  [[maybe_unused]] auto *CP =
+      cast<sandboxir::CatchPadInst>(&*Handler0->begin());
+  [[maybe_unused]] auto *CLP =
+      cast<sandboxir::CleanupPadInst>(&*Handler1->begin());
+
+  // Check getCatchSwitch().
+  EXPECT_EQ(CP->getCatchSwitch(), CS);
+  EXPECT_EQ(CP->getCatchSwitch(), Ctx.getValue(LLVMCP->getCatchSwitch()));
+
+  for (llvm::FuncletPadInst *LLVMFPI :
+       {static_cast<llvm::FuncletPadInst *>(LLVMCP),
+        static_cast<llvm::FuncletPadInst *>(LLVMCLP)}) {
+    auto *FPI = cast<sandboxir::FuncletPadInst>(Ctx.getValue(LLVMFPI));
+    // Check arg_size().
+    EXPECT_EQ(FPI->arg_size(), LLVMFPI->arg_size());
+    // Check getParentPad().
+    EXPECT_EQ(FPI->getParentPad(), Ctx.getValue(LLVMFPI->getParentPad()));
+    // Check setParentPad().
+    auto *OrigParentPad = FPI->getParentPad();
+    auto *NewParentPad = Dispatch;
+    EXPECT_NE(NewParentPad, OrigParentPad);
+    FPI->setParentPad(NewParentPad);
+    EXPECT_EQ(FPI->getParentPad(), NewParentPad);
+    FPI->setParentPad(OrigParentPad);
+    EXPECT_EQ(FPI->getParentPad(), OrigParentPad);
+    // Check getArgOperand().
+    for (auto Idx : seq<unsigned>(0, FPI->arg_size()))
+      EXPECT_EQ(FPI->getArgOperand(Idx),
+                Ctx.getValue(LLVMFPI->getArgOperand(Idx)));
+    // Check setArgOperand().
+    auto *OrigArgOperand = FPI->getArgOperand(0);
+    auto *NewArgOperand = Dispatch;
+    EXPECT_NE(NewArgOperand, OrigArgOperand);
+    FPI->setArgOperand(0, NewArgOperand);
+    EXPECT_EQ(FPI->getArgOperand(0), NewArgOperand);
+    FPI->setArgOperand(0, OrigArgOperand);
+    EXPECT_EQ(FPI->getArgOperand(0), OrigArgOperand);
+  }
+  // Check CatchPadInst::create().
+  auto *NewCPI = cast<sandboxir::CatchPadInst>(sandboxir::CatchPadInst::create(
+      CS, {}, BBRet->getIterator(), BB, Ctx, "NewCPI"));
+  EXPECT_EQ(NewCPI->getCatchSwitch(), CS);
+  EXPECT_EQ(NewCPI->arg_size(), 0u);
+  EXPECT_EQ(NewCPI->getNextNode(), BBRet);
+#ifndef NDEBUG
+  EXPECT_EQ(NewCPI->getName(), "NewCPI");
+#endif // NDEBUG
+  // Check CleanupPadInst::create().
+  auto *NewCLPI =
+      cast<sandboxir::CleanupPadInst>(sandboxir::CleanupPadInst::create(
+          CS, {}, BBRet->getIterator(), BB, Ctx, "NewCLPI"));
+  EXPECT_EQ(NewCLPI->getParentPad(), CS);
+  EXPECT_EQ(NewCLPI->arg_size(), 0u);
+  EXPECT_EQ(NewCLPI->getNextNode(), BBRet);
+#ifndef NDEBUG
+  EXPECT_EQ(NewCLPI->getName(), "NewCLPI");
+#endif // NDEBUG
+}
+
+TEST_F(SandboxIRTest, CatchReturnInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %catch] unwind to caller
+catch:
+  %catchpad = catchpad within %cs [ptr @foo]
+  catchret from %catchpad to label %continue
+continue:
+  ret void
+catch2:
+  %catchpad2 = catchpad within %cs [ptr @foo]
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCatch = getBasicBlockByName(LLVMF, "catch");
+  auto LLVMIt = LLVMCatch->begin();
+  [[maybe_unused]] auto *LLVMCP = cast<llvm::CatchPadInst>(&*LLVMIt++);
+  auto *LLVMCR = cast<llvm::CatchReturnInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Catch = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCatch));
+  auto *Catch2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "catch2")));
+  auto It = Catch->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CatchPadInst>(&*It++);
+  auto *CR = cast<sandboxir::CatchReturnInst>(&*It++);
+  auto *CP2 = cast<sandboxir::CatchPadInst>(&*Catch2->begin());
+
+  // Check getCatchPad().
+  EXPECT_EQ(CR->getCatchPad(), Ctx.getValue(LLVMCR->getCatchPad()));
+  // Check setCatchPad().
+  auto *OrigCP = CR->getCatchPad();
+  auto *NewCP = CP2;
+  EXPECT_NE(NewCP, OrigCP);
+  CR->setCatchPad(NewCP);
+  EXPECT_EQ(CR->getCatchPad(), NewCP);
+  CR->setCatchPad(OrigCP);
+  EXPECT_EQ(CR->getCatchPad(), OrigCP);
+  // Check getSuccessor().
+  EXPECT_EQ(CR->getSuccessor(), Ctx.getValue(LLVMCR->getSuccessor()));
+  // Check setSuccessor().
+  auto *OrigSucc = CR->getSuccessor();
+  auto *NewSucc = Catch;
+  EXPECT_NE(NewSucc, OrigSucc);
+  CR->setSuccessor(NewSucc);
+  EXPECT_EQ(CR->getSuccessor(), NewSucc);
+  CR->setSuccessor(OrigSucc);
+  EXPECT_EQ(CR->getSuccessor(), OrigSucc);
+  // Check getNumSuccessors().
+  EXPECT_EQ(CR->getNumSuccessors(), LLVMCR->getNumSuccessors());
+  // Check getCatchSwitchParentPad().
+  EXPECT_EQ(CR->getCatchSwitchParentPad(),
+            Ctx.getValue(LLVMCR->getCatchSwitchParentPad()));
+  // Check create().
+  auto *CRI =
+      cast<sandboxir::CatchReturnInst>(sandboxir::CatchReturnInst::create(
+          CP, Catch, CP->getIterator(), Catch, Ctx));
+  EXPECT_EQ(CRI->getNextNode(), CP);
+  EXPECT_EQ(CRI->getCatchPad(), CP);
+  EXPECT_EQ(CRI->getSuccessor(), Catch);
+}
+
+TEST_F(SandboxIRTest, CleanupReturnInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  invoke void @foo()
+              to label %throw unwind label %cleanup
+throw:
+  ret void
+cleanup:
+  %cleanuppad = cleanuppad within none []
+  cleanupret from %cleanuppad unwind label %cleanup2
+cleanup2:
+  %cleanuppad2 = cleanuppad within none []
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCleanup = getBasicBlockByName(LLVMF, "cleanup");
+  auto LLVMIt = LLVMCleanup->begin();
+  [[maybe_unused]] auto *LLVMCP = cast<llvm::CleanupPadInst>(&*LLVMIt++);
+  auto *LLVMCRI = cast<llvm::CleanupReturnInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Throw = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "throw")));
+  auto *Cleanup = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCleanup));
+  auto *Cleanup2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "cleanup2")));
+  auto It = Cleanup->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CleanupPadInst>(&*It++);
+  auto *CRI = cast<sandboxir::CleanupReturnInst>(&*It++);
+  It = Cleanup2->begin();
+  auto *CP2 = cast<sandboxir::CleanupPadInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check hasUnwindDest().
+  EXPECT_EQ(CRI->hasUnwindDest(), LLVMCRI->hasUnwindDest());
+  // Check unwindsToCaller().
+  EXPECT_EQ(CRI->unwindsToCaller(), LLVMCRI->unwindsToCaller());
+  // Check getCleanupPad().
+  EXPECT_EQ(CRI->getCleanupPad(), Ctx.getValue(LLVMCRI->getCleanupPad()));
+  // Check setCleanupPad().
+  auto *OrigCleanupPad = CRI->getCleanupPad();
+  auto *NewCleanupPad = CP2;
+  EXPECT_NE(NewCleanupPad, OrigCleanupPad);
+  CRI->setCleanupPad(NewCleanupPad);
+  EXPECT_EQ(CRI->getCleanupPad(), NewCleanupPad);
+  CRI->setCleanupPad(OrigCleanupPad);
+  EXPECT_EQ(CRI->getCleanupPad(), OrigCleanupPad);
+  // Check setNumSuccessors().
+  EXPECT_EQ(CRI->getNumSuccessors(), LLVMCRI->getNumSuccessors());
+  // Check getUnwindDest().
+  EXPECT_EQ(CRI->getUnwindDest(), Ctx.getValue(LLVMCRI->getUnwindDest()));
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CRI->getUnwindDest();
+  auto *NewUnwindDest = Throw;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  CRI->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CRI->getUnwindDest(), NewUnwindDest);
+  CRI->setUnwindDest(OrigUnwindDest);
+  EXPECT_EQ(CRI->getUnwindDest(), OrigUnwindDest);
+  // Check create().
+  auto *UnwindBB = Cleanup;
+  auto *NewCRI = sandboxir::CleanupReturnInst::create(
+      CP2, UnwindBB, Ret->getIterator(), Ret->getParent(), Ctx);
+  EXPECT_EQ(NewCRI->getCleanupPad(), CP2);
+  EXPECT_EQ(NewCRI->getUnwindDest(), UnwindBB);
+  EXPECT_EQ(NewCRI->getNextNode(), Ret);
 }
 
 TEST_F(SandboxIRTest, GetElementPtrInstruction) {
