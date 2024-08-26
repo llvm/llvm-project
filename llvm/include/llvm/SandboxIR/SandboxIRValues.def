@@ -19,6 +19,7 @@ DEF_VALUE(Argument, Argument)
 DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_USER(Constant, Constant)
+DEF_USER(ConstantInt, ConstantInt)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
@@ -36,6 +37,7 @@ DEF_USER(Constant, Constant)
 DEF_INSTR(Opaque,         OP(Opaque),         OpaqueInst)
 DEF_INSTR(ExtractElement, OP(ExtractElement), ExtractElementInst)
 DEF_INSTR(InsertElement,  OP(InsertElement),  InsertElementInst)
+DEF_INSTR(ShuffleVector,  OP(ShuffleVector),  ShuffleVectorInst)
 DEF_INSTR(Select,         OP(Select),         SelectInst)
 DEF_INSTR(Br,             OP(Br),             BranchInst)
 DEF_INSTR(Load,           OP(Load),           LoadInst)
@@ -44,8 +46,38 @@ DEF_INSTR(Ret,            OP(Ret),            ReturnInst)
 DEF_INSTR(Call,           OP(Call),           CallInst)
 DEF_INSTR(Invoke,         OP(Invoke),         InvokeInst)
 DEF_INSTR(CallBr,         OP(CallBr),         CallBrInst)
+DEF_INSTR(CatchPad,       OP(CatchPad),       CatchPadInst)
+DEF_INSTR(CleanupPad,     OP(CleanupPad),     CleanupPadInst)
+DEF_INSTR(CatchRet,       OP(CatchRet),       CatchReturnInst)
+DEF_INSTR(CleanupRet,     OP(CleanupRet),     CleanupReturnInst)
 DEF_INSTR(GetElementPtr,  OP(GetElementPtr),  GetElementPtrInst)
-DEF_INSTR(AtomicCmpXchg, OP(AtomicCmpXchg), AtomicCmpXchgInst)
+DEF_INSTR(CatchSwitch,    OP(CatchSwitch),    CatchSwitchInst)
+DEF_INSTR(Switch,         OP(Switch),         SwitchInst)
+DEF_INSTR(UnOp,           OPCODES( \
+                          OP(FNeg) \
+                          ),                  UnaryOperator)
+DEF_INSTR(BinaryOperator, OPCODES(\
+                          OP(Add)  \
+                          OP(FAdd) \
+                          OP(Sub)  \
+                          OP(FSub) \
+                          OP(Mul)  \
+                          OP(FMul) \
+                          OP(UDiv) \
+                          OP(SDiv) \
+                          OP(FDiv) \
+                          OP(URem) \
+                          OP(SRem) \
+                          OP(FRem) \
+                          OP(Shl)  \
+                          OP(LShr) \
+                          OP(AShr) \
+                          OP(And)  \
+                          OP(Or)   \
+                          OP(Xor)  \
+                          ),                  BinaryOperator)
+DEF_INSTR(AtomicRMW,      OP(AtomicRMW),      AtomicRMWInst)
+DEF_INSTR(AtomicCmpXchg,  OP(AtomicCmpXchg),  AtomicCmpXchgInst)
 DEF_INSTR(Alloca,         OP(Alloca),         AllocaInst)
 DEF_INSTR(Cast,   OPCODES(\
                           OP(ZExt)          \

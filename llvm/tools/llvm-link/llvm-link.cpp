@@ -381,9 +381,8 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     // definition, so make the import type definition directly.
     // FIXME: A follow-up patch should add test coverage for import declaration
     // in `llvm-link` CLI (e.g., by introducing a new command line option).
-    auto &Entry =
-        ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry[F->getGUID()] = GlobalValueSummary::Definition;
+    ImportList.addDefinition(
+        FileNameStringCache.insert(FileName).first->getKey(), F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));

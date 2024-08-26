@@ -42,6 +42,7 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -64,6 +65,22 @@ static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
 static llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
+
+//===--------------------------------------------------------------------===//
+//                        Defines for metadata
+//===--------------------------------------------------------------------===//
+
+// Those values are crucial to be the SAME as in ubsan runtime library.
+enum VariableTypeDescriptorKind : uint16_t {
+  /// An integer type.
+  TK_Integer = 0x0000,
+  /// A floating-point type.
+  TK_Float = 0x0001,
+  /// An _BitInt(N) type.
+  TK_BitInt = 0x0002,
+  /// Any other type. The value representation is unspecified.
+  TK_Unknown = 0xffff
+};
 
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
@@ -1148,22 +1165,6 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
 
   return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), Res,
                                    getIntAlign(), "..counted_by.load");
-}
-
-const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
-  if (!FD)
-    return nullptr;
-
-  const auto *CAT = FD->getType()->getAs<CountAttributedType>();
-  if (!CAT)
-    return nullptr;
-
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
-  const auto *CountDecl = CountDRE->getDecl();
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
-    CountDecl = IFD->getAnonField();
-
-  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -3304,22 +3305,40 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
 ///   { i16 TypeKind, i16 TypeInfo }
 /// \endcode
 ///
-/// followed by an array of i8 containing the type name. TypeKind is 0 for an
-/// integer, 1 for a floating point value, and -1 for anything else.
+/// followed by an array of i8 containing the type name with extra information
+/// for BitInt. TypeKind is TK_Integer(0) for an integer, TK_Float(1) for a
+/// floating point value, TK_BitInt(2) for BitInt and TK_Unknown(0xFFFF) for
+/// anything else.
 llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // Only emit each type's descriptor once.
   if (llvm::Constant *C = CGM.getTypeDescriptorFromMap(T))
     return C;
 
-  uint16_t TypeKind = -1;
+  uint16_t TypeKind = TK_Unknown;
   uint16_t TypeInfo = 0;
+  bool IsBitInt = false;
 
   if (T->isIntegerType()) {
-    TypeKind = 0;
+    TypeKind = TK_Integer;
     TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
                (T->isSignedIntegerType() ? 1 : 0);
+    // Follow suggestion from discussion of issue 64100.
+    // So we can write the exact amount of bits in TypeName after '\0'
+    // making it <diagnostic-like type name>.'\0'.<32-bit width>.
+    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
+      // Do a sanity checks as we are using 32-bit type to store bit length.
+      assert(getContext().getTypeSize(T) > 0 &&
+             " non positive amount of bits in __BitInt type");
+      assert(getContext().getTypeSize(T) <= 0xFFFFFFFF &&
+             " too many bits in __BitInt type");
+
+      // Redefine TypeKind with the actual __BitInt type if we have signed
+      // BitInt.
+      TypeKind = TK_BitInt;
+      IsBitInt = true;
+    }
   } else if (T->isFloatingType()) {
-    TypeKind = 1;
+    TypeKind = TK_Float;
     TypeInfo = getContext().getTypeSize(T);
   }
 
@@ -3329,6 +3348,20 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   CGM.getDiags().ConvertArgToString(
       DiagnosticsEngine::ak_qualtype, (intptr_t)T.getAsOpaquePtr(), StringRef(),
       StringRef(), std::nullopt, Buffer, std::nullopt);
+
+  if (IsBitInt) {
+    // The Structure is: 0 to end the string, 32 bit unsigned integer in target
+    // endianness, zero.
+    char S[6] = {'\0', '\0', '\0', '\0', '\0', '\0'};
+    const auto *EIT = T->castAs<BitIntType>();
+    uint32_t Bits = EIT->getNumBits();
+    llvm::support::endian::write32(S + 1, Bits,
+                                   getTarget().isBigEndian()
+                                       ? llvm::endianness::big
+                                       : llvm::endianness::little);
+    StringRef Str = StringRef(S, sizeof(S) / sizeof(decltype(S[0])));
+    Buffer.append(Str);
+  }
 
   llvm::Constant *Components[] = {
     Builder.getInt16(TypeKind), Builder.getInt16(TypeInfo),
@@ -4305,7 +4338,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
           if (std::optional<int64_t> Diff =
                   getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {
             CharUnits OffsetDiff = CGM.getContext().toCharUnitsFromBits(*Diff);
@@ -4359,13 +4392,24 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   return LV;
 }
 
+llvm::Value *CodeGenFunction::EmitMatrixIndexExpr(const Expr *E) {
+  llvm::Value *Idx = EmitScalarExpr(E);
+  if (Idx->getType() == IntPtrTy)
+    return Idx;
+  bool IsSigned = E->getType()->isSignedIntegerOrEnumerationType();
+  return Builder.CreateIntCast(Idx, IntPtrTy, IsSigned);
+}
+
 LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   assert(
       !E->isIncomplete() &&
       "incomplete matrix subscript expressions should be rejected during Sema");
   LValue Base = EmitLValue(E->getBase());
-  llvm::Value *RowIdx = EmitScalarExpr(E->getRowIdx());
-  llvm::Value *ColIdx = EmitScalarExpr(E->getColumnIdx());
+
+  // Extend or truncate the index type to 32 or 64-bits if needed.
+  llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
+  llvm::Value *ColIdx = EmitMatrixIndexExpr(E->getColumnIdx());
+
   llvm::Value *NumRows = Builder.getIntN(
       RowIdx->getType()->getScalarSizeInBits(),
       E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
