@@ -194,6 +194,9 @@ TEST_F(RtsanFileTest, OpenatDiesWhenRealtime) {
 }
 
 TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
+  const mode_t existing_umask = umask(0);
+  umask(existing_umask);
+
   const int mode = S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR;
 
   const int fd = open(GetTemporaryFilePath(), O_CREAT | O_WRONLY, mode);
@@ -204,7 +207,9 @@ TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
   ASSERT_THAT(stat(GetTemporaryFilePath(), &st), Eq(0));
 
   // Mask st_mode to get permission bits only
-  ASSERT_THAT(st.st_mode & 0777, Eq(mode));
+  const mode_t actual_mode = st.st_mode & 0777;
+  const mode_t expected_mode = mode & ~existing_umask;
+  ASSERT_THAT(actual_mode, Eq(expected_mode));
 }
 
 TEST_F(RtsanFileTest, CreatDiesWhenRealtime) {
