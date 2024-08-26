@@ -128,6 +128,7 @@ class CallBase;
 class CallInst;
 class InvokeInst;
 class CallBrInst;
+class LandingPadInst;
 class FuncletPadInst;
 class CatchPadInst;
 class CleanupPadInst;
@@ -263,6 +264,7 @@ protected:
   friend class CallInst;              // For getting `Val`.
   friend class InvokeInst;            // For getting `Val`.
   friend class CallBrInst;            // For getting `Val`.
+  friend class LandingPadInst;        // For getting `Val`.
   friend class FuncletPadInst;        // For getting `Val`.
   friend class CatchPadInst;          // For getting `Val`.
   friend class CleanupPadInst;        // For getting `Val`.
@@ -692,6 +694,7 @@ protected:
   friend class CallInst;           // For getTopmostLLVMInstruction().
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
+  friend class LandingPadInst;     // For getTopmostLLVMInstruction().
   friend class CatchPadInst;       // For getTopmostLLVMInstruction().
   friend class CleanupPadInst;     // For getTopmostLLVMInstruction().
   friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
@@ -1829,8 +1832,7 @@ public:
   BasicBlock *getUnwindDest() const;
   void setNormalDest(BasicBlock *BB);
   void setUnwindDest(BasicBlock *BB);
-  // TODO: Return a `LandingPadInst` once implemented.
-  Instruction *getLandingPadInst() const;
+  LandingPadInst *getLandingPadInst() const;
   BasicBlock *getSuccessor(unsigned SuccIdx) const;
   void setSuccessor(unsigned SuccIdx, BasicBlock *NewSucc) {
     assert(SuccIdx < 2 && "Successor # out of range for invoke!");
@@ -1885,6 +1887,50 @@ public:
   BasicBlock *getSuccessor(unsigned Idx) const;
   unsigned getNumSuccessors() const {
     return cast<llvm::CallBrInst>(Val)->getNumSuccessors();
+  }
+};
+
+class LandingPadInst : public SingleLLVMInstructionImpl<llvm::LandingPadInst> {
+  LandingPadInst(llvm::LandingPadInst *LP, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::LandingPad, Opcode::LandingPad, LP,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static LandingPadInst *create(Type *RetTy, unsigned NumReservedClauses,
+                                BBIterator WhereIt, BasicBlock *WhereBB,
+                                Context &Ctx, const Twine &Name = "");
+  /// Return 'true' if this landingpad instruction is a
+  /// cleanup. I.e., it should be run when unwinding even if its landing pad
+  /// doesn't catch the exception.
+  bool isCleanup() const {
+    return cast<llvm::LandingPadInst>(Val)->isCleanup();
+  }
+  /// Indicate that this landingpad instruction is a cleanup.
+  void setCleanup(bool V);
+
+  // TODO: We are not implementing addClause() because we have no way to revert
+  // it for now.
+
+  /// Get the value of the clause at index Idx. Use isCatch/isFilter to
+  /// determine what type of clause this is.
+  Constant *getClause(unsigned Idx) const;
+
+  /// Return 'true' if the clause and index Idx is a catch clause.
+  bool isCatch(unsigned Idx) const {
+    return cast<llvm::LandingPadInst>(Val)->isCatch(Idx);
+  }
+  /// Return 'true' if the clause and index Idx is a filter clause.
+  bool isFilter(unsigned Idx) const {
+    return cast<llvm::LandingPadInst>(Val)->isFilter(Idx);
+  }
+  /// Get the number of clauses for this landing pad.
+  unsigned getNumClauses() const {
+    return cast<llvm::LandingPadInst>(Val)->getNumOperands();
+  }
+  // TODO: We are not implementing reserveClauses() because we can't revert it.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::LandingPad;
   }
 };
 
@@ -2908,6 +2954,8 @@ protected:
   friend InvokeInst; // For createInvokeInst()
   CallBrInst *createCallBrInst(llvm::CallBrInst *I);
   friend CallBrInst; // For createCallBrInst()
+  LandingPadInst *createLandingPadInst(llvm::LandingPadInst *I);
+  friend LandingPadInst; // For createLandingPadInst()
   CatchPadInst *createCatchPadInst(llvm::CatchPadInst *I);
   friend CatchPadInst; // For createCatchPadInst()
   CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
