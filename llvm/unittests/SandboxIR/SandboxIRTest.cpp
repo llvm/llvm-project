@@ -580,6 +580,52 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, FenceInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+  fence syncscope("singlethread") seq_cst
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB = &*LLVMF->begin();
+  auto *LLVMFence = cast<llvm::FenceInst>(&*LLVMBB->begin());
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Fence = cast<sandboxir::FenceInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getOrdering().
+  EXPECT_EQ(Fence->getOrdering(), LLVMFence->getOrdering());
+  // Check setOrdering().
+  auto OrigOrdering = Fence->getOrdering();
+  auto NewOrdering = AtomicOrdering::Release;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  Fence->setOrdering(NewOrdering);
+  EXPECT_EQ(Fence->getOrdering(), NewOrdering);
+  Fence->setOrdering(OrigOrdering);
+  EXPECT_EQ(Fence->getOrdering(), OrigOrdering);
+  // Check getSyncScopeID().
+  EXPECT_EQ(Fence->getSyncScopeID(), LLVMFence->getSyncScopeID());
+  // Check setSyncScopeID().
+  auto OrigSSID = Fence->getSyncScopeID();
+  auto NewSSID = SyncScope::System;
+  EXPECT_NE(NewSSID, OrigSSID);
+  Fence->setSyncScopeID(NewSSID);
+  EXPECT_EQ(Fence->getSyncScopeID(), NewSSID);
+  Fence->setSyncScopeID(OrigSSID);
+  EXPECT_EQ(Fence->getSyncScopeID(), OrigSSID);
+  // Check create().
+  auto *NewFence =
+      sandboxir::FenceInst::create(AtomicOrdering::Release, Ret->getIterator(),
+                                   BB, Ctx, SyncScope::SingleThread);
+  EXPECT_EQ(NewFence->getNextNode(), Ret);
+  EXPECT_EQ(NewFence->getOrdering(), AtomicOrdering::Release);
+  EXPECT_EQ(NewFence->getSyncScopeID(), SyncScope::SingleThread);
+}
+
 TEST_F(SandboxIRTest, SelectInst) {
   parseIR(C, R"IR(
 define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
@@ -1865,6 +1911,67 @@ define void @foo(i8 %arg) {
     EXPECT_EQ(NewCallBr->getNextNode(), nullptr);
     EXPECT_EQ(NewCallBr->getParent(), BB0);
   }
+}
+
+TEST_F(SandboxIRTest, LandingPadInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+unwind:
+  %lpad = landingpad { ptr, i32 }
+            catch ptr null
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwind = getBasicBlockByName(LLVMF, "unwind");
+  auto *LLVMLPad = cast<llvm::LandingPadInst>(&*LLVMUnwind->begin());
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Unwind = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwind));
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb")));
+  auto It = Unwind->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check isCleanup().
+  EXPECT_EQ(LPad->isCleanup(), LLVMLPad->isCleanup());
+  // Check setCleanup().
+  auto OrigIsCleanup = LPad->isCleanup();
+  auto NewIsCleanup = true;
+  EXPECT_NE(NewIsCleanup, OrigIsCleanup);
+  LPad->setCleanup(NewIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), NewIsCleanup);
+  LPad->setCleanup(OrigIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), OrigIsCleanup);
+  // Check getNumClauses().
+  EXPECT_EQ(LPad->getNumClauses(), LLVMLPad->getNumClauses());
+  // Check getClause().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->getClause(Idx), Ctx.getValue(LLVMLPad->getClause(Idx)));
+  // Check isCatch().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->isCatch(Idx), LLVMLPad->isCatch(Idx));
+  // Check isFilter().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->isFilter(Idx), LLVMLPad->isFilter(Idx));
+  // Check create().
+  auto *BBRet = &*BB->begin();
+  auto *NewLPad =
+      cast<sandboxir::LandingPadInst>(sandboxir::LandingPadInst::create(
+          Type::getInt8Ty(C), 0, BBRet->getIterator(), BBRet->getParent(), Ctx,
+          "NewLPad"));
+  EXPECT_EQ(NewLPad->getNextNode(), BBRet);
+  EXPECT_FALSE(NewLPad->isCleanup());
+#ifndef NDEBUG
+  EXPECT_EQ(NewLPad->getName(), "NewLPad");
+#endif // NDEBUG
 }
 
 TEST_F(SandboxIRTest, FuncletPadInst_CatchPadInst_CleanupPadInst) {
