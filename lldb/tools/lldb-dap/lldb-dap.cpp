@@ -4364,7 +4364,7 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
   g_dap.RegisterRequestCallback("disassemble", request_disassemble);
-  // Instruction breapoint request
+  // Instruction breakpoint request
   g_dap.RegisterRequestCallback("setInstructionBreakpoints",
                                 request_setInstructionBreakpoints);
   // Custom requests
