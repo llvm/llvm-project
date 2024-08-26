@@ -91,10 +91,10 @@ bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
   return m_opaque_up->RemoveThread(thread.GetSP());
 }
 
-
-lldb::SBError SBSaveCoreOptions::AddMemoryRegionToSave(const SBMemoryRegionInfo &region) {
+lldb::SBError
+SBSaveCoreOptions::AddMemoryRegionToSave(const SBMemoryRegionInfo &region) {
   LLDB_INSTRUMENT_VA(this, region);
-  // Currently add memory region can't fail, so we always return a success 
+  // Currently add memory region can't fail, so we always return a success
   // SBerror, but because these API's live forever, this is the most future
   // proof thing to do.
   m_opaque_up->AddMemoryRegionToSave(region.ref());

@@ -31,9 +31,7 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
   return error;
 }
 
-void SaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) { 
-  m_style = style;
-}
+void SaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) { m_style = style; }
 
 void SaveCoreOptions::SetOutputFile(FileSpec file) { m_file = file; }
 
@@ -107,7 +105,8 @@ bool SaveCoreOptions::HasSpecifiedThreads() const {
   return !m_threads_to_save.empty();
 }
 
-void SaveCoreOptions::AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region) {
+void SaveCoreOptions::AddMemoryRegionToSave(
+    const lldb_private::MemoryRegionInfo &region) {
   m_regions_to_save.Insert(region.GetRange(), /*combine=*/true);
 }
 

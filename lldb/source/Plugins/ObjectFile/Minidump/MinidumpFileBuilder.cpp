@@ -830,7 +830,8 @@ Status MinidumpFileBuilder::AddMemoryList() {
                                                     all_core_memory_ranges);
 
   std::vector<Process::CoreFileMemoryRange> all_core_memory_vec;
-  // Extract all the data into just a vector of data. So we can mutate this in place.
+  // Extract all the data into just a vector of data. So we can mutate this in
+  // place.
   for (const auto &core_range : all_core_memory_ranges)
     all_core_memory_vec.push_back(core_range.data);
 
@@ -962,8 +963,8 @@ GetLargestRangeSize(const std::vector<Process::CoreFileMemoryRange> &ranges) {
   return max_size;
 }
 
-Status
-MinidumpFileBuilder::AddMemoryList_32(std::vector<Process::CoreFileMemoryRange> &ranges) {
+Status MinidumpFileBuilder::AddMemoryList_32(
+    std::vector<Process::CoreFileMemoryRange> &ranges) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -1037,8 +1038,8 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<Process::CoreFileMemoryRange> 
   return error;
 }
 
-Status
-MinidumpFileBuilder::AddMemoryList_64(std::vector<Process::CoreFileMemoryRange> &ranges) {
+Status MinidumpFileBuilder::AddMemoryList_64(
+    std::vector<Process::CoreFileMemoryRange> &ranges) {
   Status error;
   if (ranges.empty())
     return error;

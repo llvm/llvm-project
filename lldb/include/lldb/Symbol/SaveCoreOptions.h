@@ -12,11 +12,10 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RangeMap.h"
 
-
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_set>
-#include <set>
 
 using MemoryRanges = lldb_private::RangeVector<lldb::addr_t, lldb::addr_t>;
 
@@ -44,7 +43,7 @@ public:
   bool HasSpecifiedThreads() const;
 
   Status EnsureValidConfiguration(lldb::ProcessSP process_sp) const;
-  const MemoryRanges& GetCoreFileMemoryRanges() const;
+  const MemoryRanges &GetCoreFileMemoryRanges() const;
 
   void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
 

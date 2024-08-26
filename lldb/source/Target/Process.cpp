@@ -6534,8 +6534,7 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // given region. If the region has dirty page information, only dirty pages
 // will be added to \a ranges, else the entire range will be added to \a
 // ranges.
-static void AddRegion(const MemoryRegionInfo &region, 
-                      bool try_dirty_pages,
+static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                       Process::CoreFileMemoryRanges &ranges) {
   // Don't add empty ranges.
   if (region.GetRange().GetByteSize() == 0)
@@ -6546,7 +6545,9 @@ static void AddRegion(const MemoryRegionInfo &region,
   if (try_dirty_pages && AddDirtyPages(region, ranges))
     return;
 
-  ranges.Append(region.GetRange().GetRangeBase(), region.GetRange().GetByteSize(), CreateCoreFileMemoryRange(region));
+  ranges.Append(region.GetRange().GetRangeBase(),
+                region.GetRange().GetByteSize(),
+                CreateCoreFileMemoryRange(region));
 }
 
 static void SaveOffRegionsWithStackPointers(
@@ -6595,8 +6596,8 @@ static void GetCoreFileSaveRangesFull(Process &process,
                                       Process::CoreFileMemoryRanges &ranges,
                                       std::set<addr_t> &stack_ends) {
 
-// Don't add only dirty pages, add full regions.
-const bool try_dirty_pages = false;
+  // Don't add only dirty pages, add full regions.
+  const bool try_dirty_pages = false;
   for (const auto &region : regions)
     if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
       AddRegion(region, try_dirty_pages, ranges);
@@ -6652,10 +6653,9 @@ static void GetCoreFileSaveRangesStackOnly(
   }
 }
 
-static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
-                                               const MemoryRegionInfos &regions,
-                                               const SaveCoreOptions &options,
-                                               Process::CoreFileMemoryRanges &ranges) {
+static void GetUserSpecifiedCoreFileSaveRanges(
+    Process &process, const MemoryRegionInfos &regions,
+    const SaveCoreOptions &options, Process::CoreFileMemoryRanges &ranges) {
   const auto &option_ranges = options.GetCoreFileMemoryRanges();
   if (option_ranges.IsEmpty())
     return;
@@ -6664,30 +6664,35 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
     if (entry)
       ranges.Append(range.GetRange().GetRangeBase(),
-                    range.GetRange().GetByteSize(), CreateCoreFileMemoryRange(range));
+                    range.GetRange().GetByteSize(),
+                    CreateCoreFileMemoryRange(range));
   }
 }
 
-static Status FinalizeCoreFileSaveRanges(Process::CoreFileMemoryRanges &ranges) {
-      Status error;
-      ranges.Sort();
-      for (size_t i = ranges.GetSize() - 1; i > 0; i--) {
-        auto region = ranges.GetMutableEntryAtIndex(i);
-        auto next_region = ranges.GetMutableEntryAtIndex(i - 1);
-        if (next_region->GetRangeEnd() >= region->GetRangeBase() 
-            && region->GetRangeBase() <= next_region->GetRangeEnd()
-            && region->data.lldb_permissions == next_region->data.lldb_permissions) {
-            const addr_t base = std::min(region->GetRangeBase(), next_region->GetRangeBase());
-            const addr_t byte_size = std::max(region->GetRangeEnd(), next_region->GetRangeEnd()) - base;
-            next_region->SetRangeBase(base);
-            next_region->SetByteSize(byte_size);
-            if (!ranges.Erase(i, i + 1)) {
-              error.SetErrorString("Core file memory ranges mutated outside of CalculateCoreFileSaveRanges");
-              return error;
-            }
-        }
+static Status
+FinalizeCoreFileSaveRanges(Process::CoreFileMemoryRanges &ranges) {
+  Status error;
+  ranges.Sort();
+  for (size_t i = ranges.GetSize() - 1; i > 0; i--) {
+    auto region = ranges.GetMutableEntryAtIndex(i);
+    auto next_region = ranges.GetMutableEntryAtIndex(i - 1);
+    if (next_region->GetRangeEnd() >= region->GetRangeBase() &&
+        region->GetRangeBase() <= next_region->GetRangeEnd() &&
+        region->data.lldb_permissions == next_region->data.lldb_permissions) {
+      const addr_t base =
+          std::min(region->GetRangeBase(), next_region->GetRangeBase());
+      const addr_t byte_size =
+          std::max(region->GetRangeEnd(), next_region->GetRangeEnd()) - base;
+      next_region->SetRangeBase(base);
+      next_region->SetByteSize(byte_size);
+      if (!ranges.Erase(i, i + 1)) {
+        error.SetErrorString("Core file memory ranges mutated outside of "
+                             "CalculateCoreFileSaveRanges");
+        return error;
+      }
     }
-    return error;                         
+  }
+  return error;
 }
 
 Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
@@ -6709,7 +6714,8 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
   // For fully custom set ups, we don't want to even look at threads if there
   // are no threads specified.
   if (core_style != lldb::eSaveCoreCustomOnly || options.HasSpecifiedThreads())
-    SaveOffRegionsWithStackPointers(*this, options, regions, ranges, stack_ends);
+    SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
+                                    stack_ends);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
