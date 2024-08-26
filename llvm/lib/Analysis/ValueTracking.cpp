@@ -5948,6 +5948,32 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.KnownFPClasses = fcNan;
       else if (!APFloat(Ty->getFltSemantics(), ~Bits.Zero).isNaN())
         Known.knownNot(fcNan);
+
+      // Build KnownBits representing Inf and check if it must be equal or
+      // unequal to this value.
+      auto InfKB = KnownBits::makeConstant(
+          APFloat::getInf(Ty->getFltSemantics(), false).bitcastToAPInt());
+      InfKB = InfKB.intersectWith(KnownBits::makeConstant(
+          APFloat::getInf(Ty->getFltSemantics(), true).bitcastToAPInt()));
+      if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
+        assert(!InfResult.value());
+        Known.knownNot(fcInf);
+      } else if (Bits == InfKB) {
+        Known.KnownFPClasses = fcInf;
+      }
+
+      // Build KnownBits representing Zero and check if it must be equal or
+      // unequal to this value.
+      auto ZeroKB = KnownBits::makeConstant(
+          APFloat::getZero(Ty->getFltSemantics(), false).bitcastToAPInt());
+      ZeroKB = ZeroKB.intersectWith(KnownBits::makeConstant(
+          APFloat::getZero(Ty->getFltSemantics(), true).bitcastToAPInt()));
+      if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
+        assert(!ZeroResult.value());
+        Known.knownNot(fcZero);
+      } else if (Bits == ZeroKB) {
+        Known.KnownFPClasses = fcZero;
+      }
     }
 
     break;
