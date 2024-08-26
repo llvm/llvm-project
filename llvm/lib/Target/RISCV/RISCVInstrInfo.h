@@ -209,7 +209,7 @@ public:
   getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-      unsigned MinRepeates) const override;
+      unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
   virtual outliner::InstrType

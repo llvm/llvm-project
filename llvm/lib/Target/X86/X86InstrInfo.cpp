@@ -10525,7 +10525,7 @@ std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 X86InstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-    unsigned MinRepeates) const {
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
     // FIXME: x86 doesn't implement getInstSizeInBytes, so

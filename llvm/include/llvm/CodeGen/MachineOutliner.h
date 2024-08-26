@@ -234,11 +234,11 @@ public:
   unsigned FrameConstructionID = 0;
 
   /// Return the number of candidates for this \p OutlinedFunction.
-  virtual unsigned getOccurrenceCount() const { return Candidates.size(); }
+  unsigned getOccurrenceCount() const { return Candidates.size(); }
 
   /// Return the number of bytes it would take to outline this
   /// function.
-  virtual unsigned getOutliningCost() const {
+  unsigned getOutliningCost() const {
     unsigned CallOverhead = 0;
     for (const Candidate &C : Candidates)
       CallOverhead += C.getCallOverhead();
@@ -272,7 +272,6 @@ public:
   }
 
   OutlinedFunction() = delete;
-  virtual ~OutlinedFunction() = default;
 };
 } // namespace outliner
 } // namespace llvm

@@ -2832,7 +2832,7 @@ std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 RISCVInstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-    unsigned MinRepeates) const {
+    unsigned MinRepeats) const {
 
   // First we need to filter out candidates where the X5 register (IE t0) can't
   // be used to setup the function call.
@@ -2844,7 +2844,7 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   llvm::erase_if(RepeatedSequenceLocs, CannotInsertCall);
 
   // If the sequence doesn't have enough candidates left, then we're done.
-  if (RepeatedSequenceLocs.size() < MinRepeates)
+  if (RepeatedSequenceLocs.size() < MinRepeats)
     return std::nullopt;
 
   unsigned SequenceSize = 0;

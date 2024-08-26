@@ -588,7 +588,7 @@ public:
   getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-      unsigned MinRepeates) const override;
+      unsigned MinRepeats) const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
