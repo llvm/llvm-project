@@ -314,57 +314,6 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   const MachineOperand &MO = MI->getOperand (opNum);
   SparcMCExpr::VariantKind TF = (SparcMCExpr::VariantKind) MO.getTargetFlags();
 
-#ifndef NDEBUG
-  // Verify the target flags.
-  if (MO.isGlobal() || MO.isSymbol() || MO.isCPI()) {
-    if (MI->getOpcode() == SP::CALL)
-      assert(TF == SparcMCExpr::VK_Sparc_None &&
-             "Cannot handle target flags on call address");
-    else if (MI->getOpcode() == SP::SETHIi)
-      assert((TF == SparcMCExpr::VK_Sparc_HI
-              || TF == SparcMCExpr::VK_Sparc_H44
-              || TF == SparcMCExpr::VK_Sparc_HH
-              || TF == SparcMCExpr::VK_Sparc_LM
-              || TF == SparcMCExpr::VK_Sparc_TLS_GD_HI22
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_HI22
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDO_HIX22
-              || TF == SparcMCExpr::VK_Sparc_TLS_IE_HI22
-              || TF == SparcMCExpr::VK_Sparc_TLS_LE_HIX22) &&
-             "Invalid target flags for address operand on sethi");
-    else if (MI->getOpcode() == SP::TLS_CALL)
-      assert((TF == SparcMCExpr::VK_Sparc_None
-              || TF == SparcMCExpr::VK_Sparc_TLS_GD_CALL
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_CALL) &&
-             "Cannot handle target flags on tls call address");
-    else if (MI->getOpcode() == SP::TLS_ADDrr)
-      assert((TF == SparcMCExpr::VK_Sparc_TLS_GD_ADD
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_ADD
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDO_ADD
-              || TF == SparcMCExpr::VK_Sparc_TLS_IE_ADD) &&
-             "Cannot handle target flags on add for TLS");
-    else if (MI->getOpcode() == SP::TLS_LDrr)
-      assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LD &&
-             "Cannot handle target flags on ld for TLS");
-    else if (MI->getOpcode() == SP::TLS_LDXrr)
-      assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LDX &&
-             "Cannot handle target flags on ldx for TLS");
-    else if (MI->getOpcode() == SP::XORri)
-      assert((TF == SparcMCExpr::VK_Sparc_TLS_LDO_LOX10
-              || TF == SparcMCExpr::VK_Sparc_TLS_LE_LOX10) &&
-             "Cannot handle target flags on xor for TLS");
-    else
-      assert((TF == SparcMCExpr::VK_Sparc_LO
-              || TF == SparcMCExpr::VK_Sparc_M44
-              || TF == SparcMCExpr::VK_Sparc_L44
-              || TF == SparcMCExpr::VK_Sparc_HM
-              || TF == SparcMCExpr::VK_Sparc_TLS_GD_LO10
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_LO10
-              || TF == SparcMCExpr::VK_Sparc_TLS_IE_LO10 ) &&
-             "Invalid target flags for small address operand");
-  }
-#endif
-
-
   bool CloseParen = SparcMCExpr::printVariantKind(O, TF);
 
   switch (MO.getType()) {
