@@ -9,7 +9,7 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
 
     @add_test_categories(["libc++"])
     def test_frame_recognizer(self):
-        """Test that implementation details details of `std::invoke`"""
+        """Test that implementation details of `std::invoke` are hidden"""
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
@@ -22,16 +22,13 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
                     for f in ["print_num", "add", "PrintAdder"]
                 )
             )
-            print(thread.GetFrameAtIndex(0).GetFunctionName())
             # Skip all hidden frames
             frame_id = 1
             while (
                 frame_id < thread.GetNumFrames()
                 and thread.GetFrameAtIndex(frame_id).IsHidden()
             ):
-                print(thread.GetFrameAtIndex(frame_id).GetFunctionName())
                 frame_id = frame_id + 1
-            print(thread.GetFrameAtIndex(frame_id).GetFunctionName())
             # Expect `std::invoke` to be the direct parent
             self.assertIn(
                 "::invoke", thread.GetFrameAtIndex(frame_id).GetFunctionName()
