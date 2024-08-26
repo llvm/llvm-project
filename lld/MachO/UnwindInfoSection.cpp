@@ -111,7 +111,6 @@ CREATE_LAYOUT_CLASS(CompactUnwind, FOR_EACH_CU_FIELD);
 
 void lld::macho::CompactUnwindEntry::relocateOneCompactUnwindEntry(
     const Defined *d) {
-  functionAddress = d->getVA();
 
   ConcatInputSection *unwindEntry = d->unwindEntry();
   if (!unwindEntry)
@@ -389,7 +388,9 @@ Symbol *UnwindInfoSectionImpl::canonicalizePersonality(Symbol *personality) {
 void UnwindInfoSectionImpl::relocateCompactUnwind(
     std::vector<CompactUnwindEntry> &cuEntries) {
   parallelFor(0, symbolsVec.size(), [&](size_t i) {
-    cuEntries[i].relocateOneCompactUnwindEntry(symbolsVec[i].second);
+    const Defined *d = symbolsVec[i].second;
+    cuEntries[i].functionAddress = d->getVA();
+    cuEntries[i].relocateOneCompactUnwindEntry(d);
   });
 }
 
