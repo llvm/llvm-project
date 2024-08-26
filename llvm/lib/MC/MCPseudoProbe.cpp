@@ -501,7 +501,6 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     if (Cur && !isSentinelProbe(Attr)) {
       PseudoProbeVec.emplace_back(Addr, Index, PseudoProbeType(Kind), Attr,
                                   Discriminator, Cur);
-      Address2ProbesMap[Addr].emplace_back(PseudoProbeVec.back());
       ++CurrentProbeCount;
     }
     LastAddr = Addr;
@@ -635,6 +634,15 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
          "Mismatching probe count pre- and post-parsing");
   assert(InlineTreeVec.size() == InlinedCount &&
          "Mismatching function records count pre- and post-parsing");
+
+  std::vector<std::pair<uint64_t, uint32_t>> SortedA2P(ProbeCount);
+  for (const auto &[I, Probe] : llvm::enumerate(PseudoProbeVec))
+    SortedA2P[I] = {Probe.getAddress(), I};
+  llvm::sort(SortedA2P);
+  Address2ProbesMap.reserve(ProbeCount);
+  for (const uint32_t I : llvm::make_second_range(SortedA2P))
+    Address2ProbesMap.emplace_back(PseudoProbeVec[I]);
+  SortedA2P.clear();
   return true;
 }
 
@@ -650,36 +658,29 @@ void MCPseudoProbeDecoder::printGUID2FuncDescMap(raw_ostream &OS) {
 
 void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
                                                 uint64_t Address) {
-  auto It = Address2ProbesMap.find(Address);
-  if (It != Address2ProbesMap.end()) {
-    for (const MCDecodedPseudoProbe &Probe : It->second) {
-      OS << " [Probe]:\t";
-      Probe.print(OS, GUID2FuncDescMap, true);
-    }
+  for (const MCDecodedPseudoProbe &Probe : Address2ProbesMap.find(Address)) {
+    OS << " [Probe]:\t";
+    Probe.print(OS, GUID2FuncDescMap, true);
   }
 }
 
 void MCPseudoProbeDecoder::printProbesForAllAddresses(raw_ostream &OS) {
-  auto Entries = make_first_range(Address2ProbesMap);
-  SmallVector<uint64_t, 0> Addresses(Entries.begin(), Entries.end());
-  llvm::sort(Addresses);
-  for (auto K : Addresses) {
-    OS << "Address:\t";
-    OS << K;
-    OS << "\n";
-    printProbeForAddress(OS, K);
+  uint64_t PrevAddress = INT64_MAX;
+  for (MCDecodedPseudoProbe &Probe : Address2ProbesMap) {
+    uint64_t Address = Probe.getAddress();
+    if (Address != PrevAddress) {
+      PrevAddress = Address;
+      OS << "Address:\t" << Address << '\n';
+    }
+    OS << " [Probe]:\t";
+    Probe.print(OS, GUID2FuncDescMap, true);
   }
 }
 
 const MCDecodedPseudoProbe *
 MCPseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
-  auto It = Address2ProbesMap.find(Address);
-  if (It == Address2ProbesMap.end())
-    return nullptr;
-  const auto &Probes = It->second;
-
   const MCDecodedPseudoProbe *CallProbe = nullptr;
-  for (const MCDecodedPseudoProbe &Probe : Probes) {
+  for (const MCDecodedPseudoProbe &Probe : Address2ProbesMap.find(Address)) {
     if (Probe.isCall()) {
       // Disabling the assert and returning first call probe seen so far.
       // Subsequent call probes, if any, are ignored. Due to the the way
