@@ -7239,11 +7239,12 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
+#ifndef NDEBUG
 /// Return true if the original loop \ TheLoop contains any instructions that do
 /// not have corresponding recipes in \p Plan and are not marked to be ignored
 /// in \p CostCtx. This means the VPlan contains simplification that the legacy
 /// cost-model did not account for.
-[[maybe_unused]] static bool
+static bool
 planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
                                       VPCostContext &CostCtx, Loop *TheLoop,
                                       LoopVectorizationCostModel &CM) {
@@ -7288,6 +7289,7 @@ planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
         });
       });
 }
+#endif
 
 VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   if (VPlans.empty())
@@ -7902,11 +7904,7 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
 iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
 VPRecipeBuilder::mapToVPValues(User::op_range Operands) {
   std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-    if (auto *I = dyn_cast<Instruction>(Op)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
-    }
-    return Plan.getOrAddLiveIn(Op);
+    return getVPValueOrAddLiveIn(Op);
   };
   return map_range(Operands, Fn);
 }
@@ -7922,7 +7920,7 @@ void VPRecipeBuilder::createSwitchEdgeMasks(SwitchInst *SI) {
   // Create masks where the terminator in Src is a switch. We create mask for
   // all edges at the same time. This is more efficient, as we can create and
   // collect compares for all cases once.
-  VPValue *Cond = getVPValueOrAddLiveIn(SI->getCondition(), Plan);
+  VPValue *Cond = getVPValueOrAddLiveIn(SI->getCondition());
   BasicBlock *DefaultDst = SI->getDefaultDest();
   MapVector<BasicBlock *, SmallVector<VPValue *>> Dst2Compares;
   for (auto &C : SI->cases()) {
@@ -7933,7 +7931,7 @@ void VPRecipeBuilder::createSwitchEdgeMasks(SwitchInst *SI) {
     if (Dst == DefaultDst)
       continue;
     auto I = Dst2Compares.insert({Dst, {}});
-    VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue(), Plan);
+    VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue());
     I.first->second.push_back(Builder.createICmp(CmpInst::ICMP_EQ, Cond, V));
   }
 
@@ -7996,7 +7994,7 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
   if (OrigLoop->isLoopExiting(Src))
     return EdgeMaskCache[Edge] = SrcMask;
 
-  VPValue *EdgeMask = getVPValueOrAddLiveIn(BI->getCondition(), Plan);
+  VPValue *EdgeMask = getVPValueOrAddLiveIn(BI->getCondition());
   assert(EdgeMask && "No Edge Mask found for condition");
 
   if (BI->getSuccessor(0) != Dst)
@@ -8607,7 +8605,7 @@ static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
   for (PHINode &ExitPhi : ExitBB->phis()) {
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
-    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
+    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
     // Exit values for inductions are computed and updated outside of VPlan and
     // independent of induction recipes.
     // TODO: Compute induction exit values in VPlan, use VPLiveOuts to update
