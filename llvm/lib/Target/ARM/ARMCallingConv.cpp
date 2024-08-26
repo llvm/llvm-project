@@ -117,7 +117,7 @@ static bool f64RetAssign(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg LoRegList[] = { ARM::R1, ARM::R3 };
 
   MCRegister Reg = State.AllocateReg(HiRegList, LoRegList);
-  if (Reg == 0)
+  if (!Reg)
     return false; // we didn't handle it
 
   unsigned i;
