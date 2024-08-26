@@ -464,7 +464,7 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   VisitMode Mode = VM_counting;  // Visiting mode.
   unsigned *CurCtrIdx = nullptr; // Pointer to current counter index.
   unsigned TotalNumCtrs = 0;     // Total number of counters
-  GlobalVariable *FuncNameVar = nullptr;
+  GlobalValue *FuncNameVar = nullptr;
   uint64_t FuncHash = 0;
   PGOUseFunc *UseFunc = nullptr;
   bool HasSingleByteCoverage;
@@ -482,7 +482,7 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   // Ind is a pointer to the counter index variable; \p TotalNC
   // is the total number of counters; \p FNV is the pointer to the
   // PGO function name var; \p FHash is the function hash.
-  void instrumentSelects(unsigned *Ind, unsigned TotalNC, GlobalVariable *FNV,
+  void instrumentSelects(unsigned *Ind, unsigned TotalNC, GlobalValue *FNV,
                          uint64_t FHash) {
     Mode = VM_instrument;
     CurCtrIdx = Ind;
@@ -901,13 +901,14 @@ void FunctionInstrumenter::instrument() {
     SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI, BFI);
   }
 
+  const bool IsCtxProf = InstrumentationType == PGOInstrumentationType::CTXPROF;
   FuncPGOInstrumentation<PGOEdge, PGOBBInfo> FuncInfo(
-      F, TLI, ComdatMembers, true, BPI, BFI,
+      F, TLI, ComdatMembers, /*CreateGlobalVar=*/!IsCtxProf, BPI, BFI,
       InstrumentationType == PGOInstrumentationType::CSFDO,
       shouldInstrumentEntryBB(), PGOBlockCoverage);
 
-  auto Name = FuncInfo.FuncNameVar;
-  auto CFGHash =
+  auto *const Name = IsCtxProf ? cast<GlobalValue>(&F) : FuncInfo.FuncNameVar;
+  auto *const CFGHash =
       ConstantInt::get(Type::getInt64Ty(M.getContext()), FuncInfo.FunctionHash);
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
@@ -929,7 +930,7 @@ void FunctionInstrumenter::instrument() {
   unsigned NumCounters =
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
-  if (InstrumentationType == PGOInstrumentationType::CTXPROF) {
+  if (IsCtxProf) {
     auto *CSIntrinsic =
         Intrinsic::getDeclaration(&M, Intrinsic::instrprof_callsite);
     // We want to count the instrumentable callsites, then instrument them. This
@@ -995,7 +996,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   // Now instrument select instructions:
-  FuncInfo.SIVisitor.instrumentSelects(&I, NumCounters, FuncInfo.FuncNameVar,
+  FuncInfo.SIVisitor.instrumentSelects(&I, NumCounters, Name,
                                        FuncInfo.FunctionHash);
   assert(I == NumCounters);
 
@@ -1657,11 +1658,17 @@ void PGOUseFunc::setBranchWeights() {
       continue;
 
     // We have a non-zero Branch BB.
-    unsigned Size = BBCountInfo.OutEdges.size();
-    SmallVector<uint64_t, 2> EdgeCounts(Size, 0);
+
+    // SuccessorCount can be greater than OutEdgesCount, because
+    // removed edges don't appear in OutEdges.
+    unsigned OutEdgesCount = BBCountInfo.OutEdges.size();
+    unsigned SuccessorCount = BB.getTerminator()->getNumSuccessors();
+    assert(OutEdgesCount <= SuccessorCount);
+
+    SmallVector<uint64_t, 2> EdgeCounts(SuccessorCount, 0);
     uint64_t MaxCount = 0;
-    for (unsigned s = 0; s < Size; s++) {
-      const PGOUseEdge *E = BBCountInfo.OutEdges[s];
+    for (unsigned It = 0; It < OutEdgesCount; It++) {
+      const PGOUseEdge *E = BBCountInfo.OutEdges[It];
       const BasicBlock *SrcBB = E->SrcBB;
       const BasicBlock *DestBB = E->DestBB;
       if (DestBB == nullptr)

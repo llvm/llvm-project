@@ -58,7 +58,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     return; // we can't do anything here.  ValidatePlan() will return false.
 
   // While stepping out, behave as-if artificial frames are not present.
-  while (return_frame_sp->IsArtificial()) {
+  while (return_frame_sp->IsArtificial() || return_frame_sp->IsHidden()) {
     m_stepped_past_frames.push_back(return_frame_sp);
 
     ++return_frame_index;

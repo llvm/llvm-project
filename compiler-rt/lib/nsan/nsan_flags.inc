@@ -48,3 +48,5 @@ NSAN_FLAG(bool, enable_loadtracking_stats, false,
           "due to invalid or unknown types.")
 NSAN_FLAG(bool, poison_in_free, true, "")
 NSAN_FLAG(bool, print_stats_on_exit, false, "If true, print stats on exit.")
+NSAN_FLAG(bool, check_nan, false,
+          "If true, check the floating-point number is nan")
