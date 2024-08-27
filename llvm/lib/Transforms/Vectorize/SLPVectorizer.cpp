@@ -2448,7 +2448,7 @@ public:
         }
         // TODO: Check if we can remove a check for non-power-2 number of
         // scalars after full support of non-power-2 vectorization.
-        return UniqueValues.size() != 2 && isPowerOf2_32(UniqueValues.size());
+        return UniqueValues.size() != 2 && has_single_bit(UniqueValues.size());
       };
 
       // If the initial strategy fails for any of the operand indexes, then we
@@ -3240,7 +3240,7 @@ private:
 
     /// Return true if this is a non-power-of-2 node.
     bool isNonPowOf2Vec() const {
-      bool IsNonPowerOf2 = !isPowerOf2_32(Scalars.size());
+      bool IsNonPowerOf2 = !has_single_bit(Scalars.size());
       assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
              "Reshuffling not supported with non-power-of-2 vectors yet.");
       return IsNonPowerOf2;
@@ -4696,7 +4696,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   // Check the order of pointer operands or that all pointers are the same.
   bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
   // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
-  if (!Order.empty() && !isPowerOf2_32(VL.size())) {
+  if (!Order.empty() && !has_single_bit(VL.size())) {
     assert(VectorizeNonPowerOf2 && "non-power-of-2 number of loads only "
                                    "supported with VectorizeNonPowerOf2");
     return LoadsState::Gather;
@@ -4746,13 +4746,14 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                      return !getTreeEntry(U) && !MustGather.contains(U);
                    });
           });
-      if (IsPossibleStrided && (IsAnyPointerUsedOutGraph ||
-                                ((Sz > MinProfitableStridedLoads ||
-                                  (static_cast<unsigned>(std::abs(*Diff)) <=
-                                       MaxProfitableLoadStride * Sz &&
-                                   isPowerOf2_32(std::abs(*Diff)))) &&
-                                 static_cast<unsigned>(std::abs(*Diff)) > Sz) ||
-                                *Diff == -(static_cast<int>(Sz) - 1))) {
+      const unsigned AbsoluteDiff = std::abs(*Diff);
+      if (IsPossibleStrided &&
+          (IsAnyPointerUsedOutGraph ||
+           ((Sz > MinProfitableStridedLoads ||
+             (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+              has_single_bit(AbsoluteDiff))) &&
+            AbsoluteDiff > Sz) ||
+           *Diff == -(static_cast<int>(Sz) - 1))) {
         int Stride = *Diff / static_cast<int>(Sz - 1);
         if (*Diff == Stride * static_cast<int>(Sz - 1)) {
           Align Alignment =
@@ -6495,7 +6496,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractElement: {
     bool Reuse = canReuseExtract(VL, VL0, CurrentOrder);
     // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
-    if (!isPowerOf2_32(VL.size()))
+    if (!has_single_bit(VL.size()))
       return TreeEntry::NeedToGather;
     if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
@@ -10907,7 +10908,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           // Keep original scalar if number of externally used instructions in
           // the same entry is not power of 2. It may help to do some extra
           // vectorization for now.
-          KeepScalar = ScalarUsesCount <= 1 || !isPowerOf2_32(ScalarUsesCount);
+          KeepScalar = ScalarUsesCount <= 1 || !has_single_bit(ScalarUsesCount);
         }
         if (KeepScalar) {
           ExternalUsesAsOriginalScalar.insert(EU.Scalar);
@@ -16353,7 +16354,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
-  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF) {
+  if (!has_single_bit(Sz) || !has_single_bit(VF) || VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered. At
     // the moment, only consider cases where VF + 1 is a power-of-2, i.e. almost
     // all vector lanes are used.
@@ -16372,8 +16373,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
     bool IsPowerOf2 =
-        isPowerOf2_32(ValOps.size()) ||
-        (VectorizeNonPowerOf2 && isPowerOf2_32(ValOps.size() + 1));
+        has_single_bit(ValOps.size()) ||
+        (VectorizeNonPowerOf2 && has_single_bit(ValOps.size() + 1));
     if ((!IsPowerOf2 && S.getOpcode() && S.getOpcode() != Instruction::Load &&
          (!S.MainOp->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -16540,7 +16541,7 @@ bool SLPVectorizerPass::vectorizeStores(
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
         unsigned CandVF = Operands.size();
-        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxRegVF)
+        if (has_single_bit(CandVF + 1) && CandVF <= MaxRegVF)
           NonPowerOf2VF = CandVF;
       }
 
@@ -16946,7 +16947,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!isPowerOf2_32(ActualVF))
+      if (!has_single_bit(ActualVF))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
@@ -18292,7 +18293,7 @@ private:
   Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
                        unsigned ReduxWidth, const TargetTransformInfo *TTI) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
-    assert(isPowerOf2_32(ReduxWidth) &&
+    assert(has_single_bit(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
     assert(RdxKind != RecurKind::FMulAdd &&
            "A call to the llvm.fmuladd intrinsic is not handled yet");
