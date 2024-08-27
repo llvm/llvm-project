@@ -1,0 +1,13 @@
+void foo() {
+    // expected-error@+3{{use of undeclared identifier 'c'}}
+    // expected-error@+2{{use of undeclared identifier 'b'}}
+    // expected-error@+1{{use of undeclared identifier 'a'}}
+    a = 2; b = 2; c = 2;
+}
+
+void bar() {
+    x = 2; y = 2; z = 2;
+    // expected-error@-1{{use of undeclared identifier 'x'}}
+    // expected-error@-2{{use of undeclared identifier 'y'}}
+    // expected-error@-3{{use of undeclared identifier 'z'}}
+}

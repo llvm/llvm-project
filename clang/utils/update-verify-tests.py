@@ -28,6 +28,8 @@ class KnownException(Exception):
 
 
 def parse_error_category(s):
+    if "no expected directives found" in line:
+        return None
     parts = s.split("diagnostics")
     diag_category = parts[0]
     category_parts = parts[0].strip().strip("'").split("-")
@@ -64,21 +66,10 @@ class Line:
         self.content = content
         self.diag = None
         self.line_n = line_n
-        self.related_diags = []
         self.targeting_diags = []
 
     def update_line_n(self, n):
-        if self.diag and not self.diag.line_is_absolute:
-            self.diag.orig_target_line_n += n - self.line_n
         self.line_n = n
-        for diag in self.targeting_diags:
-            if diag.line_is_absolute:
-                diag.orig_target_line_n = n
-            else:
-                diag.orig_target_line_n = n - diag.line.line_n
-        for diag in self.related_diags:
-            if not diag.line_is_absolute:
-                pass
 
     def render(self):
         if not self.diag:
@@ -95,16 +86,17 @@ class Diag:
         self,
         diag_content,
         category,
-        targeted_line_n,
+        parsed_target_line_n,
         line_is_absolute,
         count,
         line,
         is_re,
         whitespace_strings,
+        is_from_source_file,
     ):
         self.diag_content = diag_content
         self.category = category
-        self.orig_target_line_n = targeted_line_n
+        self.parsed_target_line_n = parsed_target_line_n
         self.line_is_absolute = line_is_absolute
         self.count = count
         self.line = line
@@ -112,24 +104,49 @@ class Diag:
         self.is_re = is_re
         self.absolute_target()
         self.whitespace_strings = whitespace_strings
+        self.is_from_source_file = is_from_source_file
 
-    def add(self):
-        if targeted_line > 0:
-            targeted_line += 1
-        elif targeted_line < 0:
-            targeted_line -= 1
+    def decrement_count(self):
+        self.count -= 1
+        assert self.count >= 0
+
+    def increment_count(self):
+        assert self.count >= 0
+        self.count += 1
+
+    def unset_target(self):
+        assert self.target is not None
+        self.target.targeting_diags.remove(self)
+        self.target = None
+
+    def set_target(self, target):
+        if self.target:
+            self.unset_target()
+        self.target = target
+        self.target.targeting_diags.append(self)
 
     def absolute_target(self):
-        if self.line_is_absolute:
-            res = self.orig_target_line_n
-        else:
-            res = self.line.line_n + self.orig_target_line_n
         if self.target:
-            assert self.line.line_n == res
-        return res
+            return self.target.line_n
+        if self.line_is_absolute:
+            return self.parsed_target_line_n
+        return self.line.line_n + self.parsed_target_line_n
 
     def relative_target(self):
         return self.absolute_target() - self.line.line_n
+
+    def take(self, other_diag):
+        assert self.count == 0
+        assert other_diag.count > 0
+        assert other_diag.target == self.target
+        assert not other_diag.line_is_absolute
+        assert not other_diag.is_re and not self.is_re
+        self.line_is_absolute = False
+        self.diag_content = other_diag.diag_content
+        self.count = other_diag.count
+        self.category = other_diag.category
+        self.count = other_diag.count
+        other_diag.count = 0
 
     def render(self):
         assert self.count >= 0
@@ -151,19 +168,25 @@ class Diag:
             whitespace1_s = self.whitespace_strings[0]
             whitespace2_s = self.whitespace_strings[1]
             whitespace3_s = self.whitespace_strings[2]
-            whitespace4_s = self.whitespace_strings[3]
         else:
             whitespace1_s = " "
             whitespace2_s = ""
             whitespace3_s = ""
-            whitespace4_s = ""
-        if count_s and not whitespace3_s:
-            whitespace3_s = " "
-        return f"//{whitespace1_s}expected-{self.category}{re_s}{whitespace2_s}{line_location_s}{whitespace3_s}{count_s}{whitespace4_s}{{{{{self.diag_content}}}}}"
-
+        if count_s and not whitespace2_s:
+            whitespace2_s = " " # required to parse correctly
+        elif not count_s and whitespace2_s == " ":
+            """ Don't emit a weird extra space.
+            However if the whitespace is something other than the
+            standard single space, let it be to avoid disrupting manual formatting.
+            The existence of a non-empty whitespace2_s implies this was parsed with
+            a count > 1 and then decremented, otherwise this whitespace would have
+            been parsed as whitespace3_s.
+            """
+            whitespace2_s = ""
+        return f"//{whitespace1_s}expected-{self.category}{re_s}{line_location_s}{whitespace2_s}{count_s}{whitespace3_s}{{{{{self.diag_content}}}}}"
 
 expected_diag_re = re.compile(
-    r"//(\s*)expected-(note|warning|error)(-re)?(\s*)(@[+-]?\d+)?(\s*)(\d+)?(\s*)\{\{(.*)\}\}"
+    r"//(\s*)expected-(note|warning|error)(-re)?(@[+-]?\d+)?(?:(\s*)(\d+))?(\s*)\{\{(.*)\}\}"
 )
 
 
@@ -173,19 +196,17 @@ def parse_diag(line, filename, lines):
     if not ms:
         return None
     if len(ms) > 1:
-        print(
+        raise KnownException(
             f"multiple diags on line {filename}:{line.line_n}. Aborting due to missing implementation."
         )
-        sys.exit(1)
     [
         whitespace1_s,
         category_s,
         re_s,
-        whitespace2_s,
         target_line_s,
-        whitespace3_s,
+        whitespace2_s,
         count_s,
-        whitespace4_s,
+        whitespace3_s,
         diag_s,
     ] = ms[0]
     if not target_line_s:
@@ -211,16 +232,9 @@ def parse_diag(line, filename, lines):
         count,
         line,
         bool(re_s),
-        [whitespace1_s, whitespace2_s, whitespace3_s, whitespace4_s],
+        [whitespace1_s, whitespace2_s, whitespace3_s],
+        True,
     )
-
-
-def link_line_diags(lines, diag):
-    line_n = diag.line.line_n
-    target_line_n = diag.absolute_target()
-    step = 1 if target_line_n < line_n else -1
-    for i in range(target_line_n, line_n, step):
-        lines[i - 1].related_diags.append(diag)
 
 
 def add_line(new_line, lines):
@@ -231,6 +245,14 @@ def add_line(new_line, lines):
         line.update_line_n(i + 1)
     assert all(line.line_n == i + 1 for i, line in enumerate(lines))
 
+def remove_line(old_line, lines):
+    lines.remove(old_line)
+    for i in range(old_line.line_n - 1, len(lines)):
+        line = lines[i]
+        assert line.line_n == i + 2
+        line.update_line_n(i + 1)
+    assert all(line.line_n == i + 1 for i, line in enumerate(lines))
+
 
 indent_re = re.compile(r"\s*")
 
@@ -238,8 +260,11 @@ indent_re = re.compile(r"\s*")
 def get_indent(s):
     return indent_re.match(s).group(0)
 
+def orig_line_n_to_new_line_n(line_n, orig_lines):
+    return orig_lines[line_n - 1].line_n
 
-def add_diag(line_n, diag_s, diag_category, lines):
+def add_diag(orig_line_n, diag_s, diag_category, lines, orig_lines):
+    line_n = orig_line_n_to_new_line_n(orig_line_n, orig_lines)
     target = lines[line_n - 1]
     for other in target.targeting_diags:
         if other.is_re:
@@ -272,18 +297,42 @@ def add_diag(line_n, diag_s, diag_category, lines):
     assert new_line_n == line_n + (not reverse) - total_offset
 
     new_line = Line(get_indent(prev_line.content) + "{{DIAG}}\n", new_line_n)
-    new_line.related_diags = list(prev_line.related_diags)
     add_line(new_line, lines)
 
+    whitespace_strings = prev_line.diag.whitespace_strings if prev_line.diag else None
     new_diag = Diag(
-        diag_s, diag_category, total_offset, False, 1, new_line, False, None
+        diag_s, diag_category, total_offset, False, 1, new_line, False, whitespace_strings, False,
     )
     new_line.diag = new_diag
-    new_diag.target_line = target
-    assert type(new_diag) != str
-    target.targeting_diags.append(new_diag)
-    link_line_diags(lines, new_diag)
+    new_diag.set_target(target)
 
+def remove_dead_diags(lines):
+    for line in lines:
+        if not line.diag or line.diag.count != 0:
+            continue
+        if line.render() == "":
+            remove_line(line, lines)
+        else:
+            assert line.diag.is_from_source_file
+            for other_diag in line.targeting_diags:
+                if other_diag.is_from_source_file or other_diag.count == 0 or other_diag.category != line.diag.category:
+                    continue
+                if other_diag.is_re or line.diag.is_re:
+                    continue
+                line.diag.take(other_diag)
+                remove_line(other_diag.line, lines)
+
+def has_live_diags(lines):
+    for line in lines:
+        if line.diag and line.diag.count > 0:
+            return True
+    return False
+
+def get_expected_no_diags_line_n(lines):
+    for line in lines:
+        if "expected-no-diagnostics" in line.content:
+            return line.line_n
+    return None
 
 updated_test_files = set()
 
@@ -298,13 +347,14 @@ def update_test_file(filename, diag_errors):
         updated_test_files.add(filename)
     with open(filename, "r") as f:
         lines = [Line(line, i + 1) for i, line in enumerate(f.readlines())]
+    orig_lines = list(lines)
+    expected_no_diags_line_n = get_expected_no_diags_line_n(orig_lines)
+
     for line in lines:
         diag = parse_diag(line, filename, lines)
         if diag:
             line.diag = diag
-            diag.target_line = lines[diag.absolute_target() - 1]
-            link_line_diags(lines, diag)
-            lines[diag.absolute_target() - 1].targeting_diags.append(diag)
+            diag.set_target(lines[diag.absolute_target() - 1])
 
     for line_n, diag_s, diag_category, seen in diag_errors:
         if seen:
@@ -319,13 +369,13 @@ def update_test_file(filename, diag_errors):
             raise KnownException(
                 f"{filename}:{line_n} - found {lines[line_n - 1].diag.category} diag but expected {diag_category}"
             )
-        lines[line_n - 1].diag.count -= 1
+        lines[line_n - 1].diag.decrement_count()
     diag_errors_left = []
     diag_errors.sort(reverse=True, key=lambda t: t[0])
     for line_n, diag_s, diag_category, seen in diag_errors:
         if not seen:
             continue
-        target = lines[line_n - 1]
+        target = orig_lines[line_n - 1]
         other_diags = [
             d
             for d in target.targeting_diags
@@ -333,13 +383,17 @@ def update_test_file(filename, diag_errors):
         ]
         other_diag = other_diags[0] if other_diags else None
         if other_diag:
-            other_diag.count += 1
+            other_diag.increment_count()
         else:
-            diag_errors_left.append((line_n, diag_s, diag_category))
-    for line_n, diag_s, diag_category in diag_errors_left:
-        add_diag(line_n, diag_s, diag_category, lines)
+            add_diag(line_n, diag_s, diag_category, lines, orig_lines)
+    remove_dead_diags(lines)
+    has_diags = has_live_diags(lines)
     with open(filename, "w") as f:
+        if not has_diags and expected_no_diags_line_n is None:
+            f.write("// expected-no-diagnostics\n")
         for line in lines:
+            if has_diags and line.line_n == expected_no_diags_line_n:
+                continue
             f.write(line.render())
 
 
@@ -361,6 +415,7 @@ curr = []
 curr_category = None
 curr_run_line = None
 lines_since_run = []
+skip_to_next_file = False
 for line in sys.stdin.readlines():
     lines_since_run.append(line)
     try:
@@ -374,20 +429,28 @@ for line in sys.stdin.readlines():
                 for line in lines_since_run:
                     print(line, end="")
                     print("====================")
-                print("no mismatching diagnostics found since last RUN line")
+                if lines_since_run:
+                    print("no mismatching diagnostics found since last RUN line")
+            skip_to_next_file = False
+            continue
+        if skip_to_next_file:
             continue
         if line.startswith("error: "):
-            if "no expected directives found" in line:
-                print(
-                    f"no expected directives found for RUN line '{curr_run_line.strip()}'. Add 'expected-no-diagnostics' manually if this is intended."
-                )
-                continue
             curr_category = parse_error_category(line[len("error: ") :])
             continue
 
         diag_error = parse_diag_error(line.strip())
         if diag_error:
             curr.append((diag_error, curr_category))
+    except KnownException as e:
+            print(f"Error while parsing: {e}")
+            if curr:
+                print("skipping to next file")
+            curr = []
+            curr_category = None
+            curr_run_line = None
+            lines_since_run = []
+            skip_to_next_file = True
     except Exception as e:
         for line in lines_since_run:
             print(line, end="")
