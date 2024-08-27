@@ -66,11 +66,12 @@ std::string getUnescapedName(const StringRef &Name) {
   return Output;
 }
 
-std::optional<StringRef> getLTOCommonName(const StringRef Name) {
-  for (StringRef Suffix : {".__uniq.", ".lto_priv.", ".constprop.", ".llvm."}) {
+std::optional<StringRef> getLTOCommonName(const StringRef Name,
+                                          ArrayRef<StringRef> Suffixes) {
+  for (StringRef Suffix : Suffixes) {
     size_t LTOSuffixPos = Name.find(Suffix);
     if (LTOSuffixPos != StringRef::npos)
-      return Name.substr(0, LTOSuffixPos + Suffix.size());
+      return Name.substr(0, LTOSuffixPos);
   }
   return std::nullopt;
 }

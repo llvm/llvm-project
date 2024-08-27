@@ -64,8 +64,12 @@ std::string getUnescapedName(const StringRef &Name);
 /// of functions. Later, out of all matching profiles we pick the one with the
 /// best match.
 ///
+static SmallVector<StringRef, 4> LTOSuffixes({".__uniq.", ".lto_priv.",
+                                              ".constprop.", ".llvm."});
 /// Return a common part of LTO name for a given \p Name.
-std::optional<StringRef> getLTOCommonName(const StringRef Name);
+std::optional<StringRef>
+getLTOCommonName(const StringRef Name,
+                 ArrayRef<StringRef> Suffixes = LTOSuffixes);
 
 // Determines which register a given DWARF expression is being assigned to.
 // If the expression is defining the CFA, return std::nullopt.
