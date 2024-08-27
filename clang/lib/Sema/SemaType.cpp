@@ -6082,9 +6082,6 @@ namespace {
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       // nothing
     }
-    void VisitHLSLResourcedAttributedTypeLoc(HLSLAttributedResourceTypeLoc TL) {
-      // nothing
-    }
     void VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
       // nothing
     }
