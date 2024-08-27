@@ -5952,9 +5952,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Build KnownBits representing Inf and check if it must be equal or
       // unequal to this value.
       auto InfKB = KnownBits::makeConstant(
-          APFloat::getInf(Ty->getFltSemantics(), false).bitcastToAPInt());
-      InfKB = InfKB.intersectWith(KnownBits::makeConstant(
-          APFloat::getInf(Ty->getFltSemantics(), true).bitcastToAPInt()));
+          APFloat::getInf(Ty->getFltSemantics()).bitcastToAPInt());
+      InfKB.Zero.clearSignBit();
       if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
         assert(!InfResult.value());
         Known.knownNot(fcInf);
@@ -5965,9 +5964,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Build KnownBits representing Zero and check if it must be equal or
       // unequal to this value.
       auto ZeroKB = KnownBits::makeConstant(
-          APFloat::getZero(Ty->getFltSemantics(), false).bitcastToAPInt());
-      ZeroKB = ZeroKB.intersectWith(KnownBits::makeConstant(
-          APFloat::getZero(Ty->getFltSemantics(), true).bitcastToAPInt()));
+          APFloat::getZero(Ty->getFltSemantics()).bitcastToAPInt());
+      ZeroKB.Zero.clearSignBit();
       if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
         assert(!ZeroResult.value());
         Known.knownNot(fcZero);
