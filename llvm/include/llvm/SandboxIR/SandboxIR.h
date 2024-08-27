@@ -111,6 +111,8 @@ class ConstantInt;
 class Context;
 class Function;
 class Instruction;
+class FreezeInst;
+class FenceInst;
 class SelectInst;
 class ExtractElementInst;
 class InsertElementInst;
@@ -127,12 +129,15 @@ class CallBase;
 class CallInst;
 class InvokeInst;
 class CallBrInst;
+class LandingPadInst;
 class FuncletPadInst;
 class CatchPadInst;
 class CleanupPadInst;
 class CatchReturnInst;
+class CleanupReturnInst;
 class GetElementPtrInst;
 class CastInst;
+class PossiblyNonNegInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
@@ -140,6 +145,7 @@ class CatchSwitchInst;
 class SwitchInst;
 class UnaryOperator;
 class BinaryOperator;
+class PossiblyDisjointInst;
 class AtomicRMWInst;
 class AtomicCmpXchgInst;
 
@@ -248,6 +254,8 @@ protected:
   friend class Context;               // For getting `Val`.
   friend class User;                  // For getting `Val`.
   friend class Use;                   // For getting `Val`.
+  friend class FreezeInst;            // For getting `Val`.
+  friend class FenceInst;             // For getting `Val`.
   friend class SelectInst;            // For getting `Val`.
   friend class ExtractElementInst;    // For getting `Val`.
   friend class InsertElementInst;     // For getting `Val`.
@@ -260,12 +268,14 @@ protected:
   friend class CallInst;              // For getting `Val`.
   friend class InvokeInst;            // For getting `Val`.
   friend class CallBrInst;            // For getting `Val`.
+  friend class LandingPadInst;        // For getting `Val`.
   friend class FuncletPadInst;        // For getting `Val`.
   friend class CatchPadInst;          // For getting `Val`.
   friend class CleanupPadInst;        // For getting `Val`.
   friend class CatchReturnInst;       // For getting `Val`.
   friend class GetElementPtrInst;     // For getting `Val`.
   friend class CatchSwitchInst;       // For getting `Val`.
+  friend class CleanupReturnInst;     // For getting `Val`.
   friend class SwitchInst;            // For getting `Val`.
   friend class UnaryOperator;         // For getting `Val`.
   friend class BinaryOperator;        // For getting `Val`.
@@ -676,6 +686,8 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class FreezeInst;         // For getTopmostLLVMInstruction().
+  friend class FenceInst;          // For getTopmostLLVMInstruction().
   friend class SelectInst;         // For getTopmostLLVMInstruction().
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
   friend class InsertElementInst;  // For getTopmostLLVMInstruction().
@@ -687,9 +699,11 @@ protected:
   friend class CallInst;           // For getTopmostLLVMInstruction().
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
+  friend class LandingPadInst;     // For getTopmostLLVMInstruction().
   friend class CatchPadInst;       // For getTopmostLLVMInstruction().
   friend class CleanupPadInst;     // For getTopmostLLVMInstruction().
   friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
+  friend class CleanupReturnInst;  // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
   friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
@@ -877,6 +891,33 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+class FenceInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
+  FenceInst(llvm::FenceInst *FI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Fence, Opcode::Fence, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static FenceInst *create(AtomicOrdering Ordering, BBIterator WhereIt,
+                           BasicBlock *WhereBB, Context &Ctx,
+                           SyncScope::ID SSID = SyncScope::System);
+  /// Returns the ordering constraint of this fence instruction.
+  AtomicOrdering getOrdering() const {
+    return cast<llvm::FenceInst>(Val)->getOrdering();
+  }
+  /// Sets the ordering constraint of this fence instruction.  May only be
+  /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
+  void setOrdering(AtomicOrdering Ordering);
+  /// Returns the synchronization scope ID of this fence instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::FenceInst>(Val)->getSyncScopeID();
+  }
+  /// Sets the synchronization scope ID of this fence instruction.
+  void setSyncScopeID(SyncScope::ID SSID);
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Fence;
+  }
 };
 
 class SelectInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
@@ -1492,10 +1533,23 @@ protected:
 
 public:
   static bool classof(const Instruction *I) {
-    return isa<LoadInst>(I) || isa<CastInst>(I);
+    return isa<LoadInst>(I) || isa<CastInst>(I) || isa<FreezeInst>(I);
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class FreezeInst : public UnaryInstruction {
+  FreezeInst(llvm::FreezeInst *FI, Context &Ctx)
+      : UnaryInstruction(ClassID::Freeze, Opcode::Freeze, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static FreezeInst *create(Value *V, BBIterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Freeze;
   }
 };
 
@@ -1796,8 +1850,7 @@ public:
   BasicBlock *getUnwindDest() const;
   void setNormalDest(BasicBlock *BB);
   void setUnwindDest(BasicBlock *BB);
-  // TODO: Return a `LandingPadInst` once implemented.
-  Instruction *getLandingPadInst() const;
+  LandingPadInst *getLandingPadInst() const;
   BasicBlock *getSuccessor(unsigned SuccIdx) const;
   void setSuccessor(unsigned SuccIdx, BasicBlock *NewSucc) {
     assert(SuccIdx < 2 && "Successor # out of range for invoke!");
@@ -1852,6 +1905,50 @@ public:
   BasicBlock *getSuccessor(unsigned Idx) const;
   unsigned getNumSuccessors() const {
     return cast<llvm::CallBrInst>(Val)->getNumSuccessors();
+  }
+};
+
+class LandingPadInst : public SingleLLVMInstructionImpl<llvm::LandingPadInst> {
+  LandingPadInst(llvm::LandingPadInst *LP, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::LandingPad, Opcode::LandingPad, LP,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static LandingPadInst *create(Type *RetTy, unsigned NumReservedClauses,
+                                BBIterator WhereIt, BasicBlock *WhereBB,
+                                Context &Ctx, const Twine &Name = "");
+  /// Return 'true' if this landingpad instruction is a
+  /// cleanup. I.e., it should be run when unwinding even if its landing pad
+  /// doesn't catch the exception.
+  bool isCleanup() const {
+    return cast<llvm::LandingPadInst>(Val)->isCleanup();
+  }
+  /// Indicate that this landingpad instruction is a cleanup.
+  void setCleanup(bool V);
+
+  // TODO: We are not implementing addClause() because we have no way to revert
+  // it for now.
+
+  /// Get the value of the clause at index Idx. Use isCatch/isFilter to
+  /// determine what type of clause this is.
+  Constant *getClause(unsigned Idx) const;
+
+  /// Return 'true' if the clause and index Idx is a catch clause.
+  bool isCatch(unsigned Idx) const {
+    return cast<llvm::LandingPadInst>(Val)->isCatch(Idx);
+  }
+  /// Return 'true' if the clause and index Idx is a filter clause.
+  bool isFilter(unsigned Idx) const {
+    return cast<llvm::LandingPadInst>(Val)->isFilter(Idx);
+  }
+  /// Get the number of clauses for this landing pad.
+  unsigned getNumClauses() const {
+    return cast<llvm::LandingPadInst>(Val)->getNumOperands();
+  }
+  // TODO: We are not implementing reserveClauses() because we can't revert it.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::LandingPad;
   }
 };
 
@@ -1938,6 +2035,36 @@ public:
   Value *getCatchSwitchParentPad() const;
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CatchRet;
+  }
+};
+
+class CleanupReturnInst
+    : public SingleLLVMInstructionImpl<llvm::CleanupReturnInst> {
+  CleanupReturnInst(llvm::CleanupReturnInst *CRI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CleanupRet, Opcode::CleanupRet, CRI,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
+                                   BasicBlock *UnwindBB, BBIterator WhereIt,
+                                   BasicBlock *WhereBB, Context &Ctx);
+  bool hasUnwindDest() const {
+    return cast<llvm::CleanupReturnInst>(Val)->hasUnwindDest();
+  }
+  bool unwindsToCaller() const {
+    return cast<llvm::CleanupReturnInst>(Val)->unwindsToCaller();
+  }
+  CleanupPadInst *getCleanupPad() const;
+  void setCleanupPad(CleanupPadInst *CleanupPad);
+  unsigned getNumSuccessors() const {
+    return cast<llvm::CleanupReturnInst>(Val)->getNumSuccessors();
+  }
+  BasicBlock *getUnwindDest() const;
+  void setUnwindDest(BasicBlock *NewDest);
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CleanupRet;
   }
 };
 
@@ -2249,6 +2376,7 @@ public:
 };
 
 class BinaryOperator : public SingleLLVMInstructionImpl<llvm::BinaryOperator> {
+protected:
   static Opcode getBinOpOpcode(llvm::Instruction::BinaryOps BinOp) {
     switch (BinOp) {
     case llvm::Instruction::Add:
@@ -2326,6 +2454,22 @@ public:
     return From->getSubclassID() == ClassID::BinaryOperator;
   }
   void swapOperands() { swapOperandsInternal(0, 1); }
+};
+
+/// An or instruction, which can be marked as "disjoint", indicating that the
+/// inputs don't have a 1 in the same bit position. Meaning this instruction
+/// can also be treated as an add.
+class PossiblyDisjointInst : public BinaryOperator {
+public:
+  void setIsDisjoint(bool B);
+  bool isDisjoint() const {
+    return cast<llvm::PossiblyDisjointInst>(Val)->isDisjoint();
+  }
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) &&
+           cast<Instruction>(From)->getOpcode() == Opcode::Or;
+  }
 };
 
 class AtomicRMWInst : public SingleLLVMInstructionImpl<llvm::AtomicRMWInst> {
@@ -2619,6 +2763,28 @@ public:
   Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
 };
 
+/// Instruction that can have a nneg flag (zext/uitofp).
+class PossiblyNonNegInst : public CastInst {
+public:
+  bool hasNonNeg() const {
+    return cast<llvm::PossiblyNonNegInst>(Val)->hasNonNeg();
+  }
+  void setNonNeg(bool B);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From)) {
+      switch (I->getOpcode()) {
+      case Opcode::ZExt:
+      case Opcode::UIToFP:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
+};
+
 // Helper class to simplify stamping out CastInst subclasses.
 template <Instruction::Opcode Op> class CastInstImpl : public CastInst {
 public:
@@ -2821,6 +2987,10 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
+  friend FreezeInst; // For createFreezeInst()
+  FenceInst *createFenceInst(llvm::FenceInst *SI);
+  friend FenceInst; // For createFenceInst()
   SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
   InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
@@ -2843,12 +3013,16 @@ protected:
   friend InvokeInst; // For createInvokeInst()
   CallBrInst *createCallBrInst(llvm::CallBrInst *I);
   friend CallBrInst; // For createCallBrInst()
+  LandingPadInst *createLandingPadInst(llvm::LandingPadInst *I);
+  friend LandingPadInst; // For createLandingPadInst()
   CatchPadInst *createCatchPadInst(llvm::CatchPadInst *I);
   friend CatchPadInst; // For createCatchPadInst()
   CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
   friend CleanupPadInst; // For createCleanupPadInst()
   CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
   friend CatchReturnInst; // For createCatchReturnInst()
+  CleanupReturnInst *createCleanupReturnInst(llvm::CleanupReturnInst *I);
+  friend CleanupReturnInst; // For createCleanupReturnInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
   CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
