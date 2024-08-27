@@ -5225,7 +5225,7 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
 
 QualType ASTContext::getHLSLAttributedResourceType(
     QualType Wrapped, QualType Contained,
-    HLSLAttributedResourceType::Attributes &Attrs) {
+    const HLSLAttributedResourceType::Attributes &Attrs) {
 
   llvm::FoldingSetNodeID ID;
   HLSLAttributedResourceType::Profile(ID, Wrapped, Contained, Attrs);

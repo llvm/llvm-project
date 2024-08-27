@@ -688,17 +688,18 @@ let Class = BTFTagAttributedType in {
 }
 
 let Class = HLSLAttributedResourceType in {
-  // def : Property<"attrs", SmallVector<Attr*, 4>> {
-  //   let Read = [{ node->getAttr() }];
-  // }
-  def : Property<"wrappedType", QualType> {
+  def : Property<"attrsData", UInt32> {
+    let Read = [{ node->getAttrs().Data }];
+  }
+  def : Property<"wrappedTy", QualType> {
     let Read = [{ node->getWrappedType() }];
   }
-
+  def : Property<"containedTy", QualType> {
+    let Read = [{ node->getContainedType() }];
+  }
   def : Creator<[{
-    llvm_unreachable("FIXME");
-    (void)ctx;
-    //return ctx.getHLSLAttributedResourceType(attrs, wrappedType);
+    return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy,
+                            HLSLAttributedResourceType::Attributes(attrsData));
   }]>;
 }
 

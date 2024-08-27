@@ -1930,10 +1930,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
-  case attr::HLSLResourceClass:
-  case attr::HLSLROV:
-    llvm_unreachable("HLSL resource attributes handled separately");
-
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -2058,13 +2054,7 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
 void TypePrinter::printHLSLAttributedResourceBefore(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
-  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
-  OS << " [[hlsl::resource_class("
-     << HLSLResourceClassAttr::ConvertResourceClassToStr(
-            static_cast<llvm::dxil::ResourceClass>(Attrs.ResourceClass))
-     << "]]";
-  if (Attrs.IsROV)
-    OS << " [[hlsl::is_rov()]]";
+  // FIXME: print values of resource type attributes here
 }
 
 void TypePrinter::printHLSLAttributedResourceAfter(

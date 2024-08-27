@@ -1834,18 +1834,15 @@ ExpectedType clang::ASTNodeImporter::VisitBTFTagAttributedType(
 
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
-  // FIXME:
-  llvm_unreachable(
-      "ASTNodeImporter::VisitHLSLAttributedResourceType not yet implemented");
+  Error Err = Error::success();
+  const HLSLAttributedResourceType::Attributes &ToAttrs = T->getAttrs();
+  QualType ToWrappedType = importChecked(Err, T->getWrappedType());
+  QualType ToContainedType = importChecked(Err, T->getContainedType());
+  if (Err)
+    return std::move(Err);
 
-  // Error Err = Error::success();
-  // const SmallVector<Attr*,4> *ToAttrs = importChecked(Err, T->getAttrs());
-  // QualType ToWrappedType = importChecked(Err, T->getWrappedType());
-  // if (Err)
-  //   return std::move(Err);
-
-  // return Importer.getToContext().getHLSLAttributedResourceType(ToAttrs,
-  //                                                        ToWrappedType);
+  return Importer.getToContext().getHLSLAttributedResourceType(
+      ToWrappedType, ToContainedType, ToAttrs);
 }
 
 ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(

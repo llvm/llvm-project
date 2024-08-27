@@ -6154,18 +6154,21 @@ public:
 class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
+    // This is where data gathered from HLSL resource attributes are stored,
+    // such as resource class, is_rov, dimension, is_array, is_feedback 
+    // or is_multisample. The values will be accessed individually via fields
+    // on the embedded struct. The Data alias is used for the AST type
+    //  serialization.
     union {
       struct {
         uint8_t ResourceClass; // maps to llvm::dxil::ResourceClass
         uint8_t IsROV : 1;
-        uint8_t Dimension : 2;
-        uint8_t IsArray : 1;
-        uint8_t IsMultisample : 1;
-        uint8_t IsFeedback : 1;
+        // FIXME: add additional resource properties here
       };
       unsigned Data;
     };
     Attributes() : Data() {}
+    Attributes(unsigned Data) : Data(Data) {}
   };
   static_assert(sizeof(Attributes) == sizeof(Attributes::Data));
 

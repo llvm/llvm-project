@@ -1672,9 +1672,9 @@ public:
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped);
 
-  QualType
-  getHLSLAttributedResourceType(QualType Wrapped, QualType Contained,
-                                HLSLAttributedResourceType::Attributes &Attrs);
+  QualType getHLSLAttributedResourceType(
+      QualType Wrapped, QualType Contained,
+      const HLSLAttributedResourceType::Attributes &Attrs);
 
   QualType
   getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
