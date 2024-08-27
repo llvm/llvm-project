@@ -6,11 +6,11 @@
 # PREAGG: B X:0 #main# 1 0
 ## Check pseudo-probes in regular YAML profile (non-BOLTed binary)
 # RUN: link_fdata %s %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin %t.preagg PREAGG
-# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata --profile-use-pseudo-probes
+# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata --profile-write-pseudo-probes
 # RUN: FileCheck --input-file %t.yaml %s --check-prefix CHECK-YAML
 ## Check pseudo-probes in BAT YAML profile (BOLTed binary)
 # RUN: link_fdata %s %t.bolt %t.preagg2 PREAGG
-# RUN: perf2bolt %t.bolt -p %t.preagg2 --pa -w %t.yaml2 -o %t.fdata2 --profile-use-pseudo-probes
+# RUN: perf2bolt %t.bolt -p %t.preagg2 --pa -w %t.yaml2 -o %t.fdata2 --profile-write-pseudo-probes
 # RUN: FileCheck --input-file %t.yaml2 %s --check-prefix CHECK-YAML
 # CHECK-YAML: name: bar
 # CHECK-YAML: - bid: 0
@@ -30,7 +30,7 @@
 # CHECK-YAML: guid: 0xDB956436E78DD5FA
 # CHECK-YAML: pseudo_probe_desc_hash: 0x10000FFFFFFFF
 #
-## Check that without --profile-use-pseudo-probes option, no pseudo probes are
+## Check that without --profile-write-pseudo-probes option, no pseudo probes are
 ## generated
 # RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata
 # RUN: FileCheck --input-file %t.yaml %s --check-prefix CHECK-NO-OPT
