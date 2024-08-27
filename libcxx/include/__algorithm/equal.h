@@ -104,7 +104,7 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
       std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
       std::__unwrap_iter(_Traits1::__local(__last1)),
       std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
-      __pred)
+      __pred);
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
