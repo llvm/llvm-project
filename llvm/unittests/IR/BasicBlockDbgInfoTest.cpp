@@ -1525,8 +1525,7 @@ TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
   EXPECT_FALSE(Ret->hasDbgRecords());
 }
 
-TEST(BasicBlockDbgInfoTest, DbgKnownSentinelCrash) {
-  return;
+TEST(BasicBlockDbgInfoTest, CloneTrailingRecordsToEmptyBlock) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @foo(i16 %a) !dbg !6 {
@@ -1570,10 +1569,11 @@ TEST(BasicBlockDbgInfoTest, DbgKnownSentinelCrash) {
   // The trailing records should've been absorbed into NewBB.
   EXPECT_FALSE(BB.getTrailingDbgRecords());
   EXPECT_TRUE(NewBB->getTrailingDbgRecords());
-  if (NewBB->getTrailingDbgRecords())
+  if (NewBB->getTrailingDbgRecords()) {
     EXPECT_EQ(
         llvm::range_size(NewBB->getTrailingDbgRecords()->getDbgRecordRange()),
-        1);
+        1u);
+  }
 
   // Drop the trailing records now, to prevent a cleanup assertion.
   NewBB->deleteTrailingDbgRecords();
