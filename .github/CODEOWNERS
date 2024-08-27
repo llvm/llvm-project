@@ -150,3 +150,6 @@
 
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
+
+# LLVM Security Group documentation
+/llvm/docs/Security.rst @llvm/llvm-security-group
