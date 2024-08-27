@@ -369,6 +369,9 @@ extern char &AMDGPUCodeGenPrepareID;
 void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
+void initializeAMDGPUIfConverterPass(PassRegistry &);
+extern char &AMDGPUIfConverterID;
+
 void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareLegacyID;
 

@@ -204,11 +204,6 @@ static VGPRRegisterRegAlloc fastRegAllocVGPR(
 } // anonymous namespace
 
 static cl::opt<bool>
-EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
-                        cl::desc("Run early if-conversion"),
-                        cl::init(false));
-
-static cl::opt<bool>
 OptExecMaskPreRA("amdgpu-opt-exec-mask-pre-ra", cl::Hidden,
             cl::desc("Run pre-RA exec mask optimizations"),
             cl::init(true));
@@ -447,6 +442,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
+  initializeAMDGPUIfConverterPass(*PR);
   initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
@@ -1285,9 +1281,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
 }
 
 bool GCNPassConfig::addILPOpts() {
-  if (EnableEarlyIfConversion)
-    addPass(&EarlyIfConverterID);
-
+  addPass(&AMDGPUIfConverterID);
   TargetPassConfig::addILPOpts();
   return false;
 }
