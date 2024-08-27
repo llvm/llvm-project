@@ -12,13 +12,27 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 static void prettyPrintResources(raw_ostream &OS,
                                  const dxil::Resources &MDResources) {
-  MDResources.print(OS);
+  // Column widths are arbitrary but match the widths DXC uses.
+  OS << ";\n; Resource Bindings:\n;\n";
+  OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,16}\n", "Name",
+                "Type", "Format", "Dim", "ID", "HLSL Bind", "Count");
+  OS << formatv(
+      "; {0,-+30} {1,-+10} {2,-+7} {3,-+11} {4,-+7} {5,-+14} {6,-+16}\n", "",
+      "", "", "", "", "", "");
+
+  if (MDResources.hasCBuffers())
+    MDResources.printCBuffers(OS);
+  if (MDResources.hasUAVs())
+    MDResources.printUAVs(OS);
+
+  OS << ";\n";
 }
 
 PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
@@ -63,7 +77,7 @@ INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   dxil::Resources &Res = getAnalysis<DXILResourceMDWrapper>().getDXILResource();
-  Res.print(OS);
+  prettyPrintResources(OS, Res);
   return false;
 }
 

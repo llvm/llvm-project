@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower %s | FileCheck %s
+; RUN: opt -S -passes=dxil-op-lower,dxil-translate-metadata %s | FileCheck %s
 
 target triple = "dxil-pc-shadermodel6.0-compute"
 
@@ -49,5 +49,13 @@ define void @test_buffers() {
 
   ret void
 }
+
+; Just check that we have the right types and number of metadata nodes, the
+; contents of the metadata are tested elsewhere.
+;
+; CHECK: !dx.resources = !{[[RESMD:![0-9]+]]}
+; CHECK: [[RESMD]] = !{[[SRVMD:![0-9]+]], [[UAVMD:![0-9]+]], null, null}
+; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
+; CHECK-DAG: [[UAVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
