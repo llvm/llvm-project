@@ -4991,9 +4991,9 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
     auto *Mid = std::stable_partition(
         Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
     DenseMap<Value *, DenseMap<Value *, bool>> LessThan;
-    for (auto I = Begin; I < Mid; ++I)
+    for (auto *I = Begin; I < Mid; ++I)
       LessThan.try_emplace(std::get<1>(*I));
-    for (auto I = Begin; I < Mid; ++I) {
+    for (auto *I = Begin; I < Mid; ++I) {
       Value *V = std::get<1>(*I);
       while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
         V = Gep->getOperand(0);
@@ -9455,7 +9455,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto It = MinBWs.find(E);
   Type *OrigScalarTy = ScalarTy;
   if (It != MinBWs.end()) {
-    auto VecTy = dyn_cast<FixedVectorType>(ScalarTy);
+    auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
@@ -13133,7 +13133,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     ScalarTy = IE->getOperand(1)->getType();
   auto It = MinBWs.find(E);
   if (It != MinBWs.end()) {
-    auto VecTy = dyn_cast<FixedVectorType>(ScalarTy);
+    auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
