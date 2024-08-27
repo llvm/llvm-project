@@ -72,7 +72,8 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN4Name3fooEv.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_ZN4Name3fooEv.resolver(
+// CHECK-SAME: ) #[[ATTR4:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -86,7 +87,8 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK-NEXT:    ret ptr @_ZN4Name3fooEv.default
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN3Foo3barEv.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_ZN3Foo3barEv.resolver(
+// CHECK-SAME: ) #[[ATTR4]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -104,6 +106,7 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
 // CHECK: attributes #[[ATTR3]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
+// CHECK: attributes #[[ATTR4]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

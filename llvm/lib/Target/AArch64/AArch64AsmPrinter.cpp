@@ -244,6 +244,9 @@ private:
     assert(STI);
     return STI;
   }
+  const MCExpr *
+  emitMachOIfuncLazyPointerInit(const GlobalIFunc &GI,
+                                const MCSymbolRefExpr *Init) override;
   void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
@@ -2843,6 +2846,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+const MCExpr *
+AArch64AsmPrinter::emitMachOIfuncLazyPointerInit(const GlobalIFunc &GI,
+                                                 const MCSymbolRefExpr *Init) {
+  if (GI.getResolverFunction()->hasFnAttribute("ptrauth-calls"))
+    return AArch64AuthMCExpr::create(Init, /*Disc=*/0, AArch64PACKey::IA,
+                                     /*HasAddressDiversity=*/false, OutContext);
+
+  return Init;
+}
+
 void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                                MCSymbol *LazyPointer) {
   // _ifunc:
@@ -2885,11 +2898,12 @@ void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                    .addImm(0),
                                *STI);
 
-  OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
-                                                 ? AArch64::BRAAZ
-                                                 : AArch64::BR)
-                                   .addReg(AArch64::X16),
-                               *STI);
+  OutStreamer->emitInstruction(
+      MCInstBuilder(GI.getResolverFunction()->hasFnAttribute("ptrauth-calls")
+                        ? AArch64::BRAAZ
+                        : AArch64::BR)
+          .addReg(AArch64::X16),
+      *STI);
 }
 
 void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
@@ -2925,6 +2939,9 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
   //   ldp	x1, x0, [sp], #16
   //   ldp	fp, lr, [sp], #16
   //   br	x16
+
+  if (GI.getResolverFunction()->hasFnAttribute("ptrauth-returns"))
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::PACIBSP), *STI);
 
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
                                    .addReg(AArch64::SP)
@@ -3031,11 +3048,12 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                                    .addImm(2),
                                *STI);
 
-  OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
-                                                 ? AArch64::BRAAZ
-                                                 : AArch64::BR)
-                                   .addReg(AArch64::X16),
-                               *STI);
+  OutStreamer->emitInstruction(
+      MCInstBuilder(GI.getResolverFunction()->hasFnAttribute("ptrauth-calls")
+                        ? AArch64::BRAAZ
+                        : AArch64::BR)
+          .addReg(AArch64::X16),
+      *STI);
 }
 
 const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {

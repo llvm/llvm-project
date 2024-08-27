@@ -464,7 +464,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv.resolver
+// CHECK-SAME: () #[[ATTR12:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -542,7 +543,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @fmv.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_one.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_one.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -564,7 +566,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @fmv_one.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_two.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_two.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -602,7 +605,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @fmv_two.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_e.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_e.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -630,7 +634,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_d.resolver() {
+// CHECK-LABEL: define {{[^@]+}}@fmv_d.resolver
+// CHECK-SAME: () #[[ATTR12]] {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -644,7 +649,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @fmv_d.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_c.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_c.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -777,7 +783,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -911,7 +918,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @fmv_inline.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@unused_with_default_def.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@unused_with_default_def.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -925,7 +933,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @unused_with_default_def.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_default_def.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_default_def.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -939,7 +948,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @unused_with_implicit_default_def.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_forward_default_def.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_forward_default_def.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -953,7 +963,8 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @unused_with_implicit_forward_default_def.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -1124,7 +1135,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK: attributes #[[ATTR9]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR10]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ccpp" }
 // CHECK: attributes #[[ATTR11]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #[[ATTR12:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR12]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR13]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
 // CHECK: attributes #[[ATTR14]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
 // CHECK: attributes #[[ATTR15]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }

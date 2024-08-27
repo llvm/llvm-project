@@ -29,7 +29,7 @@ int __attribute__((target_clones("sse4.2", "default"))) overloaded(int) { return
 
 // WINDOWS: define dso_local noundef i32 @"?overloaded@@YAHH@Z.sse4.2.0"(i32{{.+}})
 // WINDOWS: define dso_local noundef i32 @"?overloaded@@YAHH@Z.default.1"(i32{{.+}})
-// WINDOWS: define weak_odr dso_local i32 @"?overloaded@@YAHH@Z"(i32{{.+}}) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?overloaded@@YAHH@Z"(i32{{.+}}) {{.*}} comdat
 // WINDOWS: call i32 @"?overloaded@@YAHH@Z.sse4.2.0"
 // WINDOWS: call i32 @"?overloaded@@YAHH@Z.default.1"
 
@@ -43,7 +43,7 @@ int __attribute__((target_clones("arch=ivybridge", "default"))) overloaded(const
 
 // WINDOWS: define dso_local noundef i32 @"?overloaded@@YAHPEBD@Z.arch_ivybridge.0"(ptr{{.+}})
 // WINDOWS: define dso_local noundef i32 @"?overloaded@@YAHPEBD@Z.default.1"(ptr{{.+}})
-// WINDOWS: define weak_odr dso_local i32 @"?overloaded@@YAHPEBD@Z"(ptr{{.+}}) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?overloaded@@YAHPEBD@Z"(ptr{{.+}}) {{.*}} comdat
 // WINDOWS: call i32 @"?overloaded@@YAHPEBD@Z.arch_ivybridge.0"
 // WINDOWS: call i32 @"?overloaded@@YAHPEBD@Z.default.1"
 
