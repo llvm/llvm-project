@@ -291,7 +291,6 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
                     RVLocs2.end(), AreCompatible);
 }
 
-#ifndef NDEBUG
 void CCState::dump() const {
   dbgs() << "CCState:\n";
   for (const CCValAssign &Loc : Locs) {
@@ -352,4 +351,3 @@ void CCState::dump() const {
     dbgs() << "\n";
   }
 }
-#endif
