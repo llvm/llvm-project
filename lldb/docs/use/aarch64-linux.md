@@ -229,3 +229,54 @@ bytes.
 
 `zt0`'s value and whether it is active or not will be saved prior to
 expression evaluation and restored afterwards.
+
+## Guarded Control Stack Extension (GCS)
+
+GCS support includes the following new registers:
+
+* `gcs_features_enabled`
+* `gcs_features_locked`
+* `gcspr_el0`
+
+These map to the registers ptrace provides. The first two have had a `gcs_`
+prefix added as their names are too generic without it.
+
+When the GCS is enabled the kernel allocates a memory region for it. This region
+has a special attribute that LLDB will detect and presents like this:
+```
+  (lldb) memory region --all
+  <...>
+  [0x0000fffff7a00000-0x0000fffff7e00000) rw-
+  shadow stack: yes
+  [0x0000fffff7e00000-0x0000fffff7e10000) ---
+```
+
+`shadow stack` is a generic term used in the kernel for secure stack
+extensions like GCS.
+
+### Expression Evaluation
+
+To execute an expression, LLDB must push the return address of the expression
+wrapper (usually the entry point of the program) to the Guarded Control Stack.
+It does this by decrementing `gcspr_el0` and writing to the location that
+`gcspr_el0` then points to (instead of using the GCS push instructions).
+
+After an expression finishes, LLDB will restore the contents of all 3 registers,
+apart from the enable bit of `gcs_features_enabled`.
+
+This is because there are limits on how often and from where you can set this
+value. We cannot enable GCS from ptrace at all and it is expected that a process
+that has enabled GCS then disabled it, will not enable it again. The simplest
+choice was to not restore the enable bit at all. It's up to the user or
+program to manage that value.
+
+The return address that was pushed onto the Guarded Control Stack will be left
+in place. As will any values that were pushed to the stack by functions run
+during the expresison.
+
+When the process resumes, `gcspr_el0` will be pointing to the original entry
+on the stack. So the other values will have no effect and likely be overwritten
+by future function calls.
+
+LLDB does not track and restore changes to general memory during expressions,
+so not restoring the GCS contents fits with the current behaviour.
