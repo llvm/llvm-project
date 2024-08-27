@@ -33,7 +33,16 @@ void transform::QueryOp::getEffects(
 DiagnosedSilenceableFailure transform::QueryOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results, TransformState &state) {
-  auto keys = SmallVector<StringAttr>(getKeys().getAsRange<StringAttr>());
+  SmallVector<DataLayoutEntryKey> keys;
+  for (Attribute key : getKeys()) {
+    if (auto strKey = dyn_cast<StringAttr>(key))
+      keys.push_back(strKey);
+    else if (auto typeKey = dyn_cast<TypeAttr>(key))
+      keys.push_back(typeKey.getValue());
+    else
+      return emitDefiniteFailure("'transform.dlti.query' keys of wrong type: "
+                                 "only StringAttr and TypeAttr are allowed");
+  }
 
   FailureOr<Attribute> result = dlti::query(target, keys, /*emitError=*/true);
 
