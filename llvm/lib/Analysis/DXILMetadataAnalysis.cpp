@@ -39,41 +39,41 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
   }
 
-    // For all HLSL Shader functions
-    for (auto &F : M.functions()) {
-      if (!F.hasFnAttribute("hlsl.shader"))
-        continue;
+  // For all HLSL Shader functions
+  for (auto &F : M.functions()) {
+    if (!F.hasFnAttribute("hlsl.shader"))
+      continue;
 
-      FunctionProperties EFP{};
-      // Get "hlsl.shader" attribute
-      Attribute EntryAttr = F.getFnAttribute("hlsl.shader");
-      StringRef EntryProfile = EntryAttr.getValueAsString();
-      Triple T("", "", "", EntryProfile);
-      EFP.ShaderStage = T.getEnvironment();
-      // Get numthreads attribute value, if one exists
-      StringRef NumThreadsStr =
-          F.getFnAttribute("hlsl.numthreads").getValueAsString();
-      if (!NumThreadsStr.empty()) {
-        SmallVector<StringRef> NumThreadsVec;
-        NumThreadsStr.split(NumThreadsVec, ',');
-        if (NumThreadsVec.size() != 3) {
-          report_fatal_error(Twine(F.getName()) +
-                                 ": Invalid numthreads specified",
-                             /* gen_crash_diag */ false);
-        }
-        auto Zip =
-            llvm::zip(NumThreadsVec, MutableArrayRef<unsigned>(EFP.NumThreads));
-        for (auto It : Zip) {
-          StringRef Str = std::get<0>(It);
-          APInt V;
-          assert(!Str.getAsInteger(10, V) &&
-                 "Failed to parse numthreads components as integer values");
-          unsigned &Num = std::get<1>(It);
-          Num = V.getLimitedValue();
-        }
+    FunctionProperties EFP{};
+    // Get "hlsl.shader" attribute
+    Attribute EntryAttr = F.getFnAttribute("hlsl.shader");
+    StringRef EntryProfile = EntryAttr.getValueAsString();
+    Triple T("", "", "", EntryProfile);
+    EFP.ShaderStage = T.getEnvironment();
+    // Get numthreads attribute value, if one exists
+    StringRef NumThreadsStr =
+        F.getFnAttribute("hlsl.numthreads").getValueAsString();
+    if (!NumThreadsStr.empty()) {
+      SmallVector<StringRef> NumThreadsVec;
+      NumThreadsStr.split(NumThreadsVec, ',');
+      if (NumThreadsVec.size() != 3) {
+        report_fatal_error(Twine(F.getName()) +
+                               ": Invalid numthreads specified",
+                           /* gen_crash_diag */ false);
       }
-      MMDAI.FunctionPropertyMap.emplace(std::make_pair(std::addressof(F), EFP));
+      auto Zip =
+          llvm::zip(NumThreadsVec, MutableArrayRef<unsigned>(EFP.NumThreads));
+      for (auto It : Zip) {
+        StringRef Str = std::get<0>(It);
+        APInt V;
+        assert(!Str.getAsInteger(10, V) &&
+               "Failed to parse numthreads components as integer values");
+        unsigned &Num = std::get<1>(It);
+        Num = V.getLimitedValue();
+      }
     }
+    MMDAI.FunctionPropertyMap.emplace(std::make_pair(std::addressof(F), EFP));
+  }
   return MMDAI;
 }
 
