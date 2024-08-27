@@ -3992,6 +3992,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
   };
+  // JavaScript/TypeScript supports anonymous classes like:
+  // a = class extends foo { }
+  bool JSPastExtendsOrImplements = false;
   // The actual identifier can be a nested name specifier, and in macros
   // it is often token-pasted.
   // An [[attribute]] can be before the identifier.
@@ -4002,6 +4005,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
+      JSPastExtendsOrImplements = true;
       // JavaScript/TypeScript supports inline object types in
       // extends/implements positions:
       //     class Foo implements {bar: number} { }
@@ -4027,7 +4031,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::coloncolon:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier) &&
+      if (!JSPastExtendsOrImplements && !ClassName && Previous->is(tok::identifier) &&
           Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
       }
