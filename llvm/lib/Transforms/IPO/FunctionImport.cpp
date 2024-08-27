@@ -1082,21 +1082,29 @@ numGlobalVarSummaries(const ModuleSummaryIndex &Index,
   return NumGVS;
 }
 
-// Given ImportMap, return the number of global variable summaries and record
-// the number of defined function summaries as output parameter.
-static unsigned
-numGlobalVarSummaries(const ModuleSummaryIndex &Index,
-                      const FunctionImporter::FunctionsToImportTy &ImportMap,
-                      unsigned &DefinedFS) {
+struct ImportSummary {
   unsigned NumGVS = 0;
-  DefinedFS = 0;
-  for (auto &[GUID, Type] : ImportMap) {
-    if (isGlobalVarSummary(Index, GUID))
-      ++NumGVS;
-    else if (Type == GlobalValueSummary::Definition)
-      ++DefinedFS;
+  unsigned DefinedFS = 0;
+  unsigned Count = 0;
+};
+
+// Compute import summary for each source module in ImportList.
+static DenseMap<StringRef, ImportSummary>
+summarizeImports(const ModuleSummaryIndex &Index,
+                 const FunctionImporter::ImportMapTy &ImportList) {
+  DenseMap<StringRef, ImportSummary> Histogram;
+
+  for (const auto &[FromModule, GUIDs] : ImportList.getImportMap()) {
+    for (const auto &[GUID, Type] : GUIDs) {
+      ImportSummary &Entry = Histogram[FromModule];
+      ++Entry.Count;
+      if (isGlobalVarSummary(Index, GUID))
+        ++Entry.NumGVS;
+      else if (Type == GlobalValueSummary::Definition)
+        ++Entry.DefinedFS;
+    }
   }
-  return NumGVS;
+  return Histogram;
 }
 #endif
 
@@ -1217,21 +1225,19 @@ void llvm::ComputeCrossModuleImport(
     auto ModName = ModuleImports.first;
     auto &Exports = ExportLists[ModName];
     unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
+    DenseMap<StringRef, ImportSummary> Histogram =
+        summarizeImports(Index, ModuleImports.second);
     LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
                       << Exports.size() - NumGVS << " functions and " << NumGVS
-                      << " vars. Imports from "
-                      << ModuleImports.second.getImportMap().size()
+                      << " vars. Imports from " << Histogram.size()
                       << " modules.\n");
-    for (const auto &Src : ModuleImports.second.getImportMap()) {
-      auto SrcModName = Src.first;
-      unsigned DefinedFS = 0;
-      unsigned NumGVSPerMod =
-          numGlobalVarSummaries(Index, Src.second, DefinedFS);
-      LLVM_DEBUG(dbgs() << " - " << DefinedFS << " function definitions and "
-                        << Src.second.size() - NumGVSPerMod - DefinedFS
+    for (const auto &[SrcModName, Summary] : Histogram) {
+      LLVM_DEBUG(dbgs() << " - " << Summary.DefinedFS
+                        << " function definitions and "
+                        << Summary.Count - Summary.NumGVS - Summary.DefinedFS
                         << " function declarations imported from " << SrcModName
                         << "\n");
-      LLVM_DEBUG(dbgs() << " - " << NumGVSPerMod
+      LLVM_DEBUG(dbgs() << " - " << Summary.NumGVS
                         << " global vars imported from " << SrcModName << "\n");
     }
   }
@@ -1242,17 +1248,17 @@ void llvm::ComputeCrossModuleImport(
 static void dumpImportListForModule(const ModuleSummaryIndex &Index,
                                     StringRef ModulePath,
                                     FunctionImporter::ImportMapTy &ImportList) {
+  DenseMap<StringRef, ImportSummary> Histogram =
+      summarizeImports(Index, ImportList);
   LLVM_DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
-                    << ImportList.getImportMap().size() << " modules.\n");
-  for (const auto &Src : ImportList.getImportMap()) {
-    auto SrcModName = Src.first;
-    unsigned DefinedFS = 0;
-    unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second, DefinedFS);
-    LLVM_DEBUG(dbgs() << " - " << DefinedFS << " function definitions and "
-                      << Src.second.size() - DefinedFS - NumGVSPerMod
+                    << Histogram.size() << " modules.\n");
+  for (const auto &[SrcModName, Summary] : Histogram) {
+    LLVM_DEBUG(dbgs() << " - " << Summary.DefinedFS
+                      << " function definitions and "
+                      << Summary.Count - Summary.DefinedFS - Summary.NumGVS
                       << " function declarations imported from " << SrcModName
                       << "\n");
-    LLVM_DEBUG(dbgs() << " - " << NumGVSPerMod << " vars imported from "
+    LLVM_DEBUG(dbgs() << " - " << Summary.NumGVS << " vars imported from "
                       << SrcModName << "\n");
   }
 }
