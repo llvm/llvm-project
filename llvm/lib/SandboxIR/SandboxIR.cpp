@@ -2286,8 +2286,8 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   }
   case llvm::Instruction::InsertValue: {
     auto *LLVMIns = cast<llvm::InsertValueInst>(LLVMV);
-    It->second = std::unique_ptr<InsertValueInst>(
-        new InsertValueInst(LLVMIns, *this));
+    It->second =
+        std::unique_ptr<InsertValueInst>(new InsertValueInst(LLVMIns, *this));
     return It->second.get();
   }
   case llvm::Instruction::Br: {
@@ -2501,8 +2501,7 @@ Context::createShuffleVectorInst(llvm::ShuffleVectorInst *SVI) {
   return cast<ShuffleVectorInst>(registerValue(std::move(NewPtr)));
 }
 
-InsertValueInst *
-Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
+InsertValueInst *Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
   auto NewPtr =
       std::unique_ptr<InsertValueInst>(new InsertValueInst(IVI, *this));
   return cast<InsertValueInst>(registerValue(std::move(NewPtr)));

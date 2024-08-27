@@ -1294,7 +1294,7 @@ define void @foo({i32, float} %agg, i32 %i) {
 
   // getAggregateOperand
   EXPECT_EQ(Ins0->getAggregateOperand(), ArgAgg);
-  const auto* ConstIns0 = Ins0;
+  const auto *ConstIns0 = Ins0;
   EXPECT_EQ(ConstIns0->getAggregateOperand(), ArgAgg);
 
   // getAggregateOperandIndex
