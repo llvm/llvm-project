@@ -47,6 +47,7 @@ unittest("SupportTests") {
     "FileCollectorTest.cpp",
     "FileOutputBufferTest.cpp",
     "FormatVariadicTest.cpp",
+    "GenericDomTreeTest.cpp",
     "GlobPatternTest.cpp",
     "HashBuilderTest.cpp",
     "IndexedAccessorTest.cpp",

@@ -256,28 +256,6 @@ bool ClauseProcessor::processCollapse(
   return found;
 }
 
-bool ClauseProcessor::processDefault() const {
-  if (auto *clause = findUniqueClause<omp::clause::Default>()) {
-    // Private, Firstprivate, Shared, None
-    switch (clause->v) {
-    case omp::clause::Default::DataSharingAttribute::Shared:
-    case omp::clause::Default::DataSharingAttribute::None:
-      // Default clause with shared or none do not require any handling since
-      // Shared is the default behavior in the IR and None is only required
-      // for semantic checks.
-      break;
-    case omp::clause::Default::DataSharingAttribute::Private:
-      // TODO Support default(private)
-      break;
-    case omp::clause::Default::DataSharingAttribute::Firstprivate:
-      // TODO Support default(firstprivate)
-      break;
-    }
-    return true;
-  }
-  return false;
-}
-
 bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
                                     mlir::omp::DeviceClauseOps &result) const {
   const parser::CharBlock *source = nullptr;
@@ -382,8 +360,12 @@ bool ClauseProcessor::processNumTeams(
   // TODO Get lower and upper bounds for num_teams when parser is updated to
   // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->t);
-    auto &upperBound = std::get<ExprTy>(clause->t);
+    // The num_teams directive accepts a list of team lower/upper bounds.
+    // This is an extension to support grid specification for ompx_bare.
+    // Here, only expect a single element in the list.
+    assert(clause->v.size() == 1);
+    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
+    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
     result.numTeamsUpper =
         fir::getBase(converter.genExprValue(upperBound, stmtCtx));
     return true;

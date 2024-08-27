@@ -25,6 +25,7 @@
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
+#include "mlir/Dialect/DLTI/TransformOps/DLTITransformOps.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
@@ -69,6 +70,7 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   // Register all transform dialect extensions.
   affine::registerTransformDialectExtension(registry);
   bufferization::registerTransformDialectExtension(registry);
+  dlti::registerTransformDialectExtension(registry);
   func::registerTransformDialectExtension(registry);
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);

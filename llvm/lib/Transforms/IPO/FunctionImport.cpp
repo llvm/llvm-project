@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -30,6 +29,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -174,16 +174,7 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
-static cl::opt<bool> ImportAssumeUniqueLocal(
-    "import-assume-unique-local", cl::init(false),
-    cl::desc(
-        "By default, a local-linkage global variable won't be imported in the "
-        "edge mod1:func -> mod2:local-var (from value profiles) since compiler "
-        "cannot assume mod2 is compiled with full path which gives local-var a "
-        "program-wide unique GUID. Set this option to true will help cross "
-        "module import of such variables. This is only safe if the compiler "
-        "user specify the full module path."),
-    cl::Hidden);
+extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -210,9 +201,8 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
-  // We can import a local from another module if all inputs are compiled
-  // with full paths or when there is one definition.
-  if (ImportAssumeUniqueLocal || NumDefs == 1)
+  // We can import a local when there is one definition.
+  if (NumDefs == 1)
     return false;
   // In other cases, make sure we import the copy in the caller's module if the
   // referenced value has local linkage. The only time a local variable can
@@ -604,13 +594,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
     LLVM_DEBUG(dbgs() << "[Workload] Done\n");
   }
 
-public:
-  WorkloadImportsManager(
-      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-          IsPrevailing,
-      const ModuleSummaryIndex &Index,
-      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
-      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+  void loadFromJson() {
     // Since the workload def uses names, we need a quick lookup
     // name->ValueInfo.
     StringMap<ValueInfo> NameToValueInfo;
@@ -680,15 +664,81 @@ public:
         }
         Set.insert(ElemIt->second);
       }
-      LLVM_DEBUG({
+    }
+  }
+
+  void loadFromCtxProf() {
+    std::error_code EC;
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(UseCtxProfile);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      report_fatal_error("Failed to open contextual profile file");
+      return;
+    }
+    auto Buffer = std::move(BufferOrErr.get());
+
+    PGOCtxProfileReader Reader(Buffer->getBuffer());
+    auto Ctx = Reader.loadContexts();
+    if (!Ctx) {
+      report_fatal_error("Failed to parse contextual profiles");
+      return;
+    }
+    const auto &CtxMap = *Ctx;
+    DenseSet<GlobalValue::GUID> ContainedGUIDs;
+    for (const auto &[RootGuid, Root] : CtxMap) {
+      // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for
+      // subsequent roots, but clear its contents.
+      ContainedGUIDs.clear();
+
+      auto RootVI = Index.getValueInfo(RootGuid);
+      if (!RootVI) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << RootGuid
+                          << " not found in this linkage unit.\n");
+        continue;
+      }
+      if (RootVI.getSummaryList().size() != 1) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << RootGuid
+                          << " should have exactly one summary, but has "
+                          << RootVI.getSummaryList().size() << ". Skipping.\n");
+        continue;
+      }
+      StringRef RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath();
+      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
+                        << " is : " << RootDefiningModule << "\n");
+      auto &Set = Workloads[RootDefiningModule];
+      Root.getContainedGuids(ContainedGUIDs);
+      for (auto Guid : ContainedGUIDs)
+        if (auto VI = Index.getValueInfo(Guid))
+          Set.insert(VI);
+    }
+  }
+
+public:
+  WorkloadImportsManager(
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      const ModuleSummaryIndex &Index,
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
+      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+    if (UseCtxProfile.empty() == WorkloadDefinitions.empty()) {
+      report_fatal_error(
+          "Pass only one of: -thinlto-pgo-ctx-prof or -thinlto-workload-def");
+      return;
+    }
+    if (!UseCtxProfile.empty())
+      loadFromCtxProf();
+    else
+      loadFromJson();
+    LLVM_DEBUG({
+      for (const auto &[Root, Set] : Workloads) {
         dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
                << " distinct callees.\n";
         for (const auto &VI : Set) {
           dbgs() << "[Workload] Root: " << Root
                  << " Would include: " << VI.getGUID() << "\n";
         }
-      });
-    }
+      }
+    });
   }
 };
 
@@ -697,7 +747,7 @@ std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
         IsPrevailing,
     const ModuleSummaryIndex &Index,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
-  if (WorkloadDefinitions.empty()) {
+  if (WorkloadDefinitions.empty() && UseCtxProfile.empty()) {
     LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
     return std::unique_ptr<ModuleImportsManager>(
         new ModuleImportsManager(IsPrevailing, Index, ExportLists));

@@ -10,13 +10,13 @@
 
 define void @fma_f16() {
 ; FAST-LABEL: 'fma_f16'
-; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fma_f16'
@@ -30,13 +30,13 @@ define void @fma_f16() {
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FAST-SIZE-LABEL: 'fma_f16'
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_f16'

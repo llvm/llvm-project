@@ -55,11 +55,11 @@ cleanup7:                                         ; preds = %cleanup
 define void @f2_hwasan(i1 %c1) sanitize_hwaddress {
 ; CHECK-LABEL: @f2_hwasan(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[E:%.*]] = alloca i16, align 1
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[G_0_SROA_SPECULATE_LOAD_CLEANUP:%.*]] = load i16, ptr @a, align 1
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
 ; CHECK-NEXT:      i32 2, label [[LBL1]]
@@ -67,7 +67,8 @@ define void @f2_hwasan(i1 %c1) sanitize_hwaddress {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
 ; CHECK:       lbl1:
-; CHECK-NEXT:    [[G_0_SROA_SPECULATED:%.*]] = phi i16 [ [[G_0_SROA_SPECULATE_LOAD_CLEANUP]], [[CLEANUP]] ], [ [[G_0_SROA_SPECULATE_LOAD_CLEANUP]], [[CLEANUP]] ], [ undef, [[IF_ELSE]] ]
+; CHECK-NEXT:    [[G_0:%.*]] = phi ptr [ @a, [[CLEANUP]] ], [ @a, [[CLEANUP]] ], [ [[E]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[G_0]], align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cleanup7:
 ; CHECK-NEXT:    ret void

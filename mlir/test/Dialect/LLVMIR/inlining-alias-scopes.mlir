@@ -296,6 +296,60 @@ llvm.func @bar(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 
 llvm.func @random() -> i1
 
+llvm.func @region_branch(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
+  %0 = llvm.mlir.constant(5 : i64) : i32
+  test.region_if %arg0: !llvm.ptr -> !llvm.ptr then {
+  ^bb0(%arg2: !llvm.ptr):
+    test.region_if_yield %arg0 : !llvm.ptr
+  } else {
+  ^bb0(%arg2: !llvm.ptr):
+    test.region_if_yield %arg0 : !llvm.ptr
+  } join {
+  ^bb0(%arg2: !llvm.ptr):
+    llvm.store %0, %arg2 : i32, !llvm.ptr
+    test.region_if_yield %arg0 : !llvm.ptr
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @region_branch_inlining
+// CHECK: llvm.store
+// CHECK-SAME: alias_scopes = [#[[$ARG0_SCOPE]]]
+// CHECK-SAME: noalias_scopes = [#[[$ARG1_SCOPE]]]
+llvm.func @region_branch_inlining(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
+  llvm.call @region_branch(%arg0, %arg2) : (!llvm.ptr, !llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @missing_region_branch(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
+  %0 = llvm.mlir.constant(5 : i64) : i32
+  "test.one_region_op"() ({
+  ^bb0(%arg2: !llvm.ptr):
+    llvm.store %0, %arg2 : i32, !llvm.ptr
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @missing_region_branch_inlining
+// CHECK: llvm.store
+// CHECK-NOT: alias_scopes
+// CHECK-NOT: noalias_scopes
+llvm.func @missing_region_branch_inlining(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
+  llvm.call @missing_region_branch(%arg0, %arg2) : (!llvm.ptr, !llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+// CHECK-DAG: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<{{.*}}>
+// CHECK-DAG: #[[$ARG0_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
+// CHECK-DAG: #[[$ARG1_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
+
+llvm.func @random() -> i1
+
 llvm.func @block_arg(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
   %0 = llvm.mlir.constant(5 : i64) : i32
   %1 = llvm.mlir.constant(1 : i64) : i64

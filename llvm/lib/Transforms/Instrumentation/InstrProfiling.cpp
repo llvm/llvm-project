@@ -132,6 +132,11 @@ cl::opt<bool> AtomicFirstCounter(
              "the entry counter)"),
     cl::init(false));
 
+cl::opt<bool> ConditionalCounterUpdate(
+    "conditional-counter-update",
+    cl::desc("Do conditional counter updates in single byte counters mode)"),
+    cl::init(false));
+
 // If the option is not specified, the default behavior about whether
 // counter promotion is done depends on how instrumentaiton lowering
 // pipeline is setup, i.e., the default value of true of this option
@@ -1192,23 +1197,38 @@ CallInst *InstrLowerer::getRMWOrCall(Value *Addr, Value *Val) {
 
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
+  if (!isRuntimeCounterRelocationEnabled())
+    return Bitmaps;
+
+  // Put BiasLI onto the entry block.
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  Function *Fn = I->getFunction();
+  IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
+  auto *Bias = getOrCreateBiasVar(getInstrProfBitmapBiasVarName());
+  auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");
+  // Assume BiasLI invariant (in the function at least)
+  BiasLI->setMetadata(LLVMContext::MD_invariant_load,
+                      MDNode::get(M.getContext(), std::nullopt));
+
+  // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);
-
-  if (isRuntimeCounterRelocationEnabled()) {
-    LLVMContext &Ctx = M.getContext();
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M.getName().data(),
-        Twine("Runtime counter relocation is presently not supported for MC/DC "
-              "bitmaps."),
-        DS_Warning));
-  }
-
-  return Bitmaps;
+  return Builder.CreatePtrAdd(Bitmaps, BiasLI, "profbm_addr");
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  if (ConditionalCounterUpdate) {
+    Instruction *SplitBefore = CoverInstruction->getNextNode();
+    auto &Ctx = CoverInstruction->getParent()->getContext();
+    auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
+    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
+    Builder.SetInsertPoint(ThenBranch);
+  }
+
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();

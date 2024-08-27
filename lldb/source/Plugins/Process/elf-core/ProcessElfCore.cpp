@@ -1077,10 +1077,10 @@ ArchSpec ProcessElfCore::GetArchitecture() {
 }
 
 DataExtractor ProcessElfCore::GetAuxvData() {
-  const uint8_t *start = m_auxv.GetDataStart();
-  size_t len = m_auxv.GetByteSize();
-  lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(start, len));
-  return DataExtractor(buffer, GetByteOrder(), GetAddressByteSize());
+  assert(m_auxv.GetByteSize() == 0 ||
+         (m_auxv.GetByteOrder() == GetByteOrder() &&
+          m_auxv.GetAddressByteSize() == GetAddressByteSize()));
+  return DataExtractor(m_auxv);
 }
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {

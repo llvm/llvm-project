@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
 
 // <mutex>
@@ -15,28 +14,28 @@
 
 // unique_lock(mutex_type& m, defer_lock_t);
 
-#include <mutex>
 #include <cassert>
-#include "nasty_containers.h"
+#include <mutex>
 
+#include "nasty_containers.h"
+#include "../types.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-    typedef std::mutex M;
+int main(int, char**) {
+  {
+    typedef MyMutex M;
     M m;
     std::unique_lock<M> lk(m, std::defer_lock);
     assert(lk.mutex() == std::addressof(m));
     assert(lk.owns_lock() == false);
-    }
-    {
+  }
+  {
     typedef nasty_mutex M;
     M m;
     std::unique_lock<M> lk(m, std::defer_lock);
     assert(lk.mutex() == std::addressof(m));
     assert(lk.owns_lock() == false);
-    }
+  }
 
   return 0;
 }

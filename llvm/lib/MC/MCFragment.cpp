@@ -27,7 +27,8 @@
 using namespace llvm;
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
-    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
+    : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
+      LinkerRelaxable(false), AllowAutoPadding(false) {}
 
 void MCFragment::destroy() {
   switch (Kind) {

@@ -227,7 +227,7 @@ llvm::Error CommandObjectDisassemble::CheckRangeSize(const AddressRange &range,
     return llvm::Error::success();
   StreamString msg;
   msg << "Not disassembling " << what << " because it is very large ";
-  range.Dump(&msg, &GetSelectedTarget(), Address::DumpStyleLoadAddress,
+  range.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
              Address::DumpStyleFileAddress);
   msg << ". To disassemble specify an instruction count limit, start/stop "
          "addresses or use the --force option.";
@@ -252,7 +252,7 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
     }
   };
 
-  Target &target = GetSelectedTarget();
+  Target &target = GetTarget();
   if (!target.GetSectionLoadList().IsEmpty()) {
     Address symbol_containing_address;
     if (target.GetSectionLoadList().ResolveLoadAddress(
@@ -351,8 +351,8 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
 
   // Find functions matching the given name.
   SymbolContextList sc_list;
-  GetSelectedTarget().GetImages().FindFunctions(name, eFunctionNameTypeAuto,
-                                                function_options, sc_list);
+  GetTarget().GetImages().FindFunctions(name, eFunctionNameTypeAuto,
+                                        function_options, sc_list);
 
   std::vector<AddressRange> ranges;
   llvm::Error range_errs = llvm::Error::success();
@@ -439,10 +439,10 @@ CommandObjectDisassemble::GetRangesForSelectedMode(
 
 void CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
-  Target *target = &GetSelectedTarget();
+  Target &target = GetTarget();
 
   if (!m_options.arch.IsValid())
-    m_options.arch = target->GetArchitecture();
+    m_options.arch = target.GetArchitecture();
 
   if (!m_options.arch.IsValid()) {
     result.AppendError(
@@ -535,7 +535,7 @@ void CommandObjectDisassemble::DoExecute(Args &command,
       } else {
         result.AppendErrorWithFormat(
             "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
-            cur_range.GetBaseAddress().GetLoadAddress(target));
+            cur_range.GetBaseAddress().GetLoadAddress(&target));
       }
     }
     if (print_sc_header)

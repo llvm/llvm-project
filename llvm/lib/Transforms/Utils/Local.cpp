@@ -1726,7 +1726,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
   // know nothing about the variable's content.
-  DV = UndefValue::get(DV->getType());
+  DV = PoisonValue::get(DV->getType());
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
                                     SI->getIterator());
 }
@@ -1798,7 +1798,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
   // know nothing about the variable's content.
-  DV = UndefValue::get(DV->getType());
+  DV = PoisonValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DbgVariableRecord *NewDVR =
       new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());

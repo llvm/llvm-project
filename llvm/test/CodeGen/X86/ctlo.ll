@@ -364,7 +364,7 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-NOCMOV-NEXT:    notl %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
-; X86-NOCMOV-NEXT:    addl $32, %eax
+; X86-NOCMOV-NEXT:    orl $32, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ; X86-NOCMOV-NEXT:  .LBB7_1:
@@ -383,7 +383,7 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-CMOV-NEXT:    xorl $31, %edx
 ; X86-CMOV-NEXT:    bsrl %eax, %eax
 ; X86-CMOV-NEXT:    xorl $31, %eax
-; X86-CMOV-NEXT:    addl $32, %eax
+; X86-CMOV-NEXT:    orl $32, %eax
 ; X86-CMOV-NEXT:    testl %ecx, %ecx
 ; X86-CMOV-NEXT:    cmovnel %edx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx

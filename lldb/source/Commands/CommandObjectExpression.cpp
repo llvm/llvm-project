@@ -605,7 +605,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
       return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target &target = GetSelectedOrDummyTarget();
+      Target &target = GetTarget();
       // Drop into REPL
       m_expr_lines.clear();
       m_expr_line_count = 0;
@@ -665,7 +665,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     }
   }
 
-  Target &target = GetSelectedOrDummyTarget();
+  Target &target = GetTarget();
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 

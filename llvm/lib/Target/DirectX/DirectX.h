@@ -47,7 +47,7 @@ void initializeDXILTranslateMetadataPass(PassRegistry &);
 ModulePass *createDXILTranslateMetadataPass();
 
 /// Initializer for DXILTranslateMetadata.
-void initializeDXILResourceWrapperPass(PassRegistry &);
+void initializeDXILResourceMDWrapperPass(PassRegistry &);
 
 /// Pass to pretty print DXIL metadata.
 ModulePass *createDXILPrettyPrinterPass(raw_ostream &OS);
@@ -63,6 +63,13 @@ void initializeDXContainerGlobalsPass(PassRegistry &);
 
 /// Pass for generating DXContainer part globals.
 ModulePass *createDXContainerGlobalsPass();
+
+/// Initializer for DXILFinalizeLinkage pass.
+void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
+
+/// Pass to finalize linkage of functions.
+ModulePass *createDXILFinalizeLinkageLegacyPass();
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

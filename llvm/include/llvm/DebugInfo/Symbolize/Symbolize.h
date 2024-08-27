@@ -52,6 +52,7 @@ public:
   struct Options {
     FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName;
     FileLineInfoKind PathStyle = FileLineInfoKind::AbsoluteFilePath;
+    bool SkipLineZero = false;
     bool UseSymbolTable = true;
     bool Demangle = true;
     bool RelativeAddresses = false;

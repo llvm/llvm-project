@@ -20,66 +20,48 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {1, 2, 3};
-    int ib[] = {1, 3, 5, 2, 4, 6};
+template <class T, class Iter1>
+struct Test {
+  template <class Iter2>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    T ia[]            = {1, 2, 3, 4};
+    const unsigned sa = sizeof(ia) / sizeof(ia[0]);
+    T ib[]            = {1, 2, 3};
+    assert(!std::lexicographical_compare(Iter1(ia), Iter1(ia + sa), Iter2(ib), Iter2(ib + 2)));
+    assert(std::lexicographical_compare(Iter1(ib), Iter1(ib + 2), Iter2(ia), Iter2(ia + sa)));
+    assert(!std::lexicographical_compare(Iter1(ia), Iter1(ia + sa), Iter2(ib), Iter2(ib + 3)));
+    assert(std::lexicographical_compare(Iter1(ib), Iter1(ib + 3), Iter2(ia), Iter2(ia + sa)));
+    assert(std::lexicographical_compare(Iter1(ia), Iter1(ia + sa), Iter2(ib + 1), Iter2(ib + 3)));
+    assert(!std::lexicographical_compare(Iter1(ib + 1), Iter1(ib + 3), Iter2(ia), Iter2(ia + sa)));
+  }
+};
 
-    return  std::lexicographical_compare(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib))
-        && !std::lexicographical_compare(std::begin(ib), std::end(ib), std::begin(ia), std::end(ia))
-           ;
-    }
+template <class T>
+struct TestIter {
+  template <class Iter1>
+  TEST_CONSTEXPR_CXX20 bool operator()() {
+    types::for_each(types::cpp17_input_iterator_list<T*>(), Test<T, Iter1>());
+
+    return true;
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::cpp17_input_iterator_list<const int*>(), TestIter<const int>());
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  types::for_each(types::cpp17_input_iterator_list<const wchar_t*>(), TestIter<const wchar_t>());
 #endif
+  types::for_each(types::cpp17_input_iterator_list<const char*>(), TestIter<const char>());
+  types::for_each(types::cpp17_input_iterator_list<unsigned char*>(), TestIter<unsigned char>());
 
-template <class Iter1, class Iter2>
-void
-test()
-{
-    int ia[] = {1, 2, 3, 4};
-    const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-    int ib[] = {1, 2, 3};
-    assert(!std::lexicographical_compare(Iter1(ia),   Iter1(ia+sa), Iter2(ib),   Iter2(ib+2)));
-    assert( std::lexicographical_compare(Iter1(ib),   Iter1(ib+2),  Iter2(ia),   Iter2(ia+sa)));
-    assert(!std::lexicographical_compare(Iter1(ia),   Iter1(ia+sa), Iter2(ib),   Iter2(ib+3)));
-    assert( std::lexicographical_compare(Iter1(ib),   Iter1(ib+3),  Iter2(ia),   Iter2(ia+sa)));
-    assert( std::lexicographical_compare(Iter1(ia),   Iter1(ia+sa), Iter2(ib+1), Iter2(ib+3)));
-    assert(!std::lexicographical_compare(Iter1(ib+1), Iter1(ib+3),  Iter2(ia),   Iter2(ia+sa)));
+  return true;
 }
 
-int main(int, char**)
-{
-    test<cpp17_input_iterator<const int*>, cpp17_input_iterator<const int*> >();
-    test<cpp17_input_iterator<const int*>, forward_iterator<const int*> >();
-    test<cpp17_input_iterator<const int*>, bidirectional_iterator<const int*> >();
-    test<cpp17_input_iterator<const int*>, random_access_iterator<const int*> >();
-    test<cpp17_input_iterator<const int*>, const int*>();
+int main(int, char**) {
+  test();
 
-    test<forward_iterator<const int*>, cpp17_input_iterator<const int*> >();
-    test<forward_iterator<const int*>, forward_iterator<const int*> >();
-    test<forward_iterator<const int*>, bidirectional_iterator<const int*> >();
-    test<forward_iterator<const int*>, random_access_iterator<const int*> >();
-    test<forward_iterator<const int*>, const int*>();
-
-    test<bidirectional_iterator<const int*>, cpp17_input_iterator<const int*> >();
-    test<bidirectional_iterator<const int*>, forward_iterator<const int*> >();
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*> >();
-    test<bidirectional_iterator<const int*>, random_access_iterator<const int*> >();
-    test<bidirectional_iterator<const int*>, const int*>();
-
-    test<random_access_iterator<const int*>, cpp17_input_iterator<const int*> >();
-    test<random_access_iterator<const int*>, forward_iterator<const int*> >();
-    test<random_access_iterator<const int*>, bidirectional_iterator<const int*> >();
-    test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
-    test<random_access_iterator<const int*>, const int*>();
-
-    test<const int*, cpp17_input_iterator<const int*> >();
-    test<const int*, forward_iterator<const int*> >();
-    test<const int*, bidirectional_iterator<const int*> >();
-    test<const int*, random_access_iterator<const int*> >();
-    test<const int*, const int*>();
-
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

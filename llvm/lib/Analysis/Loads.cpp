@@ -378,8 +378,12 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &S
   // If DT is not specified we can't make context-sensitive query
   const Instruction* CtxI = DT ? ScanFrom : nullptr;
   if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC, DT,
-                                         TLI))
-    return true;
+                                         TLI)) {
+    // With sanitizers `Dereferenceable` is not always enough for unconditional
+    // load.
+    if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))
+      return true;
+  }
 
   if (!ScanFrom)
     return false;

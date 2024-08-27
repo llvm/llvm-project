@@ -99,13 +99,51 @@ define i32 @test3(i32 %A) {
 }
 
 ; D = B + -A = B - A
-define i32 @test4(i32 %A, i32 %B) {
+define i32 @test4(i32 %A, i32 %BB) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
   %C = sub i32 0, %A
   %D = add i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test4_both_nsw(i32 %A, i32 %BB) {
+; CHECK-LABEL: @test4_both_nsw(
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
+  %C = sub nsw i32 0, %A
+  %D = add nsw i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test4_neg_nsw(i32 %A, i32 %BB) {
+; CHECK-LABEL: @test4_neg_nsw(
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
+  %C = sub nsw i32 0, %A
+  %D = add i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test4_add_nsw(i32 %A, i32 %BB) {
+; CHECK-LABEL: @test4_add_nsw(
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
+  %C = sub i32 0, %A
+  %D = add nsw i32 %B, %C
   ret i32 %D
 }
 

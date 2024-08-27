@@ -216,6 +216,8 @@ void reorder(Instruction *I) {
       if (IM->getParent() != I->getParent())
         continue;
 
+      assert(IM != I && "Unexpected cycle while re-ordering instructions");
+
       if (!IM->comesBefore(I)) {
         InstructionsToMove.insert(IM);
         Worklist.push_back(IM);

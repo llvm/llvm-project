@@ -209,3 +209,67 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
 
   return true;
 }
+
+bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI,
+                                   BuildFnTy &MatchInfo) {
+  const GExtOp *First = cast<GExtOp>(&FirstMI);
+  const GExtOp *Second = cast<GExtOp>(&SecondMI);
+
+  Register Dst = First->getReg(0);
+  Register Src = Second->getSrcReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
+    return false;
+
+  // ext of ext -> later ext
+  if (First->getOpcode() == Second->getOpcode() &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    // not zext -> no flags
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildInstr(Second->getOpcode(), {Dst}, {Src});
+    };
+    return true;
+  }
+
+  // anyext of sext/zext  -> sext/zext
+  // -> pick anyext as second ext, then ext of ext
+  if (First->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  // sext/zext of anyext -> sext/zext
+  // -> pick anyext as first ext, then ext of ext
+  if (Second->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({First->getOpcode(), {DstTy, SrcTy}})) {
+    if (First->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (First->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
+}

@@ -58,7 +58,7 @@ int main(void) {
 // CHECK-NEXT: entry:
 // CHECK:        [[SUPER:%.*]] = alloca %struct._objc_super, align 8
 // CHECK:        [[METACLASS_REF:%.*]] = load ptr, ptr @"OBJC_CLASSLIST_SUP_REFS_$_", align 8
-// CHECK:        [[DEST:%.*]] = getelementptr inbounds %struct._objc_super, ptr [[SUPER]], i32 0, i32 1
+// CHECK:        [[DEST:%.*]] = getelementptr inbounds nuw %struct._objc_super, ptr [[SUPER]], i32 0, i32 1
 // CHECK:        store ptr [[METACLASS_REF]], ptr [[DEST]], align 8
 // CHECK:        call void @objc_msgSendSuper2(ptr noundef [[SUPER]], ptr noundef {{%.*}})
 // CHECK:        ret void
@@ -70,7 +70,7 @@ int main(void) {
 // CHECK-NEXT: entry:
 // CHECK:        [[SUPER:%.*]] = alloca %struct._objc_super, align 8
 // CHECK:        [[CLASS_REF:%.*]] = call ptr @objc_loadClassref(ptr @"OBJC_CLASSLIST_SUP_REFS_$_.1")
-// CHECK:        [[DEST:%.*]] = getelementptr inbounds %struct._objc_super, ptr [[SUPER]], i32 0, i32 1
+// CHECK:        [[DEST:%.*]] = getelementptr inbounds nuw %struct._objc_super, ptr [[SUPER]], i32 0, i32 1
 // CHECK:        store ptr [[CLASS_REF]], ptr [[DEST]], align 8
 // CHECK:        call void @objc_msgSendSuper2(ptr noundef [[SUPER]], ptr noundef {{%.*}})
 // CHECK:        ret void

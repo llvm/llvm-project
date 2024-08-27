@@ -29,9 +29,8 @@ define i32 @test_asan(i1 %f) sanitize_address {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
-; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[F:%.*]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SEL]], align 8
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
@@ -50,9 +49,8 @@ define i32 @test_hwasan(i1 %f) sanitize_hwaddress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
-; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[F:%.*]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SEL]], align 8
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
@@ -70,9 +68,8 @@ define i32 @test_tsan(i1 %f) sanitize_thread {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
-; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[F:%.*]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SEL]], align 8
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:

@@ -1624,7 +1624,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   return Expanded;
 }
 
-bool vputils::isHeaderMask(VPValue *V, VPlan &Plan) {
+bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
 

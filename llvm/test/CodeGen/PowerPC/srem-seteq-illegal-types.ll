@@ -85,8 +85,8 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; PPC-LABEL: test_srem_pow2_setne:
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    slwi 4, 3, 26
-; PPC-NEXT:    srawi 4, 4, 26
-; PPC-NEXT:    rlwinm 4, 4, 23, 30, 31
+; PPC-NEXT:    srawi 4, 4, 31
+; PPC-NEXT:    clrlwi 4, 4, 30
 ; PPC-NEXT:    add 4, 3, 4
 ; PPC-NEXT:    rlwinm 4, 4, 0, 26, 29
 ; PPC-NEXT:    sub 3, 3, 4
@@ -99,8 +99,8 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; PPC64LE-LABEL: test_srem_pow2_setne:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    slwi 4, 3, 26
-; PPC64LE-NEXT:    srawi 4, 4, 26
-; PPC64LE-NEXT:    rlwinm 4, 4, 23, 30, 31
+; PPC64LE-NEXT:    srawi 4, 4, 31
+; PPC64LE-NEXT:    clrlwi 4, 4, 30
 ; PPC64LE-NEXT:    add 4, 3, 4
 ; PPC64LE-NEXT:    rlwinm 4, 4, 0, 26, 29
 ; PPC64LE-NEXT:    sub 3, 3, 4

@@ -2203,6 +2203,11 @@ LLVMValueRef LLVMGetNamedGlobal(LLVMModuleRef M, const char *Name) {
   return wrap(unwrap(M)->getNamedGlobal(Name));
 }
 
+LLVMValueRef LLVMGetNamedGlobalWithLength(LLVMModuleRef M, const char *Name,
+                                          size_t Length) {
+  return wrap(unwrap(M)->getNamedGlobal(StringRef(Name, Length)));
+}
+
 LLVMValueRef LLVMGetFirstGlobal(LLVMModuleRef M) {
   Module *Mod = unwrap(M);
   Module::global_iterator I = Mod->global_begin();
@@ -2379,6 +2384,11 @@ LLVMValueRef LLVMAddFunction(LLVMModuleRef M, const char *Name,
 
 LLVMValueRef LLVMGetNamedFunction(LLVMModuleRef M, const char *Name) {
   return wrap(unwrap(M)->getFunction(Name));
+}
+
+LLVMValueRef LLVMGetNamedFunctionWithLength(LLVMModuleRef M, const char *Name,
+                                            size_t Length) {
+  return wrap(unwrap(M)->getFunction(StringRef(Name, Length)));
 }
 
 LLVMValueRef LLVMGetFirstFunction(LLVMModuleRef M) {

@@ -35,17 +35,21 @@ class OutputSection;
 
 LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
 
-// Returned by InputSectionBase::relsOrRelas. At least one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
 template <class ELFT> struct RelsOrRelas {
   Relocs<typename ELFT::Rel> rels;
   Relocs<typename ELFT::Rela> relas;
+  Relocs<typename ELFT::Crel> crels;
   bool areRelocsRel() const { return rels.size(); }
+  bool areRelocsCrel() const { return crels.size(); }
 };
 
 #define invokeOnRelocs(sec, f, ...)                                            \
   {                                                                            \
     const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
-    if (rs.areRelocsRel())                                                     \
+    if (rs.areRelocsCrel())                                                    \
+      f(__VA_ARGS__, rs.crels);                                                \
+    else if (rs.areRelocsRel())                                                \
       f(__VA_ARGS__, rs.rels);                                                 \
     else                                                                       \
       f(__VA_ARGS__, rs.relas);                                                \
@@ -57,7 +61,7 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output, Class };
 
   Kind kind() const { return (Kind)sectionKind; }
 
@@ -144,7 +148,9 @@ public:
                    uint32_t addralign, ArrayRef<uint8_t> data, StringRef name,
                    Kind sectionKind);
 
-  static bool classof(const SectionBase *s) { return s->kind() != Output; }
+  static bool classof(const SectionBase *s) {
+    return s->kind() != Output && s->kind() != Class;
+  }
 
   // The file which contains this section. Its dynamic type is usually
   // ObjFile<ELFT>, but may be an InputFile of InternalKind (for a synthetic
@@ -209,7 +215,8 @@ public:
   // used by --gc-sections.
   InputSectionBase *nextInSectionGroup = nullptr;
 
-  template <class ELFT> RelsOrRelas<ELFT> relsOrRelas() const;
+  template <class ELFT>
+  RelsOrRelas<ELFT> relsOrRelas(bool supportsCrel = true) const;
 
   // InputSections that are dependent on us (reverse dependency for GC)
   llvm::TinyPtrVector<InputSection *> dependentSections;
@@ -483,7 +490,8 @@ public:
 };
 
 inline bool isStaticRelSecType(uint32_t type) {
-  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_REL;
+  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_CREL ||
+         type == llvm::ELF::SHT_REL;
 }
 
 inline bool isDebugSection(const InputSectionBase &sec) {

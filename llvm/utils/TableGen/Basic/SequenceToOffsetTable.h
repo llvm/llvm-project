@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_SEQUENCETOOFFSETTABLE_H
-#define LLVM_UTILS_TABLEGEN_SEQUENCETOOFFSETTABLE_H
+#ifndef LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H
+#define LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -172,4 +172,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H

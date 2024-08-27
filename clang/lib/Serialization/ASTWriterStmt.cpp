@@ -2606,6 +2606,12 @@ void ASTStmtWriter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   Code = serialization::STMT_OMP_TASKWAIT_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPAssumeDirective(OMPAssumeDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ASSUME_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPErrorDirective(OMPErrorDirective *D) {
   VisitStmt(D);
   Record.push_back(D->getNumClauses());

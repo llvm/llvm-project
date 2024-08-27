@@ -729,10 +729,10 @@ struct S2 {
 };
 
 S2& S2::operator=(this int&& self, const S2&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should be reference to 'S2'}}
 
 S2& S2::operator=(this int&& self, S2&&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should be reference to 'S2'}}
 
 struct Move {
     Move& operator=(this int&, Move&&) = default;
@@ -972,3 +972,61 @@ struct R {
 	f(r_value_ref); // expected-error {{no matching member function for call to 'f'}}
   }
 };
+
+namespace GH100329 {
+struct A {
+    bool operator == (this const int&, const A&);
+};
+bool A::operator == (this const int&, const A&) = default;
+// expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const int &', expected 'const GH100329::A &'}}
+} // namespace GH100329
+
+namespace defaulted_assign {
+struct A {
+  A& operator=(this A, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  A& operator=(this int, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+};
+} // namespace defaulted_assign
+
+namespace defaulted_compare {
+struct A {
+  bool operator==(this A&, const A&) = default;
+  // expected-error@-1 {{defaulted member equality comparison operator must be const-qualified}}
+  bool operator==(this const A, const A&) = default;
+  // expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const A', expected 'const defaulted_compare::A &'}}
+  bool operator==(this A, A) = default;
+};
+struct B {
+  int a;
+  bool operator==(this B, B) = default;
+};
+static_assert(B{0} == B{0});
+static_assert(B{0} != B{1});
+template<B b>
+struct X;
+static_assert(__is_same(X<B{0}>, X<B{0}>));
+static_assert(!__is_same(X<B{0}>, X<B{1}>));
+} // namespace defaulted_compare
+
+namespace GH102025 {
+struct Foo {
+  template <class T>
+  constexpr auto operator[](this T &&self, auto... i) // expected-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
+      -> decltype(_evaluate(self, i...)) {
+    return self._evaluate(i...);
+  }
+
+private:
+  template <class T>
+  constexpr auto _evaluate(this T &&self, auto... i) -> decltype((i + ...));
+};
+
+int main() {
+  Foo foo;
+  return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
+}
+}

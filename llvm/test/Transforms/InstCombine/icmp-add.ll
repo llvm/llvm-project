@@ -3102,3 +3102,84 @@ define i1 @uge_add_C2_pow2_C_neg(i8 %x) {
 }
 
 declare void @llvm.assume(i1)
+
+; Change an unsigned predicate to signed in icmp (add x, C1), C2
+define i1 @icmp_add_constant_with_constant_ult_to_slt(i32 range(i32 -4, 10) %x) {
+; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 5
+  %cmp = icmp ult i32 %add, 13
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_constant_with_constant_ugt_to_sgt(i32 range(i32 -4, 10) %x) {
+; CHECK-LABEL: @icmp_add_constant_with_constant_ugt_to_sgt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 10
+  %cmp = icmp ugt i32 %add, 12
+  ret i1 %cmp
+}
+
+; Negative test: x + C1 may be negative
+define i1 @icmp_add_constant_with_constant_ult_to_slt_neg1(i32 range(i32 -5, 10) %x) {
+; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt_neg1(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 20
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 4
+  %cmp = icmp ult i32 %add, 20
+  ret i1 %cmp
+}
+
+; Negative test: missing nsw flag
+define i1 @icmp_add_constant_with_constant_ult_to_slt_neg2(i8 range(i8 -4, 120) %x) {
+; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt_neg2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[ADD]], 20
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 15
+  %cmp = icmp ult i8 %add, 20
+  ret i1 %cmp
+}
+
+; Negative test: C2 is negative
+define i1 @icmp_add_constant_with_constant_ult_to_slt_neg3(i32 range(i32 -4, 10) %x) {
+; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt_neg3(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], -6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 4
+  %cmp = icmp ult i32 %add, -6
+  ret i1 %cmp
+}
+
+; Negative test: C2 - C1 is negative
+define i1 @icmp_add_constant_with_constant_ult_to_slt_neg4(i32 range(i32 -4, 10) %x) {
+; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt_neg4(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 5
+  %cmp = icmp ult i32 %add, 2
+  ret i1 %cmp
+}
+
+; Same as before, but infer the range of ucmp
+define i1 @icmp_of_ucmp_plus_const_with_const(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_of_ucmp_plus_const_with_const(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  %add = add i8 %cmp1, 1
+  %cmp2 = icmp ult i8 %add, 2
+  ret i1 %cmp2
+}

@@ -119,8 +119,8 @@ define i32 @test3(i32 %A, i32 %B) {
 
 define i32 @test4(i32 %A) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[NOTC1:%.*]] = or i32 [[A:%.*]], -6
-; CHECK-NEXT:    ret i32 [[NOTC1]]
+; CHECK-NEXT:    [[NOTC:%.*]] = or i32 [[A:%.*]], -6
+; CHECK-NEXT:    ret i32 [[NOTC]]
 ;
   %nota = xor i32 %A, -1
   %c = and i32 %nota, 5

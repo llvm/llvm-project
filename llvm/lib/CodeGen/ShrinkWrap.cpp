@@ -440,8 +440,7 @@ static bool
 isSaveReachableThroughClean(const MachineBasicBlock *SavePoint,
                             ArrayRef<MachineBasicBlock *> CleanPreds) {
   DenseSet<const MachineBasicBlock *> Visited;
-  SmallVector<MachineBasicBlock *, 4> Worklist(CleanPreds.begin(),
-                                               CleanPreds.end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(CleanPreds);
   while (!Worklist.empty()) {
     MachineBasicBlock *CleanBB = Worklist.pop_back_val();
     if (CleanBB == SavePoint)

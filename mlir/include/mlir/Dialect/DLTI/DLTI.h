@@ -22,6 +22,19 @@ namespace detail {
 class DataLayoutEntryAttrStorage;
 } // namespace detail
 } // namespace mlir
+namespace mlir {
+namespace dlti {
+/// Find the first DataLayoutSpec associated to `op`, via either the
+/// DataLayoutOpInterface, a method on ModuleOp, or an attribute implementing
+/// the interface, on `op` and else on `op`'s ancestors in turn.
+DataLayoutSpecInterface getDataLayoutSpec(Operation *op);
+
+/// Find the first TargetSystemSpec associated to `op`, via either the
+/// DataLayoutOpInterface, a method on ModuleOp, or an attribute implementing
+/// the interface, on `op` and else on `op`'s ancestors in turn.
+TargetSystemSpecInterface getTargetSystemSpec(Operation *op);
+} // namespace dlti
+} // namespace mlir
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/DLTI/DLTIAttrs.h.inc"

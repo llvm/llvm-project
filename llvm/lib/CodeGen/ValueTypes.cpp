@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -287,6 +288,23 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
                        VTy->getElementCount());
   }
   }
+}
+
+const fltSemantics &MVT::getFltSemantics() const {
+  switch (getScalarType().SimpleTy) {
+  default: llvm_unreachable("Unknown FP format");
+  case MVT::f16:     return APFloat::IEEEhalf();
+  case MVT::bf16:    return APFloat::BFloat();
+  case MVT::f32:     return APFloat::IEEEsingle();
+  case MVT::f64:     return APFloat::IEEEdouble();
+  case MVT::f80:     return APFloat::x87DoubleExtended();
+  case MVT::f128:    return APFloat::IEEEquad();
+  case MVT::ppcf128: return APFloat::PPCDoubleDouble();
+  }
+}
+
+const fltSemantics &EVT::getFltSemantics() const {
+  return getScalarType().getSimpleVT().getFltSemantics();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

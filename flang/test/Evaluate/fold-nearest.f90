@@ -6,11 +6,8 @@ module m1
   logical, parameter :: test_2 = nearest(minSubnormal, -1.) == 0
   logical, parameter :: test_3 = nearest(1., 1.) == 1.0000001
   logical, parameter :: test_4 = nearest(1.0000001, -1.) == 1
-  !WARN: warning: NEAREST intrinsic folding overflow
   real, parameter :: inf = nearest(huge(1.), 1.)
-  !WARN: warning: NEAREST intrinsic folding: bad argument
   logical, parameter :: test_5 = nearest(inf, 1.) == inf
-  !WARN: warning: NEAREST intrinsic folding: bad argument
   logical, parameter :: test_6 = nearest(-inf, -1.) == -inf
   logical, parameter :: test_7 = nearest(1.9999999, 1.) == 2.
   logical, parameter :: test_8 = nearest(2., -1.) == 1.9999999
@@ -59,10 +56,10 @@ module m2
   logical, parameter :: test_12 = ieee_next_after(1., 1.) == 1.
   !WARN: warning: invalid argument on division
   real, parameter :: nan = 0. / 0.
-  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: bad argument
+  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: arguments are unordered
   real, parameter :: x13 = ieee_next_after(nan, nan)
   logical, parameter :: test_13 = .not. (x13 == x13)
-  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: bad argument
+  !WARN: warning: IEEE_NEXT_AFTER intrinsic folding: arguments are unordered
   real, parameter :: x14 = ieee_next_after(nan, 0.)
   logical, parameter :: test_14 = .not. (x14 == x14)
 end module
@@ -77,24 +74,20 @@ module m3
   logical, parameter :: test_4 = ieee_next_down(1.0000000000000002d0) == 1.d0
   !WARN: warning: division by zero
   real(kind(0.d0)), parameter :: inf = 1.d0 / 0.d0
-  !WARN: warning: IEEE_NEXT_UP intrinsic folding overflow
   logical, parameter :: test_5 = ieee_next_up(huge(0.d0)) == inf
-  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding overflow
   logical, parameter :: test_6 = ieee_next_down(-huge(0.d0)) == -inf
-  !WARN: warning: IEEE_NEXT_UP intrinsic folding: bad argument
   logical, parameter :: test_7 = ieee_next_up(inf) == inf
   logical, parameter :: test_8 = ieee_next_down(inf) == h
   logical, parameter :: test_9 = ieee_next_up(-inf) == -h
-  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: bad argument
   logical, parameter :: test_10 = ieee_next_down(-inf) == -inf
   logical, parameter :: test_11 = ieee_next_up(1.9999999999999997d0) == 2.d0
   logical, parameter :: test_12 = ieee_next_down(2.d0) == 1.9999999999999997d0
   !WARN: warning: invalid argument on division
   real(kind(0.d0)), parameter :: nan = 0.d0 / 0.d0
-  !WARN: warning: IEEE_NEXT_UP intrinsic folding: bad argument
+  !WARN: warning: IEEE_NEXT_UP intrinsic folding: argument is NaN
   real(kind(0.d0)), parameter :: x13 = ieee_next_up(nan)
   logical, parameter :: test_13 = .not. (x13 == x13)
-  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: bad argument
+  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: argument is NaN
   real(kind(0.d0)), parameter :: x14 = ieee_next_down(nan)
   logical, parameter :: test_14 = .not. (x14 == x14)
 end module

@@ -430,7 +430,9 @@ entry:
 define i8 @select_diff_addrspace_remove_alloca_asan(i1 %cond, ptr %p) sanitize_address {
 ; CHECK-LABEL: @select_diff_addrspace_remove_alloca_asan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[GEP2:%.*]] = select i1 [[COND:%.*]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 4), ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 6)
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[GEP2]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
   %alloca = alloca [32 x i8]

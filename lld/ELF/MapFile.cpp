@@ -167,6 +167,8 @@ static void writeMapFile(raw_fd_ostream &os) {
       os << assign->commandString << '\n';
       continue;
     }
+    if (isa<SectionClassDesc>(cmd))
+      continue;
 
     osec = &cast<OutputDesc>(cmd)->osec;
     writeHeader(os, osec->addr, osec->getLMA(), osec->size, osec->addralign);

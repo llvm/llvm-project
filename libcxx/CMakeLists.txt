@@ -845,10 +845,6 @@ add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
 
-if (LIBCXX_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
-
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(lib/abi)

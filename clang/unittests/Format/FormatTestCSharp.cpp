@@ -1149,6 +1149,17 @@ public class SaleItem
     public decimal Price { get; set; }
 })",
                MicrosoftStyle);
+
+  verifyFormat("internal class Program\n"
+               "{\n"
+               "    bool AutoAllowKnownApps\n"
+               "    {\n"
+               "        get;\n"
+               "        [Simple]\n"
+               "        set;\n"
+               "    }\n"
+               "}",
+               MicrosoftStyle);
 }
 
 TEST_F(FormatTestCSharp, DefaultLiteral) {

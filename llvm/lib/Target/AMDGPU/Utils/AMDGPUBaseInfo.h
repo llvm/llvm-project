@@ -1314,8 +1314,7 @@ bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
-/// The bit indicating isHi is the LSB of the encoding.
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI);
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.

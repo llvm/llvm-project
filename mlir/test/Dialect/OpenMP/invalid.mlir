@@ -34,11 +34,11 @@ func.func @invalid_nested_wrapper(%lb : index, %ub : index, %step : index) {
           omp.yield
         }
         omp.terminator
-      }
+      } {omp.composite}
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
 
   return
 }
@@ -53,9 +53,9 @@ func.func @no_nested_wrapper(%lb : index, %ub : index, %step : index) {
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
 
   return
 }
@@ -208,9 +208,9 @@ func.func @invalid_nested_wrapper(%lb : index, %ub : index, %step : index) {
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
 }
 
 // -----
@@ -1394,7 +1394,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1407,7 +1407,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
     // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1432,7 +1432,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,1,0,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0,0,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1442,7 +1442,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,0,0,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,1>} : (memref<i32>) -> ()
   return
 }
 
@@ -1623,7 +1623,7 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -1820,7 +1820,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1834,7 +1834,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 2, 0, 0, 0, 0, 0, 0>, reduction_syms = [@add_f32]} : (!llvm.ptr, !llvm.ptr) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>, reduction_syms = [@add_f32]} : (!llvm.ptr, !llvm.ptr) -> ()
   return
 }
 
@@ -1847,7 +1847,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>, reduction_syms = [@add_f32, @add_f32]} : (!llvm.ptr) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>, reduction_syms = [@add_f32, @add_f32]} : (!llvm.ptr) -> ()
   return
 }
 
@@ -1861,7 +1861,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
-  }) {in_reduction_syms = [@add_f32], operandSegmentSizes = array<i32: 0, 0, 2, 0, 0, 0, 0, 0, 0, 0>} : (!llvm.ptr, !llvm.ptr) -> ()
+  }) {in_reduction_syms = [@add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>} : (!llvm.ptr, !llvm.ptr) -> ()
   return
 }
 
@@ -1874,7 +1874,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
-  }) {in_reduction_syms = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0>} : (!llvm.ptr) -> ()
+  }) {in_reduction_syms = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>} : (!llvm.ptr) -> ()
   return
 }
 
@@ -1963,9 +1963,9 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
   return
 }
 
@@ -2020,7 +2020,7 @@ func.func @omp_target_enter_data(%map1: memref<?xi32>) {
 func.func @omp_target_enter_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0>}
   return
 }
 
@@ -2038,7 +2038,7 @@ func.func @omp_target_exit_data(%map1: memref<?xi32>) {
 func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0>}
   return
 }
 
@@ -2119,7 +2119,7 @@ llvm.mlir.global internal @_QFsubEx() : i32
 func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0>}
   return
 }
 
@@ -2129,7 +2129,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -2137,7 +2137,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
 
 func.func @omp_distribute_schedule(%chunk_size : i32) -> () {
   // expected-error @below {{op chunk size set without dist_schedule_static being present}}
-  "omp.distribute"(%chunk_size) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>}> ({
+  "omp.distribute"(%chunk_size) <{operandSegmentSizes = array<i32: 0, 0, 1, 0>}> ({
       "omp.terminator"() : () -> ()
     }) : (i32) -> ()
 }
@@ -2146,7 +2146,7 @@ func.func @omp_distribute_schedule(%chunk_size : i32) -> () {
 
 func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
-  "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 0, 1, 0, 0>}> ({
+  "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>}> ({
       "omp.terminator"() : () -> ()
     }) : (memref<i32>) -> ()
 }
@@ -2171,9 +2171,9 @@ func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -
         "omp.yield"() : () -> ()
       }
       "omp.terminator"() : () -> ()
-    }) : () -> ()
+    }) {omp.composite} : () -> ()
     "omp.terminator"() : () -> ()
-  }
+  } {omp.composite}
 }
 
 // -----
@@ -2340,7 +2340,7 @@ func.func @undefined_privatizer(%arg0: index) {
 // -----
 func.func @undefined_privatizer(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
-  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1>, private_syms = [@x.privatizer, @y.privatizer]}> ({
+  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0>, private_syms = [@x.privatizer, @y.privatizer]}> ({
     ^bb0(%arg2: !llvm.ptr):
       omp.terminator
     }) : (!llvm.ptr) -> ()
@@ -2381,5 +2381,167 @@ func.func @masked_arg_count_mismatch(%arg0: i32, %arg1: i32) {
   "omp.masked"(%arg0, %arg1) ({
       omp.terminator
     }) : (i32, i32) -> ()
+  return
+}
+
+// -----
+func.func @omp_parallel_missing_composite(%lb: index, %ub: index, %step: index) -> () {
+  omp.distribute {
+    // expected-error@+1 {{'omp.composite' attribute missing from composite wrapper}}
+    omp.parallel {
+      omp.wsloop {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    }
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_parallel_invalid_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
+  omp.parallel {
+    omp.wsloop {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+      omp.terminator
+    }
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_wsloop_missing_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+  omp.wsloop {
+    omp.simd {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @omp_wsloop_invalid_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_wsloop_missing_composite_2(%lb: index, %ub: index, %step: index) -> () {
+  omp.distribute {
+    omp.parallel {
+      // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+      omp.wsloop {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+        omp.terminator
+      }
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_simd_missing_composite(%lb: index, %ub: index, %step: index) -> () {
+  omp.wsloop {
+    // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+    omp.simd {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+      omp.terminator
+    }
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_simd_invalid_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
+  omp.simd {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_distribute_missing_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+  omp.distribute {
+    omp.parallel {
+      omp.wsloop {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @omp_distribute_invalid_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
+  omp.distribute {
+    omp.loop_nest (%0) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_taskloop_missing_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+  omp.taskloop {
+    omp.simd {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
+        omp.yield
+      }
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
+  omp.taskloop {
+    omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
+      omp.yield
+    }
+    omp.terminator
+  } {omp.composite}
   return
 }

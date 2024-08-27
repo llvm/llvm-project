@@ -28,7 +28,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -5570,6 +5569,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       bool UsedAssumedInformation = false;
       A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
                              UsedAssumedInformation, AA::Interprocedural);
+      A.getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*LI->getPointerOperand()));
       continue;
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
@@ -5579,6 +5580,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     }
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
+      A.getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*SI->getPointerOperand()));
       continue;
     }
     if (auto *FI = dyn_cast<FenceInst>(&I)) {

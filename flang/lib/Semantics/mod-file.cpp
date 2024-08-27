@@ -410,15 +410,14 @@ bool ModFileWriter::PutComponents(const Symbol &typeSymbol) {
   llvm::raw_string_ostream typeBindings{buf};
   UnorderedSymbolSet emitted;
   SymbolVector symbols{scope.GetSymbols()};
-  // Emit type parameters first
-  for (const Symbol &symbol : symbols) {
-    if (symbol.has<TypeParamDetails>()) {
-      PutSymbol(typeBindings, symbol);
-      emitted.emplace(symbol);
-    }
-  }
-  // Emit components in component order.
+  // Emit type parameter declarations first, in order
   const auto &details{typeSymbol.get<DerivedTypeDetails>()};
+  for (const Symbol &symbol : details.paramDeclOrder()) {
+    CHECK(symbol.has<TypeParamDetails>());
+    PutSymbol(typeBindings, symbol);
+    emitted.emplace(symbol);
+  }
+  // Emit actual components in component order.
   for (SourceName name : details.componentNames()) {
     auto iter{scope.find(name)};
     if (iter != scope.end()) {
@@ -549,10 +548,10 @@ void ModFileWriter::PutDerivedType(
     decls_ << ",extends(" << extends->name() << ')';
   }
   decls_ << "::" << typeSymbol.name();
-  if (!details.paramNames().empty()) {
+  if (!details.paramNameOrder().empty()) {
     char sep{'('};
-    for (const auto &name : details.paramNames()) {
-      decls_ << sep << name;
+    for (const SymbolRef &ref : details.paramNameOrder()) {
+      decls_ << sep << ref->name();
       sep = ',';
     }
     decls_ << ')';
@@ -1046,7 +1045,7 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
       os, symbol,
       [&]() {
         PutType(os, DEREF(symbol.GetType()));
-        PutLower(os << ',', common::EnumToString(details.attr()));
+        PutLower(os << ',', common::EnumToString(details.attr().value()));
       },
       symbol.attrs());
   PutInit(os, details.init());

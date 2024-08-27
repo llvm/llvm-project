@@ -428,6 +428,28 @@ void MCAssembler::layoutBundle(MCFragment *Prev, MCFragment *F) const {
       DF->Offset = EF->Offset;
 }
 
+void MCAssembler::ensureValid(MCSection &Sec) const {
+  if (Sec.hasLayout())
+    return;
+  Sec.setHasLayout(true);
+  MCFragment *Prev = nullptr;
+  uint64_t Offset = 0;
+  for (MCFragment &F : Sec) {
+    F.Offset = Offset;
+    if (isBundlingEnabled() && F.hasInstructions()) {
+      layoutBundle(Prev, &F);
+      Offset = F.Offset;
+    }
+    Offset += computeFragmentSize(F);
+    Prev = &F;
+  }
+}
+
+uint64_t MCAssembler::getFragmentOffset(const MCFragment &F) const {
+  ensureValid(*F.getParent());
+  return F.Offset;
+}
+
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
@@ -907,20 +929,22 @@ void MCAssembler::layout() {
 
   // Layout until everything fits.
   this->HasLayout = true;
-  for (MCSection &Sec : *this)
-    layoutSection(Sec);
   while (layoutOnce()) {
+    if (getContext().hadError())
+      return;
+    // Size of fragments in one section can depend on the size of fragments in
+    // another. If any fragment has changed size, we have to re-layout (and
+    // as a result possibly further relax) all.
+    for (MCSection &Sec : *this)
+      Sec.setHasLayout(false);
   }
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - post-relaxation\n--\n";
       dump(); });
 
-  // Some targets might want to adjust fragment offsets. If so, perform another
-  // layout loop.
-  if (getBackend().finishLayout(*this))
-    for (MCSection &Sec : *this)
-      layoutSection(Sec);
+  // Finalize the layout, including fragment lowering.
+  getBackend().finishLayout(*this);
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - final-layout\n--\n";
@@ -1273,42 +1297,15 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   }
 }
 
-void MCAssembler::layoutSection(MCSection &Sec) {
-  MCFragment *Prev = nullptr;
-  uint64_t Offset = 0;
-  for (MCFragment &F : Sec) {
-    F.Offset = Offset;
-    if (LLVM_UNLIKELY(isBundlingEnabled())) {
-      if (F.hasInstructions()) {
-        layoutBundle(Prev, &F);
-        Offset = F.Offset;
-      }
-      Prev = &F;
-    }
-    Offset += computeFragmentSize(F);
-  }
-}
-
 bool MCAssembler::layoutOnce() {
   ++stats::RelaxationSteps;
 
-  // Size of fragments in one section can depend on the size of fragments in
-  // another. If any fragment has changed size, we have to re-layout (and
-  // as a result possibly further relax) all.
-  bool ChangedAny = false;
-  for (MCSection &Sec : *this) {
-    for (;;) {
-      bool Changed = false;
-      for (MCFragment &F : Sec)
-        if (relaxFragment(F))
-          Changed = true;
-      ChangedAny |= Changed;
-      if (!Changed)
-        break;
-      layoutSection(Sec);
-    }
-  }
-  return ChangedAny;
+  bool Changed = false;
+  for (MCSection &Sec : *this)
+    for (MCFragment &Frag : Sec)
+      if (relaxFragment(Frag))
+        Changed = true;
+  return Changed;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

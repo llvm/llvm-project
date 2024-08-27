@@ -188,7 +188,7 @@ TEST_F(TestClangASTImporter, MetadataPropagation) {
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
-  ASSERT_NE(nullptr, importer.GetDeclMetadata(imported));
+  ASSERT_NE(std::nullopt, importer.GetDeclMetadata(imported));
   EXPECT_EQ(metadata, importer.GetDeclMetadata(imported)->GetUserID());
 }
 
@@ -219,7 +219,7 @@ TEST_F(TestClangASTImporter, MetadataPropagationIndirectImport) {
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
-  ASSERT_NE(nullptr, importer.GetDeclMetadata(imported));
+  ASSERT_NE(std::nullopt, importer.GetDeclMetadata(imported));
   EXPECT_EQ(metadata, importer.GetDeclMetadata(imported)->GetUserID());
 }
 
@@ -244,7 +244,7 @@ TEST_F(TestClangASTImporter, MetadataPropagationAfterCopying) {
   source.ast->SetMetadataAsUserID(source.record_decl, metadata);
 
   // Check that we got the same Metadata.
-  ASSERT_NE(nullptr, importer.GetDeclMetadata(imported));
+  ASSERT_NE(std::nullopt, importer.GetDeclMetadata(imported));
   EXPECT_EQ(metadata, importer.GetDeclMetadata(imported)->GetUserID());
 }
 

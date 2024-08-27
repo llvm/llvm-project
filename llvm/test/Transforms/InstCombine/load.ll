@@ -56,9 +56,11 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
+; FIXME: Constants should be allowed for this optimization.
 define i32 @test5_asan(i1 %C) sanitize_address {
 ; CHECK-LABEL: @test5_asan(
-; CHECK-NEXT:    [[Z:%.*]] = select i1 [[C:%.*]], i32 42, i32 47
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], ptr @X, ptr @X2
+; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[Y]], align 4
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %Y = select i1 %C, ptr @X, ptr @X2		; <ptr> [#uses=1]

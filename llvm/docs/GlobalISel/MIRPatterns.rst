@@ -115,7 +115,7 @@ GITypeOf
 ``GITypeOf<"$x">`` is a ``GISpecialType`` that allows for the creation of a
 register or immediate with the same type as another (register) operand.
 
-Operand:
+Type Parameters:
 
 * An operand name as a string, prefixed by ``$``.
 
@@ -142,6 +142,59 @@ Semantics:
     (match (G_FMUL $dst, $src, -1)),
     (apply (G_FSUB $dst, $src, $tmp),
            (G_FNEG GITypeOf<"$dst">:$tmp, $src))>;
+
+GIVariadic
+~~~~~~~~~~
+
+``GIVariadic<>`` is a ``GISpecialType`` that allows for matching 1 or
+more operands remaining on an instruction.
+
+Type Parameters:
+
+* The minimum number of additional operands to match. Must be greater than zero.
+
+  * Default is 1.
+
+* The maximum number of additional operands to match. Must be strictly greater
+  than the minimum.
+
+  * 0 can be used to indicate there is no upper limit.
+  * Default is 0.
+
+Semantics:
+
+* ``GIVariadic<>`` operands can only appear on variadic instructions.
+* ``GIVariadic<>`` operands cannot be defs.
+* ``GIVariadic<>`` operands can only appear as the last operand in a 'match' pattern.
+* Each instance within a 'match' pattern must be uniquely named.
+* Re-using a ``GIVariadic<>`` operand in an 'apply' pattern will result in all
+  the matched operands being copied from the original instruction.
+* The min/max operands will result in the matcher checking that the number of operands
+  falls within that range.
+* ``GIVariadic<>`` operands can be used in C++ code within a rule, which will
+  result in the operand name being expanded to a value of type ``ArrayRef<MachineOperand>``.
+
+.. code-block:: text
+
+  // bool checkBuildVectorToUnmerge(ArrayRef<MachineOperand>);
+
+  def build_vector_to_unmerge: GICombineRule <
+    (defs root:$root),
+    (match (G_BUILD_VECTOR $root, GIVariadic<>:$args),
+           [{ return checkBuildVectorToUnmerge(${args}); }]),
+    (apply (G_UNMERGE_VALUES $root, $args))
+  >;
+
+.. code-block:: text
+
+  // Will additionally check the number of operands is >= 3 and <= 5.
+  // ($root is one operand, then 2 to 4 variadic operands).
+  def build_vector_to_unmerge: GICombineRule <
+    (defs root:$root),
+    (match (G_BUILD_VECTOR $root, GIVariadic<2, 4>:$two_to_four),
+           [{ return checkBuildVectorToUnmerge(${two_to_four}); }]),
+    (apply (G_UNMERGE_VALUES $root, $two_to_four))
+  >;
 
 Builtin Operations
 ------------------
@@ -240,6 +293,8 @@ This a non-exhaustive list of known issues with MIR patterns at this time.
   match. e.g. if a pattern needs to work on both i32 and i64, you either
   need to leave it untyped and check the type in C++, or duplicate the
   pattern.
+* ``GISpecialType`` operands are not allowed within a ``GICombinePatFrag``.
+* ``GIVariadic<>`` matched operands must each have a unique name.
 
 GICombineRule
 -------------

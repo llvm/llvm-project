@@ -7,9 +7,11 @@ define void @p(double %0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>, double [[TMP0]], i32 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[MUL16_150_1_I:%.*]] = fmul double 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP3]], <2 x i32> <i32 1, i32 7>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <2 x i32> <i32 poison, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP14]], double [[MUL16_150_1_I]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP4]], zeroinitializer

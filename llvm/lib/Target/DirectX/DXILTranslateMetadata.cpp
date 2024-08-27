@@ -29,11 +29,11 @@ public:
   static char ID; // Pass identification, replacement for typeid
   explicit DXILTranslateMetadata() : ModulePass(ID) {}
 
-  StringRef getPassName() const override { return "DXIL Metadata Emit"; }
+  StringRef getPassName() const override { return "DXIL Translate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<DXILResourceWrapper>();
+    AU.addRequired<DXILResourceMDWrapper>();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
   }
 
@@ -51,7 +51,7 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   dxil::createDXILVersionMD(M);
 
   const dxil::Resources &Res =
-      getAnalysis<DXILResourceWrapper>().getDXILResource();
+      getAnalysis<DXILResourceMDWrapper>().getDXILResource();
   Res.write(M);
 
   const uint64_t Flags = static_cast<uint64_t>(
@@ -67,9 +67,9 @@ ModulePass *llvm::createDXILTranslateMetadataPass() {
   return new DXILTranslateMetadata();
 }
 
-INITIALIZE_PASS_BEGIN(DXILTranslateMetadata, "dxil-metadata-emit",
-                      "DXIL Metadata Emit", false, false)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapper)
+INITIALIZE_PASS_BEGIN(DXILTranslateMetadata, "dxil-translate-metadata",
+                      "DXIL Translate Metadata", false, false)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
-INITIALIZE_PASS_END(DXILTranslateMetadata, "dxil-metadata-emit",
-                    "DXIL Metadata Emit", false, false)
+INITIALIZE_PASS_END(DXILTranslateMetadata, "dxil-translate-metadata",
+                    "DXIL Translate Metadata", false, false)

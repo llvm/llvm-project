@@ -42,6 +42,8 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
+  case Intrinsic::dx_length:
+  case Intrinsic::dx_normalize:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return true;
@@ -157,6 +159,37 @@ static bool expandAnyIntrinsic(CallInst *Orig) {
   return true;
 }
 
+static bool expandLengthIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  Type *Ty = X->getType();
+  Type *EltTy = Ty->getScalarType();
+
+  // Though dx.length does work on scalar type, we can optimize it to just emit
+  // fabs, in CGBuiltin.cpp. We shouldn't see a scalar type here because
+  // CGBuiltin.cpp should have emitted a fabs call.
+  Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
+  auto *XVec = dyn_cast<FixedVectorType>(Ty);
+  unsigned XVecSize = XVec->getNumElements();
+  if (!(Ty->isVectorTy() && XVecSize > 1))
+    report_fatal_error(Twine("Invalid input type for length intrinsic"),
+                       /* gen_crash_diag=*/false);
+
+  Value *Sum = Builder.CreateFMul(Elt, Elt);
+  for (unsigned I = 1; I < XVecSize; I++) {
+    Elt = Builder.CreateExtractElement(X, I);
+    Value *Mul = Builder.CreateFMul(Elt, Elt);
+    Sum = Builder.CreateFAdd(Sum, Mul);
+  }
+  Value *Result = Builder.CreateIntrinsic(
+      EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum}, nullptr, "elt.sqrt");
+
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
+}
+
 static bool expandLerpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
@@ -195,6 +228,74 @@ static bool expandLogIntrinsic(CallInst *Orig,
 }
 static bool expandLog10Intrinsic(CallInst *Orig) {
   return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
+}
+
+static bool expandNormalizeIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = Orig->getType();
+  Type *EltTy = Ty->getScalarType();
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+
+  auto *XVec = dyn_cast<FixedVectorType>(Ty);
+  if (!XVec) {
+    if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
+      const APFloat &fpVal = constantFP->getValueAPF();
+      if (fpVal.isZero())
+        report_fatal_error(Twine("Invalid input scalar: length is zero"),
+                           /* gen_crash_diag=*/false);
+    }
+    Value *Result = Builder.CreateFDiv(X, X);
+
+    Orig->replaceAllUsesWith(Result);
+    Orig->eraseFromParent();
+    return true;
+  }
+
+  unsigned XVecSize = XVec->getNumElements();
+  Value *DotProduct = nullptr;
+  // use the dot intrinsic corresponding to the vector size
+  switch (XVecSize) {
+  case 1:
+    report_fatal_error(Twine("Invalid input vector: length is zero"),
+                       /* gen_crash_diag=*/false);
+    break;
+  case 2:
+    DotProduct = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::dx_dot2, ArrayRef<Value *>{X, X}, nullptr, "dx.dot2");
+    break;
+  case 3:
+    DotProduct = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::dx_dot3, ArrayRef<Value *>{X, X}, nullptr, "dx.dot3");
+    break;
+  case 4:
+    DotProduct = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::dx_dot4, ArrayRef<Value *>{X, X}, nullptr, "dx.dot4");
+    break;
+  default:
+    report_fatal_error(Twine("Invalid input vector: vector size is invalid."),
+                       /* gen_crash_diag=*/false);
+  }
+
+  // verify that the length is non-zero
+  // (if the dot product is non-zero, then the length is non-zero)
+  if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
+    const APFloat &fpVal = constantFP->getValueAPF();
+    if (fpVal.isZero())
+      report_fatal_error(Twine("Invalid input vector: length is zero"),
+                         /* gen_crash_diag=*/false);
+  }
+
+  Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
+                                                ArrayRef<Value *>{DotProduct},
+                                                nullptr, "dx.rsqrt");
+
+  Value *MultiplicandVec = Builder.CreateVectorSplat(XVecSize, Multiplicand);
+  Value *Result = Builder.CreateFMul(X, MultiplicandVec);
+
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
 }
 
 static bool expandPowIntrinsic(CallInst *Orig) {
@@ -280,6 +381,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandClampIntrinsic(Orig, F.getIntrinsicID());
   case Intrinsic::dx_lerp:
     return expandLerpIntrinsic(Orig);
+  case Intrinsic::dx_length:
+    return expandLengthIntrinsic(Orig);
+  case Intrinsic::dx_normalize:
+    return expandNormalizeIntrinsic(Orig);
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return expandIntegerDot(Orig, F.getIntrinsicID());

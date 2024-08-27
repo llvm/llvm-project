@@ -2341,7 +2341,7 @@ void MachOObjectFile::getRelocationTypeName(
         "ARM64_RELOC_PAGEOFF12",          "ARM64_RELOC_GOT_LOAD_PAGE21",
         "ARM64_RELOC_GOT_LOAD_PAGEOFF12", "ARM64_RELOC_POINTER_TO_GOT",
         "ARM64_RELOC_TLVP_LOAD_PAGE21",   "ARM64_RELOC_TLVP_LOAD_PAGEOFF12",
-        "ARM64_RELOC_ADDEND"
+        "ARM64_RELOC_ADDEND",             "ARM64_RELOC_AUTHENTICATED_POINTER"
       };
 
       if (RType >= std::size(Table))
@@ -5192,11 +5192,6 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
   const char *ImportsEnd = Contents + ImportsEndOffset;
   const char *Symbols = Contents + Header.symbols_offset;
   const char *SymbolsEnd = Contents + DyldChainedFixups.datasize;
-
-  if (ImportsEnd > Symbols)
-    return malformedError("bad chained fixups: imports end " +
-                          Twine(ImportsEndOffset) + " extends past end " +
-                          Twine(DyldChainedFixups.datasize));
 
   if (ImportsEnd > Symbols)
     return malformedError("bad chained fixups: imports end " +

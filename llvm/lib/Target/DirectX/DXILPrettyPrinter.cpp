@@ -41,7 +41,7 @@ public:
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<DXILResourceWrapper>();
+    AU.addRequired<DXILResourceMDWrapper>();
   }
 };
 } // namespace
@@ -49,12 +49,12 @@ public:
 char DXILPrettyPrinter::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinter, "dxil-pretty-printer",
                       "DXIL Metadata Pretty Printer", true, true)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapper)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_END(DXILPrettyPrinter, "dxil-pretty-printer",
                     "DXIL Metadata Pretty Printer", true, true)
 
 bool DXILPrettyPrinter::runOnModule(Module &M) {
-  dxil::Resources &Res = getAnalysis<DXILResourceWrapper>().getDXILResource();
+  dxil::Resources &Res = getAnalysis<DXILResourceMDWrapper>().getDXILResource();
   Res.print(OS);
   return false;
 }

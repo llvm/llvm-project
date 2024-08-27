@@ -1669,6 +1669,7 @@ def : RWSysReg<"TRBPTR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b001>;
 def : RWSysReg<"TRBBASER_EL1",  0b11, 0b000, 0b1001, 0b1011, 0b010>;
 def : RWSysReg<"TRBSR_EL1",     0b11, 0b000, 0b1001, 0b1011, 0b011>;
 def : RWSysReg<"TRBMAR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b100>;
+def : RWSysReg<"TRBMPAM_EL1",   0b11, 0b000, 0b1001, 0b1011, 0b101>;
 def : RWSysReg<"TRBTRG_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b110>;
 def : ROSysReg<"TRBIDR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b111>;
 } // FeatureTRBE
@@ -1745,11 +1746,6 @@ foreach n = 0-31 in {
 // Statistical Profiling Extension system register
 let Requires = [{ {AArch64::FeatureSPE_EEF} }] in
 def : RWSysReg<"PMSNEVFR_EL1",      0b11, 0b000, 0b1001, 0b1001, 0b001>;
-
-// Cyclone specific system registers
-//                                 Op0    Op1     CRn     CRm    Op2
-let Requires = [{ {AArch64::FeatureAppleA7SysReg} }] in
-def : RWSysReg<"CPM_IOACC_CTL_EL3", 0b11, 0b111, 0b1111, 0b0010, 0b000>;
 
 // Scalable Matrix Extension (SME)
 //                                 Op0   Op1    CRn     CRm     Op2

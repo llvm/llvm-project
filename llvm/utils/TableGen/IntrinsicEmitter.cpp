@@ -35,18 +35,18 @@
 #include <vector>
 using namespace llvm;
 
-cl::OptionCategory GenIntrinsicCat("Options for -gen-intrinsic-enums");
-cl::opt<std::string>
+static cl::OptionCategory GenIntrinsicCat("Options for -gen-intrinsic-enums");
+static cl::opt<std::string>
     IntrinsicPrefix("intrinsic-prefix",
                     cl::desc("Generate intrinsics with this target prefix"),
                     cl::value_desc("target prefix"), cl::cat(GenIntrinsicCat));
 
 namespace {
 class IntrinsicEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
 public:
-  IntrinsicEmitter(RecordKeeper &R) : Records(R) {}
+  IntrinsicEmitter(const RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &OS, bool Enums);
 
@@ -123,7 +123,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     std::vector<std::string> KnownTargets;
     for (const auto &Target : Ints.Targets)
       if (!Target.Name.empty())
-        KnownTargets.push_back(Target.Name);
+        KnownTargets.push_back(Target.Name.str());
     PrintFatalError("tried to generate intrinsics for unknown target " +
                     IntrinsicPrefix +
                     "\nKnown targets are: " + join(KnownTargets, ", ") + "\n");
@@ -136,12 +136,11 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     std::string UpperPrefix = StringRef(IntrinsicPrefix).upper();
     OS << "#ifndef LLVM_IR_INTRINSIC_" << UpperPrefix << "_ENUMS_H\n";
     OS << "#define LLVM_IR_INTRINSIC_" << UpperPrefix << "_ENUMS_H\n\n";
-    OS << "namespace llvm {\n";
-    OS << "namespace Intrinsic {\n";
+    OS << "namespace llvm::Intrinsic {\n";
     OS << "enum " << UpperPrefix << "Intrinsics : unsigned {\n";
   }
 
-  OS << "// Enum values for intrinsics\n";
+  OS << "// Enum values for intrinsics.\n";
   for (unsigned i = Set->Offset, e = Set->Offset + Set->Count; i != e; ++i) {
     OS << "    " << Ints[i].EnumName;
 
@@ -162,8 +161,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << "#endif\n\n";
   } else {
     OS << "}; // enum\n";
-    OS << "} // namespace Intrinsic\n";
-    OS << "} // namespace llvm\n\n";
+    OS << "} // namespace llvm::Intrinsic\n\n";
     OS << "#endif\n";
   }
 }
@@ -171,7 +169,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
 void IntrinsicEmitter::EmitArgKind(raw_ostream &OS) {
   if (!IntrinsicPrefix.empty())
     return;
-  OS << "// llvm::Intrinsic::IITDescriptor::ArgKind\n";
+  OS << "// llvm::Intrinsic::IITDescriptor::ArgKind.\n";
   OS << "#ifdef GET_INTRINSIC_ARGKIND\n";
   if (auto RecArgKind = Records.getDef("ArgKind")) {
     for (auto &RV : RecArgKind->getValues())
@@ -205,7 +203,7 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
 
 void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
-  OS << "// Target mapping\n";
+  OS << "// Target mapping.\n";
   OS << "#ifdef GET_INTRINSIC_TARGET_DATA\n";
   OS << "struct IntrinsicTargetInfo {\n"
      << "  llvm::StringLiteral Name;\n"
@@ -222,19 +220,19 @@ void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
 
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  OS << "// Intrinsic ID to name table\n";
+  OS << "// Intrinsic ID to name table.\n";
   OS << "#ifdef GET_INTRINSIC_NAME_TABLE\n";
   OS << "  // Note that entry #0 is the invalid intrinsic!\n";
-  for (unsigned i = 0, e = Ints.size(); i != e; ++i)
-    OS << "  \"" << Ints[i].Name << "\",\n";
+  for (const auto &Int : Ints)
+    OS << "  \"" << Int.Name << "\",\n";
   OS << "#endif\n\n";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  OS << "// Intrinsic ID to overload bitset\n";
+  OS << "// Intrinsic ID to overload bitset.\n";
   OS << "#ifdef GET_INTRINSIC_OVERLOAD_TABLE\n";
-  OS << "static const uint8_t OTable[] = {\n";
+  OS << "static constexpr uint8_t OTable[] = {\n";
   OS << "  0";
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     // Add one to the index so we emit a null bit for the invalid #0 intrinsic.
@@ -315,7 +313,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   OS << "// Global intrinsic function declaration type table.\n";
   OS << "#ifdef GET_INTRINSIC_GENERATOR_GLOBAL\n";
 
-  OS << "static const unsigned IIT_Table[] = {\n  ";
+  OS << "static constexpr unsigned IIT_Table[] = {\n  ";
 
   for (unsigned i = 0, e = FixedEncodings.size(); i != e; ++i) {
     if ((i & 7) == 7)
@@ -338,7 +336,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   OS << "0\n};\n\n";
 
   // Emit the shared table of register lists.
-  OS << "static const unsigned char IIT_LongEncodingTable[] = {\n";
+  OS << "static constexpr unsigned char IIT_LongEncodingTable[] = {\n";
   if (!LongEncodingTable.empty())
     LongEncodingTable.emit(OS, printIITEntry);
   OS << "  255\n};\n\n";
@@ -346,72 +344,44 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   OS << "#endif\n\n"; // End of GET_INTRINSIC_GENERATOR_GLOBAL
 }
 
-namespace {
-std::optional<bool> compareFnAttributes(const CodeGenIntrinsic *L,
-                                        const CodeGenIntrinsic *R) {
-  // Sort throwing intrinsics after non-throwing intrinsics.
-  if (L->canThrow != R->canThrow)
-    return R->canThrow;
+static bool compareFnAttributes(const CodeGenIntrinsic *L,
+                                const CodeGenIntrinsic *R, bool Default) {
+  auto TieBoolAttributes = [](const CodeGenIntrinsic *I) -> auto {
+    // Sort throwing intrinsics after non-throwing intrinsics.
+    return std::tie(I->canThrow, I->isNoDuplicate, I->isNoMerge, I->isNoReturn,
+                    I->isNoCallback, I->isNoSync, I->isNoFree, I->isWillReturn,
+                    I->isCold, I->isConvergent, I->isSpeculatable,
+                    I->hasSideEffects, I->isStrictFP);
+  };
 
-  if (L->isNoDuplicate != R->isNoDuplicate)
-    return R->isNoDuplicate;
+  auto TieL = TieBoolAttributes(L);
+  auto TieR = TieBoolAttributes(R);
 
-  if (L->isNoMerge != R->isNoMerge)
-    return R->isNoMerge;
-
-  if (L->isNoReturn != R->isNoReturn)
-    return R->isNoReturn;
-
-  if (L->isNoCallback != R->isNoCallback)
-    return R->isNoCallback;
-
-  if (L->isNoSync != R->isNoSync)
-    return R->isNoSync;
-
-  if (L->isNoFree != R->isNoFree)
-    return R->isNoFree;
-
-  if (L->isWillReturn != R->isWillReturn)
-    return R->isWillReturn;
-
-  if (L->isCold != R->isCold)
-    return R->isCold;
-
-  if (L->isConvergent != R->isConvergent)
-    return R->isConvergent;
-
-  if (L->isSpeculatable != R->isSpeculatable)
-    return R->isSpeculatable;
-
-  if (L->hasSideEffects != R->hasSideEffects)
-    return R->hasSideEffects;
-
-  if (L->isStrictFP != R->isStrictFP)
-    return R->isStrictFP;
+  if (TieL != TieR)
+    return TieL < TieR;
 
   // Try to order by readonly/readnone attribute.
   uint32_t LK = L->ME.toIntValue();
   uint32_t RK = R->ME.toIntValue();
   if (LK != RK)
-    return (LK > RK);
+    return LK > RK;
 
-  return std::nullopt;
+  return Default;
 }
 
+namespace {
 struct FnAttributeComparator {
   bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
-    return compareFnAttributes(L, R).value_or(false);
+    return compareFnAttributes(L, R, false);
   }
 };
 
 struct AttributeComparator {
   bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
-    if (std::optional<bool> Res = compareFnAttributes(L, R))
-      return *Res;
-
-    // Order by argument attributes.
+    // Order by argument attributes if function attributes are equal.
     // This is reliable because each side is already sorted internally.
-    return (L->ArgumentAttributes < R->ArgumentAttributes);
+    return compareFnAttributes(L, R,
+                               L->ArgumentAttributes < R->ArgumentAttributes);
   }
 };
 } // End anonymous namespace
@@ -559,7 +529,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
 
   // Emit an array of AttributeList.  Most intrinsics will have at least one
   // entry, for the function itself (index ~1), which is usually nounwind.
-  OS << "  static const uint16_t IntrinsicsToAttributesMap[] = {\n";
+  OS << "  static constexpr uint16_t IntrinsicsToAttributesMap[] = {\n";
 
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     const CodeGenIntrinsic &intrinsic = Ints[i];
@@ -624,31 +594,34 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     const CodeGenIntrinsicTable &Ints, bool IsClang, raw_ostream &OS) {
-  StringRef CompilerName = (IsClang ? "Clang" : "MS");
-  StringRef UpperCompilerName = (IsClang ? "CLANG" : "MS");
-  typedef std::map<std::string, std::map<std::string, std::string>> BIMTy;
+  StringRef CompilerName = IsClang ? "Clang" : "MS";
+  StringRef UpperCompilerName = IsClang ? "CLANG" : "MS";
+  // map<TargetPrefix, map<BuiltinName, EnumName>>. Note that we iterate over
+  // both maps in the code below. For the inner map, entries need to be emitted
+  // in the sorted order of `BuiltinName` because we use std::lower_bound to
+  // search these entries. For the outer map, it doesn't need be be sorted, but
+  // we use a map to eliminate non-determinism in the emitted code.
+  typedef std::map<StringRef, std::map<StringRef, StringRef>> BIMTy;
   BIMTy BuiltinMap;
   StringToOffsetTable Table;
-  for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
-    const std::string &BuiltinName =
-        IsClang ? Ints[i].ClangBuiltinName : Ints[i].MSBuiltinName;
-    if (!BuiltinName.empty()) {
-      // Get the map for this target prefix.
-      std::map<std::string, std::string> &BIM =
-          BuiltinMap[Ints[i].TargetPrefix];
+  for (const CodeGenIntrinsic &Int : Ints) {
+    StringRef BuiltinName = IsClang ? Int.ClangBuiltinName : Int.MSBuiltinName;
+    if (BuiltinName.empty())
+      continue;
+    // Get the map for this target prefix.
+    std::map<StringRef, StringRef> &BIM = BuiltinMap[Int.TargetPrefix];
 
-      if (!BIM.insert(std::pair(BuiltinName, Ints[i].EnumName)).second)
-        PrintFatalError(Ints[i].TheDef->getLoc(),
-                        "Intrinsic '" + Ints[i].TheDef->getName() +
-                            "': duplicate " + CompilerName + " builtin name!");
-      Table.GetOrAddStringOffset(BuiltinName);
-    }
+    if (!BIM.insert(std::pair(BuiltinName, Int.EnumName)).second)
+      PrintFatalError(Int.TheDef->getLoc(),
+                      "Intrinsic '" + Int.TheDef->getName() + "': duplicate " +
+                          CompilerName + " builtin name!");
+    Table.GetOrAddStringOffset(BuiltinName);
   }
 
   OS << "// Get the LLVM intrinsic that corresponds to a builtin.\n";
   OS << "// This is used by the C front-end.  The builtin name is passed\n";
   OS << "// in as BuiltinName, and a target prefix (e.g. 'ppc') is passed\n";
-  OS << "// in as TargetPrefix.  The result is assigned to 'IntrinsicID'.\n";
+  OS << "// in as TargetPrefix. The result is assigned to 'IntrinsicID'.\n";
   OS << "#ifdef GET_LLVM_INTRINSIC_FOR_" << UpperCompilerName << "_BUILTIN\n";
 
   OS << "Intrinsic::ID Intrinsic::getIntrinsicFor" << CompilerName
@@ -662,7 +635,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     return;
   }
 
-  OS << "  static const char BuiltinNames[] = {\n";
+  OS << "  static constexpr char BuiltinNames[] = {\n";
   Table.EmitCharArray(OS);
   OS << "  };\n\n";
 
@@ -689,7 +662,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     OS << "{\n";
 
     // Emit the comparisons for this target prefix.
-    OS << "    static const BuiltinEntry " << I.first << "Names[] = {\n";
+    OS << "    static constexpr BuiltinEntry " << I.first << "Names[] = {\n";
     for (const auto &P : I.second) {
       OS << "      {Intrinsic::" << P.second << ", "
          << Table.GetOrAddStringOffset(P.first) << "}, // " << P.first << "\n";
@@ -703,8 +676,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     OS << "      return I->IntrinID;\n";
     OS << "  }\n";
   }
-  OS << "  return ";
-  OS << "Intrinsic::not_intrinsic;\n";
+  OS << "  return Intrinsic::not_intrinsic;\n";
   OS << "}\n";
   OS << "#endif\n\n";
 }
@@ -721,4 +693,4 @@ static void EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS) {
 }
 
 static TableGen::Emitter::Opt Y("gen-intrinsic-impl", EmitIntrinsicImpl,
-                                "Generate intrinsic information");
+                                "Generate intrinsic implementation code");

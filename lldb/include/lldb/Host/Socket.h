@@ -60,6 +60,10 @@ public:
 
   ~Socket() override;
 
+  static const char *FindSchemeByProtocol(const SocketProtocol protocol);
+  static bool FindProtocolByScheme(const char *scheme,
+                                   SocketProtocol &protocol);
+
   static llvm::Error Initialize();
   static void Terminate();
 
