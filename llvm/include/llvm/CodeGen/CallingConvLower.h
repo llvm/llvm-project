@@ -540,9 +540,7 @@ public:
                });
   }
 
-#ifndef NDEBUG
   void dump() const;
-#endif
 
 private:
   /// MarkAllocated - Mark a register and all of its aliases as allocated.
