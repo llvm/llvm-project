@@ -14,7 +14,7 @@
 namespace clang::tidy::bugprone {
 
 /// Finds suspicious pointer arithmetic calculations where the pointer is
-/// offset by a sizeof() expression.
+/// offset by an alignof(), offsetof(), or sizeof() expression.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-pointer-arithmetics-using-sizeof.html

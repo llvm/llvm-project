@@ -30,7 +30,11 @@ const auto IgnoredTypes = qualType(
           asString("const uint8_t"), asString("const std::byte")));
 const auto InterestingPointer = pointerType(unless(pointee(IgnoredTypes)));
 
-const auto ScaledIntegerTraitExprs = /*stmt(anyOf(*/ sizeOfExpr(expr()) /*))*/;
+AST_MATCHER(Expr, offsetOfExpr) { return isa<OffsetOfExpr>(Node); }
+
+const auto ScaledIntegerTraitExprs =
+    expr(anyOf(unaryExprOrTypeTraitExpr(ofKind(UETT_SizeOf)),
+               unaryExprOrTypeTraitExpr(ofKind(UETT_AlignOf)), offsetOfExpr()));
 
 CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
   if (!Ty || Ty->isIncompleteType() || Ty->isDependentType() ||
@@ -67,18 +71,38 @@ void SuspiciousPointerArithmeticsUsingSizeofCheck::check(
   const ASTContext &Ctx = *Result.Context;
   const auto *BO = Result.Nodes.getNodeAs<BinaryOperator>(BinOp);
   const auto *QT = Result.Nodes.getNodeAs<QualType>(PointedType);
-  assert(BO && QT && "Broken matchers encountered.");
+  const auto *ScaleE = Result.Nodes.getNodeAs<Expr>(ScaleExpr);
+  assert(BO && QT && ScaleE && "Broken matchers encountered.");
 
   const auto Size = getSizeOfType(Ctx, QT->getTypePtr()).getQuantity();
   if (Size == 1)
     return;
 
-  diag(BO->getExprLoc(),
-       "pointer arithmetic using a number scaled by '%0'; this value will be "
-       "scaled again by the '%1' operator")
-      << "sizeof" << BO->getOpcodeStr();
-  diag(BO->getExprLoc(), "'%0' scales with '%1(%2)' == %3", DiagnosticIDs::Note)
-      << BO->getOpcodeStr() << "sizeof" << "?" << Size;
+  const int KindSelect = [ScaleE]() {
+    if (const auto *UTTE = dyn_cast<UnaryExprOrTypeTraitExpr>(ScaleE))
+      switch (UTTE->getKind()) {
+      case UETT_SizeOf:
+        return 0;
+      case UETT_AlignOf:
+        return 1;
+      default:
+        return -1;
+      }
+
+    if (isa<OffsetOfExpr>(ScaleE))
+      return 2;
+
+    return -1;
+  }();
+  assert(KindSelect != -1 && "Unhandled scale-expr kind!");
+
+  diag(BO->getExprLoc(), "pointer arithmetic using a number scaled by "
+                         "'%select{sizeof|alignof|offsetof}0'; this value will "
+                         "be scaled again by the '%1' operator")
+      << KindSelect << BO->getOpcodeStr() << ScaleE->getSourceRange();
+  diag(BO->getExprLoc(), "'%0' scales with 'sizeof(%1)' == %2",
+       DiagnosticIDs::Note)
+      << BO->getOpcodeStr() << QT->getAsString(Ctx.getPrintingPolicy()) << Size;
 }
 
 } // namespace clang::tidy::bugprone

@@ -3,10 +3,10 @@
 bugprone-suspicious-pointer-arithmetics-using-sizeof
 ====================================================
 
-Finds suspicious pointer arithmetic calculations where the pointer is offset by a ``sizeof()`` expression.
+Finds suspicious pointer arithmetic calculations where the pointer is offset by an ``alignof()``, ``offsetof()``, or ``sizeof()`` expression.
 
 Pointer arithmetic expressions implicitly scale the offset added to or subtracted from the address by the size of the pointee type.
-Scaling the offset expression manually effectively results in a squared offset, which creates an invalid pointer that points beyond the end of the intended array.
+Using an offset expression that is already scaled by the size of the underlying type effectively results in a squared offset, which is likely an invalid pointer that points beyond the end of the intended array.
 
 .. code-block:: c++
 

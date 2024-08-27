@@ -13,8 +13,8 @@ void bad1a(void) {
   int *P = &Buffer[0];
   int *Q = P;
   while (Q < P + sizeof(Buffer)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof()'; this distance will be scaled again by the '+' operator [bugprone-suspicious-pointer-arithemetics-using-sizeof]
-    // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' scales with 'sizeof(Buffer)' == {{[0-9]+}}
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+' operator [bugprone-suspicious-pointer-arithmetics-using-sizeof]
+    // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' scales with 'sizeof(int)' == {{[0-9]+}}
     *Q++ = 0;
   }
 }
@@ -26,8 +26,8 @@ void bad1b(void) {
   Integer *P = &Buffer[0];
   Integer *Q = P;
   while (Q < P + sizeof(Buffer)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof()'; this distance will be scaled again by the '+' operator
-    // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' scales with 'sizeof(Buffer)' == {{[0-9]+}}
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+' operator
+    // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' scales with 'sizeof(Integer)' == {{[0-9]+}}
     *Q++ = 0;
   }
 }
@@ -47,8 +47,8 @@ void bad2(void) {
   int *P = Buffer;
 
   while (P < Buffer + sizeof(Buffer)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '+' operator
-    // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' scales with 'sizeof(int)' == {{[0-9]+}}
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+' operator
+    // CHECK-MESSAGES: :[[@LINE-2]]:21: note: '+' scales with 'sizeof(int)' == {{[0-9]+}}
     *P++ = 0;
   }
 }
@@ -87,8 +87,8 @@ void good3a(struct S *S) {
 void bad3b(struct S *S) {
   memset(S + offsetof(struct S, B), 0,
          sizeof(struct S) - offsetof(struct S, B));
-  // NCHECK-MESSAGES: :[[@LINE-1]]:12: warning: pointer arithmetic using a number scaled by 'offsetof()'; this value will be scaled again by the '+' operator
-  // NCHECK-MESSAGES: :[[@LINE-2]]:12: note: '+' scales with 'sizeof(int)' == {{[0-9]+}}
+  // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: pointer arithmetic using a number scaled by 'offsetof'; this value will be scaled again by the '+' operator
+  // CHECK-MESSAGES: :[[@LINE-3]]:12: note: '+' scales with 'sizeof(struct S)' == {{[0-9]+}}
 }
 
 void good3b(struct S *S) {
@@ -103,7 +103,7 @@ void bad3c(void) {
   struct S *P = &Buffer[0];
   struct S *Q = P;
   while (Q < P + sizeof(Buffer)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '+' operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+' operator
     // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' scales with 'sizeof(struct S)' == {{[0-9]+}}
     sink(Q++);
   }
@@ -117,7 +117,7 @@ void bad4(void) {
   while (Q < P + BufferSize) {
     *Q = 0;
     Q += sizeof(*Q);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '+=' operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+=' operator
     // CHECK-MESSAGES: :[[@LINE-2]]:7: note: '+=' scales with 'sizeof(int)' == {{[0-9]+}}
   }
 }
@@ -196,7 +196,7 @@ void bad6(void) {
   while (Q < P + BufferSize) {
     *Q = 0;
     Q = Q + sizeof(*Q);
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '+' operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+' operator
     // CHECK-MESSAGES: :[[@LINE-2]]:11: note: '+' scales with 'sizeof(int)' == {{[0-9]+}}
   }
 }
@@ -253,7 +253,7 @@ void bad8(void) {
   while (Q >= P) {
     *Q = 0;
     Q = Q - sizeof(*Q);
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '-' operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '-' operator
     // CHECK-MESSAGES: :[[@LINE-2]]:11: note: '-' scales with 'sizeof(int)' == {{[0-9]+}}
   }
 }
