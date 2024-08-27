@@ -109,8 +109,8 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
   if (error.Fail())
     return error;
   if (num_bytes != sizeof(protocol_info))
-    return Status::FromErrorStringWithFormat(
-        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes", num_bytes);
+    return Status::FromErrorStringWithFormatv(
+        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes", num_bytes);
 #endif
   return Status();
 }
@@ -129,16 +129,16 @@ Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
     if (error.Fail())
       return error;
     if (num_bytes != sizeof(protocol_info)) {
-      return Status(
-          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: % d bytes",
+      return Status::FromErrorStringWithFormatv(
+          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes",
           num_bytes);
     }
   }
   socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
                        FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
   if (socket == INVALID_SOCKET) {
-    return Status::FromErrorStringWithFormat(
-        "WSASocket(FROM_PROTOCOL_INFO) failed: error %d", ::WSAGetLastError());
+    return Status::FromErrorStringWithFormatv(
+        "WSASocket(FROM_PROTOCOL_INFO) failed: error {0}", ::WSAGetLastError());
   }
   return Status();
 #else
@@ -421,7 +421,7 @@ size_t Socket::Send(const void *buf, const size_t num_bytes) {
 
 void Socket::SetLastError(Status &error) {
 #if defined(_WIN32)
-  error.SetError(::WSAGetLastError(), lldb::eErrorTypeWin32);
+  error = Status(::WSAGetLastError(), lldb::eErrorTypeWin32);
 #else
   error = Status::FromErrno();
 #endif
