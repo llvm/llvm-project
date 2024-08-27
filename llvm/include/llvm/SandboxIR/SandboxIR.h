@@ -137,6 +137,7 @@ class CatchReturnInst;
 class CleanupReturnInst;
 class GetElementPtrInst;
 class CastInst;
+class PossiblyNonNegInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
@@ -2760,6 +2761,28 @@ public:
   static bool classof(const Value *From);
   Type *getSrcTy() const { return cast<llvm::CastInst>(Val)->getSrcTy(); }
   Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
+};
+
+/// Instruction that can have a nneg flag (zext/uitofp).
+class PossiblyNonNegInst : public CastInst {
+public:
+  bool hasNonNeg() const {
+    return cast<llvm::PossiblyNonNegInst>(Val)->hasNonNeg();
+  }
+  void setNonNeg(bool B);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From)) {
+      switch (I->getOpcode()) {
+      case Opcode::ZExt:
+      case Opcode::UIToFP:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
 };
 
 // Helper class to simplify stamping out CastInst subclasses.
