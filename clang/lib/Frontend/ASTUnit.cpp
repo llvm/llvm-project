@@ -615,7 +615,7 @@ public:
 
     this->TargetOpts = std::make_shared<TargetOptions>(TargetOpts);
     Target =
-        TargetInfo::CreateTargetInfo(PP.getDiagnostics(), this->TargetOpts);
+        TargetInfo::CreateTargetInfo(PP.getDiagnostics(), *this->TargetOpts);
 
     updated();
     return false;
