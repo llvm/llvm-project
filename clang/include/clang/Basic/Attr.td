@@ -1450,6 +1450,13 @@ def CUDAHost : InheritableAttr {
 }
 def : MutualExclusions<[CUDAGlobal, CUDAHost]>;
 
+def CUDAGridConstant : InheritableAttr {
+  let Spellings = [GNU<"grid_constant">, Declspec<"__grid_constant__">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let LangOpts = [CUDA];
+  let Documentation = [Undocumented];
+}
+
 def NVPTXKernel : InheritableAttr, TargetSpecificAttr<TargetNVPTX> {
   let Spellings = [Clang<"nvptx_kernel">];
   let Subjects = SubjectList<[Function]>;
