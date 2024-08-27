@@ -600,8 +600,12 @@ bool AnalysisState::canOmitTensorCopy(OpOperand &opOperand) const {
 }
 
 bool AnalysisState::isInPlace(OpOperand &opOperand) const {
-  // ToMemrefOps are always in-place.
-  if (isa<ToMemrefOp>(opOperand.getOwner()))
+  // We should always inplace operands that must be inplaced.
+  auto bufferizableOp =
+      getOptions().dynCastBufferizableOp(opOperand.getOwner());
+  if ((bufferizableOp &&
+       bufferizableOp.mustBufferizeInPlace(opOperand, *this)) ||
+      isa<ToMemrefOp>(opOperand.getOwner()))
     return true;
 
   // In the absence of analysis information, OpOperands that bufferize to a
