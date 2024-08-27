@@ -1236,20 +1236,20 @@ define void @crash_no_tracked_instructions(ptr %arg, ptr %arg.2, ptr %arg.3, i1 
 ; CHECK:       bb22:
 ; CHECK-NEXT:    [[T23:%.*]] = fmul float [[T20]], 9.900000e+01
 ; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds float, ptr [[T19]], i64 2
+; CHECK-NEXT:    [[T26:%.*]] = fmul float [[T23]], 1.000000e+01
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[T23]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], <float 9.900000e+01, float 1.000000e+01>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; CHECK-NEXT:    store float [[TMP4]], ptr [[T25]], align 4
+; CHECK-NEXT:    store float [[T26]], ptr [[T25]], align 4
 ; CHECK-NEXT:    [[T27:%.*]] = load float, ptr [[ARG_2:%.*]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP3]], <float 2.000000e+01, float 2.000000e+01>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP3]], <float 2.000000e+01, float 2.000000e+01>
 ; CHECK-NEXT:    br label [[BB30]]
 ; CHECK:       bb30:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x float> [ [[TMP5]], [[BB22]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x float> [ [[TMP4]], [[BB22]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[BB36:%.*]]
 ; CHECK:       bb36:
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP6]], <float 3.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[ARG_3]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x float> [[TMP5]], <float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[ARG_3]], align 4
 ; CHECK-NEXT:    br label [[BB41:%.*]]
 ; CHECK:       bb41:
 ; CHECK-NEXT:    ret void

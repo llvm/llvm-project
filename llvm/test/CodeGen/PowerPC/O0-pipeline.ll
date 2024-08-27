@@ -24,9 +24,7 @@
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
-; CHECK-NEXT:       Lower constant intrinsics
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
-; CHECK-NEXT:       Expand vector predication intrinsics
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
@@ -61,7 +59,6 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       PowerPC Pre-Emit Peephole
-; CHECK-NEXT:       PowerPC Expand ISEL Generation
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis

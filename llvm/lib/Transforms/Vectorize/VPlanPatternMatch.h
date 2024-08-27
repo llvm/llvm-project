@@ -29,6 +29,11 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return const_cast<Pattern &>(P).match(V);
 }
 
+template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
+  auto *R = dyn_cast<VPRecipeBase>(U);
+  return R && match(R, P);
+}
+
 template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
 };

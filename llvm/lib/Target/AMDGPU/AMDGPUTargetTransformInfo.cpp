@@ -418,19 +418,19 @@ int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 // FIXME: This could use fine tuning and microbenchmarks.
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+    unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicElementSize) const {
 
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
 
-  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+  Align MinAlign = std::min(SrcAlign, DestAlign);
 
   // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
   // hardware into byte accesses. If you assume all alignments are equally
   // probable, it's more efficient on average to use short accesses for this
   // case.
-  if (MinAlign == 2)
+  if (MinAlign == Align(2))
     return Type::getInt16Ty(Context);
 
   // Not all subtargets have 128-bit DS instructions, and we currently don't
@@ -450,7 +450,7 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
 void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-    unsigned SrcAlign, unsigned DestAlign,
+    Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicCpySize) const {
   assert(RemainingBytes < 16);
 
@@ -459,9 +459,9 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+  Align MinAlign = std::min(SrcAlign, DestAlign);
 
-  if (MinAlign != 2) {
+  if (MinAlign != Align(2)) {
     Type *I64Ty = Type::getInt64Ty(Context);
     while (RemainingBytes >= 8) {
       OpsOut.push_back(I64Ty);
@@ -686,13 +686,17 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
 // instructions for an intrinsic, even if it requires nontrivial legalization.
 static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::fma: // TODO: fmuladd
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::copysign:
+  case Intrinsic::canonicalize:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
+  case Intrinsic::abs:
     return true;
   default:
     return false;
@@ -721,7 +725,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (SLT == MVT::f64)
     return LT.first * NElts * get64BitInstrCost(CostKind);
 
-  if ((ST->has16BitInsts() && SLT == MVT::f16) ||
+  if ((ST->has16BitInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
       (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
 
@@ -730,16 +734,39 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   switch (ICA.getID()) {
   case Intrinsic::fma:
-    InstRate = ST->hasFastFMAF32() ? getHalfRateInstrCost(CostKind)
-                                   : getQuarterRateInstrCost(CostKind);
+  case Intrinsic::fmuladd:
+    if ((SLT == MVT::f32 && ST->hasFastFMAF32()) || SLT == MVT::f16)
+      InstRate = getFullRateInstrCost();
+    else {
+      InstRate = ST->hasFastFMAF32() ? getHalfRateInstrCost(CostKind)
+                                     : getQuarterRateInstrCost(CostKind);
+    }
     break;
+  case Intrinsic::copysign:
+    return NElts * getFullRateInstrCost();
+  case Intrinsic::canonicalize: {
+    assert(SLT != MVT::f64);
+    InstRate = getFullRateInstrCost();
+    break;
+  }
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
-  case Intrinsic::ssub_sat:
+  case Intrinsic::ssub_sat: {
+    if (SLT == MVT::i16 || SLT == MVT::i32)
+      InstRate = getFullRateInstrCost();
+
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
     if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
       NElts = 1;
+    break;
+  }
+  case Intrinsic::abs:
+    // Expansion takes 2 instructions for VALU
+    if (SLT == MVT::i16 || SLT == MVT::i32)
+      InstRate = 2 * getFullRateInstrCost();
+    break;
+  default:
     break;
   }
 
@@ -1018,7 +1045,6 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   switch (IID) {
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
@@ -1080,7 +1106,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
                              {NewV, MaskOp});
   }
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:

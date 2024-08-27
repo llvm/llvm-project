@@ -61,7 +61,7 @@ static StringRef getBasename(StringRef path) {
 std::string lld::toString(const coff::InputFile *file) {
   if (!file)
     return "<internal>";
-  if (file->parentName.empty() || file->kind() == coff::InputFile::ImportKind)
+  if (file->parentName.empty())
     return std::string(file->getName());
 
   return (getBasename(file->parentName) + "(" + getBasename(file->getName()) +
@@ -724,7 +724,7 @@ std::optional<Symbol *> ObjFile::createDefined(
   return createRegular(sym);
 }
 
-MachineTypes ObjFile::getMachineType() {
+MachineTypes ObjFile::getMachineType() const {
   if (coffObj)
     return static_cast<MachineTypes>(coffObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;
@@ -987,6 +987,13 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
 ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
 
+MachineTypes ImportFile::getMachineType() const {
+  uint16_t machine =
+      reinterpret_cast<const coff_import_header *>(mb.getBufferStart())
+          ->Machine;
+  return MachineTypes(machine);
+}
+
 void ImportFile::parse() {
   const auto *hdr =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
@@ -1139,7 +1146,7 @@ void BitcodeFile::parseLazy() {
       ctx.symtab.addLazyObject(this, sym.getName());
 }
 
-MachineTypes BitcodeFile::getMachineType() {
+MachineTypes BitcodeFile::getMachineType() const {
   switch (Triple(obj->getTargetTriple()).getArch()) {
   case Triple::x86_64:
     return AMD64;
@@ -1220,7 +1227,7 @@ void DLLFile::parse() {
   }
 }
 
-MachineTypes DLLFile::getMachineType() {
+MachineTypes DLLFile::getMachineType() const {
   if (coffObj)
     return static_cast<MachineTypes>(coffObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;

@@ -62,10 +62,9 @@ class ScopeHandler;
 // When inheritFromParent is set, defaults come from the parent rules.
 class ImplicitRules {
 public:
-  ImplicitRules(SemanticsContext &context, ImplicitRules *parent)
-      : parent_{parent}, context_{context} {
-    inheritFromParent_ = parent != nullptr;
-  }
+  ImplicitRules(SemanticsContext &context, const ImplicitRules *parent)
+      : parent_{parent}, context_{context},
+        inheritFromParent_{parent != nullptr} {}
   bool isImplicitNoneType() const;
   bool isImplicitNoneExternal() const;
   void set_isImplicitNoneType(bool x) { isImplicitNoneType_ = x; }
@@ -82,7 +81,7 @@ public:
 private:
   static char Incr(char ch);
 
-  ImplicitRules *parent_;
+  const ImplicitRules *parent_;
   SemanticsContext &context_;
   bool inheritFromParent_{false}; // look in parent if not specified here
   bool isImplicitNoneType_{
@@ -1798,6 +1797,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     }
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
+  } else if (symbol.GetIsExplicitBindName()) {
+    // don't try to override explicit binding name with default
+    return;
   } else if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
     // BIND(C) does not give an implicit binding label to internal procedures.
     return;
@@ -3380,6 +3382,7 @@ bool ModuleVisitor::BeginSubmodule(
     parentScope = &currScope();
   }
   BeginModule(name, true);
+  set_inheritFromParent(false); // submodules don't inherit parents' implicits
   if (ancestor && !ancestor->AddSubmodule(name.source, currScope())) {
     Say(name, "Module '%s' already has a submodule named '%s'"_err_en_US,
         ancestorName.source, name.source);
@@ -4487,7 +4490,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
         CHECK(context().HasError(genericSymbol));
       }
     }
-    set_inheritFromParent(hasModulePrefix);
+    set_inheritFromParent(false); // interfaces don't inherit, even if MODULE
   }
   if (Symbol * found{FindSymbol(name)};
       found && found->has<HostAssocDetails>()) {
@@ -5456,34 +5459,14 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   CHECK(scope.symbol());
   CHECK(scope.symbol()->scope() == &scope);
   auto &details{scope.symbol()->get<DerivedTypeDetails>()};
-  std::set<SourceName> paramNames;
   for (auto &paramName : std::get<std::list<parser::Name>>(stmt.statement.t)) {
-    details.add_paramName(paramName.source);
-    auto *symbol{FindInScope(scope, paramName)};
-    if (!symbol) {
-      Say(paramName,
-          "No definition found for type parameter '%s'"_err_en_US); // C742
-      // No symbol for a type param.  Create one and mark it as containing an
-      // error to improve subsequent semantic processing
-      BeginAttrs();
-      Symbol *typeParam{MakeTypeSymbol(
-          paramName, TypeParamDetails{common::TypeParamAttr::Len})};
-      context().SetError(*typeParam);
-      EndAttrs();
-    } else if (!symbol->has<TypeParamDetails>()) {
-      Say2(paramName, "'%s' is not defined as a type parameter"_err_en_US,
-          *symbol, "Definition of '%s'"_en_US); // C741
-    }
-    if (!paramNames.insert(paramName.source).second) {
-      Say(paramName,
-          "Duplicate type parameter name: '%s'"_err_en_US); // C731
-    }
-  }
-  for (const auto &[name, symbol] : currScope()) {
-    if (symbol->has<TypeParamDetails>() && !paramNames.count(name)) {
-      SayDerivedType(name,
-          "'%s' is not a type parameter of this derived type"_err_en_US,
-          currScope()); // C741
+    if (auto *symbol{FindInScope(scope, paramName)}) {
+      if (auto *details{symbol->detailsIf<TypeParamDetails>()}) {
+        if (!details->attr()) {
+          Say(paramName,
+              "No definition found for type parameter '%s'"_err_en_US); // C742
+        }
+      }
     }
   }
   Walk(std::get<std::list<parser::Statement<parser::PrivateOrSequence>>>(x.t));
@@ -5499,7 +5482,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
             "A sequence type should have at least one component"_warn_en_US);
       }
     }
-    if (!details.paramNames().empty()) { // C740
+    if (!details.paramDeclOrder().empty()) { // C740
       Say(stmt.source,
           "A sequence type may not have type parameters"_err_en_US);
     }
@@ -5527,11 +5510,8 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   std::optional<DerivedTypeSpec> extendsType{
       ResolveExtendsType(name, extendsName)};
   DerivedTypeDetails derivedTypeDetails;
-  if (Symbol * typeSymbol{FindInScope(currScope(), name)}; typeSymbol &&
-      typeSymbol->has<DerivedTypeDetails>() &&
-      typeSymbol->get<DerivedTypeDetails>().isForwardReferenced()) {
-    derivedTypeDetails.set_isForwardReferenced(true);
-  }
+  // Catch any premature structure constructors within the definition
+  derivedTypeDetails.set_isForwardReferenced(true);
   auto &symbol{MakeSymbol(name, GetAttrs(), std::move(derivedTypeDetails))};
   symbol.ReplaceName(name.source);
   derivedTypeInfo_.type = &symbol;
@@ -5559,24 +5539,50 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
       details.add_component(comp);
     }
   }
+  // Create symbols now for type parameters so that they shadow names
+  // from the enclosing specification part.
+  if (auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+    for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+      if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{})}) {
+        details->add_paramNameOrder(*symbol);
+      }
+    }
+  }
   EndAttrs();
 }
 
 void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
   auto *type{GetDeclTypeSpec()};
+  DerivedTypeDetails *derivedDetails{nullptr};
+  if (Symbol * dtSym{currScope().symbol()}) {
+    derivedDetails = dtSym->detailsIf<DerivedTypeDetails>();
+  }
   auto attr{std::get<common::TypeParamAttr>(x.t)};
   for (auto &decl : std::get<std::list<parser::TypeParamDecl>>(x.t)) {
     auto &name{std::get<parser::Name>(decl.t)};
-    if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{attr})}) {
-      SetType(name, *type);
-      if (auto &init{
-              std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
-          if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
-            symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
+    if (Symbol * symbol{FindInScope(currScope(), name)}) {
+      if (auto *paramDetails{symbol->detailsIf<TypeParamDetails>()}) {
+        if (!paramDetails->attr()) {
+          paramDetails->set_attr(attr);
+          SetType(name, *type);
+          if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
+                  decl.t)}) {
+            if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
+              if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
+                paramDetails->set_init(std::move(*intExpr));
+              }
+            }
           }
+          if (derivedDetails) {
+            derivedDetails->add_paramDeclOrder(*symbol);
+          }
+        } else {
+          Say(name,
+              "Type parameter '%s' was already declared in this derived type"_err_en_US);
         }
       }
+    } else {
+      Say(name, "'%s' is not a parameter of this derived type"_err_en_US);
     }
   }
   EndDecl();
@@ -6779,9 +6785,6 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
     }
     Symbol &result{MakeSymbol(name, attrs, std::move(details))};
     SetCUDADataAttr(name, result, cudaDataAttr());
-    if (result.has<TypeParamDetails>()) {
-      derivedType.symbol()->get<DerivedTypeDetails>().add_paramDecl(result);
-    }
     return &result;
   }
 }
@@ -7118,8 +7121,12 @@ void ConstructVisitor::Post(const parser::AssociateStmt &x) {
   for (auto nthLastAssoc{assocCount}; nthLastAssoc > 0; --nthLastAssoc) {
     SetCurrentAssociation(nthLastAssoc);
     if (auto *symbol{MakeAssocEntity()}) {
-      if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
+      const MaybeExpr &expr{GetCurrentAssociation().selector.expr};
+      if (ExtractCoarrayRef(expr)) { // C1103
         Say("Selector must not be a coindexed object"_err_en_US);
+      }
+      if (evaluate::IsAssumedRank(expr)) {
+        Say("Selector must not be assumed-rank"_err_en_US);
       }
       SetTypeFromAssociation(*symbol);
       SetAttrsFromAssociation(*symbol);
@@ -7830,6 +7837,12 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       CheckEntryDummyUse(name.source, symbol);
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
+    } else if (const auto *tpd{symbol->detailsIf<TypeParamDetails>()};
+               tpd && !tpd->attr()) {
+      Say(name,
+          "Type parameter '%s' was referenced before being declared"_err_en_US,
+          name.source);
+      context().SetError(*symbol);
     }
     if (checkIndexUseInOwnBounds_ &&
         *checkIndexUseInOwnBounds_ == name.source && !InModuleFile()) {
@@ -9222,7 +9235,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       node.GetKind() == ProgramTree::Kind::Submodule};
   for (auto &pair : *node.scope()) {
     Symbol &symbol{*pair.second};
-    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
+    if (inModule && symbol.attrs().test(Attr::EXTERNAL) && !IsPointer(symbol) &&
         !symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine)) {
       // in a module, external proc without return type is subroutine

@@ -2517,9 +2517,7 @@ static void updateRegisterMapForDbgValueListAfterMove(
     if (RegIt == RegisterMap.end())
       return;
     auto &InstrVec = RegIt->getSecond();
-    for (unsigned I = 0; I < InstrVec.size(); I++)
-      if (InstrVec[I] == InstrToReplace)
-        InstrVec[I] = DbgValueListInstr;
+    llvm::replace(InstrVec, InstrToReplace, DbgValueListInstr);
   });
 }
 

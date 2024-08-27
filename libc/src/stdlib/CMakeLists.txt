@@ -62,7 +62,7 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-    libc.config.linux.app_h
+  libc.config.app_h
 )
 
 add_entrypoint_object(
@@ -350,12 +350,14 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
     list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
-
-    list(APPEND SCUDO_DEPS
-      RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      )
+    
+    if (COMPILER_RT_BUILD_GWP_ASAN)
+      list(APPEND SCUDO_DEPS
+        RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        )
+    endif()
 
     add_entrypoint_external(
       malloc
@@ -443,14 +445,23 @@ if(LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       .${LIBC_TARGET_OS}.free
   )
-  add_entrypoint_external(
-    calloc
-  )
-  add_entrypoint_external(
+  add_entrypoint_object(
     realloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.realloc
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
+    calloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.calloc
+  )
+  add_entrypoint_object(
     aligned_alloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.aligned_alloc
   )
 endif()
 

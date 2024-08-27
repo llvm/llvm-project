@@ -440,12 +440,14 @@ void RISCVInstrInfo::copyPhysRegVector(
 void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  const DebugLoc &DL, MCRegister DstReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 MCRegister SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg,
+                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc))
         .addImm(0);
     return;
   }
@@ -3761,6 +3763,12 @@ RISCVInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
       {{MONontemporalBit0, "riscv-nontemporal-domain-bit-0"},
        {MONontemporalBit1, "riscv-nontemporal-domain-bit-1"}};
   return ArrayRef(TargetFlags);
+}
+
+unsigned RISCVInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
+  return OptLevel >= CodeGenOptLevel::Aggressive
+             ? STI.getTailDupAggressiveThreshold()
+             : 2;
 }
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.

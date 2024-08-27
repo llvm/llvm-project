@@ -86,6 +86,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -1664,8 +1665,12 @@ bool FastISel::selectInstruction(const Instruction *I) {
 /// (fall-through) successor, and update the CFG.
 void FastISel::fastEmitBranch(MachineBasicBlock *MSucc,
                               const DebugLoc &DbgLoc) {
-  if (FuncInfo.MBB->getBasicBlock()->sizeWithoutDebug() > 1 &&
-      FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
+  const BasicBlock *BB = FuncInfo.MBB->getBasicBlock();
+  bool BlockHasMultipleInstrs = &BB->front() != &BB->back();
+  // Handle legacy case of debug intrinsics
+  if (BlockHasMultipleInstrs && !BB->getModule()->IsNewDbgInfoFormat)
+    BlockHasMultipleInstrs = BB->sizeWithoutDebug() > 1;
+  if (BlockHasMultipleInstrs && FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
     // For more accurate line information if this is the only non-debug
     // instruction in the block then emit it, otherwise we have the
     // unconditional fall-through case, which needs no instructions.
@@ -1833,7 +1838,7 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
 
     if (BI->isUnconditional()) {
       const BasicBlock *LLVMSucc = BI->getSuccessor(0);
-      MachineBasicBlock *MSucc = FuncInfo.MBBMap[LLVMSucc];
+      MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
       fastEmitBranch(MSucc, BI->getDebugLoc());
       return true;
     }
@@ -2243,7 +2248,7 @@ bool FastISel::handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
   for (const BasicBlock *SuccBB : successors(LLVMBB)) {
     if (!isa<PHINode>(SuccBB->begin()))
       continue;
-    MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];
+    MachineBasicBlock *SuccMBB = FuncInfo.getMBB(SuccBB);
 
     // If this terminator has multiple identical successors (common for
     // switches), only handle each succ once.
@@ -2367,7 +2372,7 @@ bool FastISel::canFoldAddIntoGEP(const User *GEP, const Value *Add) {
     return false;
   // Must be in the same basic block.
   if (isa<Instruction>(Add) &&
-      FuncInfo.MBBMap[cast<Instruction>(Add)->getParent()] != FuncInfo.MBB)
+      FuncInfo.getMBB(cast<Instruction>(Add)->getParent()) != FuncInfo.MBB)
     return false;
   // Must have a constant operand.
   return isa<ConstantInt>(cast<AddOperator>(Add)->getOperand(1));

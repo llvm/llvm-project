@@ -620,6 +620,94 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcf' is only supported for 'rv32'");
   }
+
+  for (StringRef Input : {"rv64i_xwchc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xwchc' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv32id_xwchc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'d' and 'xwchc' extensions are incompatible");
+  }
+
+  for (StringRef Input : {"rv32i_zcb_xwchc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xwchc' and 'zcb' extensions are incompatible");
+  }
+}
+
+TEST(ParseArchString, MissingDepency) {
+  for (StringRef Input : {"rv32i_zvl32b", "rv64i_zvl128b"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvbb"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvbb' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvbc32e0p7"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvbc32e' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvbc"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvkb"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvkb' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvkg"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvkg' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvkgs0p7"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvkg' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvkned"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvkned' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvknha"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvknha' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvksed"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvksed' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvksh"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zvksh' requires 'v' or 'zve*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zvknhb"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+        "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zacas1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zacas' requires 'a' or 'zaamo' extension to also be specified");
+  }
+
+  for (StringRef Input : {"rv32i_zabha"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zabha' requires 'a' or 'zaamo' extension to also be specified");
+  }
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -983,6 +1071,7 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
     sstc                 1.0
@@ -1029,11 +1118,14 @@ Experimental extensions
     zicfiss              1.0
     zacas                1.0
     zalasr               0.1
+    zvbc32e              0.7
+    zvkgs                0.7
+    smctr                1.0
     smmpm                1.0
     smnpm                1.0
+    ssctr                1.0
     ssnpm                1.0
     sspm                 1.0
-    ssqosid              1.0
     supm                 1.0
 
 Supported Profiles

@@ -10,7 +10,9 @@
 #define SUPPORT_OPERATOR_HIJACKER_H
 
 #include <cstddef>
+#include <memory>
 #include <functional>
+#include <string>
 
 #include "test_macros.h"
 
@@ -18,8 +20,8 @@
 ///
 /// The class has some additional operations to be usable in all containers.
 struct operator_hijacker {
-  bool operator<(const operator_hijacker&) const { return true; }
-  bool operator==(const operator_hijacker&) const { return true; }
+  TEST_CONSTEXPR bool operator<(const operator_hijacker&) const { return true; }
+  TEST_CONSTEXPR bool operator==(const operator_hijacker&) const { return true; }
 
   template <typename T>
   friend void operator&(T&&) = delete;
@@ -42,5 +44,17 @@ template <>
 struct std::hash<operator_hijacker> {
   std::size_t operator()(const operator_hijacker&) const { return 0; }
 };
+
+template <class T>
+struct operator_hijacker_allocator : std::allocator<T>, operator_hijacker {
+#if TEST_STD_VER <= 17
+  struct rebind {
+    typedef operator_hijacker_allocator<T> other;
+  };
+#endif
+};
+
+template <class CharT>
+struct operator_hijacker_char_traits : std::char_traits<CharT>, operator_hijacker {};
 
 #endif // SUPPORT_OPERATOR_HIJACKER_H

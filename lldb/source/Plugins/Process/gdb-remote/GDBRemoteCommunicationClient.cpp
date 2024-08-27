@@ -352,8 +352,11 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
 
   // build the qSupported packet
   std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc",
-                                       "multiprocess+", "fork-events+",
-                                       "vfork-events+"};
+                                       "multiprocess+",
+                                       "fork-events+",
+                                       "vfork-events+",
+                                       "swbreak+",
+                                       "hwbreak+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -1629,17 +1632,9 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
             }
           }
         } else if (name == "type") {
-          std::string comma_sep_str = value.str();
-          size_t comma_pos;
-          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
-            comma_sep_str[comma_pos] = '\0';
-            if (comma_sep_str == "stack") {
+          for (llvm::StringRef entry : llvm::split(value, ',')) {
+            if (entry == "stack")
               region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
-            }
-          }
-          // handle final (or only) type of "stack"
-          if (comma_sep_str == "stack") {
-            region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
           }
         } else if (name == "error") {
           StringExtractorGDBRemote error_extractor(value);

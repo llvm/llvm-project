@@ -2093,6 +2093,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoSanitizeBounds;
   case bitc::ATTR_KIND_NO_SANITIZE_COVERAGE:
     return Attribute::NoSanitizeCoverage;
+  case bitc::ATTR_KIND_NO_SANITIZE_REALTIME:
+    return Attribute::NoSanitizeRealtime;
   case bitc::ATTR_KIND_NULL_POINTER_IS_VALID:
     return Attribute::NullPointerIsValid;
   case bitc::ATTR_KIND_OPTIMIZE_FOR_DEBUGGING:
@@ -2141,6 +2143,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeMemory;
   case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
     return Attribute::SanitizeNumericalStability;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME:
+    return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:

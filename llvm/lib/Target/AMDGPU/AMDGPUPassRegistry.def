@@ -17,21 +17,39 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
-MODULE_PASS("amdgpu-attributor", AMDGPUAttributorPass(*this))
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
 MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
+MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
+MODULE_PASS("amdgpu-perf-hint",
+            AMDGPUPerfHintAnalysisPass(
+              *static_cast<const GCNTargetMachine *>(this)))
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-unify-metadata", AMDGPUUnifyMetadataPass())
 #undef MODULE_PASS
 
+#ifndef MODULE_PASS_WITH_PARAMS
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
+#endif
+MODULE_PASS_WITH_PARAMS(
+    "amdgpu-attributor", "AMDGPUAttributorPass",
+    [=](AMDGPUAttributorOptions Options) {
+      return AMDGPUAttributorPass(*this, Options);
+    },
+    parseAMDGPUAttributorPassOptions, "closed-world")
+#undef MODULE_PASS_WITH_PARAMS
+
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("amdgpu-annotate-uniform", AMDGPUAnnotateUniformValuesPass())
 FUNCTION_PASS("amdgpu-codegenprepare", AMDGPUCodeGenPreparePass(*this))
 FUNCTION_PASS("amdgpu-image-intrinsic-opt",
               AMDGPUImageIntrinsicOptimizerPass(*this))
+FUNCTION_PASS("amdgpu-late-codegenprepare",
+              AMDGPULateCodeGenPreparePass(
+                *static_cast<const GCNTargetMachine *>(this)))
 FUNCTION_PASS("amdgpu-lower-kernel-arguments",
               AMDGPULowerKernelArgumentsPass(*this))
 FUNCTION_PASS("amdgpu-lower-kernel-attributes",
@@ -46,6 +64,7 @@ FUNCTION_PASS("amdgpu-rewrite-undef-for-phi", AMDGPURewriteUndefForPHIPass())
 FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
+FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -76,4 +95,6 @@ FUNCTION_PASS_WITH_PARAMS(
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
+MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
 #undef MACHINE_FUNCTION_PASS

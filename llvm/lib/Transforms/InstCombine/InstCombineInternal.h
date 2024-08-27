@@ -33,8 +33,6 @@
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
-using namespace llvm::PatternMatch;
-
 // As a default, let's assume that we want to be aggressive,
 // and attempt to traverse with no limits in attempt to sink negation.
 static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
@@ -68,15 +66,15 @@ public:
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
+                   ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI,
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, LI) {}
+                     BFI, BPI, PSI, DL, LI, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
-  bool prepareWorklist(Function &F,
-                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
+  bool prepareWorklist(Function &F);
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
@@ -731,6 +729,7 @@ public:
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
+  Instruction *foldSelectToCmp(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
@@ -782,11 +781,14 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
+  const DominatorTree &DT;
+
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
+          bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

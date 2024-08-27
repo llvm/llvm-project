@@ -150,9 +150,15 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
+    Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"gfx000\"",
+                        "Chipset that these operations will run on">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
+    Option<"allowPackedF16Rtz", "allow-packed-f16-round-to-zero", "bool",
+           /*default=*/"false",
+           "Whether we should allow f32->f16 packed round-to-zero conversion">,
   ];
 }
 
@@ -1300,7 +1306,9 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
     Option<"targetRank", "target-rank", "unsigned", /*default=*/"1",
            "Target vector rank to which transfer ops should be lowered">,
     Option<"lowerTensors", "lower-tensors", "bool", /*default=*/"false",
-           "Lower transfer ops that operate on tensors">
+           "Lower transfer ops that operate on tensors">,
+    Option<"lowerScalable", "lower-scalable", "bool", /*default=*/"false",
+           "Add scalable vector specific lowerings (that introduce loops)">
   ];
 }
 

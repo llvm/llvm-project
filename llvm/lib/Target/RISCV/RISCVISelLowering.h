@@ -238,7 +238,7 @@ enum NodeType : unsigned {
   VECREDUCE_FMIN_VL,
   VECREDUCE_FMAX_VL,
 
-  // Vector binary ops with a merge as a third operand, a mask as a fourth
+  // Vector binary ops with a passthru as a third operand, a mask as a fourth
   // operand, and VL as a fifth operand.
   ADD_VL,
   AND_VL,
@@ -294,7 +294,7 @@ enum NodeType : unsigned {
   FABS_VL,
   FSQRT_VL,
   FCLASS_VL,
-  FCOPYSIGN_VL, // Has a merge operand
+  FCOPYSIGN_VL, // Has a passthru operand
   VFCVT_RTZ_X_F_VL,
   VFCVT_RTZ_XU_F_VL,
   VFCVT_X_F_VL,
@@ -322,7 +322,7 @@ enum NodeType : unsigned {
   VFWMSUB_VL,
   VFWNMSUB_VL,
 
-  // Widening instructions with a merge value a third operand, a mask as a
+  // Widening instructions with a passthru value a third operand, a mask as a
   // fourth operand, and VL as a fifth operand.
   VWMUL_VL,
   VWMULU_VL,
@@ -415,32 +415,6 @@ enum NodeType : unsigned {
   /// operand 1 is the target address.
   SW_GUARDED_BRIND,
 
-  // FP to 32 bit int conversions for RV64. These are used to keep track of the
-  // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-  STRICT_FCVT_WU_RV64,
-  STRICT_FADD_VL,
-  STRICT_FSUB_VL,
-  STRICT_FMUL_VL,
-  STRICT_FDIV_VL,
-  STRICT_FSQRT_VL,
-  STRICT_VFMADD_VL,
-  STRICT_VFNMADD_VL,
-  STRICT_VFMSUB_VL,
-  STRICT_VFNMSUB_VL,
-  STRICT_FP_ROUND_VL,
-  STRICT_FP_EXTEND_VL,
-  STRICT_VFNCVT_ROD_VL,
-  STRICT_SINT_TO_FP_VL,
-  STRICT_UINT_TO_FP_VL,
-  STRICT_VFCVT_RM_X_F_VL,
-  STRICT_VFCVT_RTZ_X_F_VL,
-  STRICT_VFCVT_RTZ_XU_F_VL,
-  STRICT_FSETCC_VL,
-  STRICT_FSETCCS_VL,
-  STRICT_VFROUND_NOEXCEPT_VL,
-  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
-
   SF_VC_XV_SE,
   SF_VC_IV_SE,
   SF_VC_VV_SE,
@@ -467,6 +441,32 @@ enum NodeType : unsigned {
   SF_VC_V_IVW_SE,
   SF_VC_V_VVW_SE,
   SF_VC_V_FVW_SE,
+
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RV64,
+  STRICT_FADD_VL,
+  STRICT_FSUB_VL,
+  STRICT_FMUL_VL,
+  STRICT_FDIV_VL,
+  STRICT_FSQRT_VL,
+  STRICT_VFMADD_VL,
+  STRICT_VFNMADD_VL,
+  STRICT_VFMSUB_VL,
+  STRICT_VFNMSUB_VL,
+  STRICT_FP_ROUND_VL,
+  STRICT_FP_EXTEND_VL,
+  STRICT_VFNCVT_ROD_VL,
+  STRICT_SINT_TO_FP_VL,
+  STRICT_UINT_TO_FP_VL,
+  STRICT_VFCVT_RM_X_F_VL,
+  STRICT_VFCVT_RTZ_X_F_VL,
+  STRICT_VFCVT_RTZ_XU_F_VL,
+  STRICT_FSETCC_VL,
+  STRICT_FSETCCS_VL,
+  STRICT_VFROUND_NOEXCEPT_VL,
+  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -879,11 +879,13 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *II,
-                                        LoadInst *LI) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *II, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
-  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                       StoreInst *SI) const override;
+  bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

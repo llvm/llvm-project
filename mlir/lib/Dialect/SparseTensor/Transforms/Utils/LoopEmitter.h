@@ -145,8 +145,12 @@ public:
   /// return the reduction variable used inside the generated loop.
   Operation *enterCoIterationOverTensorsAtLvls(
       OpBuilder &builder, Location loc, ArrayRef<TensorLevel> tidLvls,
-      MutableArrayRef<Value> reduc = {}, bool isParallel = false,
-      bool needsUniv = false);
+      unsigned numCases, MutableArrayRef<Value> reduc = {},
+      bool isParallel = false, bool needsUniv = false);
+
+  Region *enterCurrentCoIterationCase(OpBuilder &builder, Location loc,
+                                      I64BitSet caseBit, unsigned caseIdx,
+                                      MutableArrayRef<Value> reduc);
 
   /// Generates code to exit the current loop (e.g., generates yields, forwards
   /// loop induction variables, etc).
@@ -221,6 +225,11 @@ public:
   /// Getters.
   ///
   SmallVector<Value> getValPosits(TensorId tid) const {
+    // Returns the iterator if we are generating sparse (co)iterate-based loops.
+    if (emitStrategy == SparseEmitStrategy::kSparseIterator)
+      return {spIterVals[tid].back()};
+
+    // Returns {[batch coords], last-level position}.
     SmallVector<Value> batchCrds = iters[tid].back().back()->getBatchCrds();
     Value lastLvlPos = iters[tid].back().back()->getCurPosition().front();
     batchCrds.push_back(lastLvlPos);
@@ -255,9 +264,9 @@ private:
     // required for levels with non-tivial index expressions, which is
     // maintained by the sliceDrivenInfo array below.
     const llvm::SmallVector<TensorLevel> tidLvls;
-    const Operation *loop;      // the loop operation
+    Operation *loop;            // the loop operation
     Block *const userCodeBlock; // the block holding users' generated code.
-    const Value iv;             // the induction variable for the loop
+    Value iv;                   // the induction variable for the loop
   };
 
   void categorizeIterators(ArrayRef<TensorLevel> tidLvls,
@@ -426,6 +435,17 @@ private:
 
   std::vector<std::vector<Value>> spIterVals;
 };
+
+//
+// Utils functions to generate sparse loops.
+//
+
+// Generate a while loop that co-iterates over a set of iterators.
+std::pair<Operation *, Value> genCoIteration(OpBuilder &builder, Location loc,
+                                             ArrayRef<SparseIterator *> iters,
+                                             MutableArrayRef<Value> reduc,
+                                             Value uniIdx,
+                                             bool userReducFirst = false);
 
 } // namespace sparse_tensor
 } // namespace mlir

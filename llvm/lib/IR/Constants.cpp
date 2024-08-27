@@ -681,9 +681,8 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   }
 
   PossibleRelocationsTy Result = NoRelocation;
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    Result =
-        std::max(cast<Constant>(getOperand(i))->getRelocationInfo(), Result);
+  for (const Value *Op : operands())
+    Result = std::max(cast<Constant>(Op)->getRelocationInfo(), Result);
 
   return Result;
 }
@@ -2096,6 +2095,18 @@ Value *ConstantPtrAuth::handleOperandChangeImpl(Value *From, Value *ToV) {
 
   return getContext().pImpl->ConstantPtrAuths.replaceOperandsInPlace(
       Values, this, From, To, NumUpdated, OperandNo);
+}
+
+bool ConstantPtrAuth::hasSpecialAddressDiscriminator(uint64_t Value) const {
+  const auto *CastV = dyn_cast<ConstantExpr>(getAddrDiscriminator());
+  if (!CastV || CastV->getOpcode() != Instruction::IntToPtr)
+    return false;
+
+  const auto *IntVal = dyn_cast<ConstantInt>(CastV->getOperand(0));
+  if (!IntVal)
+    return false;
+
+  return IntVal->getValue() == Value;
 }
 
 bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
