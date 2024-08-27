@@ -165,7 +165,8 @@ int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
     return 0;
   }
 
-  StripUnderscore = Args.hasFlag(OPT_strip_underscore, OPT_no_strip_underscore, false);
+  StripUnderscore =
+      Args.hasFlag(OPT_strip_underscore, OPT_no_strip_underscore, false);
 
   ParseParams = !Args.hasArg(OPT_no_params);
 
