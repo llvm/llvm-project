@@ -13759,6 +13759,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
+        if (isa<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          // CreateMaskedGather expects VecTy and VecPtr have same size. We need
+          // to expand VecPtr if ScalarTy is a vector type.
+          unsigned ScalarTyNumElements =
+              cast<FixedVectorType>(ScalarTy)->getNumElements();
+          unsigned VecTyNumElements =
+              cast<FixedVectorType>(VecTy)->getNumElements();
+          assert(VecTyNumElements % ScalarTyNumElements == 0 &&
+                 "Cannot expand getelementptr.");
+          unsigned VF = VecTyNumElements / ScalarTyNumElements;
+          SmallVector<Constant *> Indices(VecTyNumElements);
+          transform(seq(VecTyNumElements), Indices.begin(), [=](unsigned I) {
+            return Builder.getInt64(I % ScalarTyNumElements);
+          });
+          VecPtr = Builder.CreateGEP(
+              VecTy->getElementType(),
+              Builder.CreateShuffleVector(
+                  VecPtr, createReplicatedMask(ScalarTyNumElements, VF)),
+              ConstantVector::get(Indices));
+        }
         // Use the minimum alignment of the gathered loads.
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
         NewLI = Builder.CreateMaskedGather(VecTy, VecPtr, CommonAlignment);

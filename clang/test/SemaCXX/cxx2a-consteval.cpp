@@ -380,11 +380,9 @@ void test() {
   { A k = to_lvalue_ref(A()); } // expected-error {{is not a constant expression}}
   // expected-note@-1 {{is not a constant expression}} expected-note@-1 {{temporary created here}}
   { A k = to_lvalue_ref(A().ret_a()); }
-  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
-  // expected-note@-2 {{heap-allocated object is not a constant expression}}
-  // expected-error@-3 {{'alloc::to_lvalue_ref' is not a constant expression}}
-  // expected-note@-4 {{reference to temporary is not a constant expression}}
-  // expected-note@-5 {{temporary created here}}
+  // expected-note@-1 {{reference to temporary is not a constant expression}}
+  // expected-error@-2 {{'alloc::to_lvalue_ref' is not a constant expression}}
+  // expected-note@-3 {{temporary created here}}
   { int k = A().ret_a().ret_i(); }
   // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
   // expected-note@-2 {{heap-allocated object is not a constant expression}}
@@ -394,19 +392,13 @@ void test() {
   { int k = rvalue_ref(A()); }
   { int k = rvalue_ref(std::move(a)); }
   { int k = const_a_ref(A().ret_a()); }
-  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
-  // expected-note@-2 {{is not a constant expression}}
   { int k = const_a_ref(to_lvalue_ref(A().ret_a())); }
-  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
-  // expected-note@-2 {{is not a constant expression}}
   { int k = const_a_ref(to_lvalue_ref(std::move(a))); }
   { int k = by_value_a(A().ret_a()); }
   { int k = by_value_a(to_lvalue_ref(static_cast<const A&&>(a))); }
   { int k = (A().ret_a(), A().ret_i()); }// expected-error {{is not a constant expression}}
   // expected-note@-1 {{is not a constant expression}}
   { int k = (const_a_ref(A().ret_a()), A().ret_i()); }
-  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
-  // expected-note@-2 {{is not a constant expression}}
 }
 
 }
@@ -1231,5 +1223,28 @@ consteval void immediate() {
                          // expected-error {{variable of non-literal type 'int[undefined()]' cannot be defined in a constexpr function before C++23}}
 }
 
+
+}
+
+namespace GH105558 {
+
+consteval int* alloc() { return new int(0); }
+consteval void f(int* p) { delete p; }
+consteval void g1(int*&& p) { delete p; }
+consteval void g2(const int* p) { delete p; }
+consteval void g3(int*const& p) { delete p; }
+struct X {
+  int* p;
+  explicit(false) constexpr X(int* p) : p(p) {}
+};
+consteval void g4(X x) { delete x.p; }
+
+void test() {
+  f(alloc());
+  g1(alloc());
+  g2(alloc());
+  g3(alloc());
+  g4(alloc());
+}
 
 }
