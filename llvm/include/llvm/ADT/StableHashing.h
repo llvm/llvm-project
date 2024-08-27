@@ -61,7 +61,8 @@ inline StringRef get_stable_name(StringRef Name) {
 // Generates a consistent hash value for a given input name across different
 // program executions and environments. This function first converts the input
 // name into a stable form using the `get_stable_name` function, and then
-// computes a hash of this stable name.
+// computes a hash of this stable name. For instance, `foo.llvm.1234` would have
+// the same hash as `foo.llvm.5678.
 inline stable_hash stable_hash_name(StringRef Name) {
   return xxh3_64bits(get_stable_name(Name));
 }

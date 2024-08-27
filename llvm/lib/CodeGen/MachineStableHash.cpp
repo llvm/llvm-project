@@ -84,21 +84,21 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   }
 
   case MachineOperand::MO_MachineBasicBlock:
-    StableHashBailingMachineBasicBlock++;
+    ++StableHashBailingMachineBasicBlock;
     return 0;
   case MachineOperand::MO_ConstantPoolIndex:
-    StableHashBailingConstantPoolIndex++;
+    ++StableHashBailingConstantPoolIndex;
     return 0;
   case MachineOperand::MO_BlockAddress:
-    StableHashBailingBlockAddress++;
+    ++StableHashBailingBlockAddress;
     return 0;
   case MachineOperand::MO_Metadata:
-    StableHashBailingMetadataUnsupported++;
+    ++StableHashBailingMetadataUnsupported;
     return 0;
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
     if (!GV->hasName()) {
-      StableHashBailingGlobalAddress++;
+      ++StableHashBailingGlobalAddress;
       return 0;
     }
     auto Name = GV->getName();
@@ -110,7 +110,7 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     if (const char *Name = MO.getTargetIndexName())
       return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                  stable_hash_name(Name), MO.getOffset());
-    StableHashBailingTargetIndexNoName++;
+    ++StableHashBailingTargetIndexNoName;
     return 0;
   }
 

@@ -134,10 +134,10 @@ body:             |
   auto *MF3 = MMI.getMachineFunction(*M->getFunction("f3"));
   auto *MF4 = MMI.getMachineFunction(*M->getFunction("f4"));
 
-  // Expect the suffix, `.llvm.{number}` to be ignored.
-  EXPECT_EQ(stableHashValue(*MF1), stableHashValue(*MF2));
-  // Expect the suffix, `.__uniq.{number}` to be ignored.
-  EXPECT_EQ(stableHashValue(*MF1), stableHashValue(*MF3));
+  EXPECT_EQ(stableHashValue(*MF1), stableHashValue(*MF2))
+      << "Expect the suffix, `.llvm.{number}` to be ignored.";
+  EXPECT_EQ(stableHashValue(*MF1), stableHashValue(*MF3))
+      << "Expect the suffix, `.__uniq.{number}` to be ignored.";
   // Do not ignore `.invalid.{number}`.
   EXPECT_NE(stableHashValue(*MF1), stableHashValue(*MF4));
 }
