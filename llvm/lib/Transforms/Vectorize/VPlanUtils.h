@@ -1,4 +1,4 @@
-//===- VPUtils.h - Miscellanous VPlan-related utilities ---------*- C++ -*-===//
+//===- VPlanUtils.h - Miscellanous VPlan-related utilities ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_VECTORIZE_VPUTILS_H
-#define LLVM_TRANSFORMS_VECTORIZE_VPUTILS_H
+#ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
+#define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
 

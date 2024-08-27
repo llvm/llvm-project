@@ -13,11 +13,11 @@
 
 #include "VPlanTransforms.h"
 #include "VPRecipeBuilder.h"
-#include "VPUtils.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
