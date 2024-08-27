@@ -798,7 +798,7 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;
-  if (llvm::AArch64::getExtensionFeatures(ArchInfo->DefaultExts, CPUFeats)) {
+  if (llvm::AArch64::getExtensionFeatures(ArchInfo->ImpliedExts, CPUFeats)) {
     for (auto F : CPUFeats) {
       assert(F[0] == '+' && "Expected + in target feature!");
       Features[F.drop_front(1)] = true;
@@ -1180,7 +1180,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       // Ret.Features.
       if (!AI)
         continue;
-      FeatureBits.addArchDefaults(*AI);
+      FeatureBits.addArchFeatures(*AI);
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features, FeatureBits);
     } else if (Feature.starts_with("cpu=")) {
@@ -1193,7 +1193,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
             Feature.split("=").second.trim().split("+");
         Ret.CPU = Split.first;
         if (auto CpuInfo = llvm::AArch64::parseCpu(Ret.CPU)) {
-          FeatureBits.addCPUDefaults(*CpuInfo);
+          FeatureBits.addCPUFeatures(*CpuInfo);
           SplitAndAddFeatures(Split.second, Ret.Features, FeatureBits);
         }
       }
