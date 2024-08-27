@@ -111,6 +111,7 @@ class ConstantInt;
 class Context;
 class Function;
 class Instruction;
+class VAArgInst;
 class FreezeInst;
 class FenceInst;
 class SelectInst;
@@ -255,6 +256,7 @@ protected:
   friend class Context;               // For getting `Val`.
   friend class User;                  // For getting `Val`.
   friend class Use;                   // For getting `Val`.
+  friend class VAArgInst;             // For getting `Val`.
   friend class FreezeInst;            // For getting `Val`.
   friend class FenceInst;             // For getting `Val`.
   friend class SelectInst;            // For getting `Val`.
@@ -688,6 +690,7 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class VAArgInst;          // For getTopmostLLVMInstruction().
   friend class FreezeInst;         // For getTopmostLLVMInstruction().
   friend class FenceInst;          // For getTopmostLLVMInstruction().
   friend class SelectInst;         // For getTopmostLLVMInstruction().
@@ -1540,6 +1543,27 @@ public:
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class VAArgInst : public UnaryInstruction {
+  VAArgInst(llvm::VAArgInst *FI, Context &Ctx)
+      : UnaryInstruction(ClassID::VAArg, Opcode::VAArg, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static VAArgInst *create(Value *List, Type *Ty, BBIterator WhereIt,
+                           BasicBlock *WhereBB, Context &Ctx,
+                           const Twine &Name = "");
+  Value *getPointerOperand();
+  const Value *getPointerOperand() const {
+    return const_cast<VAArgInst *>(this)->getPointerOperand();
+  }
+  static unsigned getPointerOperandIndex() {
+    return llvm::VAArgInst::getPointerOperandIndex();
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::VAArg;
   }
 };
 
@@ -3006,6 +3030,8 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
+  friend VAArgInst; // For createVAArgInst()
   FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
   friend FreezeInst; // For createFreezeInst()
   FenceInst *createFenceInst(llvm::FenceInst *SI);

@@ -575,6 +575,22 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+VAArgInst *VAArgInst::create(Value *List, Type *Ty, BBIterator WhereIt,
+                             BasicBlock *WhereBB, Context &Ctx,
+                             const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::VAArgInst>(Builder.CreateVAArg(List->Val, Ty, Name));
+  return Ctx.createVAArgInst(LLVMI);
+}
+
+Value *VAArgInst::getPointerOperand() {
+  return Ctx.getValue(cast<llvm::VAArgInst>(Val)->getPointerOperand());
+}
+
 FreezeInst *FreezeInst::create(Value *V, BBIterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
                                const Twine &Name) {
@@ -2251,6 +2267,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
   switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
+  case llvm::Instruction::VAArg: {
+    auto *LLVMVAArg = cast<llvm::VAArgInst>(LLVMV);
+    It->second = std::unique_ptr<VAArgInst>(new VAArgInst(LLVMVAArg, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Freeze: {
     auto *LLVMFreeze = cast<llvm::FreezeInst>(LLVMV);
     It->second = std::unique_ptr<FreezeInst>(new FreezeInst(LLVMFreeze, *this));
@@ -2463,6 +2484,11 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   // Create SandboxIR for BB's body.
   BB->buildBasicBlockFromLLVMIR(LLVMBB);
   return BB;
+}
+
+VAArgInst *Context::createVAArgInst(llvm::VAArgInst *SI) {
+  auto NewPtr = std::unique_ptr<VAArgInst>(new VAArgInst(SI, *this));
+  return cast<VAArgInst>(registerValue(std::move(NewPtr)));
 }
 
 FreezeInst *Context::createFreezeInst(llvm::FreezeInst *SI) {
