@@ -7607,7 +7607,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
       uint64_t ValueID = Record[0];
       GlobalValue::GUID RefGUID;
-      if (Version >= 10) {
+      if (Version >= 11) {
         RefGUID = Record[1] << 32 | Record[2];
       } else {
         RefGUID = Record[1];
