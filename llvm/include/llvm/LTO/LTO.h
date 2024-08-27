@@ -362,16 +362,16 @@ private:
     /// Keep track if the symbol is visible outside of a module with a summary
     /// (i.e. in either a regular object or a regular LTO module without a
     /// summary).
-    bool VisibleOutsideSummary = false;
+    unsigned VisibleOutsideSummary : 1 {false};
 
     /// The symbol was exported dynamically, and therefore could be referenced
     /// by a shared library not visible to the linker.
-    bool ExportDynamic = false;
+    unsigned ExportDynamic : 1 {false};
 
-    bool UnnamedAddr = true;
+    unsigned UnnamedAddr : 1 {true};
 
     /// True if module contains the prevailing definition.
-    bool Prevailing = false;
+    unsigned Prevailing : 1 {false};
 
     /// Returns true if module contains the prevailing definition and symbol is
     /// an IR symbol. For example when module-level inline asm block is used,
