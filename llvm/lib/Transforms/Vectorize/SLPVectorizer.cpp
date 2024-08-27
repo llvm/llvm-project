@@ -10193,10 +10193,38 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return VecCost;
     };
     if (SLPReVec && !E->isAltShuffle())
-      return GetCostDiff(GetScalarCost, [&](InstructionCost) {
-        return ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                                VecTy, calculateShufflevectorMask(E->Scalars));
-      });
+      return GetCostDiff(
+          GetScalarCost, [&](InstructionCost) -> InstructionCost {
+            // If a group uses mask in order, the shufflevector can be
+            // eliminated by instcombine. Then the cost is 0.
+            bool IsIdentity = true;
+            auto *SV = cast<ShuffleVectorInst>(VL.front());
+            unsigned SVNumElements =
+                cast<FixedVectorType>(SV->getOperand(0)->getType())
+                    ->getNumElements();
+            unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
+            for (size_t I = 0, E = VL.size(); I != E; I += GroupSize) {
+              ArrayRef<Value *> Group = VL.slice(I, GroupSize);
+              SmallVector<int> ExtractionIndex(SVNumElements);
+              for_each(Group, [&](Value *V) {
+                auto *SV = cast<ShuffleVectorInst>(V);
+                int Index;
+                SV->isExtractSubvectorMask(Index);
+                for (int I :
+                     seq<int>(Index, Index + SV->getShuffleMask().size()))
+                  ExtractionIndex.push_back(I);
+              });
+              if (!is_sorted(ExtractionIndex)) {
+                IsIdentity = false;
+                break;
+              }
+            }
+            return IsIdentity
+                       ? TTI::TCC_Free
+                       : ::getShuffleCost(
+                             *TTI, TargetTransformInfo::SK_PermuteSingleSrc,
+                             VecTy, calculateShufflevectorMask(E->Scalars));
+          });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
   case Instruction::Freeze:
