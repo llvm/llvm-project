@@ -1,8 +1,6 @@
 #include <functional>
 
-void consume_number(int i) {
-  __builtin_printf("break here");
-}
+void consume_number(int i) { __builtin_printf("break here"); }
 
 int add(int i, int j) {
   // break here
@@ -11,12 +9,8 @@ int add(int i, int j) {
 
 struct Callable {
   Callable(int num) : num_(num) {}
-  void operator()(int i) const {
-    __builtin_printf("break here");
-  }
-  void member_function(int i) const {
-    __builtin_printf("break here");
-  }
+  void operator()(int i) const { __builtin_printf("break here"); }
+  void member_function(int i) const { __builtin_printf("break here"); }
   int num_;
 };
 
