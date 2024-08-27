@@ -540,8 +540,6 @@ public:
                });
   }
 
-  void dump() const;
-
 private:
   /// MarkAllocated - Mark a register and all of its aliases as allocated.
   void MarkAllocated(MCPhysReg Reg);
