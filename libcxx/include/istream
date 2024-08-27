@@ -1211,11 +1211,10 @@ operator>>(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _
     try {
 #endif
       __str.clear();
-      using _Size = typename basic_string<_CharT, _Traits, _Allocator>::size_type;
-      static_assert(numeric_limits<_Size>::max() >= numeric_limits<streamsize>::max(),
-                    "Stream width could be too large to be represented in the string's size_type");
+      using _Size               = typename basic_string<_CharT, _Traits, _Allocator>::size_type;
       streamsize const __width  = __is.width();
-      _Size const __n           = __width <= 0 ? __str.max_size() : static_cast<_Size>(__width);
+      _Size const __max_size    = __str.max_size();
+      _Size const __n           = __width <= 0 ? __max_size : std::min(__max_size, static_cast<_Size>(__width));
       _Size __c                 = 0;
       const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
       while (__c < __n) {
