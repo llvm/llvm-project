@@ -860,7 +860,7 @@ struct StreamingVLOpConversion
 };
 
 /// Merges consecutive `arm_sme.intr.zero` operations in a block by bitwise
-/// or-ing the zero masks. Note: In furture the backend _should_ handle this.
+/// or-ing the zero masks. Note: In future the backend _should_ handle this.
 static void mergeConsecutiveTileZerosInBlock(Block *block) {
   uint32_t mergedZeroMask = 0;
   SmallVector<arm_sme::aarch64_sme_zero, 16> zeroOpsToMerge;
@@ -872,7 +872,6 @@ static void mergeConsecutiveTileZerosInBlock(Block *block) {
     if (zeroOpsToMerge.size() <= 1)
       return;
     IRRewriter rewriter(zeroOpsToMerge.front());
-    rewriter.setInsertionPoint(zeroOpsToMerge.front());
     rewriter.create<arm_sme::aarch64_sme_zero>(
         zeroOpsToMerge.front().getLoc(),
         rewriter.getI32IntegerAttr(mergedZeroMask));
