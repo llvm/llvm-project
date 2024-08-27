@@ -261,6 +261,8 @@ Improvements to Clang's diagnostics
   compilation speed with modules. This warning is disabled by default and it needs
   to be explicitly enabled or by ``-Weverything``.
 
+- Improved diagnostics when trying to overload a function in extern "C". (#GH80235)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
