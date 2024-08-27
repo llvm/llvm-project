@@ -697,12 +697,12 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
                            uint64_t default_value = LLDB_INVALID_ADDRESS,
                            SymbolType sym_type = lldb::eSymbolTypeData) {
   if (!process) {
-    error.SetErrorString("no process");
+    error = Status::FromErrorString("no process");
     return default_value;
   }
 
   if (!module_sp) {
-    error.SetErrorString("no module");
+    error = Status::FromErrorString("no module");
     return default_value;
   }
 
@@ -712,14 +712,14 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
       module_sp->FindFirstSymbolWithNameAndType(name, lldb::eSymbolTypeData);
 
   if (!symbol || !symbol->ValueIsAddress()) {
-    error.SetErrorString("no symbol");
+    error = Status::FromErrorString("no symbol");
     return default_value;
   }
 
   lldb::addr_t symbol_load_addr =
       symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
   if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
-    error.SetErrorString("symbol address invalid");
+    error = Status::FromErrorString("symbol address invalid");
     return default_value;
   }
 
@@ -882,8 +882,8 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
+        error = Status::FromErrorStringWithFormat(
+            "unrecognized short option '%c'", short_option);
         break;
       }
 
