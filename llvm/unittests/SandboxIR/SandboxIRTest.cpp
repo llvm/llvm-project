@@ -1228,6 +1228,98 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   }
 }
 
+TEST_F(SandboxIRTest, InsertValueInst) {
+  parseIR(C, R"IR(
+define void @foo({i32, float} %agg, i32 %i) {
+  %ins0 = insertvalue {i32, float} %agg, i32 %i, 0
+  %ins1 = insertvalue {i32, float} {i32 99, float 99.0}, i32 %i, 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgAgg = F.getArg(0);
+  auto *ArgInt = F.getArg(1);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ins0 = cast<sandboxir::InsertValueInst>(&*It++);
+  auto *Ins1 = cast<sandboxir::InsertValueInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(Ins0->getOperand(0), ArgAgg);
+  EXPECT_EQ(Ins0->getOperand(1), ArgInt);
+
+  // create before instruction
+  auto *NewInsBeforeRet =
+      cast<sandboxir::InsertValueInst>(sandboxir::InsertValueInst::create(
+          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), Ret->getIterator(),
+          Ret->getParent(), Ctx, "NewInsBeforeRet"));
+  EXPECT_EQ(NewInsBeforeRet->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewInsBeforeRet->getName(), "NewInsBeforeRet");
+#endif // NDEBUG
+
+  // create at end of BB
+  auto *NewInsAtEnd =
+      cast<sandboxir::InsertValueInst>(sandboxir::InsertValueInst::create(
+          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx,
+          "NewInsAtEnd"));
+  EXPECT_EQ(NewInsAtEnd->getPrevNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewInsAtEnd->getName(), "NewInsAtEnd");
+#endif // NDEBUG
+
+  // Test the path that creates a folded constant. We're currently using an
+  // insertvalue instruction with a constant struct operand in the textual IR
+  // above to obtain a constant struct to work with.
+  // TODO: Refactor this once sandboxir::ConstantStruct lands.
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
+  auto *ShouldBeConstant = sandboxir::InsertValueInst::create(
+      Ins1->getOperand(0), Zero, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx);
+  EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
+
+  // idx_begin / idx_end
+  auto IdxIt = Ins0->idx_begin();
+  EXPECT_EQ(*IdxIt++, 0u);
+  EXPECT_EQ(IdxIt, Ins0->idx_end());
+
+  // indices
+  int Count = 0;
+  for (unsigned Idx : Ins0->indices()) {
+    EXPECT_EQ(Idx, 0u);
+    Count++;
+  }
+  EXPECT_EQ(Count, 1);
+
+  // getAggregateOperand
+  EXPECT_EQ(Ins0->getAggregateOperand(), ArgAgg);
+  const auto* ConstIns0 = Ins0;
+  EXPECT_EQ(ConstIns0->getAggregateOperand(), ArgAgg);
+
+  // getAggregateOperandIndex
+  EXPECT_EQ(sandboxir::InsertValueInst::getAggregateOperandIndex(),
+            llvm::InsertValueInst::getAggregateOperandIndex());
+
+  // getInsertedValueOperand
+  EXPECT_EQ(Ins0->getInsertedValueOperand(), ArgInt);
+  EXPECT_EQ(ConstIns0->getInsertedValueOperand(), ArgInt);
+
+  // getInsertedValueOperandIndex
+  EXPECT_EQ(sandboxir::InsertValueInst::getInsertedValueOperandIndex(),
+            llvm::InsertValueInst::getInsertedValueOperandIndex());
+
+  // getIndices
+  EXPECT_EQ(Ins0->getIndices().size(), 1u);
+  EXPECT_EQ(Ins0->getIndices()[0], 0u);
+
+  // getNumIndices
+  EXPECT_EQ(Ins0->getNumIndices(), 1u);
+
+  // hasIndices
+  EXPECT_EQ(Ins0->hasIndices(), true);
+}
+
 TEST_F(SandboxIRTest, BranchInst) {
   parseIR(C, R"IR(
 define void @foo(i1 %cond0, i1 %cond2) {
