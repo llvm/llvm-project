@@ -987,7 +987,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getFeatureBits().test(FeatureLocalMemorySize393216)) {
+  if (STM.getFeatureBits().test(FeatureLocalMemorySize327680)) {
     // LDS is allocated in 256 dword blocks.
     LDSAlignShift = 10;
   } else if (STM.getFeatureBits().test(FeatureLocalMemorySize163840)) {
