@@ -5542,7 +5542,7 @@ static TemplateDeductionResult CheckDeductionConsistency(
   bool IsIncompleteSubstitution = false;
   QualType InstP = S.SubstType(P, MLTAL, FTD->getLocation(), FTD->getDeclName(),
                                &IsIncompleteSubstitution);
-  if (InstP.isNull())
+  if (InstP.isNull() && !IsIncompleteSubstitution)
     return TemplateDeductionResult::SubstitutionFailure;
   if (!CheckConsistency)
     return TemplateDeductionResult::Success;

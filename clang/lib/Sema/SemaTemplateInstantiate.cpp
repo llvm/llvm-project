@@ -1346,15 +1346,18 @@ namespace {
     // Whether Substitution was Incomplete, that is, we tried to substitute in
     // any user provided template arguments which were null.
     bool IsIncomplete = false;
+    // Whether an incomplete substituion should be treated as an error.
+    bool BailOutOnIncomplete;
 
   public:
     typedef TreeTransform<TemplateInstantiator> inherited;
 
     TemplateInstantiator(Sema &SemaRef,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
-                         SourceLocation Loc, DeclarationName Entity)
+                         SourceLocation Loc, DeclarationName Entity,
+                         bool BailOutOnIncomplete = false)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-          Entity(Entity) {}
+          Entity(Entity), BailOutOnIncomplete(BailOutOnIncomplete) {}
 
     void setEvaluateConstraints(bool B) {
       EvaluateConstraints = B;
@@ -1427,6 +1430,8 @@ namespace {
           TemplateArgs.setArgument(Depth, Index, TemplateArgument());
         } else {
           IsIncomplete = true;
+          if (BailOutOnIncomplete)
+            return TemplateArgument();
         }
       }
 
@@ -1824,7 +1829,7 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
                                             TTP->getPosition())) {
         IsIncomplete = true;
-        return D;
+        return BailOutOnIncomplete ? nullptr : D;
       }
 
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
@@ -1973,7 +1978,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
                                             TTP->getPosition())) {
         IsIncomplete = true;
-        return Name;
+        return BailOutOnIncomplete ? TemplateName() : Name;
       }
 
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
@@ -2058,7 +2063,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   if (!TemplateArgs.hasTemplateArgument(NTTP->getDepth(),
                                         NTTP->getPosition())) {
     IsIncomplete = true;
-    return E;
+    return BailOutOnIncomplete ? ExprError() : E;
   }
 
   TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
@@ -2479,6 +2484,9 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     // arguments left unspecified.
     if (!TemplateArgs.hasTemplateArgument(T->getDepth(), T->getIndex())) {
       IsIncomplete = true;
+      if (BailOutOnIncomplete)
+        return QualType();
+
       TemplateTypeParmTypeLoc NewTL
         = TLB.push<TemplateTypeParmTypeLoc>(TL.getType());
       NewTL.setNameLoc(TL.getNameLoc());
@@ -2861,7 +2869,9 @@ QualType Sema::SubstType(QualType T,
   if (!T->isInstantiationDependentType() && !T->isVariablyModifiedType())
     return T;
 
-  TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, Entity);
+  TemplateInstantiator Instantiator(
+      *this, TemplateArgs, Loc, Entity,
+      /*BailOutOnIncomplete=*/IsIncompleteSubstitution != nullptr);
   QualType QT = Instantiator.TransformType(T);
   if (IsIncompleteSubstitution && Instantiator.getIsIncomplete())
     *IsIncompleteSubstitution = true;
