@@ -5374,56 +5374,29 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
 
     // In C++, the logic operators !, &&, || are available for vectors. !v is
     // equivalent to v == 0.
+    //
+    // The result of the comparison is a vector of the same width and number of
+    // elements as the comparison operands with a signed integral element type.
+    //
     // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
-    QualType SignedVecT =
-        Ctx.getASTContext().GetSignedVectorType(SubExpr->getType());
+    QualType SignedVecTy = E->getType();
     PrimType SignedElemT =
-        classifyPrim(SignedVecT->getAs<VectorType>()->getElementType());
+        classifyPrim(SignedVecTy->getAs<VectorType>()->getElementType());
     for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
-
       // operator ! on vectors returns -1 for 'truth', so negate it.
-      if (isIntegralType(ElemT)) {
-        if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
-          return false;
-        if (!this->emitInv(E))
-          return false;
-        if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
-          return false;
-        if (!this->emitNeg(ElemT, E))
-          return false;
-        if (ElemT != SignedElemT &&
-            !this->emitPrimCast(ElemT, SignedElemT, SignedVecT, E))
-          return false;
-      } else {
-        // Float types result in an int of the same size, but -1 for true, or 0
-        // for false.
-        auto &FpSemantics = Ctx.getFloatSemantics(VecTy->getElementType());
-        unsigned NumBits =
-            Ctx.getBitWidth(SignedVecT->getAs<VectorType>()->getElementType());
-        auto Zero = APFloat::getZero(FpSemantics);
-        APSInt SIntZero(APSInt::getZero(NumBits));
-        APSInt SIntAllOne(APSInt::getAllOnes(NumBits));
-        // Emit operations equivalent to isZero(Vec[I]) ? -1 : 0
-        if (!this->emitConstFloat(Zero, E))
-          return false;
-        if (!this->emitEQ(ElemT, E))
-          return false;
-        LabelTy LabelFalse = this->getLabel();
-        LabelTy LabelEnd = this->getLabel();
-        if (!this->jumpFalse(LabelFalse))
-          return false;
-        if (!this->emitConst(SIntAllOne, SignedElemT, E))
-          return false;
-        if (!this->jump(LabelEnd))
-          return false;
-        this->emitLabel(LabelFalse);
-        if (!this->emitConst(SIntZero, SignedElemT, E))
-          return false;
-        this->fallthrough(LabelEnd);
-        this->emitLabel(LabelEnd);
-      }
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitInv(E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (ElemT != SignedElemT &&
+          !this->emitPrimCast(ElemT, SignedElemT, SignedVecTy, E))
+        return false;
       if (!this->emitInitElem(SignedElemT, I, E))
         return false;
     }
