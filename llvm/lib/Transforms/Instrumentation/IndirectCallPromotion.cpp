@@ -303,8 +303,6 @@ private:
   Function &F;
   Module &M;
 
-  ProfileSummaryInfo *PSI = nullptr;
-
   // Symtab that maps indirect call profile values to function names and
   // defines.
   InstrProfSymtab *const Symtab;
@@ -391,12 +389,11 @@ private:
 
 public:
   IndirectCallPromoter(
-      Function &Func, Module &M, ProfileSummaryInfo *PSI,
-      InstrProfSymtab *Symtab, bool SamplePGO,
+      Function &Func, Module &M, InstrProfSymtab *Symtab, bool SamplePGO,
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
       OptimizationRemarkEmitter &ORE)
-      : F(Func), M(M), PSI(PSI), Symtab(Symtab), SamplePGO(SamplePGO),
+      : F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
         VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE) {}
   IndirectCallPromoter(const IndirectCallPromoter &) = delete;
@@ -842,7 +839,6 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     return false;
   LLVM_DEBUG(dbgs() << "\nEvaluating vtable profitability for callsite #"
                     << NumOfPGOICallsites << CB << "\n");
-  uint64_t RemainingVTableCount = TotalCount;
   const size_t CandidateSize = Candidates.size();
   for (size_t I = 0; I < CandidateSize; I++) {
     auto &Candidate = Candidates[I];
@@ -868,8 +864,6 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
       return false;
     }
 
-    RemainingVTableCount -= Candidate.Count;
-
     // 'MaxNumVTable' limits the number of vtables to make vtable comparison
     // profitable. Comparing multiple vtables for one function candidate will
     // insert additional instructions on the hot path, and allowing more than
@@ -886,14 +880,6 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
                         << " vtables. Bail out for vtable comparison.\n");
       return false;
     }
-  }
-
-  // If the indirect fallback is not cold, don't compare vtables.
-  if (PSI && PSI->hasProfileSummary() &&
-      !PSI->isColdCount(RemainingVTableCount)) {
-    LLVM_DEBUG(dbgs() << "    Indirect fallback basic block is not cold. Bail "
-                         "out for vtable comparison.\n");
-    return false;
   }
 
   return true;
@@ -992,8 +978,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    IndirectCallPromoter CallPromoter(F, M, PSI, &Symtab, SamplePGO,
-                                      VirtualCSInfo,
+    IndirectCallPromoter CallPromoter(F, M, &Symtab, SamplePGO, VirtualCSInfo,
                                       VTableAddressPointOffsetVal, ORE);
     bool FuncChanged = CallPromoter.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
