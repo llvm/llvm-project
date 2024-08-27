@@ -415,26 +415,34 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
       return false;
     }
 
-    void updateInvalidatedRegions(const MemRegion *Region) {
+    // Keep track of the variables that were invalidated through an opaque
+    // function call. Even if the initial values of such variables were bound to
+    // an address of a local variable, we cannot claim anything now, at the
+    // function exit, so skip them to avoid false positives.
+    void recordInvalidatedRegions(const MemRegion *Region) {
       if (const auto *SymReg = Region->getAs<SymbolicRegion>()) {
         SymbolRef Symbol = SymReg->getSymbol();
         if (const auto *DerS = dyn_cast<SymbolDerived>(Symbol);
             DerS && isa_and_nonnull<SymbolConjured>(DerS->getParentSymbol())) {
-          InvalidatedRegions.insert(Symbol->getOriginRegion()->getBaseRegion());
+          ExcludedRegions.insert(Symbol->getOriginRegion()->getBaseRegion());
         }
       }
     }
 
   public:
     SmallVector<std::pair<const MemRegion *, const MemRegion *>, 10> V;
-    llvm::SmallPtrSet<const MemRegion *, 4> InvalidatedRegions;
+    // ExcludedRegions are skipped from reporting.
+    // I.e., if a referrer in this set, skip the related bug report.
+    // It is useful to avoid false positive for the variables that were
+    // reset to a conjured value after an opaque function call.
+    llvm::SmallPtrSet<const MemRegion *, 4> ExcludedRegions;
 
     CallBack(CheckerContext &CC, bool TopFrame)
         : Ctx(CC), PoppedFrame(CC.getStackFrame()), TopFrame(TopFrame) {}
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {
-      updateInvalidatedRegions(Region);
+      recordInvalidatedRegions(Region);
       const MemRegion *VR = Val.getAsRegion();
       if (!VR)
         return true;
@@ -473,7 +481,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   for (const auto &P : Cb.V) {
     const MemRegion *Referrer = P.first->getBaseRegion();
     const MemRegion *Referred = P.second;
-    if (Cb.InvalidatedRegions.contains(getOriginBaseRegion(Referrer))) {
+    if (Cb.ExcludedRegions.contains(getOriginBaseRegion(Referrer))) {
       continue;
     }
 
