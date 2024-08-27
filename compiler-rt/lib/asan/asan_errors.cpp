@@ -348,10 +348,10 @@ void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorBadParamsToMoveContiguousContainerAnnotations::Print() {
+void ErrorBadParamsToCopyContiguousContainerAnnotations::Print() {
   Report(
       "ERROR: AddressSanitizer: bad parameters to "
-      "__sanitizer_move_contiguous_container_annotations:\n"
+      "__sanitizer_copy_contiguous_container_annotations:\n"
       "      old_storage_beg : %p\n"
       "      old_storage_end : %p\n"
       "      new_storage_beg : %p\n"

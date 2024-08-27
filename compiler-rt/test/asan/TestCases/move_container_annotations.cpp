@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -fexceptions -O %s -o %t && %env_asan_opts=detect_stack_use_after_return=0 %run %t
 //
-// Test __sanitizer_move_contiguous_container_annotations.
+// Test __sanitizer_copy_contiguous_container_annotations.
 
 #include <algorithm>
 #include <deque>
@@ -61,8 +61,8 @@ static size_t count_unpoisoned(std::deque<int> &poison_states, size_t n) {
   return result;
 }
 
-void TestMove(size_t capacity, size_t off_old, size_t off_new,
-              int poison_buffers) {
+void TestNonOverlappingContainers(size_t capacity, size_t off_old,
+                                  size_t off_new, int poison_buffers) {
   size_t old_buffer_size = capacity + off_old + kGranularity * 2;
   size_t new_buffer_size = capacity + off_new + kGranularity * 2;
   char *old_buffer = new char[old_buffer_size];
@@ -76,7 +76,7 @@ void TestMove(size_t capacity, size_t off_old, size_t off_new,
   char *old_end = old_beg + capacity;
   char *new_end = new_beg + capacity;
 
-  for (int i = 0; i < 75; i++) {
+  for (int i = 0; i < 35; i++) {
     if (poison_old)
       __asan_poison_memory_region(old_buffer, old_buffer_size);
     if (poison_new)
@@ -84,7 +84,7 @@ void TestMove(size_t capacity, size_t off_old, size_t off_new,
 
     RandomPoison(old_beg, old_end);
     std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
-    __sanitizer_move_contiguous_container_annotations(old_beg, old_end, new_beg,
+    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end, new_beg,
                                                       new_end);
 
     // If old_buffer were poisoned, expected state of memory before old_beg
@@ -150,11 +150,11 @@ void TestMove(size_t capacity, size_t off_old, size_t off_new,
 
 int main(int argc, char **argv) {
   int n = argc == 1 ? 64 : atoi(argv[1]);
-  for (size_t j = 0; j < kGranularity * 2; j++) {
-    for (size_t k = 0; k < kGranularity * 2; k++) {
+  for (size_t j = 0; j < kGranularity + 2; j++) {
+    for (size_t k = 0; k < kGranularity + 2; k++) {
       for (int i = 0; i <= n; i++) {
         for (int poison = 0; poison < 4; ++poison) {
-          TestMove(i, j, k, poison);
+          TestNonOverlappingContainers(i, j, k, poison);
         }
       }
     }

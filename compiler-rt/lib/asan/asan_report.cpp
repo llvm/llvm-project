@@ -367,11 +367,11 @@ void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
   in_report.ReportError(error);
 }
 
-void ReportBadParamsToMoveContiguousContainerAnnotations(
+void ReportBadParamsToCopyContiguousContainerAnnotations(
     uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
     uptr new_storage_end, BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  ErrorBadParamsToMoveContiguousContainerAnnotations error(
+  ErrorBadParamsToCopyContiguousContainerAnnotations error(
       GetCurrentTidOrInvalid(), stack, old_storage_beg, old_storage_end,
       new_storage_beg, new_storage_end);
   in_report.ReportError(error);
