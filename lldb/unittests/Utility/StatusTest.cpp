@@ -84,16 +84,16 @@ TEST(StatusTest, ErrorWin32) {
   // formatted messages will be different.
   bool skip = wcscmp(L"en-US", name) != 0;
 
-  auto s = Status(ERROR_ACCESS_DENIED, ErrorType::eErrorTypeWin32);
+  Status s = Status(ERROR_ACCESS_DENIED, ErrorType::eErrorTypeWin32);
   EXPECT_TRUE(s.Fail());
   if (!skip)
     EXPECT_STREQ("Access is denied. ", s.AsCString());
 
-  s.SetError(ERROR_IPSEC_IKE_TIMED_OUT, ErrorType::eErrorTypeWin32);
+  s = Status(ERROR_IPSEC_IKE_TIMED_OUT, ErrorType::eErrorTypeWin32);
   if (!skip)
     EXPECT_STREQ("Negotiation timed out ", s.AsCString());
 
-  s.SetError(16000, ErrorType::eErrorTypeWin32);
+  s = Status(16000, ErrorType::eErrorTypeWin32);
   if (!skip)
     EXPECT_STREQ("unknown error", s.AsCString());
 }
