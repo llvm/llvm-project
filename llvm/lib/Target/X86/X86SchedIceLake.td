@@ -900,10 +900,10 @@ def ICXWriteResGroup38 : SchedWriteRes<[ICXPort15,ICXPort01]> {
 }
 def: InstRW<[ICXWriteResGroup38], (instregex "(V?)PH(ADD|SUB)SW(Y?)rr")>;
 
-def ICXWriteResGroup41 : SchedWriteRes<[ICXPort5,ICXPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+def ICXWriteResGroup41 : SchedWriteRes<[ICXPort5]> {
+  let Latency = 4;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[ICXWriteResGroup41], (instrs MMX_PACKSSDWrr,
                                           MMX_PACKSSWBrr,
