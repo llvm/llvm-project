@@ -1160,12 +1160,9 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   ScriptExpr *e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
-    e = make<DynamicExpr>([=, c = op[0]]() -> ExprValue {
-      ExprValue lhs = script->getSymbolValue(name, loc);
-      BinaryExpr *expr =
-          make<BinaryExpr>(op, make<DynamicExpr>([=] { return lhs; }), e, loc);
-      return expr->evaluateBinaryOperands();
-    });
+    DynamicExpr *lhs =
+        make<DynamicExpr>([=] { return script->getSymbolValue(name, loc); });
+    e = make<BinaryExpr>(op, lhs, e, loc);
   }
   return make<SymbolAssignment>(name, e, ctx.scriptSymOrderCounter++,
                                 getCurrentLocation());
