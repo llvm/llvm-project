@@ -65,8 +65,8 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
           || candidate == "EXC_RESOURCE"
           || candidate == "EXC_GUARD"
           || candidate == "EXC_SYSCALL")) {
-      error.SetErrorStringWithFormat("invalid exception type: '%s'",
-          candidate.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid exception type: '%s'",
+                                                candidate.str().c_str());
       return error;
     }
   }
@@ -713,7 +713,8 @@ lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
       process_sp = m_remote_platform_sp->DebugProcess(launch_info, debugger,
                                                       target, error);
     else
-      error.SetErrorString("the platform is not currently connected");
+      error =
+          Status::FromErrorString("the platform is not currently connected");
   }
   return process_sp;
 }

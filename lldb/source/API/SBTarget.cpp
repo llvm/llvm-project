@@ -85,8 +85,9 @@ static Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
       // listener, so if a valid listener is supplied, we need to error out to
       // let the client know.
       if (attach_info.GetListener())
-        return Status("process is connected and already has a listener, pass "
-                      "empty listener");
+        return Status::FromErrorString(
+            "process is connected and already has a listener, pass "
+            "empty listener");
     }
   }
 
@@ -452,7 +453,7 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
         if (platform_sp->GetProcessInfo(attach_pid, instance_info)) {
           attach_info.SetUserID(instance_info.GetEffectiveUserID());
         } else {
-          error.ref().SetErrorStringWithFormat(
+          error.ref() = Status::FromErrorStringWithFormat(
               "no process found with process ID %" PRIu64, attach_pid);
           return sb_process;
         }
@@ -1655,7 +1656,7 @@ SBError SBTarget::SetLabel(const char *label) {
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
-    return Status("Couldn't get internal target object.");
+    return Status::FromErrorString("Couldn't get internal target object.");
 
   return Status(target_sp->SetLabel(label));
 }
@@ -2323,8 +2324,8 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
         } else {
           Status error;
-          error.SetErrorString("can't evaluate expressions when the "
-                               "process is running.");
+          error = Status::FromErrorString("can't evaluate expressions when the "
+                                          "process is running.");
           expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
         }
       } else {

@@ -68,8 +68,8 @@ public:
         address.emplace();
         if (option_arg.getAsInteger(0, *address)) {
           address.reset();
-          error.SetErrorStringWithFormat("invalid address argument '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid address argument '%s'", option_arg.str().c_str());
         }
       } break;
 
@@ -77,8 +77,8 @@ public:
         offset.emplace();
         if (option_arg.getAsInteger(0, *offset)) {
           offset.reset();
-          error.SetErrorStringWithFormat("invalid offset argument '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset argument '%s'", option_arg.str().c_str());
         }
       } break;
 
@@ -224,8 +224,8 @@ public:
       case 'r': {
         int32_t offset = 0;
         if (option_arg.getAsInteger(0, offset) || offset == INT32_MIN) {
-          error.SetErrorStringWithFormat("invalid frame offset argument '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid frame offset argument '%s'", option_arg.str().c_str());
         } else
           relative_frame_offset = offset;
         break;
@@ -748,7 +748,7 @@ private:
         if (success) {
           m_first_instruction_only = value;
         } else {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid boolean value '%s' passed for -f option",
               option_arg.str().c_str());
         }
