@@ -1014,6 +1014,32 @@ define void @foo(i8 %arg0, i8 %arg1) {
   EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
 }
 
+TEST_F(TrackerTest, PossiblyNonNegInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %zext = zext i32 %arg to i64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PNNI = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+
+  // Check setNonNeg().
+  auto OrigNonNeg = PNNI->hasNonNeg();
+  auto NewNonNeg = true;
+  EXPECT_NE(NewNonNeg, OrigNonNeg);
+  Ctx.save();
+  PNNI->setNonNeg(NewNonNeg);
+  EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+  Ctx.revert();
+  EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
+}
+
 TEST_F(TrackerTest, AtomicRMWSetters) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %arg) {
