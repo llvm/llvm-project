@@ -316,7 +316,7 @@ TEST(UniqueFunctionTest, InlineStorageWorks) {
   // We do assume a couple of implementation details of the unique_function here:
   //  - It can store certain small-enough payload inline
   //  - Inline storage size is at least >= sizeof(void*)
-  void *ptr;
+  void *ptr = nullptr;
   unique_function<void(void *)> UniqueFunctionWithInlineStorage{
       [ptr](void *self) {
         auto mid = reinterpret_cast<uintptr_t>(&ptr);

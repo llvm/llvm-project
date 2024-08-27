@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueLattice.h"
@@ -418,7 +419,7 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   DenseMap<Function *, std::unique_ptr<PredicateInfo>> FnPredicateInfo;
 
-  DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
+  DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
   LLVMContext &Ctx;
 
@@ -443,6 +444,12 @@ private:
   bool markConstant(Value *V, Constant *C) {
     assert(!V->getType()->isStructTy() && "structs should use mergeInValue");
     return markConstant(ValueState[V], V, C);
+  }
+
+  bool markNotConstant(ValueLatticeElement &IV, Value *V, Constant *C);
+
+  bool markNotNull(ValueLatticeElement &IV, Value *V) {
+    return markNotConstant(IV, V, Constant::getNullValue(V->getType()));
   }
 
   /// markConstantRange - Mark the object as constant range with \p CR. If the
@@ -819,7 +826,11 @@ public:
         return;
       }
     }
-    // Assume nothing about the incoming arguments without range.
+    if (A->hasNonNullAttr()) {
+      markNotNull(ValueState[A], A);
+      return;
+    }
+    // Assume nothing about the incoming arguments without attributes.
     markOverdefined(A);
   }
 
@@ -828,10 +839,6 @@ public:
   Constant *getConstant(const ValueLatticeElement &LV, Type *Ty) const;
 
   Constant *getConstantOrNull(Value *V) const;
-
-  SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
-    return TrackingIncomingArguments;
-  }
 
   void setLatticeValueForSpecializationArguments(Function *F,
                                        const SmallVectorImpl<ArgInfo> &Args);
@@ -904,6 +911,15 @@ bool SCCPInstVisitor::markConstant(ValueLatticeElement &IV, Value *V,
   if (!IV.markConstant(C, MayIncludeUndef))
     return false;
   LLVM_DEBUG(dbgs() << "markConstant: " << *C << ": " << *V << '\n');
+  pushToWorkList(IV, V);
+  return true;
+}
+
+bool SCCPInstVisitor::markNotConstant(ValueLatticeElement &IV, Value *V,
+                                      Constant *C) {
+  if (!IV.markNotConstant(C))
+    return false;
+  LLVM_DEBUG(dbgs() << "markNotConstant: " << *C << ": " << *V << '\n');
   pushToWorkList(IV, V);
   return true;
 }
@@ -1367,7 +1383,7 @@ void SCCPInstVisitor::visitInsertValueInst(InsertValueInst &IVI) {
 
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (SCCPSolver::isOverdefined(ValueState[&IVI]))
+  if (ValueState[&IVI].isOverdefined())
     return (void)markOverdefined(&IVI);
 
   // If this has more than one index, we can't handle it, drive all results to
@@ -1439,7 +1455,7 @@ void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
   ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (SCCPSolver::isOverdefined(IV))
+  if (IV.isOverdefined())
     return (void)markOverdefined(&I);
 
   // If something is unknown/undef, wait for it to resolve.
@@ -1464,7 +1480,7 @@ void SCCPInstVisitor::visitFreezeInst(FreezeInst &I) {
   ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (SCCPSolver::isOverdefined(IV))
+  if (IV.isOverdefined())
     return (void)markOverdefined(&I);
 
   // If something is unknown/undef, wait for it to resolve.
@@ -1544,7 +1560,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
 void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
   // Do not cache this lookup, getValueState calls later in the function might
   // invalidate the reference.
-  if (SCCPSolver::isOverdefined(ValueState[&I]))
+  if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
   Value *Op1 = I.getOperand(0);
@@ -1574,8 +1590,21 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
 // Handle getelementptr instructions.  If all operands are constants then we
 // can turn this into a getelementptr ConstantExpr.
 void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
-  if (SCCPSolver::isOverdefined(ValueState[&I]))
+  if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
+
+  const ValueLatticeElement &PtrState = getValueState(I.getPointerOperand());
+  if (PtrState.isUnknownOrUndef())
+    return;
+
+  // gep inbounds/nuw of non-null is non-null.
+  if (PtrState.isNotConstant() && PtrState.getNotConstant()->isNullValue()) {
+    if (I.hasNoUnsignedWrap() ||
+        (I.isInBounds() &&
+         !NullPointerIsDefined(I.getFunction(), I.getAddressSpace())))
+      return (void)markNotNull(ValueState[&I], &I);
+    return (void)markOverdefined(&I);
+  }
 
   SmallVector<Constant *, 8> Operands;
   Operands.reserve(I.getNumOperands());
@@ -1584,9 +1613,6 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     ValueLatticeElement State = getValueState(I.getOperand(i));
     if (State.isUnknownOrUndef())
       return; // Operands are not resolved yet.
-
-    if (SCCPSolver::isOverdefined(State))
-      return (void)markOverdefined(&I);
 
     if (Constant *C = getConstant(State, I.getOperand(i)->getType())) {
       Operands.push_back(C);
@@ -2155,10 +2181,6 @@ Constant *SCCPSolver::getConstant(const ValueLatticeElement &LV,
 
 Constant *SCCPSolver::getConstantOrNull(Value *V) const {
   return Visitor->getConstantOrNull(V);
-}
-
-SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
-  return Visitor->getArgumentTrackedFunctions();
 }
 
 void SCCPSolver::setLatticeValueForSpecializationArguments(Function *F,

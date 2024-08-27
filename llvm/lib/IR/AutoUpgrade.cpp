@@ -1034,7 +1034,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax")) {
+          Name.starts_with("ds.fmax") ||
+          Name.starts_with("global.atomic.fadd") ||
+          Name.starts_with("flat.atomic.fadd")) {
         // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
         // declaration.
         NewFn = nullptr;
@@ -4042,7 +4044,9 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("ds.fmin", AtomicRMWInst::FMin)
           .StartsWith("ds.fmax", AtomicRMWInst::FMax)
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
-          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
+          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
+          .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4097,8 +4101,10 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
   if (PtrTy->getAddressSpace() != 3) {
-    RMW->setMetadata("amdgpu.no.fine.grained.memory",
-                     MDNode::get(F->getContext(), {}));
+    MDNode *EmptyMD = MDNode::get(F->getContext(), {});
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+    if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
+      RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
   }
 
   if (IsVolatile)

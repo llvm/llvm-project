@@ -4778,7 +4778,7 @@ bool AArch64InstrInfo::shouldClusterMemOps(
 }
 
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
-                                            unsigned Reg, unsigned SubIdx,
+                                            MCRegister Reg, unsigned SubIdx,
                                             unsigned State,
                                             const TargetRegisterInfo *TRI) {
   if (!SubIdx)
@@ -4825,8 +4825,8 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       DebugLoc DL, unsigned DestReg,
-                                       unsigned SrcReg, bool KillSrc,
+                                       const DebugLoc &DL, MCRegister DestReg,
+                                       MCRegister SrcReg, bool KillSrc,
                                        unsigned Opcode, unsigned ZeroReg,
                                        llvm::ArrayRef<unsigned> Indices) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -4851,7 +4851,9 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   MCRegister SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       (AArch64::GPR32spRegClass.contains(SrcReg) || SrcReg == AArch64::WZR)) {
     const TargetRegisterInfo *TRI = &getRegisterInfo();

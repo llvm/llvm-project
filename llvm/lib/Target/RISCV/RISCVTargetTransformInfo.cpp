@@ -447,21 +447,30 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
 
         InstructionCost Cost = 0;
-        for (unsigned I = 0; I < NumRegs; ++I) {
+        for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
+             I < NumSrcRegs; ++I) {
           bool IsSingleVector = true;
           SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-          transform(Mask.slice(I * SubVF,
-                               I == NumRegs - 1 ? Mask.size() % SubVF : SubVF),
-                    SubMask.begin(), [&](int I) {
-                      bool SingleSubVector = I / VF == 0;
-                      IsSingleVector &= SingleSubVector;
-                      return (SingleSubVector ? 0 : 1) * SubVF + I % VF;
-                    });
+          transform(
+              Mask.slice(I * SubVF,
+                         I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
+              SubMask.begin(), [&](int I) -> int {
+                if (I == PoisonMaskElem)
+                  return PoisonMaskElem;
+                bool SingleSubVector = I / VF == 0;
+                IsSingleVector &= SingleSubVector;
+                return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
+              });
+          if (all_of(enumerate(SubMask), [](auto &&P) {
+                return P.value() == PoisonMaskElem ||
+                       static_cast<unsigned>(P.value()) == P.index();
+              }))
+            continue;
           Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
                                                 : TTI::SK_PermuteTwoSrc,
                                  SubVecTy, SubMask, CostKind, 0, nullptr);
-          return Cost;
         }
+        return Cost;
       }
       break;
     }
@@ -1055,13 +1064,12 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
-                (int)Log2_32(Src->getScalarSizeInBits());
+  int PowDiff = (int)Log2_32(DstLT.second.getScalarSizeInBits()) -
+                (int)Log2_32(SrcLT.second.getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    const unsigned SrcEltSize = Src->getScalarSizeInBits();
-    if (SrcEltSize == 1) {
+    if (Src->getScalarSizeInBits() == 1) {
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
@@ -1091,8 +1099,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
-    unsigned SrcEltSize = Src->getScalarSizeInBits();
-    unsigned DstEltSize = Dst->getScalarSizeInBits();
+    unsigned SrcEltSize = SrcLT.second.getScalarSizeInBits();
+    unsigned DstEltSize = DstLT.second.getScalarSizeInBits();
 
     unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
                   : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V

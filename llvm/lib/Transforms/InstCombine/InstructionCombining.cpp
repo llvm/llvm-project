@@ -5234,8 +5234,7 @@ public:
 /// them to the worklist (this significantly speeds up instcombine on code where
 /// many instructions are dead or constant).  Additionally, if we find a branch
 /// whose condition is a known constant, we only visit the reachable successors.
-bool InstCombinerImpl::prepareWorklist(
-    Function &F, ReversePostOrderTraversal<BasicBlock *> &RPOT) {
+bool InstCombinerImpl::prepareWorklist(Function &F) {
   bool MadeIRChange = false;
   SmallPtrSet<BasicBlock *, 32> LiveBlocks;
   SmallVector<Instruction *, 128> InstrsForInstructionWorklist;
@@ -5417,9 +5416,9 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, LI);
+                        ORE, BFI, BPI, PSI, DL, LI, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
-    bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
+    bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
       break;
@@ -5428,7 +5427,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-              Twine(Opts.MaxIterations) + " iterations",
+              Twine(Opts.MaxIterations) + " iterations. " +
+              "Use 'instcombine<no-verify-fixpoint>' to suppress this error.",
           /*GenCrashDiag=*/false);
     }
   }

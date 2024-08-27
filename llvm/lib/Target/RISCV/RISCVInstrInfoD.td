@@ -25,7 +25,7 @@ def SDT_RISCVSplitF64     : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
 def RISCVBuildPairF64 : SDNode<"RISCVISD::BuildPairF64", SDT_RISCVBuildPairF64>;
 def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
 
-def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmINX">;
+def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmRV32Zdinx">;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -392,6 +392,8 @@ def : Pat<(fneg (any_fma_nsz FPR64IN32X:$rs1, FPR64IN32X:$rs2, FPR64IN32X:$rs3))
 foreach Ext = DExts in {
   defm : PatFprFpr_m<fminnum, FMIN_D, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_D, Ext>;
+  defm : PatFprFpr_m<fminimumnum, FMIN_D, Ext>;
+  defm : PatFprFpr_m<fmaximumnum, FMAX_D, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_D, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_D, Ext>;
 }

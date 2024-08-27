@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/LoadRelocatableObject.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
+#include "llvm/Support/FileSystem.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -29,10 +30,22 @@ checkELFRelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT) {
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-loadRelocatableObject(StringRef Path, const Triple &TT) {
-  auto Buf = MemoryBuffer::getFile(Path);
+loadRelocatableObject(StringRef Path, const Triple &TT,
+                      std::optional<StringRef> IdentifierOverride) {
+  if (!IdentifierOverride)
+    IdentifierOverride = Path;
+
+  Expected<sys::fs::file_t> FDOrErr =
+      sys::fs::openNativeFileForRead(Path, sys::fs::OF_None);
+  if (!FDOrErr)
+    return createFileError(Path, FDOrErr.takeError());
+  sys::fs::file_t FD = *FDOrErr;
+  auto Buf =
+      MemoryBuffer::getOpenFile(FD, *IdentifierOverride, /*FileSize=*/-1);
+  sys::fs::closeFile(FD);
   if (!Buf)
-    return createFileError(Path, Buf.getError());
+    return make_error<StringError>(
+        StringRef("Could not load object at path ") + Path, Buf.getError());
 
   std::optional<Triple::ObjectFormatType> RequireFormat;
   if (TT.getObjectFormat() != Triple::UnknownObjectFormat)
@@ -53,8 +66,8 @@ loadRelocatableObject(StringRef Path, const Triple &TT) {
     break;
   case file_magic::macho_universal_binary:
     if (!RequireFormat || *RequireFormat == Triple::MachO)
-      return loadMachORelocatableObjectFromUniversalBinary(Path,
-                                                           std::move(*Buf), TT);
+      return loadMachORelocatableObjectFromUniversalBinary(
+          Path, std::move(*Buf), TT, IdentifierOverride);
     break;
   default:
     break;
