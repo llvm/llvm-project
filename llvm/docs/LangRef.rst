@@ -19641,7 +19641,7 @@ vectorization factor should be multiplied by vscale.
 Semantics:
 """"""""""
 
-Returns a positive i32 value (explicit vector length) that is unknown at compile
+Returns a non-negative i32 value (explicit vector length) that is unknown at compile
 time and depends on the hardware specification.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
@@ -19651,13 +19651,23 @@ in order to get the number of elements to process on each loop iteration. The
 result should be used to decrease the count for the next iteration until the
 count reaches zero.
 
-If the count is larger than the number of lanes in the type described by the
-last 2 arguments, this intrinsic may return a value less than the number of
-lanes implied by the type. The result will be at least as large as the result
-will be on any later loop iteration.
+Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
+``%scalable``, here are the constraints on the returned value:
 
-This intrinsic will only return 0 if the input count is also 0. A non-zero input
-count will produce a non-zero result.
+-  If ``%cnt`` equals to 0, returns 0.
+-  The returned value is always less than or equal to ``%max_lanes``.
+-  The returned value is always greater than or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``,
+   if ``%cnt`` is non-zero.
+-  The returned values are monotonically non-increasing in each loop iteration. That is,
+   the returned value of an iteration is at least as large as that of any later
+   iteration.
+
+Note that it has the following implications:
+
+-  For a loop that uses this intrinsic, the number of iterations is equal to
+   ``ceil(%C / %max_lanes)`` where ``%C`` is the initial ``%cnt`` value.
+-  If ``%cnt`` is non-zero, the return value is non-zero as well.
+-  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
