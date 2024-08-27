@@ -223,6 +223,20 @@ define i8 @scmp_from_select_lt(i32 %x, i32 %y) {
   ret i8 %r
 }
 
+; Fold (x s< y) ? -1 : zext(x s> y) into scmp(x, y)
+define i8 @scmp_from_select_lt_and_gt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_lt_and_gt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %gt_bool = icmp sgt i32 %x, %y
+  %gt = zext i1 %gt_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %gt
+  ret i8 %r
+}
+
 ; Vector version
 define <4 x i8> @scmp_from_select_vec_lt(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i8> @scmp_from_select_vec_lt(
@@ -313,5 +327,19 @@ define i8 @scmp_of_sub_and_zero_neg3(i32 %x, i32 %y) {
 ;
   %diff = sub nsw i32 %x, %y
   %r = call i8 @llvm.ucmp(i32 %diff, i32 0)
+  ret i8 %r
+}
+
+; Fold (x s> y) ? 1 : sext(x s< y)
+define i8 @scmp_from_select_gt_and_lt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_gt_and_lt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt_bool = icmp slt i32 %x, %y
+  %lt = sext i1 %lt_bool to i8
+  %gt = icmp sgt i32 %x, %y
+  %r = select i1 %gt, i8 1, i8 %lt
   ret i8 %r
 }

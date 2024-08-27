@@ -12,7 +12,7 @@
 include "mlir/Pass/PassBase.td"
 
 def MapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization"> {
+    : Pass<"omp-map-info-finalization", "mlir::ModuleOp"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
     Expands MapInfo operations containing descriptor types into multiple

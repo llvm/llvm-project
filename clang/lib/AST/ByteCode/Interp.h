@@ -41,7 +41,7 @@ using APSInt = llvm::APSInt;
 /// Convert a value to an APValue.
 template <typename T>
 bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
-  R = V.toAPValue(S.getCtx());
+  R = V.toAPValue(S.getASTContext());
   return true;
 }
 
@@ -231,12 +231,12 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
   if (NumElements->toAPSInt().getActiveBits() >
-          ConstantArrayType::getMaxSizeBits(S.getCtx()) ||
+          ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
       *NumElements > MaxElements) {
     if (!IsNoThrow) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-          << NumElements->toDiagnosticString(S.getCtx());
+          << NumElements->toDiagnosticString(S.getASTContext());
     }
     return false;
   }
@@ -911,8 +911,8 @@ inline bool CmpHelper<FunctionPointer>(InterpState &S, CodePtr OpPC,
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-      << LHS.toDiagnosticString(S.getCtx())
-      << RHS.toDiagnosticString(S.getCtx());
+      << LHS.toDiagnosticString(S.getASTContext())
+      << RHS.toDiagnosticString(S.getASTContext());
   return false;
 }
 
@@ -927,7 +927,7 @@ inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
     if (FP.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
-          << FP.toDiagnosticString(S.getCtx());
+          << FP.toDiagnosticString(S.getASTContext());
       return false;
     }
   }
@@ -945,8 +945,8 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-        << LHS.toDiagnosticString(S.getCtx())
-        << RHS.toDiagnosticString(S.getCtx());
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
     return false;
   } else {
     unsigned VL = LHS.getByteOffset();
@@ -974,7 +974,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     if (P.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
-          << P.toDiagnosticString(S.getCtx());
+          << P.toDiagnosticString(S.getASTContext());
       return false;
     }
   }
@@ -984,13 +984,13 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         RHS.getOffset() == 0) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-          << LHS.toDiagnosticString(S.getCtx());
+          << LHS.toDiagnosticString(S.getASTContext());
       return false;
     } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
                LHS.getOffset() == 0) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-          << RHS.toDiagnosticString(S.getCtx());
+          << RHS.toDiagnosticString(S.getASTContext());
       return false;
     }
 
@@ -1073,8 +1073,8 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
     // This should only happen with pointers.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-        << LHS.toDiagnosticString(S.getCtx())
-        << RHS.toDiagnosticString(S.getCtx());
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
     return false;
   }
 
@@ -1342,7 +1342,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   const Pointer &Ptr = S.P.getGlobal(I);
 
   const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue(S.getCtx());
+  APValue APV = Value.toAPValue(S.getASTContext());
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
@@ -1369,7 +1369,7 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
       std::make_pair(P.getDeclDesc()->asExpr(), Temp));
 
   if (std::optional<APValue> APV =
-          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
+          P.toRValue(S.getASTContext(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }
@@ -1404,7 +1404,8 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
     return false;
   const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
-  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
+  Field.deref<T>() =
+      Value.truncate(F->Decl->getBitWidthValue(S.getASTContext()));
   Field.initialize();
   return true;
 }
@@ -1427,7 +1428,8 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
   const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
-  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
+  Field.deref<T>() =
+      Value.truncate(F->Decl->getBitWidthValue(S.getASTContext()));
   Field.activate();
   Field.initialize();
   return true;
@@ -1477,7 +1479,7 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
 
   if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
     return true;
   }
 
@@ -1505,7 +1507,7 @@ inline bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
 
   if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
     return true;
   }
 
@@ -1721,7 +1723,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
-    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getASTContext()));
   else
     Ptr.deref<T>() = Value;
   return true;
@@ -1736,7 +1738,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
-    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getASTContext()));
   else
     Ptr.deref<T>() = Value;
   return true;
@@ -2014,7 +2016,7 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
       while (auto *AT = dyn_cast<ArrayType>(PtrT))
         PtrT = AT->getElementType();
 
-      QualType ArrayTy = S.getCtx().getConstantArrayType(
+      QualType ArrayTy = S.getASTContext().getConstantArrayType(
           PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_pointer_subtraction_zero_size)
@@ -2608,9 +2610,11 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     // the function we're about to call is a lambda call operator,
     // skip the CheckInvoke, since the ThisPtr is a null pointer
     // anyway.
-    if (!(S.Current->getFunction() &&
-          S.Current->getFunction()->isLambdaStaticInvoker() &&
-          Func->isLambdaCallOperator())) {
+    if (S.Current->getFunction() &&
+        S.Current->getFunction()->isLambdaStaticInvoker() &&
+        Func->isLambdaCallOperator()) {
+      assert(ThisPtr.isZero());
+    } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return false;
     }
@@ -2951,7 +2955,7 @@ inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
   if (VD == S.EvaluatingDecl)
     return true;
 
-  if (!VD->isUsableInConstantExpressions(S.getCtx())) {
+  if (!VD->isUsableInConstantExpressions(S.getASTContext())) {
     S.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
         << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
     return false;
@@ -3045,7 +3049,7 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
     if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
-          << Ptr.toDiagnosticString(S.getCtx()) << Ptr.isOnePastEnd();
+          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
       return false;
     }
 
@@ -3074,6 +3078,11 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
   }
   return CheckNewDeleteForms(S, OpPC, WasArrayAlloc, DeleteIsArrayForm,
                              BlockDesc, Source);
+}
+
+static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
+  S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+  return true;
 }
 
 inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
