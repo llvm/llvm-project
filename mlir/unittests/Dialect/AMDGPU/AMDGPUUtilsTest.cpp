@@ -27,10 +27,6 @@ TEST(ChipsetTest, Parsing) {
   ASSERT_TRUE(succeeded(chipset));
   EXPECT_EQ(chipset->majorVersion, 11u);
   EXPECT_EQ(chipset->minorVersion, 0x03u);
-
-  ASSERT_TRUE(succeeded(chipset));
-  EXPECT_EQ(chipset->majorVersion, 11u);
-  EXPECT_EQ(chipset->minorVersion, 0x03u);
 }
 
 TEST(ChipsetTest, ParsingInvalid) {
