@@ -25,7 +25,7 @@ RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty, const GlobalValue *GV)
     : MachineConstantPoolValue(Ty), GV(GV), Kind(RISCVCPKind::GlobalValue) {}
 
 RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C, StringRef S)
-    : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), S(S),
+    : MachineConstantPoolValue(Type::getInt64Ty(C)), S(S),
       Kind(RISCVCPKind::ExtSymbol) {}
 
 RISCVConstantPoolValue *RISCVConstantPoolValue::Create(const GlobalValue *GV) {
