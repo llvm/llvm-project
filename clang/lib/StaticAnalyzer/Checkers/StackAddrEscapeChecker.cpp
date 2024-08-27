@@ -305,12 +305,12 @@ static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
   return nullptr;
 }
 
-const MemRegion *getOriginBaseRegion(const MemRegion *Referrer) {
-  Referrer = Referrer->getBaseRegion();
-  while (const auto *SymReg = dyn_cast<SymbolicRegion>(Referrer)) {
-    Referrer = SymReg->getSymbol()->getOriginRegion()->getBaseRegion();
+const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
+  Reg = Reg->getBaseRegion();
+  while (const auto *SymReg = dyn_cast<SymbolicRegion>(Reg)) {
+    Reg = SymReg->getSymbol()->getOriginRegion()->getBaseRegion();
   }
-  return Referrer;
+  return Reg;
 }
 
 std::optional<std::string> printReferrer(const MemRegion *Referrer) {
