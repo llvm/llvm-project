@@ -84,7 +84,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // any allocations.  Otherwise start at the beginning of memory.
 
   if (m_allocations.empty()) {
-    ret = 0x0;
+    ret = 0;
   } else {
     auto back = m_allocations.rbegin();
     lldb::addr_t addr = back->first;
@@ -116,10 +116,18 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
     Status err = process_sp->GetMemoryRegionInfo(ret, region_info);
     if (err.Success()) {
       while (true) {
-        if (region_info.GetReadable() != MemoryRegionInfo::OptionalBool::eNo ||
-            region_info.GetWritable() != MemoryRegionInfo::OptionalBool::eNo ||
-            region_info.GetExecutable() !=
-                MemoryRegionInfo::OptionalBool::eNo) {
+        if (region_info.GetRange().GetRangeBase() == 0 &&
+            region_info.GetRange().GetRangeEnd() < end_of_memory) {
+          // Don't use a region that starts at address 0,
+          // it can make it harder to debug null dereference crashes
+          // in the inferior.
+          ret = region_info.GetRange().GetRangeEnd();
+        } else if (region_info.GetReadable() !=
+                       MemoryRegionInfo::OptionalBool::eNo ||
+                   region_info.GetWritable() !=
+                       MemoryRegionInfo::OptionalBool::eNo ||
+                   region_info.GetExecutable() !=
+                       MemoryRegionInfo::OptionalBool::eNo) {
           if (region_info.GetRange().GetRangeEnd() - 1 >= end_of_memory) {
             ret = LLDB_INVALID_ADDRESS;
             break;
