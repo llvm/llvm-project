@@ -124,7 +124,7 @@ public:
 
 static std::optional<llvm::SmallVector<MachineInstr *>>
 moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
-  unsigned MaxNumberOfNodesToBeProcessed = 25;
+  unsigned MaxNumberOfNodesToBeProcessed = 10;
   MachineInstr *DstInstr = Dst->getInstr();
   MachineInstr *SrcInstr = Src->getInstr();
   if (DstInstr == nullptr || SrcInstr == nullptr)
@@ -175,9 +175,9 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
         if (!SectionInstr[DestinationFromSource]) {
           SectionInstr[DestinationFromSource] = true;
           Edges.push(SU);
+          NumProcessedNode++;
         }
       }
-      NumProcessedNode++;
     }
     return NumProcessedNode < MaxNumberOfNodesToBeProcessed;      
   };
