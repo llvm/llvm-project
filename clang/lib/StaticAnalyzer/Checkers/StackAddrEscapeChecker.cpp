@@ -372,9 +372,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   bool ExitingTopFrame =
       Ctx.getPredecessor()->getLocationContext()->inTopFrame();
 
-  if (ExitingTopFrame && Node->getLocation().getTag() &&
-      Node->getLocation().getTag()->getTagDescription() ==
-          "ExprEngine : Clean Node" &&
+  if (ExitingTopFrame &&
+      Node->getLocation().getTag() == ExprEngine::cleanupNodeTag() &&
       Node->getFirstPred()) {
     // When finishing analysis of a top-level function, engine proactively
     // removes dead symbols thus preventing this checker from looking through
