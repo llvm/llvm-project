@@ -1711,7 +1711,7 @@ TEST_F(ScalarEvolutionsTest, ExitCountWithPredicates) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
-define void @foo(ptr %dest, ptr %src, i64 noundef %end) {
+define void @foo1(ptr %dest, ptr %src, i64 noundef %end) {
 entry:
   %cmp7 = icmp sgt i64 %end, 0
   br i1 %cmp7, label %for.body, label %exit
@@ -1732,13 +1732,42 @@ for.body:
 
 exit:
   ret void
+}
+
+define i32 @foo2(ptr nocapture noundef %src1, ptr nocapture noundef readonly %src2, i8 noundef %start, i32 %end) {
+entry:
+  %st = zext i8 %start to i16
+  %ext = zext i8 %start to i32
+  %ecmp = icmp ult i16 %st, 42
+  br i1 %ecmp, label %for.body, label %exit
+
+for.body:
+  %i.08 = phi i8 [ %inc, %for.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %src1, i8 %i.08
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %src2, i8 %i.08
+  %1 = load i32, ptr %arrayidx3, align 4
+  %cmp.early = icmp eq i32 %0, %1
+  br i1 %cmp.early, label %found, label %for.inc
+
+for.inc:
+  %inc = add i8 %i.08, 1
+  %conv = zext i8 %inc to i32
+  %cmp = icmp ult i32 %conv, %end
+  br i1 %cmp, label %for.body, label %exit
+
+found:
+  ret i32 1
+
+exit:
+  ret i32 0
 })",
                                                   Err, C);
 
   ASSERT_TRUE(M && "Could not parse module?");
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+  runWithSE(*M, "foo1", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     BasicBlock &EntryBB = F.getEntryBlock();
     BasicBlock *ForBodyBB = nullptr;
     Loop *Loop = nullptr;
@@ -1756,6 +1785,31 @@ exit:
         Loop, ForBodyBB, &Predicates, ScalarEvolution::Exact);
     ASSERT_FALSE(isa<SCEVCouldNotCompute>(ExitCount));
     ASSERT_FALSE(Predicates.empty());
+  });
+
+  runWithSE(*M, "foo2", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    BasicBlock &EntryBB = F.getEntryBlock();
+    BasicBlock *ForIncBB = nullptr;
+    Loop *Loop = nullptr;
+    for (BasicBlock *Succ : successors(&EntryBB)) {
+      Loop = LI.getLoopFor(Succ);
+      if (Loop) {
+        ForIncBB = Loop->getLoopLatch();
+        break;
+      }
+    }
+    ASSERT_TRUE(Loop && "Couldn't find the loop!");
+    ASSERT_TRUE(ForIncBB && "Couldn't find the loop header!");
+    SmallVector<const SCEVPredicate *, 4> Predicates;
+    const SCEV *ExitCount = SE.getPredicatedExitCount(
+        Loop, ForIncBB, &Predicates, ScalarEvolution::SymbolicMaximum);
+    ASSERT_FALSE(isa<SCEVCouldNotCompute>(ExitCount));
+    ASSERT_FALSE(Predicates.empty());
+    ExitCount = SE.getPredicatedExitCount(Loop, ForIncBB, &Predicates,
+                                          ScalarEvolution::ConstantMaximum);
+    ASSERT_TRUE(isa<SCEVConstant>(ExitCount));
+    ASSERT_TRUE(cast<SCEVConstant>(ExitCount)->getAPInt().getSExtValue() ==
+                -2ll);
   });
 }
 
