@@ -141,6 +141,7 @@ class PossiblyNonNegInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class ResumeInst;
 class CatchSwitchInst;
 class SwitchInst;
 class UnaryOperator;
@@ -274,6 +275,7 @@ protected:
   friend class CleanupPadInst;        // For getting `Val`.
   friend class CatchReturnInst;       // For getting `Val`.
   friend class GetElementPtrInst;     // For getting `Val`.
+  friend class ResumeInst;            // For getting `Val`.
   friend class CatchSwitchInst;       // For getting `Val`.
   friend class CleanupReturnInst;     // For getting `Val`.
   friend class SwitchInst;            // For getting `Val`.
@@ -705,6 +707,7 @@ protected:
   friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
   friend class CleanupReturnInst;  // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class ResumeInst;         // For getTopmostLLVMInstruction().
   friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
   friend class UnaryOperator;      // For getTopmostLLVMInstruction().
@@ -2249,6 +2252,22 @@ public:
   }
 };
 
+class ResumeInst : public SingleLLVMInstructionImpl<llvm::ResumeInst> {
+public:
+  ResumeInst(llvm::ResumeInst *CSI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Resume, Opcode::Resume, CSI, Ctx) {}
+
+  static ResumeInst *create(Value *Exn, BBIterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx);
+  Value *getValue() const;
+  unsigned getNumSuccessors() const {
+    return cast<llvm::ResumeInst>(Val)->getNumSuccessors();
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Resume;
+  }
+};
+
 class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
 public:
   SwitchInst(llvm::SwitchInst *SI, Context &Ctx)
@@ -3027,6 +3046,8 @@ protected:
   friend GetElementPtrInst; // For createGetElementPtrInst()
   CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
   friend CatchSwitchInst; // For createCatchSwitchInst()
+  ResumeInst *createResumeInst(llvm::ResumeInst *I);
+  friend ResumeInst; // For createResumeInst()
   SwitchInst *createSwitchInst(llvm::SwitchInst *I);
   friend SwitchInst; // For createSwitchInst()
   UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
