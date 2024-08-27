@@ -6883,10 +6883,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-    return lowerToScalableOp(Op, DAG);
   case ISD::UADDSAT:
   case ISD::USUBSAT:
-    return lowerToScalableOp(Op, DAG);
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
     return lowerToScalableOp(Op, DAG);
