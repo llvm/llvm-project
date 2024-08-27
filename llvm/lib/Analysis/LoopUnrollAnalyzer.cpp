@@ -186,9 +186,12 @@ bool UnrolledInstAnalyzer::visitCmpInst(CmpInst &I) {
       if (SimplifiedRHS != SimplifiedAddresses.end()) {
         SimplifiedAddress &LHSAddr = SimplifiedLHS->second;
         SimplifiedAddress &RHSAddr = SimplifiedRHS->second;
-        if (LHSAddr.Base == RHSAddr.Base)
-          return ICmpInst::compare(LHSAddr.Offset, RHSAddr.Offset,
-                                   I.getPredicate());
+        if (LHSAddr.Base == RHSAddr.Base) {
+          bool Res = ICmpInst::compare(LHSAddr.Offset, RHSAddr.Offset,
+                                       I.getPredicate());
+          SimplifiedValues[&I] = ConstantInt::getBool(I.getType(), Res);
+          return true;
+        }
       }
     }
   }
