@@ -1982,21 +1982,6 @@ DeclResult Sema::CheckClassTemplate(
   }
 
   if (PrevClassTemplate) {
-    #if 0
-    // Ensure that the template parameter lists are compatible. Skip this check
-    // for a friend in a dependent context: the template parameter list itself
-    // could be dependent.
-    if (!(TUK == TagUseKind::Friend && CurContext->isDependentContext()) &&
-        !TemplateParameterListsAreEqual(
-            TemplateCompareNewDeclInfo(SemanticContext ? SemanticContext
-                                                       : CurContext,
-                                       CurContext, KWLoc),
-            TemplateParams, PrevClassTemplate,
-            PrevClassTemplate->getTemplateParameters(), /*Complain=*/true,
-            TPL_TemplateMatch))
-      return true;
-    #endif
-
     // C++ [temp.class]p4:
     //   In a redeclaration, partial specialization, explicit
     //   specialization or explicit instantiation of a class template,
@@ -2114,13 +2099,14 @@ DeclResult Sema::CheckClassTemplate(
   NewClass->setLexicalDeclContext(CurContext);
   NewTemplate->setLexicalDeclContext(CurContext);
 
-
+  // Ensure that the template parameter lists are compatible. Skip this check
+  // for a friend in a dependent context: the template parameter list itself
+  // could be dependent.
   if (ShouldAddRedecl && PrevClassTemplate && !TemplateParameterListsAreEqual(
       NewTemplate, TemplateParams,
       PrevClassTemplate, PrevClassTemplate->getTemplateParameters(),
       /*Complain=*/true, TPL_TemplateMatch))
     return true;
-
 
   // Check the template parameter list of this declaration, possibly
   // merging in the template parameter list from the previous class
@@ -4106,9 +4092,6 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     if (!PrevPartial)
       VarTemplate->AddPartialSpecialization(Partial, InsertPos);
     Specialization = Partial;
-
-    //if (PrevPartial && PrevPartial->getInstantiatedFromMember())
-    //  PrevPartial->setMemberSpecialization();
 
     CheckTemplatePartialSpecialization(Partial);
   } else {
