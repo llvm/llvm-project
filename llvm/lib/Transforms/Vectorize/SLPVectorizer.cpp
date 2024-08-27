@@ -136,13 +136,6 @@ static cl::opt<bool> ShouldStartVectorizeHorAtStore(
     cl::desc(
         "Attempt to vectorize horizontal reductions feeding into a store"));
 
-// NOTE: If AllowHorRdxIdenityOptimization is true, the optimization will run
-// even if we match a reduction but do not vectorize in the end.
-static cl::opt<bool> AllowHorRdxIdenityOptimization(
-    "slp-optimize-identity-hor-reduction-ops", cl::init(true), cl::Hidden,
-    cl::desc("Allow optimization of original scalar identity operations on "
-             "matched horizontal reductions."));
-
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -17565,10 +17558,9 @@ public:
                           return Num + Vals.size();
                         });
     if (NumReducedVals < ReductionLimit &&
-        (!AllowHorRdxIdenityOptimization ||
-         all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
+        all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
            return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
-         }))) {
+        })) {
       for (ReductionOpsType &RdxOps : ReductionOps)
         for (Value *RdxOp : RdxOps)
           V.analyzedReductionRoot(cast<Instruction>(RdxOp));
@@ -17698,8 +17690,7 @@ public:
       }
 
       // Emit code for constant values.
-      if (AllowHorRdxIdenityOptimization && Candidates.size() > 1 &&
-          allConstant(Candidates)) {
+      if (Candidates.size() > 1 && allConstant(Candidates)) {
         Value *Res = Candidates.front();
         ++VectorizedVals.try_emplace(Candidates.front(), 0).first->getSecond();
         for (Value *VC : ArrayRef(Candidates).drop_front()) {
@@ -17714,14 +17705,13 @@ public:
 
       unsigned NumReducedVals = Candidates.size();
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 || !AllowHorRdxIdenityOptimization ||
-           !isSplat(Candidates)))
+          (NumReducedVals < 2 || !isSplat(Candidates)))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
-          AllowHorRdxIdenityOptimization && RdxKind != RecurKind::Mul &&
+          RdxKind != RecurKind::Mul &&
           RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
       // Gather same values.
       MapVector<Value *, unsigned> SameValuesCounter;
