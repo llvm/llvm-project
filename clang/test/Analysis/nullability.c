@@ -55,9 +55,6 @@ __attribute__((returns_nonnull)) int *passthrough(int *p) {
   return p; // no-warning: we have no evidence that `p` is null, i.e., violating the contract
 }
 
-__attribute__((noreturn))
-void exit(int);
-
 __attribute__((returns_nonnull)) int *passthrough2(int *p);
 int *passthrough2(int *p) {
   return p; // expected-warning{{Null returned from a function that is expected to return a non-null value}}
