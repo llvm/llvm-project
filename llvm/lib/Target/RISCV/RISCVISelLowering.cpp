@@ -19167,8 +19167,14 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
       (LocVT == MVT::f64 && Subtarget.is64Bit() &&
        Subtarget.hasStdExtZdinx())) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
-      LocInfo = CCValAssign::BCvt;
+      if (LocVT.getSizeInBits() != Subtarget.getXLen()) {
+        LocVT = Subtarget.getXLenVT();
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        return false;
+      }
       LocVT = Subtarget.getXLenVT();
+      LocInfo = CCValAssign::BCvt;
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
