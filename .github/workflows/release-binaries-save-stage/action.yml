@@ -10,6 +10,9 @@ inputs:
     required: true
     type: 'string'
 
+permissions:
+  contents: read
+
 runs:
   using: "composite"
   steps:
