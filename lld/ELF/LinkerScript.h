@@ -129,12 +129,10 @@ private:
 
 class BinaryExpr : public ScriptExpr {
 public:
-  enum class Opcode { LNot, Minus, Not, Plus };
-  BinaryExpr(StringRef op, const ExprValue LHS, const ExprValue RHS,
+  BinaryExpr(StringRef op, ScriptExpr *LHS, ScriptExpr *RHS,
              const std::string loc)
       : ScriptExpr(ExprKind::Binary), op_(op), LHS(LHS), RHS(RHS), loc_(loc) {}
-
-  ExprValue evaluateSymbolAssignment();
+  ExprValue evaluateBinaryOperands() const;
   // Some operations only support one non absolute value. Move the
   // absolute one to the right hand side for convenience.
   static void moveAbsRight(ExprValue &a, ExprValue &b);
@@ -146,7 +144,8 @@ public:
 
 private:
   StringRef op_;
-  const ExprValue LHS, RHS;
+  // const ExprValue LHS, RHS;
+  const ScriptExpr *LHS, *RHS;
   std::string loc_;
 };
 

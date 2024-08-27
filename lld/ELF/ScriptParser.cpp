@@ -111,7 +111,6 @@ private:
   void readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
                             uint32_t &negFlags, uint32_t &negInvFlags);
 
-  ScriptExpr *combine(StringRef op, ScriptExpr *l, ScriptExpr *r);
   ScriptExpr *readExpr();
   ScriptExpr *readExpr1(ScriptExpr *lhs, int minPrec);
   StringRef readParenName();
@@ -1163,8 +1162,9 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
     std::string loc = getCurrentLocation();
     e = make<DynamicExpr>([=, c = op[0]]() -> ExprValue {
       ExprValue lhs = script->getSymbolValue(name, loc);
-      BinaryExpr *expr = make<BinaryExpr>(op, lhs, e->getExprValue(), loc);
-      return expr->evaluateSymbolAssignment();
+      BinaryExpr *expr =
+          make<BinaryExpr>(op, make<DynamicExpr>([=] { return lhs; }), e, loc);
+      return expr->evaluateBinaryOperands();
     });
   }
   return make<SymbolAssignment>(name, e, ctx.scriptSymOrderCounter++,
@@ -1179,90 +1179,6 @@ ScriptExpr *ScriptParser::readExpr() {
   SaveAndRestore saved(inExpr, true);
   ScriptExpr *e = readExpr1(readPrimary(), 0);
   return e;
-}
-
-ScriptExpr *ScriptParser::combine(StringRef op, ScriptExpr *l, ScriptExpr *r) {
-  if (op == "+")
-    return make<DynamicExpr>(
-        [=] { return BinaryExpr::add(l->getExprValue(), r->getExprValue()); });
-  if (op == "-")
-    return make<DynamicExpr>(
-        [=] { return BinaryExpr::sub(l->getExprValue(), r->getExprValue()); });
-  if (op == "*")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() * r->getExprValueAlignValue();
-    });
-  if (op == "/") {
-    std::string loc = getCurrentLocation();
-    return make<DynamicExpr>([=]() -> uint64_t {
-      if (uint64_t rv = r->getExprValueAlignValue())
-        return l->getExprValueAlignValue() / rv;
-      error(loc + ": division by zero");
-      return 0;
-    });
-  }
-  if (op == "%") {
-    std::string loc = getCurrentLocation();
-    return make<DynamicExpr>([=]() -> uint64_t {
-      if (uint64_t rv = r->getExprValueAlignValue())
-        return l->getExprValueAlignValue() % rv;
-      error(loc + ": modulo by zero");
-      return 0;
-    });
-  }
-  if (op == "<<")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() << r->getExprValueAlignValue() % 64;
-    });
-  if (op == ">>")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() >> r->getExprValueAlignValue() % 64;
-    });
-  if (op == "<")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() < r->getExprValueAlignValue();
-    });
-  if (op == ">")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() > r->getExprValueAlignValue();
-    });
-  if (op == ">=")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() >= r->getExprValueAlignValue();
-    });
-  if (op == "<=")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() <= r->getExprValueAlignValue();
-    });
-  if (op == "==")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() == r->getExprValueAlignValue();
-    });
-  if (op == "!=")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() != r->getExprValueAlignValue();
-    });
-  if (op == "||")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() || r->getExprValueAlignValue();
-    });
-  if (op == "&&")
-    return make<DynamicExpr>([=] {
-      return l->getExprValueAlignValue() && r->getExprValueAlignValue();
-    });
-  if (op == "&")
-    return make<DynamicExpr>([=] {
-      return BinaryExpr::bitAnd(l->getExprValue(), r->getExprValue());
-    });
-  if (op == "^")
-    return make<DynamicExpr>([=] {
-      return BinaryExpr::bitXor(l->getExprValue(), r->getExprValue());
-    });
-  if (op == "|")
-    return make<DynamicExpr>([=] {
-      return BinaryExpr::bitOr(l->getExprValue(), r->getExprValue());
-    });
-  llvm_unreachable("invalid operator");
 }
 
 // This is a part of the operator-precedence parser. This function
@@ -1289,7 +1205,8 @@ ScriptExpr *ScriptParser::readExpr1(ScriptExpr *lhs, int minPrec) {
       rhs = readExpr1(rhs, precedence(op2));
     }
 
-    lhs = combine(op1, lhs, rhs);
+    std::string location = getCurrentLocation();
+    lhs = make<BinaryExpr>(op1, lhs, rhs, location);
   }
   return lhs;
 }

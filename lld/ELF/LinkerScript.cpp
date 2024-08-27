@@ -139,6 +139,10 @@ std::function<ExprValue()> ScriptExpr::getExpr() const {
     auto expr = static_cast<const DynamicExpr *>(this);
     return expr->getImpl();
   }
+  case ExprKind::Binary: {
+    auto expr = static_cast<const BinaryExpr *>(this);
+    return [=] { return expr->evaluateBinaryOperands(); };
+  }
   default:
     return [] { return ExprValue(0); };
   };
@@ -150,6 +154,8 @@ ExprValue ScriptExpr::getExprValue() const {
     return static_cast<const ConstantExpr *>(this)->getConstantExprValue();
   case ExprKind::Dynamic:
     return static_cast<const DynamicExpr *>(this)->getImpl()();
+  case ExprKind::Binary:
+    return static_cast<const BinaryExpr *>(this)->evaluateBinaryOperands();
   default:
     return ExprValue(0);
   }
@@ -160,33 +166,58 @@ uint64_t ScriptExpr::getExprValueAlignValue() const {
   return e.getValue();
 }
 
-ExprValue BinaryExpr::evaluateSymbolAssignment() {
-  switch (op_[0]) {
-  case '*':
-    return LHS.getValue() * RHS.getValue();
-  case '/':
-    if (uint64_t rv = RHS.getValue())
-      return LHS.getValue() / rv;
+ExprValue BinaryExpr::evaluateBinaryOperands() const {
+  if (op_ == "+" || op_ == "+=")
+    return add(LHS->getExprValue(), RHS->getExprValue());
+  if (op_ == "-" || op_ == "-=")
+    return sub(LHS->getExprValue(), RHS->getExprValue());
+  if (op_ == "*" || op_ == "*=")
+    return LHS->getExprValueAlignValue() * RHS->getExprValueAlignValue();
+  if (op_ == "/" || op_ == "/=") {
+    if (uint64_t rv = RHS->getExprValueAlignValue())
+      return LHS->getExprValueAlignValue() / rv;
     error(loc_ + ": division by zero");
     return 0;
-  case '+':
-    return add(LHS, RHS);
-  case '-':
-    return sub(LHS, RHS);
-  case '<':
-    return LHS.getValue() << RHS.getValue() % 64;
-  case '>':
-    return LHS.getValue() >> RHS.getValue() % 64;
-  case '&':
-    return LHS.getValue() & RHS.getValue();
-  case '^':
-    return LHS.getValue() ^ RHS.getValue();
-  case '|':
-    return LHS.getValue() | RHS.getValue();
-  default:
-    llvm_unreachable("");
   }
-  return 0;
+  if (op_ == "%") {
+    if (uint64_t rv = RHS->getExprValueAlignValue())
+      return LHS->getExprValueAlignValue() % rv;
+    error(loc_ + ": modulo by zero");
+    return 0;
+  }
+  if (op_ == "<<" || op_ == "<<=")
+    return LHS->getExprValueAlignValue() << RHS->getExprValueAlignValue() % 64;
+  if (op_ == ">>" || op_ == ">>=")
+    return LHS->getExprValueAlignValue() >> RHS->getExprValueAlignValue() % 64;
+  if (op_ == "<")
+    return LHS->getExprValueAlignValue() < RHS->getExprValueAlignValue();
+  if (op_ == ">")
+    return LHS->getExprValueAlignValue() > RHS->getExprValueAlignValue();
+  if (op_ == ">=")
+    return LHS->getExprValueAlignValue() >= RHS->getExprValueAlignValue();
+  if (op_ == "<=")
+    return LHS->getExprValueAlignValue() <= RHS->getExprValueAlignValue();
+  if (op_ == "==")
+    return LHS->getExprValueAlignValue() == RHS->getExprValueAlignValue();
+  if (op_ == "!=")
+    return LHS->getExprValueAlignValue() != RHS->getExprValueAlignValue();
+  if (op_ == "||")
+    return LHS->getExprValueAlignValue() || RHS->getExprValueAlignValue();
+  if (op_ == "&&")
+    return LHS->getExprValueAlignValue() && RHS->getExprValueAlignValue();
+  if (op_ == "&")
+    return bitAnd(LHS->getExprValue(), RHS->getExprValue());
+  if (op_ == "^")
+    return bitXor(LHS->getExprValue(), RHS->getExprValue());
+  if (op_ == "|")
+    return bitOr(LHS->getExprValue(), RHS->getExprValue());
+  if (op_ == "&=")
+    return LHS->getExprValueAlignValue() & RHS->getExprValueAlignValue();
+  if (op_ == "^=")
+    return LHS->getExprValueAlignValue() ^ RHS->getExprValueAlignValue();
+  if (op_ == "|=")
+    return LHS->getExprValueAlignValue() | RHS->getExprValueAlignValue();
+  llvm_unreachable("invalid operator");
 }
 
 void BinaryExpr::moveAbsRight(ExprValue &a, ExprValue &b) {
