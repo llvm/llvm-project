@@ -61,6 +61,10 @@ def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir:
   }];
 
   let constructor = "mlir::LLVM::createDIScopeForLLVMFuncOpPass()";
+  let options = [
+    Option<"emissionKind", "emission-kind", "mlir::LLVM::DIEmissionKind",
+    /*default=*/"mlir::LLVM::DIEmissionKind::LineTablesOnly", "Emission kind to generate debug info.">,
+  ];
 }
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
