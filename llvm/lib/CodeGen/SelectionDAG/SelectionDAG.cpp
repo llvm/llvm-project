@@ -7895,9 +7895,10 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // realignment which may conflict with optimizations such as tail call
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+    if (!TRI->hasStackRealignment(MF)) {
+      const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+      NewAlign = std::min(NewAlign, std::max(Alignment, TFL->getStackAlign()));
+    }
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -8090,9 +8091,10 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // realignment which may conflict with optimizations such as tail call
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+    if (!TRI->hasStackRealignment(MF)) {
+      const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+      NewAlign = std::min(NewAlign, std::max(Alignment, TFL->getStackAlign()));
+    }
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -8208,9 +8210,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     // realignment which may conflict with optimizations such as tail call
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+    if (!TRI->hasStackRealignment(MF)) {
+      const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+      NewAlign = std::min(NewAlign, std::max(Alignment, TFL->getStackAlign()));
+    }
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.

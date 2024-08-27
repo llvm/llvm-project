@@ -9135,9 +9135,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+    if (!TRI->hasStackRealignment(MF)) {
+      const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+      NewAlign = std::min(NewAlign, std::max(Alignment, TFL->getStackAlign()));
+    }
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;
@@ -9243,9 +9244,10 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+    if (NewAlign > Alignment && !TRI->hasStackRealignment(MF)) {
+      const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+      NewAlign = std::min(NewAlign, TFL->getStackAlign());
+    }
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;
