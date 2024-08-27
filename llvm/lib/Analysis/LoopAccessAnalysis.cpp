@@ -190,6 +190,32 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
   Members.push_back(Index);
 }
 
+// Match expression in form of: PtrBase + (Dividend urem Divisor) * ConstStride,
+// where PtrBase and Divisor are loop-invariant and ConstStride is non-negative.
+// In this case Start = PtrBase, End = PtrBase + (Divisor - 1) * ConstStride.
+static std::optional<std::pair<const SCEV *, const SCEV *>>
+getStartAndEndForURemAccess(ScalarEvolution &SE, const SCEV *PtrScev,
+                            const Loop *L) {
+  const SCEV *PtrBase = SE.getPointerBase(PtrScev);
+  if (!SE.isLoopInvariant(PtrBase, L))
+    return std::nullopt;
+  const SCEV *PtrAddend = SE.removePointerBase(PtrScev);
+  auto ConstStride = SE.getConstantMultiple(PtrAddend);
+  if (ConstStride.isNegative())
+    return std::nullopt;
+  const SCEV *StrideScev = SE.getConstant(ConstStride);
+  const SCEV *Dividend, *Divisor;
+  if (!SE.isURemWithKnownMultiplier(PtrAddend, StrideScev, Dividend, Divisor))
+    return std::nullopt;
+  if (!SE.isLoopInvariant(Divisor, L))
+    return std::nullopt;
+  const SCEV *DivisorMinusOne =
+      SE.getAddExpr(Divisor, SE.getMinusOne(Divisor->getType()));
+  return std::make_pair(
+      PtrBase,
+      SE.getAddExpr(PtrBase, SE.getMulExpr(DivisorMinusOne, StrideScev)));
+}
+
 /// Calculate Start and End points of memory access.
 /// Let's assume A is the first access and B is a memory access on N-th loop
 /// iteration. Then B is calculated as:
@@ -221,6 +247,8 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
 
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
+  } else if (auto Bounds = getStartAndEndForURemAccess(*SE, PtrExpr, Lp)) {
+    std::tie(ScStart, ScEnd) = *Bounds;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
     const SCEV *Ex = PSE.getSymbolicMaxBackedgeTakenCount();
 
@@ -811,8 +839,12 @@ private:
 static bool hasComputableBounds(PredicatedScalarEvolution &PSE, Value *Ptr,
                                 const SCEV *PtrScev, const Loop *L,
                                 bool Assume) {
+  ScalarEvolution *SE = PSE.getSE();
   // The bounds for loop-invariant pointer is trivial.
-  if (PSE.getSE()->isLoopInvariant(PtrScev, L))
+  if (SE->isLoopInvariant(PtrScev, L))
+    return true;
+
+  if (getStartAndEndForURemAccess(*SE, PtrScev, L))
     return true;
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);

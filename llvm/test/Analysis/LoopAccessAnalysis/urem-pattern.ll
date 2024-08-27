@@ -4,10 +4,21 @@
 define void @test_stride_1(ptr writeonly %dst, ptr readonly %src, i64 %n, i64 %offset) {
 ; CHECK-LABEL: 'test_stride_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx1 = getelementptr inbounds i8, ptr %dst, i64 %i
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i8, ptr %src, i64 %rem
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:          (Low: %dst High: (%n + %dst))
+; CHECK-NEXT:            Member: {%dst,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:          (Low: %src High: (%n + %src))
+; CHECK-NEXT:            Member: ((-1 * ({%offset,+,1}<nw><%loop> /u %n) * %n) + {(%offset + %src),+,1}<nw><%loop>)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -37,10 +48,21 @@ exit:
 define void @test_stride_4(ptr writeonly %dst, ptr readonly %src, i64 %n, i64 %offset) {
 ; CHECK-LABEL: 'test_stride_4'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx1 = getelementptr inbounds i32, ptr %dst, i64 %i
+; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %src, i64 %rem
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:          (Low: %dst High: ((4 * %n) + %dst))
+; CHECK-NEXT:            Member: {%dst,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:          (Low: %src High: ((4 * %n) + %src))
+; CHECK-NEXT:            Member: ((-4 * ({%offset,+,1}<nw><%loop> /u %n) * %n) + {((4 * %offset) + %src),+,4}<%loop>)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
