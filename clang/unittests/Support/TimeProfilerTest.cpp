@@ -210,8 +210,8 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
 Frontend (test.cc)
-| ParseDeclarationOrFunctionDefinition (test.cc:2:1)
-| ParseDeclarationOrFunctionDefinition (test.cc:6:1)
+| ParseDeclarationOrFunctionDefinition (test.cc:2)
+| ParseDeclarationOrFunctionDefinition (test.cc:6)
 | | ParseFunctionDefinition (slow_func)
 | | | EvaluateAsRValue (<test.cc:8:21>)
 | | | EvaluateForOverflow (<test.cc:8:21, col:25>)
@@ -223,15 +223,15 @@ Frontend (test.cc)
 | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
 | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
 | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| ParseDeclarationOrFunctionDefinition (test.cc:16:1)
+| ParseDeclarationOrFunctionDefinition (test.cc:16)
 | | ParseFunctionDefinition (slow_test)
 | | | EvaluateAsInitializer (slow_value)
 | | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
 | | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
-| ParseDeclarationOrFunctionDefinition (test.cc:22:1)
+| ParseDeclarationOrFunctionDefinition (test.cc:22)
 | | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
 | | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
-| ParseDeclarationOrFunctionDefinition (test.cc:25:1)
+| ParseDeclarationOrFunctionDefinition (test.cc:25)
 | | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations
 )",
@@ -270,7 +270,7 @@ Frontend (test.cc)
 | ParseFunctionDefinition (fooB)
 | ParseFunctionDefinition (fooMTA)
 | ParseFunctionDefinition (fooA)
-| ParseDeclarationOrFunctionDefinition (test.cc:3:5)
+| ParseDeclarationOrFunctionDefinition (test.cc:3)
 | | ParseFunctionDefinition (user)
 | PerformPendingInstantiations
 | | InstantiateFunction (fooA<int>, a.h:7)
@@ -292,7 +292,7 @@ struct {
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
 Frontend (test.c)
-| ParseDeclarationOrFunctionDefinition (test.c:2:1)
+| ParseDeclarationOrFunctionDefinition (test.c:2)
 | | isIntegerConstantExpr (<test.c:3:18>)
 | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | PerformPendingInstantiations
