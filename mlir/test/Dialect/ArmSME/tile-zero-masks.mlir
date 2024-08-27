@@ -91,7 +91,9 @@ func.func @zero_za_d() {
 
 // CHECK-LABEL: merge_consecutive_tile_zero_ops
 func.func @merge_consecutive_tile_zero_ops() {
+  // CHECK-NOT: arm_sme.intr.zero
   // CHECK: "arm_sme.intr.zero"() <{tile_mask = 255 : i32}> : () -> ()
+  // CHECK-NOT: arm_sme.intr.zero
   %zero_za0s = arm_sme.zero : vector<[4]x[4]xi32>
   %zero_za1s = arm_sme.zero : vector<[4]x[4]xi32>
   %zero_za2s = arm_sme.zero : vector<[4]x[4]xi32>
@@ -110,11 +112,14 @@ func.func @merge_consecutive_tile_zero_ops() {
 
 // CHECK-LABEL: merge_consecutive_tile_zero_ops_with_barrier
 func.func @merge_consecutive_tile_zero_ops_with_barrier() {
+  // CHECK-NOT: arm_sme.intr.zero
   // CHECK: "arm_sme.intr.zero"() <{tile_mask = 51 : i32}> : () -> ()
+  // CHECK-NOT: arm_sme.intr.zero
   %zero_za0s = arm_sme.zero : vector<[4]x[4]xi32>
   %zero_za1s = arm_sme.zero : vector<[4]x[4]xi32>
   "test.prevent_zero_merge"() : () -> ()
   // CHECK: "arm_sme.intr.zero"() <{tile_mask = 204 : i32}> : () -> ()
+  // CHECK-NOT: arm_sme.intr.zero
   %zero_za2s = arm_sme.zero : vector<[4]x[4]xi32>
   %zero_za3s = arm_sme.zero : vector<[4]x[4]xf32>
   "test.some_use"(%zero_za0s) : (vector<[4]x[4]xi32>) -> ()
