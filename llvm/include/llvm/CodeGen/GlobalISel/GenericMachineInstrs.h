@@ -511,6 +511,9 @@ public:
   Intrinsic::ID getIntrinsicID() const {
     return getOperand(getNumExplicitDefs()).getIntrinsicID();
   }
+  void setIntrinsicID(Intrinsic::ID ID) {
+    getOperand(getNumExplicitDefs()).setIntrinsicID(ID);
+  }
 
   bool is(Intrinsic::ID ID) const { return getIntrinsicID() == ID; }
 
