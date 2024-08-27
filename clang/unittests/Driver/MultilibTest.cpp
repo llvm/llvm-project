@@ -157,14 +157,14 @@ TEST(MultilibTest, SetPriority) {
   Driver TheDriver = diagnostic_test_driver();
   Multilib::flags_list Flags1 = {"+foo", "-bar"};
   llvm::SmallVector<Multilib> Selection1;
-  ASSERT_TRUE(MS.select(Flags1, Selection1, TheDriver))
+  ASSERT_TRUE(MS.select(TheDriver, Flags1, Selection1))
       << "Flag set was {\"+foo\"}, but selection not found";
   ASSERT_TRUE(Selection1.back().gccSuffix() == "/foo")
       << "Selection picked " << Selection1.back() << " which was not expected";
 
   Multilib::flags_list Flags2 = {"+foo", "+bar"};
   llvm::SmallVector<Multilib> Selection2;
-  ASSERT_TRUE(MS.select(Flags2, Selection2, TheDriver))
+  ASSERT_TRUE(MS.select(TheDriver, Flags2, Selection2))
       << "Flag set was {\"+bar\"}, but selection not found";
   ASSERT_TRUE(Selection2.back().gccSuffix() == "/bar")
       << "Selection picked " << Selection2.back() << " which was not expected";
@@ -178,15 +178,15 @@ TEST(MultilibTest, SelectMultiple) {
   llvm::SmallVector<Multilib> Selection;
   Driver TheDriver = diagnostic_test_driver();
 
-  ASSERT_TRUE(MS.select({"x"}, Selection, TheDriver));
+  ASSERT_TRUE(MS.select(TheDriver, {"x"}, Selection));
   ASSERT_EQ(1u, Selection.size());
   EXPECT_EQ("/a", Selection[0].gccSuffix());
 
-  ASSERT_TRUE(MS.select({"y"}, Selection, TheDriver));
+  ASSERT_TRUE(MS.select(TheDriver, {"y"}, Selection));
   ASSERT_EQ(1u, Selection.size());
   EXPECT_EQ("/b", Selection[0].gccSuffix());
 
-  ASSERT_TRUE(MS.select({"y", "x"}, Selection, TheDriver));
+  ASSERT_TRUE(MS.select(TheDriver, {"y", "x"}, Selection));
   ASSERT_EQ(2u, Selection.size());
   EXPECT_EQ("/a", Selection[0].gccSuffix());
   EXPECT_EQ("/b", Selection[1].gccSuffix());
@@ -370,9 +370,9 @@ Mappings:
   Flags: [-mfloat-abi=soft]
 )"));
   Driver TheDriver = diagnostic_test_driver();
-  EXPECT_TRUE(MS.select({"-mfloat-abi=soft"}, Selected, TheDriver));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected, TheDriver));
+  EXPECT_TRUE(MS.select(TheDriver, {"-mfloat-abi=soft"}, Selected));
+  EXPECT_TRUE(MS.select(TheDriver, {"-mfloat-abi=softfp"}, Selected));
+  EXPECT_FALSE(MS.select(TheDriver, {"-mfloat-abi=hard"}, Selected));
 }
 
 TEST(MultilibTest, SelectSoftFP) {
@@ -384,9 +384,9 @@ Variants:
   Flags: [-mfloat-abi=softfp]
 )"));
   Driver TheDriver = diagnostic_test_driver();
-  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected, TheDriver));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected, TheDriver));
+  EXPECT_FALSE(MS.select(TheDriver, {"-mfloat-abi=soft"}, Selected));
+  EXPECT_TRUE(MS.select(TheDriver, {"-mfloat-abi=softfp"}, Selected));
+  EXPECT_FALSE(MS.select(TheDriver, {"-mfloat-abi=hard"}, Selected));
 }
 
 TEST(MultilibTest, SelectHard) {
@@ -400,9 +400,9 @@ Variants:
   Flags: [-mfloat-abi=hard]
 )"));
   Driver TheDriver = diagnostic_test_driver();
-  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected, TheDriver));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=hard"}, Selected, TheDriver));
+  EXPECT_FALSE(MS.select(TheDriver, {"-mfloat-abi=soft"}, Selected));
+  EXPECT_FALSE(MS.select(TheDriver, {"-mfloat-abi=softfp"}, Selected));
+  EXPECT_TRUE(MS.select(TheDriver, {"-mfloat-abi=hard"}, Selected));
 }
 
 TEST(MultilibTest, SelectFloatABI) {
@@ -421,11 +421,11 @@ Mappings:
   Flags: [-mfloat-abi=soft]
 )"));
   Driver TheDriver = diagnostic_test_driver();
-  MS.select({"-mfloat-abi=soft"}, Selected, TheDriver);
+  MS.select(TheDriver, {"-mfloat-abi=soft"}, Selected);
   EXPECT_EQ("/s", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver);
+  MS.select(TheDriver, {"-mfloat-abi=softfp"}, Selected);
   EXPECT_EQ("/f", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=hard"}, Selected, TheDriver);
+  MS.select(TheDriver, {"-mfloat-abi=hard"}, Selected);
   EXPECT_EQ("/h", Selected.back().gccSuffix());
 }
 
@@ -447,11 +447,11 @@ Mappings:
   Flags: [-mfloat-abi=soft]
 )"));
   Driver TheDriver = diagnostic_test_driver();
-  MS.select({"-mfloat-abi=soft"}, Selected, TheDriver);
+  MS.select(TheDriver, {"-mfloat-abi=soft"}, Selected);
   EXPECT_EQ("/s", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver);
+  MS.select(TheDriver, {"-mfloat-abi=softfp"}, Selected);
   EXPECT_EQ("/s", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=hard"}, Selected, TheDriver);
+  MS.select(TheDriver, {"-mfloat-abi=hard"}, Selected);
   EXPECT_EQ("/h", Selected.back().gccSuffix());
 }
 
@@ -505,48 +505,53 @@ Mappings:
   llvm::SmallVector<Multilib> Selected;
   ASSERT_TRUE(parseYaml(MS, MultilibSpec));
 
-  ASSERT_TRUE(MS.select({"--target=thumbv6m-none-unknown-eabi", "-mfpu=none"},
-                        Selected, TheDriver));
+  ASSERT_TRUE(MS.select(TheDriver,
+                        {"--target=thumbv6m-none-unknown-eabi", "-mfpu=none"},
+                        Selected));
   EXPECT_EQ("/thumb/v6-m/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv7m-none-unknown-eabi", "-mfpu=none"},
-                        Selected, TheDriver));
+  ASSERT_TRUE(MS.select(TheDriver,
+                        {"--target=thumbv7m-none-unknown-eabi", "-mfpu=none"},
+                        Selected));
   EXPECT_EQ("/thumb/v7-m/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv7em-none-unknown-eabi", "-mfpu=none"},
-                        Selected, TheDriver));
+  ASSERT_TRUE(MS.select(TheDriver,
+                        {"--target=thumbv7em-none-unknown-eabi", "-mfpu=none"},
+                        Selected));
   EXPECT_EQ("/thumb/v7e-m/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(
-      MS.select({"--target=thumbv8m.main-none-unknown-eabi", "-mfpu=none"},
-                Selected, TheDriver));
+  ASSERT_TRUE(MS.select(
+      TheDriver, {"--target=thumbv8m.main-none-unknown-eabi", "-mfpu=none"},
+      Selected));
   EXPECT_EQ("/thumb/v8-m.main/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(
-      MS.select({"--target=thumbv8.1m.main-none-unknown-eabi", "-mfpu=none"},
-                Selected, TheDriver));
+  ASSERT_TRUE(MS.select(
+      TheDriver, {"--target=thumbv8.1m.main-none-unknown-eabi", "-mfpu=none"},
+      Selected));
   EXPECT_EQ("/thumb/v8.1-m.main/nofp/nomve", Selected.back().gccSuffix());
 
   ASSERT_TRUE(
-      MS.select({"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv4-sp-d16"},
-                Selected, TheDriver));
+      MS.select(TheDriver,
+                {"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv4-sp-d16"},
+                Selected));
   EXPECT_EQ("/thumb/v7e-m/fpv4_sp_d16", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(
-      MS.select({"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv5-d16"},
-                Selected, TheDriver));
+  ASSERT_TRUE(MS.select(
+      TheDriver, {"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv5-d16"},
+      Selected));
   EXPECT_EQ("/thumb/v7e-m/fpv5_d16", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv8m.main-none-unknown-eabihf"},
-                        Selected, TheDriver));
+  ASSERT_TRUE(MS.select(
+      TheDriver, {"--target=thumbv8m.main-none-unknown-eabihf"}, Selected));
   EXPECT_EQ("/thumb/v8-m.main/fp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf"},
-                        Selected, TheDriver));
+  ASSERT_TRUE(MS.select(
+      TheDriver, {"--target=thumbv8.1m.main-none-unknown-eabihf"}, Selected));
   EXPECT_EQ("/thumb/v8.1-m.main/fp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf",
+  ASSERT_TRUE(MS.select(TheDriver,
+                        {"--target=thumbv8.1m.main-none-unknown-eabihf",
                          "-mfpu=none", "-march=thumbv8.1m.main+dsp+mve"},
-                        Selected, TheDriver));
+                        Selected));
   EXPECT_EQ("/thumb/v8.1-m.main/nofp/mve", Selected.back().gccSuffix());
 }

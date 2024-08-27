@@ -166,7 +166,7 @@ TEST(MultilibBuilderTest, SetSelection1) {
   Multilib::flags_list FlagM64 = {"-m64"};
   llvm::SmallVector<Multilib> SelectionM64;
   Driver TheDriver = diagnostic_test_driver();
-  ASSERT_TRUE(MS1.select(FlagM64, SelectionM64, TheDriver))
+  ASSERT_TRUE(MS1.select(TheDriver, FlagM64, SelectionM64))
       << "Flag set was {\"-m64\"}, but selection not found";
   ASSERT_TRUE(SelectionM64.back().gccSuffix() == "/64")
       << "Selection picked " << SelectionM64.back()
@@ -174,7 +174,7 @@ TEST(MultilibBuilderTest, SetSelection1) {
 
   Multilib::flags_list FlagNoM64 = {"!m64"};
   llvm::SmallVector<Multilib> SelectionNoM64;
-  ASSERT_TRUE(MS1.select(FlagNoM64, SelectionNoM64, TheDriver))
+  ASSERT_TRUE(MS1.select(TheDriver, FlagNoM64, SelectionNoM64))
       << "Flag set was {\"!m64\"}, but selection not found";
   ASSERT_TRUE(SelectionNoM64.back().gccSuffix() == "")
       << "Selection picked " << SelectionNoM64.back()
@@ -203,7 +203,7 @@ TEST(MultilibBuilderTest, SetSelection2) {
 
     llvm::SmallVector<Multilib> Selection;
     Driver TheDriver = diagnostic_test_driver();
-    ASSERT_TRUE(MS2.select(Flags, Selection, TheDriver))
+    ASSERT_TRUE(MS2.select(TheDriver, Flags, Selection))
         << "Selection failed for " << (IsEL ? "-EL" : "!EL") << " "
         << (IsSF ? "-SF" : "!SF");
 

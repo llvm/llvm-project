@@ -51,7 +51,7 @@ static bool findOHOSMuslMultilibs(const Driver &D,
       Multilib("/a7_hard_neon-vfpv4", {}, {},
                {"-mcpu=cortex-a7", "-mfloat-abi=hard", "-mfpu=neon-vfpv4"}));
 
-  if (Multilibs.select(Flags, Result.SelectedMultilibs, D)) {
+  if (Multilibs.select(D, Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = Multilibs;
     return true;
   }
