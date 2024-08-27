@@ -15,7 +15,7 @@
 #include "sanitizer_common/sanitizer_type_traits.h"
 
 #if __has_include(<sys/types.h>)
-#include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #include <stddef.h>
 #include <stdint.h>
@@ -44,4 +44,3 @@ COMPILER_CHECK(sizeof(::OFF64_T) == sizeof(off64_t));
   _FILE_OFFSET_BITS != 64
 COMPILER_CHECK(sizeof(::OFF_T) == sizeof(off_t));
 # endif
-
