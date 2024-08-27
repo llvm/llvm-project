@@ -1469,6 +1469,10 @@ public:
                        BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
                        const Twine &Name = "");
 
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::InsertValue;
+  }
+
   using idx_iterator = llvm::InsertValueInst::idx_iterator;
   inline idx_iterator idx_begin() const {
     return cast<llvm::InsertValueInst>(Val)->idx_begin();
