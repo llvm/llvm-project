@@ -662,11 +662,12 @@ void MachineOutliner::findCandidates(
                       << "\n");
     LLVM_DEBUG(dbgs() << "    Candidates kept: " << NumKept << "\n\n");
 #endif
+    unsigned MinRepeats = 2;
 
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
-    if (CandidatesForRepeatedSeq.size() < 2)
+    if (CandidatesForRepeatedSeq.size() < MinRepeats)
       continue;
 
     // Arbitrarily choose a TII from the first candidate.
@@ -674,7 +675,6 @@ void MachineOutliner::findCandidates(
     const TargetInstrInfo *TII =
         CandidatesForRepeatedSeq[0].getMF()->getSubtarget().getInstrInfo();
 
-    unsigned MinRepeats = 2;
     std::optional<std::unique_ptr<OutlinedFunction>> OF =
         TII->getOutliningCandidateInfo(*MMI, CandidatesForRepeatedSeq,
                                        MinRepeats);
