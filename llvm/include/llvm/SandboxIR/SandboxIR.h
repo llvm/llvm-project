@@ -111,6 +111,7 @@ class ConstantInt;
 class Context;
 class Function;
 class Instruction;
+class VAArgInst;
 class FreezeInst;
 class FenceInst;
 class SelectInst;
@@ -141,6 +142,7 @@ class PossiblyNonNegInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class ResumeInst;
 class CatchSwitchInst;
 class SwitchInst;
 class UnaryOperator;
@@ -218,6 +220,7 @@ public:
   enum class ClassID : unsigned {
 #define DEF_VALUE(ID, CLASS) ID,
 #define DEF_USER(ID, CLASS) ID,
+#define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
 #include "llvm/SandboxIR/SandboxIRValues.def"
   };
@@ -229,6 +232,9 @@ protected:
   case ClassID::ID:                                                            \
     return #ID;
 #define DEF_USER(ID, CLASS)                                                    \
+  case ClassID::ID:                                                            \
+    return #ID;
+#define DEF_CONST(ID, CLASS)                                                   \
   case ClassID::ID:                                                            \
     return #ID;
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
@@ -254,6 +260,7 @@ protected:
   friend class Context;               // For getting `Val`.
   friend class User;                  // For getting `Val`.
   friend class Use;                   // For getting `Val`.
+  friend class VAArgInst;             // For getting `Val`.
   friend class FreezeInst;            // For getting `Val`.
   friend class FenceInst;             // For getting `Val`.
   friend class SelectInst;            // For getting `Val`.
@@ -274,6 +281,7 @@ protected:
   friend class CleanupPadInst;        // For getting `Val`.
   friend class CatchReturnInst;       // For getting `Val`.
   friend class GetElementPtrInst;     // For getting `Val`.
+  friend class ResumeInst;            // For getting `Val`.
   friend class CatchSwitchInst;       // For getting `Val`.
   friend class CleanupReturnInst;     // For getting `Val`.
   friend class SwitchInst;            // For getting `Val`.
@@ -511,6 +519,7 @@ public:
 };
 
 class Constant : public sandboxir::User {
+protected:
   Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
   Constant(ClassID ID, llvm::Constant *C, sandboxir::Context &SBCtx)
@@ -525,9 +534,13 @@ class Constant : public sandboxir::User {
 public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
-    return From->getSubclassID() == ClassID::Constant ||
-           From->getSubclassID() == ClassID::ConstantInt ||
-           From->getSubclassID() == ClassID::Function;
+    switch (From->getSubclassID()) {
+#define DEF_CONST(ID, CLASS) case ClassID::ID:
+#include "llvm/SandboxIR/SandboxIRValues.def"
+      return true;
+    default:
+      return false;
+    }
   }
   sandboxir::Context &getParent() const { return getContext(); }
   unsigned getUseOperandNo(const Use &Use) const override {
@@ -686,6 +699,7 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class VAArgInst;          // For getTopmostLLVMInstruction().
   friend class FreezeInst;         // For getTopmostLLVMInstruction().
   friend class FenceInst;          // For getTopmostLLVMInstruction().
   friend class SelectInst;         // For getTopmostLLVMInstruction().
@@ -705,6 +719,7 @@ protected:
   friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
   friend class CleanupReturnInst;  // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class ResumeInst;         // For getTopmostLLVMInstruction().
   friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
   friend class UnaryOperator;      // For getTopmostLLVMInstruction().
@@ -1540,6 +1555,27 @@ public:
   }
 };
 
+class VAArgInst : public UnaryInstruction {
+  VAArgInst(llvm::VAArgInst *FI, Context &Ctx)
+      : UnaryInstruction(ClassID::VAArg, Opcode::VAArg, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static VAArgInst *create(Value *List, Type *Ty, BBIterator WhereIt,
+                           BasicBlock *WhereBB, Context &Ctx,
+                           const Twine &Name = "");
+  Value *getPointerOperand();
+  const Value *getPointerOperand() const {
+    return const_cast<VAArgInst *>(this)->getPointerOperand();
+  }
+  static unsigned getPointerOperandIndex() {
+    return llvm::VAArgInst::getPointerOperandIndex();
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::VAArg;
+  }
+};
+
 class FreezeInst : public UnaryInstruction {
   FreezeInst(llvm::FreezeInst *FI, Context &Ctx)
       : UnaryInstruction(ClassID::Freeze, Opcode::Freeze, FI, Ctx) {}
@@ -2246,6 +2282,22 @@ public:
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CatchSwitch;
+  }
+};
+
+class ResumeInst : public SingleLLVMInstructionImpl<llvm::ResumeInst> {
+public:
+  ResumeInst(llvm::ResumeInst *CSI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Resume, Opcode::Resume, CSI, Ctx) {}
+
+  static ResumeInst *create(Value *Exn, BBIterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx);
+  Value *getValue() const;
+  unsigned getNumSuccessors() const {
+    return cast<llvm::ResumeInst>(Val)->getNumSuccessors();
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Resume;
   }
 };
 
@@ -2987,6 +3039,8 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
+  friend VAArgInst; // For createVAArgInst()
   FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
   friend FreezeInst; // For createFreezeInst()
   FenceInst *createFenceInst(llvm::FenceInst *SI);
@@ -3027,6 +3081,8 @@ protected:
   friend GetElementPtrInst; // For createGetElementPtrInst()
   CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
   friend CatchSwitchInst; // For createCatchSwitchInst()
+  ResumeInst *createResumeInst(llvm::ResumeInst *I);
+  friend ResumeInst; // For createResumeInst()
   SwitchInst *createSwitchInst(llvm::SwitchInst *I);
   friend SwitchInst; // For createSwitchInst()
   UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);

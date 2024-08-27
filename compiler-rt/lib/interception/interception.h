@@ -25,8 +25,14 @@
 
 // These typedefs should be used only in the interceptor definitions to replace
 // the standard system types (e.g. SSIZE_T instead of ssize_t)
-typedef __sanitizer::uptr    SIZE_T;
-typedef __sanitizer::sptr    SSIZE_T;
+// On Windows the system headers (basetsd.h) provide a conflicting definition
+// of SIZE_T/SSIZE_T that do not match the real size_t/ssize_t for 32-bit
+// systems (using long instead of the expected int). Work around the typedef
+// redefinition by #defining SIZE_T instead of using a typedef.
+// TODO: We should be using __sanitizer::usize (and a new ssize) instead of
+// these new macros as long as we ensure they match the real system definitions.
+#define SIZE_T __sanitizer::usize
+#define SSIZE_T __sanitizer::sptr
 typedef __sanitizer::sptr    PTRDIFF_T;
 typedef __sanitizer::s64     INTMAX_T;
 typedef __sanitizer::u64     UINTMAX_T;

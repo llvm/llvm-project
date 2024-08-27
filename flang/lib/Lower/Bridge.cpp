@@ -4251,15 +4251,37 @@ private:
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
-    auto getRefIfLoaded = [](mlir::Value val) -> mlir::Value {
+    auto getRefFromValue = [](mlir::Value val) -> mlir::Value {
       if (auto loadOp =
               mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
         return loadOp.getMemref();
+      if (!mlir::isa<fir::BaseBoxType>(val.getType()))
+        return val;
+      if (auto declOp =
+              mlir::dyn_cast_or_null<hlfir::DeclareOp>(val.getDefiningOp())) {
+        if (!declOp.getShape())
+          return val;
+        if (mlir::isa<fir::ReferenceType>(declOp.getMemref().getType()))
+          return declOp.getMemref();
+      }
       return val;
     };
 
-    mlir::Value rhsVal = getRefIfLoaded(rhs.getBase());
-    mlir::Value lhsVal = getRefIfLoaded(lhs.getBase());
+    auto getShapeFromDecl = [](mlir::Value val) -> mlir::Value {
+      if (!mlir::isa<fir::BaseBoxType>(val.getType()))
+        return {};
+      if (auto declOp =
+              mlir::dyn_cast_or_null<hlfir::DeclareOp>(val.getDefiningOp()))
+        return declOp.getShape();
+      return {};
+    };
+
+    mlir::Value rhsVal = getRefFromValue(rhs.getBase());
+    mlir::Value lhsVal = getRefFromValue(lhs.getBase());
+    // Get shape from the rhs if available otherwise get it from lhs.
+    mlir::Value shape = getShapeFromDecl(rhs.getBase());
+    if (!shape)
+      shape = getShapeFromDecl(lhs.getBase());
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -4272,19 +4294,18 @@ private:
           base = convertOp.getValue();
         // Special case if the rhs is a constant.
         if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(
-              loc, base, lhsVal, /*shape=*/mlir::Value{}, transferKindAttr);
+          builder.create<cuf::DataTransferOp>(loc, base, lhsVal, shape,
+                                              transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(
               loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
           builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
-                                              /*shape=*/mlir::Value{},
-                                              transferKindAttr);
+                                              shape, transferKindAttr);
           builder.create<hlfir::EndAssociateOp>(loc, associate);
         }
       } else {
-        builder.create<cuf::DataTransferOp>(
-            loc, rhsVal, lhsVal, /*shape=*/mlir::Value{}, transferKindAttr);
+        builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
+                                            transferKindAttr);
       }
       return;
     }
@@ -4293,8 +4314,7 @@ private:
     if (!lhsIsDevice && rhsIsDevice) {
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
-                                          /*shape=*/mlir::Value{},
+      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                           transferKindAttr);
       return;
     }
@@ -4304,8 +4324,7 @@ private:
       assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
-                                          /*shape=*/mlir::Value{},
+      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                           transferKindAttr);
       return;
     }
