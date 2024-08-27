@@ -1128,6 +1128,7 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantInductionCasts(Plan);
 
   simplifyRecipes(Plan, SE.getContext());
+  licm(Plan);
   legalizeAndOptimizeInductions(Plan, SE);
   removeDeadRecipes(Plan);
 
@@ -1585,5 +1586,24 @@ void VPlanTransforms::createInterleaveGroups(
         }
         MemberR->eraseFromParent();
       }
+  }
+}
+
+void VPlanTransforms::licm(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Preheader =
+      cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
+  // Hoist any loop invariant recipes from the vector loop region to the
+  // preheader.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
+          any_of(R.operands(), [](VPValue *Op) {
+            return !Op->isDefinedOutsideVectorRegions();
+          }))
+        continue;
+      R.moveBefore(*Preheader, Preheader->end());
+    }
   }
 }
