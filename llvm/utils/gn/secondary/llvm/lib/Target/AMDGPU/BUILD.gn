@@ -189,6 +189,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUSetWavePriority.cpp",
     "AMDGPUSplitModule.cpp",
     "AMDGPUSubtarget.cpp",
+    "AMDGPUSwLowerLDS.cpp",
     "AMDGPUTargetMachine.cpp",
     "AMDGPUTargetObjectFile.cpp",
     "AMDGPUTargetTransformInfo.cpp",
