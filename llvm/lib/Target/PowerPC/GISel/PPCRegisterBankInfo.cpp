@@ -34,13 +34,6 @@ const RegisterBank &
 PPCRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                             LLT Ty) const {
   switch (RC.getID()) {
-  case PPC::G8RCRegClassID:
-  case PPC::G8RC_NOX0RegClassID:
-  case PPC::G8RC_and_G8RC_NOX0RegClassID:
-  case PPC::GPRCRegClassID:
-  case PPC::GPRC_NOR0RegClassID:
-  case PPC::GPRC_and_GPRC_NOR0RegClassID:
-    return getRegBank(PPC::GPRRegBankID);
   case PPC::VSFRCRegClassID:
   case PPC::SPILLTOVSRRC_and_VSFRCRegClassID:
   case PPC::SPILLTOVSRRC_and_VFRCRegClassID:
@@ -50,19 +43,8 @@ PPCRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case PPC::VSSRCRegClassID:
   case PPC::F4RCRegClassID:
     return getRegBank(PPC::FPRRegBankID);
-  case PPC::VSRCRegClassID:
-  case PPC::VRRCRegClassID:
-  case PPC::VRRC_with_sub_64_in_SPILLTOVSRRCRegClassID:
-  case PPC::VSRC_with_sub_64_in_SPILLTOVSRRCRegClassID:
-  case PPC::SPILLTOVSRRCRegClassID:
-  case PPC::VSLRCRegClassID:
-  case PPC::VSLRC_with_sub_64_in_SPILLTOVSRRCRegClassID:
-    return getRegBank(PPC::VECRegBankID);
-  case PPC::CRRCRegClassID:
-  case PPC::CRBITRCRegClassID:
-    return getRegBank(PPC::CRRegBankID);
   default:
-    llvm_unreachable("Unexpected register class");
+    return PPCGenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
   }
 }
 

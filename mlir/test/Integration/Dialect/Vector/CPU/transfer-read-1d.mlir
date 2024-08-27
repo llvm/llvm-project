@@ -82,7 +82,7 @@ func.func @transfer_read_1d_broadcast(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {permutation_map = affine_map<(d0, d1) -> (0)>}
+      {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (0)>}
       : memref<?x?xf32>, vector<9xf32>
   vector.print %f: vector<9xf32>
   return

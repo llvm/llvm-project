@@ -53,7 +53,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -580,14 +580,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       }
     }
   }
-
-  // These libcalls are not available in 32-bit.
-  setLibcallName(RTLIB::SHL_I128, nullptr);
-  setLibcallName(RTLIB::SRL_I128, nullptr);
-  setLibcallName(RTLIB::SRA_I128, nullptr);
-  setLibcallName(RTLIB::MUL_I128, nullptr);
-  setLibcallName(RTLIB::MULO_I64, nullptr);
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   // RTLIB
   if (Subtarget->isAAPCS_ABI() &&
@@ -1307,12 +1299,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   } else {
     setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
     setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
-  }
-
-  if (Subtarget->getTargetTriple().isOSMSVCRT()) {
-    // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
   setOperationAction(ISD::GlobalAddress, MVT::i32,   Custom);
@@ -2475,8 +2461,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // Since callee will pop argument stack as a tail call, we must keep the
     // popped size 16-byte aligned.
-    Align StackAlign = DAG.getDataLayout().getStackAlignment();
-    NumBytes = alignTo(NumBytes, StackAlign);
+    MaybeAlign StackAlign = DAG.getDataLayout().getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    NumBytes = alignTo(NumBytes, *StackAlign);
 
     // SPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
@@ -2855,7 +2842,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall) {
-    Ops.push_back(DAG.getTargetConstant(SPDiff, dl, MVT::i32));
+    Ops.push_back(
+        DAG.getSignedConstant(SPDiff, dl, MVT::i32, /*isTarget=*/true));
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -2906,7 +2894,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // we need to undo that after it returns to restore the status-quo.
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
   uint64_t CalleePopBytes =
-      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1ULL;
+      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1U;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, dl);
   if (!Ins.empty())
@@ -2928,7 +2916,7 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   // Byval (as with any stack) slots are always at least 4 byte aligned.
   Alignment = std::max(Alignment, Align(4));
 
-  unsigned Reg = State->AllocateReg(GPRArgRegs);
+  MCRegister Reg = State->AllocateReg(GPRArgRegs);
   if (!Reg)
     return;
 
@@ -3038,18 +3026,27 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   assert(Subtarget->supportsTailCall());
 
-  // Indirect tail calls cannot be optimized for Thumb1 if the args
-  // to the call take up r0-r3. The reason is that there are no legal registers
-  // left to hold the pointer to the function to be called.
-  // Similarly, if the function uses return address sign and authentication,
-  // r12 is needed to hold the PAC and is not available to hold the callee
-  // address.
-  if (Outs.size() >= 4 &&
-      (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect)) {
-    if (Subtarget->isThumb1Only())
-      return false;
-    // Conservatively assume the function spills LR.
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true))
+  // Indirect tail-calls require a register to hold the target address. That
+  // register must be:
+  // * Allocatable (i.e. r0-r7 if the target is Thumb1).
+  // * Not callee-saved, so must be one of r0-r3 or r12.
+  // * Not used to hold an argument to the tail-called function, which might be
+  //   in r0-r3.
+  // * Not used to hold the return address authentication code, which is in r12
+  //   if enabled.
+  // Sometimes, no register matches all of these conditions, so we can't do a
+  // tail-call.
+  if (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect) {
+    SmallSet<MCPhysReg, 5> AddressRegisters;
+    for (Register R : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
+      AddressRegisters.insert(R);
+    if (!(Subtarget->isThumb1Only() ||
+          MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true)))
+      AddressRegisters.insert(ARM::R12);
+    for (const CCValAssign &AL : ArgLocs)
+      if (AL.isRegLoc())
+        AddressRegisters.erase(AL.getLocReg());
+    if (AddressRegisters.empty())
       return false;
   }
 
@@ -4533,11 +4530,10 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   // argument, as they will be allocated a stack slot below the CFA (Canonical
   // Frame Address, the stack pointer at entry to the function).
   unsigned ArgRegBegin = ARM::R4;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (const CCValAssign &VA : ArgLocs) {
     if (CCInfo.getInRegsParamsProcessed() >= CCInfo.getInRegsParamsCount())
       break;
 
-    CCValAssign &VA = ArgLocs[i];
     unsigned Index = VA.getValNo();
     ISD::ArgFlagsTy Flags = Ins[Index].Flags;
     if (!Flags.isByVal())
@@ -4716,8 +4712,9 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   if (canGuaranteeTCO(CallConv, TailCallOpt)) {
     // The only way to guarantee a tail call is if the callee restores its
     // argument area, but it must also keep the stack aligned when doing so.
-    const DataLayout &DL = DAG.getDataLayout();
-    StackArgSize = alignTo(StackArgSize, DL.getStackAlignment());
+    MaybeAlign StackAlign = DAG.getDataLayout().getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    StackArgSize = alignTo(StackArgSize, *StackAlign);
 
     AFI->setArgumentStackToRestore(StackArgSize);
   }
@@ -8557,7 +8554,7 @@ static SDValue LowerVECTOR_SHUFFLEv8i8(SDValue Op,
 
   SmallVector<SDValue, 8> VTBLMask;
   for (int I : ShuffleMask)
-    VTBLMask.push_back(DAG.getConstant(I, DL, MVT::i32));
+    VTBLMask.push_back(DAG.getSignedConstant(I, DL, MVT::i32));
 
   if (V2.getNode()->isUndef())
     return DAG.getNode(ARMISD::VTBL1, DL, MVT::v8i8, V1,
@@ -9225,7 +9222,7 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
   };
 
   // Concat each pair of subvectors and pack into the lower half of the array.
-  SmallVector<SDValue> ConcatOps(Op->op_begin(), Op->op_end());
+  SmallVector<SDValue> ConcatOps(Op->ops());
   while (ConcatOps.size() > 1) {
     for (unsigned I = 0, E = ConcatOps.size(); I != E; I += 2) {
       SDValue V1 = ConcatOps[I];
@@ -15449,6 +15446,9 @@ static SDValue PerformVECTOR_REG_CASTCombine(SDNode *N, SelectionDAG &DAG,
   if (ST->isLittle())
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);
 
+  // VT VECTOR_REG_CAST (VT Op) -> Op
+  if (Op.getValueType() == VT)
+    return Op;
   // VECTOR_REG_CAST undef -> undef
   if (Op.isUndef())
     return DAG.getUNDEF(VT);
@@ -20192,9 +20192,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // CSINV: KnownOp0 or ~KnownOp1
     // CSNEG: KnownOp0 or KnownOp1 * -1
     if (Op.getOpcode() == ARMISD::CSINC)
-      KnownOp1 = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KnownOp1,
-          KnownBits::makeConstant(APInt(32, 1)));
+      KnownOp1 =
+          KnownBits::add(KnownOp1, KnownBits::makeConstant(APInt(32, 1)));
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)
@@ -20678,7 +20677,8 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         }
         return;
     }
-    Result = DAG.getTargetConstant(CVal, SDLoc(Op), Op.getValueType());
+    Result = DAG.getSignedConstant(CVal, SDLoc(Op), Op.getValueType(),
+                                   /*isTarget=*/true);
     break;
   }
 
@@ -22035,7 +22035,9 @@ Align ARMTargetLowering::getABIAlignmentForCallingConv(
 
   // Avoid over-aligning vector parameters. It would require realigning the
   // stack and waste space for no real benefit.
-  return std::min(ABITypeAlign, DL.getStackAlignment());
+  MaybeAlign StackAlign = DL.getStackAlignment();
+  assert(StackAlign && "data layout string is missing stack alignment");
+  return std::min(ABITypeAlign, *StackAlign);
 }
 
 /// Return true if a type is an AAPCS-VFP homogeneous aggregate or one of

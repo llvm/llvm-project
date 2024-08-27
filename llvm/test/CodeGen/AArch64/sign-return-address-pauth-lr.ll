@@ -93,8 +93,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp1:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    //APP
@@ -111,8 +111,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp1:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    //APP
@@ -127,8 +127,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp1:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    //APP
@@ -148,8 +148,8 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp2:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    bl foo
@@ -164,8 +164,8 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp2:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl foo
@@ -178,8 +178,8 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp2:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
@@ -195,8 +195,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp3:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    bl foo
@@ -211,8 +211,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp3:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl foo
@@ -225,8 +225,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp3:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
@@ -245,8 +245,8 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ; CHECK-NEXT:    hint #39
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    paciasp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl foo
@@ -263,8 +263,8 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ; PAUTHLR-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; PAUTHLR-NEXT:  .Ltmp4:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
@@ -304,8 +304,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp6:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    //APP
@@ -322,8 +322,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp6:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    //APP
@@ -339,8 +339,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp6:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    //APP

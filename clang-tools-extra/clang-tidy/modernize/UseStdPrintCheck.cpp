@@ -95,16 +95,12 @@ unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
 }
 
 void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType =
-      hasType(pointerType(pointee(matchers::isSimpleChar())));
   if (!PrintfLikeFunctions.empty())
     Finder->addMatcher(
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
                      hasArgument(0, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         hasParameter(0, CharPointerType),
-                                         matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedName(
                                              PrintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("printf")),
@@ -115,9 +111,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
         unusedReturnValue(
             callExpr(argumentCountAtLeast(2),
                      hasArgument(1, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         hasParameter(1, CharPointerType),
-                                         matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedName(
                                              FprintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("fprintf")),
@@ -156,7 +150,7 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
       << ReplacementFunction << OldFunction->getIdentifier();
 
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(PrintfCall->getBeginLoc(),
+      CharSourceRange::getTokenRange(PrintfCall->getExprLoc(),
                                      PrintfCall->getEndLoc()),
       ReplacementFunction);
   Converter.applyFixes(Diag, *Result.SourceManager);

@@ -33,6 +33,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  math_function_macros
+  HDRS
+    math_function_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.include.math
+)
+
+add_proxy_header_library(
   errno_macros
   HDRS
     errno_macros.h
@@ -67,6 +76,16 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.signal_macros
     libc.include.signal
+)
+
+add_proxy_header_library(
+  stdio_macros
+  HDRS
+    stdio_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdio
+    libc.include.llvm-libc-macros.stdio_macros
+    libc.include.llvm-libc-macros.file_seek_macros
 )
 
 add_proxy_header_library(

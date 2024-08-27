@@ -362,6 +362,19 @@ TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
             format("aaaaaaaaaa(aaaa(aaaa,\n"
                    "aaaa), //\n"
                    "aaaa, bbbbb);"));
+
+  FormatStyle BreakAlways = getLLVMStyle();
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("int SomeFunction(a,\n"
+               "                 b, // comment\n"
+               "                 c,\n"
+               "                 d);",
+               BreakAlways);
+  verifyFormat("int SomeFunction(a,\n"
+               "                 b,\n"
+               "                 // comment\n"
+               "                 c);",
+               BreakAlways);
 }
 
 TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
@@ -403,13 +416,27 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
   verifyFormat("f(/* aaaaaaaaaaaaaaaaaa = */\n"
                "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
-  FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  verifyFormat(
+      "int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb, /* 2nd */ int ccccccccccc,\n"
+      "                  /* 3rd */ int dddddddddddd);");
+
+  auto Style = getLLVMStyle();
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
                "         /* parameter 2 */ aaaaaa,\n"
                "         /* parameter 3 */ aaaaaa,\n"
                "         /* parameter 4 */ aaaaaa);",
-               NoBinPacking);
+               Style);
+  verifyFormat("int a(/* 1st */ int b, /* 2nd */ int c);", Style);
+  verifyFormat("int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb,\n"
+               "                  /* 2nd */ int ccccccccccc,\n"
+               "                  /* 3rd */ int dddddddddddd);",
+               Style);
+
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("int a(/* 1st */ int b,\n"
+               "      /* 2nd */ int c);",
+               Style);
 
   // Aligning block comments in macros.
   verifyGoogleFormat("#define A        \\\n"
@@ -2449,7 +2476,7 @@ TEST_F(FormatTestComments, BlockComments) {
                    getLLVMStyleWithColumns(50)));
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   EXPECT_EQ("someFunction(1, /* comment 1 */\n"
             "             2, /* comment 2 */\n"
             "             3, /* comment 3 */\n"
@@ -3145,6 +3172,23 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    "int bar = 1234;       // This is a very long comment\n"
                    "          // which is wrapped arround.",
                    Style));
+
+  Style = getLLVMStyle();
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
+  Style.TabWidth = 2;
+  Style.UseTab = FormatStyle::UT_ForIndentation;
+  verifyNoChange("{\n"
+                 "\t// f\n"
+                 "\tf();\n"
+                 "\n"
+                 "\t// g\n"
+                 "\tg();\n"
+                 "\t{\n"
+                 "\t\t// h();  // h\n"
+                 "\t\tfoo();  // foo\n"
+                 "\t}\n"
+                 "}",
+                 Style);
 }
 
 TEST_F(FormatTestComments, DontAlignNamespaceComments) {

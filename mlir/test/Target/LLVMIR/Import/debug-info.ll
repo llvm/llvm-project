@@ -308,16 +308,16 @@ define void @class_method() {
 }
 
 ; Verify the cyclic composite type is identified, even though conversion begins from the subprogram type.
-; CHECK: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
-; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], sizeInBits = 64>
-; CHECK: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
-; CHECK: #[[SP_INNER:.+]] = #llvm.di_subprogram<id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP_SELF]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
-; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_INNER]]>
+; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], sizeInBits = 64>
+; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
+; CHECK-DAG: #[[SP_INNER:.+]] = #llvm.di_subprogram<id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP_SELF]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_INNER]]>
 
-; CHECK: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
-; CHECK: #[[SP_TYPE_OUTER:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR_OUTER]]>
-; CHECK: #[[SP_OUTER:.+]] = #llvm.di_subprogram<id = [[SP_ID]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE_OUTER]]>
-; CHECK: #[[LOC]] = loc(fused<#[[SP_OUTER]]>
+; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; CHECK-DAG: #[[SP_TYPE_OUTER:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR_OUTER]]>
+; CHECK-DAG: #[[SP_OUTER:.+]] = #llvm.di_subprogram<id = [[SP_ID]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE_OUTER]]>
+; CHECK-DAG: #[[LOC]] = loc(fused<#[[SP_OUTER]]>
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -335,12 +335,12 @@ define void @class_method() {
 ; // -----
 
 ; Verify the cyclic composite type is handled correctly.
-; CHECK: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
-; CHECK: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
-; CHECK: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
-; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
-; CHECK: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
-; CHECK: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
+; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
+; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
+; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
+; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
+; CHECK-DAG: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
 
 ; CHECK: @class_field
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
@@ -727,9 +727,7 @@ define void @class_field(ptr %arg1) !dbg !18 {
 ; CHECK-DAG: #[[B_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_B:.+]]>
 ; CHECK-DAG: #[[C_FROM_B]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID:.+]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF:.+]], #[[TO_B_SELF:.+]], #[[TO_C_SELF:.+]]>
 
-; CHECK-DAG: #[[C_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF]], #[[TO_B_INNER:.+]], #[[TO_C_SELF]]
-; CHECK-DAG: #[[TO_B_INNER]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_INNER:.+]]>
-; CHECK-DAG: #[[B_INNER]] = #llvm.di_composite_type<{{.*}}name = "B", {{.*}}elements = #[[TO_C_SELF]]>
+; CHECK-DAG: #[[C_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF]], #[[A_TO_B:.+]], #[[TO_C_SELF]]
 
 ; CHECK-DAG: #[[TO_A_SELF]] = #llvm.di_derived_type<{{.*}}name = "->A", {{.*}}baseType = #[[A_SELF:.+]]>
 ; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
@@ -783,7 +781,7 @@ define void @string_type(ptr %arg1) {
 !6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
 !7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
-!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6);
+!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6, flags: 64);
 !10 = !DILocation(line: 1, column: 2, scope: !5)
 
 ; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
@@ -793,3 +791,29 @@ define void @string_type(ptr %arg1) {
 ; CHECK-SAME: stringLength = #[[VAR]]
 ; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
 ; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "str", file = #di_file, type = #di_string_type, flags = Artificial>
+
+; // -----
+
+; Test that imported entities for a functions are handled correctly.
+
+define void @imp_fn() !dbg !12 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!4}
+
+!2 = !DIModule(scope: !4, name: "mod1", file: !3, line: 1)
+!3 = !DIFile(filename: "test.f90", directory: "")
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3)
+!8 = !DIModule(scope: !4, name: "mod1", file: !3, line: 5)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = distinct !DISubprogram(name: "imp_fn", linkageName: "imp_fn", scope: !3, file: !3, line: 10, type: !14, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !4, retainedNodes: !16)
+!14 = !DISubroutineType(cc: DW_CC_program, types: !15)
+!15 = !{}
+!16 = !{!17}
+!17 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !12, entity: !8, file: !3, line: 1, elements: !15)
+
+; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module, entity = #[[M]]{{.*}}>>

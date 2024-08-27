@@ -26,6 +26,7 @@ program omp_doCollapse
   !$omp parallel do collapse(2)
     do i = 1, 3
       !ERROR: Loop control is not present in the DO LOOP
+      !ERROR: The associated loop of a loop-associated directive cannot be a DO without control.
       do
       end do
     end do

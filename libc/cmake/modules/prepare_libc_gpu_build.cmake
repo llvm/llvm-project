@@ -21,36 +21,10 @@ if(LIBC_TARGET_TRIPLE)
   set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
 endif()
 if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib -nostdlib")
 elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
-endif()
-
-# Identify the program used to package multiple images into a single binary.
-get_filename_component(compiler_path ${CMAKE_CXX_COMPILER} DIRECTORY)
-if(TARGET clang-offload-packager)
-  get_target_property(LIBC_CLANG_OFFLOAD_PACKAGER clang-offload-packager LOCATION)
-else()
-  find_program(LIBC_CLANG_OFFLOAD_PACKAGER
-               NAMES clang-offload-packager NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
-    message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
-                        "build")
-  endif()
-endif()
-
-# Identify llvm-link program so we can merge the output IR into a single blob.
-if(TARGET llvm-link)
-  get_target_property(LIBC_LLVM_LINK llvm-link LOCATION)
-else()
-  find_program(LIBC_LLVM_LINK
-               NAMES llvm-link NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(NOT LIBC_LLVM_LINK)
-    message(FATAL_ERROR "Cannot find 'llvm-link' for the GPU build")
-  endif()
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument -nostdlib")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.

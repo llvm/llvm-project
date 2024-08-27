@@ -14,9 +14,10 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 LIBC_INLINE ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
 #if SYS_clock_gettime
@@ -39,6 +40,6 @@ LIBC_INLINE ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H

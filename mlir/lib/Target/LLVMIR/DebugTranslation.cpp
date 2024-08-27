@@ -228,8 +228,8 @@ DebugTranslation::translateImpl(DILocalVariableAttr attr) {
   return llvm::DILocalVariable::get(
       llvmCtx, translate(attr.getScope()), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getType()),
-      attr.getArg(),
-      /*Flags=*/llvm::DINode::FlagZero, attr.getAlignInBits(),
+      attr.getArg(), static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      attr.getAlignInBits(),
       /*Annotations=*/nullptr);
 }
 
@@ -306,6 +306,19 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit);
 
+  // DIImportedEntity requires scope information which DIImportedEntityAttr does
+  // not have. This is why we translate DIImportedEntityAttr after we have
+  // created DISubprogram as we can use it as the scope.
+  SmallVector<llvm::Metadata *> retainedNodes;
+  for (DINodeAttr nodeAttr : attr.getRetainedNodes()) {
+    if (auto importedAttr = dyn_cast<DIImportedEntityAttr>(nodeAttr)) {
+      llvm::DINode *dn = translate(importedAttr, node);
+      retainedNodes.push_back(dn);
+    }
+  }
+  if (!retainedNodes.empty())
+    node->replaceRetainedNodes(llvm::MDTuple::get(llvmCtx, retainedNodes));
+
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);
   return node;
@@ -324,6 +337,18 @@ llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
   return llvm::DINamespace::get(llvmCtx, translate(attr.getScope()),
                                 getMDStringOrNull(attr.getName()),
                                 attr.getExportSymbols());
+}
+
+llvm::DIImportedEntity *DebugTranslation::translate(DIImportedEntityAttr attr,
+                                                    llvm::DIScope *scope) {
+  SmallVector<llvm::Metadata *> elements;
+  for (DINodeAttr member : attr.getElements())
+    elements.push_back(translate(member));
+
+  return llvm::DIImportedEntity::get(
+      llvmCtx, attr.getTag(), scope, translate(attr.getEntity()),
+      translate(attr.getFile()), attr.getLine(),
+      getMDStringOrNull(attr.getName()), llvm::MDNode::get(llvmCtx, elements));
 }
 
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {

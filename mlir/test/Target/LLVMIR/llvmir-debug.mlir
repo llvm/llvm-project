@@ -347,6 +347,55 @@ llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_
 
 // -----
 
+// CHECK: @func_global = external global i64, !dbg {{.*}}
+// CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GVALS:.*]])
+// CHECK-DAG: ![[SP:.*]] = distinct !DISubprogram(name: "fn_with_gl"{{.*}}unit: ![[CU]])
+// CHECK-DAG: ![[GVAR:.*]] = distinct !DIGlobalVariable(name: "func_global"{{.*}}, scope: ![[SP]]{{.*}})
+// CHECK-DAG: ![[GEXPR:.*]] = !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
+// CHECK-DAG: ![[GVALS]] = !{![[GEXPR]]}
+
+#file = #llvm.di_file<"test.f90" in "existence">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #file, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#ty1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "fn_with_gl", file = #file, subprogramFlags = "Definition|Optimized">
+llvm.mlir.global @func_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #sp, name = "func_global", linkageName = "func_global", file = #file, line = 121, type = #ty1, isLocalToUnit = true, isDefined = true>, expr = <>>} : i64
+
+llvm.func @fn_with_gl() {
+  llvm.return
+} loc(fused<#sp>["foo1.mlir":0:0])
+
+// -----
+
+// Test that imported entries correctly generates 'retainedNodes' in the
+// subprogram.
+
+llvm.func @imp_fn() {
+  llvm.return
+} loc(#loc2)
+#file = #llvm.di_file<"test.f90" in "">
+#SP_TY = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+#CU = #llvm.di_compile_unit<id = distinct[0]<>,
+  sourceLanguage = DW_LANG_Fortran95, file = #file, isOptimized = false,
+  emissionKind = Full>
+#MOD = #llvm.di_module<file = #file, scope = #CU, name = "mod1">
+#MOD1 = #llvm.di_module<file = #file, scope = #CU, name = "mod2">
+#SP = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #CU, scope = #file,
+  name = "imp_fn", file = #file, subprogramFlags = Definition, type = #SP_TY,
+  retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  entity = #MOD1, file = #file, line = 1>, #llvm.di_imported_entity<tag
+  = DW_TAG_imported_module, entity = #MOD, file = #file, line = 1>>
+#loc1 = loc("test.f90":12:14)
+#loc2 = loc(fused<#SP>[#loc1])
+
+// CHECK-DAG: ![[SP:[0-9]+]] = {{.*}}!DISubprogram(name: "imp_fn"{{.*}}retainedNodes: ![[NODES:[0-9]+]])
+// CHECK-DAG: ![[NODES]] = !{![[NODE2:[0-9]+]], ![[NODE1:[0-9]+]]}
+// CHECK-DAG: ![[NODE1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD1:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[NODE2]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD2:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[MOD1]] = !DIModule({{.*}}name: "mod1"{{.*}})
+// CHECK-DAG: ![[MOD2]] = !DIModule({{.*}}name: "mod2"{{.*}})
+
+// -----
+
 // Nameless and scopeless global constant.
 
 // CHECK-LABEL: @.str.1 = external constant [10 x i8]
@@ -584,7 +633,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
  file = #file, isOptimized = false, emissionKind = Full>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
  file = #file, subprogramFlags = Definition>
-#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt>
+#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt, flags = Artificial>
 #ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
@@ -601,4 +650,4 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc2 = loc(fused<#sp>[#loc1])
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
-// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}})
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)

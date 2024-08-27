@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++17 -Wc++20-extensions -verify=expected %s
 // RUN: %clang_cc1 -std=c++20 -Wpre-c++20-compat -verify=expected %s
+// RUN: %clang_cc1 -std=c++20 -Wpre-c++20-compat -fexperimental-new-constant-interpreter -verify=expected %s
 
 void use_from_own_init() {
   auto [a] = a; // expected-error {{binding 'a' cannot appear in the initializer of its own decomposition declaration}}

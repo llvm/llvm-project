@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -287,10 +288,7 @@ bool PointerReplacer::collectUsers() {
   // Ensure that all outstanding (indirect) users of I
   // are inserted into the Worklist. Return false
   // otherwise.
-  for (auto *Inst : ValuesToRevisit)
-    if (!Worklist.contains(Inst))
-      return false;
-  return true;
+  return llvm::set_is_subset(ValuesToRevisit, Worklist);
 }
 
 bool PointerReplacer::collectUsersRecursive(Instruction &I) {
@@ -394,9 +392,14 @@ void PointerReplacer::replace(Instruction *I) {
     NewI->setNoWrapFlags(GEP->getNoWrapFlags());
     WorkMap[GEP] = NewI;
   } else if (auto *SI = dyn_cast<SelectInst>(I)) {
-    auto *NewSI = SelectInst::Create(
-        SI->getCondition(), getReplacement(SI->getTrueValue()),
-        getReplacement(SI->getFalseValue()), SI->getName(), nullptr, SI);
+    Value *TrueValue = SI->getTrueValue();
+    Value *FalseValue = SI->getFalseValue();
+    if (Value *Replacement = getReplacement(TrueValue))
+      TrueValue = Replacement;
+    if (Value *Replacement = getReplacement(FalseValue))
+      FalseValue = Replacement;
+    auto *NewSI = SelectInst::Create(SI->getCondition(), TrueValue, FalseValue,
+                                     SI->getName(), nullptr, SI);
     IC.InsertNewInstWith(NewSI, SI->getIterator());
     NewSI->takeName(SI);
     WorkMap[SI] = NewSI;

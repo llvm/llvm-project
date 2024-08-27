@@ -2198,7 +2198,7 @@ const Decl *PathSensitiveBugReport::getDeclWithIssue() const {
 void BasicBugReport::Profile(llvm::FoldingSetNodeID& hash) const {
   hash.AddInteger(static_cast<int>(getKind()));
   hash.AddPointer(&BT);
-  hash.AddString(Description);
+  hash.AddString(getShortDescription());
   assert(Location.isValid());
   Location.Profile(hash);
 
@@ -2213,7 +2213,7 @@ void BasicBugReport::Profile(llvm::FoldingSetNodeID& hash) const {
 void PathSensitiveBugReport::Profile(llvm::FoldingSetNodeID &hash) const {
   hash.AddInteger(static_cast<int>(getKind()));
   hash.AddPointer(&BT);
-  hash.AddString(Description);
+  hash.AddString(getShortDescription());
   PathDiagnosticLocation UL = getUniqueingLocation();
   if (UL.isValid()) {
     UL.Profile(hash);

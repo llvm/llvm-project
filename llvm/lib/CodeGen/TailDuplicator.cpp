@@ -97,7 +97,6 @@ void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   MRI = &MF->getRegInfo();
-  MMI = &MF->getMMI();
   MBPI = MBPIin;
   MBFI = MBFIin;
   PSI = PSIin;

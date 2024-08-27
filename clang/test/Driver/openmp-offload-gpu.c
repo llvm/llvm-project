@@ -372,33 +372,9 @@
 // XARCH-DEVICE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-O3"
 // XARCH-DEVICE-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-O3"
 
-//
-// Check that `-gpulibc` includes the LLVM C libraries for the GPU.
-//
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
-// RUN:      --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgpu-gfx803.bc \
-// RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:      --rocm-path=%S/Inputs/rocm \
-// RUN:      --offload-arch=sm_52,gfx803 -gpulibc -nogpuinc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
-// RUN:      --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgpu-gfx803.bc \
-// RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:      --rocm-path=%S/Inputs/rocm \
-// RUN:      -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 \
-// RUN:      -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 \
-// RUN:      -fopenmp-targets=nvptx64-nvidia-cuda,amdgcn-amd-amdhsa -gpulibc -nogpuinc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
-// LIBC-GPU-DAG: "-lcgpu-amdgpu"
-// LIBC-GPU-DAG: "-lmgpu-amdgpu"
-// LIBC-GPU-DAG: "-lcgpu-nvptx"
-// LIBC-GPU-DAG: "-lmgpu-nvptx"
-
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
 // RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=NO-LIBC-GPU %s
-// NO-LIBC-GPU-NOT: -lmgpu{{.*}}-lcgpu
+// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
+// LIBC-GPU: clang-linker-wrapper{{.*}}"--device-compiler=-nolibc"

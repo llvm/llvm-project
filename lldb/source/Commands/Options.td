@@ -841,6 +841,12 @@ let Command = "scripting run" in {
     " language. If none is specific the default scripting language is used.">;
 }
 
+let Command = "scripting extension list" in {
+  def scripting_extension_list_language : Option<"language", "l">,
+    EnumArg<"ScriptLang">, Desc<"Specify the scripting "
+    " language. If none is specified the default scripting language is used.">;
+}
+
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;
@@ -1042,6 +1048,8 @@ let Command = "thread backtrace" in {
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
   Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
+  Desc<"Do not filter out frames according to installed frame recognizers">;
 }
 
 let Command = "thread step scope" in {

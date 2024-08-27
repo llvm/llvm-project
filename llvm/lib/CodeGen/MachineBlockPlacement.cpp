@@ -213,6 +213,12 @@ static cl::opt<bool> RenumberBlocksBeforeView(
         "into a dot graph. Only used when a function is being printed."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
+    "ext-tsp-block-placement-max-blocks",
+    cl::desc("Maximum number of basic blocks in a function to run ext-TSP "
+             "block placement."),
+    cl::init(UINT_MAX), cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -609,7 +615,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -628,7 +634,7 @@ char &llvm::MachineBlockPlacementID = MachineBlockPlacement::ID;
 INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
@@ -2596,7 +2602,15 @@ void MachineBlockPlacement::rotateLoopWithProfile(
 /// otherwise, collect all blocks in the loop.
 MachineBlockPlacement::BlockFilterSet
 MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
-  BlockFilterSet LoopBlockSet;
+  // Collect the blocks in a set ordered by block number, as this gives the same
+  // order as they appear in the function.
+  struct MBBCompare {
+    bool operator()(const MachineBasicBlock *X,
+                    const MachineBasicBlock *Y) const {
+      return X->getNumber() < Y->getNumber();
+    }
+  };
+  std::set<const MachineBasicBlock *, MBBCompare> LoopBlockSet;
 
   // Filter cold blocks off from LoopBlockSet when profile data is available.
   // Collect the sum of frequencies of incoming edges to the loop header from
@@ -2627,7 +2641,11 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   } else
     LoopBlockSet.insert(L.block_begin(), L.block_end());
 
-  return LoopBlockSet;
+  // Copy the blocks into a BlockFilterSet, as iterating it is faster than
+  // std::set. We will only remove blocks and never insert them, which will
+  // preserve the ordering.
+  BlockFilterSet Ret(LoopBlockSet.begin(), LoopBlockSet.end());
+  return Ret;
 }
 
 /// Forms basic block chains from the natural loop structures.
@@ -3427,7 +3445,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   F = &MF;
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MBFI = std::make_unique<MBFIWrapper>(
-      getAnalysis<MachineBlockFrequencyInfo>());
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
@@ -3511,7 +3529,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   // Apply a post-processing optimizing block placement.
   if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData())) {
+      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
+      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
     // Find a new placement and modify the layout of the blocks in the function.
     applyExtTsp();
 
@@ -3630,6 +3649,11 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
+  // At this point, we possibly removed blocks from the function, so we can't
+  // renumber the domtree. At this point, we don't need it anymore, though.
+  // TODO: move this to the point where the dominator tree is actually
+  // invalidated (i.e., where blocks are removed without updating the domtree).
+  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {
@@ -3727,7 +3751,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -3742,7 +3766,7 @@ char &llvm::MachineBlockPlacementStatsID = MachineBlockPlacementStats::ID;
 INITIALIZE_PASS_BEGIN(MachineBlockPlacementStats, "block-placement-stats",
                       "Basic Block Placement Stats", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_END(MachineBlockPlacementStats, "block-placement-stats",
                     "Basic Block Placement Stats", false, false)
 
@@ -3755,7 +3779,7 @@ bool MachineBlockPlacementStats::runOnMachineFunction(MachineFunction &F) {
     return false;
 
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
   for (MachineBasicBlock &MBB : F) {
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);

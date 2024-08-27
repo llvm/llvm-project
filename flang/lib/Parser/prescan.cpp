@@ -111,9 +111,13 @@ void Prescanner::Statement() {
     skipLeadingAmpersand_ |= !inFixedForm_;
     return;
   case LineClassification::Kind::PreprocessorDirective:
+    preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
+    afterPreprocessingDirective_ = true;
+    // Don't set skipLeadingAmpersand_
+    return;
   case LineClassification::Kind::DefinitionDirective:
     preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
-    // Don't set afterPreprocessingDirective_
+    // Don't set afterPreprocessingDirective_ or skipLeadingAmpersand_
     return;
   case LineClassification::Kind::CompilerDirective: {
     directiveSentinel_ = line.sentinel;
@@ -189,17 +193,27 @@ void Prescanner::Statement() {
       // a comment marker or directive sentinel.  If so, disable line
       // continuation, so that NextToken() won't consume anything from
       // following lines.
-      if (IsLegalIdentifierStart(*at_) && NextToken(tokens) &&
-          tokens.SizeInTokens() > 0) {
-        if (CharBlock id{tokens.TokenAt(0)}; preprocessor_.IsNameDefined(id) &&
+      if (IsLegalIdentifierStart(*at_)) {
+        // TODO: Only bother with these cases when any keyword macro has
+        // been defined with replacement text that could begin a comment
+        // or directive sentinel.
+        const char *p{at_};
+        while (IsLegalInIdentifier(*++p)) {
+        }
+        CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+        if (preprocessor_.IsNameDefined(id) &&
             !preprocessor_.IsFunctionLikeDefinition(id)) {
-          if (auto replaced{preprocessor_.MacroReplacement(tokens, *this)}) {
+          TokenSequence toks;
+          toks.Put(id, GetProvenance(at_));
+          if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
             auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
-            disableSourceContinuation_ =
-                newLineClass.kind != LineClassification::Kind::Source;
             if (newLineClass.kind ==
                 LineClassification::Kind::CompilerDirective) {
               directiveSentinel_ = newLineClass.sentinel;
+              disableSourceContinuation_ = false;
+            } else {
+              disableSourceContinuation_ =
+                  newLineClass.kind != LineClassification::Kind::Source;
             }
           }
         }
@@ -1102,39 +1116,33 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
       SkipToEndOfLine();
       omitNewline_ = true;
     }
-    return false;
-  }
-  auto lineClass{ClassifyLine(nextLine_)};
-  if (lineClass.kind == LineClassification::Kind::Comment) {
-    NextLine();
-    return true;
   } else if (inPreprocessorDirective_) {
-    return false;
-  } else if (afterAmpersand &&
-      (lineClass.kind ==
-              LineClassification::Kind::ConditionalCompilationDirective ||
-          lineClass.kind == LineClassification::Kind::DefinitionDirective ||
-          lineClass.kind == LineClassification::Kind::PreprocessorDirective ||
-          lineClass.kind == LineClassification::Kind::IncludeDirective ||
-          lineClass.kind == LineClassification::Kind::IncludeLine)) {
-    SkipToEndOfLine();
-    omitNewline_ = true;
-    skipLeadingAmpersand_ = true;
-    return false;
-  } else if (lineClass.kind ==
-          LineClassification::Kind::ConditionalCompilationDirective ||
-      lineClass.kind == LineClassification::Kind::PreprocessorDirective) {
-    // Allow conditional compilation directives (e.g., #ifdef) to affect
-    // continuation lines.
-    // Allow other preprocessor directives, too, except #include
-    // (when it does not follow '&'), #define, and #undef (because
-    // they cannot be allowed to affect preceding text on a
-    // continued line).
-    preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
-    return true;
   } else {
-    return false;
+    auto lineClass{ClassifyLine(nextLine_)};
+    if (lineClass.kind == LineClassification::Kind::Comment) {
+      NextLine();
+      return true;
+    } else if (lineClass.kind ==
+            LineClassification::Kind::ConditionalCompilationDirective ||
+        lineClass.kind == LineClassification::Kind::PreprocessorDirective) {
+      // Allow conditional compilation directives (e.g., #ifdef) to affect
+      // continuation lines.
+      // Allow other preprocessor directives, too, except #include
+      // (when it does not follow '&'), #define, and #undef (because
+      // they cannot be allowed to affect preceding text on a
+      // continued line).
+      preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
+      return true;
+    } else if (afterAmpersand &&
+        (lineClass.kind == LineClassification::Kind::DefinitionDirective ||
+            lineClass.kind == LineClassification::Kind::IncludeDirective ||
+            lineClass.kind == LineClassification::Kind::IncludeLine)) {
+      SkipToEndOfLine();
+      omitNewline_ = true;
+      skipLeadingAmpersand_ = true;
+    }
   }
+  return false;
 }
 
 const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {

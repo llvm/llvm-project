@@ -10,12 +10,13 @@
 
 #include "src/__support/common.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/sys/auxv/getauxval.h"
 #include <sys/auxv.h>
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   long ret = 0;
@@ -30,4 +31,4 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

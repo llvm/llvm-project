@@ -754,7 +754,7 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       // with unknown symbol in runtime library. E.g. for static PIE
       // executable
       createSimpleFunction("__bolt_fini_trampoline",
-                           BC.MIB->createDummyReturnFunction(BC.Ctx.get()));
+                           BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
   }
 }

@@ -790,19 +790,19 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
   ConstraintSatisfaction Satisfaction;
   Satisfaction.IsSatisfied = Record.readInt();
   Satisfaction.ContainsErrors = Record.readInt();
+  const ASTContext &C = Record.getContext();
   if (!Satisfaction.IsSatisfied) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
-      Expr *ConstraintExpr = Record.readExpr();
       if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
-        std::string DiagMessage = Record.readString();
+        StringRef DiagMessage = C.backupStr(Record.readString());
+
         Satisfaction.Details.emplace_back(
-            ConstraintExpr, new (Record.getContext())
-                                ConstraintSatisfaction::SubstitutionDiagnostic{
-                                    DiagLocation, DiagMessage});
+            new (C) ConstraintSatisfaction::SubstitutionDiagnostic(
+                DiagLocation, DiagMessage));
       } else
-        Satisfaction.Details.emplace_back(ConstraintExpr, Record.readExpr());
+        Satisfaction.Details.emplace_back(Record.readExpr());
     }
   }
   return Satisfaction;
@@ -821,9 +821,11 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
 
 static concepts::Requirement::SubstitutionDiagnostic *
 readSubstitutionDiagnostic(ASTRecordReader &Record) {
-  std::string SubstitutedEntity = Record.readString();
+  const ASTContext &C = Record.getContext();
+  StringRef SubstitutedEntity = C.backupStr(Record.readString());
   SourceLocation DiagLoc = Record.readSourceLocation();
-  std::string DiagMessage = Record.readString();
+  StringRef DiagMessage = C.backupStr(Record.readString());
+
   return new (Record.getContext())
       concepts::Requirement::SubstitutionDiagnostic{SubstitutedEntity, DiagLoc,
                                                     DiagMessage};
@@ -908,26 +910,21 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
+        ASTContext &C = Record.getContext();
         bool HasInvalidConstraint = Record.readInt();
         if (HasInvalidConstraint) {
-          std::string InvalidConstraint = Record.readString();
-          char *InvalidConstraintBuf =
-              new (Record.getContext()) char[InvalidConstraint.size()];
-          std::copy(InvalidConstraint.begin(), InvalidConstraint.end(),
-                    InvalidConstraintBuf);
-          R = new (Record.getContext()) concepts::NestedRequirement(
-              Record.getContext(),
-              StringRef(InvalidConstraintBuf, InvalidConstraint.size()),
+          StringRef InvalidConstraint = C.backupStr(Record.readString());
+          R = new (C) concepts::NestedRequirement(
+              Record.getContext(), InvalidConstraint,
               readConstraintSatisfaction(Record));
           break;
         }
         Expr *E = Record.readExpr();
         if (E->isInstantiationDependent())
-          R = new (Record.getContext()) concepts::NestedRequirement(E);
+          R = new (C) concepts::NestedRequirement(E);
         else
-          R = new (Record.getContext())
-              concepts::NestedRequirement(Record.getContext(), E,
-                                          readConstraintSatisfaction(Record));
+          R = new (C) concepts::NestedRequirement(
+              C, E, readConstraintSatisfaction(Record));
       } break;
     }
     if (!R)
@@ -1131,6 +1128,7 @@ void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
       (BinaryOperator::Opcode)CurrentUnpackingBits->getNextBits(/*Width=*/6));
   bool hasFP_Features = CurrentUnpackingBits->getNextBit();
   E->setHasStoredFPFeatures(hasFP_Features);
+  E->setExcludedOverflowPattern(CurrentUnpackingBits->getNextBit());
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());
@@ -2393,7 +2391,6 @@ void ASTStmtReader::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   Record.readOMPChildren(E->Data);
   E->setLocStart(readSourceLocation());
   E->setLocEnd(readSourceLocation());
-  E->setMappedDirective(Record.readEnum<OpenMPDirectiveKind>());
 }
 
 void ASTStmtReader::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
@@ -2435,6 +2432,14 @@ void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -2529,6 +2534,11 @@ void ASTStmtReader::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   VisitStmt(D);
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
+  VisitOMPExecutableDirective(D);
+}
+
+void ASTStmtReader::VisitOMPAssumeDirective(OMPAssumeDirective *D) {
+  VisitStmt(D);
   VisitOMPExecutableDirective(D);
 }
 
@@ -3457,6 +3467,22 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_REVERSE_DIRECTIVE: {
+      assert(Record[ASTStmtReader::NumStmtFields] == 1 &&
+             "Reverse directive accepts only a single loop");
+      assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
+             "Reverse directive has no clauses");
+      S = OMPReverseDirective::CreateEmpty(Context);
+      break;
+    }
+
+    case STMT_OMP_INTERCHANGE_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPInterchangeDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
     case STMT_OMP_FOR_DIRECTIVE: {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
@@ -3890,6 +3916,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTargetParallelGenericLoopDirective::CreateEmpty(
           Context, NumClauses, CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_ASSUME_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OMPAssumeDirective::CreateEmpty(Context, NumClauses, Empty);
       break;
     }
 

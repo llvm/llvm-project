@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "LLVMInlining.h"
 #include "TypeDetail.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -24,6 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -948,6 +949,11 @@ static SmallVector<Type, 1> getCallOpResultTypes(LLVMFunctionType calleeType) {
   return results;
 }
 
+/// Gets the variadic callee type for a LLVMFunctionType.
+static TypeAttr getCallOpVarCalleeType(LLVMFunctionType calleeType) {
+  return calleeType.isVarArg() ? TypeAttr::get(calleeType) : nullptr;
+}
+
 /// Constructs a LLVMFunctionType from MLIR `results` and `args`.
 static LLVMFunctionType getLLVMFuncType(MLIRContext *context, TypeRange results,
                                         ValueRange args) {
@@ -974,9 +980,11 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    FlatSymbolRefAttr callee, ValueRange args) {
   assert(callee && "expected non-null callee in direct call builder");
   build(builder, state, results,
-        TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
-        callee, args, /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
+        /*var_callee_type=*/nullptr, callee, args, /*fastmathFlags=*/nullptr,
+        /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
+        /*memory_effects=*/nullptr,
+        /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -997,18 +1005,24 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, FlatSymbolRefAttr callee,
                    ValueRange args) {
   build(builder, state, getCallOpResultTypes(calleeType),
-        TypeAttr::get(calleeType), callee, args, /*fastmathFlags=*/nullptr,
+        getCallOpVarCalleeType(calleeType), callee, args,
+        /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr, /*CConv=*/nullptr,
-        /*TailCallKind=*/nullptr, /*access_groups=*/nullptr,
+        /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
+        /*convergent=*/nullptr,
+        /*no_unwind=*/nullptr, /*will_return=*/nullptr,
+        /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, ValueRange args) {
   build(builder, state, getCallOpResultTypes(calleeType),
-        TypeAttr::get(calleeType), /*callee=*/nullptr, args,
+        getCallOpVarCalleeType(calleeType),
+        /*callee=*/nullptr, args,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
-        /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
+        /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
+        /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1017,9 +1031,10 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                    ValueRange args) {
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
-        TypeAttr::get(calleeType), SymbolRefAttr::get(func), args,
+        getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), args,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
-        /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
+        /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
+        /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1076,9 +1091,49 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
   return success();
 }
 
+/// Verify that the parameter and return types of the variadic callee type match
+/// the `callOp` argument and result types.
+template <typename OpTy>
+LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
+  std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType();
+  if (!varCalleeType)
+    return success();
+
+  // Verify the variadic callee type is a variadic function type.
+  if (!varCalleeType->isVarArg())
+    return callOp.emitOpError(
+        "expected var_callee_type to be a variadic function type");
+
+  // Verify the variadic callee type has at most as many parameters as the call
+  // has argument operands.
+  if (varCalleeType->getNumParams() > callOp.getArgOperands().size())
+    return callOp.emitOpError("expected var_callee_type to have at most ")
+           << callOp.getArgOperands().size() << " parameters";
+
+  // Verify the variadic callee type matches the call argument types.
+  for (auto [paramType, operand] :
+       llvm::zip(varCalleeType->getParams(), callOp.getArgOperands()))
+    if (paramType != operand.getType())
+      return callOp.emitOpError()
+             << "var_callee_type parameter type mismatch: " << paramType
+             << " != " << operand.getType();
+
+  // Verify the variadic callee type matches the call result type.
+  if (!callOp.getNumResults()) {
+    if (!isa<LLVMVoidType>(varCalleeType->getReturnType()))
+      return callOp.emitOpError("expected var_callee_type to return void");
+  } else {
+    if (callOp.getResult().getType() != varCalleeType->getReturnType())
+      return callOp.emitOpError("var_callee_type return type mismatch: ")
+             << varCalleeType->getReturnType()
+             << " != " << callOp.getResult().getType();
+  }
+  return success();
+}
+
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  if (getNumResults() > 1)
-    return emitOpError("must have 0 or 1 result");
+  if (failed(verifyCallOpVarCalleeType(*this)))
+    return failure();
 
   // Type for the callee, we'll get it differently depending if it is a direct
   // or indirect call.
@@ -1120,8 +1175,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!funcType)
     return emitOpError("callee does not have a functional type: ") << fnType;
 
-  if (funcType.isVarArg() && !getCalleeType())
-    return emitOpError() << "missing callee type attribute for vararg call";
+  if (funcType.isVarArg() && !getVarCalleeType())
+    return emitOpError() << "missing var_callee_type attribute for vararg call";
 
   // Verify that the operand and result types match the callee.
 
@@ -1168,21 +1223,13 @@ void CallOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
   bool isDirect = callee.has_value();
 
-  LLVMFunctionType calleeType;
-  bool isVarArg = false;
-
-  if (std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType()) {
-    calleeType = *optionalCalleeType;
-    isVarArg = calleeType.isVarArg();
-  }
-
   p << ' ';
 
   // Print calling convention.
   if (getCConv() != LLVM::CConv::C)
     p << stringifyCConv(getCConv()) << ' ';
 
-  if(getTailCallKind() != LLVM::TailCallKind::None)
+  if (getTailCallKind() != LLVM::TailCallKind::None)
     p << tailcallkind::stringifyTailCallKind(getTailCallKind()) << ' ';
 
   // Print the direct callee if present as a function attribute, or an indirect
@@ -1195,12 +1242,13 @@ void CallOp::print(OpAsmPrinter &p) {
   auto args = getOperands().drop_front(isDirect ? 0 : 1);
   p << '(' << args << ')';
 
-  if (isVarArg)
-    p << " vararg(" << calleeType << ")";
+  // Print the variadic callee type if the call is variadic.
+  if (std::optional<LLVMFunctionType> varCalleeType = getVarCalleeType())
+    p << " vararg(" << *varCalleeType << ")";
 
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
-                          {getCConvAttrName(), "callee", "callee_type",
-                           getTailCallKindAttrName()});
+                          {getCalleeAttrName(), getTailCallKindAttrName(),
+                           getVarCalleeTypeAttrName(), getCConvAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1270,11 +1318,11 @@ static ParseResult parseOptionalCallFuncPtr(
 
 // <operation> ::= `llvm.call` (cconv)? (tailcallkind)? (function-id | ssa-use)
 //                             `(` ssa-use-list `)`
-//                             ( `vararg(` var-arg-func-type `)` )?
+//                             ( `vararg(` var-callee-type `)` )?
 //                             attribute-dict? `:` (type `,`)? function-type
 ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   SymbolRefAttr funcAttr;
-  TypeAttr calleeType;
+  TypeAttr varCalleeType;
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
 
   // Default to C Calling Convention if no keyword is provided.
@@ -1305,8 +1353,12 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
   if (isVarArg) {
+    StringAttr varCalleeTypeAttrName =
+        CallOp::getVarCalleeTypeAttrName(result.name);
     if (parser.parseLParen().failed() ||
-        parser.parseAttribute(calleeType, "callee_type", result.attributes)
+        parser
+            .parseAttribute(varCalleeType, varCalleeTypeAttrName,
+                            result.attributes)
             .failed() ||
         parser.parseRParen().failed())
       return failure();
@@ -1320,8 +1372,8 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 LLVMFunctionType CallOp::getCalleeFunctionType() {
-  if (getCalleeType())
-    return *getCalleeType();
+  if (std::optional<LLVMFunctionType> varCalleeType = getVarCalleeType())
+    return *varCalleeType;
   return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
@@ -1334,8 +1386,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                      Block *unwind, ValueRange unwindOps) {
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
-        TypeAttr::get(calleeType), SymbolRefAttr::get(func), ops, normalOps,
-        unwindOps, nullptr, nullptr, normal, unwind);
+        getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
+        normalOps, unwindOps, nullptr, nullptr, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1343,8 +1395,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange normalOps, Block *unwind,
                      ValueRange unwindOps) {
   build(builder, state, tys,
-        TypeAttr::get(getLLVMFuncType(builder.getContext(), tys, ops)), callee,
-        ops, normalOps, unwindOps, nullptr, nullptr, normal, unwind);
+        /*var_callee_type=*/nullptr, callee, ops, normalOps, unwindOps, nullptr,
+        nullptr, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1352,8 +1404,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
   build(builder, state, getCallOpResultTypes(calleeType),
-        TypeAttr::get(calleeType), callee, ops, normalOps, unwindOps, nullptr,
-        nullptr, normal, unwind);
+        getCallOpVarCalleeType(calleeType), callee, ops, normalOps, unwindOps,
+        nullptr, nullptr, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -1390,8 +1442,8 @@ MutableOperandRange InvokeOp::getArgOperandsMutable() {
 }
 
 LogicalResult InvokeOp::verify() {
-  if (getNumResults() > 1)
-    return emitOpError("must have 0 or 1 result");
+  if (failed(verifyCallOpVarCalleeType(*this)))
+    return failure();
 
   Block *unwindDest = getUnwindDest();
   if (unwindDest->empty())
@@ -1408,14 +1460,6 @@ LogicalResult InvokeOp::verify() {
 void InvokeOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
   bool isDirect = callee.has_value();
-
-  LLVMFunctionType calleeType;
-  bool isVarArg = false;
-
-  if (std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType()) {
-    calleeType = *optionalCalleeType;
-    isVarArg = calleeType.isVarArg();
-  }
 
   p << ' ';
 
@@ -1435,12 +1479,13 @@ void InvokeOp::print(OpAsmPrinter &p) {
   p << " unwind ";
   p.printSuccessorAndUseList(getUnwindDest(), getUnwindDestOperands());
 
-  if (isVarArg)
-    p << " vararg(" << calleeType << ")";
+  // Print the variadic callee type if the invoke is variadic.
+  if (std::optional<LLVMFunctionType> varCalleeType = getVarCalleeType())
+    p << " vararg(" << *varCalleeType << ")";
 
   p.printOptionalAttrDict((*this)->getAttrs(),
-                          {InvokeOp::getOperandSegmentSizeAttr(), "callee",
-                           "callee_type", InvokeOp::getCConvAttrName()});
+                          {getCalleeAttrName(), getOperandSegmentSizeAttr(),
+                           getCConvAttrName(), getVarCalleeTypeAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1453,12 +1498,12 @@ void InvokeOp::print(OpAsmPrinter &p) {
 //                  `(` ssa-use-list `)`
 //                  `to` bb-id (`[` ssa-use-and-type-list `]`)?
 //                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
-//                  ( `vararg(` var-arg-func-type `)` )?
+//                  ( `vararg(` var-callee-type `)` )?
 //                  attribute-dict? `:` (type `,`)? function-type
 ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
   SymbolRefAttr funcAttr;
-  TypeAttr calleeType;
+  TypeAttr varCalleeType;
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
   Builder &builder = parser.getBuilder();
@@ -1488,8 +1533,12 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
   if (isVarArg) {
+    StringAttr varCalleeTypeAttrName =
+        InvokeOp::getVarCalleeTypeAttrName(result.name);
     if (parser.parseLParen().failed() ||
-        parser.parseAttribute(calleeType, "callee_type", result.attributes)
+        parser
+            .parseAttribute(varCalleeType, varCalleeTypeAttrName,
+                            result.attributes)
             .failed() ||
         parser.parseRParen().failed())
       return failure();
@@ -1515,8 +1564,8 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 LLVMFunctionType InvokeOp::getCalleeFunctionType() {
-  if (getCalleeType())
-    return *getCalleeType();
+  if (std::optional<LLVMFunctionType> varCalleeType = getVarCalleeType())
+    return *varCalleeType;
   return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
@@ -2618,6 +2667,39 @@ OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
 // ConstantOp.
 //===----------------------------------------------------------------------===//
 
+/// Compute the total number of elements in the given type, also taking into
+/// account nested types. Supported types are `VectorType`, `LLVMArrayType` and
+/// `LLVMFixedVectorType`. Everything else is treated as a scalar.
+static int64_t getNumElements(Type t) {
+  if (auto vecType = dyn_cast<VectorType>(t))
+    return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
+    return arrayType.getNumElements() *
+           getNumElements(arrayType.getElementType());
+  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
+    return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  assert(!isa<LLVM::LLVMScalableVectorType>(t) &&
+         "number of elements of a scalable vector type is unknown");
+  return 1;
+}
+
+/// Check if the given type is a scalable vector type or a vector/array type
+/// that contains a nested scalable vector type.
+static bool hasScalableVectorType(Type t) {
+  if (isa<LLVM::LLVMScalableVectorType>(t))
+    return true;
+  if (auto vecType = dyn_cast<VectorType>(t)) {
+    if (vecType.isScalable())
+      return true;
+    return hasScalableVectorType(vecType.getElementType());
+  }
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
+    return hasScalableVectorType(arrayType.getElementType());
+  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
+    return hasScalableVectorType(vecType.getElementType());
+  return false;
+}
+
 LogicalResult LLVM::ConstantOp::verify() {
   if (StringAttr sAttr = llvm::dyn_cast<StringAttr>(getValue())) {
     auto arrayType = llvm::dyn_cast<LLVMArrayType>(getType());
@@ -2629,45 +2711,49 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     return success();
   }
-  if (auto structType = llvm::dyn_cast<LLVMStructType>(getType())) {
-    if (structType.getBody().size() != 2 ||
-        structType.getBody()[0] != structType.getBody()[1]) {
-      return emitError() << "expected struct type with two elements of the "
-                            "same type, the type of a complex constant";
+  if (auto structType = dyn_cast<LLVMStructType>(getType())) {
+    auto arrayAttr = dyn_cast<ArrayAttr>(getValue());
+    if (!arrayAttr) {
+      return emitOpError() << "expected array attribute for a struct constant";
     }
 
-    auto arrayAttr = llvm::dyn_cast<ArrayAttr>(getValue());
-    if (!arrayAttr || arrayAttr.size() != 2) {
-      return emitOpError() << "expected array attribute with two elements, "
-                              "representing a complex constant";
+    ArrayRef<Type> elementTypes = structType.getBody();
+    if (arrayAttr.size() != elementTypes.size()) {
+      return emitOpError() << "expected array attribute of size "
+                           << elementTypes.size();
     }
-    auto re = llvm::dyn_cast<TypedAttr>(arrayAttr[0]);
-    auto im = llvm::dyn_cast<TypedAttr>(arrayAttr[1]);
-    if (!re || !im || re.getType() != im.getType()) {
-      return emitOpError()
-             << "expected array attribute with two elements of the same type";
+    for (auto elementTy : elementTypes) {
+      if (!isa<IntegerType, FloatType, LLVMPPCFP128Type>(elementTy)) {
+        return emitOpError() << "expected struct element types to be floating "
+                                "point type or integer type";
+      }
     }
 
-    Type elementType = structType.getBody()[0];
-    if (!llvm::isa<IntegerType, Float16Type, Float32Type, Float64Type>(
-            elementType)) {
-      return emitError()
-             << "expected struct element types to be floating point type or "
-                "integer type";
+    for (size_t i = 0; i < elementTypes.size(); ++i) {
+      Attribute element = arrayAttr[i];
+      if (!isa<IntegerAttr, FloatAttr>(element)) {
+        return emitOpError()
+               << "expected struct element attribute types to be floating "
+                  "point type or integer type";
+      }
+      auto elementType = cast<TypedAttr>(element).getType();
+      if (elementType != elementTypes[i]) {
+        return emitOpError()
+               << "struct element at index " << i << " is of wrong type";
+      }
     }
+
     return success();
   }
   if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
     return emitOpError() << "does not support target extension type.";
   }
-  if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
-    return emitOpError()
-           << "only supports integer, float, string or elements attributes";
+
+  // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
   if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
-  }
-  if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
+  } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     unsigned floatWidth = APFloat::getSizeInBits(sem);
     if (auto floatTy = dyn_cast<FloatType>(getType())) {
@@ -2680,13 +2766,34 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
-  }
-  if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
-    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
-        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
-        !isa<LLVM::LLVMScalableVectorType>(getType()))
+  } else if (isa<ElementsAttr, ArrayAttr>(getValue())) {
+    if (hasScalableVectorType(getType())) {
+      // The exact number of elements of a scalable vector is unknown, so we
+      // allow only splat attributes.
+      auto splatElementsAttr = dyn_cast<SplatElementsAttr>(getValue());
+      if (!splatElementsAttr)
+        return emitOpError()
+               << "scalable vector type requires a splat attribute";
+      return success();
+    }
+    if (!isa<VectorType, LLVM::LLVMArrayType, LLVM::LLVMFixedVectorType>(
+            getType()))
       return emitOpError() << "expected vector or array type";
+    // The number of elements of the attribute and the type must match.
+    int64_t attrNumElements;
+    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue()))
+      attrNumElements = elementsAttr.getNumElements();
+    else
+      attrNumElements = cast<ArrayAttr>(getValue()).size();
+    if (getNumElements(getType()) != attrNumElements)
+      return emitOpError()
+             << "type and attribute have a different number of elements: "
+             << getNumElements(getType()) << " vs. " << attrNumElements;
+  } else {
+    return emitOpError()
+           << "only supports integer, float, string or elements attributes";
   }
+
   return success();
 }
 
@@ -3132,7 +3239,6 @@ void LLVMDialect::initialize() {
   // clang-format off
   addTypes<LLVMVoidType,
            LLVMPPCFP128Type,
-           LLVMX86MMXType,
            LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType,
@@ -3153,7 +3259,7 @@ void LLVMDialect::initialize() {
   // clang-format off
   addInterfaces<LLVMOpAsmDialectInterface>();
   // clang-format on
-  detail::addLLVMInlinerInterface(this);
+  declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
 }
 
 #define GET_OP_CLASSES

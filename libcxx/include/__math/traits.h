@@ -55,6 +55,18 @@ _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfin
   return true;
 }
 
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(float __x) _NOEXCEPT {
+  return __builtin_isfinite(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(double __x) _NOEXCEPT {
+  return __builtin_isfinite(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(long double __x) _NOEXCEPT {
+  return __builtin_isfinite(__x);
+}
+
 // isinf
 
 template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && numeric_limits<_A1>::has_infinity, int> = 0>
@@ -67,20 +79,22 @@ _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf
   return false;
 }
 
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(float __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
-isinf(double __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+_LIBCPP_PREFERRED_OVERLOAD
+#endif
+    bool
+    isinf(double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
-#endif
 
 // isnan
 
@@ -94,20 +108,22 @@ _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan
   return false;
 }
 
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(float __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
-isnan(double __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+_LIBCPP_PREFERRED_OVERLOAD
+#endif
+    bool
+    isnan(double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
-#endif
 
 // isnormal
 

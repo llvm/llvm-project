@@ -446,6 +446,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           L->sawDiagnostic(D, Diag);
       });
 
+  // Adjust header search options to load the built module files recorded
+  // in RequiredModules.
+  if (Preamble && Preamble->RequiredModules)
+    Preamble->RequiredModules->adjustHeaderSearchOptions(
+        CI->getHeaderSearchOpts());
+
   std::optional<PreamblePatch> Patch;
   // We might use an ignoring diagnostic consumer if they are going to be
   // dropped later on to not pay for extra latency by processing them.
@@ -459,6 +465,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       std::move(CI), PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
       *DiagConsumer);
+
   if (!Clang) {
     // The last diagnostic contains information about the reason of this
     // failure.
@@ -505,8 +512,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   auto Action = std::make_unique<ClangdFrontendAction>();
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
-    log("BeginSourceFile() failed when building AST for {0}",
-        MainInput.getFile());
+    elog("BeginSourceFile() failed when building AST for {0}",
+         MainInput.getFile());
     return std::nullopt;
   }
   // If we saw an include guard in the preamble section of the main file,

@@ -63,7 +63,7 @@ std::optional<Expr<SubscriptInteger>> DynamicTypeWithLength::LEN() const {
 }
 
 static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
-    const std::optional<parser::TypeSpec> &spec) {
+    const std::optional<parser::TypeSpec> &spec, FoldingContext &context) {
   if (spec) {
     if (const semantics::DeclTypeSpec *typeSpec{spec->declTypeSpec}) {
       // Name resolution sets TypeSpec::declTypeSpec only when it's valid
@@ -80,7 +80,13 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::ParamValue &len{cts.length()};
             // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
             // type guards, but not in array constructors.
-            return DynamicTypeWithLength{DynamicType{kind, len}};
+            DynamicTypeWithLength type{DynamicType{kind, len}};
+            if (auto lenExpr{type.LEN()}) {
+              type.length = Fold(context,
+                  AsExpr(Extremum<SubscriptInteger>{Ordering::Greater,
+                      Expr<SubscriptInteger>{0}, std::move(*lenExpr)}));
+            }
+            return type;
           } else {
             return DynamicTypeWithLength{DynamicType{category, kind}};
           }
@@ -523,7 +529,7 @@ static std::optional<parser::Substring> FixMisparsedSubstringDataRef(
                   parser::GetLastName(arrElement.base).symbol}) {
             const Symbol &ultimate{symbol->GetUltimate()};
             if (const semantics::DeclTypeSpec *type{ultimate.GetType()}) {
-              if (!ultimate.IsObjectArray() &&
+              if (ultimate.Rank() == 0 &&
                   type->category() == semantics::DeclTypeSpec::Character) {
                 // The ambiguous S(j:k) was parsed as an array section
                 // reference, but it's now clear that it's a substring.
@@ -1584,7 +1590,8 @@ private:
   std::optional<Expr<SubscriptInteger>> LengthIfGood() const {
     if (type_) {
       auto len{type_->LEN()};
-      if (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len)) {
+      if (explicitType_ ||
+          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
         return len;
       }
     }
@@ -1939,7 +1946,8 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
-  ArrayConstructorContext acContext{*this, AnalyzeTypeSpec(acSpec.type)};
+  ArrayConstructorContext acContext{
+      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
   for (const parser::AcValue &value : acSpec.values) {
     acContext.Add(value);
   }
@@ -2007,6 +2015,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   // initialize X or A by name, but not both.
   auto components{semantics::OrderedComponentIterator{spec}};
   auto nextAnonymous{components.begin()};
+  auto afterLastParentComponentIter{components.end()};
+  if (parentComponent) {
+    for (auto iter{components.begin()}; iter != components.end(); ++iter) {
+      if (iter->test(Symbol::Flag::ParentComp)) {
+        afterLastParentComponentIter = iter;
+        ++afterLastParentComponentIter;
+      }
+    }
+  }
 
   std::set<parser::CharBlock> unavailable;
   bool anyKeyword{false};
@@ -2052,20 +2069,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       // Here's a regrettably common extension of the standard: anonymous
       // initialization of parent components, e.g., T(PT(1)) rather than
-      // T(1) or T(PT=PT(1)).
-      if (nextAnonymous == components.begin() && parentComponent &&
-          valueType == DynamicType::From(*parentComponent) &&
+      // T(1) or T(PT=PT(1)).  There may be multiple parent components.
+      if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
-        auto iter{
-            std::find(components.begin(), components.end(), *parentComponent)};
-        if (iter != components.end()) {
-          symbol = parentComponent;
-          nextAnonymous = ++iter;
-          if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
-            Say(source,
-                "Whole parent component '%s' in structure "
-                "constructor should not be anonymous"_port_en_US,
-                symbol->name());
+        for (auto parent{components.begin()};
+             parent != afterLastParentComponentIter; ++parent) {
+          if (auto parentType{DynamicType::From(*parent)}; parentType &&
+              parent->test(Symbol::Flag::ParentComp) &&
+              valueType->IsEquivalentTo(*parentType)) {
+            symbol = &*parent;
+            nextAnonymous = ++parent;
+            if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
+              Say(source,
+                  "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
+                  symbol->name());
+            }
+            break;
           }
         }
       }
@@ -3018,8 +3037,7 @@ const Symbol *AssumedTypeDummy<parser::PointerObject>(
 bool ExpressionAnalyzer::CheckIsValidForwardReference(
     const semantics::DerivedTypeSpec &dtSpec) {
   if (dtSpec.IsForwardReferenced()) {
-    Say("Cannot construct value for derived type '%s' "
-        "before it is defined"_err_en_US,
+    Say("Cannot construct value for derived type '%s' before it is defined"_err_en_US,
         dtSpec.name());
     return false;
   }
@@ -3579,8 +3597,12 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
         analyzer.IsIntrinsicRelational(opr, *leftType, *rightType)) {
       analyzer.CheckForNullPointer("as a relational operand");
       analyzer.CheckForAssumedRank("as a relational operand");
-      return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
-          analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
+      if (auto cmp{Relate(context.GetContextualMessages(), opr,
+              analyzer.MoveExpr(0), analyzer.MoveExpr(1))}) {
+        return AsMaybeExpr(ConvertToKind<TypeCategory::Logical>(
+            context.GetDefaultKind(TypeCategory::Logical),
+            AsExpr(std::move(*cmp))));
+      }
     } else {
       return analyzer.TryDefinedOp(opr,
           leftType && leftType->category() == TypeCategory::Logical &&
@@ -4525,6 +4547,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
         !OkLogicalIntegerAssignment(lhsType->category(), rhsType->category())) {
       SayNoMatch("ASSIGNMENT(=)", true);
     }
+  } else if (!fatalErrors_) {
+    CheckAssignmentConformance();
   }
   return std::nullopt;
 }

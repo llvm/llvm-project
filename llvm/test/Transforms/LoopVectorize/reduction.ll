@@ -49,7 +49,7 @@ define i32 @reduction_sum(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP17]] = add i32 [[TMP16]], [[TMP13]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[DOT_CRIT_EDGE_LOOPEXIT]], label [[DOTLR_PH]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], [[DOTLR_PH]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
@@ -130,7 +130,7 @@ define i32 @reduction_prod(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP17]] = mul i32 [[TMP16]], [[TMP13]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[DOT_CRIT_EDGE_LOOPEXIT]], label [[DOTLR_PH]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], [[DOTLR_PH]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
@@ -211,7 +211,7 @@ define i32 @reduction_mix(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP17]] = add i32 [[TMP16]], [[TMP14]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[DOT_CRIT_EDGE_LOOPEXIT]], label [[DOTLR_PH]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], [[DOTLR_PH]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
@@ -292,7 +292,7 @@ define i32 @reduction_mul(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP17]] = mul i32 [[TMP16]], [[SUM_02]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[DOT_CRIT_EDGE_LOOPEXIT]], label [[DOTLR_PH]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], [[DOTLR_PH]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
@@ -369,7 +369,7 @@ define i32 @start_at_non_zero(ptr %in, ptr %coeff, ptr %out, i32 %n) {
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[MUL]], [[SUM_09]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
@@ -445,7 +445,7 @@ define i32 @reduction_and(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[AND]] = and i32 [[ADD]], [[RESULT_08]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[AND_LCSSA:%.*]] = phi i32 [ [[AND]], [[FOR_BODY]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
@@ -521,7 +521,7 @@ define i32 @reduction_or(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[OR]] = or i32 [[ADD]], [[RESULT_08]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], [[FOR_BODY]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
@@ -597,7 +597,7 @@ define i32 @reduction_xor(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[XOR]] = xor i32 [[ADD]], [[RESULT_08]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[XOR_LCSSA:%.*]] = phi i32 [ [[XOR]], [[FOR_BODY]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
@@ -646,7 +646,7 @@ define i32 @reduction_sub_rhs(i32 %n, ptr %A) {
 ; CHECK-NEXT:    [[SUB]] = sub nsw i32 [[TMP0]], [[X_05]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -714,7 +714,7 @@ define i32 @reduction_sub_lhs(i32 %n, ptr %A) {
 ; CHECK-NEXT:    [[SUB]] = sub nsw i32 [[X_05]], [[TMP5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[SUB_LCSSA:%.*]] = phi i32 [ [[SUB]], [[FOR_BODY]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
@@ -1083,7 +1083,7 @@ define i32 @reduction_sum_multiuse(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP17]] = add i32 [[TMP16]], [[TMP13]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    [[SUM_COPY:%.*]] = phi i32 [ [[TMP17]], [[DOTLR_PH]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]

@@ -29,11 +29,13 @@
 #include <__chrono/year_month.h>
 #include <__chrono/year_month_day.h>
 #include <__chrono/year_month_weekday.h>
+#include <__chrono/zoned_time.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_error.h>
 #include <__memory/addressof.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_specialization.h>
 #include <cstdint>
 #include <ctime>
 #include <limits>
@@ -178,7 +180,13 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     // Has no time information.
   } else if constexpr (same_as<_ChronoT, chrono::local_info>) {
     // Has no time information.
-#  endif
+#    if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                          \
+        !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+  } else if constexpr (__is_specialization_v<_ChronoT, chrono::zoned_time>) {
+    return std::__convert_to_tm<_Tm>(
+        chrono::sys_time<typename _ChronoT::duration>{__value.get_local_time().time_since_epoch()});
+#    endif
+#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   } else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
 

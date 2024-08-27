@@ -70,7 +70,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
   }
   if (Subtarget->hasReferenceTypes()) {
@@ -146,7 +146,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
@@ -1123,10 +1123,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
-      Chain = DAG.getMemcpy(
-          Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getNonZeroByValAlign(),
-          /*isVolatile*/ false, /*AlwaysInline=*/false,
-          /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode,
+                            Out.Flags.getNonZeroByValAlign(),
+                            /*isVolatile*/ false, /*AlwaysInline=*/false,
+                            /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                            MachinePointerInfo());
       OutVal = FINode;
     }
     // Count the number of fixed args *after* legalization.
@@ -1188,8 +1189,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+    MaybeAlign StackAlign = Layout.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
@@ -2274,8 +2276,15 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat (which might be selected as a load splat)
-    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    size_t DestLaneSize = VecT.getVectorElementType().getFixedSizeInBits();
+    if (NumSplatLanes == 1 && Op->getOperand(0) == SplatValue &&
+        (DestLaneSize == 32 || DestLaneSize == 64)) {
+      // Could be selected to load_zero.
+      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecT, SplatValue);
+    } else {
+      // Use a splat (which might be selected as a load splat)
+      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    }
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };

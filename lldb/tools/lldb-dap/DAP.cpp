@@ -36,6 +36,7 @@ DAP::DAP()
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
+      enable_display_extended_backtrace(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -58,10 +59,17 @@ DAP::DAP()
 
 DAP::~DAP() = default;
 
+/// Return string with first character capitalized.
+static std::string capitalize(llvm::StringRef str) {
+  if (str.empty())
+    return "";
+  return ((llvm::Twine)llvm::toUpper(str[0]) + str.drop_front()).str();
+}
+
 void DAP::PopulateExceptionBreakpoints() {
   llvm::call_once(init_exception_breakpoints_flag, [this]() {
-    exception_breakpoints = std::vector<ExceptionBreakpoint> {};
-    
+    exception_breakpoints = std::vector<ExceptionBreakpoint>{};
+
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
       exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
                                           lldb::eLanguageTypeC_plus_plus);
@@ -79,6 +87,49 @@ void DAP::PopulateExceptionBreakpoints() {
                                           lldb::eLanguageTypeSwift);
       exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
                                           lldb::eLanguageTypeSwift);
+    }
+    // Besides handling the hardcoded list of languages from above, we try to
+    // find any other languages that support exception breakpoints using the
+    // SB API.
+    for (int raw_lang = lldb::eLanguageTypeUnknown;
+         raw_lang < lldb::eNumLanguageTypes; ++raw_lang) {
+      lldb::LanguageType lang = static_cast<lldb::LanguageType>(raw_lang);
+
+      // We first discard any languages already handled above.
+      if (lldb::SBLanguageRuntime::LanguageIsCFamily(lang) ||
+          lang == lldb::eLanguageTypeSwift)
+        continue;
+
+      if (!lldb::SBDebugger::SupportsLanguage(lang))
+        continue;
+
+      const char *name = lldb::SBLanguageRuntime::GetNameForLanguageType(lang);
+      if (!name)
+        continue;
+      std::string raw_lang_name = name;
+      std::string capitalized_lang_name = capitalize(name);
+
+      if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnThrow(lang)) {
+        const char *raw_throw_keyword =
+            lldb::SBLanguageRuntime::GetThrowKeywordForLanguage(lang);
+        std::string throw_keyword =
+            raw_throw_keyword ? raw_throw_keyword : "throw";
+
+        exception_breakpoints->emplace_back(
+            raw_lang_name + "_" + throw_keyword,
+            capitalized_lang_name + " " + capitalize(throw_keyword), lang);
+      }
+
+      if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(lang)) {
+        const char *raw_catch_keyword =
+            lldb::SBLanguageRuntime::GetCatchKeywordForLanguage(lang);
+        std::string catch_keyword =
+            raw_catch_keyword ? raw_catch_keyword : "catch";
+
+        exception_breakpoints->emplace_back(
+            raw_lang_name + "_" + catch_keyword,
+            capitalized_lang_name + " " + capitalize(catch_keyword), lang);
+      }
     }
     assert(!exception_breakpoints->empty() && "should not be empty");
   });
@@ -244,8 +295,6 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
   if (output.empty())
     return;
 
-  llvm::json::Object event(CreateEventObject("output"));
-  llvm::json::Object body;
   const char *category = nullptr;
   switch (o) {
   case OutputType::Console:
@@ -261,10 +310,22 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
     category = "telemetry";
     break;
   }
-  body.try_emplace("category", category);
-  EmplaceSafeString(body, "output", output.str());
-  event.try_emplace("body", std::move(body));
-  SendJSON(llvm::json::Value(std::move(event)));
+
+  // Send each line of output as an individual event, including the newline if
+  // present.
+  ::size_t idx = 0;
+  do {
+    ::size_t end = output.find('\n', idx);
+    if (end == llvm::StringRef::npos)
+      end = output.size() - 1;
+    llvm::json::Object event(CreateEventObject("output"));
+    llvm::json::Object body;
+    body.try_emplace("category", category);
+    EmplaceSafeString(body, "output", output.slice(idx, end + 1).str());
+    event.try_emplace("body", std::move(body));
+    SendJSON(llvm::json::Value(std::move(event)));
+    idx = end + 1;
+  } while (idx < output.size());
 }
 
 // interface ProgressStartEvent extends Event {
@@ -511,6 +572,12 @@ DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
 llvm::Error DAP::RunInitCommands() {
   if (!RunLLDBCommands("Running initCommands:", init_commands))
     return createRunLLDBCommandsErrorMessage("initCommands");
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::RunPreInitCommands() {
+  if (!RunLLDBCommands("Running preInitCommands:", pre_init_commands))
+    return createRunLLDBCommandsErrorMessage("preInitCommands");
   return llvm::Error::success();
 }
 
@@ -927,6 +994,34 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
             format, error.GetCString())
             .str());
   }
+}
+
+InstructionBreakpoint *
+DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
+  for (auto &bp : instruction_breakpoints) {
+    if (bp.second.id == bp_id)
+      return &bp.second;
+  }
+  return nullptr;
+}
+
+InstructionBreakpoint *
+DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
+  const auto num = thread.GetStopReasonDataCount();
+  InstructionBreakpoint *inst_bp = nullptr;
+  for (size_t i = 0; i < num; i += 2) {
+    // thread.GetStopReasonDataAtIndex(i) will return the bp ID and
+    // thread.GetStopReasonDataAtIndex(i+1) will return the location
+    // within that breakpoint. We only care about the bp ID so we can
+    // see if this is an instruction breakpoint that is getting hit.
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+    inst_bp = GetInstructionBreakpoint(bp_id);
+    // If any breakpoint is not an instruction breakpoint, then stop and
+    // report this as a normal breakpoint
+    if (inst_bp == nullptr)
+      return nullptr;
+  }
+  return inst_bp;
 }
 
 } // namespace lldb_dap

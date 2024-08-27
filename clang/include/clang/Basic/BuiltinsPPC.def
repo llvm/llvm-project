@@ -515,6 +515,16 @@ TARGET_BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "", "power9-vector")
 
+// P7 BCD builtins.
+TARGET_BUILTIN(__builtin_cdtbcd, "UiUi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_cbcdtd, "UiUi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_addg6s, "UiUiUi", "", "isa-v206-instructions")
+
+// P7 XL Compat BCD builtins.
+TARGET_BUILTIN(__builtin_ppc_cdtbcd, "LLiLLi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_ppc_cbcdtd, "LLiLLi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_ppc_addg6s, "LLiLLiLLi", "", "isa-v206-instructions")
+
 // P8 BCD builtins.
 TARGET_BUILTIN(__builtin_ppc_bcdadd, "V16UcV16UcV16UcIi", "",
                "isa-v207-instructions")

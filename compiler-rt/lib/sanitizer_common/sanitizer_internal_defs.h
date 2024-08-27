@@ -457,6 +457,9 @@ using namespace __sanitizer;
 namespace __msan {
 using namespace __sanitizer;
 }
+namespace __nsan {
+using namespace __sanitizer;
+}
 namespace __hwasan {
 using namespace __sanitizer;
 }

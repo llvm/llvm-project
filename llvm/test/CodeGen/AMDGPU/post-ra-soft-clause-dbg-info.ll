@@ -8,16 +8,16 @@
 define amdgpu_kernel void @dbg_clause(ptr addrspace(1) %out, ptr addrspace(1) %aptr) !dbg !4 {
 ; GCN-LABEL: dbg_clause:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GCN-NEXT:    ;DEBUG_VALUE: foo:a <- $vgpr1
-; GCN-NEXT:    global_load_dword v2, v0, s[2:3] offset:32
+; GCN-NEXT:    global_load_dword v2, v0, s[6:7] offset:32
 ; GCN-NEXT:    ;DEBUG_VALUE: foo:b <- $vgpr2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_f32_e32 v1, v1, v2
-; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GCN-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid

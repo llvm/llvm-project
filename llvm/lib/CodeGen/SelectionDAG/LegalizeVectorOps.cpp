@@ -402,6 +402,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSIN:
   case ISD::FCOS:
   case ISD::FTAN:
+  case ISD::FASIN:
+  case ISD::FACOS:
+  case ISD::FATAN:
+  case ISD::FSINH:
+  case ISD::FCOSH:
+  case ISD::FTANH:
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:
@@ -449,6 +455,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
+  case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
@@ -466,6 +473,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
                                               Node->getValueType(0), Scale);
     break;
   }
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::LRINT:
   case ISD::LLRINT:
   case ISD::SINT_TO_FP:
@@ -1117,6 +1126,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
+  case ISD::VECTOR_COMPRESS:
+    Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
+    return;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
