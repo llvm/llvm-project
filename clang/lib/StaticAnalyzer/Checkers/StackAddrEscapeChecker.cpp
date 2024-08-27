@@ -350,6 +350,18 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
   return buf;
 }
 
+/// Check whether \p Region refers to a freshly minted symbol after an opaque
+/// function call.
+bool isInvalidatedSymbolRegion(const MemRegion *Region) {
+  const auto *SymReg = Region->getAs<SymbolicRegion>();
+  if (!SymReg)
+    return false;
+  SymbolRef Symbol = SymReg->getSymbol();
+
+  const auto *DerS = dyn_cast<SymbolDerived>(Symbol);
+  return DerS && isa_and_nonnull<SymbolConjured>(DerS->getParentSymbol());
+}
+
 void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
                                               CheckerContext &Ctx) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
@@ -419,14 +431,9 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     // function call. Even if the initial values of such variables were bound to
     // an address of a local variable, we cannot claim anything now, at the
     // function exit, so skip them to avoid false positives.
-    void recordInvalidatedRegions(const MemRegion *Region) {
-      if (const auto *SymReg = Region->getAs<SymbolicRegion>()) {
-        SymbolRef Symbol = SymReg->getSymbol();
-        if (const auto *DerS = dyn_cast<SymbolDerived>(Symbol);
-            DerS && isa_and_nonnull<SymbolConjured>(DerS->getParentSymbol())) {
-          ExcludedRegions.insert(Symbol->getOriginRegion()->getBaseRegion());
-        }
-      }
+    void recordInInvalidatedRegions(const MemRegion *Region) {
+      if (isInvalidatedSymbolRegion(Region))
+        ExcludedRegions.insert(getOriginBaseRegion(Region));
     }
 
   public:
@@ -442,7 +449,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {
-      recordInvalidatedRegions(Region);
+      recordInInvalidatedRegions(Region);
       const MemRegion *VR = Val.getAsRegion();
       if (!VR)
         return true;
