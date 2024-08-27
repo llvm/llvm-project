@@ -35,9 +35,8 @@ define void @test2(ptr %in, ptr %out) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i32> [[TMP0]] to <8 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <16 x i32> <i32 poison, i32 poison, i32 2, i32 3, i32 0, i32 1, i32 poison, i32 poison, i32 4, i32 5, i32 poison, i32 poison, i32 poison, i32 poison, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i64> [[TMP2]], <16 x i64> poison, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 8, i32 9, i32 14, i32 15>
-; CHECK-NEXT:    store <8 x i64> [[TMP3]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    store <8 x i64> [[TMP2]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -64,9 +63,8 @@ entry:
 define void @test3(<16 x i32> %0, ptr %out) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[TMP1]], <64 x i32> poison, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 24, i32 25, i32 26, i32 27, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51>
-; CHECK-NEXT:    store <16 x i32> [[TMP2]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    store <16 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

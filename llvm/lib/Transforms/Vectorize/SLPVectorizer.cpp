@@ -13967,9 +13967,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
-        // The current shufflevector usage always duplicate the source.
-        V = Builder.CreateShuffleVector(Src,
-                                        calculateShufflevectorMask(E->Scalars));
+        assert(isa<ShuffleVectorInst>(Src) &&
+               "Not supported shufflevector usage.");
+        ShuffleVectorInst *SVSrc = cast<ShuffleVectorInst>(Src);
+        assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
+               "Not supported shufflevector usage.");
+        SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
+        SmallVector<int> NewMask(ThisMask.size());
+        transform(ThisMask, NewMask.begin(),
+                  [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
+        V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
         propagateIRFlags(V, E->Scalars, VL0);
       } else {
         assert(E->isAltShuffle() &&
