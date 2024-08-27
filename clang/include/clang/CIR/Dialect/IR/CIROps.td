@@ -38,8 +38,48 @@ include "mlir/IR/CommonAttrConstraints.td"
 // CIR Ops
 //===----------------------------------------------------------------------===//
 
+// LLVMLoweringInfo is used by cir-tablegen to generate LLVM lowering logic
+// automatically for CIR operations. The `llvmOp` field gives the name of the
+// LLVM IR dialect operation that the CIR operation will be lowered to. The
+// input arguments of the CIR operation will be passed in the same order to the
+// lowered LLVM IR operation.
+//
+// Example:
+//
+// For the following CIR operation definition:
+//
+//   def FooOp : CIR_Op<"foo"> {
+//     // ...
+//     let arguments = (ins CIR_AnyType:$arg1, CIR_AnyType:$arg2);
+//     let llvmOp = "BarOp";
+//   }
+//
+// cir-tablegen will generate LLVM lowering code for the FooOp similar to the
+// following:
+//
+//   class CIRFooOpLowering
+//       : public mlir::OpConversionPattern<mlir::cir::FooOp> {
+//   public:
+//     using OpConversionPattern<mlir::cir::FooOp>::OpConversionPattern;
+//
+//     mlir::LogicalResult matchAndRewrite(
+//         mlir::cir::FooOp op,
+//         OpAdaptor adaptor,
+//         mlir::ConversionPatternRewriter &rewriter) const override {
+//       rewriter.replaceOpWithNewOp<mlir::LLVM::BarOp>(
+//         op, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+//       return mlir::success();
+//     }
+//   }
+//
+// If you want fully customized LLVM IR lowering logic, simply exclude the
+// `llvmOp` field from your CIR operation definition.
+class LLVMLoweringInfo {
+  string llvmOp = "";
+}
+
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
-    Op<CIR_Dialect, mnemonic, traits>;
+    Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
 // CIR Op Traits
@@ -2708,6 +2748,8 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
   }];
 
   let hasVerifier = 0;
+
+  let llvmOp = "InsertElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2732,6 +2774,8 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   }];
 
   let hasVerifier = 0;
+
+  let llvmOp = "ExtractElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3762,30 +3806,32 @@ def LLroundOp : UnaryFPToIntBuiltinOp<"llround">;
 def LrintOp : UnaryFPToIntBuiltinOp<"lrint">;
 def LLrintOp : UnaryFPToIntBuiltinOp<"llrint">;
 
-class UnaryFPToFPBuiltinOp<string mnemonic>
+class UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins CIR_AnyFloat:$src);
   let results = (outs CIR_AnyFloat:$result);
   let summary = "libc builtin equivalent ignoring "
                 "floating point exceptions and errno";
   let assemblyFormat = "$src `:` type($src) attr-dict";
+
+  let llvmOp = llvmOpName;
 }
 
-def CeilOp : UnaryFPToFPBuiltinOp<"ceil">;
-def CosOp : UnaryFPToFPBuiltinOp<"cos">;
-def ExpOp : UnaryFPToFPBuiltinOp<"exp">;
-def Exp2Op : UnaryFPToFPBuiltinOp<"exp2">;
-def FloorOp : UnaryFPToFPBuiltinOp<"floor">;
-def FAbsOp : UnaryFPToFPBuiltinOp<"fabs">;
-def LogOp : UnaryFPToFPBuiltinOp<"log">;
-def Log10Op : UnaryFPToFPBuiltinOp<"log10">;
-def Log2Op : UnaryFPToFPBuiltinOp<"log2">;
-def NearbyintOp : UnaryFPToFPBuiltinOp<"nearbyint">;
-def RintOp : UnaryFPToFPBuiltinOp<"rint">;
-def RoundOp : UnaryFPToFPBuiltinOp<"round">;
-def SinOp : UnaryFPToFPBuiltinOp<"sin">;
-def SqrtOp : UnaryFPToFPBuiltinOp<"sqrt">;
-def TruncOp : UnaryFPToFPBuiltinOp<"trunc">;
+def CeilOp : UnaryFPToFPBuiltinOp<"ceil", "FCeilOp">;
+def CosOp : UnaryFPToFPBuiltinOp<"cos", "CosOp">;
+def ExpOp : UnaryFPToFPBuiltinOp<"exp", "ExpOp">;
+def Exp2Op : UnaryFPToFPBuiltinOp<"exp2", "Exp2Op">;
+def FloorOp : UnaryFPToFPBuiltinOp<"floor", "FFloorOp">;
+def FAbsOp : UnaryFPToFPBuiltinOp<"fabs", "FAbsOp">;
+def LogOp : UnaryFPToFPBuiltinOp<"log", "LogOp">;
+def Log10Op : UnaryFPToFPBuiltinOp<"log10", "Log10Op">;
+def Log2Op : UnaryFPToFPBuiltinOp<"log2", "Log2Op">;
+def NearbyintOp : UnaryFPToFPBuiltinOp<"nearbyint", "NearbyintOp">;
+def RintOp : UnaryFPToFPBuiltinOp<"rint", "RintOp">;
+def RoundOp : UnaryFPToFPBuiltinOp<"round", "RoundOp">;
+def SinOp : UnaryFPToFPBuiltinOp<"sin", "SinOp">;
+def SqrtOp : UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp">;
+def TruncOp : UnaryFPToFPBuiltinOp<"trunc", "FTruncOp">;
 
 class BinaryFPToFPBuiltinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
@@ -3987,6 +4033,8 @@ def StackRestoreOp : CIR_Op<"stack_restore"> {
 
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+
+  let llvmOp = "StackRestoreOp";
 }
 
 def AsmATT : I32EnumAttrCase<"x86_att", 0>;
