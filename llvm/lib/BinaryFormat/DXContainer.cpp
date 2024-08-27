@@ -119,4 +119,3 @@ static const EnumEntry<PSV::ResourceFlag> ResourceFlagNames[] = {
 ArrayRef<EnumEntry<PSV::ResourceFlag>> PSV::getResourceFlags() {
   return ArrayRef(ResourceFlagNames);
 }
-
