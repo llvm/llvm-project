@@ -7082,6 +7082,14 @@ private:
 /// implicit conversion sequences to initialize the temporary, and on expiration
 /// of the temporary an inverse conversion sequence is applied as a write-back
 /// conversion to the source l-value.
+///
+///This AST node has three sub-expressions:
+///  - An OpaqueValueExpr with a source that is the argument lvalue expression.
+///  - An OpaqueValueExpr with a source that is a an implicit conversion
+///    sequence from the source lvalue to the argument type.
+///  - A BinaryOperatorExpr that assigns the first sub-expression with the
+///    value from an implict conversion sequence from the second expression to
+///    the argument expression's type.
 class HLSLOutArgExpr : public Expr {
   friend class ASTStmtReader;
 
@@ -7138,6 +7146,7 @@ public:
     return cast<OpaqueValueExpr>(SubExprs[CastedTemporary]);
   }
 
+  /// returns true if the parameter is inout and false if the parameter is out.
   bool isInOut() const { return IsInOut; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {

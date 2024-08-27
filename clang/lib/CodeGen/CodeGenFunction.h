@@ -4294,8 +4294,8 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
-  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args, QualType Ty);
-  LValue BindHLSLOutArgExpr(const HLSLOutArgExpr *E, Address OutTemp);
+  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
+                          QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 

@@ -5434,13 +5434,6 @@ LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
   return getOrCreateOpaqueLValueMapping(e);
 }
 
-LValue CodeGenFunction::BindHLSLOutArgExpr(const HLSLOutArgExpr *E,
-                                           Address OutTemp) {
-  LValue Result = MakeAddrLValue(OutTemp, E->getType());
-  OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), Result);
-  return Result;
-}
-
 void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
                                          CallArgList &Args, QualType Ty) {
 
@@ -5448,26 +5441,27 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
   LValue BaseLV = EmitLValue(E->getArgLValue());
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
 
-  LValue TempLV;
+  QualType ExprTy = E->getType();
+  Address OutTemp = CreateIRTemp(ExprTy);
+  LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
   if (E->isInOut()) {
-    RValue InitVal = EmitAnyExprToTemp(E->getCastedTemporary()->getSourceExpr());
-    assert(!InitVal.isComplex() &&
+    Expr *TempExpr = E->getCastedTemporary()->getSourceExpr();
+    auto ExprEvalKind = getEvaluationKind(ExprTy);
+    assert(ExprEvalKind != TEK_Complex &&
            "HLSL does not support complex values in output expressions.");
-    if (InitVal.isScalar()) {
-      Address OutTemp = CreateIRTemp(E->getType());
-      llvm::Value *V = InitVal.getScalarVal();
-      if (V->getType()->getScalarType()->isIntegerTy(1))
-        V = Builder.CreateZExt(V, ConvertTypeForMem(E->getType()), "frombool");
-      (void)Builder.CreateStore(V, OutTemp);
-      TempLV = MakeAddrLValue(OutTemp, E->getType());
+    if (ExprEvalKind == TEK_Aggregate) {
+      EmitAggExpr(TempExpr,
+                  AggValueSlot::forLValue(TempLV, AggValueSlot::IsDestructed,
+                                          AggValueSlot::DoesNotNeedGCBarriers,
+                                          AggValueSlot::IsNotAliased,
+                                          AggValueSlot::MayOverlap));
     } else {
-      Address OutTemp = InitVal.getAggregateAddress();
-      TempLV = MakeAddrLValue(OutTemp, E->getType());
+      if (TempLV.isSimple())
+        EmitScalarInit(TempExpr, /*D=*/nullptr, TempLV, /*Captured=*/false);
+      else
+        EmitStoreThroughLValue(RValue::get(EmitScalarExpr(TempExpr)), TempLV);
     }
-  } else {
-    Address OutTemp = CreateIRTemp(E->getType());
-    TempLV = MakeAddrLValue(OutTemp, E->getType());
   }
 
   OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
