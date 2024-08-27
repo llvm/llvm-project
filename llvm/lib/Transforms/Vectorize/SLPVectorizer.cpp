@@ -272,8 +272,7 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
 /// A group has the following features
 /// 1. All of value in a group are shufflevector.
 /// 2. The mask of all shufflevector is isExtractSubvectorMask.
-/// 3. The mask of all shufflevector uses all of the elements of the source (and
-/// the elements are used in order).
+/// 3. The mask of all shufflevector uses all of the elements of the source.
 /// e.g., it is 1 group (%0)
 /// %1 = shufflevector <16 x i8> %0, <16 x i8> poison,
 ///    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -309,7 +308,7 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
     auto *SV = cast<ShuffleVectorInst>(VL[I]);
     Value *Src = SV->getOperand(0);
     ArrayRef<Value *> Group = VL.slice(I, GroupSize);
-    SmallVector<int> ExtractionIndex(SVNumElements);
+    SmallBitVector UsedIndex(SVNumElements);
     if (!all_of(Group, [&](Value *V) {
           auto *SV = cast<ShuffleVectorInst>(V);
           // From the same source.
@@ -318,12 +317,11 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
           int Index;
           if (!SV->isExtractSubvectorMask(Index))
             return false;
-          for (int I : seq<int>(Index, Index + SV->getShuffleMask().size()))
-            ExtractionIndex.push_back(I);
+          UsedIndex.set(Index, Index + SV->getShuffleMask().size());
           return true;
         }))
       return 0;
-    if (!is_sorted(ExtractionIndex))
+    if (!UsedIndex.all())
       return 0;
     ++NumGroup;
   }
@@ -10195,11 +10193,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return VecCost;
     };
     if (SLPReVec && !E->isAltShuffle())
-      return GetCostDiff(GetScalarCost, [](InstructionCost) {
-        // shufflevector will be eliminated by instcombine because the
-        // shufflevector masks are used in order (guaranteed by
-        // getShufflevectorNumGroups). The vector cost is 0.
-        return TTI::TCC_Free;
+      return GetCostDiff(GetScalarCost, [&](InstructionCost) {
+        return ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
+                                VecTy, calculateShufflevectorMask(E->Scalars));
       });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
