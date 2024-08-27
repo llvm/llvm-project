@@ -1127,8 +1127,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       auto *module_wrapper =
           new ExternalASTSourceWrapper(ast_context.getExternalSource());
 
-      auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
-
       auto *multiplexer =
           new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
 
