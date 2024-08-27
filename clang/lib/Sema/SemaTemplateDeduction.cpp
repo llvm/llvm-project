@@ -28,6 +28,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -4462,6 +4463,9 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       ParamTypesForArgChecking.push_back(ParamType);
 
       if (ParamIdx == 0 && HasExplicitObject) {
+        if (ObjectType.isNull())
+          return TemplateDeductionResult::InvalidExplicitArguments;
+
         if (auto Result = DeduceCallArgument(ParamType, 0,
                                              /*ExplicitObjectArgument=*/true);
             Result != TemplateDeductionResult::Success)
@@ -5805,12 +5809,19 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
                                                FunctionDecl *FD2) {
   assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
          "not for function templates");
+  assert(!FD1->isFunctionTemplateSpecialization() ||
+         isa<CXXConversionDecl>(FD1));
+  assert(!FD2->isFunctionTemplateSpecialization() ||
+         isa<CXXConversionDecl>(FD2));
+
   FunctionDecl *F1 = FD1;
-  if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
-    F1 = MF;
+  if (FunctionDecl *P = FD1->getTemplateInstantiationPattern(false))
+    F1 = P;
+
   FunctionDecl *F2 = FD2;
-  if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
-    F2 = MF;
+  if (FunctionDecl *P = FD2->getTemplateInstantiationPattern(false))
+    F2 = P;
+
   llvm::SmallVector<const Expr *, 1> AC1, AC2;
   F1->getAssociatedConstraints(AC1);
   F2->getAssociatedConstraints(AC2);

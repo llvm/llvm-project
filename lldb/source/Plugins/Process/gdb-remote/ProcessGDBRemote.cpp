@@ -1513,7 +1513,7 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
   ThreadList old_thread_list_copy(old_thread_list);
   if (num_thread_ids > 0) {
     for (size_t i = 0; i < num_thread_ids; ++i) {
-      tid_t tid = m_thread_ids[i];
+      lldb::tid_t tid = m_thread_ids[i];
       ThreadSP thread_sp(
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
@@ -2354,6 +2354,9 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!key.getAsInteger(16, reg))
           expedited_register_map[reg] = std::string(std::move(value));
       }
+      // swbreak and hwbreak are also expected keys, but we don't need to
+      // change our behaviour for them because lldb always expects the remote
+      // to adjust the program counter (if relevant, e.g., for x86 targets)
     }
 
     if (stop_pid != LLDB_INVALID_PROCESS_ID && stop_pid != pid) {

@@ -447,21 +447,30 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
 
         InstructionCost Cost = 0;
-        for (unsigned I = 0; I < NumRegs; ++I) {
+        for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
+             I < NumSrcRegs; ++I) {
           bool IsSingleVector = true;
           SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-          transform(Mask.slice(I * SubVF,
-                               I == NumRegs - 1 ? Mask.size() % SubVF : SubVF),
-                    SubMask.begin(), [&](int I) {
-                      bool SingleSubVector = I / VF == 0;
-                      IsSingleVector &= SingleSubVector;
-                      return (SingleSubVector ? 0 : 1) * SubVF + I % VF;
-                    });
+          transform(
+              Mask.slice(I * SubVF,
+                         I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
+              SubMask.begin(), [&](int I) -> int {
+                if (I == PoisonMaskElem)
+                  return PoisonMaskElem;
+                bool SingleSubVector = I / VF == 0;
+                IsSingleVector &= SingleSubVector;
+                return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
+              });
+          if (all_of(enumerate(SubMask), [](auto &&P) {
+                return P.value() == PoisonMaskElem ||
+                       static_cast<unsigned>(P.value()) == P.index();
+              }))
+            continue;
           Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
                                                 : TTI::SK_PermuteTwoSrc,
                                  SubVecTy, SubMask, CostKind, 0, nullptr);
-          return Cost;
         }
+        return Cost;
       }
       break;
     }
@@ -1030,27 +1039,37 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsVectorType)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
-  bool IsTypeLegal = isTypeLegal(Src) && isTypeLegal(Dst) &&
-                     (Src->getScalarSizeInBits() <= ST->getELen()) &&
-                     (Dst->getScalarSizeInBits() <= ST->getELen());
-
-  // FIXME: Need to compute legalizing cost for illegal types.
-  if (!IsTypeLegal)
+  // FIXME: Need to compute legalizing cost for illegal types.  The current
+  // code handles only legal types and those which can be trivially
+  // promoted to legal.
+  if (!ST->hasVInstructions() || Src->getScalarSizeInBits() > ST->getELen() ||
+      Dst->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
 
+  // Our actual lowering for the case where a wider legal type is available
+  // uses promotion to the wider type.  This is reflected in the result of
+  // getTypeLegalizationCost, but BasicTTI assumes the widened cases are
+  // scalarized if the legalized Src and Dst are not equal sized.
+  const DataLayout &DL = this->getDataLayout();
+  if (!SrcLT.second.isVector() || !DstLT.second.isVector() ||
+      !TypeSize::isKnownLE(DL.getTypeSizeInBits(Src),
+                           SrcLT.second.getSizeInBits()) ||
+      !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
+                           DstLT.second.getSizeInBits()))
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
-                (int)Log2_32(Src->getScalarSizeInBits());
+  int PowDiff = (int)Log2_32(DstLT.second.getScalarSizeInBits()) -
+                (int)Log2_32(SrcLT.second.getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    const unsigned SrcEltSize = Src->getScalarSizeInBits();
-    if (SrcEltSize == 1) {
+    if (Src->getScalarSizeInBits() == 1) {
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
@@ -1080,8 +1099,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
-    unsigned SrcEltSize = Src->getScalarSizeInBits();
-    unsigned DstEltSize = Dst->getScalarSizeInBits();
+    unsigned SrcEltSize = SrcLT.second.getScalarSizeInBits();
+    unsigned DstEltSize = DstLT.second.getScalarSizeInBits();
 
     unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
                   : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V
@@ -1988,4 +2007,36 @@ bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
   // Inline a callee if its target-features are a subset of the callers
   // target-features.
   return (CallerBits & CalleeBits) == CalleeBits;
+}
+
+/// See if \p I should be considered for address type promotion. We check if \p
+/// I is a sext with right type and used in memory accesses. If it used in a
+/// "complex" getelementptr, we allow it to be promoted without finding other
+/// sext instructions that sign extended the same initial value. A getelementptr
+/// is considered as "complex" if it has more than 2 operands.
+bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
+    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) {
+  bool Considerable = false;
+  AllowPromotionWithoutCommonHeader = false;
+  if (!isa<SExtInst>(&I))
+    return false;
+  Type *ConsideredSExtType =
+      Type::getInt64Ty(I.getParent()->getParent()->getContext());
+  if (I.getType() != ConsideredSExtType)
+    return false;
+  // See if the sext is the one with the right type and used in at least one
+  // GetElementPtrInst.
+  for (const User *U : I.users()) {
+    if (const GetElementPtrInst *GEPInst = dyn_cast<GetElementPtrInst>(U)) {
+      Considerable = true;
+      // A getelementptr is considered as "complex" if it has more than 2
+      // operands. We will promote a SExt used in such complex GEP as we
+      // expect some computation to be merged if they are done on 64 bits.
+      if (GEPInst->getNumOperands() > 2) {
+        AllowPromotionWithoutCommonHeader = true;
+        break;
+      }
+    }
+  }
+  return Considerable;
 }

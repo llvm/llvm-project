@@ -55,8 +55,10 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-    legacy::PassManagerBase &PM, std::unique_ptr<MIRParser> &MIR,
-    const LLVMTargetMachine &TM, StringRef MIRCode, const char *FuncName) {
+                                 legacy::PassManagerBase &PM,
+                                 std::unique_ptr<MIRParser> &MIR,
+                                 const LLVMTargetMachine &TM,
+                                 StringRef MIRCode) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
@@ -209,7 +211,7 @@ static void doTest(StringRef MIRFunc,
 
   legacy::PassManager PM;
   std::unique_ptr<MIRParser> MIR;
-  std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRFunc, "func");
+  std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRFunc);
   ASSERT_TRUE(M);
 
   PM.add(new TestPassT<AnalysisType>(T, ShouldPass));

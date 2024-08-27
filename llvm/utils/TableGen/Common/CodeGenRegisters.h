@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENREGISTERS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENREGISTERS_H
 
 #include "CodeGenHwModes.h"
 #include "InfoByHwMode.h"
@@ -860,4 +860,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENREGISTERS_H

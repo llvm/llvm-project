@@ -210,10 +210,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fileno
     libc.src.stdio.fprintf
     libc.src.stdio.fscanf
+    libc.src.stdio.vfscanf
     libc.src.stdio.printf
     libc.src.stdio.remove
     libc.src.stdio.rename
     libc.src.stdio.scanf
+    libc.src.stdio.vscanf
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.asprintf
@@ -406,6 +408,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd 
+    libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
@@ -571,6 +575,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanhf
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl
@@ -594,6 +599,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.exp10f16
     libc.src.math.exp2f16
     libc.src.math.expf16
+    libc.src.math.expm1f16
     libc.src.math.f16add
     libc.src.math.f16addf
     libc.src.math.f16addl
@@ -687,6 +693,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
     libc.src.math.fabsf128
+    libc.src.math.faddf128
     libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
@@ -777,6 +784,22 @@ endif()
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # ctype.h entrypoints
+    libc.src.ctype.isalnum_l
+    libc.src.ctype.isalpha_l
+    libc.src.ctype.isblank_l
+    libc.src.ctype.iscntrl_l
+    libc.src.ctype.isdigit_l
+    libc.src.ctype.isgraph_l
+    libc.src.ctype.islower_l
+    libc.src.ctype.isprint_l
+    libc.src.ctype.ispunct_l
+    libc.src.ctype.isspace_l
+    libc.src.ctype.isupper_l
+    libc.src.ctype.isxdigit_l
+    libc.src.ctype.tolower_l
+    libc.src.ctype.toupper_l
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
@@ -976,6 +999,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.time
+
+    # locale.h entrypoints
+    libc.src.locale.localeconv
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
 
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall

@@ -378,6 +378,7 @@ class ASTReader
 {
 public:
   /// Types of AST files.
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTIdentifierIterator;
   friend class ASTRecordReader;
@@ -646,6 +647,12 @@ private:
   /// Definitions for which we have added merged definitions but not yet
   /// performed deduplication.
   llvm::SetVector<NamedDecl *> PendingMergedDefinitionsToDeduplicate;
+
+  /// The duplicated definitions in module units which are pending to be warned.
+  /// We need to delay it to wait for the loading of definitions since we don't
+  /// want to warn for forward declarations.
+  llvm::SmallVector<std::pair<Decl *, Decl *>>
+      PendingWarningForDuplicatedDefsInModuleUnits;
 
   /// Read the record that describes the lexical contents of a DC.
   bool ReadLexicalDeclContextStorage(ModuleFile &M,
@@ -1558,6 +1565,9 @@ private:
   /// array and the corresponding module file.
   std::pair<ModuleFile *, unsigned>
   translateTypeIDToIndex(serialization::TypeID ID) const;
+
+  /// Get a predefined Decl from ASTContext.
+  Decl *getPredefinedDecl(PredefinedDeclIDs ID);
 
 public:
   /// Load the AST file and validate its contents against the given

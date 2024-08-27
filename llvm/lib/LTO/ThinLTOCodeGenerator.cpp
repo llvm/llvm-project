@@ -335,10 +335,6 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     raw_svector_ostream OS(OutputBuffer);
     legacy::PassManager PM;
 
-    // If the bitcode files contain ARC code and were compiled with optimization,
-    // the ObjCARCContractPass must be run, so do it unconditionally here.
-    PM.add(createObjCARCContractPass());
-
     // Setup the codegen now.
     if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
                                /* DisableVerify */ true))
@@ -386,13 +382,13 @@ public:
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
-    SmallString<40> Key;
-    computeLTOCacheKey(Key, Conf, Index, ModuleID, ImportList, ExportList,
-                       ResolvedODR, DefinedGVSummaries);
+    std::string Key =
+        computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
+                           ResolvedODR, DefinedGVSummaries);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
+    sys::path::append(EntryPath, CachePath, Twine("llvmcache-", Key));
   }
 
   // Access the path to this entry in the cache.
@@ -766,7 +762,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
  */
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries, const lto::InputFile &File) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
@@ -837,7 +833,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
   // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
   GVSummaryPtrSet DecSummaries;
-  std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+  ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
       ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);

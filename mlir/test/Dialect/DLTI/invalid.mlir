@@ -5,6 +5,11 @@
 
 // -----
 
+// expected-error@below {{'dlti.map' is expected to be a #dlti.map attribute}}
+"test.unknown_op"() { dlti.map = 42 } : () -> ()
+
+// -----
+
 // expected-error@below {{'dlti.dl_spec' is expected to be a #dlti.dl_spec attribute}}
 "test.unknown_op"() { dlti.dl_spec = 42 } : () -> ()
 
@@ -24,6 +29,14 @@
 "test.unknown_op"() { test.unknown_attr = #dlti.dl_spec<
   #dlti.dl_entry<"test.id", 42>,
   #dlti.dl_entry<"test.id", 43>
+>} : () -> ()
+
+// -----
+
+// expected-error@below {{repeated layout entry key: 'i32'}}
+"test.unknown_op"() { test.unknown_attr = #dlti.map<
+  #dlti.dl_entry<i32, 42>,
+  #dlti.dl_entry<i32, 42>
 >} : () -> ()
 
 // -----

@@ -826,20 +826,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       RecurrencePhis.push_back(FOR);
 
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  VPBuilder MiddleBuilder;
-  // Set insert point so new recipes are inserted before terminator and
-  // condition, if there is either the former or both.
-  if (auto *Term =
-          dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator())) {
-    if (auto *Cmp = dyn_cast<VPInstruction>(Term->getOperand(0)))
-      MiddleBuilder.setInsertPoint(Cmp);
-    else
-      MiddleBuilder.setInsertPoint(Term);
-  } else
-    MiddleBuilder.setInsertPoint(MiddleVPBB);
-
   for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
@@ -872,86 +858,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
-
-    // This is the second phase of vectorizing first-order recurrences. An
-    // overview of the transformation is described below. Suppose we have the
-    // following loop with some use after the loop of the last a[i-1],
-    //
-    //   for (int i = 0; i < n; ++i) {
-    //     t = a[i - 1];
-    //     b[i] = a[i] - t;
-    //   }
-    //   use t;
-    //
-    // There is a first-order recurrence on "a". For this loop, the shorthand
-    // scalar IR looks like:
-    //
-    //   scalar.ph:
-    //     s_init = a[-1]
-    //     br scalar.body
-    //
-    //   scalar.body:
-    //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [s_init, scalar.ph], [s2, scalar.body]
-    //     s2 = a[i]
-    //     b[i] = s2 - s1
-    //     br cond, scalar.body, exit.block
-    //
-    //   exit.block:
-    //     use = lcssa.phi [s1, scalar.body]
-    //
-    // In this example, s1 is a recurrence because it's value depends on the
-    // previous iteration. In the first phase of vectorization, we created a
-    // vector phi v1 for s1. We now complete the vectorization and produce the
-    // shorthand vector IR shown below (for VF = 4, UF = 1).
-    //
-    //   vector.ph:
-    //     v_init = vector(..., ..., ..., a[-1])
-    //     br vector.body
-    //
-    //   vector.body
-    //     i = phi [0, vector.ph], [i+4, vector.body]
-    //     v1 = phi [v_init, vector.ph], [v2, vector.body]
-    //     v2 = a[i, i+1, i+2, i+3];
-    //     v3 = vector(v1(3), v2(0, 1, 2))
-    //     b[i, i+1, i+2, i+3] = v2 - v3
-    //     br cond, vector.body, middle.block
-    //
-    //   middle.block:
-    //     s_penultimate = v2(2) = v3(3)
-    //     s_resume = v2(3)
-    //     br cond, scalar.ph, exit.block
-    //
-    //   scalar.ph:
-    //     s_init' = phi [s_resume, middle.block], [s_init, otherwise]
-    //     br scalar.body
-    //
-    //   scalar.body:
-    //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [s_init', scalar.ph], [s2, scalar.body]
-    //     s2 = a[i]
-    //     b[i] = s2 - s1
-    //     br cond, scalar.body, exit.block
-    //
-    //   exit.block:
-    //     lo = lcssa.phi [s1, scalar.body], [s.penultimate, middle.block]
-    //
-    // After execution completes the vector loop, we extract the next value of
-    // the recurrence (x) to use as the initial value in the scalar loop. This
-    // is modeled by ExtractFromEnd.
-    Type *IntTy = Plan.getCanonicalIV()->getScalarType();
-
-    // Extract the penultimate value of the recurrence and update VPLiveOut
-    // users of the recurrence splice. Note that the extract of the final value
-    // used to resume in the scalar loop is created earlier during VPlan
-    // construction.
-    auto *Penultimate = cast<VPInstruction>(MiddleBuilder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {FOR->getBackedgeValue(),
-         Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 2))},
-        {}, "vector.recur.extract.for.phi"));
-    RecurSplice->replaceUsesWithIf(
-        Penultimate, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
   }
   return true;
 }
@@ -989,15 +895,47 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
-  // Try to remove redundant blend recipes.
+
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
-    VPValue *Inc0 = Blend->getIncomingValue(0);
+    // Try to remove redundant blend recipes.
+    SmallPtrSet<VPValue *, 4> UniqueValues;
+    if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
+      UniqueValues.insert(Blend->getIncomingValue(0));
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (Inc0 != Blend->getIncomingValue(I) &&
-          !match(Blend->getMask(I), m_False()))
-        return;
-    Blend->replaceAllUsesWith(Inc0);
+      if (!match(Blend->getMask(I), m_False()))
+        UniqueValues.insert(Blend->getIncomingValue(I));
+
+    if (UniqueValues.size() == 1) {
+      Blend->replaceAllUsesWith(*UniqueValues.begin());
+      Blend->eraseFromParent();
+      return;
+    }
+
+    if (Blend->isNormalized())
+      return;
+
+    // Normalize the blend so its first incoming value is used as the initial
+    // value with the others blended into it.
+
+    unsigned StartIndex = 0;
+    SmallVector<VPValue *, 4> OperandsWithMask;
+    OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
+
+    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+      if (I == StartIndex)
+        continue;
+      OperandsWithMask.push_back(Blend->getIncomingValue(I));
+      OperandsWithMask.push_back(Blend->getMask(I));
+    }
+
+    auto *NewBlend = new VPBlendRecipe(
+        cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
+    NewBlend->insertBefore(&R);
+
+    VPValue *DeadMask = Blend->getMask(StartIndex);
+    Blend->replaceAllUsesWith(NewBlend);
     Blend->eraseFromParent();
+    recursivelyDeleteDeadRecipes(DeadMask);
     return;
   }
 

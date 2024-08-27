@@ -110,11 +110,32 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
           omp.yield
         }
         omp.terminator
-      }
+      } {omp.composite}
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
+
+  // CHECK: omp.distribute
+  omp.distribute {
+    // CHECK-NEXT: omp.parallel
+    omp.parallel {
+      // CHECK-NEXT: omp.wsloop
+      omp.wsloop {
+        // CHECK-NEXT: omp.simd
+        omp.simd{
+          // CHECK-NEXT: omp.loop_nest
+          omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
+            omp.yield
+          }
+          omp.terminator
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
 
   return
 }
@@ -434,9 +455,9 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }) : () -> ()
+  }) {omp.composite} : () -> ()
 
   return
 }
@@ -541,9 +562,9 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
 
   return
 }
@@ -794,9 +815,9 @@ func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i3
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
   return
 }
 
@@ -998,10 +1019,10 @@ func.func @parallel_reduction_byref() {
 func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
-    // CHECK: omp.wsloop {
-    omp.wsloop {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.wsloop reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+    omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
       // CHECK: omp.loop_nest (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         %1 = arith.constant 2.0 : f32
@@ -1195,10 +1216,10 @@ func.func @parallel_reduction2() {
 func.func @parallel_wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
-    // CHECK: omp.wsloop {
-    omp.wsloop {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.wsloop reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+    omp.wsloop reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
       // CHECK: omp.loop_nest (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         %1 = arith.constant 2.0 : f32
@@ -2101,7 +2122,7 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   // CHECK: omp.task allocate(%[[data_var]] : memref<i32> -> %[[data_var]] : memref<i32>)
   omp.task allocate(%data_var : memref<i32> -> %data_var : memref<i32>)
       // CHECK-SAME: final(%[[bool_var]]) if(%[[bool_var]])
-      final(%bool_var) if(%bool_var) 
+      final(%bool_var) if(%bool_var)
       // CHECK-SAME: in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr, byref @add_f32 -> %[[redn_var2]] : !llvm.ptr)
       in_reduction(@add_f32 -> %0 : !llvm.ptr, byref @add_f32 -> %1 : !llvm.ptr)
       // CHECK-SAME: priority(%[[i32_var]] : i32) untied
@@ -2456,9 +2477,9 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
         omp.yield
       }
       omp.terminator
-    }
+    } {omp.composite}
     omp.terminator
-  }
+  } {omp.composite}
 
   // CHECK: return
   return
@@ -2518,6 +2539,36 @@ atomic {
   %2 = llvm.load %arg3 : !llvm.ptr -> f32
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
+}
+
+// CHECK-LABEL: @alloc_reduction
+// CHECK-SAME:  alloc {
+// CHECK-NEXT:  ^bb0(%[[ARG0:.*]]: !llvm.ptr):
+// ...
+// CHECK:         omp.yield
+// CHECK-NEXT:  } init {
+// CHECK:       } combiner {
+// CHECK:       }
+omp.declare_reduction @alloc_reduction : !llvm.ptr
+alloc {
+^bb0(%arg: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
+  omp.yield (%0 : !llvm.ptr)
+}
+init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  %cst = arith.constant 1.0 : f32
+  llvm.store %cst, %alloc : f32, !llvm.ptr
+  omp.yield (%alloc : !llvm.ptr)
+}
+combiner {
+^bb1(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  %1 = llvm.load %arg1 : !llvm.ptr -> f32
+  %2 = arith.addf %0, %1 : f32
+  llvm.store %2, %arg0 : f32, !llvm.ptr
+  omp.yield (%arg0 : !llvm.ptr)
 }
 
 // CHECK-LABEL: omp_targets_with_map_bounds
@@ -2585,10 +2636,10 @@ func.func @omp_target_update_data (%if_cond : i1, %device : si32, %map1: memref<
 // CHECK-LABEL: omp_targets_is_allocatable
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 func.func @omp_targets_is_allocatable(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
-  // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}  
+  // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %mapv1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP0]] : [0] : !llvm.ptr) -> !llvm.ptr {name = ""}
-  %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>)   map_clauses(tofrom) capture(ByRef) members(%mapv1 : [0] : !llvm.ptr) -> !llvm.ptr {name = ""}  
+  %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>)   map_clauses(tofrom) capture(ByRef) members(%mapv1 : [0] : !llvm.ptr) -> !llvm.ptr {name = ""}
   // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
   omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
     ^bb0(%arg2: !llvm.ptr, %arg3 : !llvm.ptr):
@@ -2650,27 +2701,27 @@ func.func @omp_target_enter_update_exit_data_depend(%a: memref<?xi32>, %b: memre
 // CHECK-LABEL: omp_map_with_members
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: !llvm.ptr, %[[ARG4:.*]]: !llvm.ptr, %[[ARG5:.*]]: !llvm.ptr)
 func.func @omp_map_with_members(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr, %arg4: !llvm.ptr, %arg5: !llvm.ptr) -> () {
-  // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}  
+  // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
   %mapv1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
 
-  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}  
+  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
   %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-  
+
   // CHECK: %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG2]] : !llvm.ptr, !llvm.struct<(i32, f32)>) map_clauses(to) capture(ByRef) members(%[[MAP0]], %[[MAP1]] : [0], [1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "", partial_map = true}
-  %mapv3 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(i32, f32)>)   map_clauses(to) capture(ByRef) members(%mapv1, %mapv2 : [0], [1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "", partial_map = true}  
-  
+  %mapv3 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(i32, f32)>)   map_clauses(to) capture(ByRef) members(%mapv1, %mapv2 : [0], [1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "", partial_map = true}
+
   // CHECK: omp.target_enter_data map_entries(%[[MAP0]], %[[MAP1]], %[[MAP2]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
   omp.target_enter_data map_entries(%mapv1, %mapv2, %mapv3 : !llvm.ptr, !llvm.ptr, !llvm.ptr){}
 
-  // CHECK: %[[MAP3:.*]] = omp.map.info var_ptr(%[[ARG3]] : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}  
+  // CHECK: %[[MAP3:.*]] = omp.map.info var_ptr(%[[ARG3]] : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
   %mapv4 = omp.map.info var_ptr(%arg3 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
 
-  // CHECK: %[[MAP4:.*]] = omp.map.info var_ptr(%[[ARG4]] : !llvm.ptr, f32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}  
+  // CHECK: %[[MAP4:.*]] = omp.map.info var_ptr(%[[ARG4]] : !llvm.ptr, f32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
   %mapv5 = omp.map.info var_ptr(%arg4 : !llvm.ptr, f32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  
+
   // CHECK: %[[MAP5:.*]] = omp.map.info var_ptr(%[[ARG5]] : !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>) map_clauses(from) capture(ByRef) members(%[[MAP3]], %[[MAP4]] : [1,0], [1,1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "", partial_map = true}
-  %mapv6 = omp.map.info var_ptr(%arg5 : !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>) map_clauses(from) capture(ByRef) members(%mapv4, %mapv5 : [1,0], [1,1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "", partial_map = true}  
- 
+  %mapv6 = omp.map.info var_ptr(%arg5 : !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>) map_clauses(from) capture(ByRef) members(%mapv4, %mapv5 : [1,0], [1,1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "", partial_map = true}
+
   // CHECK: omp.target_exit_data map_entries(%[[MAP3]], %[[MAP4]], %[[MAP5]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
   omp.target_exit_data map_entries(%mapv4, %mapv5, %mapv6 : !llvm.ptr, !llvm.ptr, !llvm.ptr){}
 

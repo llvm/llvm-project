@@ -23,7 +23,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -252,17 +251,6 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
-
-CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
-                             BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                             std::string Suffix)
-    : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
-      Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
-                                     /* AllowVarArgs */ false,
-                                     /* AllowAlloca */ false)),
-      Suffix(Suffix) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -644,14 +632,17 @@ bool CodeExtractor::isEligible() const {
 }
 
 void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
-                                      const ValueSet &SinkCands) const {
+                                      const ValueSet &SinkCands,
+                                      bool CollectGlobalInputs) const {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
     for (Instruction &II : *BB) {
       for (auto &OI : II.operands()) {
         Value *V = OI;
-        if (!SinkCands.count(V) && definedInCaller(Blocks, V))
+        if (!SinkCands.count(V) &&
+            (definedInCaller(Blocks, V) ||
+             (CollectGlobalInputs && llvm::isa<llvm::GlobalVariable>(V))))
           Inputs.insert(V);
       }
 
@@ -946,6 +937,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoUnwind:
       case Attribute::NoSanitizeBounds:
       case Attribute::NoSanitizeCoverage:
+      case Attribute::NoSanitizeRealtime:
       case Attribute::NullPointerIsValid:
       case Attribute::OptimizeForDebugging:
       case Attribute::OptForFuzzing:
