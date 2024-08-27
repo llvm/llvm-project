@@ -953,7 +953,9 @@ public:
   TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
   SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
-  void initializeLocal(ASTContext &Context, SourceLocation loc) { setSourceRange(SourceRange()); }
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setSourceRange(SourceRange());
+  }
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 

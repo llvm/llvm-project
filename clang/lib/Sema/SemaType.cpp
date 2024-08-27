@@ -5788,8 +5788,10 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
   TL.setAttr(State.takeAttrForAttributedType(TL.getTypePtr()));
 }
 
-static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL, TypeProcessingState &State) { 
-  TL.setSourceRange(State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr()));
+static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
+                                              TypeProcessingState &State) {
+  TL.setSourceRange(
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr()));
 }
 
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
