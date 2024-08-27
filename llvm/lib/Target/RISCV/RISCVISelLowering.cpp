@@ -1285,8 +1285,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
-          // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
-          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          if (Subtarget.hasStdExtZfbfmin()) {
+            // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          } else {
+            // We need to custom legalize bf16 build vectors if Zfbfmin isn't
+            // available.
+            setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
+          }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -3935,9 +3941,9 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
-  // If we don't have scalar f16, we need to bitcast to an i16 vector.
-  if (VT.getVectorElementType() == MVT::f16 &&
-      !Subtarget.hasStdExtZfhmin())
+  // If we don't have scalar f16/bf16, we need to bitcast to an i16 vector.
+  if ((VT.getVectorElementType() == MVT::f16 && !Subtarget.hasStdExtZfhmin()) ||
+      (VT.getVectorElementType() == MVT::bf16 && !Subtarget.hasStdExtZfbfmin()))
     return lowerBUILD_VECTORvXf16(Op, DAG);
 
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
