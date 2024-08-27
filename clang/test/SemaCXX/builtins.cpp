@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++11 -fcxx-exceptions
 // RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++1z -fcxx-exceptions
+// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++20 -fms-extensions -DNOOP
+#ifndef NOOP
 typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
 
@@ -174,4 +176,9 @@ template void test_builtin_complex(int, double); // expected-note {{instantiatio
 // This previously would cause an assertion when emitting the note diagnostic.
 static void __builtin_cpu_init(); // expected-error {{static declaration of '__builtin_cpu_init' follows non-static declaration}} \
                                      expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
+#endif
+#endif // end of NOOP
+
+#if NOOP
+constexpr int x = []{ __noop; return 0; }(); // expected-no-diagnostics
 #endif

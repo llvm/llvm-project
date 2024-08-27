@@ -861,7 +861,7 @@ Bug Fixes to Compiler Builtins
 - Clang now allows pointee types of atomic builtin arguments to be complete template types
   that was not instantiated elsewhere.
 
-- Fix ``__noop`` not marked as constexpr. (#GH102064)
+- ``__noop`` can now be used in a constant expression. (#GH102064)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
