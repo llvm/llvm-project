@@ -67,3 +67,35 @@ entry:
   store <2 x i64> %8, ptr %12, align 8
   ret void
 }
+
+define void @test3(<16 x i32> %0, ptr %out) {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0:%.*]], <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 16
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 32
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 48
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = shufflevector <16 x i32> %0, <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %2 = shufflevector <16 x i32> %0, <16 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %3 = shufflevector <16 x i32> %0, <16 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %4 = shufflevector <16 x i32> %0, <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = getelementptr inbounds i32, ptr %out, i64 0
+  %6 = getelementptr inbounds i32, ptr %out, i64 4
+  %7 = getelementptr inbounds i32, ptr %out, i64 8
+  %8 = getelementptr inbounds i32, ptr %out, i64 12
+  store <4 x i32> %1, ptr %5, align 4
+  store <4 x i32> %2, ptr %6, align 4
+  store <4 x i32> %3, ptr %7, align 4
+  store <4 x i32> %4, ptr %8, align 4
+  ret void
+}
