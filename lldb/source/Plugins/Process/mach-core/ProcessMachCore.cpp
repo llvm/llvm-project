@@ -550,13 +550,13 @@ void ProcessMachCore::CleanupMemoryRegionPermissions() {
 Status ProcessMachCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
@@ -701,7 +701,7 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
       } else {
         // Only set the error if we didn't read any bytes
         if (bytes_read == 0)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "core file does not contain 0x%" PRIx64, curr_addr);
         break;
       }

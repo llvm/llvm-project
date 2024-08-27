@@ -241,7 +241,7 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
                                                    ->GetObjectSP());
       sb_error.SetError(error);
     } else
-      sb_error.SetErrorString("invalid breakpoint");
+      sb_error = Status::FromErrorString("invalid breakpoint");
 
     return sb_error;
 }
@@ -266,7 +266,7 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
                                            /*is_callback=*/false);
     sb_error.SetError(error);
   } else
-    sb_error.SetErrorString("invalid breakpoint");
+    sb_error = Status::FromErrorString("invalid breakpoint");
 
   return sb_error;
 }
