@@ -57,7 +57,9 @@ def testObjectAttr():
     assert o.object == object
 
     object = b"BC\xc0\xde5\x14\x00\x00\x05\x00\x00\x00b\x0c0$MY\xbef"
-    kernelTable = Attribute.parse("#gpu.kernel_table<[#gpu.kernel_metadata<\"kernel\", () -> ()>]>")
+    kernelTable = Attribute.parse(
+        '#gpu.kernel_table<[#gpu.kernel_metadata<"kernel", () -> ()>]>'
+    )
     o = gpu.ObjectAttr.get(target, format, object, kernels=kernelTable)
     # CHECK: #gpu.object<#nvvm.target, kernels = <[#gpu.kernel_metadata<"kernel", () -> ()>]>, "BC\C0\DE5\14\00\00\05\00\00\00b\0C0$MY\BEf">
     print(o)
