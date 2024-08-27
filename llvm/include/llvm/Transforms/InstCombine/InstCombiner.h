@@ -84,6 +84,8 @@ protected:
   // combining and will be updated to reflect any changes.
   LoopInfo *LI;
 
+  ReversePostOrderTraversal<BasicBlock *> &RPOT;
+
   bool MadeIRChange = false;
 
   /// Edges that are known to never be taken.
@@ -98,12 +100,13 @@ public:
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
+               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI,
+               ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTI(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 
