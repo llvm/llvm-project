@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-uninitialized -std=c++14 -fsyntax-only -verify
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter -Wno-uninitialized -std=c++14 -fsyntax-only -verify
 
-// expected-no-diagnostics
-
 using FourCharsVecSize __attribute__((vector_size(4))) = char;
 using FourIntsVecSize __attribute__((vector_size(16))) = int;
 using FourLongLongsVecSize __attribute__((vector_size(32))) = long long;
@@ -45,7 +43,9 @@ void FloatUsage() {
   constexpr auto Z = -Y;
   static_assert(Z[0] == -1.200000e+01 && Z[1] == -1.700000e+01 && Z[2] == 1.000000e+00 && Z[3] == 1.000000e+00, "");
 
-  // Operator ~ is illegal on floats, so no test for that.
+  // Operator ~ is illegal on floats.
+  constexpr auto ae = ~FourFloatsVecSize{0, 1, 8, -1}; // expected-error {{invalid argument type}}
+
   constexpr auto af = !FourFloatsVecSize{0, 1, 8, -1};
   static_assert(af[0] == -1 && af[1] == 0 && af[2] == 0 && af[3] == 0, "");
 }
@@ -55,34 +55,35 @@ void FloatVecUsage() {
   constexpr auto Z = -Y;
   static_assert(Z[0] == -1.200000e+01 && Z[1] == -1.700000e+01 && Z[2] == 1.000000e+00 && Z[3] == 1.000000e+00, "");
 
-  // Operator ~ is illegal on floats, so no test for that.
+  // Operator ~ is illegal on floats.
+  constexpr auto ae = ~FourFloatsVecSize{0, 1, 8, -1}; // expected-error {{invalid argument type}}
+
   constexpr auto af = !FourFloatsVecSize{0, 1, 8, -1};
   static_assert(af[0] == -1 && af[1] == 0 && af[2] == 0 && af[3] == 0, "");
 }
 
-// FIXME: Int128 vector element comparsion will cause new interpreter crash.
 void I128Usage() {
   // Operator ~ is illegal on floats, so no test for that.
   constexpr auto c = ~FourI128VecSize{1, 2, 10, 20};
-   // static_assert(c[0] == -2 && c[1] == -3 && c[2] == -11 && c[3] == -21, "");
+   static_assert(c[0] == -2 && c[1] == -3 && c[2] == -11 && c[3] == -21, "");
 
   constexpr auto d = !FourI128VecSize{0, 1, 8, -1};
-  // static_assert(d[0] == -1 && d[1] == 0 && d[2] == 0 && d[3] == 0, "");
+  static_assert(d[0] == -1 && d[1] == 0 && d[2] == 0 && d[3] == 0, "");
 }
 
 void I128VecUsage() {
   // Operator ~ is illegal on floats, so no test for that.
   constexpr auto c = ~FourI128ExtVec{1, 2, 10, 20};
-  // static_assert(c[0] == -2 && c[1] == -3 && c[2] == -11 && c[3] == -21, "");
+  static_assert(c[0] == -2 && c[1] == -3 && c[2] == -11 && c[3] == -21, "");
 
   constexpr auto d = !FourI128ExtVec{0, 1, 8, -1};
-  // static_assert(d[0] == -1 && d[1] == 0 && d[2] == 0 && d[3] == 0, "");
+  static_assert(d[0] == -1 && d[1] == 0 && d[2] == 0 && d[3] == 0, "");
 }
 
 using FourBoolsExtVec __attribute__((ext_vector_type(4))) = bool;
 void BoolVecUsage() {
-  // constexpr auto j = !FourBoolsExtVec{true, false, true, false};
-  // static_assert(j[0] == false && j[1] == true && j[2] == false && j[3] == true, "");
+  constexpr auto j = !FourBoolsExtVec{true, false, true, false};
+  static_assert(j[0] == false && j[1] == true && j[2] == false && j[3] == true, "");
 
   constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
   static_assert(k[0] == false && k[1] == true && k[2] == false && k[3] == true, "");
