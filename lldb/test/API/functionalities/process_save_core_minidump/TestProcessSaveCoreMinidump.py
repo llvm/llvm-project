@@ -283,7 +283,6 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
 
-
             # This is almost identical to the single thread test case because
             # minidump defaults to stacks only, so we want to see if the
             # default options work as expected.
@@ -294,7 +293,13 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             error = process.SaveCore(options)
             self.assertTrue(error.Success())
 
-            self.verify_core_file(default_value_file, expected_pid, expected_modules, expected_threads, stacks_to_sp_map)
+            self.verify_core_file(
+                default_value_file,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
+            )
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
@@ -319,7 +324,6 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             memory_region = lldb.SBMemoryRegionInfo()
             memory_list = process.GetMemoryRegions()
             memory_list.GetMemoryRegionAtIndex(0, memory_region)
-            
 
             # This is almost identical to the single thread test case because
             # minidump defaults to stacks only, so we want to see if the
@@ -331,7 +335,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             options.AddMemoryRegionToSave(memory_region)
             options.SetStyle(lldb.eSaveCoreCustomOnly)
             error = process.SaveCore(options)
-            print (f"Error: {error.GetCString()}")
+            print(f"Error: {error.GetCString()}")
             self.assertTrue(error.Success(), error.GetCString())
 
             core_target = self.dbg.CreateTarget(None)
@@ -342,15 +346,18 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # is present and then assert we fail on the second.
             core_memory_region = lldb.SBMemoryRegionInfo()
             core_memory_list.GetMemoryRegionAtIndex(0, core_memory_region)
-            self.assertEqual(core_memory_region.GetRegionBase(), memory_region.GetRegionBase())
-            self.assertEqual(core_memory_region.GetRegionEnd(), memory_region.GetRegionEnd())
-            
+            self.assertEqual(
+                core_memory_region.GetRegionBase(), memory_region.GetRegionBase()
+            )
+            self.assertEqual(
+                core_memory_region.GetRegionEnd(), memory_region.GetRegionEnd()
+            )
+
             region_two = lldb.SBMemoryRegionInfo()
             core_memory_list.GetMemoryRegionAtIndex(1, region_two)
             err = lldb.SBError()
             content = core_proc.ReadMemory(region_two.GetRegionBase(), 1, err)
             self.assertTrue(err.Fail(), "Should fail to read memory")
-
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
@@ -360,8 +367,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style(self):
-        """Test that verifies a custom and unspecified save style fails for 
-            containing no data to save"""
+        """Test that verifies a custom and unspecified save style fails for
+        containing no data to save"""
 
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -380,7 +387,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
             error = process.SaveCore(options)
             self.assertTrue(error.Fail())
-            self.assertEqual(error.GetCString(), "no valid address ranges found for core style")
+            self.assertEqual(
+                error.GetCString(), "no valid address ranges found for core style"
+            )
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
@@ -410,18 +419,23 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             for x in range(core_memory_list.GetSize()):
                 core_memory_region = lldb.SBMemoryRegionInfo()
                 core_memory_list.GetMemoryRegionAtIndex(x, core_memory_region)
-                mem_tuple = (core_memory_region.GetRegionBase(), core_memory_region.GetRegionEnd())
-                self.assertTrue(mem_tuple not in range_set, "Duplicate memory region found")
+                mem_tuple = (
+                    core_memory_region.GetRegionBase(),
+                    core_memory_region.GetRegionEnd(),
+                )
+                self.assertTrue(
+                    mem_tuple not in range_set, "Duplicate memory region found"
+                )
                 range_set.add(mem_tuple)
         finally:
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
-    
+
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style_duplicated_regions(self):
-        """Test that verifies a custom and unspecified save style fails for 
-            containing no data to save"""
+        """Test that verifies a custom and unspecified save style fails for
+        containing no data to save"""
 
         self.build()
         exe = self.getBuildArtifact("a.out")
