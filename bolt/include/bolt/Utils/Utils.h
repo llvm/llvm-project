@@ -41,6 +41,11 @@ std::string getEscapedName(const StringRef &Name);
 /// Return the unescaped name
 std::string getUnescapedName(const StringRef &Name);
 
+/// Return a common part for a given \p Name wrt a given \p Suffixes list.
+/// Preserve the suffix if \p KeepSuffix is set, only dropping characters
+/// following it, otherwise drop the suffix as well.
+std::optional<StringRef> getCommonName(const StringRef Name, bool KeepSuffix,
+                                       ArrayRef<StringRef> Suffixes);
 /// LTO-generated function names take a form:
 ///
 ///   <function_name>.lto_priv.<decimal_number>/...
@@ -64,12 +69,8 @@ std::string getUnescapedName(const StringRef &Name);
 /// of functions. Later, out of all matching profiles we pick the one with the
 /// best match.
 ///
-static SmallVector<StringRef, 4> LTOSuffixes({".__uniq.", ".lto_priv.",
-                                              ".constprop.", ".llvm."});
 /// Return a common part of LTO name for a given \p Name.
-std::optional<StringRef>
-getLTOCommonName(const StringRef Name,
-                 ArrayRef<StringRef> Suffixes = LTOSuffixes);
+std::optional<StringRef> getLTOCommonName(const StringRef Name);
 
 // Determines which register a given DWARF expression is being assigned to.
 // If the expression is defining the CFA, return std::nullopt.
