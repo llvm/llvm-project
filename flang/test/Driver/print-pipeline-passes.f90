@@ -1,9 +1,6 @@
-! Test that -print-pipeline-passes works in flang
+! RUN: %flang_fc1 -mllvm -print-pipeline-passes -emit-llvm-bc -o /dev/null -O0 %s 2>&1 | FileCheck %s
 
-! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -print-pipeline-passes -O0 %s 2>&1 | FileCheck %s
-
-! Don't try to check all passes, just a few to make sure that something is
-! actually printed.
+! Just check a few passes to ensure that something reasonable is being printed.
 ! CHECK: always-inline
 ! CHECK-SAME: annotation-remarks
 
