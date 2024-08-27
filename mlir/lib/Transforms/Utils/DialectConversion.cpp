@@ -1296,7 +1296,6 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
         OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
         /*inputs=*/replArgs, origArgType, converter);
     mapping.map(origArg, argMat);
-    appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
 
     Type legalOutputType;
     if (converter) {
