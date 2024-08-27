@@ -1231,13 +1231,13 @@ void llvm::ComputeCrossModuleImport(
                       << Exports.size() - NumGVS << " functions and " << NumGVS
                       << " vars. Imports from " << Histogram.size()
                       << " modules.\n");
-    for (const auto &[SrcModName, Summary] : Histogram) {
-      LLVM_DEBUG(dbgs() << " - " << Summary.DefinedFS
+    for (const auto &[SrcModName, Stats] : Histogram) {
+      LLVM_DEBUG(dbgs() << " - " << Stats.DefinedFS
                         << " function definitions and "
-                        << Summary.Count - Summary.NumGVS - Summary.DefinedFS
+                        << Stats.Count - Stats.NumGVS - Stats.DefinedFS
                         << " function declarations imported from " << SrcModName
                         << "\n");
-      LLVM_DEBUG(dbgs() << " - " << Summary.NumGVS
+      LLVM_DEBUG(dbgs() << " - " << Stats.NumGVS
                         << " global vars imported from " << SrcModName << "\n");
     }
   }
@@ -1252,13 +1252,13 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
       collectImportStatistics(Index, ImportList);
   LLVM_DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
                     << Histogram.size() << " modules.\n");
-  for (const auto &[SrcModName, Summary] : Histogram) {
-    LLVM_DEBUG(dbgs() << " - " << Summary.DefinedFS
+  for (const auto &[SrcModName, Stats] : Histogram) {
+    LLVM_DEBUG(dbgs() << " - " << Stats.DefinedFS
                       << " function definitions and "
-                      << Summary.Count - Summary.DefinedFS - Summary.NumGVS
+                      << Stats.Count - Stats.DefinedFS - Stats.NumGVS
                       << " function declarations imported from " << SrcModName
                       << "\n");
-    LLVM_DEBUG(dbgs() << " - " << Summary.NumGVS << " vars imported from "
+    LLVM_DEBUG(dbgs() << " - " << Stats.NumGVS << " vars imported from "
                       << SrcModName << "\n");
   }
 }
