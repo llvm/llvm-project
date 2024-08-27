@@ -58,13 +58,13 @@ bool UnrolledInstAnalyzer::simplifyInstWithSCEV(Instruction *I) {
   auto *Base = dyn_cast<SCEVUnknown>(SE.getPointerBase(S));
   if (!Base)
     return false;
-  auto *Offset =
-      dyn_cast<SCEVConstant>(SE.getMinusSCEV(ValueAtIteration, Base));
+  std::optional<APInt> Offset =
+      SE.computeConstantDifference(ValueAtIteration, Base);
   if (!Offset)
     return false;
   SimplifiedAddress Address;
   Address.Base = Base->getValue();
-  Address.Offset = Offset->getAPInt();
+  Address.Offset = *Offset;
   SimplifiedAddresses[I] = Address;
   return false;
 }
