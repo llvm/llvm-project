@@ -1082,21 +1082,21 @@ numGlobalVarSummaries(const ModuleSummaryIndex &Index,
   return NumGVS;
 }
 
-struct ImportSummary {
+struct ImportStatistics {
   unsigned NumGVS = 0;
   unsigned DefinedFS = 0;
   unsigned Count = 0;
 };
 
 // Compute import summary for each source module in ImportList.
-static DenseMap<StringRef, ImportSummary>
-summarizeImports(const ModuleSummaryIndex &Index,
-                 const FunctionImporter::ImportMapTy &ImportList) {
-  DenseMap<StringRef, ImportSummary> Histogram;
+static DenseMap<StringRef, ImportStatistics>
+collectImportStatistics(const ModuleSummaryIndex &Index,
+                        const FunctionImporter::ImportMapTy &ImportList) {
+  DenseMap<StringRef, ImportStatistics> Histogram;
 
   for (const auto &[FromModule, GUIDs] : ImportList.getImportMap()) {
+    ImportStatistics &Entry = Histogram[FromModule];
     for (const auto &[GUID, Type] : GUIDs) {
-      ImportSummary &Entry = Histogram[FromModule];
       ++Entry.Count;
       if (isGlobalVarSummary(Index, GUID))
         ++Entry.NumGVS;
@@ -1225,8 +1225,8 @@ void llvm::ComputeCrossModuleImport(
     auto ModName = ModuleImports.first;
     auto &Exports = ExportLists[ModName];
     unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
-    DenseMap<StringRef, ImportSummary> Histogram =
-        summarizeImports(Index, ModuleImports.second);
+    DenseMap<StringRef, ImportStatistics> Histogram =
+        collectImportStatistics(Index, ModuleImports.second);
     LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
                       << Exports.size() - NumGVS << " functions and " << NumGVS
                       << " vars. Imports from " << Histogram.size()
@@ -1248,8 +1248,8 @@ void llvm::ComputeCrossModuleImport(
 static void dumpImportListForModule(const ModuleSummaryIndex &Index,
                                     StringRef ModulePath,
                                     FunctionImporter::ImportMapTy &ImportList) {
-  DenseMap<StringRef, ImportSummary> Histogram =
-      summarizeImports(Index, ImportList);
+  DenseMap<StringRef, ImportStatistics> Histogram =
+      collectImportStatistics(Index, ImportList);
   LLVM_DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
                     << Histogram.size() << " modules.\n");
   for (const auto &[SrcModName, Summary] : Histogram) {
