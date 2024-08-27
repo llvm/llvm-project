@@ -2189,6 +2189,10 @@ example:
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.
+``nosanitize_realtime``
+    This attribute indicates that the Realtime Sanitizer instrumentation is
+    disabled for this function.
+    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``null_pointer_is_valid``
    If ``null_pointer_is_valid`` is set, then the ``null`` address
    in address-space 0 is considered to be a valid address for memory loads and
@@ -2315,6 +2319,7 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
+    This attribute is incompatible with the ``nosanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_

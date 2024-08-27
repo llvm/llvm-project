@@ -426,7 +426,7 @@ public:
     //  The difference between the retrieved memory chunk and the request
     //  size is at most MaxAllowedFragmentedPages
     //
-    //  / MaxAllowedFragmentedPages * PageSize \
+    // +- MaxAllowedFragmentedPages * PageSize -+
     // +--------------------------+-------------+
     // |                          |             |
     // +--------------------------+-------------+
