@@ -284,8 +284,8 @@ public:
     // C checkers
     // ARR
     CheckFactories
-      .registerCheck<bugprone::SuspiciousPointerArithmeticsUsingSizeofCheck>(
-        "cert-arr39-c");
+        .registerCheck<bugprone::SuspiciousPointerArithmeticsUsingSizeofCheck>(
+            "cert-arr39-c");
     // CON
     CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
         "cert-con36-c");
