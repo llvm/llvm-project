@@ -23,7 +23,7 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
   let description = [{
     GPU attribute for storing metadata related to a compiled kernel. The
-    attribute contains the name and function type of the kernel.
+    attribute contains the name and arguments type of the kernel.
 
     The attribute also contains optional parameters for storing the arguments
     attributes as well as a dictionary for additional metadata, like occupancy
