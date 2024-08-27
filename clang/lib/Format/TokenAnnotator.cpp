@@ -4732,7 +4732,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Left.isOneOf(tok::kw_new, tok::kw_delete) &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
         !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
-      return Style.SpaceBeforeParensOptions.AfterPlacementOperator;
+      const auto *RParen = Right.MatchingParen;
+      return Style.SpaceBeforeParensOptions.AfterPlacementOperator ||
+             (RParen && RParen->is(TT_CastRParen));
     }
     if (Line.Type == LT_ObjCDecl)
       return true;
