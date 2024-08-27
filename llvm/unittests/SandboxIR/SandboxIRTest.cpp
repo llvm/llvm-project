@@ -580,6 +580,39 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, VAArgInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %va) {
+  %va_arg = va_arg ptr %va, i32
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *VA = cast<sandboxir::VAArgInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getPointerOperand().
+  EXPECT_EQ(VA->getPointerOperand(), Arg);
+  // Check getPOinterOperandIndex().
+  EXPECT_EQ(sandboxir::VAArgInst::getPointerOperandIndex(),
+            llvm::VAArgInst::getPointerOperandIndex());
+  // Check create().
+  auto *NewVATy = Type::getInt8Ty(C);
+  auto *NewVA = sandboxir::VAArgInst::create(Arg, NewVATy, Ret->getIterator(),
+                                             Ret->getParent(), Ctx, "NewVA");
+  EXPECT_EQ(NewVA->getNextNode(), Ret);
+  EXPECT_EQ(NewVA->getType(), NewVATy);
+#ifndef NDEBUG
+  EXPECT_EQ(NewVA->getName(), "NewVA");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FreezeInst) {
   parseIR(C, R"IR(
 define void @foo(i8 %arg) {

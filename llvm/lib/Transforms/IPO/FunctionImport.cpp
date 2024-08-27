@@ -1503,9 +1503,25 @@ void llvm::gatherImportedSummariesForModule(
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
+
+  // Forward port the heterogeneous std::map::operator[]() from C++26, which
+  // lets us look up the map without allocating an instance of std::string when
+  // the key-value pair exists in the map.
+  // TODO: Remove this in favor of the heterogenous std::map::operator[]() from
+  // C++26 when it becomes available for our codebase.
+  auto LookupOrCreate = [](ModuleToSummariesForIndexTy &Map,
+                           StringRef Key) -> GVSummaryMapTy & {
+    auto It = Map.find(Key);
+    if (It == Map.end())
+      std::tie(It, std::ignore) =
+          Map.try_emplace(std::string(Key), GVSummaryMapTy());
+    return It->second;
+  };
+
   // Include summaries for imports.
   for (const auto &ILI : ImportList.getImportMap()) {
-    auto &SummariesForIndex = ModuleToSummariesForIndex[std::string(ILI.first)];
+    auto &SummariesForIndex =
+        LookupOrCreate(ModuleToSummariesForIndex, ILI.first);
 
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first);
