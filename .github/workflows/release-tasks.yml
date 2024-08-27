@@ -66,6 +66,7 @@ jobs:
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
@@ -75,6 +76,7 @@ jobs:
     uses: ./.github/workflows/release-lit.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
@@ -101,6 +103,7 @@ jobs:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
       runs-on: ${{ matrix.runs-on }}
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
@@ -115,5 +118,6 @@ jobs:
     uses: ./.github/workflows/release-sources.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
