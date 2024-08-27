@@ -95,6 +95,12 @@ cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
+cl::opt<std::string>
+    ReadPerfEvents("perf-script-events",
+                   cl::desc("skip perf event collection by supplying a "
+                            "perf-script output in a textual format"),
+                   cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
@@ -464,6 +470,13 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
+  if (!opts::ReadPerfEvents.empty()) {
+    dbgs() << "PERF2BOLT: using pre-processed perf events for '" << Name
+           << "' (perf-script-events)\n";
+    ParsingBuf = opts::ReadPerfEvents;
+    return 0;
+  }
+
   std::string Error;
   outs() << "PERF2BOLT: waiting for perf " << Name
          << " collection to finish...\n";
