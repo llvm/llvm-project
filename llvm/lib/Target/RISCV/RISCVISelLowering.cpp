@@ -1285,8 +1285,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
-          // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
-          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          if (Subtarget.hasStdExtZfbfmin()) {
+            // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          } else {
+            // We need to custom legalize bf16 build vectors if Zfbfmin isn't
+            // available.
+            setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
+          }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -3935,9 +3941,9 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
-  // If we don't have scalar f16, we need to bitcast to an i16 vector.
-  if (VT.getVectorElementType() == MVT::f16 &&
-      !Subtarget.hasStdExtZfhmin())
+  // If we don't have scalar f16/bf16, we need to bitcast to an i16 vector.
+  if ((VT.getVectorElementType() == MVT::f16 && !Subtarget.hasStdExtZfhmin()) ||
+      (VT.getVectorElementType() == MVT::bf16 && !Subtarget.hasStdExtZfbfmin()))
     return lowerBUILD_VECTORvXf16(Op, DAG);
 
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
@@ -6883,10 +6889,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-    return lowerToScalableOp(Op, DAG);
   case ISD::UADDSAT:
   case ISD::USUBSAT:
-    return lowerToScalableOp(Op, DAG);
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
     return lowerToScalableOp(Op, DAG);
@@ -19106,8 +19110,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
 
   const RISCVSubtarget &Subtarget = TLI.getSubtarget();
 
-  if (LocVT == MVT::f16 &&
-      (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZfhmin())) {
+  if (LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
@@ -19144,12 +19147,13 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
   }
 
   // Check if there is an available GPR before hitting the stack.
-  if ((LocVT == MVT::f16 &&
-       (Subtarget.hasStdExtZhinx() || Subtarget.hasStdExtZhinxmin())) ||
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) ||
       (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.is64Bit() &&
        Subtarget.hasStdExtZdinx())) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      LocInfo = CCValAssign::BCvt;
+      LocVT = Subtarget.getXLenVT();
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }

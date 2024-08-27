@@ -562,7 +562,7 @@ SBError SBBreakpointName::SetScriptCallbackFunction(
   SBError sb_error;
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name) {
-    sb_error.SetErrorString("unrecognized breakpoint name");
+    sb_error = Status::FromErrorString("unrecognized breakpoint name");
     return sb_error;
   }
 
