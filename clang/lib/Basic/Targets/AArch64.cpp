@@ -108,8 +108,6 @@ void AArch64TargetInfo::setArchFeatures() {
       HasBFloat16 = true;
       HasMatMul = true;
     }
-    FPU |= SveMode;
-    HasSVE2 = true;
     HasFullFP16 = true;
     HasAlternativeNZCV = true;
     HasFRInt3264 = true;
