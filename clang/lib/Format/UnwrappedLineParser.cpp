@@ -4031,8 +4031,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::coloncolon:
       break;
     default:
-      if (!JSPastExtendsOrImplements && !ClassName && Previous->is(tok::identifier) &&
-          Previous->isNot(TT_AttributeMacro)) {
+      if (!JSPastExtendsOrImplements && !ClassName &&
+          Previous->is(tok::identifier) && Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
       }
     }

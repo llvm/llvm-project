@@ -587,7 +587,6 @@ TEST_F(FormatTestJS, GoogAnonymousClass) {
                "};");
 }
 
-
 TEST_F(FormatTestJS, IIFEs) {
   // Internal calling parens; no semi.
   verifyFormat("(function() {\n"
