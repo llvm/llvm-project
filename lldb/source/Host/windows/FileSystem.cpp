@@ -32,7 +32,7 @@ Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   std::wstring wsrc, wdst;
   if (!llvm::ConvertUTF8toWide(src.GetPath(), wsrc) ||
       !llvm::ConvertUTF8toWide(dst.GetPath(), wdst))
-    error.SetErrorString(PATH_CONVERSION_ERROR);
+    error = Status::FromErrorString(PATH_CONVERSION_ERROR);
   if (error.Fail())
     return error;
   DWORD attrib = ::GetFileAttributesW(wdst.c_str());
@@ -52,7 +52,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   Status error;
   std::wstring wsrc;
   if (!llvm::ConvertUTF8toWide(src.GetPath(), wsrc)) {
-    error.SetErrorString(PATH_CONVERSION_ERROR);
+    error = Status::FromErrorString(PATH_CONVERSION_ERROR);
     return error;
   }
 
@@ -73,7 +73,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   if (result == 0)
     error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
   else if (!llvm::convertWideToUTF8(buf.data(), path))
-    error.SetErrorString(PATH_CONVERSION_ERROR);
+    error = Status::FromErrorString(PATH_CONVERSION_ERROR);
   else
     dst.SetFile(path, FileSpec::Style::native);
 
@@ -82,7 +82,8 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
 }
 
 Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
-  return Status("ResolveSymbolicLink() isn't implemented on Windows");
+  return Status::FromErrorString(
+      "ResolveSymbolicLink() isn't implemented on Windows");
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {

@@ -48,7 +48,7 @@ public:
           llvm::Twine(llvm::Twine(" (") + llvm::Twine(detailed_error) +
                       llvm::Twine(")"))
               .str();
-    error.SetErrorString(full_error_message);
+    error = Status(std::move(full_error_message));
     return {};
   }
 

@@ -269,7 +269,7 @@ protected:
         transformed_args);
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error.SetErrorString(llvm::toString(std::move(e)).c_str());
+      error = Status(std::move(e));
       return ErrorWithMessage<T>(caller_signature,
                                  "Python method could not be called.", error);
     }
@@ -368,9 +368,8 @@ protected:
     if (boolean_arg.IsValid())
       original_arg = boolean_arg.GetValue();
     else
-      error.SetErrorString(
-          llvm::formatv("{}: Invalid boolean argument.", LLVM_PRETTY_FUNCTION)
-              .str());
+      error = Status::FromErrorStringWithFormatv(
+          "{}: Invalid boolean argument.", LLVM_PRETTY_FUNCTION);
   }
 
   template <std::size_t... I, typename... Args>

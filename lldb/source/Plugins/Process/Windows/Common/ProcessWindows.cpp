@@ -123,24 +123,24 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
 ProcessWindows::~ProcessWindows() {}
 
 size_t ProcessWindows::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
-  error.SetErrorString("GetSTDOUT unsupported on Windows");
+  error = Status::FromErrorString("GetSTDOUT unsupported on Windows");
   return 0;
 }
 
 size_t ProcessWindows::GetSTDERR(char *buf, size_t buf_size, Status &error) {
-  error.SetErrorString("GetSTDERR unsupported on Windows");
+  error = Status::FromErrorString("GetSTDERR unsupported on Windows");
   return 0;
 }
 
 size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
                                 Status &error) {
-  error.SetErrorString("PutSTDIN unsupported on Windows");
+  error = Status::FromErrorString("PutSTDIN unsupported on Windows");
   return 0;
 }
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
-    return Status("Hardware breakpoints are not supported.");
+    return Status::FromErrorString("Hardware breakpoints are not supported.");
 
   Log *log = GetLog(WindowsLog::Breakpoints);
   LLDB_LOG(log, "bp_site = {0:x}, id={1}, addr={2:x}", bp_site,
@@ -175,9 +175,10 @@ Status ProcessWindows::DoDetach(bool keep_stopped) {
     else
       LLDB_LOG(log, "Detaching process error: {0}", error);
   } else {
-    error.SetErrorStringWithFormatv("error: process {0} in state = {1}, but "
-                                    "cannot detach it in this state.",
-                                    GetID(), private_state);
+    error = Status::FromErrorStringWithFormatv(
+        "error: process {0} in state = {1}, but "
+        "cannot detach it in this state.",
+        GetID(), private_state);
     LLDB_LOG(log, "error: {0}", error);
   }
   return error;
@@ -231,7 +232,7 @@ Status ProcessWindows::DoResume() {
     }
 
     if (failed) {
-      error.SetErrorString("ProcessWindows::DoResume failed");
+      error = Status::FromErrorString("ProcessWindows::DoResume failed");
     } else {
       SetPrivateState(eStateRunning);
     }
@@ -849,8 +850,8 @@ Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
     if (m_watchpoint_ids[info.slot_id] == LLDB_INVALID_BREAK_ID)
       break;
   if (info.slot_id == RegisterContextWindows::GetNumHardwareBreakpointSlots()) {
-    error.SetErrorStringWithFormat("Can't find free slot for watchpoint %i",
-                                   wp_sp->GetID());
+    error = Status::FromErrorStringWithFormat(
+        "Can't find free slot for watchpoint %i", wp_sp->GetID());
     return error;
   }
   info.address = wp_sp->GetLoadAddress();
@@ -864,7 +865,7 @@ Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
         thread->GetRegisterContext().get());
     if (!reg_ctx->AddHardwareBreakpoint(info.slot_id, info.address, info.size,
                                         info.read, info.write)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Can't enable watchpoint %i on thread 0x%llx", wp_sp->GetID(),
           thread->GetID());
       break;
@@ -898,8 +899,8 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
 
   auto it = m_watchpoints.find(wp_sp->GetID());
   if (it == m_watchpoints.end()) {
-    error.SetErrorStringWithFormat("Info about watchpoint %i is not found",
-                                   wp_sp->GetID());
+    error = Status::FromErrorStringWithFormat(
+        "Info about watchpoint %i is not found", wp_sp->GetID());
     return error;
   }
 
@@ -908,7 +909,7 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         thread->GetRegisterContext().get());
     if (!reg_ctx->RemoveHardwareBreakpoint(it->second.slot_id)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Can't disable watchpoint %i on thread 0x%llx", wp_sp->GetID(),
           thread->GetID());
       break;

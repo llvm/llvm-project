@@ -142,7 +142,7 @@ bool ValueObjectVariable::UpdateValue() {
         m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::ContextType::Variable, variable);
     } else
-      m_error.SetErrorString("empty constant data");
+      m_error = Status::FromErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
   } else {
@@ -204,7 +204,7 @@ bool ValueObjectVariable::UpdateValue() {
 
       switch (value_type) {
       case Value::ValueType::Invalid:
-        m_error.SetErrorString("invalid value");
+        m_error = Status::FromErrorString("invalid value");
         break;
       case Value::ValueType::Scalar:
         // The variable value is in the Scalar value inside the m_value. We can
@@ -365,7 +365,7 @@ const char *ValueObjectVariable::GetLocationAsCString() {
 bool ValueObjectVariable::SetValueFromCString(const char *value_str,
                                               Status &error) {
   if (!UpdateValueIfNeeded()) {
-    error.SetErrorString("unable to update value before writing");
+    error = Status::FromErrorString("unable to update value before writing");
     return false;
   }
 
@@ -375,7 +375,7 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
     RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     RegisterValue reg_value;
     if (!reg_info || !reg_ctx) {
-      error.SetErrorString("unable to retrieve register info");
+      error = Status::FromErrorString("unable to retrieve register info");
       return false;
     }
     error = reg_value.SetValueFromString(reg_info, llvm::StringRef(value_str));
@@ -385,7 +385,7 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
       SetNeedsUpdate();
       return true;
     } else {
-      error.SetErrorString("unable to write back to register");
+      error = Status::FromErrorString("unable to write back to register");
       return false;
     }
   } else
@@ -394,7 +394,7 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
 
 bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
   if (!UpdateValueIfNeeded()) {
-    error.SetErrorString("unable to update value before writing");
+    error = Status::FromErrorString("unable to update value before writing");
     return false;
   }
 
@@ -404,7 +404,7 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
     RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     RegisterValue reg_value;
     if (!reg_info || !reg_ctx) {
-      error.SetErrorString("unable to retrieve register info");
+      error = Status::FromErrorString("unable to retrieve register info");
       return false;
     }
     error = reg_value.SetValueFromData(*reg_info, data, 0, true);
@@ -414,7 +414,7 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
       SetNeedsUpdate();
       return true;
     } else {
-      error.SetErrorString("unable to write back to register");
+      error = Status::FromErrorString("unable to write back to register");
       return false;
     }
   } else

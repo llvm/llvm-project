@@ -99,14 +99,12 @@ public:
         handler = (LogHandlerKind)OptionArgParser::ToOptionEnum(
             option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
-          error.SetErrorStringWithFormat(
-              "unrecognized value for log handler '%s'",
-              option_arg.str().c_str());
+          return Status::FromErrorStringWithFormatv(
+              "unrecognized value for log handler '{0}'", option_arg);
         break;
       case 'b':
-        error =
-            buffer_size.SetValueFromString(option_arg, eVarSetOperationAssign);
-        break;
+        return buffer_size.SetValueFromString(option_arg,
+                                              eVarSetOperationAssign);
       case 'v':
         log_options |= LLDB_LOG_OPTION_VERBOSE;
         break;
