@@ -87,7 +87,6 @@ _mm512_maskz_cvttspd_epu32(__mmask8 U, __m512d A) {
       (__v8df)(__m512d)(A), (__v8si)_mm256_setzero_si256(), (__mmask8)(U),     \
       (const int)(R)))
 
-#ifdef __x86_64__
 //  512 bit : Double -> Long
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS _mm512_cvttspd_epi64(__m512d A) {
@@ -155,8 +154,6 @@ _mm512_maskz_cvttspd_epu64(__mmask8 U, __m512d A) {
   ((__m512i)__builtin_ia32_vcvttpd2uqqs512_round_mask(                         \
       (__v8df)(__m512d)(A), (__v8di)_mm512_setzero_si512(), (__mmask8)(U),     \
       (const int)(R)))
-
-#endif
 
 // 512 bit: Float -> int
 static __inline__ __m512i __DEFAULT_FN_ATTRS _mm512_cvttsps_epi32(__m512 A) {
@@ -228,7 +225,6 @@ _mm512_maskz_cvttsps_epu32(__mmask16 U, __m512 A) {
       (__v16sf)(__m512)(A), (__v16si)_mm512_setzero_si512(), (__mmask16)(U),   \
       (const int)(R)))
 
-#ifdef __x86_64__
 // 512 bit : float -> long
 static __inline__ __m512i __DEFAULT_FN_ATTRS _mm512_cvttsps_epi64(__m256 A) {
   return ((__m512i)__builtin_ia32_vcvttps2qqs512_round_mask(
@@ -296,7 +292,6 @@ _mm512_maskz_cvttsps_epu64(__mmask8 U, __m256 A) {
   ((__m512i)__builtin_ia32_vcvttps2uqqs512_round_mask(                         \
       (__v8sf)(__m256)(A), (__v8di)_mm512_setzero_si512(), (__mmask8)(U),      \
       (const int)(R)))
-#endif
 
 #undef __DEFAULT_FN_ATTRS
 #endif // __AVX10_2_512SATCVTDSINTRIN_H

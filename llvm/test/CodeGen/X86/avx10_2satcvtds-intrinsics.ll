@@ -145,7 +145,6 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_256_default(<4 x double>* %xptr
   %res = call <4 x i32> @llvm.x86.avx512.mask.vcvttpd2dqs.round.256( <4 x double> %x0, <4 x i32> undef, i8 -1, i32 4)
   ret <4 x i32> %res
 }
-
 declare <4 x i32> @llvm.x86.avx512.mask.vcvttpd2dqs.round.256(<4 x double>, <4 x i32>, i8 , i32)
 
 define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_256(<4 x double> %x0, <4 x i32> %src, i8 %mask) {
@@ -220,9 +219,7 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_256_default(<4 x double>* %x0)
   %res = call <4 x i32> @llvm.x86.avx512.mask.vcvttpd2udqs.round.256( <4 x double> %x10, <4 x i32> undef, i8 -1, i32 4)
   ret <4 x i32> %res
 }
-
 declare <4 x i32> @llvm.x86.avx512.mask.vcvttpd2udqs.round.256(<4 x double>, <4 x i32>, i8 , i32)
-
 
 define <4 x i64> @test_int_x86_mask_vcvtt_pd2qqs_256(<4 x double> %x0, <4 x i64> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2qqs_256:
@@ -290,11 +287,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2qqs_256_default(<4 x double>* %x0) 
   %res = call <4 x i64> @llvm.x86.avx512.mask.vcvttpd2qqs.round.256( <4 x double> %x10, <4 x i64> undef, i8 -1, i32 4)
   ret <4 x i64> %res
 }
-
-
 declare <4 x i64> @llvm.x86.avx512.mask.vcvttpd2qqs.round.256(<4 x double>, <4 x i64>, i8 , i32)
-
-
 
 define <4 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_256(<4 x double> %x0, <4 x i64> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2uqqs_256:
@@ -362,11 +355,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_256_default(<4 x double>* %x0)
   %res = call <4 x i64> @llvm.x86.avx512.mask.vcvttpd2uqqs.round.256( <4 x double> %x10, <4 x i64> undef, i8 -1, i32 4)
   ret <4 x i64> %res
 }
-
-
 declare <4 x i64> @llvm.x86.avx512.mask.vcvttpd2uqqs.round.256(<4 x double>, <4 x i64>, i8 , i32)
-
-
 
 define <8 x i32> @test_int_x86_mask_vcvtt_ps2dqs_256(<8 x float> %x0, <8 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2dqs_256:
@@ -433,10 +422,7 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2dqs_256_default(<8 x float>* %x0) {
   %res = call <8 x i32> @llvm.x86.avx512.mask.vcvttps2dqs.round.256( <8 x float> %x10, <8 x i32> undef, i8 -1, i32 4)
   ret <8 x i32> %res
 }
-
-
 declare <8 x i32> @llvm.x86.avx512.mask.vcvttps2dqs.round.256(<8 x float>, <8 x i32>, i8 , i32)
-
 
 define <8 x i32> @test_int_x86_mask_vcvtt_ps2udqs_256(<8 x float> %x0, <8 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2udqs_256:
@@ -504,9 +490,7 @@ define <8 x i32> @test_int_x86_mask_vcvtt_ps2udqs_256_default(<8 x float>* %x0) 
   %res = call <8 x i32> @llvm.x86.avx512.mask.vcvttps2udqs.round.256( <8 x float> %x10, <8 x i32> undef, i8 -1, i32 4)
   ret <8 x i32> %res
 }
-
 declare <8 x i32> @llvm.x86.avx512.mask.vcvttps2udqs.round.256(<8 x float>, <8 x i32>, i8 , i32)
-
 
 define <4 x i64> @test_int_x86_maskz_vcvtt_ps2qqs_256_z(<4 x float> %x0, i8 %mask) {
 ; X64-LABEL: test_int_x86_maskz_vcvtt_ps2qqs_256_z:
@@ -539,14 +523,7 @@ define <4 x i64> @test_int_x86_mask_vcvtt_ps2qqs_256_undef(<4 x float> %x0, i8 %
   %res = call <4 x i64> @llvm.x86.avx512.mask.vcvttps2qqs.round.256( <4 x float> %x0, <4 x i64> undef, i8 %mask, i32 4)
   ret <4 x i64> %res
 }
-
-
-
-
-
 declare <4 x i64> @llvm.x86.avx512.mask.vcvttps2qqs.round.256(<4 x float>, <4 x i64>, i8 , i32)
-
-
 
 define <4 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_256(<4 x float> %x0, <4 x i64> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2uqqs_256:
@@ -610,8 +587,6 @@ define <4 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_256_default(<4 x float> %x0) {
 
 declare <4 x i64> @llvm.x86.avx512.mask.vcvttps2uqqs.round.256(<4 x float>, <4 x i64>, i8 , i32)
 
-
-
 define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_128(<2 x double> %x0, <4 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2dqs_128:
 ; X64:       # %bb.0:
@@ -671,7 +646,6 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_128_default(<2 x double> %x0) {
   %res = call <4 x i32> @llvm.x86.avx512.mask.vcvttpd2dqs.128( <2 x double> %x0, <4 x i32> undef, i8 -1)
   ret <4 x i32> %res
 }
-
 declare <4 x i32> @llvm.x86.avx512.mask.vcvttpd2dqs.128(<2 x double>, <4 x i32>, i8)
 
 define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_128(<2 x double> %x0, <4 x i32> %src, i8 %mask) {
@@ -733,7 +707,6 @@ define <4 x i32> @test_int_x86_mask_vcvtt_pd2udqs_128_default(<2 x double> %x0) 
   %res = call <4 x i32> @llvm.x86.avx512.mask.vcvttpd2udqs.128( <2 x double> %x0, <4 x i32> undef, i8 -1)
   ret <4 x i32> %res
 }
-
 declare <4 x i32> @llvm.x86.avx512.mask.vcvttpd2udqs.128(<2 x double>, <4 x i32>, i8)
 
 define <2 x i64> @test_int_x86_mask_vcvtt_pd2qqs_128(<2 x double> %x0, <2 x i64> %src, i8 %mask) {
@@ -795,7 +768,6 @@ define <2 x i64> @test_int_x86_mask_vcvtt_pd2qqs_128_default(<2 x double> %x0) {
   %res = call <2 x i64> @llvm.x86.avx512.mask.vcvttpd2qqs.128( <2 x double> %x0, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
-
 declare <2 x i64> @llvm.x86.avx512.mask.vcvttpd2qqs.128(<2 x double>, <2 x i64>, i8)
 
 define <2 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_128(<2 x double> %x0, <2 x i64> %src, i8 %mask) {
@@ -857,7 +829,6 @@ define <2 x i64> @test_int_x86_mask_vcvtt_pd2uqqs_128_default(<2 x double> %x0) 
   %res = call <2 x i64> @llvm.x86.avx512.mask.vcvttpd2uqqs.128( <2 x double> %x0, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
-
 declare <2 x i64> @llvm.x86.avx512.mask.vcvttpd2uqqs.128(<2 x double>, <2 x i64>, i8)
 
 define <2 x i64> @test_int_x86_mask_vcvtt_ps2qqs_128_default(<4 x float> %x0) {
@@ -926,7 +897,6 @@ define <4 x i32> @test_int_x86_mask_vcvtt_ps2dqs_128_default(<4 x float> %x0) {
 }
 declare <4 x i32> @llvm.x86.avx512.mask.vcvttps2dqs.128(<4 x float>, <4 x i32>, i8)
 
-
 define <4 x i32> @test_int_x86_mask_vcvtt_ps2udqs_128(<4 x float> %x0, <4 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2udqs_128:
 ; X64:       # %bb.0:
@@ -984,7 +954,6 @@ define <4 x i32> @test_int_x86_mask_vcvtt_ps2udqs_128_default(<4 x float> %x0) {
 }
 declare <4 x i32> @llvm.x86.avx512.mask.vcvttps2udqs.128(<4 x float>, <4 x i32>, i8)
 
-
 define <2 x i64> @test_int_x86_mask_vcvtt_ps2qqs_128_undef(<4 x float> %x0, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_ps2qqs_128_undef:
 ; X64:       # %bb.0:
@@ -1034,7 +1003,6 @@ define <2 x i64> @test_int_x86_mask_vcvtt_ps2qqs_128(<4 x float> %x0, <2 x i64> 
   %res = call <2 x i64> @llvm.x86.avx512.mask.vcvttps2qqs.128( <4 x float> %x0, <2 x i64> %src, i8 %mask)
   ret <2 x i64> %res
 }
-
 declare <2 x i64> @llvm.x86.avx512.mask.vcvttps2qqs.128(<4 x float>, <2 x i64>, i8)
 
 define <2 x i64> @test_int_x86_mask_vcvtt_ps2uqqs_128(<4 x float> %x0, <2 x i64> %src, i8 %mask) {

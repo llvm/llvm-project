@@ -324,14 +324,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasAVX10_2() || Subtarget.hasAVX10_2_512()) {
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Legal);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Legal);
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
-    }
-  } else if (Subtarget.hasSSE2()) {
+  if (Subtarget.hasSSE2()) {
     // Custom lowering for saturating float to int conversions.
     // We handle promotion to larger result types manually.
     for (MVT VT : { MVT::i8, MVT::i16, MVT::i32 }) {
@@ -341,6 +334,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
+    }
+  }
+  if (Subtarget.hasAVX10_2()) {
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Legal);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
     }
   }
 

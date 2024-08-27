@@ -4,27 +4,27 @@
 #include <stddef.h>
 
 long long test_mm_cvttssd_si64(__m128d __A) {
-  return _mm_cvtt_roundssd_si64(__A, 22); // expected-error {{invalid rounding argument}}
+  return _mm_cvtts_roundsd_si64(__A, 22); // expected-error {{invalid rounding argument}}
 }
 
 long long test_mm_cvttssd_i64(__m128d __A) {
-  return _mm_cvtt_roundssd_i64(__A, 22); // expected-error {{invalid rounding argument}}
+  return _mm_cvtts_roundsd_i64(__A, 22); // expected-error {{invalid rounding argument}}
 }
 
 unsigned long long test_mm_cvttssd_u64(__m128d __A) {
-  return _mm_cvtt_roundssd_u64(__A, 22); // expected-error {{invalid rounding argument}}
+  return _mm_cvtts_roundsd_u64(__A, 22); // expected-error {{invalid rounding argument}}
 }
 
 float test_mm_cvttsss_i64(__m128 __A) {
-  return _mm_cvtt_roundsss_i64(__A, 22); // expected-error {{invalid rounding argument}}
+  return _mm_cvtts_roundss_i64(__A, 22); // expected-error {{invalid rounding argument}}
 }
 
 long long test_mm_cvttsss_si64(__m128 __A) {
-  return _mm_cvtt_roundsss_si64(__A, 22); // expected-error {{invalid rounding argument}}
+  return _mm_cvtts_roundss_si64(__A, 22); // expected-error {{invalid rounding argument}}
 }
 
 unsigned long long test_mm_cvttsss_u64(__m128 __A) {
-  return _mm_cvtt_roundsss_u64(__A, 22); // expected-error {{invalid rounding argument}}
+  return _mm_cvtts_roundss_u64(__A, 22); // expected-error {{invalid rounding argument}}
 }
 
 __m512i test_mm512_cvtts_roundpd_epi64(__m512d A) {
