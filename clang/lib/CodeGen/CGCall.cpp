@@ -4136,22 +4136,7 @@ static void emitWriteback(CodeGenFunction &CGF,
          "shouldn't have writeback for provably null argument");
 
   if (CGF.getLangOpts().HLSL) {
-    assert(!srcLV.isMatrixElt() &&
-           "Matrix element expressions not yet supported.");
-    assert((srcLV.isSimple() || srcLV.isBitField() || srcLV.isExtVectorElt()) &&
-           "Argument expressions should only be simple, bitfield, or "
-           "vector/matrix element expressions.");
-    // For vector element or bitfield lvalues, we need to emit the store through
-    // the lvalue, otherwise we won't get the correct component masking. This
-    // will also need to be used for matrices once we support them.
-    if (srcLV.isExtVectorElt() || srcLV.isBitField()) {
-      RValue TmpVal = CGF.EmitAnyExprToTemp(writeback.CastExpr);
-      assert(TmpVal.isScalar() &&
-             "a vector lvalue sould only be assigned from a scalar rvalue.");
-      CGF.EmitStoreThroughLValue(TmpVal, srcLV);
-    } else
-      CGF.EmitAnyExprToMem(writeback.CastExpr, srcLV.getAddress(),
-                           writeback.CastExpr->getType().getQualifiers(), true);
+    CGF.EmitIgnoredExpr(writeback.CastExpr);
 
     if (writeback.LifetimeSz)
       CGF.EmitLifetimeEnd(writeback.LifetimeSz,

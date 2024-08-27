@@ -38,6 +38,8 @@ void fn(out double F) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 
+// CHECK: BinaryOperator {{.*}} 'int' lvalue '='
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 // CHECK: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
@@ -55,6 +57,9 @@ void fn(out double F) {
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'double' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double' <FloatingCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'float' lvalue
+
+// CHECK: BinaryOperator {{.*}} 'float' lvalue '='
 // CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'float' lvalue
 // CHECK: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
@@ -74,6 +79,8 @@ void fn(out double F) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
 // CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'double' lvalue
 
+// CHECK: BinaryOperator {{.*}} 'double' lvalue '='
+// CHECK-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'double' lvalue
 // CHECK: ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'double' lvalue
 
@@ -128,6 +135,8 @@ void fizz(inout T V) {
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
 // CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      BinaryOperator {{.*}} 'int' lvalue '='
+// CHECK-NEXT:   OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 // CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
@@ -143,6 +152,8 @@ void fizz(inout T V) {
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
 // CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      BinaryOperator {{.*}} 'int' lvalue '='
+// CHECK-NEXT:   OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 // CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
@@ -157,6 +168,8 @@ void fizz(inout T V) {
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
 // CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      BinaryOperator {{.*}} 'int' lvalue '='
+// CHECK-NEXT:   OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 // CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
@@ -171,6 +184,8 @@ void fizz(inout T V) {
 // CHECK-NEXT: OpaqueValueExpr [[TmpOpV:0x[0-9a-fA-F]+]] {{.*}} 'int' lvalue
 // CHECK-NEXT:   ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:     OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
+// CHECK:      BinaryOperator {{.*}} 'int' lvalue '='
+// CHECK-NEXT:   OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 // CHECK:      ImplicitCastExpr  {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT:   OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 

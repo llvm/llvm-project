@@ -1218,6 +1218,8 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   auto *ArgOpV = new (Ctx) OpaqueValueExpr(Param->getBeginLoc(), Arg->getType(),
                                            VK_LValue, OK_Ordinary, Arg);
 
+  // Parameters are initialized via copy initialization. This allows for
+  // overload resolution of argument constructors.
   InitializedEntity Entity =
     InitializedEntity::InitializeParameter(Ctx, Ty, false);
   ExprResult Res =
@@ -1230,10 +1232,10 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   auto *OpV = new (Ctx)
       OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
 
-  // TODO: Revisit this to use ActOnBinOp so that writebacks are assignments.
-  Entity =
-    InitializedEntity::InitializeParameter(Ctx, Arg->getType(), false);
-  Res = SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), OpV);
+  // Writebacks are performed with `=` binary operator, which allows for
+  // overload resolution on writeback result expressions.
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Param->getBeginLoc(),
+                           tok::equal, ArgOpV, OpV);
 
   if (Res.isInvalid())
     return ExprError();

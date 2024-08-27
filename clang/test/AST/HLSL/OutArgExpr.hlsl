@@ -43,6 +43,8 @@ void zero(out int Z) { Z = 0; }
 // AST-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // AST-NEXT: OpaqueValueExpr [[LVOpV]] <col:15, col:21> 'float' lvalue
 
+// AST: BinaryOperator {{.*}} 'float' lvalue '='
+// AST-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'float' lvalue
 // AST: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // AST-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // AST-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
@@ -68,7 +70,8 @@ void fn(uint GI) {
 // AST-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // AST-NEXT: OpaqueValueExpr [[LVOpV]] <col:8> 'int' lvalue
 
-
+// AST: BinaryOperator {{.*}} 'int' lvalue '='
+// AST-NEXT: OpaqueValueExpr [[LVOpV]] {{.*}} 'int' lvalue
 // AST: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // AST-NEXT: OpaqueValueExpr [[TmpOpV]] {{.*}} 'int' lvalue
 
