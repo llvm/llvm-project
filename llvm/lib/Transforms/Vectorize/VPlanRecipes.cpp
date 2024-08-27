@@ -1295,6 +1295,8 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
   Builder.setMask(Mask).setEVL(EVLArg);
   Value *VPInst =
       Builder.createVectorInstruction(Opcode, Ops[0]->getType(), Ops, "vp.op");
+  if (isa<FPMathOperator>(VPInst))
+    setFlags(cast<Instruction>(VPInst));
 
   State.set(this, VPInst, 0);
   State.addMetadata(VPInst,
