@@ -13969,7 +13969,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         assert(isa<ShuffleVectorInst>(Src) &&
                "Not supported shufflevector usage.");
-        ShuffleVectorInst *SVSrc = cast<ShuffleVectorInst>(Src);
+        auto *SVSrc = cast<ShuffleVectorInst>(Src);
         assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
                "Not supported shufflevector usage.");
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
