@@ -181,7 +181,7 @@ namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<GlobalValueSummaryYaml> {
-  static void mapping(IO &io, GlobalValueSummaryYaml& summary) {
+  static void mapping(IO &io, GlobalValueSummaryYaml &summary) {
     io.mapOptional("Linkage", summary.Linkage);
     io.mapOptional("Visibility", summary.Visibility);
     io.mapOptional("NotEligibleToImport", summary.NotEligibleToImport);
