@@ -24,6 +24,7 @@ class RecordKeeper;
 
 namespace clang {
 
+void EmitCIRBuiltinsLowering(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 /**
   @param PriorizeIfSubclassOf These classes should be prioritized in the output.

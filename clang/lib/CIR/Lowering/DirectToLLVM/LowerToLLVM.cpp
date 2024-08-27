@@ -1330,34 +1330,6 @@ public:
   }
 };
 
-class CIRVectorInsertLowering
-    : public mlir::OpConversionPattern<mlir::cir::VecInsertOp> {
-public:
-  using OpConversionPattern<mlir::cir::VecInsertOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::VecInsertOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
-        op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
-    return mlir::success();
-  }
-};
-
-class CIRVectorExtractLowering
-    : public mlir::OpConversionPattern<mlir::cir::VecExtractOp> {
-public:
-  using OpConversionPattern<mlir::cir::VecExtractOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::VecExtractOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
-        op, adaptor.getVec(), adaptor.getIndex());
-    return mlir::success();
-  }
-};
-
 class CIRVectorCmpOpLowering
     : public mlir::OpConversionPattern<mlir::cir::VecCmpOp> {
 public:
@@ -3154,19 +3126,6 @@ public:
   }
 };
 
-class CIRFAbsOpLowering : public mlir::OpConversionPattern<mlir::cir::FAbsOp> {
-public:
-  using OpConversionPattern<mlir::cir::FAbsOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::FAbsOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::FAbsOp>(
-        op, adaptor.getOperands().front());
-    return mlir::success();
-  }
-};
-
 class CIRExpectOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ExpectOp> {
 public:
@@ -3246,19 +3205,8 @@ public:
   }
 };
 
-class CIRStackRestoreLowering
-    : public mlir::OpConversionPattern<mlir::cir::StackRestoreOp> {
-public:
-  using OpConversionPattern<mlir::cir::StackRestoreOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::StackRestoreOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op,
-                                                            adaptor.getPtr());
-    return mlir::success();
-  }
-};
+#define GET_BUILTIN_LOWERING_CLASSES
+#include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 
 class CIRUnreachableLowering
     : public mlir::OpConversionPattern<mlir::cir::UnreachableOp> {
@@ -3601,38 +3549,6 @@ public:
   }
 };
 
-using CIRCeilOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::CeilOp, mlir::LLVM::FCeilOp>;
-using CIRCosOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::CosOp, mlir::LLVM::CosOp>;
-using CIRExpOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::ExpOp, mlir::LLVM::ExpOp>;
-using CIRExp2OpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::Exp2Op, mlir::LLVM::Exp2Op>;
-using CIRFloorOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::FloorOp, mlir::LLVM::FFloorOp>;
-using CIRFabsOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::FAbsOp, mlir::LLVM::FAbsOp>;
-using CIRLogOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::LogOp, mlir::LLVM::LogOp>;
-using CIRLog10OpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::Log10Op, mlir::LLVM::Log10Op>;
-using CIRLog2OpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::Log2Op, mlir::LLVM::Log2Op>;
-using CIRNearbyintOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::NearbyintOp,
-                                mlir::LLVM::NearbyintOp>;
-using CIRRintOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::RintOp, mlir::LLVM::RintOp>;
-using CIRRoundOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::RoundOp, mlir::LLVM::RoundOp>;
-using CIRSinOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::SinOp, mlir::LLVM::SinOp>;
-using CIRSqrtOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::SqrtOp, mlir::LLVM::SqrtOp>;
-using CIRTruncOpLowering =
-    CIRUnaryFPBuiltinOpLowering<mlir::cir::TruncOp, mlir::LLVM::FTruncOp>;
-
 using CIRLroundOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::LroundOp, mlir::LLVM::LroundOp>;
 using CIRLLroundOpLowering =
@@ -3906,23 +3822,21 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
       CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
       CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
-      CIRVectorInsertLowering, CIRVectorExtractLowering, CIRVectorCmpOpLowering,
-      CIRVectorSplatLowering, CIRVectorTernaryLowering,
+      CIRVectorCmpOpLowering, CIRVectorSplatLowering, CIRVectorTernaryLowering,
       CIRVectorShuffleIntsLowering, CIRVectorShuffleVecLowering,
-      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering,
-      CIRTrapLowering, CIRInlineAsmOpLowering, CIRSetBitfieldLowering,
-      CIRGetBitfieldLowering, CIRPrefetchLowering, CIRObjSizeOpLowering,
-      CIRIsConstantOpLowering, CIRCmpThreeWayOpLowering, CIRLroundOpLowering,
-      CIRLLroundOpLowering, CIRLrintOpLowering, CIRLLrintOpLowering,
-      CIRCeilOpLowering, CIRCosOpLowering, CIRExpOpLowering, CIRExp2OpLowering,
-      CIRFloorOpLowering, CIRFAbsOpLowering, CIRLogOpLowering,
-      CIRLog10OpLowering, CIRLog2OpLowering, CIRNearbyintOpLowering,
-      CIRRintOpLowering, CIRRoundOpLowering, CIRSinOpLowering,
-      CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
+      CIRStackSaveLowering, CIRUnreachableLowering, CIRTrapLowering,
+      CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
+      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
+      CIRCmpThreeWayOpLowering, CIRLroundOpLowering, CIRLLroundOpLowering,
+      CIRLrintOpLowering, CIRLLrintOpLowering, CIRCopysignOpLowering,
       CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
       CIRClearCacheOpLowering, CIRUndefOpLowering, CIREhTypeIdOpLowering,
       CIRCatchParamOpLowering, CIRResumeOpLowering, CIRAllocExceptionOpLowering,
-      CIRThrowOpLowering>(converter, patterns.getContext());
+      CIRThrowOpLowering
+#define GET_BUILTIN_LOWERING_LIST
+#include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
+#undef GET_BUILTIN_LOWERING_LIST
+      >(converter, patterns.getContext());
 }
 
 namespace {

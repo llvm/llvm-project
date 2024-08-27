@@ -1,0 +1,50 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s
+
+module {
+  cir.func @test(%arg0 : !cir.float) {
+    %1 = cir.cos %arg0 : !cir.float
+    // CHECK: llvm.intr.cos(%arg0) : (f32) -> f32
+
+    %2 = cir.ceil %arg0 : !cir.float
+    // CHECK: llvm.intr.ceil(%arg0) : (f32) -> f32
+
+    %3 = cir.exp %arg0 : !cir.float
+    // CHECK: llvm.intr.exp(%arg0) : (f32) -> f32
+
+    %4 = cir.exp2 %arg0 : !cir.float
+    // CHECK: llvm.intr.exp2(%arg0) : (f32) -> f32
+
+    %5 = cir.fabs %arg0 : !cir.float
+    // CHECK: llvm.intr.fabs(%arg0) : (f32) -> f32
+
+    %6 = cir.floor %arg0 : !cir.float
+    // CHECK: llvm.intr.floor(%arg0) : (f32) -> f32
+
+    %7 = cir.log %arg0 : !cir.float
+    // CHECK: llvm.intr.log(%arg0) : (f32) -> f32
+
+    %8 = cir.log10 %arg0 : !cir.float
+    // CHECK: llvm.intr.log10(%arg0) : (f32) -> f32
+
+    %9 = cir.log2 %arg0 : !cir.float
+    // CHECK: llvm.intr.log2(%arg0) : (f32) -> f32
+
+    %10 = cir.nearbyint %arg0 : !cir.float
+    // CHECK: llvm.intr.nearbyint(%arg0) : (f32) -> f32
+
+    %11 = cir.rint %arg0 : !cir.float
+    // CHECK: llvm.intr.rint(%arg0) : (f32) -> f32
+
+    %12 = cir.round %arg0 : !cir.float
+    // CHECK: llvm.intr.round(%arg0) : (f32) -> f32
+
+    %13 = cir.sin %arg0 : !cir.float
+    // CHECK: llvm.intr.sin(%arg0) : (f32) -> f32
+
+    %14 = cir.sqrt %arg0 : !cir.float
+    // CHECK: llvm.intr.sqrt(%arg0) : (f32) -> f32
+
+    cir.return
+  }
+}
