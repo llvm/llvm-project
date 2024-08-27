@@ -266,15 +266,15 @@ Parts:
       MaximumWaveLaneCount: 4294967295
       ResourceStride:  16
       Resources:
-        - Type:            1
+        - Type:            Sampler
           Space:           1
           LowerBound:      1
           UpperBound:      1
-        - Type:            2
+        - Type:            CBV
           Space:           2
           LowerBound:      2
           UpperBound:      2
-        - Type:            3
+        - Type:            SRVTyped
           Space:           3
           LowerBound:      3
           UpperBound:      3
@@ -308,40 +308,40 @@ Parts:
   dxbc::PSV::v2::ResourceBindInfo Binding;
 
   Binding = *It;
-  EXPECT_EQ(Binding.Type, 1u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 2u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   --It;
   Binding = *It;
 
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
-  EXPECT_EQ(Binding.Type, 1u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   --It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 1u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 2u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 3u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   EXPECT_FALSE(It == PSVInfo->getResources().end());
 
@@ -351,8 +351,8 @@ Parts:
   EXPECT_TRUE(It == PSVInfo->getResources().end());
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   {
     auto Old = It++;
@@ -361,30 +361,30 @@ Parts:
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
     EXPECT_FALSE(Old != PSVInfo->getResources().end());
 
-    EXPECT_EQ(Binding.Type, 0u);
-    EXPECT_EQ(Binding.Flags, 0u);
+    EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
+    EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
   }
 
   Binding = *It;
 
   EXPECT_TRUE(It == PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 
   {
     auto Old = It--;
     Binding = *Old;
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
 
-    EXPECT_EQ(Binding.Type, 0u);
-    EXPECT_EQ(Binding.Flags, 0u);
+    EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
+    EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
   }
 
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 3u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 }
 
 // The malicious file bits in these tests are mutations of the binary produced
@@ -587,7 +587,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   dxbc::PSV::v2::ResourceBindInfo Binding;
 
   Binding = *It;
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -595,7 +595,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 5u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVStructured);
   EXPECT_EQ(Binding.Space, 6u);
   EXPECT_EQ(Binding.LowerBound, 7u);
   EXPECT_EQ(Binding.UpperBound, 8u);
@@ -605,7 +605,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
 
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -613,7 +613,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   --It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -621,7 +621,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 5u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVStructured);
   EXPECT_EQ(Binding.Space, 6u);
   EXPECT_EQ(Binding.LowerBound, 7u);
   EXPECT_EQ(Binding.UpperBound, 8u);;
@@ -635,8 +635,8 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   EXPECT_TRUE(It == PSVInfo->getResources().end());
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
-  EXPECT_EQ(Binding.Flags, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
+  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
 }
 
 // This test binary is created using mutations of the yaml in the SigElements
