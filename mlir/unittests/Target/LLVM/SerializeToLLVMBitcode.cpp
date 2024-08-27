@@ -116,7 +116,7 @@ TargetAttrImpl::createObject(Attribute attribute, Operation *module,
       module->getContext(), attribute, gpu::CompilationTarget::Offload,
       StringAttr::get(module->getContext(),
                       StringRef(object.data(), object.size())),
-      module->getAttrDictionary());
+      module->getAttrDictionary(), nullptr);
 }
 
 TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(TargetAttrAPI)) {

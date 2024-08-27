@@ -120,10 +120,10 @@ def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
 
     Examples:
     ```mlir
-      // Empty table
+      // Empty table.
       #gpu.kernel_table<>
 
-      // Table with a single kernel
+      // Table with a single kernel.
       #gpu.kernel_table<[#gpu.kernel<kernel0, () -> () >]>
 
       // Table with multiple kernels.

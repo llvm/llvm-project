@@ -31,7 +31,7 @@ mlir::ROCDL::getAMDHSAKernelsELFMetadata(Builder &builder,
   llvm::Error error = llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
       buffer, kernels, elfABIVersion);
   // Return `nullopt` if the metadata couldn't be retrieved.
-  if (!error) {
+  if (error) {
     llvm::consumeError(std::move(error));
     return std::nullopt;
   }
