@@ -607,7 +607,8 @@ LTO::LTO(Config Conf, ThinBackend Backend,
     : Conf(std::move(Conf)),
       RegularLTO(ParallelCodeGenParallelismLevel, this->Conf),
       ThinLTO(std::move(Backend)),
-      GlobalResolutions(std::make_optional<StringMap<GlobalResolution>>()),
+      GlobalResolutions(
+          std::make_unique<DenseMap<StringRef, GlobalResolution>>()),
       LTOMode(LTOMode) {}
 
 // Requires a destructor for MapVector<BitcodeModule>.

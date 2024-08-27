@@ -15,6 +15,9 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include <memory>
+
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -408,7 +411,8 @@ private:
   // Global mapping from mangled symbol names to resolutions.
   // Make this an optional to guard against accessing after it has been reset
   // (to reduce memory after we're done with it).
-  std::optional<StringMap<GlobalResolution>> GlobalResolutions;
+  std::unique_ptr<llvm::DenseMap<StringRef, GlobalResolution>>
+      GlobalResolutions;
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
