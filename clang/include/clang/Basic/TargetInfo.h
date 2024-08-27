@@ -310,7 +310,7 @@ public:
   ///
   /// \param Opts - The options to use to initialize the target. The target may
   /// modify the options to canonicalize the target feature information to match
-  /// what the backend expects.
+  /// what the backend expects. These must outlive the returned TargetInfo.
   static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
                                       TargetOptions &Opts);
 
