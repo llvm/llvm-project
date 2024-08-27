@@ -111,8 +111,8 @@ lldb_private::Status SelectHelper::Select() {
 #if !defined(__APPLE__) && !defined(_WIN32)
     lldbassert(fd < static_cast<int>(FD_SETSIZE));
     if (fd >= static_cast<int>(FD_SETSIZE)) {
-      error =
-          Status::FromErrorStringWithFormat("%i is too large for select()", fd);
+      error = lldb_private::Status::FromErrorStringWithFormat(
+          "%i is too large for select()", fd);
       return error;
     }
 #endif
