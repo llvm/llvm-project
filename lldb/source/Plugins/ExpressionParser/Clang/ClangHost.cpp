@@ -52,8 +52,8 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   Log *log = GetLog(LLDBLog::Host);
   std::string raw_path = lldb_shlib_spec.GetPath();
   llvm::StringRef parent_dir = llvm::sys::path::parent_path(raw_path);
-  const std::string clang_resource_path =
-      clang::driver::Driver::GetResourcesPath("bin/lldb", CLANG_RESOURCE_DIR);
+  static const std::string clang_resource_path =
+      clang::driver::Driver::GetResourcesPath("bin/lldb");
 
   static const llvm::StringRef kResourceDirSuffixes[] = {
       // LLVM.org's build of LLDB uses the clang resource directory placed
