@@ -12,35 +12,21 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i32
 ; GISEL12-NEXT:    s_wait_samplecnt 0x0
 ; GISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
+; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
-; GISEL12-NEXT:    s_or_saveexec_b32 s3, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v2, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v2, 0x47
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_or_saveexec_b32 s3, -1
-; GISEL12-NEXT:    v_cmp_ne_u32_e64 s4, 0, v2
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v2, s4
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL12-NEXT:    v_dual_mov_b32 v4, v2 :: v_dual_add_nc_u32 v3, 42, v0
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v0, v3
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v1, v4
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v10, v0 :: v_dual_mov_b32 v11, v1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL12-NEXT:  ; %bb.1: ; %shader
+; GISEL12-NEXT:    v_add_nc_u32_e32 v12, 42, v12
+; GISEL12-NEXT:    v_add_nc_u32_e32 v8, 5, v8
+; GISEL12-NEXT:  ; %bb.2: ; %tail
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GISEL12-NEXT:    v_add_nc_u32_e32 v11, 32, v12
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: basic:
@@ -50,98 +36,172 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i32
 ; DAGISEL12-NEXT:    s_wait_samplecnt 0x0
 ; DAGISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v0, v13 :: v_dual_mov_b32 v1, v12
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s6
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, v1
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, 0x47
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s3, -1
-; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s4, 0, v2
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s3
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_add_nc_u32 v3, 42, v1
-; DAGISEL12-NEXT:    v_mov_b32_e32 v1, v3
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v0, v4
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v1 :: v_dual_mov_b32 v11, v0
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL12-NEXT:  ; %bb.1: ; %shader
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v12, 42, v12
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v8, 5, v8
+; DAGISEL12-NEXT:  ; %bb.2: ; %tail
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v11, 32, v12
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: basic:
 ; GISEL10:       ; %bb.0: ; %entry
 ; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL10-NEXT:    s_mov_b32 s6, s3
-; GISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v12
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v13
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s3
 ; GISEL10-NEXT:    s_mov_b32 s7, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v2, 0x47
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; GISEL10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v2
-; GISEL10-NEXT:    v_mov_b32_e32 v2, s4
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL10-NEXT:    v_add_nc_u32_e32 v3, 42, v0
-; GISEL10-NEXT:    v_mov_b32_e32 v4, v2
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v3
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v4
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v10, v0
-; GISEL10-NEXT:    v_mov_b32_e32 v11, v1
+; GISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL10-NEXT:  ; %bb.1: ; %shader
+; GISEL10-NEXT:    v_add_nc_u32_e32 v12, 42, v12
+; GISEL10-NEXT:    v_add_nc_u32_e32 v8, 5, v8
+; GISEL10-NEXT:  ; %bb.2: ; %tail
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GISEL10-NEXT:    v_add_nc_u32_e32 v11, 32, v12
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL10-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL10-LABEL: basic:
 ; DAGISEL10:       ; %bb.0: ; %entry
 ; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v13
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v12
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s6
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL10-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL10-NEXT:    s_mov_b32 s6, s3
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v1
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, 0x47
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v2
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s3
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v3, 42, v1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v4, s4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v3
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v4
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v11, v0
+; DAGISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL10-NEXT:  ; %bb.1: ; %shader
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v12, 42, v12
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v8, 5, v8
+; DAGISEL10-NEXT:  ; %bb.2: ; %tail
+; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v11, 32, v12
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL10-NEXT:    s_setpc_b64 s[6:7]
+entry:
+  %entry_exec = call i1 @llvm.amdgcn.init.whole.wave()
+  br i1 %entry_exec, label %shader, label %tail
+
+shader:
+  %newx = add i32 %x, 42
+  %oldval = extractvalue { i32, ptr addrspace(5), i32, i32 } %vgpr, 0
+  %newval = add i32 %oldval, 5
+  %newvgpr = insertvalue { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 %newval, 0
+
+  br label %tail
+
+tail:
+  %full.x = phi i32 [%x, %entry], [%newx, %shader]
+  %full.vgpr = phi { i32, ptr addrspace(5), i32, i32 } [%vgpr, %entry], [%newvgpr, %shader]
+  %modified.x = add i32 %full.x, 32
+  %vgpr.args = insertvalue { i32, ptr addrspace(5), i32, i32 } %full.vgpr, i32 %modified.x, 3
+  call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr %callee, i32 %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr.args, i32 0)
+  unreachable
+}
+
+define amdgpu_cs_chain void @wwm_in_shader(<3 x i32> inreg %sgpr, ptr inreg %callee, i32 inreg %exec, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 %x, i32 %y) {
+; GISEL12-LABEL: wwm_in_shader:
+; GISEL12:       ; %bb.0: ; %entry
+; GISEL12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL12-NEXT:    s_wait_expcnt 0x0
+; GISEL12-NEXT:    s_wait_samplecnt 0x0
+; GISEL12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL12-NEXT:    s_wait_kmcnt 0x0
+; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
+; GISEL12-NEXT:    v_dual_mov_b32 v10, v12 :: v_dual_mov_b32 v11, v13
+; GISEL12-NEXT:    s_mov_b32 s6, s3
+; GISEL12-NEXT:    s_mov_b32 s7, s4
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL12-NEXT:  ; %bb.1: ; %shader
+; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; GISEL12-NEXT:    v_mov_b32_e32 v0, s8
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL12-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_add_nc_u32 v10, 42, v10
+; GISEL12-NEXT:  ; %bb.2: ; %tail
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_setpc_b64 s[6:7]
+;
+; DAGISEL12-LABEL: wwm_in_shader:
+; DAGISEL12:       ; %bb.0: ; %entry
+; DAGISEL12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL12-NEXT:    s_wait_expcnt 0x0
+; DAGISEL12-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL12-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
+; DAGISEL12-NEXT:    v_dual_mov_b32 v11, v13 :: v_dual_mov_b32 v10, v12
+; DAGISEL12-NEXT:    s_mov_b32 s7, s4
+; DAGISEL12-NEXT:    s_mov_b32 s6, s3
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL12-NEXT:  ; %bb.1: ; %shader
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
+; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s4
+; DAGISEL12-NEXT:    v_dual_mov_b32 v11, s8 :: v_dual_add_nc_u32 v10, 42, v10
+; DAGISEL12-NEXT:  ; %bb.2: ; %tail
+; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
+;
+; GISEL10-LABEL: wwm_in_shader:
+; GISEL10:       ; %bb.0: ; %entry
+; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
+; GISEL10-NEXT:    v_mov_b32_e32 v10, v12
+; GISEL10-NEXT:    v_mov_b32_e32 v11, v13
+; GISEL10-NEXT:    s_mov_b32 s6, s3
+; GISEL10-NEXT:    s_mov_b32 s7, s4
+; GISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL10-NEXT:  ; %bb.1: ; %shader
+; GISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
+; GISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; GISEL10-NEXT:    v_mov_b32_e32 v0, s8
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v10
+; GISEL10-NEXT:    v_mov_b32_e32 v11, v0
+; GISEL10-NEXT:  ; %bb.2: ; %tail
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL10-NEXT:    s_setpc_b64 s[6:7]
+;
+; DAGISEL10-LABEL: wwm_in_shader:
+; DAGISEL10:       ; %bb.0: ; %entry
+; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s8, -1
+; DAGISEL10-NEXT:    v_mov_b32_e32 v11, v13
+; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v12
+; DAGISEL10-NEXT:    s_mov_b32 s7, s4
+; DAGISEL10-NEXT:    s_mov_b32 s6, s3
+; DAGISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL10-NEXT:  ; %bb.1: ; %shader
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
+; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s4
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v10
+; DAGISEL10-NEXT:    v_mov_b32_e32 v11, s8
+; DAGISEL10-NEXT:  ; %bb.2: ; %tail
+; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; DAGISEL10-NEXT:    s_setpc_b64 s[6:7]
 entry:
@@ -176,44 +236,24 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; GISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
-; GISEL12-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    v_mov_b32_e32 v4, v12
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v4, 0x47
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_or_saveexec_b32 s3, -1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL12-NEXT:  ; %bb.1: ; %shader
+; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_cmp_ne_u32_e64 s4, 0, v4
-; GISEL12-NEXT:    v_mov_b32_e32 v4, s4
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_add_nc_u32 v5, 42, v12
-; GISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v2, v5
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v2, v2
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v3, v6
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GISEL12-NEXT:    v_mov_b32_e32 v3, v3
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v9, v1
-; GISEL12-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v3
+; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; GISEL12-NEXT:    v_mov_b32_e32 v0, s8
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL12-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_add_nc_u32 v10, 42, v12
+; GISEL12-NEXT:  ; %bb.2: ; %tail
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: phi_whole_struct:
@@ -223,132 +263,61 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; DAGISEL12-NEXT:    s_wait_samplecnt 0x0
 ; DAGISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v0, v11 :: v_dual_mov_b32 v1, v10
-; DAGISEL12-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v8
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s6
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    v_mov_b32_e32 v4, v12
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v4, 0x47
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s3, -1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL12-NEXT:  ; %bb.1: ; %shader
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s4, 0, v4
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s3
-; DAGISEL12-NEXT:    v_dual_mov_b32 v6, s4 :: v_dual_add_nc_u32 v5, 42, v12
-; DAGISEL12-NEXT:    v_mov_b32_e32 v3, v3
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v3, v3
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v1, v5
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v0, v6
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v2
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v1 :: v_dual_mov_b32 v11, v0
+; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s4
+; DAGISEL12-NEXT:    v_dual_mov_b32 v11, s8 :: v_dual_add_nc_u32 v10, 42, v12
+; DAGISEL12-NEXT:  ; %bb.2: ; %tail
+; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: phi_whole_struct:
 ; GISEL10:       ; %bb.0: ; %entry
 ; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v8
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v9
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v10
-; GISEL10-NEXT:    v_mov_b32_e32 v3, v11
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s8
 ; GISEL10-NEXT:    s_mov_b32 s6, s3
 ; GISEL10-NEXT:    s_mov_b32 s7, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v4, v12
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v4, 0x47
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; GISEL10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v4
-; GISEL10-NEXT:    v_mov_b32_e32 v4, s4
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL10-NEXT:    v_add_nc_u32_e32 v5, 42, v12
-; GISEL10-NEXT:    v_mov_b32_e32 v6, v4
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v5
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v2
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v3, v6
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v3, v3
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v8, v0
-; GISEL10-NEXT:    v_mov_b32_e32 v9, v1
-; GISEL10-NEXT:    v_mov_b32_e32 v10, v2
-; GISEL10-NEXT:    v_mov_b32_e32 v11, v3
+; GISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL10-NEXT:  ; %bb.1: ; %shader
+; GISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
+; GISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; GISEL10-NEXT:    v_mov_b32_e32 v0, s8
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v12
+; GISEL10-NEXT:    v_mov_b32_e32 v11, v0
+; GISEL10-NEXT:  ; %bb.2: ; %tail
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL10-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL10-LABEL: phi_whole_struct:
 ; DAGISEL10:       ; %bb.0: ; %entry
 ; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v11
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v10
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v9
-; DAGISEL10-NEXT:    v_mov_b32_e32 v3, v8
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s6
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL10-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL10-NEXT:    s_mov_b32 s6, s3
-; DAGISEL10-NEXT:    v_mov_b32_e32 v4, v12
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v4, 0x47
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v4
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s3
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v5, 42, v12
-; DAGISEL10-NEXT:    v_mov_b32_e32 v6, s4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v3, v3
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v3, v3
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v5
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v6
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v8, v3
-; DAGISEL10-NEXT:    v_mov_b32_e32 v9, v2
-; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v11, v0
+; DAGISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL10-NEXT:  ; %bb.1: ; %shader
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
+; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s4
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v12
+; DAGISEL10-NEXT:    v_mov_b32_e32 v11, s8
+; DAGISEL10-NEXT:  ; %bb.2: ; %tail
+; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; DAGISEL10-NEXT:    s_setpc_b64 s[6:7]
 entry:
@@ -383,71 +352,61 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
-; GISEL12-NEXT:    v_mov_b32_e32 v2, v11
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
-; GISEL12-NEXT:    v_add_nc_u32_e32 v4, -1, v12
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_mov_b32 s3, 0
-; GISEL12-NEXT:  .LBB2_1: ; %shader
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL12-NEXT:    s_cbranch_execz .LBB3_4
+; GISEL12-NEXT:  ; %bb.1: ; %shader.preheader
+; GISEL12-NEXT:    v_add_nc_u32_e32 v1, -1, v12
+; GISEL12-NEXT:    s_mov_b32 s4, 0
+; GISEL12-NEXT:  .LBB3_2: ; %shader
 ; GISEL12-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_add_nc_u32_e32 v4, 1, v4
-; GISEL12-NEXT:    v_mov_b32_e32 v3, v4
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v3, 0x47
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v3
-; GISEL12-NEXT:    v_mov_b32_e32 v3, s8
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
-; GISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v4
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v5, v3
-; GISEL12-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
-; GISEL12-NEXT:    s_cbranch_execnz .LBB2_1
-; GISEL12-NEXT:  ; %bb.2: ; %tail.loopexit
+; GISEL12-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
+; GISEL12-NEXT:    v_mov_b32_e32 v0, s9
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
+; GISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GISEL12-NEXT:    v_mov_b32_e32 v11, v0
+; GISEL12-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GISEL12-NEXT:    s_cbranch_execnz .LBB3_2
+; GISEL12-NEXT:  ; %bb.3: ; %tail.loopexit
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL12-NEXT:    v_add_nc_u32_e32 v10, 42, v1
+; GISEL12-NEXT:  .LBB3_4: ; %Flow1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GISEL12-NEXT:    v_add_nc_u32_e32 v4, 42, v4
-; GISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v1, v4
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v2, v5
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v2, v2
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL12-NEXT:    s_mov_b32 s3, exec_lo
 ; GISEL12-NEXT:    ; implicit-def: $vgpr8
 ; GISEL12-NEXT:    v_cmpx_lt_i32_e64 v12, v13
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_xor_b32 s3, exec_lo, s3
-; GISEL12-NEXT:  ; %bb.3: ; %tail.else
+; GISEL12-NEXT:  ; %bb.5: ; %tail.else
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL12-NEXT:    v_mov_b32_e32 v3, 15
+; GISEL12-NEXT:    v_mov_b32_e32 v0, 15
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v8, v3
-; GISEL12-NEXT:  ; %bb.4: ; %Flow
+; GISEL12-NEXT:    v_mov_b32_e32 v8, v0
+; GISEL12-NEXT:  ; %bb.6: ; %Flow
 ; GISEL12-NEXT:    s_and_not1_saveexec_b32 s3, s3
-; GISEL12-NEXT:  ; %bb.5: ; %tail.then
+; GISEL12-NEXT:  ; %bb.7: ; %tail.then
 ; GISEL12-NEXT:    s_mov_b32 s4, 44
-; GISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    v_mov_b32_e32 v8, s4
-; GISEL12-NEXT:  ; %bb.6: ; %tail.end
+; GISEL12-NEXT:  ; %bb.8: ; %tail.end
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GISEL12-NEXT:    v_dual_mov_b32 v9, v0 :: v_dual_mov_b32 v10, v1
-; GISEL12-NEXT:    v_mov_b32_e32 v11, v2
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: control_flow:
@@ -457,194 +416,147 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL12-NEXT:    s_wait_samplecnt 0x0
 ; DAGISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v0, v11 :: v_dual_mov_b32 v1, v10
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, v9
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s6
-; DAGISEL12-NEXT:    v_add_nc_u32_e32 v4, -1, v12
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_mov_b32 s3, 0
-; DAGISEL12-NEXT:  .LBB2_1: ; %shader
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL12-NEXT:    s_cbranch_execz .LBB3_4
+; DAGISEL12-NEXT:  ; %bb.1: ; %shader.preheader
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v1, -1, v12
+; DAGISEL12-NEXT:    s_mov_b32 s4, 0
+; DAGISEL12-NEXT:  .LBB3_2: ; %shader
 ; DAGISEL12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_add_nc_u32_e32 v4, 1, v4
-; DAGISEL12-NEXT:    v_mov_b32_e32 v3, v4
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v3, 0x47
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v3
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s4
-; DAGISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v4
-; DAGISEL12-NEXT:    v_mov_b32_e32 v5, s8
-; DAGISEL12-NEXT:    s_or_b32 s3, vcc_lo, s3
-; DAGISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; DAGISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
-; DAGISEL12-NEXT:    s_cbranch_execnz .LBB2_1
-; DAGISEL12-NEXT:  ; %bb.2: ; %tail.loopexit
+; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
+; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s8
+; DAGISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
+; DAGISEL12-NEXT:    v_mov_b32_e32 v11, s9
+; DAGISEL12-NEXT:    s_or_b32 s4, vcc_lo, s4
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; DAGISEL12-NEXT:    s_cbranch_execnz .LBB3_2
+; DAGISEL12-NEXT:  ; %bb.3: ; %tail.loopexit
+; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v10, 42, v1
+; DAGISEL12-NEXT:  .LBB3_4: ; %Flow1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; DAGISEL12-NEXT:    v_add_nc_u32_e32 v4, 42, v4
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v1, v4
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v1, v1
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v0, v5
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v0, v0
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL12-NEXT:    s_mov_b32 s3, exec_lo
 ; DAGISEL12-NEXT:    ; implicit-def: $vgpr8
 ; DAGISEL12-NEXT:    v_cmpx_lt_i32_e64 v12, v13
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_xor_b32 s3, exec_lo, s3
-; DAGISEL12-NEXT:  ; %bb.3: ; %tail.else
+; DAGISEL12-NEXT:  ; %bb.5: ; %tail.else
 ; DAGISEL12-NEXT:    s_mov_b32 s4, 15
-; DAGISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    v_mov_b32_e32 v8, s4
-; DAGISEL12-NEXT:  ; %bb.4: ; %Flow
+; DAGISEL12-NEXT:  ; %bb.6: ; %Flow
 ; DAGISEL12-NEXT:    s_and_not1_saveexec_b32 s3, s3
-; DAGISEL12-NEXT:  ; %bb.5: ; %tail.then
+; DAGISEL12-NEXT:  ; %bb.7: ; %tail.then
 ; DAGISEL12-NEXT:    v_mov_b32_e32 v8, 44
-; DAGISEL12-NEXT:  ; %bb.6: ; %tail.end
+; DAGISEL12-NEXT:  ; %bb.8: ; %tail.end
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; DAGISEL12-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v10, v1
-; DAGISEL12-NEXT:    v_mov_b32_e32 v11, v0
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: control_flow:
 ; GISEL10:       ; %bb.0: ; %entry
 ; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v9
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v10
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v11
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s8
-; GISEL10-NEXT:    v_add_nc_u32_e32 v4, -1, v12
 ; GISEL10-NEXT:    s_mov_b32 s6, s3
 ; GISEL10-NEXT:    s_mov_b32 s7, s4
-; GISEL10-NEXT:    s_mov_b32 s3, 0
-; GISEL10-NEXT:  .LBB2_1: ; %shader
+; GISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL10-NEXT:    s_cbranch_execz .LBB3_4
+; GISEL10-NEXT:  ; %bb.1: ; %shader.preheader
+; GISEL10-NEXT:    v_add_nc_u32_e32 v1, -1, v12
+; GISEL10-NEXT:    s_mov_b32 s4, 0
+; GISEL10-NEXT:  .LBB3_2: ; %shader
 ; GISEL10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL10-NEXT:    v_add_nc_u32_e32 v4, 1, v4
-; GISEL10-NEXT:    v_mov_b32_e32 v3, v4
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v3, 0x47
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v3
-; GISEL10-NEXT:    v_mov_b32_e32 v3, s8
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s4
-; GISEL10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v4
-; GISEL10-NEXT:    v_mov_b32_e32 v5, v3
-; GISEL10-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GISEL10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s3
-; GISEL10-NEXT:    s_cbranch_execnz .LBB2_1
-; GISEL10-NEXT:  ; %bb.2: ; %tail.loopexit
+; GISEL10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
+; GISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
+; GISEL10-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
+; GISEL10-NEXT:    v_mov_b32_e32 v0, s9
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s8
+; GISEL10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
+; GISEL10-NEXT:    v_mov_b32_e32 v11, v0
+; GISEL10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GISEL10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
+; GISEL10-NEXT:    s_cbranch_execnz .LBB3_2
+; GISEL10-NEXT:  ; %bb.3: ; %tail.loopexit
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v1
+; GISEL10-NEXT:  .LBB3_4: ; %Flow1
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GISEL10-NEXT:    v_add_nc_u32_e32 v4, 42, v4
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v4
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v5
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v2
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL10-NEXT:    s_mov_b32 s3, exec_lo
 ; GISEL10-NEXT:    ; implicit-def: $vgpr8
 ; GISEL10-NEXT:    v_cmpx_lt_i32_e64 v12, v13
 ; GISEL10-NEXT:    s_xor_b32 s3, exec_lo, s3
-; GISEL10-NEXT:  ; %bb.3: ; %tail.else
+; GISEL10-NEXT:  ; %bb.5: ; %tail.else
 ; GISEL10-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v3, 15
+; GISEL10-NEXT:    v_mov_b32_e32 v0, 15
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v8, v3
-; GISEL10-NEXT:  ; %bb.4: ; %Flow
+; GISEL10-NEXT:    v_mov_b32_e32 v8, v0
+; GISEL10-NEXT:  ; %bb.6: ; %Flow
 ; GISEL10-NEXT:    s_andn2_saveexec_b32 s3, s3
-; GISEL10-NEXT:  ; %bb.5: ; %tail.then
+; GISEL10-NEXT:  ; %bb.7: ; %tail.then
 ; GISEL10-NEXT:    s_mov_b32 s4, 44
 ; GISEL10-NEXT:    v_mov_b32_e32 v8, s4
-; GISEL10-NEXT:  ; %bb.6: ; %tail.end
+; GISEL10-NEXT:  ; %bb.8: ; %tail.end
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GISEL10-NEXT:    v_mov_b32_e32 v9, v0
-; GISEL10-NEXT:    v_mov_b32_e32 v10, v1
-; GISEL10-NEXT:    v_mov_b32_e32 v11, v2
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL10-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL10-LABEL: control_flow:
 ; DAGISEL10:       ; %bb.0: ; %entry
 ; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v11
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v10
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v9
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s6
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v4, -1, v12
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL10-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL10-NEXT:    s_mov_b32 s6, s3
-; DAGISEL10-NEXT:    s_mov_b32 s3, 0
-; DAGISEL10-NEXT:  .LBB2_1: ; %shader
+; DAGISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL10-NEXT:    s_cbranch_execz .LBB3_4
+; DAGISEL10-NEXT:  ; %bb.1: ; %shader.preheader
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v1, -1, v12
+; DAGISEL10-NEXT:    s_mov_b32 s4, 0
+; DAGISEL10-NEXT:  .LBB3_2: ; %shader
 ; DAGISEL10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v4, 1, v4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v3, v4
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v3, 0x47
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s4, -1
-; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v3
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s4
-; DAGISEL10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v5, s8
-; DAGISEL10-NEXT:    s_or_b32 s3, vcc_lo, s3
-; DAGISEL10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s3
-; DAGISEL10-NEXT:    s_cbranch_execnz .LBB2_1
-; DAGISEL10-NEXT:  ; %bb.2: ; %tail.loopexit
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s8, -1
+; DAGISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
+; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s8
+; DAGISEL10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
+; DAGISEL10-NEXT:    v_mov_b32_e32 v11, s9
+; DAGISEL10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; DAGISEL10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
+; DAGISEL10-NEXT:    s_cbranch_execnz .LBB3_2
+; DAGISEL10-NEXT:  ; %bb.3: ; %tail.loopexit
+; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v1
+; DAGISEL10-NEXT:  .LBB3_4: ; %Flow1
 ; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v4, 42, v4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v2
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v4
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v1
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v5
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v0
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL10-NEXT:    s_mov_b32 s3, exec_lo
 ; DAGISEL10-NEXT:    ; implicit-def: $vgpr8
 ; DAGISEL10-NEXT:    v_cmpx_lt_i32_e64 v12, v13
 ; DAGISEL10-NEXT:    s_xor_b32 s3, exec_lo, s3
-; DAGISEL10-NEXT:  ; %bb.3: ; %tail.else
+; DAGISEL10-NEXT:  ; %bb.5: ; %tail.else
 ; DAGISEL10-NEXT:    s_mov_b32 s4, 15
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v8, s4
-; DAGISEL10-NEXT:  ; %bb.4: ; %Flow
+; DAGISEL10-NEXT:  ; %bb.6: ; %Flow
 ; DAGISEL10-NEXT:    s_andn2_saveexec_b32 s3, s3
-; DAGISEL10-NEXT:  ; %bb.5: ; %tail.then
+; DAGISEL10-NEXT:  ; %bb.7: ; %tail.then
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v8, 44
-; DAGISEL10-NEXT:  ; %bb.6: ; %tail.end
+; DAGISEL10-NEXT:  ; %bb.8: ; %tail.end
 ; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; DAGISEL10-NEXT:    v_mov_b32_e32 v9, v2
-; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v11, v0
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; DAGISEL10-NEXT:    s_setpc_b64 s[6:7]
 entry:
@@ -689,8 +601,8 @@ tail.end:
 }
 
 ; Try with v0-v7 occupied - this will force us to use higher registers for temporaries. Make sure we don't preserve them.
-define amdgpu_cs_chain void @control_flow_use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, i32 inreg %exec, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 %x, i32 %y) {
-; GISEL12-LABEL: control_flow_use_v0_7:
+define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, i32 inreg %exec, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 %x, i32 %y) {
+; GISEL12-LABEL: use_v0_7:
 ; GISEL12:       ; %bb.0: ; %entry
 ; GISEL12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL12-NEXT:    s_wait_expcnt 0x0
@@ -698,191 +610,106 @@ define amdgpu_cs_chain void @control_flow_use_v0_7(<3 x i32> inreg %sgpr, ptr in
 ; GISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v13, v8 :: v_dual_mov_b32 v14, v9
-; GISEL12-NEXT:    v_dual_mov_b32 v15, v10 :: v_dual_mov_b32 v16, v11
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    v_mov_b32_e32 v17, v12
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v17, 0x47
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_or_saveexec_b32 s3, -1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL12-NEXT:    s_cbranch_execz .LBB4_2
+; GISEL12-NEXT:  ; %bb.1: ; %shader
+; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_cmp_ne_u32_e64 s4, 0, v17
-; GISEL12-NEXT:    v_mov_b32_e32 v17, s4
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_dual_mov_b32 v9, v17 :: v_dual_add_nc_u32 v8, 42, v12
+; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
+; GISEL12-NEXT:    v_mov_b32_e32 v13, s8
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL12-NEXT:    v_dual_mov_b32 v11, v13 :: v_dual_add_nc_u32 v10, 42, v12
 ; GISEL12-NEXT:    ;;#ASMSTART
 ; GISEL12-NEXT:    ; use v0-7
 ; GISEL12-NEXT:    ;;#ASMEND
-; GISEL12-NEXT:    v_mov_b32_e32 v13, v13
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v13, v13
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v14, v14
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_mov_b32_e32 v14, v14
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v15, v8
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v15, v15
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v16, v9
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GISEL12-NEXT:    v_mov_b32_e32 v16, v16
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL12-NEXT:    v_dual_mov_b32 v8, v13 :: v_dual_mov_b32 v9, v14
-; GISEL12-NEXT:    v_dual_mov_b32 v10, v15 :: v_dual_mov_b32 v11, v16
+; GISEL12-NEXT:  .LBB4_2: ; %tail
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
-; DAGISEL12-LABEL: control_flow_use_v0_7:
+; DAGISEL12-LABEL: use_v0_7:
 ; DAGISEL12:       ; %bb.0: ; %entry
 ; DAGISEL12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; DAGISEL12-NEXT:    s_wait_expcnt 0x0
 ; DAGISEL12-NEXT:    s_wait_samplecnt 0x0
 ; DAGISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v13, v11 :: v_dual_mov_b32 v14, v10
-; DAGISEL12-NEXT:    v_dual_mov_b32 v15, v9 :: v_dual_mov_b32 v16, v8
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s6
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    v_mov_b32_e32 v17, v12
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v17, 0x47
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s3, -1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL12-NEXT:    s_cbranch_execz .LBB4_2
+; DAGISEL12-NEXT:  ; %bb.1: ; %shader
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s4, 0, v17
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s3
-; DAGISEL12-NEXT:    v_dual_mov_b32 v9, s4 :: v_dual_add_nc_u32 v8, 42, v12
+; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
+; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s4
+; DAGISEL12-NEXT:    v_dual_mov_b32 v11, s8 :: v_dual_add_nc_u32 v10, 42, v12
 ; DAGISEL12-NEXT:    ;;#ASMSTART
 ; DAGISEL12-NEXT:    ; use v0-7
 ; DAGISEL12-NEXT:    ;;#ASMEND
-; DAGISEL12-NEXT:    v_mov_b32_e32 v16, v16
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v16, v16
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v15, v15
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v15, v15
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v14, v8
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; DAGISEL12-NEXT:    v_mov_b32_e32 v14, v14
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v13, v9
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v13, v13
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v8, v16 :: v_dual_mov_b32 v9, v15
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v14 :: v_dual_mov_b32 v11, v13
+; DAGISEL12-NEXT:  .LBB4_2: ; %tail
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
-; GISEL10-LABEL: control_flow_use_v0_7:
+; GISEL10-LABEL: use_v0_7:
 ; GISEL10:       ; %bb.0: ; %entry
 ; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v13, v8
-; GISEL10-NEXT:    v_mov_b32_e32 v14, v9
-; GISEL10-NEXT:    v_mov_b32_e32 v15, v10
-; GISEL10-NEXT:    v_mov_b32_e32 v16, v11
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s8
 ; GISEL10-NEXT:    s_mov_b32 s6, s3
 ; GISEL10-NEXT:    s_mov_b32 s7, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v17, v12
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v17, 0x47
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; GISEL10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v17
-; GISEL10-NEXT:    v_mov_b32_e32 v17, s4
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL10-NEXT:    v_add_nc_u32_e32 v8, 42, v12
-; GISEL10-NEXT:    v_mov_b32_e32 v9, v17
+; GISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; GISEL10-NEXT:    s_cbranch_execz .LBB4_2
+; GISEL10-NEXT:  ; %bb.1: ; %shader
+; GISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL10-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
+; GISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
+; GISEL10-NEXT:    v_mov_b32_e32 v13, s8
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v12
+; GISEL10-NEXT:    v_mov_b32_e32 v11, v13
 ; GISEL10-NEXT:    ;;#ASMSTART
 ; GISEL10-NEXT:    ; use v0-7
 ; GISEL10-NEXT:    ;;#ASMEND
-; GISEL10-NEXT:    v_mov_b32_e32 v13, v13
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v13, v13
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v14, v14
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v14, v14
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v15, v8
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v15, v15
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v16, v9
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v16, v16
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL10-NEXT:    v_mov_b32_e32 v8, v13
-; GISEL10-NEXT:    v_mov_b32_e32 v9, v14
-; GISEL10-NEXT:    v_mov_b32_e32 v10, v15
-; GISEL10-NEXT:    v_mov_b32_e32 v11, v16
+; GISEL10-NEXT:  .LBB4_2: ; %tail
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL10-NEXT:    s_setpc_b64 s[6:7]
 ;
-; DAGISEL10-LABEL: control_flow_use_v0_7:
+; DAGISEL10-LABEL: use_v0_7:
 ; DAGISEL10:       ; %bb.0: ; %entry
 ; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v13, v11
-; DAGISEL10-NEXT:    v_mov_b32_e32 v14, v10
-; DAGISEL10-NEXT:    v_mov_b32_e32 v15, v9
-; DAGISEL10-NEXT:    v_mov_b32_e32 v16, v8
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s6
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL10-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL10-NEXT:    s_mov_b32 s6, s3
-; DAGISEL10-NEXT:    v_mov_b32_e32 v17, v12
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v17, 0x47
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s3, -1
-; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v17
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s3
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v8, 42, v12
+; DAGISEL10-NEXT:    s_and_saveexec_b32 s3, s8
+; DAGISEL10-NEXT:    s_cbranch_execz .LBB4_2
+; DAGISEL10-NEXT:  ; %bb.1: ; %shader
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; DAGISEL10-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
+; DAGISEL10-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s4
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v10, 42, v12
+; DAGISEL10-NEXT:    v_mov_b32_e32 v11, s8
 ; DAGISEL10-NEXT:    ;;#ASMSTART
 ; DAGISEL10-NEXT:    ; use v0-7
 ; DAGISEL10-NEXT:    ;;#ASMEND
-; DAGISEL10-NEXT:    v_mov_b32_e32 v9, s4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v16, v16
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v16, v16
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v15, v15
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v15, v15
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v14, v8
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v14, v14
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v13, v9
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v13, v13
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v8, v16
-; DAGISEL10-NEXT:    v_mov_b32_e32 v9, v15
-; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v14
-; DAGISEL10-NEXT:    v_mov_b32_e32 v11, v13
+; DAGISEL10-NEXT:  .LBB4_2: ; %tail
+; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; DAGISEL10-NEXT:    s_setpc_b64 s[6:7]
 entry:
@@ -912,6 +739,7 @@ tail:
 
 ; Check that the inactive lanes of v8:15 are correctly preserved even across a
 ; WWM call that reads and writes them.
+; FIXME: The GlobalISel path hits a pre-existing issue, so the inactive lanes do get overwritten.
 define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inreg %callee, i32 inreg %exec, <16 x i32> %vgpr, i32 %x, i32 %y) {
 ; GISEL12-LABEL: wwm_write_to_arg_reg:
 ; GISEL12:       ; %bb.0: ; %entry
@@ -922,35 +750,43 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL12-NEXT:    s_mov_b32 s32, 0
 ; GISEL12-NEXT:    s_or_saveexec_b32 s9, -1
-; GISEL12-NEXT:    s_mov_b32 s11, s4
-; GISEL12-NEXT:    v_dual_mov_b32 v40, v8 :: v_dual_mov_b32 v41, v9
-; GISEL12-NEXT:    v_dual_mov_b32 v42, v10 :: v_dual_mov_b32 v43, v11
-; GISEL12-NEXT:    v_dual_mov_b32 v44, v12 :: v_dual_mov_b32 v45, v13
-; GISEL12-NEXT:    v_dual_mov_b32 v46, v14 :: v_dual_mov_b32 v47, v15
-; GISEL12-NEXT:    v_dual_mov_b32 v56, v16 :: v_dual_mov_b32 v57, v17
-; GISEL12-NEXT:    v_dual_mov_b32 v58, v18 :: v_dual_mov_b32 v59, v19
-; GISEL12-NEXT:    v_dual_mov_b32 v60, v20 :: v_dual_mov_b32 v61, v21
-; GISEL12-NEXT:    v_dual_mov_b32 v62, v22 :: v_dual_mov_b32 v63, v23
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s9
-; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL12-NEXT:    s_or_saveexec_b32 s12, -1
 ; GISEL12-NEXT:    s_mov_b32 s6, s0
 ; GISEL12-NEXT:    s_mov_b32 s7, s1
-; GISEL12-NEXT:    s_getpc_b64 s[0:1]
-; GISEL12-NEXT:    s_sext_i32_i16 s1, s1
-; GISEL12-NEXT:    s_add_co_u32 s0, s0, write_v0_v15@gotpcrel32@lo+8
-; GISEL12-NEXT:    s_add_co_ci_u32 s1, s1, write_v0_v15@gotpcrel32@hi+16
-; GISEL12-NEXT:    v_dual_mov_b32 v0, v40 :: v_dual_mov_b32 v1, v41
-; GISEL12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GISEL12-NEXT:    v_dual_mov_b32 v2, v42 :: v_dual_mov_b32 v3, v43
-; GISEL12-NEXT:    v_dual_mov_b32 v4, v44 :: v_dual_mov_b32 v5, v45
-; GISEL12-NEXT:    v_dual_mov_b32 v6, v46 :: v_dual_mov_b32 v7, v47
-; GISEL12-NEXT:    v_dual_mov_b32 v8, v56 :: v_dual_mov_b32 v9, v57
-; GISEL12-NEXT:    v_dual_mov_b32 v10, v58 :: v_dual_mov_b32 v11, v59
-; GISEL12-NEXT:    v_dual_mov_b32 v12, v60 :: v_dual_mov_b32 v13, v61
-; GISEL12-NEXT:    v_dual_mov_b32 v14, v62 :: v_dual_mov_b32 v15, v63
 ; GISEL12-NEXT:    s_mov_b32 s8, s2
 ; GISEL12-NEXT:    s_mov_b32 s10, s3
+; GISEL12-NEXT:    s_mov_b32 s11, s4
+; GISEL12-NEXT:    v_dual_mov_b32 v24, v8 :: v_dual_mov_b32 v25, v9
+; GISEL12-NEXT:    v_dual_mov_b32 v26, v10 :: v_dual_mov_b32 v27, v11
+; GISEL12-NEXT:    v_dual_mov_b32 v28, v12 :: v_dual_mov_b32 v29, v13
+; GISEL12-NEXT:    v_dual_mov_b32 v30, v14 :: v_dual_mov_b32 v31, v15
+; GISEL12-NEXT:    v_dual_mov_b32 v32, v16 :: v_dual_mov_b32 v33, v17
+; GISEL12-NEXT:    v_dual_mov_b32 v34, v18 :: v_dual_mov_b32 v35, v19
+; GISEL12-NEXT:    v_dual_mov_b32 v36, v20 :: v_dual_mov_b32 v37, v21
+; GISEL12-NEXT:    v_dual_mov_b32 v38, v22 :: v_dual_mov_b32 v39, v23
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s12
+; GISEL12-NEXT:    s_and_saveexec_b32 s4, s9
+; GISEL12-NEXT:    s_cbranch_execz .LBB5_2
+; GISEL12-NEXT:  ; %bb.1: ; %shader
+; GISEL12-NEXT:    s_or_saveexec_b32 s9, -1
+; GISEL12-NEXT:    s_getpc_b64 s[0:1]
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_sext_i32_i16 s1, s1
+; GISEL12-NEXT:    s_add_co_u32 s0, s0, write_v0_v15@gotpcrel32@lo+12
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_add_co_ci_u32 s1, s1, write_v0_v15@gotpcrel32@hi+24
+; GISEL12-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
+; GISEL12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GISEL12-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
+; GISEL12-NEXT:    v_dual_mov_b32 v4, v28 :: v_dual_mov_b32 v5, v29
+; GISEL12-NEXT:    v_dual_mov_b32 v6, v30 :: v_dual_mov_b32 v7, v31
+; GISEL12-NEXT:    v_dual_mov_b32 v8, v32 :: v_dual_mov_b32 v9, v33
+; GISEL12-NEXT:    v_dual_mov_b32 v10, v34 :: v_dual_mov_b32 v11, v35
+; GISEL12-NEXT:    v_dual_mov_b32 v12, v36 :: v_dual_mov_b32 v13, v37
+; GISEL12-NEXT:    v_dual_mov_b32 v14, v38 :: v_dual_mov_b32 v15, v39
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL12-NEXT:    v_dual_mov_b32 v24, v0 :: v_dual_mov_b32 v25, v1
 ; GISEL12-NEXT:    v_dual_mov_b32 v26, v2 :: v_dual_mov_b32 v27, v3
@@ -960,80 +796,11 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    v_dual_mov_b32 v34, v10 :: v_dual_mov_b32 v35, v11
 ; GISEL12-NEXT:    v_dual_mov_b32 v36, v12 :: v_dual_mov_b32 v37, v13
 ; GISEL12-NEXT:    v_dual_mov_b32 v38, v14 :: v_dual_mov_b32 v39, v15
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
-; GISEL12-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
-; GISEL12-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
-; GISEL12-NEXT:    v_dual_mov_b32 v4, v28 :: v_dual_mov_b32 v5, v29
-; GISEL12-NEXT:    v_dual_mov_b32 v6, v30 :: v_dual_mov_b32 v7, v31
-; GISEL12-NEXT:    v_dual_mov_b32 v8, v32 :: v_dual_mov_b32 v9, v33
-; GISEL12-NEXT:    v_dual_mov_b32 v10, v34 :: v_dual_mov_b32 v11, v35
-; GISEL12-NEXT:    v_dual_mov_b32 v12, v36 :: v_dual_mov_b32 v13, v37
-; GISEL12-NEXT:    v_dual_mov_b32 v14, v38 :: v_dual_mov_b32 v15, v39
-; GISEL12-NEXT:    v_mov_b32_e32 v24, v0
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v24, v40
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v25, v1
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v25, v41
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v26, v2
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v26, v42
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v27, v3
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v27, v43
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v28, v4
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v28, v44
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v29, v5
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v29, v45
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v30, v6
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v30, v46
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v31, v7
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v31, v47
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v32, v8
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v32, v56
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v33, v9
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v33, v57
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v34, v10
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v34, v58
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v35, v11
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v35, v59
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v36, v12
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v36, v60
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v37, v13
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v37, v61
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v38, v14
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v38, v62
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v39, v15
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    v_mov_b32_e32 v39, v63
-; GISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL12-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s9
+; GISEL12-NEXT:    ; kill: def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $exec
+; GISEL12-NEXT:  .LBB5_2: ; %tail
+; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:    v_dual_mov_b32 v8, v24 :: v_dual_mov_b32 v9, v25
 ; GISEL12-NEXT:    v_dual_mov_b32 v10, v26 :: v_dual_mov_b32 v11, v27
 ; GISEL12-NEXT:    v_dual_mov_b32 v12, v28 :: v_dual_mov_b32 v13, v29
@@ -1046,6 +813,7 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    s_mov_b32 s1, s7
 ; GISEL12-NEXT:    s_mov_b32 s2, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[10:11]
 ;
 ; DAGISEL12-LABEL: wwm_write_to_arg_reg:
@@ -1056,47 +824,35 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
 ; DAGISEL12-NEXT:    s_mov_b32 s32, 0
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s11, -1
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v40, v23 :: v_dual_mov_b32 v41, v22
-; DAGISEL12-NEXT:    v_dual_mov_b32 v42, v21 :: v_dual_mov_b32 v43, v20
-; DAGISEL12-NEXT:    v_dual_mov_b32 v44, v19 :: v_dual_mov_b32 v45, v18
-; DAGISEL12-NEXT:    v_dual_mov_b32 v46, v17 :: v_dual_mov_b32 v47, v16
-; DAGISEL12-NEXT:    v_dual_mov_b32 v56, v15 :: v_dual_mov_b32 v57, v14
-; DAGISEL12-NEXT:    v_dual_mov_b32 v58, v13 :: v_dual_mov_b32 v59, v12
-; DAGISEL12-NEXT:    v_dual_mov_b32 v60, v11 :: v_dual_mov_b32 v61, v10
-; DAGISEL12-NEXT:    v_dual_mov_b32 v62, v9 :: v_dual_mov_b32 v63, v8
+; DAGISEL12-NEXT:    v_dual_mov_b32 v39, v23 :: v_dual_mov_b32 v38, v22
+; DAGISEL12-NEXT:    v_dual_mov_b32 v37, v21 :: v_dual_mov_b32 v36, v20
+; DAGISEL12-NEXT:    v_dual_mov_b32 v35, v19 :: v_dual_mov_b32 v34, v18
+; DAGISEL12-NEXT:    v_dual_mov_b32 v33, v17 :: v_dual_mov_b32 v32, v16
+; DAGISEL12-NEXT:    v_dual_mov_b32 v31, v15 :: v_dual_mov_b32 v30, v14
+; DAGISEL12-NEXT:    v_dual_mov_b32 v29, v13 :: v_dual_mov_b32 v28, v12
+; DAGISEL12-NEXT:    v_dual_mov_b32 v27, v11 :: v_dual_mov_b32 v26, v10
+; DAGISEL12-NEXT:    v_dual_mov_b32 v25, v9 :: v_dual_mov_b32 v24, v8
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s6
-; DAGISEL12-NEXT:    s_or_saveexec_b32 s10, -1
-; DAGISEL12-NEXT:    s_mov_b32 s6, s1
-; DAGISEL12-NEXT:    s_mov_b32 s7, s0
-; DAGISEL12-NEXT:    s_getpc_b64 s[0:1]
-; DAGISEL12-NEXT:    s_sext_i32_i16 s1, s1
-; DAGISEL12-NEXT:    s_add_co_u32 s0, s0, write_v0_v15@gotpcrel32@lo+8
-; DAGISEL12-NEXT:    s_add_co_ci_u32 s1, s1, write_v0_v15@gotpcrel32@hi+16
-; DAGISEL12-NEXT:    v_dual_mov_b32 v0, v63 :: v_dual_mov_b32 v1, v62
-; DAGISEL12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; DAGISEL12-NEXT:    v_dual_mov_b32 v2, v61 :: v_dual_mov_b32 v3, v60
-; DAGISEL12-NEXT:    v_dual_mov_b32 v4, v59 :: v_dual_mov_b32 v5, v58
-; DAGISEL12-NEXT:    v_dual_mov_b32 v6, v57 :: v_dual_mov_b32 v7, v56
-; DAGISEL12-NEXT:    v_dual_mov_b32 v8, v47 :: v_dual_mov_b32 v9, v46
-; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v45 :: v_dual_mov_b32 v11, v44
-; DAGISEL12-NEXT:    v_dual_mov_b32 v12, v43 :: v_dual_mov_b32 v13, v42
-; DAGISEL12-NEXT:    v_dual_mov_b32 v14, v41 :: v_dual_mov_b32 v15, v40
 ; DAGISEL12-NEXT:    s_mov_b32 s9, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s8, s3
 ; DAGISEL12-NEXT:    s_mov_b32 s4, s2
-; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; DAGISEL12-NEXT:    v_dual_mov_b32 v24, v0 :: v_dual_mov_b32 v25, v1
-; DAGISEL12-NEXT:    v_dual_mov_b32 v26, v2 :: v_dual_mov_b32 v27, v3
-; DAGISEL12-NEXT:    v_dual_mov_b32 v28, v4 :: v_dual_mov_b32 v29, v5
-; DAGISEL12-NEXT:    v_dual_mov_b32 v30, v6 :: v_dual_mov_b32 v31, v7
-; DAGISEL12-NEXT:    v_dual_mov_b32 v32, v8 :: v_dual_mov_b32 v33, v9
-; DAGISEL12-NEXT:    v_dual_mov_b32 v34, v10 :: v_dual_mov_b32 v35, v11
-; DAGISEL12-NEXT:    v_dual_mov_b32 v36, v12 :: v_dual_mov_b32 v37, v13
-; DAGISEL12-NEXT:    v_dual_mov_b32 v38, v14 :: v_dual_mov_b32 v39, v15
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s10
+; DAGISEL12-NEXT:    s_mov_b32 s6, s1
+; DAGISEL12-NEXT:    s_mov_b32 s7, s0
+; DAGISEL12-NEXT:    s_and_saveexec_b32 s10, s11
+; DAGISEL12-NEXT:    s_cbranch_execz .LBB5_2
+; DAGISEL12-NEXT:  ; %bb.1: ; %shader
+; DAGISEL12-NEXT:    s_or_saveexec_b32 s11, -1
+; DAGISEL12-NEXT:    s_getpc_b64 s[0:1]
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_sext_i32_i16 s1, s1
+; DAGISEL12-NEXT:    s_add_co_u32 s0, s0, write_v0_v15@gotpcrel32@lo+12
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_add_co_ci_u32 s1, s1, write_v0_v15@gotpcrel32@hi+24
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
+; DAGISEL12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v4, v28 :: v_dual_mov_b32 v5, v29
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v6, v30 :: v_dual_mov_b32 v7, v31
@@ -1104,71 +860,29 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v34 :: v_dual_mov_b32 v11, v35
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v12, v36 :: v_dual_mov_b32 v13, v37
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v14, v38 :: v_dual_mov_b32 v15, v39
-; DAGISEL12-NEXT:    v_mov_b32_e32 v24, v0
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v24, v63
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v25, v1
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v25, v62
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v26, v2
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v26, v61
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v27, v3
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v27, v60
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v28, v4
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v28, v59
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v29, v5
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v29, v58
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v30, v6
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v30, v57
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v31, v7
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v31, v56
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v32, v8
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v32, v47
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v33, v9
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v33, v46
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v34, v10
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v34, v45
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v35, v11
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v35, v44
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v36, v12
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v36, v43
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v37, v13
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v37, v42
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v38, v14
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v38, v41
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v39, v15
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    v_mov_b32_e32 v39, v40
-; DAGISEL12-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL12-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; DAGISEL12-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v41, v1
+; DAGISEL12-NEXT:    v_dual_mov_b32 v42, v2 :: v_dual_mov_b32 v43, v3
+; DAGISEL12-NEXT:    v_dual_mov_b32 v44, v4 :: v_dual_mov_b32 v45, v5
+; DAGISEL12-NEXT:    v_dual_mov_b32 v46, v6 :: v_dual_mov_b32 v47, v7
+; DAGISEL12-NEXT:    v_dual_mov_b32 v48, v8 :: v_dual_mov_b32 v49, v9
+; DAGISEL12-NEXT:    v_dual_mov_b32 v50, v10 :: v_dual_mov_b32 v51, v11
+; DAGISEL12-NEXT:    v_dual_mov_b32 v52, v12 :: v_dual_mov_b32 v53, v13
+; DAGISEL12-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v55, v15
+; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s11
+; DAGISEL12-NEXT:    v_dual_mov_b32 v24, v40 :: v_dual_mov_b32 v25, v41
+; DAGISEL12-NEXT:    v_dual_mov_b32 v26, v42 :: v_dual_mov_b32 v27, v43
+; DAGISEL12-NEXT:    v_dual_mov_b32 v28, v44 :: v_dual_mov_b32 v29, v45
+; DAGISEL12-NEXT:    v_dual_mov_b32 v30, v46 :: v_dual_mov_b32 v31, v47
+; DAGISEL12-NEXT:    v_dual_mov_b32 v32, v48 :: v_dual_mov_b32 v33, v49
+; DAGISEL12-NEXT:    v_dual_mov_b32 v34, v50 :: v_dual_mov_b32 v35, v51
+; DAGISEL12-NEXT:    v_dual_mov_b32 v36, v52 :: v_dual_mov_b32 v37, v53
+; DAGISEL12-NEXT:    v_dual_mov_b32 v38, v54 :: v_dual_mov_b32 v39, v55
+; DAGISEL12-NEXT:  .LBB5_2: ; %tail
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s10
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v8, v24 :: v_dual_mov_b32 v9, v25
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v26 :: v_dual_mov_b32 v11, v27
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v12, v28 :: v_dual_mov_b32 v13, v29
@@ -1181,6 +895,7 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    s_mov_b32 s1, s6
 ; DAGISEL12-NEXT:    s_mov_b32 s2, s4
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
+; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[8:9]
 ;
 ; GISEL10-LABEL: wwm_write_to_arg_reg:
@@ -1188,49 +903,53 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL10-NEXT:    s_mov_b32 s32, 0
 ; GISEL10-NEXT:    s_or_saveexec_b32 s9, -1
-; GISEL10-NEXT:    s_mov_b32 s11, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v40, v8
-; GISEL10-NEXT:    v_mov_b32_e32 v41, v9
-; GISEL10-NEXT:    v_mov_b32_e32 v42, v10
-; GISEL10-NEXT:    v_mov_b32_e32 v43, v11
-; GISEL10-NEXT:    v_mov_b32_e32 v44, v12
-; GISEL10-NEXT:    v_mov_b32_e32 v45, v13
-; GISEL10-NEXT:    v_mov_b32_e32 v46, v14
-; GISEL10-NEXT:    v_mov_b32_e32 v47, v15
-; GISEL10-NEXT:    v_mov_b32_e32 v56, v16
-; GISEL10-NEXT:    v_mov_b32_e32 v57, v17
-; GISEL10-NEXT:    v_mov_b32_e32 v58, v18
-; GISEL10-NEXT:    v_mov_b32_e32 v59, v19
-; GISEL10-NEXT:    v_mov_b32_e32 v60, v20
-; GISEL10-NEXT:    v_mov_b32_e32 v61, v21
-; GISEL10-NEXT:    v_mov_b32_e32 v62, v22
-; GISEL10-NEXT:    v_mov_b32_e32 v63, v23
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s9
-; GISEL10-NEXT:    s_or_saveexec_b32 s4, -1
+; GISEL10-NEXT:    s_or_saveexec_b32 s12, -1
 ; GISEL10-NEXT:    s_mov_b32 s6, s0
 ; GISEL10-NEXT:    s_mov_b32 s7, s1
+; GISEL10-NEXT:    s_mov_b32 s8, s2
+; GISEL10-NEXT:    s_mov_b32 s10, s3
+; GISEL10-NEXT:    s_mov_b32 s11, s4
+; GISEL10-NEXT:    v_mov_b32_e32 v24, v8
+; GISEL10-NEXT:    v_mov_b32_e32 v25, v9
+; GISEL10-NEXT:    v_mov_b32_e32 v26, v10
+; GISEL10-NEXT:    v_mov_b32_e32 v27, v11
+; GISEL10-NEXT:    v_mov_b32_e32 v28, v12
+; GISEL10-NEXT:    v_mov_b32_e32 v29, v13
+; GISEL10-NEXT:    v_mov_b32_e32 v30, v14
+; GISEL10-NEXT:    v_mov_b32_e32 v31, v15
+; GISEL10-NEXT:    v_mov_b32_e32 v32, v16
+; GISEL10-NEXT:    v_mov_b32_e32 v33, v17
+; GISEL10-NEXT:    v_mov_b32_e32 v34, v18
+; GISEL10-NEXT:    v_mov_b32_e32 v35, v19
+; GISEL10-NEXT:    v_mov_b32_e32 v36, v20
+; GISEL10-NEXT:    v_mov_b32_e32 v37, v21
+; GISEL10-NEXT:    v_mov_b32_e32 v38, v22
+; GISEL10-NEXT:    v_mov_b32_e32 v39, v23
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s12
+; GISEL10-NEXT:    s_and_saveexec_b32 s4, s9
+; GISEL10-NEXT:    s_cbranch_execz .LBB5_2
+; GISEL10-NEXT:  ; %bb.1: ; %shader
+; GISEL10-NEXT:    s_or_saveexec_b32 s9, -1
 ; GISEL10-NEXT:    s_getpc_b64 s[0:1]
 ; GISEL10-NEXT:    s_add_u32 s0, s0, write_v0_v15@gotpcrel32@lo+4
 ; GISEL10-NEXT:    s_addc_u32 s1, s1, write_v0_v15@gotpcrel32@hi+12
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v40
+; GISEL10-NEXT:    v_mov_b32_e32 v0, v24
 ; GISEL10-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x0
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v41
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v42
-; GISEL10-NEXT:    v_mov_b32_e32 v3, v43
-; GISEL10-NEXT:    v_mov_b32_e32 v4, v44
-; GISEL10-NEXT:    v_mov_b32_e32 v5, v45
-; GISEL10-NEXT:    v_mov_b32_e32 v6, v46
-; GISEL10-NEXT:    v_mov_b32_e32 v7, v47
-; GISEL10-NEXT:    v_mov_b32_e32 v8, v56
-; GISEL10-NEXT:    v_mov_b32_e32 v9, v57
-; GISEL10-NEXT:    v_mov_b32_e32 v10, v58
-; GISEL10-NEXT:    v_mov_b32_e32 v11, v59
-; GISEL10-NEXT:    v_mov_b32_e32 v12, v60
-; GISEL10-NEXT:    v_mov_b32_e32 v13, v61
-; GISEL10-NEXT:    v_mov_b32_e32 v14, v62
-; GISEL10-NEXT:    v_mov_b32_e32 v15, v63
-; GISEL10-NEXT:    s_mov_b32 s8, s2
-; GISEL10-NEXT:    s_mov_b32 s10, s3
+; GISEL10-NEXT:    v_mov_b32_e32 v1, v25
+; GISEL10-NEXT:    v_mov_b32_e32 v2, v26
+; GISEL10-NEXT:    v_mov_b32_e32 v3, v27
+; GISEL10-NEXT:    v_mov_b32_e32 v4, v28
+; GISEL10-NEXT:    v_mov_b32_e32 v5, v29
+; GISEL10-NEXT:    v_mov_b32_e32 v6, v30
+; GISEL10-NEXT:    v_mov_b32_e32 v7, v31
+; GISEL10-NEXT:    v_mov_b32_e32 v8, v32
+; GISEL10-NEXT:    v_mov_b32_e32 v9, v33
+; GISEL10-NEXT:    v_mov_b32_e32 v10, v34
+; GISEL10-NEXT:    v_mov_b32_e32 v11, v35
+; GISEL10-NEXT:    v_mov_b32_e32 v12, v36
+; GISEL10-NEXT:    v_mov_b32_e32 v13, v37
+; GISEL10-NEXT:    v_mov_b32_e32 v14, v38
+; GISEL10-NEXT:    v_mov_b32_e32 v15, v39
 ; GISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GISEL10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1251,88 +970,10 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL10-NEXT:    v_mov_b32_e32 v37, v13
 ; GISEL10-NEXT:    v_mov_b32_e32 v38, v14
 ; GISEL10-NEXT:    v_mov_b32_e32 v39, v15
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v0, v24
-; GISEL10-NEXT:    v_mov_b32_e32 v1, v25
-; GISEL10-NEXT:    v_mov_b32_e32 v2, v26
-; GISEL10-NEXT:    v_mov_b32_e32 v3, v27
-; GISEL10-NEXT:    v_mov_b32_e32 v4, v28
-; GISEL10-NEXT:    v_mov_b32_e32 v5, v29
-; GISEL10-NEXT:    v_mov_b32_e32 v6, v30
-; GISEL10-NEXT:    v_mov_b32_e32 v7, v31
-; GISEL10-NEXT:    v_mov_b32_e32 v8, v32
-; GISEL10-NEXT:    v_mov_b32_e32 v9, v33
-; GISEL10-NEXT:    v_mov_b32_e32 v10, v34
-; GISEL10-NEXT:    v_mov_b32_e32 v11, v35
-; GISEL10-NEXT:    v_mov_b32_e32 v12, v36
-; GISEL10-NEXT:    v_mov_b32_e32 v13, v37
-; GISEL10-NEXT:    v_mov_b32_e32 v14, v38
-; GISEL10-NEXT:    v_mov_b32_e32 v15, v39
-; GISEL10-NEXT:    v_mov_b32_e32 v24, v0
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v24, v40
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v25, v1
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v25, v41
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v26, v2
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v26, v42
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v27, v3
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v27, v43
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v28, v4
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v28, v44
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v29, v5
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v29, v45
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v30, v6
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v30, v46
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v31, v7
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v31, v47
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v32, v8
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v32, v56
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v33, v9
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v33, v57
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v34, v10
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v34, v58
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v35, v11
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v35, v59
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v36, v12
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v36, v60
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v37, v13
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v37, v61
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v38, v14
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v38, v62
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v39, v15
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    v_mov_b32_e32 v39, v63
-; GISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL10-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s9
+; GISEL10-NEXT:    ; kill: def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $exec
+; GISEL10-NEXT:  .LBB5_2: ; %tail
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL10-NEXT:    v_mov_b32_e32 v8, v24
 ; GISEL10-NEXT:    v_mov_b32_e32 v9, v25
 ; GISEL10-NEXT:    v_mov_b32_e32 v10, v26
@@ -1359,72 +1000,39 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL10:       ; %bb.0: ; %entry
 ; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL10-NEXT:    s_mov_b32 s32, 0
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s11, -1
 ; DAGISEL10-NEXT:    s_or_saveexec_b32 s6, -1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v40, v23
-; DAGISEL10-NEXT:    v_mov_b32_e32 v41, v22
-; DAGISEL10-NEXT:    v_mov_b32_e32 v42, v21
-; DAGISEL10-NEXT:    v_mov_b32_e32 v43, v20
-; DAGISEL10-NEXT:    v_mov_b32_e32 v44, v19
-; DAGISEL10-NEXT:    v_mov_b32_e32 v45, v18
-; DAGISEL10-NEXT:    v_mov_b32_e32 v46, v17
-; DAGISEL10-NEXT:    v_mov_b32_e32 v47, v16
-; DAGISEL10-NEXT:    v_mov_b32_e32 v56, v15
-; DAGISEL10-NEXT:    v_mov_b32_e32 v57, v14
-; DAGISEL10-NEXT:    v_mov_b32_e32 v58, v13
-; DAGISEL10-NEXT:    v_mov_b32_e32 v59, v12
-; DAGISEL10-NEXT:    v_mov_b32_e32 v60, v11
-; DAGISEL10-NEXT:    v_mov_b32_e32 v61, v10
-; DAGISEL10-NEXT:    v_mov_b32_e32 v62, v9
-; DAGISEL10-NEXT:    v_mov_b32_e32 v63, v8
+; DAGISEL10-NEXT:    v_mov_b32_e32 v39, v23
+; DAGISEL10-NEXT:    v_mov_b32_e32 v38, v22
+; DAGISEL10-NEXT:    v_mov_b32_e32 v37, v21
+; DAGISEL10-NEXT:    v_mov_b32_e32 v36, v20
+; DAGISEL10-NEXT:    v_mov_b32_e32 v35, v19
+; DAGISEL10-NEXT:    v_mov_b32_e32 v34, v18
+; DAGISEL10-NEXT:    v_mov_b32_e32 v33, v17
+; DAGISEL10-NEXT:    v_mov_b32_e32 v32, v16
+; DAGISEL10-NEXT:    v_mov_b32_e32 v31, v15
+; DAGISEL10-NEXT:    v_mov_b32_e32 v30, v14
+; DAGISEL10-NEXT:    v_mov_b32_e32 v29, v13
+; DAGISEL10-NEXT:    v_mov_b32_e32 v28, v12
+; DAGISEL10-NEXT:    v_mov_b32_e32 v27, v11
+; DAGISEL10-NEXT:    v_mov_b32_e32 v26, v10
+; DAGISEL10-NEXT:    v_mov_b32_e32 v25, v9
+; DAGISEL10-NEXT:    v_mov_b32_e32 v24, v8
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s6
-; DAGISEL10-NEXT:    s_or_saveexec_b32 s12, -1
-; DAGISEL10-NEXT:    s_mov_b32 s6, s1
-; DAGISEL10-NEXT:    s_mov_b32 s7, s0
-; DAGISEL10-NEXT:    s_getpc_b64 s[0:1]
-; DAGISEL10-NEXT:    s_add_u32 s0, s0, write_v0_v15@gotpcrel32@lo+4
-; DAGISEL10-NEXT:    s_addc_u32 s1, s1, write_v0_v15@gotpcrel32@hi+12
-; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v63
-; DAGISEL10-NEXT:    s_load_dwordx2 s[10:11], s[0:1], 0x0
-; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v62
-; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v61
-; DAGISEL10-NEXT:    v_mov_b32_e32 v3, v60
-; DAGISEL10-NEXT:    v_mov_b32_e32 v4, v59
-; DAGISEL10-NEXT:    v_mov_b32_e32 v5, v58
-; DAGISEL10-NEXT:    v_mov_b32_e32 v6, v57
-; DAGISEL10-NEXT:    v_mov_b32_e32 v7, v56
-; DAGISEL10-NEXT:    v_mov_b32_e32 v8, v47
-; DAGISEL10-NEXT:    v_mov_b32_e32 v9, v46
-; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v45
-; DAGISEL10-NEXT:    v_mov_b32_e32 v11, v44
-; DAGISEL10-NEXT:    v_mov_b32_e32 v12, v43
-; DAGISEL10-NEXT:    v_mov_b32_e32 v13, v42
-; DAGISEL10-NEXT:    v_mov_b32_e32 v14, v41
-; DAGISEL10-NEXT:    v_mov_b32_e32 v15, v40
 ; DAGISEL10-NEXT:    s_mov_b32 s9, s4
 ; DAGISEL10-NEXT:    s_mov_b32 s8, s3
 ; DAGISEL10-NEXT:    s_mov_b32 s4, s2
-; DAGISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
-; DAGISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
-; DAGISEL10-NEXT:    s_waitcnt lgkmcnt(0)
-; DAGISEL10-NEXT:    s_swappc_b64 s[30:31], s[10:11]
-; DAGISEL10-NEXT:    v_mov_b32_e32 v24, v0
-; DAGISEL10-NEXT:    v_mov_b32_e32 v25, v1
-; DAGISEL10-NEXT:    v_mov_b32_e32 v26, v2
-; DAGISEL10-NEXT:    v_mov_b32_e32 v27, v3
-; DAGISEL10-NEXT:    v_mov_b32_e32 v28, v4
-; DAGISEL10-NEXT:    v_mov_b32_e32 v29, v5
-; DAGISEL10-NEXT:    v_mov_b32_e32 v30, v6
-; DAGISEL10-NEXT:    v_mov_b32_e32 v31, v7
-; DAGISEL10-NEXT:    v_mov_b32_e32 v32, v8
-; DAGISEL10-NEXT:    v_mov_b32_e32 v33, v9
-; DAGISEL10-NEXT:    v_mov_b32_e32 v34, v10
-; DAGISEL10-NEXT:    v_mov_b32_e32 v35, v11
-; DAGISEL10-NEXT:    v_mov_b32_e32 v36, v12
-; DAGISEL10-NEXT:    v_mov_b32_e32 v37, v13
-; DAGISEL10-NEXT:    v_mov_b32_e32 v38, v14
-; DAGISEL10-NEXT:    v_mov_b32_e32 v39, v15
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s12
+; DAGISEL10-NEXT:    s_mov_b32 s6, s1
+; DAGISEL10-NEXT:    s_mov_b32 s7, s0
+; DAGISEL10-NEXT:    s_and_saveexec_b32 s10, s11
+; DAGISEL10-NEXT:    s_cbranch_execz .LBB5_2
+; DAGISEL10-NEXT:  ; %bb.1: ; %shader
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s11, -1
+; DAGISEL10-NEXT:    s_getpc_b64 s[0:1]
+; DAGISEL10-NEXT:    s_add_u32 s0, s0, write_v0_v15@gotpcrel32@lo+4
+; DAGISEL10-NEXT:    s_addc_u32 s1, s1, write_v0_v15@gotpcrel32@hi+12
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v24
+; DAGISEL10-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v25
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v2, v26
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v3, v27
@@ -1440,71 +1048,45 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v13, v37
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v14, v38
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v15, v39
-; DAGISEL10-NEXT:    v_mov_b32_e32 v24, v0
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v24, v63
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v25, v1
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v25, v62
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v26, v2
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v26, v61
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v27, v3
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v27, v60
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v28, v4
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v28, v59
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v29, v5
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v29, v58
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v30, v6
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v30, v57
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v31, v7
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v31, v56
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v32, v8
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v32, v47
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v33, v9
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v33, v46
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v34, v10
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v34, v45
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v35, v11
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v35, v44
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v36, v12
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v36, v43
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v37, v13
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v37, v42
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v38, v14
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v38, v41
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v39, v15
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    v_mov_b32_e32 v39, v40
-; DAGISEL10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL10-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; DAGISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
+; DAGISEL10-NEXT:    s_waitcnt lgkmcnt(0)
+; DAGISEL10-NEXT:    s_swappc_b64 s[30:31], s[12:13]
+; DAGISEL10-NEXT:    v_mov_b32_e32 v40, v0
+; DAGISEL10-NEXT:    v_mov_b32_e32 v41, v1
+; DAGISEL10-NEXT:    v_mov_b32_e32 v42, v2
+; DAGISEL10-NEXT:    v_mov_b32_e32 v43, v3
+; DAGISEL10-NEXT:    v_mov_b32_e32 v44, v4
+; DAGISEL10-NEXT:    v_mov_b32_e32 v45, v5
+; DAGISEL10-NEXT:    v_mov_b32_e32 v46, v6
+; DAGISEL10-NEXT:    v_mov_b32_e32 v47, v7
+; DAGISEL10-NEXT:    v_mov_b32_e32 v48, v8
+; DAGISEL10-NEXT:    v_mov_b32_e32 v49, v9
+; DAGISEL10-NEXT:    v_mov_b32_e32 v50, v10
+; DAGISEL10-NEXT:    v_mov_b32_e32 v51, v11
+; DAGISEL10-NEXT:    v_mov_b32_e32 v52, v12
+; DAGISEL10-NEXT:    v_mov_b32_e32 v53, v13
+; DAGISEL10-NEXT:    v_mov_b32_e32 v54, v14
+; DAGISEL10-NEXT:    v_mov_b32_e32 v55, v15
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s11
+; DAGISEL10-NEXT:    v_mov_b32_e32 v24, v40
+; DAGISEL10-NEXT:    v_mov_b32_e32 v25, v41
+; DAGISEL10-NEXT:    v_mov_b32_e32 v26, v42
+; DAGISEL10-NEXT:    v_mov_b32_e32 v27, v43
+; DAGISEL10-NEXT:    v_mov_b32_e32 v28, v44
+; DAGISEL10-NEXT:    v_mov_b32_e32 v29, v45
+; DAGISEL10-NEXT:    v_mov_b32_e32 v30, v46
+; DAGISEL10-NEXT:    v_mov_b32_e32 v31, v47
+; DAGISEL10-NEXT:    v_mov_b32_e32 v32, v48
+; DAGISEL10-NEXT:    v_mov_b32_e32 v33, v49
+; DAGISEL10-NEXT:    v_mov_b32_e32 v34, v50
+; DAGISEL10-NEXT:    v_mov_b32_e32 v35, v51
+; DAGISEL10-NEXT:    v_mov_b32_e32 v36, v52
+; DAGISEL10-NEXT:    v_mov_b32_e32 v37, v53
+; DAGISEL10-NEXT:    v_mov_b32_e32 v38, v54
+; DAGISEL10-NEXT:    v_mov_b32_e32 v39, v55
+; DAGISEL10-NEXT:  .LBB5_2: ; %tail
+; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s10
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v8, v24
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v9, v25
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v10, v26

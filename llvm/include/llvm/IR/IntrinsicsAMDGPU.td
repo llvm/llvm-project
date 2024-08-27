@@ -216,11 +216,10 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 // (mostly related to WWM CSR handling) that differentiate it from using
 // a plain `amdgcn.init.exec -1`.
 //
-// Can only be used in functions with the `amdgpu_cs_chain` calling convention.
 // Using this intrinsic without immediately branching on its return value is an
 // error.
 def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
-    IntrHasSideEffects, IntrNoMem, IntrNoDuplicate, IntrConvergent]>;
+    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
 
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,

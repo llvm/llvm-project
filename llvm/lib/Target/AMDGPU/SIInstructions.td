@@ -589,6 +589,8 @@ def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
   [(set i1:$dst, (int_amdgcn_init_whole_wave))]> {
   let Defs = [EXEC];
   let Uses = [EXEC];
+
+  let isConvergent = 1;
 }
 
 // Return for returning shaders to a shader variant epilog.
