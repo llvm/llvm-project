@@ -203,12 +203,12 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -1078,7 +1078,7 @@ Status NativeProcessLinux::Halt() {
   Status error;
 
   if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -1114,7 +1114,7 @@ Status NativeProcessLinux::Signal(int signo) {
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -1191,7 +1191,7 @@ Status NativeProcessLinux::Kill() {
   }
 
   if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -2006,7 +2006,7 @@ Status NativeProcessLinux::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
                  addr, data);
 
   if (ret == -1)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   if (result)
     *result = ret;
