@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SaveCoreOptions.h"
 #include "llvm/Object/COFF.h"
 
 class ObjectFilePECOFF : public lldb_private::ObjectFile {
