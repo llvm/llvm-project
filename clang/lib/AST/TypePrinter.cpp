@@ -2052,7 +2052,14 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
 void TypePrinter::printHLSLAttributedResourceBefore(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
-  // FIXME: print values of resource type attributes here
+
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  OS << " [[hlsl::resource_class("
+     << HLSLResourceClassAttr::ConvertResourceClassToStr(
+            static_cast<llvm::dxil::ResourceClass>(Attrs.ResourceClass))
+     << ")]]";
+  if (Attrs.IsROV)
+    OS << " [[hlsl::is_rov()]]";
 }
 
 void TypePrinter::printHLSLAttributedResourceAfter(

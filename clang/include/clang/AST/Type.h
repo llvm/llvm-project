@@ -6158,23 +6158,12 @@ public:
 class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
-    // This is where data gathered from HLSL resource attributes are stored,
-    // such as resource class, is_rov, dimension, is_array, is_feedback
-    // or is_multisample. The values will be accessed individually via fields
-    // on the embedded struct. The Data alias is used for the AST type
-    //  serialization.
-    union {
-      struct {
-        uint8_t ResourceClass; // maps to llvm::dxil::ResourceClass
-        uint8_t IsROV : 1;
-        // FIXME: add additional resource properties here
-      };
-      unsigned Data;
-    };
-    Attributes() : Data() {}
-    Attributes(unsigned Data) : Data(Data) {}
+    // Data gathered from HLSL resource attributes
+    uint8_t ResourceClass; // maps to llvm::dxil::ResourceClass
+    uint8_t IsROV : 1;
+    Attributes(uint8_t RC, bool rov) : ResourceClass(RC), IsROV(rov) {}
+    Attributes() : Attributes(0, 0) {}
   };
-  static_assert(sizeof(Attributes) == sizeof(Attributes::Data));
 
 private:
   friend class ASTContext; // ASTContext creates these
@@ -6204,7 +6193,8 @@ public:
                       QualType Contained, const Attributes &Attrs) {
     ID.AddPointer(Wrapped.getAsOpaquePtr());
     ID.AddPointer(Contained.getAsOpaquePtr());
-    ID.AddInteger(Attrs.Data);
+    ID.AddInteger(Attrs.ResourceClass);
+    ID.AddBoolean(Attrs.IsROV);
   }
 
   static bool classof(const Type *T) {

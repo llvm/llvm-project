@@ -799,6 +799,19 @@ static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
   return true;
 }
 
+// Determine structural equivalence of two instances of
+// HLSLAttributedResourceType::Attributes
+static bool
+IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                         const HLSLAttributedResourceType::Attributes &Attrs1,
+                         const HLSLAttributedResourceType::Attributes &Attrs2) {
+  if (Attrs1.ResourceClass != Attrs2.ResourceClass)
+    return false;
+  if (Attrs1.IsROV != Attrs2.IsROV)
+    return false;
+  return true;
+}
+
 /// Determine structural equivalence of two types.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType T1, QualType T2) {
@@ -1102,8 +1115,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
             cast<HLSLAttributedResourceType>(T2)->getContainedType()))
       return false;
-    if (cast<HLSLAttributedResourceType>(T1)->getAttrs().Data !=
-        cast<HLSLAttributedResourceType>(T2)->getAttrs().Data)
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getAttrs(),
+            cast<HLSLAttributedResourceType>(T2)->getAttrs()))
       return false;
     break;
 
