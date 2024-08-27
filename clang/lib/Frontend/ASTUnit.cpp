@@ -1501,6 +1501,10 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
     Target = &CI.getTarget();
   Reader = CI.getASTReader();
   HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
+  if (Invocation != CI.getInvocationPtr()) {
+    // This happens when Parse creates a copy of \c Invocation to modify.
+    ModifiedInvocation = CI.getInvocationPtr();
+  }
 }
 
 StringRef ASTUnit::getMainFileName() const {
