@@ -135,9 +135,6 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isAnyComplexType() || T->isVectorType())
     return std::nullopt;
 
-  if (const auto *ET = T->getAs<EnumType>())
-    return classify(ET->getDecl()->getIntegerType());
-
   if (T->isSignedIntegerOrEnumerationType()) {
     switch (Ctx.getIntWidth(T)) {
     case 64:
@@ -163,6 +160,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
       return PT_Uint16;
     case 8:
       return PT_Uint8;
+    case 1:
+      // Might happen for enum types.
+      return PT_Bool;
     default:
       return PT_IntAP;
     }
@@ -179,7 +179,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     return PT_MemberPtr;
 
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType())
+      T->isFunctionType() || T->isBlockPointerType())
     return PT_FnPtr;
 
   if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())

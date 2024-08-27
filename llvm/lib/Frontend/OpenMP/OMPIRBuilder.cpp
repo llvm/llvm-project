@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -39,8 +40,8 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -1547,7 +1548,16 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   BasicBlock *CommonExit = nullptr;
   SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
   Extractor.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
-  Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands);
+
+  Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands,
+                              /*CollectGlobalInputs=*/true);
+
+  Inputs.remove_if([&](Value *I) {
+    if (auto *GV = dyn_cast_if_present<GlobalVariable>(I))
+      return GV->getValueType() == OpenMPIRBuilder::Ident;
+
+    return false;
+  });
 
   LLVM_DEBUG(dbgs() << "Before privatization: " << *OuterFn << "\n");
 

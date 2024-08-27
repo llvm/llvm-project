@@ -8517,7 +8517,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
     // NaN (if exists) will be propagated later, so orderness doesn't matter.
     SDValue Compare =
-        DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
+        DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETOGT : ISD::SETOLT);
     MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS, Flags);
   }
 
@@ -8534,7 +8534,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
+                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
     SDValue TestZero =
         DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
     SDValue LCmp = DAG.getSelect(
@@ -8823,7 +8823,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // Split the value into sign bit and absolute value.
   SDValue AbsV = DAG.getNode(ISD::AND, DL, IntVT, OpAsInt, ValueMaskV);
   SDValue SignV = DAG.getSetCC(DL, ResultVT, OpAsInt,
-                               DAG.getConstant(0.0, DL, IntVT), ISD::SETLT);
+                               DAG.getConstant(0, DL, IntVT), ISD::SETLT);
 
   // Tests that involve more than one class should be processed first.
   SDValue PartialRes;
@@ -9185,8 +9185,8 @@ SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
                      DAG.getNode(ISD::VP_SRL, dl, VT, Op, Tmp, Mask, VL), Mask,
                      VL);
   }
-  Op = DAG.getNode(ISD::VP_XOR, dl, VT, Op, DAG.getConstant(-1, dl, VT), Mask,
-                   VL);
+  Op = DAG.getNode(ISD::VP_XOR, dl, VT, Op, DAG.getAllOnesConstant(dl, VT),
+                   Mask, VL);
   return DAG.getNode(ISD::VP_CTPOP, dl, VT, Op, Mask, VL);
 }
 
@@ -9299,7 +9299,7 @@ SDValue TargetLowering::expandVPCTTZ(SDNode *Node, SelectionDAG &DAG) const {
 
   // Same as the vector part of expandCTTZ, use: popcount(~x & (x - 1))
   SDValue Not = DAG.getNode(ISD::VP_XOR, dl, VT, Op,
-                            DAG.getConstant(-1, dl, VT), Mask, VL);
+                            DAG.getAllOnesConstant(dl, VT), Mask, VL);
   SDValue MinusOne = DAG.getNode(ISD::VP_SUB, dl, VT, Op,
                                  DAG.getConstant(1, dl, VT), Mask, VL);
   SDValue Tmp = DAG.getNode(ISD::VP_AND, dl, VT, Not, MinusOne, Mask, VL);
@@ -10658,7 +10658,7 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
     SDValue SelectZeroOrOne =
         DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
                       DAG.getConstant(0, dl, ResVT));
-    return DAG.getSelect(dl, ResVT, IsLT, DAG.getConstant(-1, dl, ResVT),
+    return DAG.getSelect(dl, ResVT, IsLT, DAG.getAllOnesConstant(dl, ResVT),
                          SelectZeroOrOne);
   }
 

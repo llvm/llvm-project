@@ -403,14 +403,14 @@ def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(-N->getSExtValue(), SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 // Return an immediate value minus 32.
 def ImmSub32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() - 32, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() - 32, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 // Return an immediate subtracted from XLen.
@@ -442,16 +442,16 @@ def AddiPair : PatLeaf<(imm), [{
 def AddiPairImmSmall : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue();
   int64_t Adj = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getTargetConstant(Imm - Adj, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(Imm - Adj, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 // Return -2048 if immediate is negative or 2047 if positive. These are the
 // largest simm12 values.
 def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getTargetConstant(Imm, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(Imm, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 def TrailingZeros : SDNodeXForm<imm, [{
@@ -837,6 +837,14 @@ let Predicates = [IsRV64, HasStdExtH] in {
 def HLV_WU  : HLoad_r<0b0110100, 0b00001, "hlv.wu">, Sched<[]>;
 def HLV_D   : HLoad_r<0b0110110, 0b00000, "hlv.d">, Sched<[]>;
 def HSV_D   : HStore_rr<0b0110111, "hsv.d">, Sched<[]>;
+}
+
+let Predicates = [HasStdExtSmctrOrSsctr] in {
+def SCTRCLR : Priv<"sctrclr", 0b0001000>, Sched<[]> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = 0b00100;
+}
 }
 
 //===----------------------------------------------------------------------===//

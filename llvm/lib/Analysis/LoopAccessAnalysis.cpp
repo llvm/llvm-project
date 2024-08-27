@@ -2054,8 +2054,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
-  } else
-    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
+  } else {
+    if (!LoopGuards)
+      LoopGuards.emplace(
+          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+  }
 
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {

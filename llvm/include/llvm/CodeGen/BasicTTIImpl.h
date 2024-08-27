@@ -394,11 +394,6 @@ public:
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
-  bool shouldFoldTerminatingConditionAfterLSR() const {
-    return TargetTransformInfoImplBase::
-        shouldFoldTerminatingConditionAfterLSR();
-  }
-
   bool shouldDropLSRSolutionIfLessProfitable() const {
     return TargetTransformInfoImplBase::shouldDropLSRSolutionIfLessProfitable();
   }

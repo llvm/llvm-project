@@ -5490,6 +5490,7 @@ static void TryValueInitialization(Sema &S,
   //
   //   To value-initialize an object of type T means:
   QualType T = Entity.getType();
+  assert(!T->isVoidType() && "Cannot value-init void");
 
   //     -- if T is an array type, then each element is value-initialized;
   T = S.Context.getBaseElementType(T);

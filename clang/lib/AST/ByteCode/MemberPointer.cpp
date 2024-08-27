@@ -18,8 +18,7 @@ namespace interp {
 std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   if (!Dcl || isa<FunctionDecl>(Dcl))
     return Base;
-  const FieldDecl *FD = cast<FieldDecl>(Dcl);
-  assert(FD);
+  assert((isa<FieldDecl, IndirectFieldDecl>(Dcl)));
 
   if (!Base.isBlockPointer())
     return std::nullopt;
@@ -31,24 +30,36 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   if (!BaseRecord)
     return std::nullopt;
 
-  assert(BaseRecord);
-  if (FD->getParent() == BaseRecord->getDecl())
-    return CastedBase.atField(BaseRecord->getField(FD)->Offset);
-
-  const RecordDecl *FieldParent = FD->getParent();
-  const Record *FieldRecord = Ctx.getRecord(FieldParent);
-
   unsigned Offset = 0;
-  Offset += FieldRecord->getField(FD)->Offset;
   Offset += CastedBase.block()->getDescriptor()->getMetadataSize();
 
-  if (Offset > CastedBase.block()->getSize())
-    return std::nullopt;
+  if (const auto *FD = dyn_cast<FieldDecl>(Dcl)) {
+    if (FD->getParent() == BaseRecord->getDecl())
+      return CastedBase.atField(BaseRecord->getField(FD)->Offset);
 
-  if (const RecordDecl *BaseDecl = Base.getDeclPtr().getRecord()->getDecl();
-      BaseDecl != FieldParent)
-    Offset += Ctx.collectBaseOffset(FieldParent, BaseDecl);
+    const RecordDecl *FieldParent = FD->getParent();
+    const Record *FieldRecord = Ctx.getRecord(FieldParent);
 
+    Offset += FieldRecord->getField(FD)->Offset;
+    if (Offset > CastedBase.block()->getSize())
+      return std::nullopt;
+
+    if (const RecordDecl *BaseDecl = Base.getDeclPtr().getRecord()->getDecl();
+        BaseDecl != FieldParent)
+      Offset += Ctx.collectBaseOffset(FieldParent, BaseDecl);
+
+  } else {
+    const auto *IFD = cast<IndirectFieldDecl>(Dcl);
+
+    for (const NamedDecl *ND : IFD->chain()) {
+      const FieldDecl *F = cast<FieldDecl>(ND);
+      const RecordDecl *FieldParent = F->getParent();
+      const Record *FieldRecord = Ctx.getRecord(FieldParent);
+      Offset += FieldRecord->getField(F)->Offset;
+    }
+  }
+
+  assert(BaseRecord);
   if (Offset > CastedBase.block()->getSize())
     return std::nullopt;
 

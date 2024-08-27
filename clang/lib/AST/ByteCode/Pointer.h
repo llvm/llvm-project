@@ -137,7 +137,7 @@ public:
     if (isIntegralPointer())
       return asIntPointer().Value + (Offset * elemSize());
     if (isFunctionPointer())
-      return asFunctionPointer().getIntegerRepresentation();
+      return asFunctionPointer().getIntegerRepresentation() + Offset;
     return reinterpret_cast<uint64_t>(asBlockPointer().Pointee) + Offset;
   }
 
@@ -551,7 +551,7 @@ public:
   }
 
   /// Returns the byte offset from the start.
-  unsigned getByteOffset() const {
+  uint64_t getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
     if (isOnePastEnd())
@@ -571,7 +571,7 @@ public:
   /// Returns the index into an array.
   int64_t getIndex() const {
     if (!isBlockPointer())
-      return 0;
+      return getIntegerRepresentation();
 
     if (isZero())
       return 0;
@@ -614,6 +614,8 @@ public:
 
   /// Checks if the pointer is pointing to a zero-size array.
   bool isZeroSizeArray() const {
+    if (isFunctionPointer())
+      return false;
     if (const auto *Desc = getFieldDesc())
       return Desc->isZeroSizeArray();
     return false;

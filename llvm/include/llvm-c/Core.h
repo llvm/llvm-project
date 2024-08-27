@@ -647,6 +647,11 @@ unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
 unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
 
 /**
+ * Maps a synchronization scope name to a ID unique within this context.
+ */
+unsigned LLVMGetSyncScopeID(LLVMContextRef C, const char *Name, size_t SLen);
+
+/**
  * Return an unique id given the name of a enum attribute,
  * or 0 if no attribute by that name exists.
  *
@@ -1972,6 +1977,13 @@ void LLVMDumpValue(LLVMValueRef Val);
  * @see llvm::Value::print()
  */
 char *LLVMPrintValueToString(LLVMValueRef Val);
+
+/**
+ * Obtain the context to which this value is associated.
+ *
+ * @see llvm::Value::getContext()
+ */
+LLVMContextRef LLVMGetValueContext(LLVMValueRef Val);
 
 /**
  * Return a string representation of the DbgRecord. Use
@@ -4161,6 +4173,13 @@ void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
                                     LLVMMetadataRef FPMathTag);
 
 /**
+ * Obtain the context to which this builder is associated.
+ *
+ * @see llvm::IRBuilder::getContext()
+ */
+LLVMContextRef LLVMGetBuilderContext(LLVMBuilderRef Builder);
+
+/**
  * Deprecated: Passing the NULL location will crash.
  * Use LLVMGetCurrentDebugLocation2 instead.
  */
@@ -4578,15 +4597,28 @@ LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef, LLVMTypeRef ElemTy,
                                const char *Name);
 LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering ordering,
                             LLVMBool singleThread, const char *Name);
+LLVMValueRef LLVMBuildFenceSyncScope(LLVMBuilderRef B,
+                                     LLVMAtomicOrdering ordering, unsigned SSID,
+                                     const char *Name);
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B, LLVMAtomicRMWBinOp op,
                                 LLVMValueRef PTR, LLVMValueRef Val,
                                 LLVMAtomicOrdering ordering,
                                 LLVMBool singleThread);
+LLVMValueRef LLVMBuildAtomicRMWSyncScope(LLVMBuilderRef B,
+                                         LLVMAtomicRMWBinOp op,
+                                         LLVMValueRef PTR, LLVMValueRef Val,
+                                         LLVMAtomicOrdering ordering,
+                                         unsigned SSID);
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMValueRef Cmp, LLVMValueRef New,
                                     LLVMAtomicOrdering SuccessOrdering,
                                     LLVMAtomicOrdering FailureOrdering,
                                     LLVMBool SingleThread);
+LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(LLVMBuilderRef B, LLVMValueRef Ptr,
+                                             LLVMValueRef Cmp, LLVMValueRef New,
+                                             LLVMAtomicOrdering SuccessOrdering,
+                                             LLVMAtomicOrdering FailureOrdering,
+                                             unsigned SSID);
 
 /**
  * Get the number of elements in the mask of a ShuffleVector instruction.
@@ -4610,6 +4642,22 @@ int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
 
 LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst);
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool SingleThread);
+
+/**
+ * Returns whether an instruction is an atomic instruction, e.g., atomicrmw,
+ * cmpxchg, fence, or loads and stores with atomic ordering.
+ */
+LLVMBool LLVMIsAtomic(LLVMValueRef Inst);
+
+/**
+ * Returns the synchronization scope ID of an atomic instruction.
+ */
+unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst);
+
+/**
+ * Sets the synchronization scope ID of an atomic instruction.
+ */
+void LLVMSetAtomicSyncScopeID(LLVMValueRef AtomicInst, unsigned SSID);
 
 LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst);
 void LLVMSetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst,

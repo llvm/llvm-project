@@ -169,6 +169,7 @@ void initializeLoopInfoWrapperPassPass(PassRegistry &);
 void initializeLoopPassPass(PassRegistry &);
 void initializeLoopSimplifyPass(PassRegistry &);
 void initializeLoopStrengthReducePass(PassRegistry &);
+void initializeLoopTermFoldPass(PassRegistry &);
 void initializeLoopUnrollPass(PassRegistry &);
 void initializeLowerAtomicLegacyPassPass(PassRegistry &);
 void initializeLowerConstantIntrinsicsPass(PassRegistry &);

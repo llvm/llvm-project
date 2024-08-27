@@ -2338,7 +2338,7 @@ TEST_F(FormatTest, FormatsForLoop) {
       "for (const Foo<Bar> &baz = in.value(); !baz.at_end(); ++baz) {\n}");
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("for (int aaaaaaaaaaa = 1;\n"
                "     aaaaaaaaaaa <= aaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaa,\n"
                "                                           aaaaaaaaaaaaaaaa,\n"
@@ -3646,8 +3646,8 @@ TEST_F(FormatTest, FormatsClasses) {
                "    : public aaaaaaaaaaaaaaaaaaa<aaaaaaaaaaaaaaaaaaaaa,\n"
                "                                 aaaaaaaaaaaaaaaaaaaaaa> {};");
   verifyFormat("template <class R, class C>\n"
-               "struct Aaaaaaaaaaaaaaaaa<R (C:: *)(int) const>\n"
-               "    : Aaaaaaaaaaaaaaaaa<R (C:: *)(int)> {};");
+               "struct Aaaaaaaaaaaaaaaaa<R (C::*)(int) const>\n"
+               "    : Aaaaaaaaaaaaaaaaa<R (C::*)(int)> {};");
   verifyFormat("class ::A::B {};");
 }
 
@@ -7165,7 +7165,7 @@ TEST_F(FormatTest, LineBreakingInBinaryExpressions) {
                "}");
 
   FormatStyle OnePerLine = getLLVMStyle();
-  OnePerLine.BinPackParameters = false;
+  OnePerLine.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat(
       "if (aaaaaaaaaaaaaaaaaaaaaaaaaaaa || aaaaaaaaaaaaaaaaaaaaaaaaaaaa ||\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa || aaaaaaaaaaaaaaaaaaaaaaaaaaaa ||\n"
@@ -7319,7 +7319,7 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
 
   Style = getLLVMStyleWithColumns(20);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   Style.ContinuationIndentWidth = 2;
   verifyFormat("struct Foo {\n"
@@ -7694,7 +7694,7 @@ TEST_F(FormatTest, ConstructorInitializers) {
                "    : aaaaa(aaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaa,\n"
                "            aaaaaaaaaaaaaaaaaaaaaa) {}",
                OnePerLine);
-  OnePerLine.BinPackParameters = false;
+  OnePerLine.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat(
       "Constructor()\n"
       "    : aaaaaaaaaaaaaaaaaaaaaaaa(\n"
@@ -7718,7 +7718,7 @@ TEST_F(FormatTest, ConstructorInitializers) {
 TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
   FormatStyle Style = getLLVMStyleWithColumns(60);
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
 
   for (int i = 0; i < 4; ++i) {
     // Test all combinations of parameters that should not have an effect.
@@ -7954,7 +7954,7 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
   }
 
   // This parameter should not affect declarations.
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.AllowAllArgumentsOnNextLine = false;
   Style.AllowAllParametersOfDeclarationOnNextLine = true;
   verifyFormat("void FunctionCallWithReallyLongName(\n"
@@ -8049,7 +8049,7 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
 
   // Test the style where all parameters are on their own lines.
   Style.AllowAllParametersOfDeclarationOnNextLine = false;
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void functionDecl(paramA, paramB, paramC);\n"
                "void emptyFunctionDefinition() {}\n"
                "void functionDefinition(\n"
@@ -8244,7 +8244,7 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
                "    aaaaa(aaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaa,\n"
                "          aaaaaaaaaaaaaaaaaaaaaa) {}",
                OnePerLine);
-  OnePerLine.BinPackParameters = false;
+  OnePerLine.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("Constructor() :\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "        aaaaaaaaaaa().aaa(),\n"
@@ -8409,7 +8409,7 @@ TEST_F(FormatTest, MemoizationTests) {
   // This test takes VERY long when memoization is broken.
   FormatStyle OnePerLine = getLLVMStyle();
   OnePerLine.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
-  OnePerLine.BinPackParameters = false;
+  OnePerLine.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   std::string input = "Constructor()\n"
                       "    : aaaa(a,\n";
   for (unsigned i = 0, e = 80; i != e; ++i)
@@ -8830,7 +8830,7 @@ TEST_F(FormatTest, BreaksDesireably) {
 
 TEST_F(FormatTest, FormatsDeclarationsOnePerLine) {
   FormatStyle NoBinPacking = getGoogleStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   NoBinPacking.BinPackArguments = true;
   verifyFormat("void f() {\n"
                "  f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,\n"
@@ -8862,7 +8862,7 @@ TEST_F(FormatTest, FormatsDeclarationsOnePerLine) {
 
 TEST_F(FormatTest, FormatsOneParameterPerLineIfNecessary) {
   FormatStyle NoBinPacking = getGoogleStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   NoBinPacking.BinPackArguments = false;
   verifyFormat("f(aaaaaaaaaaaaaaaaaaaa,\n"
                "  aaaaaaaaaaaaaaaaaaaa,\n"
@@ -8923,6 +8923,97 @@ TEST_F(FormatTest, FormatsOneParameterPerLineIfNecessary) {
       "template <class SomeType, class SomeOtherType>\n"
       "SomeType SomeFunction(SomeType Type, SomeOtherType OtherType) {}",
       NoBinPacking);
+}
+
+TEST_F(FormatTest, FormatsDeclarationBreakAlways) {
+  FormatStyle BreakAlways = getGoogleStyle();
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("void f(int a,\n"
+               "       int b);",
+               BreakAlways);
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "       int cccccccccccccccccccccccc);",
+               BreakAlways);
+
+  // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
+  // to BPPS_AlwaysOnePerLine.
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b);",
+      BreakAlways);
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b\n"
+      ");",
+      BreakAlways);
+}
+
+TEST_F(FormatTest, FormatsDefinitionBreakAlways) {
+  FormatStyle BreakAlways = getGoogleStyle();
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("void f(int a,\n"
+               "       int b) {\n"
+               "  f(a, b);\n"
+               "}",
+               BreakAlways);
+
+  // Ensure BinPackArguments interact correctly when BinPackParameters is set to
+  // BPPS_AlwaysOnePerLine.
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "       int cccccccccccccccccccccccc) {\n"
+               "  f(aaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "    cccccccccccccccccccccccc);\n"
+               "}",
+               BreakAlways);
+  BreakAlways.BinPackArguments = false;
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "       int cccccccccccccccccccccccc) {\n"
+               "  f(aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "    cccccccccccccccccccccccc);\n"
+               "}",
+               BreakAlways);
+
+  // Ensure BreakFunctionDefinitionParameters interacts correctly when
+  // BinPackParameters is set to BPPS_AlwaysOnePerLine.
+  BreakAlways.BreakFunctionDefinitionParameters = true;
+  verifyFormat("void f(\n"
+               "    int a,\n"
+               "    int b) {\n"
+               "  f(a, b);\n"
+               "}",
+               BreakAlways);
+  BreakAlways.BreakFunctionDefinitionParameters = false;
+
+  // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
+  // to BPPS_AlwaysOnePerLine.
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b) {\n"
+      "  someLongFunctionName(\n"
+      "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, b);\n"
+      "}",
+      BreakAlways);
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b\n"
+      ") {\n"
+      "  someLongFunctionName(\n"
+      "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, b\n"
+      "  );\n"
+      "}",
+      BreakAlways);
 }
 
 TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
@@ -9256,7 +9347,7 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   Style.BinPackArguments = false;
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaa aaaaaaaa,\n"
                "    aaaaaaaaa aaaaaaa,\n"
@@ -9292,10 +9383,22 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "        aaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaa)) &&\n"
       "    aaaaaaaaaaaaaaaa);",
       Style);
+  verifyFormat(
+      "fooooooooooo(new BARRRRRRRRR(\n"
+      "    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXZZZZZZZZZZZZZZZZZZZZZZZZZ()));",
+      Style);
+  verifyFormat(
+      "fooooooooooo(::new BARRRRRRRRR(\n"
+      "    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXZZZZZZZZZZZZZZZZZZZZZZZZZ()));",
+      Style);
+  verifyFormat(
+      "fooooooooooo(new FOO::BARRRR(\n"
+      "    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXZZZZZZZZZZZZZZZZZZZZZZZZZ()));",
+      Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
   Style.BinPackArguments = false;
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaa aaaaaaaa,\n"
                "    aaaaaaaaa aaaaaaa,\n"
@@ -10706,7 +10809,7 @@ TEST_F(FormatTest, WrapsAtFunctionCallsIfNecessary) {
                "    .a();");
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaa)\n"
                "    .aaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaa)\n"
                "    .aaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaa,\n"
@@ -11166,10 +11269,10 @@ TEST_F(FormatTest, UnderstandsBinaryOperators) {
 }
 
 TEST_F(FormatTest, UnderstandsPointersToMembers) {
-  verifyFormat("int A:: *x;");
-  verifyFormat("int (S:: *func)(void *);");
-  verifyFormat("void f() { int (S:: *func)(void *); }");
-  verifyFormat("typedef bool *(Class:: *Member)() const;");
+  verifyFormat("int A::*x;");
+  verifyFormat("int (S::*func)(void *);");
+  verifyFormat("void f() { int (S::*func)(void *); }");
+  verifyFormat("typedef bool *(Class::*Member)() const;");
   verifyFormat("void f() {\n"
                "  (a->*f)();\n"
                "  a->*x;\n"
@@ -11187,16 +11290,16 @@ TEST_F(FormatTest, UnderstandsPointersToMembers) {
 
   FormatStyle Style = getLLVMStyle();
   EXPECT_EQ(Style.PointerAlignment, FormatStyle::PAS_Right);
-  verifyFormat("typedef bool *(Class:: *Member)() const;", Style);
-  verifyFormat("void f(int A:: *p) { int A:: *v = &A::B; }", Style);
+  verifyFormat("typedef bool *(Class::*Member)() const;", Style);
+  verifyFormat("void f(int A::*p) { int A::*v = &A::B; }", Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
-  verifyFormat("typedef bool* (Class::* Member)() const;", Style);
+  verifyFormat("typedef bool* (Class::*Member)() const;", Style);
   verifyFormat("void f(int A::* p) { int A::* v = &A::B; }", Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Middle;
-  verifyFormat("typedef bool * (Class:: * Member)() const;", Style);
-  verifyFormat("void f(int A:: * p) { int A:: * v = &A::B; }", Style);
+  verifyFormat("typedef bool * (Class::*Member)() const;", Style);
+  verifyFormat("void f(int A::* p) { int A::* v = &A::B; }", Style);
 }
 
 TEST_F(FormatTest, UnderstandsUnaryOperators) {
@@ -12539,7 +12642,7 @@ TEST_F(FormatTest, FormatsFunctionTypes) {
   verifyFormat("int (*func)(void *);");
   verifyFormat("void f() { int (*func)(void *); }");
   verifyFormat("template <class CallbackClass>\n"
-               "using Callback = void (CallbackClass:: *)(SomeObject *Data);");
+               "using MyCallback = void (CallbackClass::*)(SomeObject *Data);");
 
   verifyGoogleFormat("A<void*(int*, SomeType*)>;");
   verifyGoogleFormat("void* (*a)(int);");
@@ -13618,7 +13721,7 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
 
 TEST_F(FormatTest, IncompleteParameterLists) {
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaa(int level,\n"
                "                        double *min_x,\n"
                "                        double *max_x,\n"
@@ -14284,7 +14387,7 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                "                    [](const Input &i) -> Output { return "
                "Output{1, 2}; });");
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("waarudo::unit desk = {\n"
                "    .s = \"desk\", .p = p, .b = [] { return w::r{3, 10, 1, 1, "
                "1, 1} * w::m; }};",
@@ -19462,13 +19565,13 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "int   bbbbbbb = 0;",
                Alignment);
   // http://llvm.org/PR68079
-  verifyFormat("using Fn   = int (A:: *)();\n"
-               "using RFn  = int (A:: *)() &;\n"
-               "using RRFn = int (A:: *)() &&;",
+  verifyFormat("using Fn   = int (A::*)();\n"
+               "using RFn  = int (A::*)() &;\n"
+               "using RRFn = int (A::*)() &&;",
                Alignment);
-  verifyFormat("using Fn   = int (A:: *)();\n"
-               "using RFn  = int *(A:: *)() &;\n"
-               "using RRFn = double (A:: *)() &&;",
+  verifyFormat("using Fn   = int (A::*)();\n"
+               "using RFn  = int *(A::*)() &;\n"
+               "using RRFn = double (A::*)() &&;",
                Alignment);
 
   // PAS_Right
@@ -19789,7 +19892,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   Alignment.AlignConsecutiveAssignments.Enabled = false;
 
   Alignment.ColumnLimit = 30;
-  Alignment.BinPackParameters = false;
+  Alignment.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void foo(float     a,\n"
                "         float     b,\n"
                "         int       c,\n"
@@ -19803,7 +19906,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "         uint32_t *c,\n"
                "         bool      d) {}",
                Alignment);
-  Alignment.BinPackParameters = true;
+  Alignment.BinPackParameters = FormatStyle::BPPS_BinPack;
   Alignment.ColumnLimit = 80;
 
   // Bug 33507
@@ -23229,7 +23332,7 @@ TEST_F(FormatTest, FormatsLambdas) {
       "                           LambdaBodyMustBeBreak);\n"
       "};",
       LLVMWithBeforeLambdaBody);
-  LLVMWithBeforeLambdaBody.BinPackParameters = false;
+  LLVMWithBeforeLambdaBody.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("FctAllOnSameLine_SLS_All([]() { return S; }, Fst, Second);",
                LLVMWithBeforeLambdaBody);
   verifyFormat(
@@ -25857,7 +25960,90 @@ TEST_F(FormatTest, RequiresClausesPositions) {
                "}",
                Style);
 
+  Style.RequiresClausePosition = FormatStyle::RCPS_OwnLineWithBrace;
+  Style.IndentRequiresClause = true;
+
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T> && std::trait<T>)\n"
+               "struct Bar;",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T> && std::trait<T>)\n"
+               "class Bar {\n"
+               "public:\n"
+               "  Bar(T t);\n"
+               "  bool baz();\n"
+               "};",
+               Style);
+
+  verifyFormat(
+      "template <typename T>\n"
+      "  requires requires(T &&t) {\n"
+      "             typename T::I;\n"
+      "             requires(F<typename T::I> && std::trait<typename T::I>);\n"
+      "           }\n"
+      "Bar(T) -> Bar<typename T::I>;",
+      Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T> && std::trait<T>)\n"
+               "constexpr T MyGlobal;",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T> && requires(T t) {\n"
+               "                       { t.baz() } -> std::same_as<bool>;\n"
+               "                       requires std::same_as<T::Factor, int>;\n"
+               "                     }\n"
+               "inline int bar(T t) {\n"
+               "  return t.baz() ? T::Factor : 5;\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "inline int bar(T t)\n"
+               "  requires Foo<T> && requires(T t) {\n"
+               "                       { t.baz() } -> std::same_as<bool>;\n"
+               "                       requires std::same_as<T::Factor, int>;\n"
+               "                     } {\n"
+               "  return t.baz() ? T::Factor : 5;\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires F<T>\n"
+               "int bar(T t) {\n"
+               "  return 5;\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "  requires F<T> {\n"
+               "  return 5;\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "int S::bar(T t) &&\n"
+               "  requires F<T> {\n"
+               "  return 5;\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "  requires F<T>;",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "  requires F<T> {}",
+               Style);
+
   Style.RequiresClausePosition = FormatStyle::RCPS_SingleLine;
+  Style.IndentRequiresClause = false;
   verifyFormat("template <typename T> requires Foo<T> struct Bar {};\n"
                "template <typename T> requires Foo<T> void bar() {}\n"
                "template <typename T> void bar() requires Foo<T> {}\n"
@@ -26626,7 +26812,7 @@ TEST_F(FormatTest, AlignAfterOpenBracketBlockIndent) {
       Medium, Style);
 
   Style.BinPackArguments = false;
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
 
   verifyFormat(Short, Style);
 

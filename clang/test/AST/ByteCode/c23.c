@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c23 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -std=c23 -verify=ref,both %s
 
-
+typedef typeof(nullptr) nullptr_t;
 
 const _Bool inf1 =  (1.0/0.0 == __builtin_inf());
 constexpr _Bool inf2 = (1.0/0.0 == __builtin_inf()); // both-error {{must be initialized by a constant expression}} \
@@ -22,3 +22,6 @@ char bar() {
   ((struct S *)buffer)->c = 'a';
   return ((struct S *)buffer)->c;
 }
+
+
+static_assert((nullptr_t){} == 0);
