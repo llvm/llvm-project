@@ -3572,39 +3572,6 @@ or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
 seq\_cst total orderings of other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
-.. _floatsem:
-
-Floating-Point Semantics
-------------------------
-
-LLVM floating-point types fall into two categories:
-
-- half, float, double, and fp128, which correspond to the binary16, binary32,
-  binary64, and binary128 formats described in the IEEE-754 specification.
-- The remaining types, which do not directly correspond to a standard IEEE
-  format.
-
-For floating-point operations acting on types with a corresponding IEEE format,
-unless otherwise specified the value returned by that operation matches that of
-the corresponding IEEE-754 operation executed in the :ref:`default
-floating-point environment <floatenv>`, except that the behavior of NaN results
-is instead :ref:`as specified here <floatnan>`. (This statement concerns only
-the returned *value*; we make no statement about status flags or
-traps/exceptions.) In particular, a floating-point instruction returning a
-non-NaN value is guaranteed to always return the same bit-identical result on
-all machines and optimization levels.
-
-This means that optimizations and backends may not change the observed bitwise
-result of these operations in any way (unless NaNs are returned), and frontends
-can rely on these operations providing perfectly rounded results as described in
-the standard.
-
-Various flags and attributes can alter the behavior of these operations and thus
-make them not bit-identical across machines and optimization levels any more:
-most notably, the :ref:`fast-math flags <fastmath>` as well as the ``strictfp``
-and ``denormal-fp-math`` attributes. See their corresponding documentation for
-details.
-
 .. _floatenv:
 
 Floating-Point Environment
@@ -3691,6 +3658,39 @@ specification on some architectures:
 - Older MIPS versions use the opposite polarity for the quiet/signaling bit, and
   LLVM does not correctly represent this. See `issue #60796
   <https://github.com/llvm/llvm-project/issues/60796>`_.
+
+.. _floatsem:
+
+Floating-Point Semantics
+------------------------
+
+This section defines the semantics for core floating-point operations on types
+that use a format specified by IEEE-745. These types are: ``half``, ``float``,
+``double``, and ``fp128``, which correspond to the binary16, binary32, binary64,
+and binary128 formats, respectively. The "core" operations are those defined in
+section 5 of IEEE-745, which all have corresponding LLVM operations.
+
+The value returned by those operations matches that of the corresponding
+IEEE-754 operation executed in the :ref:`default LLVM floating-point environment
+<floatenv>`, except that the behavior of NaN results is instead :ref:`as
+specified here <floatnan>`. In particular, such a floating-point instruction
+returning a non-NaN value is guaranteed to always return the same bit-identical
+result on all machines and optimization levels.
+
+This means that optimizations and backends may not change the observed bitwise
+result of these operations in any way (unless NaNs are returned), and frontends
+can rely on these operations providing perfectly rounded results as described in
+the standard.
+
+(Note that this is only about the value returned by these operations; see the
+:ref:`floating-point environment section <floatenv>` regarding flags and
+exceptions.)
+
+Various flags and attributes can alter the behavior of these operations and thus
+make them not bit-identical across machines and optimization levels any more:
+most notably, the :ref:`fast-math flags <fastmath>` as well as the ``strictfp``
+and ``denormal-fp-math`` attributes. See their corresponding documentation for
+details.
 
 .. _fastmath:
 
