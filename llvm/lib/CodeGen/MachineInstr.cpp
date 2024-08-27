@@ -2125,19 +2125,15 @@ bool MachineInstr::addRegisterDead(Register Reg,
 }
 
 void MachineInstr::clearRegisterDeads(Register Reg) {
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg)
-      continue;
-    MO.setIsDead(false);
-  }
+  for (MachineOperand &MO : all_defs())
+    if (MO.getReg() == Reg)
+      MO.setIsDead(false);
 }
 
 void MachineInstr::setRegisterDefReadUndef(Register Reg, bool IsUndef) {
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg || MO.getSubReg() == 0)
-      continue;
-    MO.setIsUndef(IsUndef);
-  }
+  for (MachineOperand &MO : all_defs())
+    if (MO.getReg() == Reg && MO.getSubReg() != 0)
+      MO.setIsUndef(IsUndef);
 }
 
 void MachineInstr::addRegisterDefined(Register Reg,
@@ -2147,9 +2143,8 @@ void MachineInstr::addRegisterDefined(Register Reg,
     if (MO)
       return;
   } else {
-    for (const MachineOperand &MO : operands()) {
-      if (MO.isReg() && MO.getReg() == Reg && MO.isDef() &&
-          MO.getSubReg() == 0)
+    for (const MachineOperand &MO : all_defs()) {
+      if (MO.getReg() == Reg && MO.getSubReg() == 0)
         return;
     }
   }

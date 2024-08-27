@@ -1,20 +1,18 @@
-//===- DXILOpLower.cpp - Lowering LLVM intrinsic to DIXLOp function -------===//
+//===- DXILOpLowering.cpp - Lowering to DXIL operations -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file This file contains passes and utilities to lower llvm intrinsic call
-/// to DXILOp function call.
-//===----------------------------------------------------------------------===//
 
+#include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -23,6 +21,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -77,9 +76,11 @@ namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
+  DXILResourceMap &DRM;
+  SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M) : M(M), OpBuilder(M) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
 
   void replaceFunction(Function &F,
                        llvm::function_ref<Error(CallInst *CI)> ReplaceCall) {
@@ -122,6 +123,142 @@ public:
     });
   }
 
+  /// Create a cast between a `target("dx")` type and `dx.types.Handle`, which
+  /// is intended to be removed by the end of lowering. This is used to allow
+  /// lowering of ops which need to change their return or argument types in a
+  /// piecemeal way - we can add the casts in to avoid updating all of the uses
+  /// or defs, and by the end all of the casts will be redundant.
+  Value *createTmpHandleCast(Value *V, Type *Ty) {
+    Function *CastFn = Intrinsic::getDeclaration(&M, Intrinsic::dx_cast_handle,
+                                                 {Ty, V->getType()});
+    CallInst *Cast = OpBuilder.getIRB().CreateCall(CastFn, {V});
+    CleanupCasts.push_back(Cast);
+    return Cast;
+  }
+
+  void cleanupHandleCasts() {
+    SmallVector<CallInst *> ToRemove;
+    SmallVector<Function *> CastFns;
+
+    for (CallInst *Cast : CleanupCasts) {
+      // These casts were only put in to ease the move from `target("dx")` types
+      // to `dx.types.Handle in a piecemeal way. At this point, all of the
+      // non-cast uses should now be `dx.types.Handle`, and remaining casts
+      // should all form pairs to and from the now unused `target("dx")` type.
+      CastFns.push_back(Cast->getCalledFunction());
+
+      // If the cast is not to `dx.types.Handle`, it should be the first part of
+      // the pair. Keep track so we can remove it once it has no more uses.
+      if (Cast->getType() != OpBuilder.getHandleType()) {
+        ToRemove.push_back(Cast);
+        continue;
+      }
+      // Otherwise, we're the second handle in a pair. Forward the arguments and
+      // remove the (second) cast.
+      CallInst *Def = cast<CallInst>(Cast->getOperand(0));
+      assert(Def->getIntrinsicID() == Intrinsic::dx_cast_handle &&
+             "Unbalanced pair of temporary handle casts");
+      Cast->replaceAllUsesWith(Def->getOperand(0));
+      Cast->eraseFromParent();
+    }
+    for (CallInst *Cast : ToRemove) {
+      assert(Cast->user_empty() && "Temporary handle cast still has users");
+      Cast->eraseFromParent();
+    }
+
+    // Deduplicate the cast functions so that we only erase each one once.
+    llvm::sort(CastFns);
+    CastFns.erase(llvm::unique(CastFns), CastFns.end());
+    for (Function *F : CastFns)
+      F->eraseFromParent();
+
+    CleanupCasts.clear();
+  }
+
+  void lowerToCreateHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+      const auto &Binding = RI.getBinding();
+
+      std::array<Value *, 4> Args{
+          ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
+          ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
+          CI->getArgOperand(4)};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::CreateHandle, Args);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  void lowerToBindAndAnnotateHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+
+      const auto &Binding = RI.getBinding();
+      std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
+
+      // For `CreateHandleFromBinding` we need the upper bound rather than the
+      // size, so we need to be careful about the difference for "unbounded".
+      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
+      uint32_t UpperBound = Binding.Size == Unbounded
+                                ? Unbounded
+                                : Binding.LowerBound + Binding.Size - 1;
+      Constant *ResBind = OpBuilder.getResBind(
+          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
+      std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
+                                      CI->getArgOperand(4)};
+      Expected<CallInst *> OpBind =
+          OpBuilder.tryCreateOp(OpCode::CreateHandleFromBinding, BindArgs);
+      if (Error E = OpBind.takeError())
+        return E;
+
+      std::array<Value *, 2> AnnotateArgs{
+          *OpBind, OpBuilder.getResProps(Props.first, Props.second)};
+      Expected<CallInst *> OpAnnotate =
+          OpBuilder.tryCreateOp(OpCode::AnnotateHandle, AnnotateArgs);
+      if (Error E = OpAnnotate.takeError())
+        return E;
+
+      Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+
+      return Error::success();
+    });
+  }
+
+  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
+  /// taking into account binding information from DXILResourceAnalysis.
+  void lowerHandleFromBinding(Function &F) {
+    Triple TT(Triple(M.getTargetTriple()));
+    if (TT.getDXILVersion() < VersionTuple(1, 6))
+      lowerToCreateHandle(F);
+    else
+      lowerToBindAndAnnotateHandle(F);
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
 
@@ -137,39 +274,47 @@ public:
     replaceFunctionWithOp(F, OpCode);                                          \
     break;
 #include "DXILOperation.inc"
+      case Intrinsic::dx_handle_fromBinding:
+        lowerHandleFromBinding(F);
       }
       Updated = true;
     }
+    if (Updated)
+      cleanupHandleCasts();
+
     return Updated;
   }
 };
 } // namespace
 
-namespace {
-/// A pass that transforms external global definitions into declarations.
-class DXILOpLowering : public PassInfoMixin<DXILOpLowering> {
-public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
-    if (OpLowerer(M).lowerIntrinsics())
-      return PreservedAnalyses::none();
+PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
+  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+
+  bool MadeChanges = OpLowerer(M, DRM).lowerIntrinsics();
+  if (!MadeChanges)
     return PreservedAnalyses::all();
-  }
-};
-} // namespace
+  PreservedAnalyses PA;
+  PA.preserve<DXILResourceAnalysis>();
+  return PA;
+}
 
 namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
-    return OpLowerer(M).lowerIntrinsics();
+    DXILResourceMap &DRM =
+        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+
+    return OpLowerer(M, DRM).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    // Specify the passes that your pass depends on
     AU.addRequired<DXILIntrinsicExpansionLegacy>();
+    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;
@@ -177,6 +322,7 @@ char DXILOpLoweringLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)
 

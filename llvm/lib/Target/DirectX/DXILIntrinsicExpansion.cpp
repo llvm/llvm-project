@@ -38,12 +38,14 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::pow:
+  case Intrinsic::dx_all:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_length:
   case Intrinsic::dx_normalize:
+  case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return true;
@@ -53,8 +55,7 @@ static bool isIntrinsicExpansion(Function &F) {
 
 static Value *expandAbs(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
   Constant *Zero = Ty->isVectorTy()
@@ -68,25 +69,73 @@ static Value *expandAbs(CallInst *Orig) {
                                  "dx.max");
 }
 
-static Value *expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
-  assert(DotIntrinsic == Intrinsic::dx_sdot ||
-         DotIntrinsic == Intrinsic::dx_udot);
-  Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::dx_sdot
-                                   ? Intrinsic::dx_imad
-                                   : Intrinsic::dx_umad;
-  Value *A = Orig->getOperand(0);
-  Value *B = Orig->getOperand(1);
-  [[maybe_unused]] Type *ATy = A->getType();
+// Create appropriate DXIL float dot intrinsic for the given A and B operands
+// The appropriate opcode will be determined by the size of the operands
+// The dot product is placed in the position indicated by Orig
+static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
+  Type *ATy = A->getType();
   [[maybe_unused]] Type *BTy = B->getType();
   assert(ATy->isVectorTy() && BTy->isVectorTy());
 
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
 
-  auto *AVec = dyn_cast<FixedVectorType>(A->getType());
+  auto *AVec = dyn_cast<FixedVectorType>(ATy);
+
+  assert(ATy->getScalarType()->isFloatingPointTy());
+
+  Intrinsic::ID DotIntrinsic = Intrinsic::dx_dot4;
+  switch (AVec->getNumElements()) {
+  case 2:
+    DotIntrinsic = Intrinsic::dx_dot2;
+    break;
+  case 3:
+    DotIntrinsic = Intrinsic::dx_dot3;
+    break;
+  case 4:
+    DotIntrinsic = Intrinsic::dx_dot4;
+    break;
+  default:
+    report_fatal_error(
+        Twine("Invalid dot product input vector: length is outside 2-4"),
+        /* gen_crash_diag=*/false);
+    return nullptr;
+  }
+  return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
+                                 ArrayRef<Value *>{A, B}, nullptr, "dot");
+}
+
+// Create the appropriate DXIL float dot intrinsic for the operands of Orig
+// The appropriate opcode will be determined by the size of the operands
+// The dot product is placed in the position indicated by Orig
+static Value *expandFloatDotIntrinsic(CallInst *Orig) {
+  return expandFloatDotIntrinsic(Orig, Orig->getOperand(0),
+                                 Orig->getOperand(1));
+}
+
+// Expand integer dot product to multiply and add ops
+static Value *expandIntegerDotIntrinsic(CallInst *Orig,
+                                        Intrinsic::ID DotIntrinsic) {
+  assert(DotIntrinsic == Intrinsic::dx_sdot ||
+         DotIntrinsic == Intrinsic::dx_udot);
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+  Type *ATy = A->getType();
+  [[maybe_unused]] Type *BTy = B->getType();
+  assert(ATy->isVectorTy() && BTy->isVectorTy());
+
+  IRBuilder<> Builder(Orig);
+
+  auto *AVec = dyn_cast<FixedVectorType>(ATy);
+
+  assert(ATy->getScalarType()->isIntegerTy());
+
+  Value *Result;
+  Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::dx_sdot
+                                   ? Intrinsic::dx_imad
+                                   : Intrinsic::dx_umad;
   Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
   Value *Elt1 = Builder.CreateExtractElement(B, (uint64_t)0);
-  Value *Result = Builder.CreateMul(Elt0, Elt1);
+  Result = Builder.CreateMul(Elt0, Elt1);
   for (unsigned I = 1; I < AVec->getNumElements(); I++) {
     Elt0 = Builder.CreateExtractElement(A, I);
     Elt1 = Builder.CreateExtractElement(B, I);
@@ -99,8 +148,7 @@ static Value *expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
 
 static Value *expandExpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
   Constant *Log2eConst =
@@ -117,12 +165,20 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
   return Exp2Call;
 }
 
-static Value *expandAnyIntrinsic(CallInst *Orig) {
+static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
+                                      Intrinsic::ID intrinsicId) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
+
+  auto ApplyOp = [&Builder](Intrinsic::ID IntrinsicId, Value *Result,
+                            Value *Elt) {
+    if (IntrinsicId == Intrinsic::dx_any)
+      return Builder.CreateOr(Result, Elt);
+    assert(IntrinsicId == Intrinsic::dx_all);
+    return Builder.CreateAnd(Result, Elt);
+  };
 
   Value *Result = nullptr;
   if (!Ty->isVectorTy()) {
@@ -144,7 +200,7 @@ static Value *expandAnyIntrinsic(CallInst *Orig) {
     Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
     for (unsigned I = 1; I < XVec->getNumElements(); I++) {
       Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = Builder.CreateOr(Result, Elt);
+      Result = ApplyOp(intrinsicId, Result, Elt);
     }
   }
   return Result;
@@ -152,8 +208,7 @@ static Value *expandAnyIntrinsic(CallInst *Orig) {
 
 static Value *expandLengthIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
 
@@ -181,8 +236,7 @@ static Value *expandLerpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Value *S = Orig->getOperand(2);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   auto *V = Builder.CreateFSub(Y, X);
   V = Builder.CreateFMul(S, V);
   return Builder.CreateFAdd(X, V, "dx.lerp");
@@ -191,8 +245,7 @@ static Value *expandLerpIntrinsic(CallInst *Orig) {
 static Value *expandLogIntrinsic(CallInst *Orig,
                                  float LogConstVal = numbers::ln2f) {
   Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
   Constant *Ln2Const =
@@ -211,12 +264,13 @@ static Value *expandLog10Intrinsic(CallInst *Orig) {
   return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
 }
 
+// Use dot product of vector operand with itself to calculate the length.
+// Divide the vector by that length to normalize it.
 static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Type *Ty = Orig->getType();
   Type *EltTy = Ty->getScalarType();
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
 
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
   if (!XVec) {
@@ -229,30 +283,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
     return Builder.CreateFDiv(X, X);
   }
 
-  unsigned XVecSize = XVec->getNumElements();
-  Value *DotProduct = nullptr;
-  // use the dot intrinsic corresponding to the vector size
-  switch (XVecSize) {
-  case 1:
-    report_fatal_error(Twine("Invalid input vector: length is zero"),
-                       /* gen_crash_diag=*/false);
-    break;
-  case 2:
-    DotProduct = Builder.CreateIntrinsic(
-        EltTy, Intrinsic::dx_dot2, ArrayRef<Value *>{X, X}, nullptr, "dx.dot2");
-    break;
-  case 3:
-    DotProduct = Builder.CreateIntrinsic(
-        EltTy, Intrinsic::dx_dot3, ArrayRef<Value *>{X, X}, nullptr, "dx.dot3");
-    break;
-  case 4:
-    DotProduct = Builder.CreateIntrinsic(
-        EltTy, Intrinsic::dx_dot4, ArrayRef<Value *>{X, X}, nullptr, "dx.dot4");
-    break;
-  default:
-    report_fatal_error(Twine("Invalid input vector: vector size is invalid."),
-                       /* gen_crash_diag=*/false);
-  }
+  Value *DotProduct = expandFloatDotIntrinsic(Orig, X, X);
 
   // verify that the length is non-zero
   // (if the dot product is non-zero, then the length is non-zero)
@@ -267,7 +298,8 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
                                                 ArrayRef<Value *>{DotProduct},
                                                 nullptr, "dx.rsqrt");
 
-  Value *MultiplicandVec = Builder.CreateVectorSplat(XVecSize, Multiplicand);
+  Value *MultiplicandVec =
+      Builder.CreateVectorSplat(XVec->getNumElements(), Multiplicand);
   return Builder.CreateFMul(X, MultiplicandVec);
 }
 
@@ -276,8 +308,7 @@ static Value *expandPowIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
 
   auto *Log2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
@@ -321,8 +352,7 @@ static Value *expandClampIntrinsic(CallInst *Orig,
   Value *Min = Orig->getOperand(1);
   Value *Max = Orig->getOperand(2);
   Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
+  IRBuilder<> Builder(Orig);
   auto *MaxCall = Builder.CreateIntrinsic(
       Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
   return Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
@@ -331,7 +361,8 @@ static Value *expandClampIntrinsic(CallInst *Orig,
 
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
-  switch (F.getIntrinsicID()) {
+  Intrinsic::ID IntrinsicId = F.getIntrinsicID();
+  switch (IntrinsicId) {
   case Intrinsic::abs:
     Result = expandAbs(Orig);
     break;
@@ -347,12 +378,13 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::pow:
     Result = expandPowIntrinsic(Orig);
     break;
+  case Intrinsic::dx_all:
   case Intrinsic::dx_any:
-    Result = expandAnyIntrinsic(Orig);
+    Result = expandAnyOrAllIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_clamp:
-    Result = expandClampIntrinsic(Orig, F.getIntrinsicID());
+    Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);
@@ -363,9 +395,12 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_normalize:
     Result = expandNormalizeIntrinsic(Orig);
     break;
+  case Intrinsic::dx_fdot:
+    Result = expandFloatDotIntrinsic(Orig);
+    break;
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
-    Result = expandIntegerDot(Orig, F.getIntrinsicID());
+    Result = expandIntegerDotIntrinsic(Orig, IntrinsicId);
     break;
   }
 
