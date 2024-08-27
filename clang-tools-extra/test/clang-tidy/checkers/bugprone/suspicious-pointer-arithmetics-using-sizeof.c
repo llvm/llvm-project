@@ -117,8 +117,8 @@ void bad4(void) {
   while (Q < P + BufferSize) {
     *Q = 0;
     Q += sizeof(*Q);
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '+' operator
-    // CHECK-MESSAGES: :[[@LINE-2]]:7: note: '+' scales with 'sizeof(int)' == {{[0-9]+}}
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic using a number scaled by 'sizeof()'; this value will be scaled again by the '+=' operator
+    // CHECK-MESSAGES: :[[@LINE-2]]:7: note: '+=' scales with 'sizeof(int)' == {{[0-9]+}}
   }
 }
 
@@ -151,7 +151,7 @@ void good5aa(void) {
   int *Q = P;
   while (Q < P + BufferSize) {
     *Q = 0;
-    Q += ( sizeof(Buffer)/ sizeof(Buffer[0]) );
+    Q += ( sizeof(Buffer) / sizeof(Buffer[0]) );
   }
 }
 
@@ -162,7 +162,7 @@ void good5ab(void) {
   int *Q = P;
   while (Q < P + BufferSize) {
     *Q = 0;
-    Q = Q + ( sizeof(Buffer)/ sizeof(Buffer[0]) );
+    Q = Q + ( sizeof(Buffer) / sizeof(Buffer[0]) );
   }
 }
 
@@ -173,7 +173,7 @@ void good5ba(void) {
   int *Q = P;
   while (Q < P + BufferSize) {
     *Q = 0;
-    Q -= ( sizeof(Buffer)/ sizeof(Buffer[0]) );
+    Q -= ( sizeof(Buffer) / sizeof(Buffer[0]) );
   }
 }
 
@@ -184,7 +184,7 @@ void good5bb(void) {
   int *Q = P;
   while (Q < P + BufferSize) {
     *Q = 0;
-    Q = Q - ( sizeof(Buffer)/ sizeof(Buffer[0]) );
+    Q = Q - ( sizeof(Buffer) / sizeof(Buffer[0]) );
   }
 }
 
