@@ -588,8 +588,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
 
 .. _nullability-NullReturnedFromNonnull:
 
-nullability.NullReturnedFromNonnull
-"""""""""""""""""""""""""""""""""""
+nullability.NullReturnedFromNonnull (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""""""""""""
 Warns when a null pointer is returned from a function that has _Nonnull return type.
 
 .. code-block:: objc
