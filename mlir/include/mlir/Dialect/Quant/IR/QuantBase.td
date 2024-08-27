@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Predicates for types in the Quantization dialect.
+// Quantization dialect, types, and traits.
 //
 //===----------------------------------------------------------------------===//
 
@@ -76,7 +76,7 @@ def Quant_Dialect : Dialect {
       `0...255` for `u8`).
 
     - `expressedType`: Floating-point type of the value expressed by this
-      quantized type.
+      quantized type (e.g., `f32`, `f80`, `bf16`, or `tf32`).
 
     - `scale`: Floating-point value of type `expressedType` used in the
       conversion between stored and expressed values.
@@ -217,7 +217,7 @@ def Quant_Dialect : Dialect {
 
 
 //===----------------------------------------------------------------------===//
-// Type definitions
+// Type predicates
 //===----------------------------------------------------------------------===//
 
 class quant_ScalarOrTensorOf<Type etype> :

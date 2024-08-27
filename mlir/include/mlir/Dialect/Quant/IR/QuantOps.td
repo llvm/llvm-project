@@ -50,6 +50,13 @@ def quant_DequantizeCastOp : quant_Op<"dcast", [
     per-channel quantization, the appropriate `scale` and `zeroPoint` values
     are used for each tensor element computation according to the channel the
     element belongs to.
+    
+    The numerical results produced by the algorithm above may vary depending on
+    the rounding methods used by `convertIntToFloat()`, subtraction (`-`), and
+    multiplication (`*`). This operation does not define specific rounding
+    methods; instead, it is the responsibility of a transform pipeline to
+    determine which rounding method to apply when this operation is broken down
+    into lower-level dialects.
 
     The operation must satisfy the following syntactic constraints:
 
@@ -119,6 +126,13 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [
     `quantizedType`. For per-channel quantization, the appropriate `scale` and
     `zeroPoint` values are used for each tensor element computation according
     to the channel the element belongs to.
+
+    The numerical results produced by the algorithm above may vary depending on
+    the rounding methods used by `convertIntToFloat()`, `convertFloatToInt()`,
+    `clamp()`, division (`/`), and addition (`+`). This operation does not
+    define specific rounding methods; instead, it is the responsibility of a
+    transform pipeline to determine which rounding method to apply when this
+    operation is broken down into lower-level dialects.
 
     The operation must satisfy the following syntactic constraints:
 
