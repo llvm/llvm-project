@@ -1088,7 +1088,7 @@ struct ImportStatistics {
   unsigned Count = 0;
 };
 
-// Compute import summary for each source module in ImportList.
+// Compute import statistics for each source module in ImportList.
 static DenseMap<StringRef, ImportStatistics>
 collectImportStatistics(const ModuleSummaryIndex &Index,
                         const FunctionImporter::ImportMapTy &ImportList) {
