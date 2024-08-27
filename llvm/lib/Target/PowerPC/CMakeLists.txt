@@ -54,7 +54,6 @@ add_llvm_target(PowerPCCodeGen
   PPCReduceCRLogicals.cpp
   PPCVSXFMAMutate.cpp
   PPCVSXSwapRemoval.cpp
-  PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
   PPCLowerMASSVEntries.cpp
   PPCGenScalarMASSEntries.cpp
