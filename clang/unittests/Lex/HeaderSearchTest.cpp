@@ -36,7 +36,7 @@ protected:
         Search(std::make_shared<HeaderSearchOptions>(), SourceMgr, Diags,
                LangOpts, Target.get()) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   void addSearchDir(llvm::StringRef Dir) {

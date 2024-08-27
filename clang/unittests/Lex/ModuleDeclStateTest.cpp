@@ -58,7 +58,7 @@ protected:
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-unknown-linux-gnu";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor>

@@ -224,7 +224,7 @@ enum OpenCLTypeKind : uint8_t {
 ///
 class TargetInfo : public TransferrableTargetInfo,
                    public RefCountedBase<TargetInfo> {
-  std::shared_ptr<TargetOptions> TargetOpts;
+  TargetOptions *TargetOpts;
   llvm::Triple Triple;
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
@@ -311,9 +311,8 @@ public:
   /// \param Opts - The options to use to initialize the target. The target may
   /// modify the options to canonicalize the target feature information to match
   /// what the backend expects.
-  static TargetInfo *
-  CreateTargetInfo(DiagnosticsEngine &Diags,
-                   const std::shared_ptr<TargetOptions> &Opts);
+  static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
+                                      TargetOptions &Opts);
 
   virtual ~TargetInfo();
 
