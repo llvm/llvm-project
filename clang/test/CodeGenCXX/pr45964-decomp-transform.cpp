@@ -16,7 +16,7 @@ void (*d)(){test_transform<0>};
 // CHECK-NEXT:  [[BODY]]:
 // CHECK-NEXT:  [[CUR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[BODY]] ]
 // CHECK-NEXT:  [[DEST:%.*]] = getelementptr inbounds i32, ptr [[BEGIN]], i64 [[CUR]]
-// CHECK-NEXT:  [[SRC:%.*]] = getelementptr inbounds [1 x i32], ptr @a, i64 0, i64 [[CUR]]
+// CHECK-NEXT:  [[SRC:%.*]] = getelementptr inbounds nuw [1 x i32], ptr @a, i64 0, i64 [[CUR]]
 // CHECK-NEXT:  [[X:%.*]] = load i32, ptr [[SRC]]
 // CHECK-NEXT:  store i32 [[X]], ptr [[DEST]]
 // CHECK-NEXT:  [[NEXT]] = add nuw i64 [[CUR]], 1
