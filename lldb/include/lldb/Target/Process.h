@@ -35,6 +35,7 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
@@ -736,7 +737,9 @@ public:
     }
   };
 
-  using CoreFileMemoryRanges = std::vector<CoreFileMemoryRange>;
+  using CoreFileMemoryRanges =
+      lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t,
+                                    CoreFileMemoryRange>;
 
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save
