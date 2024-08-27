@@ -1087,12 +1087,13 @@ instCombineSVENoActiveReplace(InstCombiner &IC, IntrinsicInst &II,
   return std::nullopt;
 }
 
-// Simplify unary operation where predicate has all inactive lanes or try to
-// replace with  _x form when all lanes are active
+// Simplify unary operation where predicate has all inactive lanes or
+// replace unused first operand with undef when all lanes are active
 static std::optional<Instruction *>
 instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
   if (isAllActivePredicate(II.getOperand(1)) &&
-      !isa<llvm::UndefValue>(II.getOperand(0))) {
+      !isa<llvm::UndefValue>(II.getOperand(0)) &&
+      !isa<llvm::PoisonValue>(II.getOperand(0)) {
     Value *Undef = llvm::UndefValue::get(II.getType());
     return IC.replaceOperand(II, 0, Undef);
   }
