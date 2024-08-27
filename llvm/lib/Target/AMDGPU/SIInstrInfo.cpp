@@ -4613,22 +4613,27 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
          SubReg.getReg() == SuperVec.getReg();
 }
 
-// Verify the illgal copy from VGPR to SGPR for generic opcode COPY
+// Verify the illegal copy from VGPR to SGPR for generic opcode COPY
 bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI,
                              StringRef &ErrInfo) const {
   const MachineOperand &Dst = MI.getOperand(0);
   const MachineOperand &Src = MI.getOperand(1);
 
-  if (Dst.isReg() && Src.isReg()) {
-    Register DstReg = Dst.getReg();
-    Register SrcReg = Src.getReg();
-    // This is a check for copy from an VGPR to SGPR
-    if (RI.isVGPR(MRI, SrcReg) && RI.isSGPRReg(MRI, DstReg)) {
-      ErrInfo = "illegal copy from VGPR to SGPR";
-      return false;
-    }
+  Register DstReg = Dst.getReg();
+  Register SrcReg = Src.getReg();
+  // This is a check for copy from an VGPR to SGPR
+  if (RI.isVGPR(MRI, SrcReg) && RI.isSGPRReg(MRI, DstReg)) {
+    ErrInfo = "illegal copy from VGPR to SGPR";
+    return false;
   }
+
+  // This is a check for copy from an AGPR to SGPR
+  if (RI.isAGPR(MRI, SrcReg) && RI.isSGPRReg(MRI, DstReg)) {
+    ErrInfo = "illegal copy from AGPR to SGPR";
+    return false;
+  }
+
   return true;
 }
 
@@ -4644,7 +4649,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // is just done.
     if (!MRI.isSSA() && MI.isCopy())
       return verifyCopy(MI, MRI, ErrInfo);
-    
     return true;
   }
 
