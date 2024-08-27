@@ -100,8 +100,10 @@ New checks
 
 - New :doc:`bugprone-suspicious-pointer-arithmetics-using-sizeof
   <clang-tidy/checks/bugprone/suspicious-pointer-arithmetics-using-sizeof>`
-  check that finds suspicious pointer arithmetic calculations where the pointer
-  is offset by an ``alignof()``, ``offsetof()``, or ``sizeof()`` expression.
+  check.
+
+  Finds suspicious pointer arithmetic calculations where the pointer is offset
+  by an ``alignof()``, ``offsetof()``, or ``sizeof()`` expression.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

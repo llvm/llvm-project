@@ -3,12 +3,16 @@
 bugprone-suspicious-pointer-arithmetics-using-sizeof
 ====================================================
 
-Finds suspicious pointer arithmetic calculations where the pointer is offset by an ``alignof()``, ``offsetof()``, or ``sizeof()`` expression.
+Finds suspicious pointer arithmetic calculations where the pointer is offset by
+an ``alignof()``, ``offsetof()``, or ``sizeof()`` expression.
 
-Pointer arithmetic expressions implicitly scale the offset added to or subtracted from the address by the size of the pointee type.
-Using an offset expression that is already scaled by the size of the underlying type effectively results in a squared offset, which is likely an invalid pointer that points beyond the end of the intended array.
+Pointer arithmetic expressions implicitly scale the offset added to or
+subtracted from the address by the size of the pointee type.
+Using an offset expression that is already scaled by the size of the underlying
+type effectively results in a squared offset, which is likely an invalid
+pointer that points beyond the end of the intended array.
 
-.. code-block:: c++
+.. code-block:: c
 
   void printEveryEvenIndexElement(int *Array, size_t N) {
     int *P = Array;
@@ -21,7 +25,7 @@ Using an offset expression that is already scaled by the size of the underlying 
 
 The above example should be in the following, correct form:
 
-.. code-block:: c++
+.. code-block:: c
 
   void printEveryEvenIndexElement(int *Array, size_t N) {
     int *P = Array;
@@ -41,4 +45,6 @@ This check corresponds to the CERT C Coding Standard rule
 Limitations
 -----------
 
-While incorrect from a technically rigorous point of view, the check does not warn for pointer arithmetics where the pointee type is ``char`` (``sizeof(char) == 1``, by definition) on purpose.
+While incorrect from a technically rigorous point of view, the check does not
+warn for pointer arithmetics where the pointee type is ``char``
+(``sizeof(char) == 1``, by definition) on purpose.
