@@ -173,6 +173,13 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- The ``-fc++-static-destructors={all,thread-local,none}`` flag was
+  added to control which C++ variables have static destructors
+  registered: all (the default) does so for all variables, thread-local
+  only for thread-local variables, and none (which corresponds to the
+  existing ``-fno-c++-static-destructors`` flag) skips all static
+  destructors registration.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -310,6 +317,7 @@ Bug Fixes to C++ Support
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
   of the current instantiation in all cases.
 - Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
+- Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
 - Fixed an assertion failure when converting vectors to int/float with invalid expressions. (#GH105486)
 
 Bug Fixes to AST Handling
