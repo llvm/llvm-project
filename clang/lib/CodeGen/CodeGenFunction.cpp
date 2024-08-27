@@ -2978,9 +2978,8 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 
     for (auto &Feat : TargetAttrFeats) {
       StringRef CurrFeat = Feat;
-      if (!CurrFeat.starts_with("+"))
-        continue;
-      CurrTargetAttrFeats.push_back(CurrFeat.substr(1));
+      if (CurrFeat.starts_with("+"))
+        CurrTargetAttrFeats.push_back(CurrFeat.substr(1));
     }
 
     Builder.SetInsertPoint(CurBlock);
