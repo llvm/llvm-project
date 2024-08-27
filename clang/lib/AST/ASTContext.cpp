@@ -1381,7 +1381,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (LangOpts.OpenACC && !LangOpts.OpenMP) {
     InitBuiltinType(ArraySectionTy, BuiltinType::ArraySection);
   }
-  if (LangOpts.MatrixTypes)
+  if (LangOpts.MatrixTypes || LangOpts.HLSL)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
   // Builtin types for 'id', 'Class', and 'SEL'.

@@ -28,6 +28,7 @@ class HLSLExternalSemaSource : public ExternalSemaSource {
   llvm::DenseMap<CXXRecordDecl *, CompletionFunction> Completions;
 
   void defineHLSLVectorAlias();
+  void defineHLSLMatrixAlias();
   void defineTrivialHLSLTypes();
   void defineHLSLTypesWithForwardDeclarations();
 

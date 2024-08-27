@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
+// Test that matrix aliases are set up properly for HLSL
+
 // CHECK: NamespaceDecl 0x{{[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit hlsl
 // CHECK-NEXT: TypeAliasTemplateDecl 0x{{[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit vector
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> class depth 0 index 0 element
@@ -21,33 +23,27 @@
 [numthreads(1,1,1)]
 int entry() {
   // Verify that the alias is generated inside the hlsl namespace.
-  hlsl::vector<float, 2> Vec2 = {1.0, 2.0};
+  hlsl::matrix<float, 2, 2> Mat2x2;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:24:3, col:43>
-  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:42> col:26 Vec2 'hlsl::vector<float, 2>':'vector<float, 2>' cinit
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:26:3, col:35>
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:29> col:29 Mat2x2 'hlsl::matrix<float, 2, 2>'
 
   // Verify that you don't need to specify the namespace.
-  vector<int, 2> Vec2a = {1, 2};
+  matrix<int, 2, 2> Vec2x2a;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:30:3, col:32>
-  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:31> col:18 Vec2a 'vector<int, 2>' cinit
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:32:3, col:28>
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:21> col:21 Vec2x2a 'matrix<int, 2, 2>'
 
-  // Build a bigger vector.
-  vector<double, 4> Vec4 = {1.0, 2.0, 3.0, 4.0};
+  // Build a bigger matrix.
+  matrix<double, 4, 4> Mat4x4;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:36:3, col:48>
-  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:47> col:21 used Vec4 'vector<double, 4>' cinit
-
-  // Verify that swizzles still work.
-  vector<double, 3> Vec3 = Vec4.xyz;
-
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:42:3, col:36>
-  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:33> col:21 Vec3 'vector<double, 3>' cinit
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:38:3, col:30>
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:24> col:24 Mat4x4 'matrix<double, 4, 4>'
 
   // Verify that the implicit arguments generate the correct type.
-  vector<> ImpVec4 = {1.0, 2.0, 3.0, 4.0};
+  matrix<> ImpMat4x4;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:48:3, col:42>
-  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:41> col:12 ImpVec4 'vector<>':'vector<float, 4>' cinit
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:44:3, col:21>
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:12> col:12 ImpMat4x4 'matrix<>':'matrix<float, 4, 4>'
   return 1;
 }
