@@ -4091,7 +4091,7 @@ void InitializationSequence::AddParenthesizedListInitStep(QualType T) {
   Steps.push_back(S);
 }
 
-void InitializationSequence::AddUnwrapInitListAtTheBeginning(
+void InitializationSequence::AddUnwrapInitListInitStep(
     InitListExpr *Syntactic) {
   assert(Syntactic->getNumInits() == 1 &&
          "Can only unwrap trivial init lists.");
@@ -4833,7 +4833,7 @@ static void TryListInitialization(Sema &S,
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)
-          Sequence.AddUnwrapInitListAtTheBeginning(InitList);
+          Sequence.AddUnwrapInitListInitStep(InitList);
         return;
       }
 
