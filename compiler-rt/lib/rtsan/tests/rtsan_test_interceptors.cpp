@@ -71,6 +71,12 @@ TEST(TestRtsanInterceptors, MallocDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST(TestRtsanInterceptors, CallocDiesWhenRealtime) {
+  auto Func = []() { EXPECT_NE(nullptr, calloc(2, 4)); };
+  ExpectRealtimeDeath(Func, "calloc");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST(TestRtsanInterceptors, ReallocDiesWhenRealtime) {
   void *ptr_1 = malloc(1);
   auto Func = [ptr_1]() { EXPECT_NE(nullptr, realloc(ptr_1, 8)); };
