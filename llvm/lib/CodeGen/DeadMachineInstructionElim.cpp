@@ -117,7 +117,7 @@ bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
     return true;
 
   // If there are no defs with uses, the instruction might be dead.
-  return MI->canBeDead();
+  return MI->wouldBeTriviallyDead();
 }
 
 bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {

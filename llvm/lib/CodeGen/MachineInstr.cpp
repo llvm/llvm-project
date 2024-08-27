@@ -1323,7 +1323,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   return true;
 }
 
-bool MachineInstr::canBeDead() const {
+bool MachineInstr::wouldBeTriviallyDead() const {
   // Don't delete frame allocation labels.
   // FIXME: Why is LOCAL_ESCAPE not considered in MachineInstr::isLabel?
   if (getOpcode() == TargetOpcode::LOCAL_ESCAPE)
@@ -1335,6 +1335,7 @@ bool MachineInstr::canBeDead() const {
     return false;
 
   // LIFETIME markers should be preserved.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
   if (isLifetimeMarker())
     return false;
 

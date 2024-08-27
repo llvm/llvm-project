@@ -1732,9 +1732,9 @@ public:
   /// the instruction's location and its intended destination.
   bool isSafeToMove(bool &SawStore) const;
 
-  /// Return true if this instruction can be considered dead if all of its
-  /// defined registers are dead.
-  bool canBeDead() const;
+  /// Return true if this instruction would be trivially dead if all of its
+  /// defined registers were dead.
+  bool wouldBeTriviallyDead() const;
 
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.

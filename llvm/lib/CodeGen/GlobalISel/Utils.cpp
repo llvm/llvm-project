@@ -229,7 +229,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
     if (Reg.isPhysical() || !MRI.use_nodbg_empty(Reg))
       return false;
   }
-  return MI.canBeDead();
+  return MI.wouldBeTriviallyDead();
 }
 
 static void reportGISelDiagnostic(DiagnosticSeverity Severity,
