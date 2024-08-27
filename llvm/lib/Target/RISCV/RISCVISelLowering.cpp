@@ -20186,11 +20186,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
-    if (auto *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    if (auto *S = dyn_cast<GlobalAddressSDNode>(Callee))
       Callee = getLargeGlobalAddress(S, DL, PtrVT, DAG);
-    } else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee))
       Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
-    }
   } else if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
     Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
