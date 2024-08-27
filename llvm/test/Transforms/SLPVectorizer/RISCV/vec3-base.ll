@@ -433,6 +433,29 @@ define i32 @reduce_add(ptr %src) {
   ret i32 %add.1
 }
 
+define float @reduce_fadd(ptr %src) {
+; CHECK-LABEL: @reduce_fadd(
+; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
+; CHECK-NEXT:    [[L_SRC_0:%.*]] = load float, ptr [[GEP_SRC_0]], align 4
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i32 1
+; CHECK-NEXT:    [[L_SRC_1:%.*]] = load float, ptr [[GEP_SRC_1]], align 4
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i32 2
+; CHECK-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd fast float [[L_SRC_0]], [[L_SRC_1]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[L_SRC_2]]
+; CHECK-NEXT:    ret float [[ADD_1]]
+;
+  %gep.src.0 = getelementptr inbounds float, ptr %src, i32 0
+  %l.src.0 = load float, ptr %gep.src.0, align 4
+  %gep.src.1 = getelementptr inbounds float, ptr %src, i32 1
+  %l.src.1 = load float, ptr %gep.src.1, align 4
+  %gep.src.2 = getelementptr inbounds float, ptr %src, i32 2
+  %l.src.2 = load float, ptr %gep.src.2, align 4
+
+  %add.0 = fadd fast float %l.src.0, %l.src.1
+  %add.1 = fadd fast float %add.0, %l.src.2
+  ret float %add.1
+}
 
 define i32 @reduce_add_after_mul(ptr %src) {
 ; CHECK-LABEL: @reduce_add_after_mul(
@@ -465,8 +488,8 @@ define i32 @reduce_add_after_mul(ptr %src) {
   ret i32 %add.1
 }
 
-define i32 @dot_product(ptr %a, ptr %b) {
-; CHECK-LABEL: @dot_product(
+define i32 @dot_product_i32(ptr %a, ptr %b) {
+; CHECK-LABEL: @dot_product_i32(
 ; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[L_A_0:%.*]] = load i32, ptr [[GEP_A_0]], align 4
 ; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
@@ -508,6 +531,89 @@ define i32 @dot_product(ptr %a, ptr %b) {
   %add.1 = add i32 %add.0, %mul.2
   ret i32 %add.1
 }
+
+define float @dot_product_fp32(ptr %a, ptr %b) {
+; CHECK-LABEL: @dot_product_fp32(
+; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 2
+; CHECK-NEXT:    [[L_A_2:%.*]] = load float, ptr [[GEP_A_2]], align 4
+; CHECK-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i32 2
+; CHECK-NEXT:    [[L_B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_A_0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP_B_0]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[L_A_2]], [[L_B_2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    ret float [[ADD_1]]
+;
+  %gep.a.0 = getelementptr inbounds float, ptr %a, i32 0
+  %l.a.0 = load float, ptr %gep.a.0, align 4
+  %gep.a.1 = getelementptr inbounds float, ptr %a, i32 1
+  %l.a.1 = load float, ptr %gep.a.1, align 4
+  %gep.a.2 = getelementptr inbounds float, ptr %a, i32 2
+  %l.a.2 = load float, ptr %gep.a.2, align 4
+
+  %gep.b.0 = getelementptr inbounds float, ptr %b, i32 0
+  %l.b.0 = load float, ptr %gep.b.0, align 4
+  %gep.b.1 = getelementptr inbounds float, ptr %b, i32 1
+  %l.b.1 = load float, ptr %gep.b.1, align 4
+  %gep.b.2 = getelementptr inbounds float, ptr %b, i32 2
+  %l.b.2 = load float, ptr %gep.b.2, align 4
+
+  %mul.0 = fmul fast float %l.a.0, %l.b.0
+  %mul.1 = fmul fast float %l.a.1, %l.b.1
+  %mul.2 = fmul fast float %l.a.2, %l.b.2
+
+  %add.0 = fadd fast float %mul.0, %mul.1
+  %add.1 = fadd fast float %add.0, %mul.2
+  ret float %add.1
+}
+
+define double @dot_product_fp64(ptr %a, ptr %b) {
+; CHECK-LABEL: @dot_product_fp64(
+; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds double, ptr [[A]], i32 2
+; CHECK-NEXT:    [[L_A_2:%.*]] = load double, ptr [[GEP_A_2]], align 4
+; CHECK-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds double, ptr [[B]], i32 2
+; CHECK-NEXT:    [[L_B_2:%.*]] = load double, ptr [[GEP_B_2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[GEP_A_0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[GEP_B_0]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast double [[L_A_2]], [[L_B_2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast double [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    ret double [[ADD_1]]
+;
+  %gep.a.0 = getelementptr inbounds double, ptr %a, i32 0
+  %l.a.0 = load double, ptr %gep.a.0, align 4
+  %gep.a.1 = getelementptr inbounds double, ptr %a, i32 1
+  %l.a.1 = load double, ptr %gep.a.1, align 4
+  %gep.a.2 = getelementptr inbounds double, ptr %a, i32 2
+  %l.a.2 = load double, ptr %gep.a.2, align 4
+
+  %gep.b.0 = getelementptr inbounds double, ptr %b, i32 0
+  %l.b.0 = load double, ptr %gep.b.0, align 4
+  %gep.b.1 = getelementptr inbounds double, ptr %b, i32 1
+  %l.b.1 = load double, ptr %gep.b.1, align 4
+  %gep.b.2 = getelementptr inbounds double, ptr %b, i32 2
+  %l.b.2 = load double, ptr %gep.b.2, align 4
+
+  %mul.0 = fmul fast double %l.a.0, %l.b.0
+  %mul.1 = fmul fast double %l.a.1, %l.b.1
+  %mul.2 = fmul fast double %l.a.2, %l.b.2
+
+  %add.0 = fadd fast double %mul.0, %mul.1
+  %add.1 = fadd fast double %add.0, %mul.2
+  ret double %add.1
+}
+
 
 declare float @llvm.fmuladd.f32(float, float, float)
 
