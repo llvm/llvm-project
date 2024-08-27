@@ -36,12 +36,12 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -414,7 +414,7 @@ Status NativeProcessFreeBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   if (ret == -1) {
     error = CanTrace();
     if (error.Success())
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
   }
 
   if (result)
@@ -523,7 +523,7 @@ Status NativeProcessFreeBSD::Halt() {
   if (StateIsStoppedState(m_state, false))
     return error;
   if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
   return error;
 }
 
@@ -544,7 +544,7 @@ Status NativeProcessFreeBSD::Signal(int signo) {
   Status error;
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
