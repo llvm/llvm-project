@@ -12,14 +12,16 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
         """Test that implementation details of `std::invoke` are hidden"""
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
+            self, "break here", lldb.SBFileSpec("main.cpp")
         )
 
+        stop_cnt = 0
         while process.GetState() != lldb.eStateExited:
+            stop_cnt += 1
             self.assertTrue(
                 any(
                     f in thread.GetFrameAtIndex(0).GetFunctionName()
-                    for f in ["print_num", "add", "PrintAdder"]
+                    for f in ["consume_number", "add", "Callable"]
                 )
             )
             # Skip all hidden frames
@@ -38,3 +40,5 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
                 "main", thread.GetFrameAtIndex(frame_id + 1).GetFunctionName()
             )
             process.Continue()
+
+        self.assertEqual(stop_cnt, 4)

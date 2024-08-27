@@ -61,31 +61,22 @@ public:
             //    std::__1::__function::__value_func<void ()>::operator()[abi:ne200000]() const
             RegularExpression{""
               R"(^std::__[^:]*::)" // Namespace.
-              R"(__function::.*::operator\(\))"
-              R"((\[.*\])?)"    // ABI tag.
-              R"(( const)?$)"}, // const.
+              R"(__function::.*::operator\(\))"},
             // internal implementation details of std::function in ABI v2
             //    std::__2::__function::__policy_invoker<void (int, int)>::__call_impl[abi:ne200000]<std::__2::__function::__default_alloc_func<int (*)(int, int), int (int, int)>>
             RegularExpression{""
               R"(^std::__[^:]*::)" // Namespace.
-              R"(__function::.*::__call_impl)"
-              R"((\[.*\])?)"  // ABI tag.
-              R"(<.*>)"},     // template argument.
+              R"(__function::.*::__call_impl)"},
             // internal implementation details of std::invoke
             //   std::__1::__invoke[abi:ne200000]<void (*&)()>
             RegularExpression{
               R"(^std::__[^:]*::)" // Namespace.
-              R"(__invoke)"
-              R"((\[.*\])?)"  // ABI tag.
-              R"(<.*>)"},     // template argument.
+              R"(__invoke)"},
             // internal implementation details of std::invoke
             //   std::__1::__invoke_void_return_wrapper<void, true>::__call[abi:ne200000]<void (*&)()>
             RegularExpression{
               R"(^std::__[^:]*::)" // Namespace.
-              R"(__invoke_void_return_wrapper<.*>::__call)"
-              R"((\[.*\])?)"  // ABI tag.
-              R"(<.*>)"}      // template argument.
-
+              R"(__invoke_void_return_wrapper<.*>::__call)"}
         },
         m_hidden_frame(new LibCXXHiddenFrame()) {}
 
