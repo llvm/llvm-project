@@ -25,6 +25,7 @@ class Value;
 namespace dxil {
 
 class ResourceInfo {
+public:
   struct ResourceBinding {
     uint32_t RecordID;
     uint32_t Space;
@@ -38,6 +39,10 @@ class ResourceInfo {
     bool operator!=(const ResourceBinding &RHS) const {
       return !(*this == RHS);
     }
+    bool operator<(const ResourceBinding &RHS) const {
+      return std::tie(RecordID, Space, LowerBound, Size) <
+             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+    }
   };
 
   struct UAVInfo {
@@ -50,6 +55,10 @@ class ResourceInfo {
              std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
     }
     bool operator!=(const UAVInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const UAVInfo &RHS) const {
+      return std::tie(GloballyCoherent, HasCounter, IsROV) <
+             std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
+    }
   };
 
   struct StructInfo {
@@ -64,6 +73,9 @@ class ResourceInfo {
       return std::tie(Stride, AlignLog2) == std::tie(RHS.Stride, RHS.AlignLog2);
     }
     bool operator!=(const StructInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const StructInfo &RHS) const {
+      return std::tie(Stride, AlignLog2) < std::tie(RHS.Stride, RHS.AlignLog2);
+    }
   };
 
   struct TypedInfo {
@@ -75,6 +87,10 @@ class ResourceInfo {
              std::tie(RHS.ElementTy, RHS.ElementCount);
     }
     bool operator!=(const TypedInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const TypedInfo &RHS) const {
+      return std::tie(ElementTy, ElementCount) <
+             std::tie(RHS.ElementTy, RHS.ElementCount);
+    }
   };
 
   struct MSInfo {
@@ -82,6 +98,7 @@ class ResourceInfo {
 
     bool operator==(const MSInfo &RHS) const { return Count == RHS.Count; }
     bool operator!=(const MSInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const MSInfo &RHS) const { return Count < RHS.Count; }
   };
 
   struct FeedbackInfo {
@@ -89,8 +106,10 @@ class ResourceInfo {
 
     bool operator==(const FeedbackInfo &RHS) const { return Type == RHS.Type; }
     bool operator!=(const FeedbackInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const FeedbackInfo &RHS) const { return Type < RHS.Type; }
   };
 
+private:
   // Universal properties.
   Value *Symbol;
   StringRef Name;
@@ -138,11 +157,16 @@ public:
     Binding.LowerBound = LowerBound;
     Binding.Size = Size;
   }
+  const ResourceBinding &getBinding() const { return Binding; }
   void setUAV(bool GloballyCoherent, bool HasCounter, bool IsROV) {
     assert(isUAV() && "Not a UAV");
     UAVFlags.GloballyCoherent = GloballyCoherent;
     UAVFlags.HasCounter = HasCounter;
     UAVFlags.IsROV = IsROV;
+  }
+  const UAVInfo &getUAV() const {
+    assert(isUAV() && "Not a UAV");
+    return UAVFlags;
   }
   void setCBuffer(uint32_t Size) {
     assert(isCBuffer() && "Not a CBuffer");
@@ -159,6 +183,10 @@ public:
     Typed.ElementTy = ElementTy;
     Typed.ElementCount = ElementCount;
   }
+  const TypedInfo &getTyped() const {
+    assert(isTyped() && "Not typed");
+    return Typed;
+  }
   void setFeedback(dxil::SamplerFeedbackType Type) {
     assert(isFeedback() && "Not Feedback");
     Feedback.Type = Type;
@@ -167,8 +195,18 @@ public:
     assert(isMultiSample() && "Not MultiSampled");
     MultiSample.Count = Count;
   }
+  const MSInfo &getMultiSample() const {
+    assert(isMultiSample() && "Not MultiSampled");
+    return MultiSample;
+  }
+
+  StringRef getName() const { return Name; }
+  dxil::ResourceClass getResourceClass() const { return RC; }
+  dxil::ResourceKind getResourceKind() const { return Kind; }
 
   bool operator==(const ResourceInfo &RHS) const;
+  bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
+  bool operator<(const ResourceInfo &RHS) const;
 
   static ResourceInfo SRV(Value *Symbol, StringRef Name,
                           dxil::ElementType ElementTy, uint32_t ElementCount,
@@ -216,7 +254,6 @@ public:
 
   MDTuple *getAsMetadata(LLVMContext &Ctx) const;
 
-  ResourceBinding getBinding() const { return Binding; }
   std::pair<uint32_t, uint32_t> getAnnotateProps() const;
 
   void print(raw_ostream &OS) const;
@@ -224,7 +261,81 @@ public:
 
 } // namespace dxil
 
-using DXILResourceMap = MapVector<CallInst *, dxil::ResourceInfo>;
+class DXILResourceMap {
+  SmallVector<dxil::ResourceInfo> Resources;
+  DenseMap<CallInst *, unsigned> CallMap;
+  unsigned FirstUAV = 0;
+  unsigned FirstCBuffer = 0;
+  unsigned FirstSampler = 0;
+
+public:
+  using iterator = SmallVector<dxil::ResourceInfo>::iterator;
+  using const_iterator = SmallVector<dxil::ResourceInfo>::const_iterator;
+
+  DXILResourceMap(
+      SmallVectorImpl<std::pair<CallInst *, dxil::ResourceInfo>> &&CIToRI);
+
+  iterator begin() { return Resources.begin(); }
+  const_iterator begin() const { return Resources.begin(); }
+  iterator end() { return Resources.end(); }
+  const_iterator end() const { return Resources.end(); }
+
+  bool empty() const { return Resources.empty(); }
+
+  iterator find(const CallInst *Key) {
+    auto Pos = CallMap.find(Key);
+    return Pos == CallMap.end() ? Resources.end()
+                                : (Resources.begin() + Pos->second);
+  }
+
+  const_iterator find(const CallInst *Key) const {
+    auto Pos = CallMap.find(Key);
+    return Pos == CallMap.end() ? Resources.end()
+                                : (Resources.begin() + Pos->second);
+  }
+
+  iterator srv_begin() { return begin(); }
+  const_iterator srv_begin() const { return begin(); }
+  iterator srv_end() { return begin() + FirstUAV; }
+  const_iterator srv_end() const { return begin() + FirstUAV; }
+  iterator_range<iterator> srvs() { return make_range(srv_begin(), srv_end()); }
+  iterator_range<const_iterator> srvs() const {
+    return make_range(srv_begin(), srv_end());
+  }
+
+  iterator uav_begin() { return begin() + FirstUAV; }
+  const_iterator uav_begin() const { return begin() + FirstUAV; }
+  iterator uav_end() { return begin() + FirstCBuffer; }
+  const_iterator uav_end() const { return begin() + FirstCBuffer; }
+  iterator_range<iterator> uavs() { return make_range(uav_begin(), uav_end()); }
+  iterator_range<const_iterator> uavs() const {
+    return make_range(uav_begin(), uav_end());
+  }
+
+  iterator cbuffer_begin() { return begin() + FirstCBuffer; }
+  const_iterator cbuffer_begin() const { return begin() + FirstCBuffer; }
+  iterator cbuffer_end() { return begin() + FirstSampler; }
+  const_iterator cbuffer_end() const { return begin() + FirstSampler; }
+  iterator_range<iterator> cbuffers() {
+    return make_range(cbuffer_begin(), cbuffer_end());
+  }
+  iterator_range<const_iterator> cbuffers() const {
+    return make_range(cbuffer_begin(), cbuffer_end());
+  }
+
+  iterator sampler_begin() { return begin() + FirstSampler; }
+  const_iterator sampler_begin() const { return begin() + FirstSampler; }
+  iterator sampler_end() { return end(); }
+  const_iterator sampler_end() const { return end(); }
+  iterator_range<iterator> samplers() {
+    return make_range(sampler_begin(), sampler_end());
+  }
+  iterator_range<const_iterator> samplers() const {
+    return make_range(sampler_begin(), sampler_end());
+  }
+
+  void print(raw_ostream &OS) const;
+};
 
 class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
   friend AnalysisInfoMixin<DXILResourceAnalysis>;

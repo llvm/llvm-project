@@ -885,12 +885,21 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   if (!LT || !RT)
     return false;
 
+  // Visit the given pointer expression and optionally convert to a PT_Ptr.
+  auto visitAsPointer = [&](const Expr *E, PrimType T) -> bool {
+    if (!this->visit(E))
+      return false;
+    if (T != PT_Ptr)
+      return this->emitDecayPtr(T, PT_Ptr, E);
+    return true;
+  };
+
   if (LHS->getType()->isPointerType() && RHS->getType()->isPointerType()) {
     if (Op != BO_Sub)
       return false;
 
     assert(E->getType()->isIntegerType());
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
     return this->emitSubPtr(classifyPrim(E->getType()), E);
@@ -898,21 +907,38 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   PrimType OffsetType;
   if (LHS->getType()->isIntegerType()) {
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT))
+      return false;
+    if (!this->visit(LHS))
       return false;
     OffsetType = *LT;
   } else if (RHS->getType()->isIntegerType()) {
-    if (!visit(LHS) || !visit(RHS))
+    if (!visitAsPointer(LHS, *LT))
+      return false;
+    if (!this->visit(RHS))
       return false;
     OffsetType = *RT;
   } else {
     return false;
   }
 
-  if (Op == BO_Add)
-    return this->emitAddOffset(OffsetType, E);
-  else if (Op == BO_Sub)
-    return this->emitSubOffset(OffsetType, E);
+  // Do the operation and optionally transform to
+  // result pointer type.
+  if (Op == BO_Add) {
+    if (!this->emitAddOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  } else if (Op == BO_Sub) {
+    if (!this->emitSubOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  }
 
   return false;
 }
@@ -1318,14 +1344,15 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
-
   QualType QT = E->getType();
-
   if (const auto *AT = QT->getAs<AtomicType>())
     QT = AT->getValueType();
 
-  if (QT->isVoidType())
+  if (QT->isVoidType()) {
+    if (Inits.size() == 0)
+      return true;
     return this->emitInvalid(E);
+  }
 
   // Handle discarding first.
   if (DiscardResult) {
@@ -2556,7 +2583,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (T->isArrayType()) {
@@ -3238,9 +3265,6 @@ template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
@@ -3276,9 +3300,6 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
-
-  if (E->containsErrors())
-    return this->emitError(E);
 
   if (!this->checkLiteralType(E))
     return false;
@@ -4364,11 +4385,6 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
-  if (IS->isNonNegatedConsteval())
-    return visitStmt(IS->getThen());
-  if (IS->isNegatedConsteval())
-    return IS->getElse() ? visitStmt(IS->getElse()) : true;
-
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -4377,8 +4393,19 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  if (!this->visitBool(IS->getCond()))
-    return false;
+  // Compile condition.
+  if (IS->isNonNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+  } else if (IS->isNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+    if (!this->emitInv(IS))
+      return false;
+  } else {
+    if (!this->visitBool(IS->getCond()))
+      return false;
+  }
 
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();

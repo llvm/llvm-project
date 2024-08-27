@@ -111,9 +111,12 @@ class ConstantInt;
 class Context;
 class Function;
 class Instruction;
+class FreezeInst;
+class FenceInst;
 class SelectInst;
 class ExtractElementInst;
 class InsertElementInst;
+class ShuffleVectorInst;
 class BranchInst;
 class UnaryInstruction;
 class LoadInst;
@@ -126,14 +129,23 @@ class CallBase;
 class CallInst;
 class InvokeInst;
 class CallBrInst;
+class LandingPadInst;
+class FuncletPadInst;
+class CatchPadInst;
+class CleanupPadInst;
+class CatchReturnInst;
+class CleanupReturnInst;
 class GetElementPtrInst;
 class CastInst;
+class PossiblyNonNegInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class CatchSwitchInst;
 class SwitchInst;
 class UnaryOperator;
 class BinaryOperator;
+class PossiblyDisjointInst;
 class AtomicRMWInst;
 class AtomicCmpXchgInst;
 
@@ -239,30 +251,41 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context;            // For getting `Val`.
-  friend class User;               // For getting `Val`.
-  friend class Use;                // For getting `Val`.
-  friend class SelectInst;         // For getting `Val`.
-  friend class ExtractElementInst; // For getting `Val`.
-  friend class InsertElementInst;  // For getting `Val`.
-  friend class BranchInst;         // For getting `Val`.
-  friend class LoadInst;           // For getting `Val`.
-  friend class StoreInst;          // For getting `Val`.
-  friend class ReturnInst;         // For getting `Val`.
-  friend class CallBase;           // For getting `Val`.
-  friend class CallInst;           // For getting `Val`.
-  friend class InvokeInst;         // For getting `Val`.
-  friend class CallBrInst;         // For getting `Val`.
-  friend class GetElementPtrInst;  // For getting `Val`.
-  friend class SwitchInst;         // For getting `Val`.
-  friend class UnaryOperator;      // For getting `Val`.
-  friend class BinaryOperator;     // For getting `Val`.
-  friend class AtomicRMWInst;      // For getting `Val`.
-  friend class AtomicCmpXchgInst;  // For getting `Val`.
-  friend class AllocaInst;         // For getting `Val`.
-  friend class CastInst;           // For getting `Val`.
-  friend class PHINode;            // For getting `Val`.
-  friend class UnreachableInst;    // For getting `Val`.
+  friend class Context;               // For getting `Val`.
+  friend class User;                  // For getting `Val`.
+  friend class Use;                   // For getting `Val`.
+  friend class FreezeInst;            // For getting `Val`.
+  friend class FenceInst;             // For getting `Val`.
+  friend class SelectInst;            // For getting `Val`.
+  friend class ExtractElementInst;    // For getting `Val`.
+  friend class InsertElementInst;     // For getting `Val`.
+  friend class ShuffleVectorInst;     // For getting `Val`.
+  friend class BranchInst;            // For getting `Val`.
+  friend class LoadInst;              // For getting `Val`.
+  friend class StoreInst;             // For getting `Val`.
+  friend class ReturnInst;            // For getting `Val`.
+  friend class CallBase;              // For getting `Val`.
+  friend class CallInst;              // For getting `Val`.
+  friend class InvokeInst;            // For getting `Val`.
+  friend class CallBrInst;            // For getting `Val`.
+  friend class LandingPadInst;        // For getting `Val`.
+  friend class FuncletPadInst;        // For getting `Val`.
+  friend class CatchPadInst;          // For getting `Val`.
+  friend class CleanupPadInst;        // For getting `Val`.
+  friend class CatchReturnInst;       // For getting `Val`.
+  friend class GetElementPtrInst;     // For getting `Val`.
+  friend class CatchSwitchInst;       // For getting `Val`.
+  friend class CleanupReturnInst;     // For getting `Val`.
+  friend class SwitchInst;            // For getting `Val`.
+  friend class UnaryOperator;         // For getting `Val`.
+  friend class BinaryOperator;        // For getting `Val`.
+  friend class AtomicRMWInst;         // For getting `Val`.
+  friend class AtomicCmpXchgInst;     // For getting `Val`.
+  friend class AllocaInst;            // For getting `Val`.
+  friend class CastInst;              // For getting `Val`.
+  friend class PHINode;               // For getting `Val`.
+  friend class UnreachableInst;       // For getting `Val`.
+  friend class CatchSwitchAddHandler; // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -663,9 +686,12 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class FreezeInst;         // For getTopmostLLVMInstruction().
+  friend class FenceInst;          // For getTopmostLLVMInstruction().
   friend class SelectInst;         // For getTopmostLLVMInstruction().
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
   friend class InsertElementInst;  // For getTopmostLLVMInstruction().
+  friend class ShuffleVectorInst;  // For getTopmostLLVMInstruction().
   friend class BranchInst;         // For getTopmostLLVMInstruction().
   friend class LoadInst;           // For getTopmostLLVMInstruction().
   friend class StoreInst;          // For getTopmostLLVMInstruction().
@@ -673,7 +699,13 @@ protected:
   friend class CallInst;           // For getTopmostLLVMInstruction().
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
+  friend class LandingPadInst;     // For getTopmostLLVMInstruction().
+  friend class CatchPadInst;       // For getTopmostLLVMInstruction().
+  friend class CleanupPadInst;     // For getTopmostLLVMInstruction().
+  friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
+  friend class CleanupReturnInst;  // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
   friend class UnaryOperator;      // For getTopmostLLVMInstruction().
   friend class BinaryOperator;     // For getTopmostLLVMInstruction().
@@ -838,6 +870,7 @@ template <typename LLVMT> class SingleLLVMInstructionImpl : public Instruction {
 #include "llvm/SandboxIR/SandboxIRValues.def"
   friend class UnaryInstruction;
   friend class CallBase;
+  friend class FuncletPadInst;
 
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -858,6 +891,33 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+class FenceInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
+  FenceInst(llvm::FenceInst *FI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Fence, Opcode::Fence, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static FenceInst *create(AtomicOrdering Ordering, BBIterator WhereIt,
+                           BasicBlock *WhereBB, Context &Ctx,
+                           SyncScope::ID SSID = SyncScope::System);
+  /// Returns the ordering constraint of this fence instruction.
+  AtomicOrdering getOrdering() const {
+    return cast<llvm::FenceInst>(Val)->getOrdering();
+  }
+  /// Sets the ordering constraint of this fence instruction.  May only be
+  /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
+  void setOrdering(AtomicOrdering Ordering);
+  /// Returns the synchronization scope ID of this fence instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::FenceInst>(Val)->getSyncScopeID();
+  }
+  /// Sets the synchronization scope ID of this fence instruction.
+  void setSyncScopeID(SyncScope::ID SSID);
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Fence;
+  }
 };
 
 class SelectInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
@@ -945,6 +1005,452 @@ public:
   }
 };
 
+class ShuffleVectorInst final
+    : public SingleLLVMInstructionImpl<llvm::ShuffleVectorInst> {
+  /// Use Context::createShuffleVectorInst() instead.
+  ShuffleVectorInst(llvm::Instruction *I, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::ShuffleVector, Opcode::ShuffleVector,
+                                  I, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
+
+public:
+  static Value *create(Value *V1, Value *V2, Value *Mask,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *V1, Value *V2, Value *Mask,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ShuffleVector;
+  }
+
+  /// Swap the operands and adjust the mask to preserve the semantics of the
+  /// instruction.
+  void commute() { cast<llvm::ShuffleVectorInst>(Val)->commute(); }
+
+  /// Return true if a shufflevector instruction can be formed with the
+  /// specified operands.
+  static bool isValidOperands(const Value *V1, const Value *V2,
+                              const Value *Mask) {
+    return llvm::ShuffleVectorInst::isValidOperands(V1->Val, V2->Val,
+                                                    Mask->Val);
+  }
+  static bool isValidOperands(const Value *V1, const Value *V2,
+                              ArrayRef<int> Mask) {
+    return llvm::ShuffleVectorInst::isValidOperands(V1->Val, V2->Val, Mask);
+  }
+
+  /// Overload to return most specific vector type.
+  VectorType *getType() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->getType();
+  }
+
+  /// Return the shuffle mask value of this instruction for the given element
+  /// index. Return PoisonMaskElem if the element is undef.
+  int getMaskValue(unsigned Elt) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->getMaskValue(Elt);
+  }
+
+  /// Convert the input shuffle mask operand to a vector of integers. Undefined
+  /// elements of the mask are returned as PoisonMaskElem.
+  static void getShuffleMask(const Constant *Mask,
+                             SmallVectorImpl<int> &Result) {
+    llvm::ShuffleVectorInst::getShuffleMask(cast<llvm::Constant>(Mask->Val),
+                                            Result);
+  }
+
+  /// Return the mask for this instruction as a vector of integers. Undefined
+  /// elements of the mask are returned as PoisonMaskElem.
+  void getShuffleMask(SmallVectorImpl<int> &Result) const {
+    cast<llvm::ShuffleVectorInst>(Val)->getShuffleMask(Result);
+  }
+
+  /// Return the mask for this instruction, for use in bitcode.
+  Constant *getShuffleMaskForBitcode() const;
+
+  static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
+                                                Type *ResultTy, Context &Ctx);
+
+  void setShuffleMask(ArrayRef<int> Mask);
+
+  ArrayRef<int> getShuffleMask() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->getShuffleMask();
+  }
+
+  /// Return true if this shuffle returns a vector with a different number of
+  /// elements than its source vectors.
+  /// Examples: shufflevector <4 x n> A, <4 x n> B, <1,2,3>
+  ///           shufflevector <4 x n> A, <4 x n> B, <1,2,3,4,5>
+  bool changesLength() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->changesLength();
+  }
+
+  /// Return true if this shuffle returns a vector with a greater number of
+  /// elements than its source vectors.
+  /// Example: shufflevector <2 x n> A, <2 x n> B, <1,2,3>
+  bool increasesLength() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->increasesLength();
+  }
+
+  /// Return true if this shuffle mask chooses elements from exactly one source
+  /// vector.
+  /// Example: <7,5,undef,7>
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSingleSourceMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSingleSourceMask(Mask, NumSrcElts);
+  }
+  static bool isSingleSourceMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSingleSourceMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  /// Return true if this shuffle chooses elements from exactly one source
+  /// vector without changing the length of that vector.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
+  bool isSingleSource() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isSingleSource();
+  }
+
+  /// Return true if this shuffle mask chooses elements from exactly one source
+  /// vector without lane crossings. A shuffle using this mask is not
+  /// necessarily a no-op because it may change the number of elements from its
+  /// input vectors or it may provide demanded bits knowledge via undef lanes.
+  /// Example: <undef,undef,2,3>
+  static bool isIdentityMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isIdentityMask(Mask, NumSrcElts);
+  }
+  static bool isIdentityMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isIdentityMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  /// Return true if this shuffle chooses elements from exactly one source
+  /// vector without lane crossings and does not change the number of elements
+  /// from its input vectors.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
+  bool isIdentity() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isIdentity();
+  }
+
+  /// Return true if this shuffle lengthens exactly one source vector with
+  /// undefs in the high elements.
+  bool isIdentityWithPadding() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isIdentityWithPadding();
+  }
+
+  /// Return true if this shuffle extracts the first N elements of exactly one
+  /// source vector.
+  bool isIdentityWithExtract() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isIdentityWithExtract();
+  }
+
+  /// Return true if this shuffle concatenates its 2 source vectors. This
+  /// returns false if either input is undefined. In that case, the shuffle is
+  /// is better classified as an identity with padding operation.
+  bool isConcat() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isConcat();
+  }
+
+  /// Return true if this shuffle mask chooses elements from its source vectors
+  /// without lane crossings. A shuffle using this mask would be
+  /// equivalent to a vector select with a constant condition operand.
+  /// Example: <4,1,6,undef>
+  /// This returns false if the mask does not choose from both input vectors.
+  /// In that case, the shuffle is better classified as an identity shuffle.
+  /// This assumes that vector operands are the same length as the mask
+  /// (a length-changing shuffle can never be equivalent to a vector select).
+  static bool isSelectMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSelectMask(Mask, NumSrcElts);
+  }
+  static bool isSelectMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSelectMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  /// Return true if this shuffle chooses elements from its source vectors
+  /// without lane crossings and all operands have the same number of elements.
+  /// In other words, this shuffle is equivalent to a vector select with a
+  /// constant condition operand.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,1,6,3>
+  /// This returns false if the mask does not choose from both input vectors.
+  /// In that case, the shuffle is better classified as an identity shuffle.
+  bool isSelect() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isSelect();
+  }
+
+  /// Return true if this shuffle mask swaps the order of elements from exactly
+  /// one source vector.
+  /// Example: <7,6,undef,4>
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isReverseMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isReverseMask(Mask, NumSrcElts);
+  }
+  static bool isReverseMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isReverseMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  /// Return true if this shuffle swaps the order of elements from exactly
+  /// one source vector.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
+  bool isReverse() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isReverse();
+  }
+
+  /// Return true if this shuffle mask chooses all elements with the same value
+  /// as the first element of exactly one source vector.
+  /// Example: <4,undef,undef,4>
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isZeroEltSplatMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts);
+  }
+  static bool isZeroEltSplatMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isZeroEltSplatMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  /// Return true if all elements of this shuffle are the same value as the
+  /// first element of exactly one source vector without changing the length
+  /// of that vector.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,0,undef,0>
+  bool isZeroEltSplat() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isZeroEltSplat();
+  }
+
+  /// Return true if this shuffle mask is a transpose mask.
+  /// Transpose vector masks transpose a 2xn matrix. They read corresponding
+  /// even- or odd-numbered vector elements from two n-dimensional source
+  /// vectors and write each result into consecutive elements of an
+  /// n-dimensional destination vector. Two shuffles are necessary to complete
+  /// the transpose, one for the even elements and another for the odd elements.
+  /// This description closely follows how the TRN1 and TRN2 AArch64
+  /// instructions operate.
+  ///
+  /// For example, a simple 2x2 matrix can be transposed with:
+  ///
+  ///   ; Original matrix
+  ///   m0 = < a, b >
+  ///   m1 = < c, d >
+  ///
+  ///   ; Transposed matrix
+  ///   t0 = < a, c > = shufflevector m0, m1, < 0, 2 >
+  ///   t1 = < b, d > = shufflevector m0, m1, < 1, 3 >
+  ///
+  /// For matrices having greater than n columns, the resulting nx2 transposed
+  /// matrix is stored in two result vectors such that one vector contains
+  /// interleaved elements from all the even-numbered rows and the other vector
+  /// contains interleaved elements from all the odd-numbered rows. For example,
+  /// a 2x4 matrix can be transposed with:
+  ///
+  ///   ; Original matrix
+  ///   m0 = < a, b, c, d >
+  ///   m1 = < e, f, g, h >
+  ///
+  ///   ; Transposed matrix
+  ///   t0 = < a, e, c, g > = shufflevector m0, m1 < 0, 4, 2, 6 >
+  ///   t1 = < b, f, d, h > = shufflevector m0, m1 < 1, 5, 3, 7 >
+  static bool isTransposeMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isTransposeMask(Mask, NumSrcElts);
+  }
+  static bool isTransposeMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isTransposeMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  /// Return true if this shuffle transposes the elements of its inputs without
+  /// changing the length of the vectors. This operation may also be known as a
+  /// merge or interleave. See the description for isTransposeMask() for the
+  /// exact specification.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
+  bool isTranspose() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isTranspose();
+  }
+
+  /// Return true if this shuffle mask is a splice mask, concatenating the two
+  /// inputs together and then extracts an original width vector starting from
+  /// the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts, int &Index) {
+    return llvm::ShuffleVectorInst::isSpliceMask(Mask, NumSrcElts, Index);
+  }
+  static bool isSpliceMask(const Constant *Mask, int NumSrcElts, int &Index) {
+    return llvm::ShuffleVectorInst::isSpliceMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts, Index);
+  }
+
+  /// Return true if this shuffle splices two inputs without changing the length
+  /// of the vectors. This operation concatenates the two inputs together and
+  /// then extracts an original width vector starting from the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  bool isSplice(int &Index) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isSplice(Index);
+  }
+
+  /// Return true if this shuffle mask is an extract subvector mask.
+  /// A valid extract subvector mask returns a smaller vector from a single
+  /// source operand. The base extraction index is returned as well.
+  static bool isExtractSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
+                                     int &Index) {
+    return llvm::ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts,
+                                                           Index);
+  }
+  static bool isExtractSubvectorMask(const Constant *Mask, int NumSrcElts,
+                                     int &Index) {
+    return llvm::ShuffleVectorInst::isExtractSubvectorMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts, Index);
+  }
+
+  /// Return true if this shuffle mask is an extract subvector mask.
+  bool isExtractSubvectorMask(int &Index) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isExtractSubvectorMask(Index);
+  }
+
+  /// Return true if this shuffle mask is an insert subvector mask.
+  /// A valid insert subvector mask inserts the lowest elements of a second
+  /// source operand into an in-place first source operand.
+  /// Both the sub vector width and the insertion index is returned.
+  static bool isInsertSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
+                                    int &NumSubElts, int &Index) {
+    return llvm::ShuffleVectorInst::isInsertSubvectorMask(Mask, NumSrcElts,
+                                                          NumSubElts, Index);
+  }
+  static bool isInsertSubvectorMask(const Constant *Mask, int NumSrcElts,
+                                    int &NumSubElts, int &Index) {
+    return llvm::ShuffleVectorInst::isInsertSubvectorMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts, NumSubElts, Index);
+  }
+
+  /// Return true if this shuffle mask is an insert subvector mask.
+  bool isInsertSubvectorMask(int &NumSubElts, int &Index) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isInsertSubvectorMask(NumSubElts,
+                                                                     Index);
+  }
+
+  /// Return true if this shuffle mask replicates each of the \p VF elements
+  /// in a vector \p ReplicationFactor times.
+  /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
+  ///   <0,0,0,1,1,1,2,2,2,3,3,3>
+  static bool isReplicationMask(ArrayRef<int> Mask, int &ReplicationFactor,
+                                int &VF) {
+    return llvm::ShuffleVectorInst::isReplicationMask(Mask, ReplicationFactor,
+                                                      VF);
+  }
+  static bool isReplicationMask(const Constant *Mask, int &ReplicationFactor,
+                                int &VF) {
+    return llvm::ShuffleVectorInst::isReplicationMask(
+        cast<llvm::Constant>(Mask->Val), ReplicationFactor, VF);
+  }
+
+  /// Return true if this shuffle mask is a replication mask.
+  bool isReplicationMask(int &ReplicationFactor, int &VF) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isReplicationMask(
+        ReplicationFactor, VF);
+  }
+
+  /// Return true if this shuffle mask represents "clustered" mask of size VF,
+  /// i.e. each index between [0..VF) is used exactly once in each submask of
+  /// size VF.
+  /// For example, the mask for \p VF=4 is:
+  /// 0, 1, 2, 3, 3, 2, 0, 1 - "clustered", because each submask of size 4
+  /// (0,1,2,3 and 3,2,0,1) uses indices [0..VF) exactly one time.
+  /// 0, 1, 2, 3, 3, 3, 1, 0 - not "clustered", because
+  ///                          element 3 is used twice in the second submask
+  ///                          (3,3,1,0) and index 2 is not used at all.
+  static bool isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
+    return llvm::ShuffleVectorInst::isOneUseSingleSourceMask(Mask, VF);
+  }
+
+  /// Return true if this shuffle mask is a one-use-single-source("clustered")
+  /// mask.
+  bool isOneUseSingleSourceMask(int VF) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isOneUseSingleSourceMask(VF);
+  }
+
+  /// Change values in a shuffle permute mask assuming the two vector operands
+  /// of length InVecNumElts have swapped position.
+  static void commuteShuffleMask(MutableArrayRef<int> Mask,
+                                 unsigned InVecNumElts) {
+    llvm::ShuffleVectorInst::commuteShuffleMask(Mask, InVecNumElts);
+  }
+
+  /// Return if this shuffle interleaves its two input vectors together.
+  bool isInterleave(unsigned Factor) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isInterleave(Factor);
+  }
+
+  /// Return true if the mask interleaves one or more input vectors together.
+  ///
+  /// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
+  /// E.g. For a Factor of 2 (LaneLen=4):
+  ///   <0, 4, 1, 5, 2, 6, 3, 7>
+  /// E.g. For a Factor of 3 (LaneLen=4):
+  ///   <4, 0, 9, 5, 1, 10, 6, 2, 11, 7, 3, 12>
+  /// E.g. For a Factor of 4 (LaneLen=2):
+  ///   <0, 2, 6, 4, 1, 3, 7, 5>
+  ///
+  /// NumInputElts is the total number of elements in the input vectors.
+  ///
+  /// StartIndexes are the first indexes of each vector being interleaved,
+  /// substituting any indexes that were undef
+  /// E.g. <4, -1, 2, 5, 1, 3> (Factor=3): StartIndexes=<4, 0, 2>
+  ///
+  /// Note that this does not check if the input vectors are consecutive:
+  /// It will return true for masks such as
+  /// <0, 4, 6, 1, 5, 7> (Factor=3, LaneLen=2)
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts,
+                               SmallVectorImpl<unsigned> &StartIndexes) {
+    return llvm::ShuffleVectorInst::isInterleaveMask(Mask, Factor, NumInputElts,
+                                                     StartIndexes);
+  }
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts) {
+    return llvm::ShuffleVectorInst::isInterleaveMask(Mask, Factor,
+                                                     NumInputElts);
+  }
+
+  /// Check if the mask is a DE-interleave mask of the given factor
+  /// \p Factor like:
+  ///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
+                                         unsigned &Index) {
+    return llvm::ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor,
+                                                               Index);
+  }
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor) {
+    return llvm::ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor);
+  }
+
+  /// Checks if the shuffle is a bit rotation of the first operand across
+  /// multiple subelements, e.g:
+  ///
+  /// shuffle <8 x i8> %a, <8 x i8> poison, <8 x i32> <1, 0, 3, 2, 5, 4, 7, 6>
+  ///
+  /// could be expressed as
+  ///
+  /// rotl <4 x i16> %a, 8
+  ///
+  /// If it can be expressed as a rotation, returns the number of subelements to
+  /// group by in NumSubElts and the number of bits to rotate left in RotateAmt.
+  static bool isBitRotateMask(ArrayRef<int> Mask, unsigned EltSizeInBits,
+                              unsigned MinSubElts, unsigned MaxSubElts,
+                              unsigned &NumSubElts, unsigned &RotateAmt) {
+    return llvm::ShuffleVectorInst::isBitRotateMask(
+        Mask, EltSizeInBits, MinSubElts, MaxSubElts, NumSubElts, RotateAmt);
+  }
+};
+
 class BranchInst : public SingleLLVMInstructionImpl<llvm::BranchInst> {
   /// Use Context::createBranchInst(). Don't call the constructor directly.
   BranchInst(llvm::BranchInst *BI, Context &Ctx)
@@ -1027,10 +1533,23 @@ protected:
 
 public:
   static bool classof(const Instruction *I) {
-    return isa<LoadInst>(I) || isa<CastInst>(I);
+    return isa<LoadInst>(I) || isa<CastInst>(I) || isa<FreezeInst>(I);
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class FreezeInst : public UnaryInstruction {
+  FreezeInst(llvm::FreezeInst *FI, Context &Ctx)
+      : UnaryInstruction(ClassID::Freeze, Opcode::Freeze, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static FreezeInst *create(Value *V, BBIterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Freeze;
   }
 };
 
@@ -1331,8 +1850,7 @@ public:
   BasicBlock *getUnwindDest() const;
   void setNormalDest(BasicBlock *BB);
   void setUnwindDest(BasicBlock *BB);
-  // TODO: Return a `LandingPadInst` once implemented.
-  Instruction *getLandingPadInst() const;
+  LandingPadInst *getLandingPadInst() const;
   BasicBlock *getSuccessor(unsigned SuccIdx) const;
   void setSuccessor(unsigned SuccIdx, BasicBlock *NewSucc) {
     assert(SuccIdx < 2 && "Successor # out of range for invoke!");
@@ -1387,6 +1905,166 @@ public:
   BasicBlock *getSuccessor(unsigned Idx) const;
   unsigned getNumSuccessors() const {
     return cast<llvm::CallBrInst>(Val)->getNumSuccessors();
+  }
+};
+
+class LandingPadInst : public SingleLLVMInstructionImpl<llvm::LandingPadInst> {
+  LandingPadInst(llvm::LandingPadInst *LP, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::LandingPad, Opcode::LandingPad, LP,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static LandingPadInst *create(Type *RetTy, unsigned NumReservedClauses,
+                                BBIterator WhereIt, BasicBlock *WhereBB,
+                                Context &Ctx, const Twine &Name = "");
+  /// Return 'true' if this landingpad instruction is a
+  /// cleanup. I.e., it should be run when unwinding even if its landing pad
+  /// doesn't catch the exception.
+  bool isCleanup() const {
+    return cast<llvm::LandingPadInst>(Val)->isCleanup();
+  }
+  /// Indicate that this landingpad instruction is a cleanup.
+  void setCleanup(bool V);
+
+  // TODO: We are not implementing addClause() because we have no way to revert
+  // it for now.
+
+  /// Get the value of the clause at index Idx. Use isCatch/isFilter to
+  /// determine what type of clause this is.
+  Constant *getClause(unsigned Idx) const;
+
+  /// Return 'true' if the clause and index Idx is a catch clause.
+  bool isCatch(unsigned Idx) const {
+    return cast<llvm::LandingPadInst>(Val)->isCatch(Idx);
+  }
+  /// Return 'true' if the clause and index Idx is a filter clause.
+  bool isFilter(unsigned Idx) const {
+    return cast<llvm::LandingPadInst>(Val)->isFilter(Idx);
+  }
+  /// Get the number of clauses for this landing pad.
+  unsigned getNumClauses() const {
+    return cast<llvm::LandingPadInst>(Val)->getNumOperands();
+  }
+  // TODO: We are not implementing reserveClauses() because we can't revert it.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::LandingPad;
+  }
+};
+
+class FuncletPadInst : public SingleLLVMInstructionImpl<llvm::FuncletPadInst> {
+  FuncletPadInst(ClassID SubclassID, Opcode Opc, llvm::Instruction *I,
+                 Context &Ctx)
+      : SingleLLVMInstructionImpl(SubclassID, Opc, I, Ctx) {}
+  friend class CatchPadInst;   // For constructor.
+  friend class CleanupPadInst; // For constructor.
+
+public:
+  /// Return the number of funcletpad arguments.
+  unsigned arg_size() const {
+    return cast<llvm::FuncletPadInst>(Val)->arg_size();
+  }
+  /// Return the outer EH-pad this funclet is nested within.
+  ///
+  /// Note: This returns the associated CatchSwitchInst if this FuncletPadInst
+  /// is a CatchPadInst.
+  Value *getParentPad() const;
+  void setParentPad(Value *ParentPad);
+  /// Return the Idx-th funcletpad argument.
+  Value *getArgOperand(unsigned Idx) const;
+  /// Set the Idx-th funcletpad argument.
+  void setArgOperand(unsigned Idx, Value *V);
+
+  // TODO: Implement missing functions: arg_operands().
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CatchPad ||
+           From->getSubclassID() == ClassID::CleanupPad;
+  }
+};
+
+class CatchPadInst : public FuncletPadInst {
+  CatchPadInst(llvm::CatchPadInst *CPI, Context &Ctx)
+      : FuncletPadInst(ClassID::CatchPad, Opcode::CatchPad, CPI, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  CatchSwitchInst *getCatchSwitch() const;
+  // TODO: We have not implemented setCatchSwitch() because we can't revert it
+  // for now, as there is no CatchPadInst member function that can undo it.
+
+  static CatchPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
+                              BBIterator WhereIt, BasicBlock *WhereBB,
+                              Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CatchPad;
+  }
+};
+
+class CleanupPadInst : public FuncletPadInst {
+  CleanupPadInst(llvm::CleanupPadInst *CPI, Context &Ctx)
+      : FuncletPadInst(ClassID::CleanupPad, Opcode::CleanupPad, CPI, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static CleanupPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
+                                BBIterator WhereIt, BasicBlock *WhereBB,
+                                Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CleanupPad;
+  }
+};
+
+class CatchReturnInst
+    : public SingleLLVMInstructionImpl<llvm::CatchReturnInst> {
+  CatchReturnInst(llvm::CatchReturnInst *CRI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CatchRet, Opcode::CatchRet, CRI,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static CatchReturnInst *create(CatchPadInst *CatchPad, BasicBlock *BB,
+                                 BBIterator WhereIt, BasicBlock *WhereBB,
+                                 Context &Ctx);
+  CatchPadInst *getCatchPad() const;
+  void setCatchPad(CatchPadInst *CatchPad);
+  BasicBlock *getSuccessor() const;
+  void setSuccessor(BasicBlock *NewSucc);
+  unsigned getNumSuccessors() {
+    return cast<llvm::CatchReturnInst>(Val)->getNumSuccessors();
+  }
+  Value *getCatchSwitchParentPad() const;
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CatchRet;
+  }
+};
+
+class CleanupReturnInst
+    : public SingleLLVMInstructionImpl<llvm::CleanupReturnInst> {
+  CleanupReturnInst(llvm::CleanupReturnInst *CRI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CleanupRet, Opcode::CleanupRet, CRI,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
+                                   BasicBlock *UnwindBB, BBIterator WhereIt,
+                                   BasicBlock *WhereBB, Context &Ctx);
+  bool hasUnwindDest() const {
+    return cast<llvm::CleanupReturnInst>(Val)->hasUnwindDest();
+  }
+  bool unwindsToCaller() const {
+    return cast<llvm::CleanupReturnInst>(Val)->unwindsToCaller();
+  }
+  CleanupPadInst *getCleanupPad() const;
+  void setCleanupPad(CleanupPadInst *CleanupPad);
+  unsigned getNumSuccessors() const {
+    return cast<llvm::CleanupReturnInst>(Val)->getNumSuccessors();
+  }
+  BasicBlock *getUnwindDest() const;
+  void setUnwindDest(BasicBlock *NewDest);
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CleanupRet;
   }
 };
 
@@ -1478,6 +2156,97 @@ public:
                                                                         Offset);
   }
   // TODO: Add missing member functions.
+};
+
+class CatchSwitchInst
+    : public SingleLLVMInstructionImpl<llvm::CatchSwitchInst> {
+public:
+  CatchSwitchInst(llvm::CatchSwitchInst *CSI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CatchSwitch, Opcode::CatchSwitch,
+                                  CSI, Ctx) {}
+
+  static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
+                                 unsigned NumHandlers, BBIterator WhereIt,
+                                 BasicBlock *WhereBB, Context &Ctx,
+                                 const Twine &Name = "");
+
+  Value *getParentPad() const;
+  void setParentPad(Value *ParentPad);
+
+  bool hasUnwindDest() const {
+    return cast<llvm::CatchSwitchInst>(Val)->hasUnwindDest();
+  }
+  bool unwindsToCaller() const {
+    return cast<llvm::CatchSwitchInst>(Val)->unwindsToCaller();
+  }
+  BasicBlock *getUnwindDest() const;
+  void setUnwindDest(BasicBlock *UnwindDest);
+
+  unsigned getNumHandlers() const {
+    return cast<llvm::CatchSwitchInst>(Val)->getNumHandlers();
+  }
+
+private:
+  static BasicBlock *handler_helper(Value *V) { return cast<BasicBlock>(V); }
+  static const BasicBlock *handler_helper(const Value *V) {
+    return cast<BasicBlock>(V);
+  }
+
+public:
+  using DerefFnTy = BasicBlock *(*)(Value *);
+  using handler_iterator = mapped_iterator<op_iterator, DerefFnTy>;
+  using handler_range = iterator_range<handler_iterator>;
+  using ConstDerefFnTy = const BasicBlock *(*)(const Value *);
+  using const_handler_iterator =
+      mapped_iterator<const_op_iterator, ConstDerefFnTy>;
+  using const_handler_range = iterator_range<const_handler_iterator>;
+
+  handler_iterator handler_begin() {
+    op_iterator It = op_begin() + 1;
+    if (hasUnwindDest())
+      ++It;
+    return handler_iterator(It, DerefFnTy(handler_helper));
+  }
+  const_handler_iterator handler_begin() const {
+    const_op_iterator It = op_begin() + 1;
+    if (hasUnwindDest())
+      ++It;
+    return const_handler_iterator(It, ConstDerefFnTy(handler_helper));
+  }
+  handler_iterator handler_end() {
+    return handler_iterator(op_end(), DerefFnTy(handler_helper));
+  }
+  const_handler_iterator handler_end() const {
+    return const_handler_iterator(op_end(), ConstDerefFnTy(handler_helper));
+  }
+  handler_range handlers() {
+    return make_range(handler_begin(), handler_end());
+  }
+  const_handler_range handlers() const {
+    return make_range(handler_begin(), handler_end());
+  }
+
+  void addHandler(BasicBlock *Dest);
+
+  // TODO: removeHandler() cannot be reverted because there is no equivalent
+  // addHandler() with a handler_iterator to specify the position. So we can't
+  // implement it for now.
+
+  unsigned getNumSuccessors() const { return getNumOperands() - 1; }
+  BasicBlock *getSuccessor(unsigned Idx) const {
+    assert(Idx < getNumSuccessors() &&
+           "Successor # out of range for catchswitch!");
+    return cast<BasicBlock>(getOperand(Idx + 1));
+  }
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
+    assert(Idx < getNumSuccessors() &&
+           "Successor # out of range for catchswitch!");
+    setOperand(Idx + 1, NewSucc);
+  }
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CatchSwitch;
+  }
 };
 
 class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
@@ -1607,6 +2376,7 @@ public:
 };
 
 class BinaryOperator : public SingleLLVMInstructionImpl<llvm::BinaryOperator> {
+protected:
   static Opcode getBinOpOpcode(llvm::Instruction::BinaryOps BinOp) {
     switch (BinOp) {
     case llvm::Instruction::Add:
@@ -1684,6 +2454,22 @@ public:
     return From->getSubclassID() == ClassID::BinaryOperator;
   }
   void swapOperands() { swapOperandsInternal(0, 1); }
+};
+
+/// An or instruction, which can be marked as "disjoint", indicating that the
+/// inputs don't have a 1 in the same bit position. Meaning this instruction
+/// can also be treated as an add.
+class PossiblyDisjointInst : public BinaryOperator {
+public:
+  void setIsDisjoint(bool B);
+  bool isDisjoint() const {
+    return cast<llvm::PossiblyDisjointInst>(Val)->isDisjoint();
+  }
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) &&
+           cast<Instruction>(From)->getOpcode() == Opcode::Or;
+  }
 };
 
 class AtomicRMWInst : public SingleLLVMInstructionImpl<llvm::AtomicRMWInst> {
@@ -1977,6 +2763,28 @@ public:
   Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
 };
 
+/// Instruction that can have a nneg flag (zext/uitofp).
+class PossiblyNonNegInst : public CastInst {
+public:
+  bool hasNonNeg() const {
+    return cast<llvm::PossiblyNonNegInst>(Val)->hasNonNeg();
+  }
+  void setNonNeg(bool B);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From)) {
+      switch (I->getOpcode()) {
+      case Opcode::ZExt:
+      case Opcode::UIToFP:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
+};
+
 // Helper class to simplify stamping out CastInst subclasses.
 template <Instruction::Opcode Op> class CastInstImpl : public CastInst {
 public:
@@ -2179,12 +2987,18 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
+  friend FreezeInst; // For createFreezeInst()
+  FenceInst *createFenceInst(llvm::FenceInst *SI);
+  friend FenceInst; // For createFenceInst()
   SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
   InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
   friend InsertElementInst; // For createInsertElementInst()
   ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
   friend ExtractElementInst; // For createExtractElementInst()
+  ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
+  friend ShuffleVectorInst; // For createShuffleVectorInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
   friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
@@ -2199,8 +3013,20 @@ protected:
   friend InvokeInst; // For createInvokeInst()
   CallBrInst *createCallBrInst(llvm::CallBrInst *I);
   friend CallBrInst; // For createCallBrInst()
+  LandingPadInst *createLandingPadInst(llvm::LandingPadInst *I);
+  friend LandingPadInst; // For createLandingPadInst()
+  CatchPadInst *createCatchPadInst(llvm::CatchPadInst *I);
+  friend CatchPadInst; // For createCatchPadInst()
+  CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
+  friend CleanupPadInst; // For createCleanupPadInst()
+  CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
+  friend CatchReturnInst; // For createCatchReturnInst()
+  CleanupReturnInst *createCleanupReturnInst(llvm::CleanupReturnInst *I);
+  friend CleanupReturnInst; // For createCleanupReturnInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
+  friend CatchSwitchInst; // For createCatchSwitchInst()
   SwitchInst *createSwitchInst(llvm::SwitchInst *I);
   friend SwitchInst; // For createSwitchInst()
   UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);

@@ -507,7 +507,7 @@ namespace {
     SDValue visitUINT_TO_FP(SDNode *N);
     SDValue visitFP_TO_SINT(SDNode *N);
     SDValue visitFP_TO_UINT(SDNode *N);
-    SDValue visitXRINT(SDNode *N);
+    SDValue visitXROUND(SDNode *N);
     SDValue visitFP_ROUND(SDNode *N);
     SDValue visitFP_EXTEND(SDNode *N);
     SDValue visitFNEG(SDNode *N);
@@ -1929,8 +1929,10 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::UINT_TO_FP:         return visitUINT_TO_FP(N);
   case ISD::FP_TO_SINT:         return visitFP_TO_SINT(N);
   case ISD::FP_TO_UINT:         return visitFP_TO_UINT(N);
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::LRINT:
-  case ISD::LLRINT:             return visitXRINT(N);
+  case ISD::LLRINT:             return visitXROUND(N);
   case ISD::FP_ROUND:           return visitFP_ROUND(N);
   case ISD::FP_EXTEND:          return visitFP_EXTEND(N);
   case ISD::FNEG:               return visitFNEG(N);
@@ -14917,23 +14919,14 @@ SDValue DAGCombiner::visitTRUNCATE_USAT_U(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
 
-  std::function<SDValue(SDValue)> MatchFPTOINT = [&](SDValue Val) -> SDValue {
-    if (Val.getOpcode() == ISD::FP_TO_UINT)
-      return Val;
-    return SDValue();
-  };
+  SDValue FPVal;
+  if (sd_match(N0, m_FPToUI(m_Value(FPVal))) &&
+      DAG.getTargetLoweringInfo().shouldConvertFpToSat(
+          ISD::FP_TO_UINT_SAT, FPVal.getValueType(), VT))
+    return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N0), VT, FPVal,
+                       DAG.getValueType(VT.getScalarType()));
 
-  SDValue FPInstr = MatchFPTOINT(N0);
-  if (!FPInstr)
-    return SDValue();
-
-  EVT FPVT = FPInstr.getOperand(0).getValueType();
-  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(ISD::FP_TO_UINT_SAT,
-                                                        FPVT, VT))
-    return SDValue();
-  return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(FPInstr), VT,
-                     FPInstr.getOperand(0),
-                     DAG.getValueType(VT.getScalarType()));
+  return SDValue();
 }
 
 /// Detect patterns of truncation with unsigned saturation:
@@ -15808,13 +15801,16 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     }
   }
 
-  SmallSetVector<SDValue, 8> MaybePoisonOperands;
-  for (SDValue Op : N0->ops()) {
+  SmallSet<SDValue, 8> MaybePoisonOperands;
+  SmallVector<unsigned, 8> MaybePoisonOperandNumbers;
+  for (auto [OpNo, Op] : enumerate(N0->ops())) {
     if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
                                              /*Depth*/ 1))
       continue;
     bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
-    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op);
+    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
+    if (IsNewMaybePoisonOperand)
+      MaybePoisonOperandNumbers.push_back(OpNo);
     if (!HadMaybePoisonOperands)
       continue;
     if (IsNewMaybePoisonOperand && !AllowMultipleMaybePoisonOperands) {
@@ -15826,7 +15822,18 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // it could create undef or poison due to it's poison-generating flags.
   // So not finding any maybe-poison operands is fine.
 
-  for (SDValue MaybePoisonOperand : MaybePoisonOperands) {
+  for (unsigned OpNo : MaybePoisonOperandNumbers) {
+    // N0 can mutate during iteration, so make sure to refetch the maybe poison
+    // operands via the operand numbers. The typical scenario is that we have
+    // something like this
+    //   t262: i32 = freeze t181
+    //   t150: i32 = ctlz_zero_undef t262
+    //   t184: i32 = ctlz_zero_undef t181
+    //   t268: i32 = select_cc t181, Constant:i32<0>, t184, t186, setne:ch
+    // When freezing the t181 operand we get t262 back, and then the
+    // ReplaceAllUsesOfValueWith call will not only replace t181 by t262, but
+    // also recursively replace t184 by t150.
+    SDValue MaybePoisonOperand = N->getOperand(0).getOperand(OpNo);
     // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
     if (MaybePoisonOperand.getOpcode() == ISD::UNDEF)
       continue;
@@ -17984,15 +17991,17 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
   return FoldIntToFPToInt(N, DAG);
 }
 
-SDValue DAGCombiner::visitXRINT(SDNode *N) {
+SDValue DAGCombiner::visitXROUND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
   // fold (lrint|llrint undef) -> undef
+  // fold (lround|llround undef) -> undef
   if (N0.isUndef())
     return DAG.getUNDEF(VT);
 
   // fold (lrint|llrint c1fp) -> c1
+  // fold (lround|llround c1fp) -> c1
   if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N0);
 
@@ -27919,6 +27928,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     return S;
   if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N2, N3, CC, DAG))
     return S;
+  if (SDValue ABD = foldSelectToABD(N0, N1, N2, N3, CC, DL))
+    return ABD;
 
   return SDValue();
 }

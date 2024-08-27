@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple=x86_64-unknown-unknown \
-// RUN:      -analyzer-checker debug.ExprInspection,core -fheinous-gnu-extensions -w %s -verify
+// RUN:      -analyzer-checker debug.ExprInspection,core -Wno-error=invalid-gnu-asm-cast -w %s -verify
 
 int clang_analyzer_eval(int);
 

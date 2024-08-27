@@ -6855,20 +6855,18 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
       // Strengthen the range if the underlying IR value is a
       // global/alloca/heap allocation using the size of the object.
-      ObjectSizeOpts Opts;
-      Opts.RoundToAlign = false;
-      Opts.NullIsUnknownSize = true;
-      uint64_t ObjSize;
-      if ((isa<GlobalVariable>(V) || isa<AllocaInst>(V) ||
-           isAllocationFn(V, &TLI)) &&
-          getObjectSize(V, ObjSize, DL, &TLI, Opts) && ObjSize > 1) {
-        // The highest address the object can start is ObjSize bytes before the
-        // end (unsigned max value). If this value is not a multiple of the
+      bool CanBeNull, CanBeFreed;
+      uint64_t DerefBytes =
+          V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      if (DerefBytes > 1) {
+        // The highest address the object can start is DerefBytes bytes before
+        // the end (unsigned max value). If this value is not a multiple of the
         // alignment, the last possible start value is the next lowest multiple
         // of the alignment. Note: The computations below cannot overflow,
         // because if they would there's no possible start address for the
         // object.
-        APInt MaxVal = APInt::getMaxValue(BitWidth) - APInt(BitWidth, ObjSize);
+        APInt MaxVal =
+            APInt::getMaxValue(BitWidth) - APInt(BitWidth, DerefBytes);
         uint64_t Align = U->getValue()->getPointerAlignment(DL).value();
         uint64_t Rem = MaxVal.urem(Align);
         MaxVal -= APInt(BitWidth, Rem);
@@ -8249,9 +8247,8 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
   llvm_unreachable("Invalid ExitCountKind!");
 }
 
-const SCEV *
-ScalarEvolution::getPredicatedBackedgeTakenCount(const Loop *L,
-                                                 SmallVector<const SCEVPredicate *, 4> &Preds) {
+const SCEV *ScalarEvolution::getPredicatedBackedgeTakenCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
 }
 
@@ -8269,7 +8266,7 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
 }
 
 const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
-    const Loop *L, SmallVector<const SCEVPredicate *, 4> &Preds) {
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
 }
 
@@ -8539,9 +8536,9 @@ void ScalarEvolution::forgetBlockAndLoopDispositions(Value *V) {
 /// is never skipped. This is a valid assumption as long as the loop exits via
 /// that test. For precise results, it is the caller's responsibility to specify
 /// the relevant loop exiting block using getExact(ExitingBlock, SE).
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
-                                             SmallVector<const SCEVPredicate *, 4> *Preds) const {
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
+    const Loop *L, ScalarEvolution *SE,
+    SmallVectorImpl<const SCEVPredicate *> *Preds) const {
   // If any exits were not computable, the loop is not computable.
   if (!isComplete() || ExitNotTaken.empty())
     return SE->getCouldNotCompute();
@@ -8624,7 +8621,7 @@ ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
 
 const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
     const Loop *L, ScalarEvolution *SE,
-    SmallVector<const SCEVPredicate *, 4> *Predicates) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   if (!SymbolicMax) {
     // Form an expression for the maximum exit count possible for this loop. We
     // merge the max and exact information to approximate a version of
