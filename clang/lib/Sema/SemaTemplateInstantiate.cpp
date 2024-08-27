@@ -348,11 +348,8 @@ struct TemplateInstantiationArgumentCollecter
         AddOuterTemplateArguments(
             FD, TemplateArgs->asArray(), /*Final=*/false);
 
-      if ( // RelativeToPrimary &&
-          (FD->getTemplateSpecializationKind() ==
-               TSK_ExplicitSpecialization ||
-           (FD->getFriendObjectKind() &&
-            !FD->getPrimaryTemplate()->getFriendObjectKind())))
+      if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization ||
+          (FD->getFriendObjectKind() && !FD->getPrimaryTemplate()->getFriendObjectKind()))
         return UseNextDecl(FD);
 
       // If this function was instantiated from a specialized member that is
@@ -365,7 +362,6 @@ struct TemplateInstantiationArgumentCollecter
       if (!ForConstraintInstantiation &&
           isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD))
         return Done();
-
     }
 
     // If this is a friend or local declaration and it declares an entity at
@@ -389,10 +385,7 @@ struct TemplateInstantiationArgumentCollecter
         MSI && MSI->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
       return Done();
 
-    bool IsFriend = RD->getFriendObjectKind() ||
-                    (RD->getDescribedClassTemplate() &&
-                     RD->getDescribedClassTemplate()->getFriendObjectKind());
-    if (ForConstraintInstantiation && IsFriend &&
+    if (ForConstraintInstantiation && RD->getFriendObjectKind() &&
         RD->getNonTransparentDeclContext()->isFileContext()) {
       return ChangeDecl(RD->getLexicalDeclContext());
     }
