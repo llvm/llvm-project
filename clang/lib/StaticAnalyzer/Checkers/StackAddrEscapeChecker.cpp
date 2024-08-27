@@ -326,7 +326,6 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
       // warn_init_ptr_member_to_parameter_addr
       return std::nullopt;
     } else {
-      Referrer->dump();
       assert(false && "Unexpected referrer region type.");
       return std::nullopt;
     }

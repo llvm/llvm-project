@@ -580,6 +580,68 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, VAArgInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %va) {
+  %va_arg = va_arg ptr %va, i32
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *VA = cast<sandboxir::VAArgInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getPointerOperand().
+  EXPECT_EQ(VA->getPointerOperand(), Arg);
+  // Check getPOinterOperandIndex().
+  EXPECT_EQ(sandboxir::VAArgInst::getPointerOperandIndex(),
+            llvm::VAArgInst::getPointerOperandIndex());
+  // Check create().
+  auto *NewVATy = Type::getInt8Ty(C);
+  auto *NewVA = sandboxir::VAArgInst::create(Arg, NewVATy, Ret->getIterator(),
+                                             Ret->getParent(), Ctx, "NewVA");
+  EXPECT_EQ(NewVA->getNextNode(), Ret);
+  EXPECT_EQ(NewVA->getType(), NewVATy);
+#ifndef NDEBUG
+  EXPECT_EQ(NewVA->getName(), "NewVA");
+#endif // NDEBUG
+}
+
+TEST_F(SandboxIRTest, FreezeInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  freeze i8 %arg
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Freeze = cast<sandboxir::FreezeInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Freeze));
+  EXPECT_EQ(Freeze->getOperand(0), Arg);
+
+  // Check create().
+  auto *NewFreeze = sandboxir::FreezeInst::create(
+      Arg, Ret->getIterator(), Ret->getParent(), Ctx, "NewFreeze");
+  EXPECT_EQ(NewFreeze->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewFreeze->getName(), "NewFreeze");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FenceInst) {
   parseIR(C, R"IR(
 define void @foo() {
@@ -2494,6 +2556,45 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(NewCSI->getParentPad(), CS0);
 }
 
+TEST_F(SandboxIRTest, ResumeInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+bb:
+  ret void
+unwind:
+  %lpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } %lpad
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwindBB = getBasicBlockByName(LLVMF, "unwind");
+  auto LLVMIt = LLVMUnwindBB->begin();
+  [[maybe_unused]] auto *LLVMLPad = cast<llvm::LandingPadInst>(&*LLVMIt++);
+  auto *LLVMResume = cast<llvm::ResumeInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *UnwindBB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwindBB));
+  auto It = UnwindBB->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  auto *Resume = cast<sandboxir::ResumeInst>(&*It++);
+  // Check getValue().
+  EXPECT_EQ(Resume->getValue(), LPad);
+  EXPECT_EQ(Resume->getValue(), Ctx.getValue(LLVMResume->getValue()));
+  // Check getNumSuccessors().
+  EXPECT_EQ(Resume->getNumSuccessors(), LLVMResume->getNumSuccessors());
+  // Check create().
+  auto *NewResume =
+      sandboxir::ResumeInst::create(LPad, UnwindBB->end(), UnwindBB, Ctx);
+  EXPECT_EQ(NewResume->getValue(), LPad);
+  EXPECT_EQ(NewResume->getParent(), UnwindBB);
+  EXPECT_EQ(NewResume->getNextNode(), nullptr);
+}
+
 TEST_F(SandboxIRTest, SwitchInst) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
@@ -2930,6 +3031,31 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
         /*InsertBefore=*/Ret, Ctx, "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
+}
+
+TEST_F(SandboxIRTest, PossiblyDisjointInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint(), isDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  PDI->setIsDisjoint(OrigIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
 }
 
 TEST_F(SandboxIRTest, AtomicRMWInst) {
@@ -3625,6 +3751,48 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
                                     Arg, /*InsertBefore=*/Ret, Ctx, "Bad"),
         ".*Opcode.*");
 #endif // NDEBUG
+  }
+}
+
+TEST_F(SandboxIRTest, PossiblyNonNegInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
+  %zext = zext i32 %arg to i64
+  %uitofp = uitofp i32 %arg to float
+
+  %sext = sext i32 %arg to i64
+  %fptoui = fptoui float %farg to i32
+  %fptosi = fptosi float %farg to i32
+  %fpext = fpext float %farg to double
+  %ptrtoint = ptrtoint ptr %ptr to i32
+  %inttoptr = inttoptr i32 %arg to ptr
+  %sitofp = sitofp i32 %arg to float
+  %trunc = trunc i32 %arg to i16
+  %fptrunc = fptrunc double %darg to float
+  %bitcast = bitcast i32 %arg to float
+  %addrspacecast = addrspacecast ptr %ptr to ptr addrspace(1)
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *PNNI0 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  auto *PNNI1 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  for (auto ItE = BB->end(); It != ItE; ++It)
+    EXPECT_FALSE(isa<sandboxir::PossiblyNonNegInst>(&*It++));
+
+  for (auto *PNNI : {PNNI0, PNNI1}) {
+    // Check setNonNeg(), hasNonNeg().
+    auto OrigNonNeg = PNNI->hasNonNeg();
+    auto NewNonNeg = true;
+    EXPECT_NE(NewNonNeg, OrigNonNeg);
+    PNNI->setNonNeg(NewNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+    PNNI->setNonNeg(OrigNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
   }
 }
 

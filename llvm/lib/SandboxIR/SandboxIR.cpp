@@ -575,6 +575,34 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+VAArgInst *VAArgInst::create(Value *List, Type *Ty, BBIterator WhereIt,
+                             BasicBlock *WhereBB, Context &Ctx,
+                             const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::VAArgInst>(Builder.CreateVAArg(List->Val, Ty, Name));
+  return Ctx.createVAArgInst(LLVMI);
+}
+
+Value *VAArgInst::getPointerOperand() {
+  return Ctx.getValue(cast<llvm::VAArgInst>(Val)->getPointerOperand());
+}
+
+FreezeInst *FreezeInst::create(Value *V, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::FreezeInst>(Builder.CreateFreeze(V->Val, Name));
+  return Ctx.createFreezeInst(LLVMI);
+}
+
 FenceInst *FenceInst::create(AtomicOrdering Ordering, BBIterator WhereIt,
                              BasicBlock *WhereBB, Context &Ctx,
                              SyncScope::ID SSID) {
@@ -1484,6 +1512,21 @@ void CatchSwitchInst::addHandler(BasicBlock *Dest) {
       cast<llvm::BasicBlock>(Dest->Val));
 }
 
+ResumeInst *ResumeInst::create(Value *Exn, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::ResumeInst>(Builder.CreateResume(Exn->Val));
+  return Ctx.createResumeInst(LLVMI);
+}
+
+Value *ResumeInst::getValue() const {
+  return Ctx.getValue(cast<llvm::ResumeInst>(Val)->getValue());
+}
+
 SwitchInst *SwitchInst::create(Value *V, BasicBlock *Dest, unsigned NumCases,
                                BasicBlock::iterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
@@ -1716,6 +1759,14 @@ Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                              Context &Ctx, const Twine &Name) {
   return createWithCopiedFlags(Op, LHS, RHS, CopyFrom, InsertAtEnd->end(),
                                InsertAtEnd, Ctx, Name);
+}
+
+void PossiblyDisjointInst::setIsDisjoint(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyDisjointInst::isDisjoint,
+                                       &PossiblyDisjointInst::setIsDisjoint>>(
+          this);
+  cast<llvm::PossiblyDisjointInst>(Val)->setIsDisjoint(B);
 }
 
 void AtomicRMWInst::setAlignment(Align Align) {
@@ -1971,6 +2022,13 @@ bool CastInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Cast;
 }
 
+void PossiblyNonNegInst::setNonNeg(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyNonNegInst::hasNonNeg,
+                                       &PossiblyNonNegInst::setNonNeg>>(this);
+  cast<llvm::PossiblyNonNegInst>(Val)->setNonNeg(B);
+}
+
 Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
                                  Instruction *InsertBefore, Context &Ctx,
                                  const Twine &Name) {
@@ -2209,6 +2267,16 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
   switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
+  case llvm::Instruction::VAArg: {
+    auto *LLVMVAArg = cast<llvm::VAArgInst>(LLVMV);
+    It->second = std::unique_ptr<VAArgInst>(new VAArgInst(LLVMVAArg, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::Freeze: {
+    auto *LLVMFreeze = cast<llvm::FreezeInst>(LLVMV);
+    It->second = std::unique_ptr<FreezeInst>(new FreezeInst(LLVMFreeze, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Fence: {
     auto *LLVMFence = cast<llvm::FenceInst>(LLVMV);
     It->second = std::unique_ptr<FenceInst>(new FenceInst(LLVMFence, *this));
@@ -2314,6 +2382,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new CatchSwitchInst(LLVMCatchSwitchInst, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Resume: {
+    auto *LLVMResumeInst = cast<llvm::ResumeInst>(LLVMV);
+    It->second =
+        std::unique_ptr<ResumeInst>(new ResumeInst(LLVMResumeInst, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Switch: {
     auto *LLVMSwitchInst = cast<llvm::SwitchInst>(LLVMV);
     It->second =
@@ -2410,6 +2484,16 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   // Create SandboxIR for BB's body.
   BB->buildBasicBlockFromLLVMIR(LLVMBB);
   return BB;
+}
+
+VAArgInst *Context::createVAArgInst(llvm::VAArgInst *SI) {
+  auto NewPtr = std::unique_ptr<VAArgInst>(new VAArgInst(SI, *this));
+  return cast<VAArgInst>(registerValue(std::move(NewPtr)));
+}
+
+FreezeInst *Context::createFreezeInst(llvm::FreezeInst *SI) {
+  auto NewPtr = std::unique_ptr<FreezeInst>(new FreezeInst(SI, *this));
+  return cast<FreezeInst>(registerValue(std::move(NewPtr)));
 }
 
 FenceInst *Context::createFenceInst(llvm::FenceInst *SI) {
@@ -2514,6 +2598,10 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
 CatchSwitchInst *Context::createCatchSwitchInst(llvm::CatchSwitchInst *I) {
   auto NewPtr = std::unique_ptr<CatchSwitchInst>(new CatchSwitchInst(I, *this));
   return cast<CatchSwitchInst>(registerValue(std::move(NewPtr)));
+}
+ResumeInst *Context::createResumeInst(llvm::ResumeInst *I) {
+  auto NewPtr = std::unique_ptr<ResumeInst>(new ResumeInst(I, *this));
+  return cast<ResumeInst>(registerValue(std::move(NewPtr)));
 }
 SwitchInst *Context::createSwitchInst(llvm::SwitchInst *I) {
   auto NewPtr = std::unique_ptr<SwitchInst>(new SwitchInst(I, *this));

@@ -8410,6 +8410,7 @@ cc_library(
         ":ArithTransforms",
         ":ConversionPassIncGen",
         ":FuncToSPIRV",
+        ":GPUDialect",
         ":GPUToSPIRV",
         ":IR",
         ":IndexToSPIRV",

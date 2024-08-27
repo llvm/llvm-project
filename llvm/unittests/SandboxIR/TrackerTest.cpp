@@ -988,6 +988,58 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
 }
 
+TEST_F(TrackerTest, PossiblyDisjointInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  Ctx.save();
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  Ctx.revert();
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
+}
+
+TEST_F(TrackerTest, PossiblyNonNegInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %zext = zext i32 %arg to i64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PNNI = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+
+  // Check setNonNeg().
+  auto OrigNonNeg = PNNI->hasNonNeg();
+  auto NewNonNeg = true;
+  EXPECT_NE(NewNonNeg, OrigNonNeg);
+  Ctx.save();
+  PNNI->setNonNeg(NewNonNeg);
+  EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+  Ctx.revert();
+  EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
+}
+
 TEST_F(TrackerTest, AtomicRMWSetters) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %arg) {
