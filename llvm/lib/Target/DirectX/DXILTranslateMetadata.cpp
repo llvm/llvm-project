@@ -22,6 +22,30 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static void emitResourceMetadata(Module &M,
+                                 const dxil::Resources &MDResources) {
+  Metadata *SRVMD = nullptr, *UAVMD = nullptr, *CBufMD = nullptr,
+           *SmpMD = nullptr;
+  bool HasResources = false;
+
+  if (MDResources.hasUAVs()) {
+    UAVMD = MDResources.writeUAVs(M);
+    HasResources = true;
+  }
+
+  if (MDResources.hasCBuffers()) {
+    CBufMD = MDResources.writeCBuffers(M);
+    HasResources = true;
+  }
+
+  if (!HasResources)
+    return;
+
+  NamedMDNode *ResourceMD = M.getOrInsertNamedMetadata("dx.resources");
+  ResourceMD->addOperand(
+      MDNode::get(M.getContext(), {SRVMD, UAVMD, CBufMD, SmpMD}));
+}
+
 static void translateMetadata(Module &M, const dxil::Resources &MDResources,
                               const ComputedShaderFlags &ShaderFlags) {
   dxil::ValidatorVersionMD ValVerMD(M);
@@ -30,7 +54,7 @@ static void translateMetadata(Module &M, const dxil::Resources &MDResources,
   dxil::createShaderModelMD(M);
   dxil::createDXILVersionMD(M);
 
-  MDResources.write(M);
+  emitResourceMetadata(M, MDResources);
 
   dxil::createEntryMD(M, static_cast<uint64_t>(ShaderFlags));
 }
