@@ -17579,14 +17579,14 @@ public:
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
-    unsigned NumReducedVals =
-        std::accumulate(ReducedVals.begin(), ReducedVals.end(), 0,
-                        [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
-                          if (!isGoodForReduction(Vals))
-                            return Num;
-                          return Num + Vals.size();
-                        });
-    if (NumReducedVals < ReductionLimit &&
+    if (unsigned NumReducedVals = std::accumulate(
+            ReducedVals.begin(), ReducedVals.end(), 0,
+            [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
+              if (!isGoodForReduction(Vals))
+                return Num;
+              return Num + Vals.size();
+            });
+        NumReducedVals < ReductionLimit &&
         (!AllowHorRdxIdenityOptimization ||
          all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
            return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
