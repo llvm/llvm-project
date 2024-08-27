@@ -100,21 +100,17 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
   }
 
   // Iterate over the last segment
-  if (!std::__equal_iter_impl(
-          std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
-          std::__unwrap_iter(_Traits1::__local(__last1)),
-          std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
-          __pred)) {
-    return false;
-  }
-
-  return true;
+  return std::__equal_iter_impl(
+      std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
+      std::__unwrap_iter(_Traits1::__local(__last1)),
+      std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
+      __pred)
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred) {
-  if constexpr (__is_segmented_iterator<_InputIterator1>::value && __is_segmented_iterator<_InputIterator2>::value) {
+  if (__is_segmented_iterator<_InputIterator1>::value && __is_segmented_iterator<_InputIterator2>::value) {
     return std::__equal_segment_iter(__first1, __last1, __first2, __pred);
   }
   return std::__equal_iter_impl(
