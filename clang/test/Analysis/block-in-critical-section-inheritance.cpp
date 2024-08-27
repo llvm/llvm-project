@@ -29,3 +29,13 @@ void gh_99628() {
   // expected-note@-2 {{Call to blocking function 'sleep' inside of critical section}}
   m.unlock();
 }
+
+void no_false_positive_gh_104241() {
+  std::mutex m;
+  m.lock();
+  // If inheritance not handled properly, this unlock might not match the lock
+  // above because technically they act on different memory regions:
+  // __mutex_base and mutex.
+  m.unlock();
+  sleep(10); // no-warning
+}

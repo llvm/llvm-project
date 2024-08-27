@@ -245,8 +245,10 @@ static const MemRegion *getRegion(const CallEvent &Call,
                                   const MutexDescriptor &Descriptor,
                                   bool IsLock) {
   return std::visit(
-      [&Call, IsLock](auto &&Descriptor) {
-        return Descriptor.getRegion(Call, IsLock);
+      [&Call, IsLock](auto &Descr) -> const MemRegion * {
+        if (const MemRegion *Reg = Descr.getRegion(Call, IsLock))
+          return Reg->getBaseRegion();
+        return nullptr;
       },
       Descriptor);
 }
