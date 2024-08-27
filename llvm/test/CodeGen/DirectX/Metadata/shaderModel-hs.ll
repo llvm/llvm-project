@@ -9,6 +9,8 @@ target triple = "dxil-pc-shadermodel6.6-hull"
 ; ANALYSIS-NEXT: DXIL Version : 1.6
 ; ANALYSIS-NEXT: Shader Stage : hull
 ; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-NEXT: void entry()
+; ANALYSIS-NEXT: 0,0,0
 ; ANALYSIS-EMPTY:
 
 define void @entry() #0 {

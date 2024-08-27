@@ -21,6 +21,8 @@ namespace llvm {
 namespace dxil {
 
 struct FunctionProperties {
+  // Specific target shader stage may be specified for entry functions
+  Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
   unsigned NumThreads[3];
 };
 
