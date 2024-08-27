@@ -26,6 +26,7 @@
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -39,6 +40,7 @@ class MemoryBufferRef;
 class Module;
 class raw_pwrite_stream;
 class ToolOutputFile;
+class UniqueStringSaver;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
 /// recorded in the index and the ThinLTO backends must apply the changes to
@@ -351,6 +353,12 @@ private:
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
+  std::unique_ptr<llvm::BumpPtrAllocator> Alloc =
+      std::make_unique<BumpPtrAllocator>();
+
+  std::unique_ptr<llvm::UniqueStringSaver> UniqueSymbolSaver =
+      std::make_unique<llvm::UniqueStringSaver>(*Alloc);
+
   // The global resolution for a particular (mangled) symbol name. This is in
   // particular necessary to track whether each symbol can be internalized.
   // Because any input file may introduce a new cross-partition reference, we
@@ -409,7 +417,7 @@ private:
   };
 
   // Global mapping from mangled symbol names to resolutions.
-  // Make this an optional to guard against accessing after it has been reset
+  // Make this an unique_ptr to guard against accessing after it has been reset
   // (to reduce memory after we're done with it).
   std::unique_ptr<llvm::DenseMap<StringRef, GlobalResolution>>
       GlobalResolutions;

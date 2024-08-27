@@ -627,7 +627,11 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    auto &GlobalRes = (*GlobalResolutions)[Sym.getName()];
+    StringRef SymbolName = Sym.getName();
+    if (Conf.KeepSymbolNameCopies)
+      SymbolName = UniqueSymbolSaver->save(SymbolName);
+
+    auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
@@ -1798,6 +1802,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // cross module importing, which adds to peak memory via the computed import
   // and export lists.
   GlobalResolutions.reset();
+  // Reset the bump pointer allocator to release its memory.
+  UniqueSymbolSaver.reset();
+  Alloc.reset();
 
   if (Conf.OptLevel > 0)
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
