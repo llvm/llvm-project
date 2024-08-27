@@ -10,16 +10,22 @@
 #ifndef DEF_VALUE
 #define DEF_VALUE(ID, CLASS)
 #endif
-DEF_VALUE(Function, Function)
-DEF_VALUE(Argument, Argument)
 
 #ifndef DEF_USER
 #define DEF_USER(ID, CLASS)
 #endif
+
+#ifndef DEF_CONST
+#define DEF_CONST(ID, CLASS)
+#endif
+
+DEF_CONST(Function, Function)
+DEF_VALUE(Argument, Argument)
+
 DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
-DEF_USER(Constant, Constant)
-DEF_USER(ConstantInt, ConstantInt)
+DEF_CONST(Constant, Constant)
+DEF_CONST(ConstantInt, ConstantInt)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
@@ -108,6 +114,9 @@ DEF_INSTR(Unreachable,    OP(Unreachable),    UnreachableInst)
 #endif
 #ifdef DEF_USER
 #undef DEF_USER
+#endif
+#ifdef DEF_CONST
+#undef DEF_CONST
 #endif
 #ifdef DEF_INSTR
 #undef DEF_INSTR
