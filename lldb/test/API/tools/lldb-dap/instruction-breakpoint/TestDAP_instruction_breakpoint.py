@@ -17,6 +17,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
+    @skipIfWindows
     def test_instruction_breakpoint(self):
         self.build()
         self.instruction_breakpoint_test()
