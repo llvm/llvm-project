@@ -220,6 +220,7 @@ public:
   enum class ClassID : unsigned {
 #define DEF_VALUE(ID, CLASS) ID,
 #define DEF_USER(ID, CLASS) ID,
+#define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
 #include "llvm/SandboxIR/SandboxIRValues.def"
   };
@@ -231,6 +232,9 @@ protected:
   case ClassID::ID:                                                            \
     return #ID;
 #define DEF_USER(ID, CLASS)                                                    \
+  case ClassID::ID:                                                            \
+    return #ID;
+#define DEF_CONST(ID, CLASS)                                                   \
   case ClassID::ID:                                                            \
     return #ID;
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
@@ -515,6 +519,7 @@ public:
 };
 
 class Constant : public sandboxir::User {
+protected:
   Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
   Constant(ClassID ID, llvm::Constant *C, sandboxir::Context &SBCtx)
@@ -529,9 +534,13 @@ class Constant : public sandboxir::User {
 public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
-    return From->getSubclassID() == ClassID::Constant ||
-           From->getSubclassID() == ClassID::ConstantInt ||
-           From->getSubclassID() == ClassID::Function;
+    switch (From->getSubclassID()) {
+#define DEF_CONST(ID, CLASS) case ClassID::ID:
+#include "llvm/SandboxIR/SandboxIRValues.def"
+      return true;
+    default:
+      return false;
+    }
   }
   sandboxir::Context &getParent() const { return getContext(); }
   unsigned getUseOperandNo(const Use &Use) const override {

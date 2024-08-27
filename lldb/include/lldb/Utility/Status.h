@@ -83,69 +83,6 @@ public:
     return Status(result, lldb::eErrorTypeExpression, msg);
   }
 
-  ////////////////////////////////////////////////////////////////////////////
-  // TO BE REMOVED ASAP.
-  // This is transitional to make it easier to iterate with broken bots.
-  ////////////////////////////////////////////////////////////////////////////
-  LLVM_DEPRECATED("Use Status::FromErrorString() instead", "FromErrorString")
-  explicit Status(const char *format, ...)
-      __attribute__((format(printf, 2, 3))) {
-    // Yes, this drops the arguments.
-    *this = Status::FromErrorString(format);
-  }
-  template <typename... Args>
-  static LLVM_DEPRECATED("Use Status::FromErrorStringWithFormat() instead",
-                         "FromErrorStringWithFormat") Status
-      createWithFormat(const char *format, Args &&...args) {
-    return Status::FromErrorStringWithFormat(format,
-                                             std::forward<Args>(args)...);
-  }
-  LLVM_DEPRECATED("Use Status::FromExpressionError() instead",
-                  "FromExpressionError")
-  void SetExpressionError(lldb::ExpressionResults results, const char *msg) {
-    *this = Status::FromExpressionError(results, msg);
-  }
-  LLVM_DEPRECATED("Use Status::FromExpressionError() instead",
-                  "FromExpressionError")
-  int SetExpressionErrorWithFormat(lldb::ExpressionResults results,
-                                   const char *msg, ...) {
-    *this = Status::FromExpressionError(results, msg);
-    return 0;
-  }
-  LLVM_DEPRECATED("Use Status::Status() instead", "Status")
-  void SetError(ValueType err, lldb::ErrorType type) {
-    Status error(err, lldb::eErrorTypeGeneric);
-    *this = error;
-  }
-  LLVM_DEPRECATED("Use Status::FromErrNo() instead", "Status")
-  void SetErrorToErrno() { *this = Status::FromErrno(); }
-  LLVM_DEPRECATED("Use Status() instead", "Status")
-  void SetErrorToGenericError() {
-    *this = Status::FromErrorString("generic error");
-  }
-  LLVM_DEPRECATED("Use Status::FromErrorString() instead", "Status")
-  void SetErrorString(llvm::StringRef err_str) {
-    *this = Status::FromErrorString(err_str.str().c_str());
-  }
-  LLVM_DEPRECATED("Use Status::FromErrorStringWithFormat() instead", "Status")
-  int SetErrorStringWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3))) {
-    *this = Status::FromErrorString(format);
-    return 0;
-  }
-  LLVM_DEPRECATED("Use Status::FromErrorString() instead", "Status")
-  int SetErrorStringWithVarArg(const char *format, va_list args) {
-    *this = Status::FromErrorString(format);
-    return 0;
-  }
-  template <typename... Args>
-  LLVM_DEPRECATED("Use Status::FromErrorStringWithFormatv() instead", "Status")
-  void SetErrorStringWithFormatv(const char *format, Args &&...args) {
-    *this =
-        Status::FromErrorStringWithFormatv(format, std::forward<Args>(args)...);
-  }
-  ////////////////////////////////////////////////////////////////////////////
-
   /// Set the current error to errno.
   ///
   /// Update the error value to be \c errno and update the type to be \c
