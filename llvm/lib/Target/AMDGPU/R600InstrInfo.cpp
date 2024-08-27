@@ -40,7 +40,8 @@ bool R600InstrInfo::isVector(const MachineInstr &MI) const {
 void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 const DebugLoc &DL, MCRegister DestReg,
-                                MCRegister SrcReg, bool KillSrc) const {
+                                MCRegister SrcReg, bool KillSrc,
+                                bool RenamableDest, bool RenamableSrc) const {
   unsigned VectorComponents = 0;
   if ((R600::R600_Reg128RegClass.contains(DestReg) ||
       R600::R600_Reg128VerticalRegClass.contains(DestReg)) &&
@@ -1162,7 +1163,7 @@ int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
   }
 
   const TargetRegisterClass *IndirectRC = getIndirectAddrRegClass();
-  for (std::pair<unsigned, unsigned> LI : MRI.liveins()) {
+  for (std::pair<MCRegister, Register> LI : MRI.liveins()) {
     Register Reg = LI.first;
     if (Reg.isVirtual() || !IndirectRC->contains(Reg))
       continue;

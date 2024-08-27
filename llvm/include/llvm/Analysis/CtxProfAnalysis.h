@@ -9,12 +9,22 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 
 namespace llvm {
 
 class CtxProfAnalysis;
+
+// Setting initial capacity to 1 because all contexts must have at least 1
+// counter, and then, because all contexts belonging to a function have the same
+// size, there'll be at most one other heap allocation.
+using CtxProfFlatProfile =
+    DenseMap<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
 
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
@@ -63,6 +73,8 @@ public:
     return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex++;
   }
 
+  const CtxProfFlatProfile flatten() const;
+
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &) {
     // Check whether the analysis has been explicitly invalidated. Otherwise,
@@ -82,6 +94,13 @@ public:
   using Result = PGOContextualProfile;
 
   PGOContextualProfile run(Module &M, ModuleAnalysisManager &MAM);
+
+  /// Get the instruction instrumenting a callsite, or nullptr if that cannot be
+  /// found.
+  static InstrProfCallsite *getCallsiteInstrumentation(CallBase &CB);
+
+  /// Get the instruction instrumenting a BB, or nullptr if not present.
+  static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
 };
 
 class CtxProfAnalysisPrinterPass

@@ -96,8 +96,7 @@ Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
     // Insert mask and evl operands in between the instruction operands.
     for (size_t VPParamIdx = 0, ParamIdx = 0; VPParamIdx < NumVPParams;
          ++VPParamIdx) {
-      if ((MaskPosOpt && MaskPosOpt.value_or(NumVPParams) == VPParamIdx) ||
-          (VLenPosOpt && VLenPosOpt.value_or(NumVPParams) == VPParamIdx))
+      if (MaskPosOpt == VPParamIdx || VLenPosOpt == VPParamIdx)
         continue;
       assert(ParamIdx < NumInstParams);
       IntrinParams[VPParamIdx] = InstOpArray[ParamIdx++];

@@ -6,8 +6,10 @@ target triple = "dxil-pc-shadermodel-vertex"
 ; CHECK: ![[SM]] = !{!"vs", i32 0, i32 0}
 
 ; ANALYSIS: Shader Model Version : 0
-; ANALYSIS: DXIL Version : 1.0
-; ANALYSIS: Shader Stage : vertex
+; ANALYSIS-NEXT: DXIL Version : 1.0
+; ANALYSIS-NEXT: Shader Stage : vertex
+; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-EMPTY:
 
 define void @entry() #0 {
 entry:

@@ -19,6 +19,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -28,6 +29,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <map>
 #include <optional>
 #include <string>
@@ -63,6 +65,14 @@ public:
   void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints,
                                  bool IsClang, raw_ostream &OS);
 };
+
+// Helper class to use with `TableGen::Emitter::OptClass`.
+template <bool Enums> class IntrinsicEmitterOpt : public IntrinsicEmitter {
+public:
+  IntrinsicEmitterOpt(const RecordKeeper &R) : IntrinsicEmitter(R) {}
+  void run(raw_ostream &OS) { IntrinsicEmitter::run(OS, Enums); }
+};
+
 } // End anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -99,7 +109,7 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the intrinsic parameter attributes.
     EmitAttributes(Ints, OS);
 
-    // Emit code to translate GCC builtins into LLVM intrinsics.
+    // Emit code to translate Clang builtins into LLVM intrinsics.
     EmitIntrinsicToBuiltinMap(Ints, true, OS);
 
     // Emit code to translate MS builtins into LLVM intrinsics.
@@ -596,101 +606,180 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     const CodeGenIntrinsicTable &Ints, bool IsClang, raw_ostream &OS) {
   StringRef CompilerName = IsClang ? "Clang" : "MS";
   StringRef UpperCompilerName = IsClang ? "CLANG" : "MS";
-  // map<TargetPrefix, map<BuiltinName, EnumName>>. Note that we iterate over
-  // both maps in the code below. For the inner map, entries need to be emitted
-  // in the sorted order of `BuiltinName` because we use std::lower_bound to
-  // search these entries. For the outer map, it doesn't need be be sorted, but
-  // we use a map to eliminate non-determinism in the emitted code.
-  typedef std::map<StringRef, std::map<StringRef, StringRef>> BIMTy;
-  BIMTy BuiltinMap;
-  StringToOffsetTable Table;
+
+  // map<TargetPrefix, pair<map<BuiltinName, EnumName>, CommonPrefix>.
+  // Note that we iterate over both the maps in the code below and both
+  // iterations need to iterate in sorted key order. For the inner map, entries
+  // need to be emitted in the sorted order of `BuiltinName` with `CommonPrefix`
+  // rempved, because we use std::lower_bound to search these entries. For the
+  // outer map as well, entries need to be emitted in sorter order of
+  // `TargetPrefix` as we use std::lower_bound to search these entries.
+  using BIMEntryTy =
+      std::pair<std::map<StringRef, StringRef>, std::optional<StringRef>>;
+  std::map<StringRef, BIMEntryTy> BuiltinMap;
+
   for (const CodeGenIntrinsic &Int : Ints) {
     StringRef BuiltinName = IsClang ? Int.ClangBuiltinName : Int.MSBuiltinName;
     if (BuiltinName.empty())
       continue;
     // Get the map for this target prefix.
-    std::map<StringRef, StringRef> &BIM = BuiltinMap[Int.TargetPrefix];
+    auto &[Map, CommonPrefix] = BuiltinMap[Int.TargetPrefix];
 
-    if (!BIM.insert(std::pair(BuiltinName, Int.EnumName)).second)
+    if (!Map.insert({BuiltinName, Int.EnumName}).second)
       PrintFatalError(Int.TheDef->getLoc(),
                       "Intrinsic '" + Int.TheDef->getName() + "': duplicate " +
                           CompilerName + " builtin name!");
-    Table.GetOrAddStringOffset(BuiltinName);
+
+    // Update common prefix.
+    if (!CommonPrefix) {
+      // For the first builtin for this target, initialize the common prefix.
+      CommonPrefix = BuiltinName;
+      continue;
+    }
+
+    // Update the common prefix. Note that this assumes that `take_front` will
+    // never set the `Data` pointer in CommonPrefix to nullptr.
+    const char *Mismatch = mismatch(*CommonPrefix, BuiltinName).first;
+    *CommonPrefix = CommonPrefix->take_front(Mismatch - CommonPrefix->begin());
   }
 
-  OS << "// Get the LLVM intrinsic that corresponds to a builtin.\n";
-  OS << "// This is used by the C front-end.  The builtin name is passed\n";
-  OS << "// in as BuiltinName, and a target prefix (e.g. 'ppc') is passed\n";
-  OS << "// in as TargetPrefix. The result is assigned to 'IntrinsicID'.\n";
-  OS << "#ifdef GET_LLVM_INTRINSIC_FOR_" << UpperCompilerName << "_BUILTIN\n";
+  // Populate the string table with the names of all the builtins after
+  // removing this common prefix.
+  StringToOffsetTable Table;
+  for (const auto &[TargetPrefix, Entry] : BuiltinMap) {
+    auto &[Map, CommonPrefix] = Entry;
+    for (auto &[BuiltinName, EnumName] : Map) {
+      StringRef Suffix = BuiltinName.substr(CommonPrefix->size());
+      Table.GetOrAddStringOffset(Suffix);
+    }
+  }
 
-  OS << "Intrinsic::ID Intrinsic::getIntrinsicFor" << CompilerName
-     << "Builtin(const char "
-     << "*TargetPrefixStr, StringRef BuiltinNameStr) {\n";
+  OS << formatv(R"(
+// Get the LLVM intrinsic that corresponds to a builtin. This is used by the
+// C front-end. The builtin name is passed in as BuiltinName, and a target
+// prefix (e.g. 'ppc') is passed in as TargetPrefix.
+#ifdef GET_LLVM_INTRINSIC_FOR_{0}_BUILTIN
+Intrinsic::ID
+Intrinsic::getIntrinsicFor{1}Builtin(StringRef TargetPrefix, 
+                                      StringRef BuiltinName) {{
+  using namespace Intrinsic;
+)",
+                UpperCompilerName, CompilerName);
 
-  if (Table.Empty()) {
-    OS << "  return Intrinsic::not_intrinsic;\n";
-    OS << "}\n";
-    OS << "#endif\n\n";
+  if (BuiltinMap.empty()) {
+    OS << formatv(R"(
+  return not_intrinsic;
+  }
+#endif  // GET_LLVM_INTRINSIC_FOR_{0}_BUILTIN
+)",
+                  UpperCompilerName);
     return;
   }
 
-  OS << "  static constexpr char BuiltinNames[] = {\n";
-  Table.EmitCharArray(OS);
-  OS << "  };\n\n";
+  if (!Table.empty()) {
+    Table.EmitStringLiteralDef(OS, "static constexpr char BuiltinNames[]");
 
-  OS << "  struct BuiltinEntry {\n";
-  OS << "    Intrinsic::ID IntrinID;\n";
-  OS << "    unsigned StrTabOffset;\n";
-  OS << "    const char *getName() const {\n";
-  OS << "      return &BuiltinNames[StrTabOffset];\n";
-  OS << "    }\n";
-  OS << "    bool operator<(StringRef RHS) const {\n";
-  OS << "      return strncmp(getName(), RHS.data(), RHS.size()) < 0;\n";
-  OS << "    }\n";
+    OS << R"(
+  struct BuiltinEntry {
+    ID IntrinsicID;
+    unsigned StrTabOffset;
+    const char *getName() const { return &BuiltinNames[StrTabOffset]; }
+    bool operator<(StringRef RHS) const {
+      return strncmp(getName(), RHS.data(), RHS.size()) < 0;
+    }
+  };
+
+)";
+  }
+
+  // Emit a per target table of bultin names.
+  bool HasTargetIndependentBuiltins = false;
+  StringRef TargetIndepndentCommonPrefix;
+  for (const auto &[TargetPrefix, Entry] : BuiltinMap) {
+    const auto &[Map, CommonPrefix] = Entry;
+    if (!TargetPrefix.empty()) {
+      OS << formatv("  // Builtins for {0}.\n", TargetPrefix);
+    } else {
+      OS << "  // Target independent builtins.\n";
+      HasTargetIndependentBuiltins = true;
+      TargetIndepndentCommonPrefix = *CommonPrefix;
+    }
+
+    // Emit the builtin table for this target prefix.
+    OS << formatv("  static constexpr BuiltinEntry {0}Names[] = {{\n",
+                  TargetPrefix);
+    for (const auto &[BuiltinName, EnumName] : Map) {
+      StringRef Suffix = BuiltinName.substr(CommonPrefix->size());
+      OS << formatv("    {{{0}, {1}}, // {2}\n", EnumName,
+                    *Table.GetStringOffset(Suffix), BuiltinName);
+    }
+    OS << formatv("  }; // {0}Names\n\n", TargetPrefix);
+  }
+
+  // After emitting the builtin tables for all targets, emit a lookup table for
+  // all targets. We will use binary search, similar to the table for builtin
+  // names to lookup into this table.
+  OS << R"(
+  struct TargetEntry {
+    StringLiteral TargetPrefix;
+    ArrayRef<BuiltinEntry> Names;
+    StringLiteral CommonPrefix;
+    bool operator<(StringRef RHS) const {
+      return TargetPrefix < RHS;
+    };
+  };
+  static constexpr TargetEntry TargetTable[] = {
+)";
+
+  for (const auto &[TargetPrefix, Entry] : BuiltinMap) {
+    const auto &[Map, CommonPrefix] = Entry;
+    if (TargetPrefix.empty())
+      continue;
+    OS << formatv(R"(    {{"{0}", {0}Names, "{2}"},)", TargetPrefix,
+                  TargetPrefix, CommonPrefix)
+       << "\n";
+  }
   OS << "  };\n";
 
-  OS << "  StringRef TargetPrefix(TargetPrefixStr);\n\n";
-
-  // Note: this could emit significantly better code if we cared.
-  for (auto &I : BuiltinMap) {
-    OS << "  ";
-    if (!I.first.empty())
-      OS << "if (TargetPrefix == \"" << I.first << "\") ";
-    else
-      OS << "/* Target Independent Builtins */ ";
-    OS << "{\n";
-
-    // Emit the comparisons for this target prefix.
-    OS << "    static constexpr BuiltinEntry " << I.first << "Names[] = {\n";
-    for (const auto &P : I.second) {
-      OS << "      {Intrinsic::" << P.second << ", "
-         << Table.GetOrAddStringOffset(P.first) << "}, // " << P.first << "\n";
-    }
-    OS << "    };\n";
-    OS << "    auto I = std::lower_bound(std::begin(" << I.first << "Names),\n";
-    OS << "                              std::end(" << I.first << "Names),\n";
-    OS << "                              BuiltinNameStr);\n";
-    OS << "    if (I != std::end(" << I.first << "Names) &&\n";
-    OS << "        I->getName() == BuiltinNameStr)\n";
-    OS << "      return I->IntrinID;\n";
-    OS << "  }\n";
+  // Now for the actual lookup, first check the target independent table if
+  // we emitted one.
+  if (HasTargetIndependentBuiltins) {
+    OS << formatv(R"(
+  // Check if it's a target independent builtin.
+  // Copy the builtin name so we can use it in consume_front without clobbering
+  // if for the lookup in the target specific table.
+  StringRef Suffix = BuiltinName;
+  if (Suffix.consume_front("{0}")) {{
+    auto II = lower_bound(Names, Suffix);
+    if (II != std::end(Names) && II->getName() == Suffix)
+      return II->IntrinsicID;
   }
-  OS << "  return Intrinsic::not_intrinsic;\n";
-  OS << "}\n";
-  OS << "#endif\n\n";
+)",
+                  TargetIndepndentCommonPrefix);
+  }
+
+  // If a target independent builtin was not found, lookup the target specific.
+  OS << formatv(R"(
+  auto TI = lower_bound(TargetTable, TargetPrefix);
+  if (TI == std::end(TargetTable) || TI->TargetPrefix != TargetPrefix)
+    return not_intrinsic;
+  // This is the last use of BuiltinName, so no need to copy before using it in
+  // consume_front.
+  if (!BuiltinName.consume_front(TI->CommonPrefix))
+    return not_intrinsic;
+  auto II = lower_bound(TI->Names, BuiltinName);
+  if (II == std::end(TI->Names) || II->getName() != BuiltinName)
+    return not_intrinsic;
+  return II->IntrinsicID;
+}
+#endif // GET_LLVM_INTRINSIC_FOR_{0}_BUILTIN
+
+)",
+                UpperCompilerName);
 }
 
-static void EmitIntrinsicEnums(RecordKeeper &RK, raw_ostream &OS) {
-  IntrinsicEmitter(RK).run(OS, /*Enums=*/true);
-}
+static TableGen::Emitter::OptClass<IntrinsicEmitterOpt</*Enums=*/true>>
+    X("gen-intrinsic-enums", "Generate intrinsic enums");
 
-static TableGen::Emitter::Opt X("gen-intrinsic-enums", EmitIntrinsicEnums,
-                                "Generate intrinsic enums");
-
-static void EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS) {
-  IntrinsicEmitter(RK).run(OS, /*Enums=*/false);
-}
-
-static TableGen::Emitter::Opt Y("gen-intrinsic-impl", EmitIntrinsicImpl,
-                                "Generate intrinsic implementation code");
+static TableGen::Emitter::OptClass<IntrinsicEmitterOpt</*Enums=*/false>>
+    Y("gen-intrinsic-impl", "Generate intrinsic implementation code");

@@ -27,8 +27,9 @@ namespace orc {
 
 // Load an object file compatible with the given triple (if given) from the
 // given path. May return a file slice if the path contains a universal binary.
-Expected<std::unique_ptr<MemoryBuffer>> loadRelocatableObject(StringRef Path,
-                                                              const Triple &TT);
+Expected<std::unique_ptr<MemoryBuffer>> loadRelocatableObject(
+    StringRef Path, const Triple &TT,
+    std::optional<StringRef> IdentifierOverride = std::nullopt);
 
 } // End namespace orc
 } // End namespace llvm

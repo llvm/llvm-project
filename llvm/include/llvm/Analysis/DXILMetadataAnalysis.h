@@ -23,6 +23,7 @@ struct ModuleMetadataInfo {
   VersionTuple DXILVersion{};
   VersionTuple ShaderModelVersion{};
   Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
+  VersionTuple ValidatorVersion{};
 
   void print(raw_ostream &OS) const;
 };

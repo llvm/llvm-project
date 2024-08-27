@@ -31,6 +31,13 @@ namespace orc {
 /// given triple.
 /// ObjIsSlice should be set to true if Obj is a slice of a universal binary
 /// (that fact will then be reported in the error messages).
+Error checkMachORelocatableObject(MemoryBufferRef Obj, const Triple &TT,
+                                  bool ObjIsSlice);
+
+/// Check that the given buffer contains a MachO object file compatible with the
+/// given triple.
+/// This convenience overload returns the buffer if it passes all checks,
+/// otherwise it returns an error.
 Expected<std::unique_ptr<MemoryBuffer>>
 checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
                             bool ObjIsSlice);
@@ -38,14 +45,16 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
 /// Load a relocatable object compatible with TT from Path.
 /// If Path is a universal binary, this function will return a buffer for the
 /// slice compatible with Triple (if one is present).
-Expected<std::unique_ptr<MemoryBuffer>>
-loadMachORelocatableObject(StringRef Path, const Triple &TT);
+Expected<std::unique_ptr<MemoryBuffer>> loadMachORelocatableObject(
+    StringRef Path, const Triple &TT,
+    std::optional<StringRef> IdentifierOverride = std::nullopt);
 
 /// Load a compatible relocatable object (if available) from a MachO universal
 /// binary.
 Expected<std::unique_ptr<MemoryBuffer>>
 loadMachORelocatableObjectFromUniversalBinary(
-    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT);
+    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT,
+    std::optional<StringRef> IdentifierOverride = std::nullopt);
 
 /// Utility for identifying the file-slice compatible with TT in a universal
 /// binary.

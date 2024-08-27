@@ -1113,7 +1113,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // neither.
   if (!DIS || !DIS->getUnit() ||
       !dwarf::isCPlusPlus(
-          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()))
+          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()) ||
+      DIS->getUnit()->getEmissionKind() != DICompileUnit::DebugEmissionKind::FullDebug)
     return;
 
   assert(Shape.ABI == coro::ABI::Switch &&

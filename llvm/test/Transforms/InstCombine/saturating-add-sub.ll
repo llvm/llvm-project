@@ -1809,7 +1809,7 @@ define i32 @not_uadd_sat2(i32 %x, i32 %y) {
 define i32 @uadd_sat_not(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1822,7 +1822,7 @@ define i32 @uadd_sat_not(i32 %x, i32 %y) {
 define i32 @uadd_sat_not_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_nonstrict(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1852,7 +1852,7 @@ define i32 @uadd_sat_not_commute_add(i32 %xp, i32 %yp) {
 define i32 @uadd_sat_not_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_ugt(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1865,7 +1865,7 @@ define i32 @uadd_sat_not_ugt(i32 %x, i32 %y) {
 define i32 @uadd_sat_not_uge(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_uge(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1893,7 +1893,7 @@ define <2 x i32> @uadd_sat_not_ugt_commute_add(<2 x i32> %x, <2 x i32> %yp) {
 define i32 @uadd_sat_not_commute_select(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1906,7 +1906,7 @@ define i32 @uadd_sat_not_commute_select(i32 %x, i32 %y) {
 define i32 @uadd_sat_not_commute_select_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select_nonstrict(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1951,7 +1951,7 @@ define <2 x i32> @uadd_sat_not_commute_select_ugt(<2 x i32> %xp, <2 x i32> %yp) 
 define i32 @uadd_sat_not_commute_select_ugt_commute_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select_ugt_commute_add(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -1964,7 +1964,7 @@ define i32 @uadd_sat_not_commute_select_ugt_commute_add(i32 %x, i32 %y) {
 define i32 @uadd_sat_not_commute_select_uge_commute_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select_uge_commute_add(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[NOTX]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %notx = xor i32 %x, -1
@@ -2138,7 +2138,7 @@ define i32 @unsigned_sat_variable_using_wrong_min(i32 %x) {
 ; CHECK-LABEL: @unsigned_sat_variable_using_wrong_min(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 [[Y]], -1
-; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.smin.i32(i32 [[NOTY]], i32 [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[NOTY]])
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -2156,8 +2156,8 @@ define i32 @unsigned_sat_variable_using_wrong_value(i32 %x, i32 %z) {
 ; CHECK-LABEL: @unsigned_sat_variable_using_wrong_value(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 [[Y]], -1
-; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.umin.i32(i32 [[NOTY]], i32 [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[S]], [[Z:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[NOTY]])
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Z:%.*]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %y = call i32 @get_i32() ; thwart complexity-based canonicalization
@@ -2268,7 +2268,7 @@ define i32 @uadd_sat_via_add_swapped_cmp(i32 %x, i32 %y) {
 define i32 @uadd_sat_via_add_swapped_cmp_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_via_add_swapped_cmp_nonstrict(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C_NOT:%.*]] = icmp ugt i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp ult i32 [[Y]], [[A]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C_NOT]], i32 [[A]], i32 -1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -2292,7 +2292,7 @@ define i32 @uadd_sat_via_add_swapped_cmp_nonstric(i32 %x, i32 %y) {
 define i32 @uadd_sat_via_add_swapped_cmp_select_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_via_add_swapped_cmp_select_nonstrict(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Y]], [[A]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 -1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

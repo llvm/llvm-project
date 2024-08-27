@@ -38,7 +38,7 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
-- TODO
+- P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 
 
 Improvements and New Features
