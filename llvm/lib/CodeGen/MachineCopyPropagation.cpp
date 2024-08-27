@@ -124,6 +124,7 @@ public:
 
 static std::optional<llvm::SmallVector<MachineInstr *>>
 moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
+  unsigned MaxNumberOfNodesToBeProcessed = 25;
   MachineInstr *DstInstr = Dst->getInstr();
   MachineInstr *SrcInstr = Src->getInstr();
   if (DstInstr == nullptr || SrcInstr == nullptr)
@@ -147,13 +148,15 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   // The queue for the breadth first search.
   std::queue<const SUnit *> Edges;
 
+  unsigned NumProcessedNode = 0;
+
   // Process the children of a node.
   // Basically every node are checked before it is being put into the queue.
   // A node is enqueued if it has no dependencies on the source of the copy
   // (only if we are not talking about the destination node which is a special
   // case indicated by a flag) and is located between the source of the copy and
   // the destination of the copy.
-  auto ProcessSNodeChildren = [&Edges, SrcInstr, &SectionSize, &SectionInstr](
+  auto ProcessSNodeChildren = [&Edges, SrcInstr, &SectionSize, &SectionInstr, &NumProcessedNode, &MaxNumberOfNodesToBeProcessed](
                                   const SUnit *Node, bool IsRoot) -> bool {
     for (llvm::SDep I : Node->Preds) {
       SUnit *SU = I.getSUnit();
@@ -174,8 +177,9 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
           Edges.push(SU);
         }
       }
+      NumProcessedNode++;
     }
-    return true;
+    return NumProcessedNode < MaxNumberOfNodesToBeProcessed;      
   };
 
   // The BFS happens here.
