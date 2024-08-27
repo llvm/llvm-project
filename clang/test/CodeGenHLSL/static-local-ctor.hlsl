@@ -8,7 +8,7 @@
 RWBuffer<int> buf[10];
 
 void InitBuf(RWBuffer<int> buf) {
-  for (unsigned i; i < 100; i++)
+  for (unsigned int i = 0; i < 100; i++)
     buf[i] = 0;
 }
 
@@ -29,7 +29,7 @@ void InitBuf(RWBuffer<int> buf) {
 [shader("compute")]
 [numthreads(1,1,1)]
 void main() {
-  // A non-trivially initialized static local will get checks to verify that it is generated just once
+  // A non-trivially constructed static local will get checks to verify that it is generated just once
   static RWBuffer<int> mybuf;
   mybuf = buf[0];
   InitBuf(mybuf);
