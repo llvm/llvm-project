@@ -2133,6 +2133,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    assert(!Reverse &&
+           "Inconsecutive memory access should not have the order.");
     return Ctx.TTI.getAddressComputationCost(Ty) +
            Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
                                           IsMasked, Alignment, CostKind,
@@ -2149,12 +2151,12 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     Cost += Ctx.TTI.getMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment, AS,
                                     CostKind, OpInfo, &Ingredient);
   }
-  if (Reverse)
-    Cost +=
-        Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                               cast<VectorType>(Ty), std::nullopt, CostKind, 0);
+  if (!Reverse)
+    return Cost;
 
-  return Cost;
+  return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                        cast<VectorType>(Ty), std::nullopt,
+                                        CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
