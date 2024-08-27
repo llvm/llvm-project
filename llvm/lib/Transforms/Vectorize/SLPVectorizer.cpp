@@ -17559,7 +17559,7 @@ public:
                         });
     if (NumReducedVals < ReductionLimit &&
         all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
-           return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
+          return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
         })) {
       for (ReductionOpsType &RdxOps : ReductionOps)
         for (Value *RdxOp : RdxOps)
@@ -17710,9 +17710,9 @@ public:
 
       // Check if we support repeated scalar values processing (optimization of
       // original scalar identity operations on matched horizontal reductions).
-      IsSupportedHorRdxIdentityOp =
-          RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+      IsSupportedHorRdxIdentityOp = RdxKind != RecurKind::Mul &&
+                                    RdxKind != RecurKind::FMul &&
+                                    RdxKind != RecurKind::FMulAdd;
       // Gather same values.
       MapVector<Value *, unsigned> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
