@@ -7123,19 +7123,6 @@ static SDValue isVMOVModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
       ImmMask <<= 1;
     }
 
-    if (DAG.getDataLayout().isBigEndian()) {
-      // Reverse the order of elements within the vector.
-      unsigned BytesPerElem = VectorVT.getScalarSizeInBits() / 8;
-      unsigned Mask = (1 << BytesPerElem) - 1;
-      unsigned NumElems = 8 / BytesPerElem;
-      unsigned NewImm = 0;
-      for (unsigned ElemNum = 0; ElemNum < NumElems; ++ElemNum) {
-        unsigned Elem = ((Imm >> ElemNum * BytesPerElem) & Mask);
-        NewImm |= Elem << (NumElems - ElemNum - 1) * BytesPerElem;
-      }
-      Imm = NewImm;
-    }
-
     // Op=1, Cmode=1110.
     OpCmode = 0x1e;
     VT = is128Bits ? MVT::v2i64 : MVT::v1i64;
@@ -18615,7 +18602,7 @@ static SDValue PerformBITCASTCombine(SDNode *N,
   if ((Src.getOpcode() == ARMISD::VMOVIMM ||
        Src.getOpcode() == ARMISD::VMVNIMM ||
        Src.getOpcode() == ARMISD::VMOVFPIMM) &&
-      SrcVT.getScalarSizeInBits() <= DstVT.getScalarSizeInBits() &&
+      SrcVT.getScalarSizeInBits() < DstVT.getScalarSizeInBits() &&
       DAG.getDataLayout().isBigEndian())
     return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(N), DstVT, Src);
 
