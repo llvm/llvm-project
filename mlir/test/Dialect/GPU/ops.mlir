@@ -446,8 +446,8 @@ gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 gpu.binary @kernel_attrs_1 [
     #gpu.object<#rocdl.target<chip = "gfx900">,
       kernels = #gpu.kernel_table<[
-        #gpu.kernel<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
-        #gpu.kernel<"kernel1", (i32) -> (), arg_attrs = [{llvm.read_only}]>
+        #gpu.kernel_metadata<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+        #gpu.kernel_metadata<"kernel1", (i32) -> (), arg_attrs = [{llvm.read_only}]>
       ]>,
       bin = "BLOB">
   ]
@@ -455,12 +455,12 @@ gpu.binary @kernel_attrs_1 [
 // Verify the kernels are sorted
 // CHECK-LABEL: gpu.binary @kernel_attrs_2
 gpu.binary @kernel_attrs_2 [
-    // CHECK: [#gpu.kernel<"a_kernel", () -> ()>, #gpu.kernel<"m_kernel", () -> ()>, #gpu.kernel<"z_kernel", () -> ()>]
+    // CHECK: [#gpu.kernel_metadata<"a_kernel", () -> ()>, #gpu.kernel_metadata<"m_kernel", () -> ()>, #gpu.kernel_metadata<"z_kernel", () -> ()>]
     #gpu.object<#rocdl.target<chip = "gfx900">,
       kernels = #gpu.kernel_table<[
-        #gpu.kernel<"z_kernel", () -> ()>,
-        #gpu.kernel<"m_kernel", () -> ()>,
-        #gpu.kernel<"a_kernel", () -> ()>
+        #gpu.kernel_metadata<"z_kernel", () -> ()>,
+        #gpu.kernel_metadata<"m_kernel", () -> ()>,
+        #gpu.kernel_metadata<"a_kernel", () -> ()>
       ]>,
       bin = "BLOB">
   ]

@@ -2179,38 +2179,41 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GPU KernelAttr
+// GPU KernelMetadataAttr
 //===----------------------------------------------------------------------===//
 
-KernelAttr KernelAttr::get(FunctionOpInterface kernel,
-                           DictionaryAttr metadata) {
+KernelMetadataAttr KernelMetadataAttr::get(FunctionOpInterface kernel,
+                                           DictionaryAttr metadata) {
   assert(kernel && "invalid kernel");
   return get(kernel.getNameAttr(), kernel.getFunctionType(),
              kernel.getAllArgAttrs(), metadata);
 }
 
-KernelAttr KernelAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                                  FunctionOpInterface kernel,
-                                  DictionaryAttr metadata) {
+KernelMetadataAttr
+KernelMetadataAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               FunctionOpInterface kernel,
+                               DictionaryAttr metadata) {
   assert(kernel && "invalid kernel");
   return getChecked(emitError, kernel.getNameAttr(), kernel.getFunctionType(),
                     kernel.getAllArgAttrs(), metadata);
 }
 
-KernelAttr KernelAttr::appendMetadata(ArrayRef<NamedAttribute> attrs) const {
+KernelMetadataAttr
+KernelMetadataAttr::appendMetadata(ArrayRef<NamedAttribute> attrs) const {
   if (attrs.empty())
     return *this;
   NamedAttrList attrList;
   if (DictionaryAttr dict = getMetadata())
     attrList.append(dict);
   attrList.append(attrs);
-  return KernelAttr::get(getName(), getFunctionType(), getArgAttrs(),
-                         attrList.getDictionary(getContext()));
+  return KernelMetadataAttr::get(getName(), getFunctionType(), getArgAttrs(),
+                                 attrList.getDictionary(getContext()));
 }
 
-LogicalResult KernelAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 StringAttr name, Type functionType,
-                                 ArrayAttr argAttrs, DictionaryAttr metadata) {
+LogicalResult
+KernelMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           StringAttr name, Type functionType,
+                           ArrayAttr argAttrs, DictionaryAttr metadata) {
   if (name.empty())
     return emitError() << "the kernel name can't be empty";
   if (argAttrs) {
@@ -2228,7 +2231,7 @@ LogicalResult KernelAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 KernelTableAttr KernelTableAttr::get(MLIRContext *context,
-                                     ArrayRef<KernelAttr> kernels,
+                                     ArrayRef<KernelMetadataAttr> kernels,
                                      bool isSorted) {
   // Note that `is_sorted` is always only invoked once even with assertions ON.
   assert((!isSorted || llvm::is_sorted(kernels)) &&
@@ -2237,15 +2240,14 @@ KernelTableAttr KernelTableAttr::get(MLIRContext *context,
   if (isSorted || llvm::is_sorted(kernels))
     return Base::get(context, kernels);
   // Sort the array.
-  SmallVector<KernelAttr> kernelsTmp(kernels);
+  SmallVector<KernelMetadataAttr> kernelsTmp(kernels);
   llvm::array_pod_sort(kernelsTmp.begin(), kernelsTmp.end());
   return Base::get(context, kernelsTmp);
 }
 
-KernelTableAttr
-KernelTableAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                            MLIRContext *context, ArrayRef<KernelAttr> kernels,
-                            bool isSorted) {
+KernelTableAttr KernelTableAttr::getChecked(
+    function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+    ArrayRef<KernelMetadataAttr> kernels, bool isSorted) {
   // Note that `is_sorted` is always only invoked once even with assertions ON.
   assert((!isSorted || llvm::is_sorted(kernels)) &&
          "expected a sorted kernel array");
@@ -2253,19 +2255,19 @@ KernelTableAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
   if (isSorted || llvm::is_sorted(kernels))
     return Base::getChecked(emitError, context, kernels);
   // Sort the array.
-  SmallVector<KernelAttr> kernelsTmp(kernels);
+  SmallVector<KernelMetadataAttr> kernelsTmp(kernels);
   llvm::array_pod_sort(kernelsTmp.begin(), kernelsTmp.end());
   return Base::getChecked(emitError, context, kernelsTmp);
 }
 
 LogicalResult
 KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                        ArrayRef<KernelAttr> kernels) {
+                        ArrayRef<KernelMetadataAttr> kernels) {
   if (kernels.size() < 2)
     return success();
   // Check that the kernels are uniquely named.
   if (std::adjacent_find(kernels.begin(), kernels.end(),
-                         [](KernelAttr l, KernelAttr r) {
+                         [](KernelMetadataAttr l, KernelMetadataAttr r) {
                            return l.getName() == r.getName();
                          }) != kernels.end()) {
     return emitError() << "expected all kernels to be uniquely named";
@@ -2273,14 +2275,14 @@ KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-KernelAttr KernelTableAttr::lookup(StringRef key) const {
+KernelMetadataAttr KernelTableAttr::lookup(StringRef key) const {
   auto [iterator, found] = impl::findAttrSorted(begin(), end(), key);
-  return found ? *iterator : KernelAttr();
+  return found ? *iterator : KernelMetadataAttr();
 }
 
-KernelAttr KernelTableAttr::lookup(StringAttr key) const {
+KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
   auto [iterator, found] = impl::findAttrSorted(begin(), end(), key);
-  return found ? *iterator : KernelAttr();
+  return found ? *iterator : KernelMetadataAttr();
 }
 
 //===----------------------------------------------------------------------===//

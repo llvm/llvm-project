@@ -72,13 +72,13 @@ gpu::KernelTableAttr mlir::ROCDL::getKernelMetadata(Operation *gpuModule,
                                                     ArrayRef<char> elfData) {
   auto module = cast<gpu::GPUModuleOp>(gpuModule);
   Builder builder(module.getContext());
-  SmallVector<gpu::KernelAttr> kernels;
+  SmallVector<gpu::KernelMetadataAttr> kernels;
   std::optional<DenseMap<StringAttr, NamedAttrList>> mdMapOrNull =
       getAMDHSAKernelsELFMetadata(builder, elfData);
   for (auto funcOp : module.getBody()->getOps<LLVM::LLVMFuncOp>()) {
     if (!funcOp->getDiscardableAttr("rocdl.kernel"))
       continue;
-    kernels.push_back(gpu::KernelAttr::get(
+    kernels.push_back(gpu::KernelMetadataAttr::get(
         funcOp, mdMapOrNull ? builder.getDictionaryAttr(
                                   mdMapOrNull->lookup(funcOp.getNameAttr()))
                             : nullptr));

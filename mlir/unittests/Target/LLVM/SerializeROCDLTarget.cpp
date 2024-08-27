@@ -213,8 +213,8 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
     ASSERT_TRUE(metadata.lookup("rocdl_kernel_0") != nullptr);
     // Check that the kernel doesn't exist.
     ASSERT_TRUE(metadata.lookup("not_existent_kernel") == nullptr);
-    // Test the `ROCDLObjectMDAttr` iterators.
-    for (gpu::KernelAttr kernel : metadata) {
+    // Test the `KernelMetadataAttr` iterators.
+    for (gpu::KernelMetadataAttr kernel : metadata) {
       // Check that the ELF metadata is present.
       ASSERT_TRUE(kernel.getMetadata() != nullptr);
       // Verify that `sgpr_count` is present and it is an integer attribute.

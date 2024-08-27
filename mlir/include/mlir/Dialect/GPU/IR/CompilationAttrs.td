@@ -17,10 +17,10 @@ include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// GPU kernel attribute
+// GPU kernel metadata attribute
 //===----------------------------------------------------------------------===//
 
-def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
+def GPU_KernelMetadataAttr : GPU_Attr<"KernelMetadata", "kernel_metadata"> {
   let description = [{
     GPU attribute for storing metadata related to a compiled kernel. The
     attribute contains the name and arguments type of the kernel.
@@ -34,8 +34,8 @@ def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
 
     Examples:
     ```mlir
-      #gpu.kernel<@kernel1, (i32) -> (), arg_attrs = [...],  metadata = {reg_count = 255, ...}>
-      #gpu.kernel<@kernel2, (i32, f64) -> ()>
+      #gpu.kernel_metadata<@kernel1, (i32) -> (), arg_attrs = [...],  metadata = {reg_count = 255, ...}>
+      #gpu.kernel_metadata<@kernel2, (i32, f64) -> ()>
     ```
   }];
   let parameters = (ins
@@ -63,7 +63,7 @@ def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{
     /// Compare two kernels based on the name.
-    bool operator<(const KernelAttr& other) const {
+    bool operator<(const KernelMetadataAttr& other) const {
       return getName().getValue() < other.getName().getValue();
     }
 
@@ -103,8 +103,8 @@ def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
       return argDict ? argDict.get(name) : nullptr;
     }
 
-    /// Returns a new KernelAttr that contains `attrs` in the metadata dictionary.
-    KernelAttr appendMetadata(ArrayRef<NamedAttribute> attrs) const;
+    /// Returns a new KernelMetadataAttr that contains `attrs` in the metadata dictionary.
+    KernelMetadataAttr appendMetadata(ArrayRef<NamedAttribute> attrs) const;
   }];
 }
 
@@ -114,7 +114,7 @@ def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
 
 def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
   let description = [{
-    GPU attribute representing a list of `#gpu.kernel` attributes. This
+    GPU attribute representing a list of `#gpu.kernel_metadata` attributes. This
     attribute supports searching kernels by name. All kernels in the table must
     have an unique name.
 
@@ -124,32 +124,32 @@ def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
       #gpu.kernel_table<>
 
       // Table with a single kernel.
-      #gpu.kernel_table<[#gpu.kernel<kernel0, () -> () >]>
+      #gpu.kernel_table<[#gpu.kernel_metadata<kernel0, () -> () >]>
 
       // Table with multiple kernels.
       #gpu.kernel_table<[
-        #gpu.kernel<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
-        #gpu.kernel<"kernel1", (i32) -> ()>
+        #gpu.kernel_metadata<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+        #gpu.kernel_metadata<"kernel1", (i32) -> ()>
       ]>
     ```
   }];
   let parameters = (ins
-    OptionalArrayRefParameter<"KernelAttr", "array of kernels">:$kernel_table
+    OptionalArrayRefParameter<"KernelMetadataAttr", "array of kernels">:$kernel_table
   );
   let assemblyFormat = [{
     `<` (`[` qualified($kernel_table)^ `]`)? `>`
   }];
   let builders = [
-    AttrBuilder<(ins "ArrayRef<KernelAttr>":$kernels,
+    AttrBuilder<(ins "ArrayRef<KernelMetadataAttr>":$kernels,
                      CArg<"bool", "false">:$isSorted)>
   ];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{
-    llvm::ArrayRef<KernelAttr>::iterator begin() const {
+    llvm::ArrayRef<KernelMetadataAttr>::iterator begin() const {
       return getKernelTable().begin();
     }
-    llvm::ArrayRef<KernelAttr>::iterator end() const {
+    llvm::ArrayRef<KernelMetadataAttr>::iterator end() const {
       return getKernelTable().end();
     }
     size_t size() const {
@@ -160,8 +160,8 @@ def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
     }
 
     /// Returns the kernel with name `key` or `nullptr` if not present.
-    KernelAttr lookup(StringRef key) const;
-    KernelAttr lookup(StringAttr key) const;
+    KernelMetadataAttr lookup(StringRef key) const;
+    KernelMetadataAttr lookup(StringAttr key) const;
   }];
 }
 
