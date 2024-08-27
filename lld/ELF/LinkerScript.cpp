@@ -166,58 +166,85 @@ uint64_t ScriptExpr::getExprValueAlignValue() const {
   return e.getValue();
 }
 
+BinaryExpr::Op BinaryExpr::stringToOp(const StringRef op) {
+  static const std::unordered_map<llvm::StringRef, Op> opMap = {
+      {"+", Op::Add},        {"-", Op::Sub},         {"*", Op::Mul},
+      {"/", Op::Div},        {"%", Op::Mod},         {"<<", Op::Shl},
+      {">>", Op::Shr},       {"&", Op::And},         {"|", Op::Or},
+      {"^", Op::Xor},        {"&&", Op::LAnd},       {"||", Op::LOr},
+      {"==", Op::Eq},        {"!=", Op::Neq},        {"<", Op::Lt},
+      {">", Op::Gt},         {"<=", Op::Leq},        {">=", Op::Geq},
+      {"+=", Op::AddAssign}, {"-=", Op::SubAssign},  {"*=", Op::MulAssign},
+      {"/=", Op::DivAssign}, {"<<=", Op::ShlAssign}, {">>=", Op::ShrAssign},
+      {"&=", Op::AndAssign}, {"|=", Op::OrAssign},   {"^=", Op::XorAssign}};
+
+  auto it = opMap.find(op);
+  if (it != opMap.end()) {
+    return it->second;
+  }
+  return Op::Invalid;
+}
+
 ExprValue BinaryExpr::evaluateBinaryOperands() const {
-  if (op_ == "+" || op_ == "+=")
+  switch (opcode) {
+  case Op::Add:
+  case Op::AddAssign:
     return add(LHS->getExprValue(), RHS->getExprValue());
-  if (op_ == "-" || op_ == "-=")
+  case Op::Sub:
+  case Op::SubAssign:
     return sub(LHS->getExprValue(), RHS->getExprValue());
-  if (op_ == "*" || op_ == "*=")
+  case Op::Mul:
+  case Op::MulAssign:
     return LHS->getExprValueAlignValue() * RHS->getExprValueAlignValue();
-  if (op_ == "/" || op_ == "/=") {
+  case Op::Div:
+  case Op::DivAssign:
     if (uint64_t rv = RHS->getExprValueAlignValue())
       return LHS->getExprValueAlignValue() / rv;
     error(loc_ + ": division by zero");
     return 0;
-  }
-  if (op_ == "%") {
+  case Op::Mod:
     if (uint64_t rv = RHS->getExprValueAlignValue())
       return LHS->getExprValueAlignValue() % rv;
     error(loc_ + ": modulo by zero");
     return 0;
-  }
-  if (op_ == "<<" || op_ == "<<=")
+  case Op::Shl:
+  case Op::ShlAssign:
     return LHS->getExprValueAlignValue() << RHS->getExprValueAlignValue() % 64;
-  if (op_ == ">>" || op_ == ">>=")
+  case Op::Shr:
+  case Op::ShrAssign:
     return LHS->getExprValueAlignValue() >> RHS->getExprValueAlignValue() % 64;
-  if (op_ == "<")
+  case Op::Lt:
     return LHS->getExprValueAlignValue() < RHS->getExprValueAlignValue();
-  if (op_ == ">")
+  case Op::Gt:
     return LHS->getExprValueAlignValue() > RHS->getExprValueAlignValue();
-  if (op_ == ">=")
+  case Op::Geq:
     return LHS->getExprValueAlignValue() >= RHS->getExprValueAlignValue();
-  if (op_ == "<=")
+  case Op::Leq:
     return LHS->getExprValueAlignValue() <= RHS->getExprValueAlignValue();
-  if (op_ == "==")
+  case Op::Eq:
     return LHS->getExprValueAlignValue() == RHS->getExprValueAlignValue();
-  if (op_ == "!=")
+  case Op::Neq:
     return LHS->getExprValueAlignValue() != RHS->getExprValueAlignValue();
-  if (op_ == "||")
+  case Op::LOr:
     return LHS->getExprValueAlignValue() || RHS->getExprValueAlignValue();
-  if (op_ == "&&")
+  case Op::LAnd:
     return LHS->getExprValueAlignValue() && RHS->getExprValueAlignValue();
-  if (op_ == "&")
+  case Op::And:
     return bitAnd(LHS->getExprValue(), RHS->getExprValue());
-  if (op_ == "^")
+  case Op::Xor:
     return bitXor(LHS->getExprValue(), RHS->getExprValue());
-  if (op_ == "|")
+  case Op::Or:
     return bitOr(LHS->getExprValue(), RHS->getExprValue());
-  if (op_ == "&=")
+  case Op::AndAssign:
     return LHS->getExprValueAlignValue() & RHS->getExprValueAlignValue();
-  if (op_ == "^=")
+  case Op::XorAssign:
     return LHS->getExprValueAlignValue() ^ RHS->getExprValueAlignValue();
-  if (op_ == "|=")
+  case Op::OrAssign:
     return LHS->getExprValueAlignValue() | RHS->getExprValueAlignValue();
-  llvm_unreachable("invalid operator");
+  case Op::Invalid:
+  default:
+    llvm_unreachable("invalid operator");
+  }
 }
 
 void BinaryExpr::moveAbsRight(ExprValue &a, ExprValue &b) {

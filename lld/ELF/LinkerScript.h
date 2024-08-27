@@ -129,9 +129,42 @@ private:
 
 class BinaryExpr : public ScriptExpr {
 public:
+  enum class Op {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Shl,
+    Shr,
+    And,
+    Or,
+    Xor,
+    LAnd,
+    LOr,
+    Eq,
+    Neq,
+    Lt,
+    Gt,
+    Leq,
+    Geq,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    ModAssign,
+    ShlAssign,
+    ShrAssign,
+    AndAssign,
+    OrAssign,
+    XorAssign,
+    Invalid
+  };
   BinaryExpr(StringRef op, ScriptExpr *LHS, ScriptExpr *RHS,
              const std::string loc)
-      : ScriptExpr(ExprKind::Binary), op_(op), LHS(LHS), RHS(RHS), loc_(loc) {}
+      : ScriptExpr(ExprKind::Binary), LHS(LHS), RHS(RHS), loc_(loc) {
+    opcode = stringToOp(op);
+  }
   ExprValue evaluateBinaryOperands() const;
   // Some operations only support one non absolute value. Move the
   // absolute one to the right hand side for convenience.
@@ -143,10 +176,10 @@ public:
   static ExprValue bitOr(ExprValue a, ExprValue b);
 
 private:
-  StringRef op_;
-  // const ExprValue LHS, RHS;
+  Op opcode;
   const ScriptExpr *LHS, *RHS;
   std::string loc_;
+  static Op stringToOp(const StringRef op);
 };
 
 // This enum is used to implement linker script SECTIONS command.
