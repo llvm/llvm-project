@@ -188,7 +188,7 @@ void RTDyldObjectLinkingLayer::emit(
 
   auto Resolver =
       std::make_unique<JITDylibSearchOrderResolver>(*SharedR, *Deps);
-  auto* ResolverPtr = Resolver.get();
+  auto *ResolverPtr = Resolver.get();
 
   jitLinkForORC(
       object::OwningBinary<object::ObjectFile>(std::move(*Obj), std::move(O)),
