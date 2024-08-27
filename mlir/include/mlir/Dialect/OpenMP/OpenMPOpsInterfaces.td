@@ -82,41 +82,12 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let methods = [
     InterfaceMethod<
       /*description=*/[{
-        Check whether the operation is a valid loop wrapper. That is, it has a
-        single region with a single block in which there are two operations:
-        another loop wrapper or `omp.loop_nest` operation and a terminator.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isValidWrapper",
-      (ins ), [{}], [{
-        if ($_op->getNumRegions() != 1)
-          return false;
-
-        Region &r = $_op->getRegion(0);
-        if (!r.hasOneBlock())
-          return false;
-
-        if (::llvm::range_size(r.getOps()) != 2)
-          return false;
-
-        Operation &firstOp = *r.op_begin();
-        Operation &secondOp = *(std::next(r.op_begin()));
-
-        if (!secondOp.hasTrait<OpTrait::IsTerminator>())
-          return false;
-
-        return ::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp);
-      }]
-    >,
-    InterfaceMethod<
-      /*description=*/[{
         If there is another loop wrapper immediately nested inside, return that
         operation. Assumes this operation is a valid loop wrapper.
       }],
       /*retTy=*/"::mlir::omp::LoopWrapperInterface",
       /*methodName=*/"getNestedWrapper",
       (ins), [{}], [{
-        assert($_op.isValidWrapper() && "Unexpected non-wrapper op");
         Operation *nested = &*$_op->getRegion(0).op_begin();
         return ::llvm::dyn_cast<LoopWrapperInterface>(nested);
       }]
@@ -129,7 +100,6 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
       /*retTy=*/"::mlir::Operation *",
       /*methodName=*/"getWrappedLoop",
       (ins), [{}], [{
-        assert($_op.isValidWrapper() && "Unexpected non-wrapper op");
         if (LoopWrapperInterface nested = $_op.getNestedWrapper())
           return nested.getWrappedLoop();
         return &*$_op->getRegion(0).op_begin();

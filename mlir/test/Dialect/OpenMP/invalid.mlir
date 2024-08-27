@@ -123,7 +123,7 @@ func.func @iv_number_mismatch(%lb : index, %ub : index, %step : index) {
 // -----
 
 func.func @no_wrapper(%lb : index, %ub : index, %step : index) {
-  // expected-error @below {{op must be a valid loop wrapper}}
+  // expected-error @below {{op loop wrapper does not contain exactly two nested ops}}
   omp.wsloop {
     %0 = arith.constant 0 : i32
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -309,7 +309,7 @@ llvm.func @test_omp_wsloop_dynamic_wrong_modifier3(%lb : i64, %ub : i64, %step :
 // -----
 
 func.func @omp_simd() -> () {
-  // expected-error @below {{op must be a valid loop wrapper}}
+  // expected-error @below {{op loop wrapper does not contain exactly two nested ops}}
   omp.simd {
     omp.terminator
   }
@@ -1963,7 +1963,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  // expected-error @below {{op must be a valid loop wrapper}}
+  // expected-error @below {{op first nested op in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
   omp.taskloop {
     %0 = arith.constant 0 : i32
     omp.terminator
@@ -2171,11 +2171,13 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
 
 // -----
 
-func.func @omp_distribute_wrapper() -> () {
-  // expected-error @below {{op must be a valid loop wrapper}}
+func.func @omp_distribute_wrapper(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{op second nested op in loop wrapper is not a terminator}}
   omp.distribute {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        "omp.yield"() : () -> ()
+      }
       %0 = arith.constant 0 : i32
-      "omp.terminator"() : () -> ()
   }
 }
 
