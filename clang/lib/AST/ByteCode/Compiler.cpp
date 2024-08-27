@@ -1344,6 +1344,16 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
+  QualType QT = E->getType();
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
+  if (QT->isVoidType()) {
+    if (Inits.size() == 0)
+      return true;
+    return this->emitInvalid(E);
+  }
+
   // Handle discarding first.
   if (DiscardResult) {
     for (const Expr *Init : Inits) {
@@ -1352,13 +1362,6 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     }
     return true;
   }
-
-  QualType QT = E->getType();
-  if (const auto *AT = QT->getAs<AtomicType>())
-    QT = AT->getValueType();
-
-  if (QT->isVoidType())
-    return this->emitInvalid(E);
 
   // Primitive values.
   if (std::optional<PrimType> T = classify(QT)) {
@@ -3262,9 +3265,6 @@ template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
@@ -3275,9 +3275,12 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   if (E->getType().isNull())
     return false;
 
+  if (E->getType()->isVoidType())
+    return this->discard(E);
+
   // Create local variable to hold the return value.
-  if (!E->getType()->isVoidType() && !E->isGLValue() &&
-      !E->getType()->isAnyComplexType() && !classify(E->getType())) {
+  if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
+      !classify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -3297,9 +3300,6 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
-
-  if (E->containsErrors())
-    return this->emitError(E);
 
   if (!this->checkLiteralType(E))
     return false;
@@ -4385,11 +4385,6 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
-  if (IS->isNonNegatedConsteval())
-    return visitStmt(IS->getThen());
-  if (IS->isNegatedConsteval())
-    return IS->getElse() ? visitStmt(IS->getElse()) : true;
-
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -4398,8 +4393,19 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  if (!this->visitBool(IS->getCond()))
-    return false;
+  // Compile condition.
+  if (IS->isNonNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+  } else if (IS->isNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+    if (!this->emitInv(IS))
+      return false;
+  } else {
+    if (!this->visitBool(IS->getCond()))
+      return false;
+  }
 
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
@@ -5171,7 +5177,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult || E->getType()->isVoidType())
+    if (DiscardResult)
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x

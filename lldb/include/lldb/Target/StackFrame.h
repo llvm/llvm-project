@@ -407,6 +407,11 @@ public:
   /// may have limited support for inspecting variables.
   bool IsArtificial() const;
 
+  /// Query whether this frame should be hidden from backtraces. Frame
+  /// recognizers can customize this behavior and hide distracting
+  /// system implementation details this way.
+  bool IsHidden();
+
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
   ///
@@ -518,33 +523,36 @@ protected:
   bool HasCachedData() const;
 
 private:
-  // For StackFrame only
+  /// For StackFrame only.
+  /// \{
   lldb::ThreadWP m_thread_wp;
   uint32_t m_frame_index;
   uint32_t m_concrete_frame_index;
   lldb::RegisterContextSP m_reg_context_sp;
   StackID m_id;
-  Address m_frame_code_addr; // The frame code address (might not be the same as
-                             // the actual PC for inlined frames) as a
-                             // section/offset address
+  /// \}
+
+  /// The frame code address (might not be the same as the actual PC
+  /// for inlined frames) as a section/offset address.
+  Address m_frame_code_addr;
   SymbolContext m_sc;
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
-  bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
-                       // LLDB_INVALID_ADDRESS
+  uint16_t m_frame_recognizer_generation = 0;
+  /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
+  bool m_cfa_is_valid;
   Kind m_stack_frame_kind;
 
-  // Whether this frame behaves like the zeroth frame, in the sense
-  // that its pc value might not immediately follow a call (and thus might
-  // be the first address of its function). True for actual frame zero as
-  // well as any other frame with the same trait.
+  /// Whether this frame behaves like the zeroth frame, in the sense
+  /// that its pc value might not immediately follow a call (and thus might
+  /// be the first address of its function). True for actual frame zero as
+  /// well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
   lldb::VariableListSP m_variable_list_sp;
-  ValueObjectList m_variable_list_value_objects; // Value objects for each
-                                                 // variable in
-                                                 // m_variable_list_sp
-  lldb::RecognizedStackFrameSP m_recognized_frame_sp;
+  /// Value objects for each variable in m_variable_list_sp.
+  ValueObjectList m_variable_list_value_objects;
+  std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
 

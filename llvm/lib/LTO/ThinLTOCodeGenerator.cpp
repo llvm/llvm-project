@@ -762,7 +762,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
  */
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries, const lto::InputFile &File) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
@@ -833,7 +833,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
   // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
   GVSummaryPtrSet DecSummaries;
-  std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+  ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
       ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
