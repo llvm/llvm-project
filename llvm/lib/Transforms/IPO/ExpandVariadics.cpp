@@ -238,7 +238,7 @@ public:
 
   FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
     // The type of "FTy" with the ... removed and a va_list appended
-    SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+    SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
     return FunctionType::get(FTy->getReturnType(), ArgTypes,
                              /*IsVarArgs=*/false);
@@ -538,7 +538,7 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   const bool FunctionIsDefinition = !F.isDeclaration();
 
   FunctionType *FTy = F.getFunctionType();
-  SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+  SmallVector<Type *> ArgTypes(FTy->params());
   ArgTypes.push_back(ABI->vaListParameterType(M));
 
   FunctionType *NFTy = inlinableVariadicFunctionType(M, FTy);

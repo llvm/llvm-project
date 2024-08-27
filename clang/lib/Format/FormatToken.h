@@ -1978,6 +1978,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
          FormatTok.OriginalColumn >= MinContinueColumn;
 }
 
+// Returns \c true if \c Current starts a new parameter.
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style);
+
 } // namespace format
 } // namespace clang
 

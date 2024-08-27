@@ -141,6 +141,20 @@ struct CufDeallocateOpConversion
   }
 };
 
+static bool inDeviceContext(mlir::Operation *op) {
+  if (op->getParentOfType<cuf::KernelOp>())
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
+  return false;
+}
+
 struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -156,6 +170,16 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     // Only convert cuf.alloc that allocates a descriptor.
     if (!boxTy)
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      // In device context just replace the cuf.alloc operation with a fir.alloc
+      // the cuf.free will be removed.
+      rewriter.replaceOpWithNewOp<fir::AllocaOp>(
+          op, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
+          op.getBindcName() ? *op.getBindcName() : "", op.getTypeparams(),
+          op.getShape());
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -199,6 +223,11 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
     auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getDevptr().getType());
     if (!mlir::isa<fir::BaseBoxType>(refTy.getEleTy()))
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -248,6 +277,7 @@ public:
         [](::cuf::AllocateOp op) { return isBoxGlobal(op); });
     target.addDynamicallyLegalOp<cuf::DeallocateOp>(
         [](::cuf::DeallocateOp op) { return isBoxGlobal(op); });
+    target.addLegalDialect<fir::FIROpsDialect>();
     patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
     patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
                     CufFreeOpConversion>(ctx);

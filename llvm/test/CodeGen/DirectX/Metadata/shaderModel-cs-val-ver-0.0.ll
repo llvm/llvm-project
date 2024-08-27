@@ -1,4 +1,5 @@
-; RUN: opt -S -dxil-prepare  %s | FileCheck %s 
+; RUN: opt -S -dxil-prepare  %s | FileCheck %s
+; RUN: opt -S -passes="print<dxil-metadata>" -disable-output %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
@@ -8,9 +9,15 @@ entry:
 }
 
 ; Make sure experimental attribute is left when validation version is 0.0.
-; CHECK:attributes #0 = { noinline nounwind "exp-shader"="cs" } 
+; CHECK:attributes #0 = { noinline nounwind "exp-shader"="cs" }
 attributes #0 = { noinline nounwind "exp-shader"="cs" "hlsl.numthreads"="1,2,1" "hlsl.shader"="compute" }
 
 !dx.valver = !{!0}
 
 !0 = !{i32 0, i32 0}
+
+; ANALYSIS: Shader Model Version : 6.6
+; ANALYSIS-NEXT: DXIL Version : 1.6
+; ANALYSIS-NEXT: Shader Stage : compute
+; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-EMPTY:

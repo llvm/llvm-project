@@ -22,11 +22,13 @@ subroutine reduce(r)
 end subroutine
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf64 : !fir.ref<!fir.box<!fir.array<?xf64>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf64 : !fir.ref<!fir.box<!fir.array<?xf64>>> alloc {
+! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
+! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f64
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
@@ -38,8 +40,8 @@ end program
 ! CHECK:           %[[SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[REBOX:.*]] = fir.rebox %[[VAL_7]]#0(%[[SHIFT]]) : (!fir.box<!fir.array<?xf64>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xf64>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[REBOX]] : f64, !fir.box<!fir.array<?xf64>>
-! CHECK:           fir.store %[[REBOX]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
+! CHECK:           fir.store %[[REBOX]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf64>>>

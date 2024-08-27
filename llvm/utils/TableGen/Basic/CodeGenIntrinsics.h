@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENINTRINSICS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENINTRINSICS_H
+#ifndef LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H
+#define LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H
 
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -26,12 +26,12 @@ class Record;
 class RecordKeeper;
 
 struct CodeGenIntrinsic {
-  Record *TheDef;       // The actual record defining this intrinsic.
+  const Record *TheDef; // The actual record defining this intrinsic.
   std::string Name;     // The name of the LLVM function "llvm.bswap.i32"
-  std::string EnumName; // The name of the enum "bswap_i32"
-  std::string ClangBuiltinName; // Name of the corresponding GCC builtin, or "".
-  std::string MSBuiltinName;    // Name of the corresponding MS builtin, or "".
-  std::string TargetPrefix;     // Target prefix, e.g. "ppc" for t-s intrinsics.
+  StringRef EnumName;   // The name of the enum "bswap_i32"
+  StringRef ClangBuiltinName; // Name of the corresponding GCC builtin, or "".
+  StringRef MSBuiltinName;    // Name of the corresponding MS builtin, or "".
+  StringRef TargetPrefix;     // Target prefix, e.g. "ppc" for t-s intrinsics.
 
   /// This structure holds the return values and parameter values of an
   /// intrinsic. If the number of return values is > 1, then the intrinsic
@@ -43,13 +43,13 @@ struct CodeGenIntrinsic {
     /// only populated when in the context of a target .td file. When building
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
-    std::vector<Record *> RetTys;
+    std::vector<const Record *> RetTys;
 
     /// The MVT::SimpleValueType for each parameter type. Note that this list is
     /// only populated when in the context of a target .td file.  When building
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
-    std::vector<Record *> ParamTys;
+    std::vector<const Record *> ParamTys;
   };
 
   IntrinsicSignature IS;
@@ -58,54 +58,54 @@ struct CodeGenIntrinsic {
   MemoryEffects ME = MemoryEffects::unknown();
 
   /// SDPatternOperator Properties applied to the intrinsic.
-  unsigned Properties;
+  unsigned Properties = 0;
 
   /// This is set to true if the intrinsic is overloaded by its argument
   /// types.
-  bool isOverloaded;
+  bool isOverloaded = false;
 
   /// True if the intrinsic is commutative.
-  bool isCommutative;
+  bool isCommutative = false;
 
   /// True if the intrinsic can throw.
-  bool canThrow;
+  bool canThrow = false;
 
   /// True if the intrinsic is marked as noduplicate.
-  bool isNoDuplicate;
+  bool isNoDuplicate = false;
 
   /// True if the intrinsic is marked as nomerge.
-  bool isNoMerge;
+  bool isNoMerge = false;
 
   /// True if the intrinsic is no-return.
-  bool isNoReturn;
+  bool isNoReturn = false;
 
   /// True if the intrinsic is no-callback.
-  bool isNoCallback;
+  bool isNoCallback = false;
 
   /// True if the intrinsic is no-sync.
-  bool isNoSync;
+  bool isNoSync = false;
 
   /// True if the intrinsic is no-free.
-  bool isNoFree;
+  bool isNoFree = false;
 
   /// True if the intrinsic is will-return.
-  bool isWillReturn;
+  bool isWillReturn = false;
 
   /// True if the intrinsic is cold.
-  bool isCold;
+  bool isCold = false;
 
   /// True if the intrinsic is marked as convergent.
-  bool isConvergent;
+  bool isConvergent = false;
 
   /// True if the intrinsic has side effects that aren't captured by any
   /// of the other flags.
-  bool hasSideEffects;
+  bool hasSideEffects = false;
 
   // True if the intrinsic is marked as speculatable.
-  bool isSpeculatable;
+  bool isSpeculatable = false;
 
   // True if the intrinsic is marked as strictfp.
-  bool isStrictFP;
+  bool isStrictFP = false;
 
   enum ArgAttrKind {
     NoCapture,
@@ -139,12 +139,12 @@ struct CodeGenIntrinsic {
 
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
-  /// Goes through all IntrProperties that have IsDefault
-  /// value set and sets the property.
-  void setDefaultProperties(Record *R, ArrayRef<Record *> DefaultProperties);
+  /// Goes through all IntrProperties that have IsDefault value set and sets
+  /// the property.
+  void setDefaultProperties(ArrayRef<const Record *> DefaultProperties);
 
-  /// Helper function to set property \p Name to true;
-  void setProperty(Record *R);
+  /// Helper function to set property \p Name to true.
+  void setProperty(const Record *R);
 
   /// Returns true if the parameter at \p ParamIdx is a pointer type. Returns
   /// false if the parameter is not a pointer, or \p ParamIdx is greater than
@@ -155,7 +155,8 @@ struct CodeGenIntrinsic {
 
   bool isParamImmArg(unsigned ParamIdx) const;
 
-  CodeGenIntrinsic(Record *R, ArrayRef<Record *> DefaultProperties);
+  CodeGenIntrinsic(const Record *R,
+                   ArrayRef<const Record *> DefaultProperties = {});
 };
 
 class CodeGenIntrinsicTable {
@@ -163,7 +164,7 @@ class CodeGenIntrinsicTable {
 
 public:
   struct TargetSet {
-    std::string Name;
+    StringRef Name;
     size_t Offset;
     size_t Count;
   };
@@ -183,4 +184,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H

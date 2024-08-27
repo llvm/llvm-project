@@ -1012,7 +1012,8 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
 
     // Add any nested regions to the worklist.
     for (Block &block : *region) {
-      anyChanged = succeeded(dropRedundantArguments(rewriter, block));
+      anyChanged =
+          succeeded(dropRedundantArguments(rewriter, block)) || anyChanged;
 
       for (Operation &op : block)
         for (Region &nestedRegion : op.getRegions())

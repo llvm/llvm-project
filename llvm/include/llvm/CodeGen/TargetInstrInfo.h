@@ -1018,10 +1018,16 @@ public:
   /// The source and destination registers may overlap, which may require a
   /// careful implementation when multiple copy instructions are required for
   /// large registers. See for example the ARM target.
+  ///
+  /// If RenamableDest is true, the copy instruction's destination operand is
+  /// marked renamable.
+  /// If RenamableSrc is true, the copy instruction's source operand is
+  /// marked renamable.
   virtual void copyPhysReg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                           MCRegister DestReg, MCRegister SrcReg,
-                           bool KillSrc) const {
+                           MCRegister DestReg, MCRegister SrcReg, bool KillSrc,
+                           bool RenamableDest = false,
+                           bool RenamableSrc = false) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }
 

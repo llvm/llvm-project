@@ -531,7 +531,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hazard_pointer                       202306L
 // # define __cpp_lib_inplace_vector                       202406L
-// # define __cpp_lib_is_virtual_base_of                   202406L
+# if __has_builtin(__builtin_is_virtual_base_of)
+#   define __cpp_lib_is_virtual_base_of                 202406L
+# endif
 // # define __cpp_lib_is_within_lifetime                   202306L
 // # define __cpp_lib_linalg                               202311L
 # undef  __cpp_lib_mdspan

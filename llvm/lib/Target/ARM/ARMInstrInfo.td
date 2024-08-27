@@ -371,12 +371,14 @@ def ARMVCCElse : PatLeaf<(i32 2)>;
 
 // imm_neg_XFORM - Return the negation of an i32 immediate value.
 def imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32,
+                                   /*isTarget=*/true);
 }]>;
 
 // imm_not_XFORM - Return the complement of a i32 immediate value.
 def imm_not_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32,
+                                   /*isTarget=*/true);
 }]>;
 def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
   GISDNodeXFormEquiv<imm_not_XFORM>;

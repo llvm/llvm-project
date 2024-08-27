@@ -3591,10 +3591,10 @@ static bool isX87Reg(unsigned Reg) {
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
-  // Call defs X87 register, so we special case it here because
+  // Call and inlineasm defs X87 register, so we special case it here because
   // otherwise calls are incorrectly flagged as x87 instructions
   // as a result.
-  if (MI.isCall())
+  if (MI.isCall() || MI.isInlineAsm())
     return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
@@ -4293,7 +4293,8 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
 void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               MCRegister SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
   bool HasVLX = Subtarget.hasVLX();

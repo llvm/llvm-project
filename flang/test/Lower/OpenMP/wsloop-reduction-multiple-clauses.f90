@@ -24,11 +24,13 @@ program main
 
 endprogram
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x3xf64 : !fir.ref<!fir.box<!fir.array<3x3xf64>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x3xf64 : !fir.ref<!fir.box<!fir.array<3x3xf64>>> alloc {
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<3x3xf64>>
+! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f64
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<3x3xf64>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
@@ -42,8 +44,8 @@ endprogram
 ! CHECK:           %[[VAL_14:.*]] = fir.shape_shift %[[VAL_11]]#0, %[[VAL_11]]#1, %[[VAL_13]]#0, %[[VAL_13]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_9]]#0(%[[VAL_14]]) : (!fir.heap<!fir.array<3x3xf64>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x3xf64>>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_15]] : f64, !fir.box<!fir.array<3x3xf64>>
-! CHECK:           fir.store %[[VAL_15]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
-! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
+! CHECK:           fir.store %[[VAL_15]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>):

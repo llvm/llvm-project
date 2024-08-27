@@ -423,10 +423,12 @@ class IndexSet<int tuple_index, int nf, int lmul, bit isV0 = false> {
 
 // This class returns a list of vector register collections.
 // For example, for NF = 2 and LMUL = 4,
-// it will return
+// L would be:
 //   ([ V8M4, V12M4, V16M4, V20M4, V24M4, V4M4],
 //    [V12M4, V16M4, V20M4, V24M4, V28M4, V8M4])
-//
+// Names are the starting register of each register list,
+// in this example:
+//   ["v8", "v12", "v16", "v20", "v24", "v4"]
 class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
   list<dag> L =
     !if(!ge(start, nf),
@@ -440,6 +442,9 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
                 !listsplat("",
                   !size(IndexSet<start, nf, lmul, isV0>.R)))],
           VRegList<LIn, !add(start, 1), nf, lmul, isV0>.L));
+  list<string> Names =
+    !if(!ge(start, nf), [],
+        !foreach(i, IndexSet<start, nf, lmul, isV0>.R, "v" # i));
 }
 
 // Vector registers
@@ -491,12 +496,16 @@ def VCSR : RISCVRegisterClass<[XLenVT], 32,
 
 foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
+    defvar RegListWOV0 = VRegList<[], 0, n, m, false>;
+    defvar RegListWV0 = VRegList<[], 0, n, m, true>;
     def "VN" # n # "M" # m # "NoV0": RegisterTuples<
                                        SubRegSet<n, m>.L,
-                                       VRegList<[], 0, n, m, false>.L>;
+                                       RegListWOV0.L,
+                                       RegListWOV0.Names>;
     def "VN" # n # "M" # m # "V0" : RegisterTuples<
                                        SubRegSet<n, m>.L,
-                                       VRegList<[], 0, n, m, true>.L>;
+                                       RegListWV0.L,
+                                       RegListWV0.Names>;
   }
 }
 

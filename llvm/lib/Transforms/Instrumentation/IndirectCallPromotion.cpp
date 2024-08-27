@@ -117,7 +117,7 @@ static cl::opt<bool>
 // Indirect call promotion pass will fall back to function-based comparison if
 // vtable-count / function-count is smaller than this threshold.
 static cl::opt<float> ICPVTablePercentageThreshold(
-    "icp-vtable-percentage-threshold", cl::init(0.99), cl::Hidden,
+    "icp-vtable-percentage-threshold", cl::init(0.995), cl::Hidden,
     cl::desc("The percentage threshold of vtable-count / function-count for "
              "cost-benefit analysis."));
 
@@ -364,8 +364,7 @@ private:
 
   // Return true if it's profitable to compare vtables for the callsite.
   bool isProfitableToCompareVTables(const CallBase &CB,
-                                    ArrayRef<PromotionCandidate> Candidates,
-                                    uint64_t TotalCount);
+                                    ArrayRef<PromotionCandidate> Candidates);
 
   // Given an indirect callsite and the list of function candidates, compute
   // the following vtable information in output parameters and return vtable
@@ -818,7 +817,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
     Instruction *VPtr =
         computeVTableInfos(CB, VTableGUIDCounts, PromotionCandidates);
 
-    if (isProfitableToCompareVTables(*CB, PromotionCandidates, TotalCount))
+    if (isProfitableToCompareVTables(*CB, PromotionCandidates))
       Changed |= tryToPromoteWithVTableCmp(*CB, VPtr, PromotionCandidates,
                                            TotalCount, NumCandidates,
                                            ICallProfDataRef, VTableGUIDCounts);
@@ -833,8 +832,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
 // TODO: Return false if the function addressing and vtable load instructions
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
-    const CallBase &CB, ArrayRef<PromotionCandidate> Candidates,
-    uint64_t TotalCount) {
+    const CallBase &CB, ArrayRef<PromotionCandidate> Candidates) {
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;
   LLVM_DEBUG(dbgs() << "\nEvaluating vtable profitability for callsite #"
