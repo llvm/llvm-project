@@ -7431,13 +7431,12 @@ static SDValue getLargeExternalSymbol(ExternalSymbolSDNode *N, SDLoc DL, EVT Ty,
 
 template <class NodeTy>
 static SDValue getLargeAddr(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG) {
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N)) {
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N))
     return getLargeGlobalAddress(G, DL, Ty, DAG);
-  } else {
-    // Using pc-relative mode for other node type.
-    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
-    return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
-  }
+
+  // Using pc-relative mode for other node type.
+  SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+  return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
 }
 
 template <class NodeTy>

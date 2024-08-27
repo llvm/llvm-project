@@ -74,7 +74,7 @@ void RISCVConstantPoolValue::print(raw_ostream &O) const {
 bool RISCVConstantPoolValue::equals(const RISCVConstantPoolValue *A) const {
   if (isGlobalValue() && A->isGlobalValue())
     return GV == A->GV;
-  else if (isExtSymbol() && A->isExtSymbol())
+  if (isExtSymbol() && A->isExtSymbol())
     return S == A->S;
 
   return false;
