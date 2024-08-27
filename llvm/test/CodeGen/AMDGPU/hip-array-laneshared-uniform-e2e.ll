@@ -97,10 +97,8 @@ define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegr
 ; CHECK-NEXT:    s_add_co_i32 s0, s0, 4
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 0x46
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s3
-; CHECK-NEXT:    v_cndmask_b32_e64 v8, v8, v7, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 v0, v8
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v8, v7, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
 ; CHECK-NEXT:  ; %bb.4: ; %for.cond.cleanup6

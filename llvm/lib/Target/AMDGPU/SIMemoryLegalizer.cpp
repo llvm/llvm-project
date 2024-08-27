@@ -2730,8 +2730,6 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
 
 bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
                                           MachineBasicBlock::iterator &MI) {
-  assert(MI->getOpcode() == AMDGPU::ATOMIC_FENCE);
-
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
@@ -2780,10 +2778,8 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   return Changed;
 }
 
-bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
-  MachineBasicBlock::iterator &MI) {
-  assert(MI->mayLoad() && MI->mayStore());
-
+bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(
+    const SIMemOpInfo &MOI, MachineBasicBlock::iterator &MI) {
   bool Changed = false;
 
   if (MOI.isAtomic()) {

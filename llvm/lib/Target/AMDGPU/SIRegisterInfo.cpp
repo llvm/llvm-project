@@ -3028,8 +3028,14 @@ unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
-static const TargetRegisterClass *
-getAnyVGPRClassForBitWidth(unsigned BitWidth) {
+const TargetRegisterClass *
+SIRegisterInfo::getAnyVGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth == 1)
+    return &AMDGPU::VReg_1RegClass;
+  if (BitWidth == 16)
+    return &AMDGPU::VGPR_16RegClass;
+  if (BitWidth == 32)
+    return &AMDGPU::VGPR_32RegClass;
   if (BitWidth == 64)
     return &AMDGPU::VReg_64RegClass;
   if (BitWidth == 96)

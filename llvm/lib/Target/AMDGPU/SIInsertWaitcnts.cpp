@@ -2132,8 +2132,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (ScoreBrackets.hasPendingEvent(BVH_CNT))
       Wait.BvhCnt = 0;
   }
-
-  return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,
+  // We do allow s_waitcnt in bundle, however, it is better to
+  // put the s_waitcnt out of bundle when possible.
+  auto InsertPt = MI.getIterator();
+  if (MI.isBundled() && (MI.getOpcode() == AMDGPU::V_STORE_IDX ||
+                         MI.getOpcode() == AMDGPU::V_LOAD_IDX))
+    InsertPt = getBundleStart(MI.getIterator());
+  return generateWaitcnt(Wait, InsertPt, *MI.getParent(), ScoreBrackets,
                          OldWaitcntInstr);
 }
 
