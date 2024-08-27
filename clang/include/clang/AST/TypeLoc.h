@@ -944,20 +944,16 @@ struct HLSLAttributedResourceLocInfo {
   SourceRange Range;
 };
 
-/// Type source information for an btf_tag attributed type.
+/// Type source information for HLSL attributed resource type.
 class HLSLAttributedResourceTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, HLSLAttributedResourceTypeLoc,
                              HLSLAttributedResourceType,
                              HLSLAttributedResourceLocInfo> {
 public:
   TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
-
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
-
   SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
-
   void initializeLocal(ASTContext &Context, SourceLocation loc) { setSourceRange(SourceRange()); }
-
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 

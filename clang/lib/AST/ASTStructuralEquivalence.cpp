@@ -1098,6 +1098,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context, cast<HLSLAttributedResourceType>(T1)->getWrappedType(),
             cast<HLSLAttributedResourceType>(T2)->getWrappedType()))
       return false;
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
+            cast<HLSLAttributedResourceType>(T2)->getContainedType()))
+      return false;
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs().Data !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs().Data)
+      return false;
     break;
 
   case Type::Paren:

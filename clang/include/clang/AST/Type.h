@@ -67,7 +67,6 @@ class ValueDecl;
 class TagDecl;
 class TemplateParameterList;
 class Type;
-class Attr;
 
 enum {
   TypeAlignmentInBits = 4,
