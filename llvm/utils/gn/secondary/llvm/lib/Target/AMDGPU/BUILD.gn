@@ -166,7 +166,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULowerModuleLDSPass.cpp",
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMIRFormatter.cpp",
-    "AMDGPUMachineCFGStructurizer.cpp",
     "AMDGPUMachineFunction.cpp",
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
