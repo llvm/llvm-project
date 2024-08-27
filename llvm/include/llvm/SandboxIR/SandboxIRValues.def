@@ -54,6 +54,7 @@ DEF_INSTR(CleanupPad,     OP(CleanupPad),     CleanupPadInst)
 DEF_INSTR(CatchRet,       OP(CatchRet),       CatchReturnInst)
 DEF_INSTR(CleanupRet,     OP(CleanupRet),     CleanupReturnInst)
 DEF_INSTR(GetElementPtr,  OP(GetElementPtr),  GetElementPtrInst)
+DEF_INSTR(Resume,         OP(Resume),         ResumeInst)
 DEF_INSTR(CatchSwitch,    OP(CatchSwitch),    CatchSwitchInst)
 DEF_INSTR(Switch,         OP(Switch),         SwitchInst)
 DEF_INSTR(UnOp,           OPCODES( \
