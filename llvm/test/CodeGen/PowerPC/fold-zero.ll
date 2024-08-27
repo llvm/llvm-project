@@ -14,9 +14,8 @@ define i32 @test1(i1 %a, i32 %c) nounwind  {
 ; CHECK: blr
 ; CHECK-NO-ISEL-LABEL: @test1
 ; CHECK-NO-ISEL: li 3, 0
-; CHECK-NO-ISEL-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL-NEXT: blr
-; CHECK-NO-ISEL-NEXT: [[TRUE]]
+; CHECK-NO-ISEL-NEXT: bclr 4, 1, 0
+; CHECK-NO-ISEL-NEXT: # %bb.1:
 ; CHECK-NO-ISEL-NEXT: addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT: blr
 }

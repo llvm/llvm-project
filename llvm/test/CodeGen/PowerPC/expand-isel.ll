@@ -31,9 +31,8 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELToIf
 ; CHECK: cmpwi	 r3, 0
-; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
-; CHECK-NEXT: blr
-; CHECK-NEXT:  [[TRUE]]
+; CHECK-NEXT: bclr 4, gt, 0
+; CHECK-NEXT: # %bb.1: # %entry
 ; CHECK-NEXT: addi r3, r4, 0
 ; CHECK-NEXT: blr
 }
@@ -155,9 +154,8 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELsTo0ORI2ADDIs
 ; CHECK: cmpwi r7, 0
-; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
-; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
-; CHECK-NEXT:  [[TRUE]]
+; CHECK-NEXT: bc 4, gt, [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NEXT: # %bb.1: # %entry
 ; CHECK-NEXT: addi r4, r3, 0
 ; CHECK-NEXT: addi r6, r5, 0
 ; CHECK-NEXT:  [[SUCCESSOR]]

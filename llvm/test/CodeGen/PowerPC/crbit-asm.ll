@@ -31,9 +31,8 @@ define zeroext i1 @testi1(i1 zeroext %b1, i1 zeroext %b2) #0 {
 ; CHECK-NO-ISEL-NEXT:    #APP
 ; CHECK-NO-ISEL-NEXT:    crand 20, 20, 1
 ; CHECK-NO-ISEL-NEXT:    #NO_APP
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB0_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB0_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 20, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
@@ -68,9 +67,8 @@ define signext i32 @testi32(i32 signext %b1, i32 signext %b2) #0 {
 ; CHECK-NO-ISEL-NEXT:    #APP
 ; CHECK-NO-ISEL-NEXT:    crand 20, 20, 1
 ; CHECK-NO-ISEL-NEXT:    #NO_APP
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB1_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB1_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 20, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
@@ -106,9 +104,8 @@ define zeroext i8 @testi8(i8 zeroext %b1, i8 zeroext %b2) #0 {
 ; CHECK-NO-ISEL-NEXT:    #APP
 ; CHECK-NO-ISEL-NEXT:    crand 20, 20, 1
 ; CHECK-NO-ISEL-NEXT:    #NO_APP
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB2_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB2_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 20, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:

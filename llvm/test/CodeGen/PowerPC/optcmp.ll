@@ -21,7 +21,6 @@ define signext i32 @foo(i32 signext %a, i32 signext %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB0_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB0_2
 ; CHECK-NO-ISEL-NEXT:  .LBB0_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    stw 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -77,7 +76,6 @@ define i64 @fool(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB2_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB2_2
 ; CHECK-NO-ISEL-NEXT:  .LBB2_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -100,9 +98,8 @@ define i64 @foolb(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-LABEL: foolb:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    sub. 6, 3, 4
-; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB3_1
-; CHECK-NO-ISEL-NEXT:    b .LBB3_2
-; CHECK-NO-ISEL-NEXT:  .LBB3_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bc 4, 1, .LBB3_2
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:  .LBB3_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
@@ -129,7 +126,6 @@ define i64 @foolc(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    bc 12, 0, .LBB4_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB4_2
 ; CHECK-NO-ISEL-NEXT:  .LBB4_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -155,7 +151,6 @@ define i64 @foold(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB5_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB5_2
 ; CHECK-NO-ISEL-NEXT:  .LBB5_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -181,7 +176,6 @@ define i64 @foold2(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    bc 12, 0, .LBB6_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB6_2
 ; CHECK-NO-ISEL-NEXT:  .LBB6_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -339,7 +333,6 @@ define signext i64 @fooct(i64 signext %a, i64 signext %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB10_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB10_2
 ; CHECK-NO-ISEL-NEXT:  .LBB10_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr

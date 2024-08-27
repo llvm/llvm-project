@@ -152,7 +152,7 @@ wait_on_buffer.exit1319:                          ; preds = %while.body392
 ; CHECK: iselgt {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: ori 5, 3, 0
-; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NO-ISEL-NEXT: [[TRUE]]
 
 
 while.end418:                                     ; preds = %wait_on_buffer.exit1319, %do.body378

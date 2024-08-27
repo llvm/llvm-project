@@ -134,9 +134,9 @@ _ZNK4llvm9StringRef6substrEmm.exit:
 ; Unecessary ISEL (all the registers are the same) is always removed
 ; CHECK-GEN-ISEL-TRUE-NOT: iseleq [[SAME:r[0-9]+]], [[SAME]], [[SAME]]
 ; CHECK-GEN-ISEL-TRUE: iseleq [[SAME:r[0-9]+]], {{r[0-9]+}}, [[SAME]]
-; CHECK: bc 12, eq, [[TRUE:.LBB[0-9]+]]
-; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
-; CHECK-NEXT: [[TRUE]]
+; CHECK: bc 12, lt, [[TRUE:.LBB[0-9]+]]
+; CHECK: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK: [[TRUE]]
 ; CHECK-NEXT: # in Loop: Header
 ; CHECK-NEXT: addi {{r[0-9]+}}, {{r[0-9]+}}, 0
 ; CHECK-NEXT: [[SUCCESSOR]]

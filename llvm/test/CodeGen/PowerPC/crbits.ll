@@ -36,9 +36,8 @@ define zeroext i1 @test1(float %v1, float %v2) #0 {
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 0
 ; CHECK-NO-ISEL-NEXT:    crnor 21, 7, 1
 ; CHECK-NO-ISEL-NEXT:    crnand 20, 20, 21
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB0_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB0_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 20, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 3, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
@@ -87,9 +86,8 @@ define zeroext i1 @test2(float %v1, float %v2) #0 {
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 0
 ; CHECK-NO-ISEL-NEXT:    crnor 21, 7, 1
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 20, 21
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB1_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB1_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 20, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 3, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
@@ -142,9 +140,8 @@ define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ; CHECK-NO-ISEL-NEXT:    cmpwi 5, -2
 ; CHECK-NO-ISEL-NEXT:    crandc 21, 21, 2
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 20, 21
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB2_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB2_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 20, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 3, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
@@ -332,9 +329,8 @@ define signext i32 @exttest7(i32 signext %a) #0 {
 ; CHECK-NO-ISEL-NEXT:    cmplwi 3, 5
 ; CHECK-NO-ISEL-NEXT:    li 3, 8
 ; CHECK-NO-ISEL-NEXT:    li 4, 7
-; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB7_1
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB7_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bclr 4, 2, 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
@@ -369,9 +365,8 @@ define zeroext i32 @exttest8() #0 {
 ; CHECK-NO-ISEL-NEXT:    subfic 3, 3, 80
 ; CHECK-NO-ISEL-NEXT:    rldicl 3, 3, 63, 1
 ; CHECK-NO-ISEL-NEXT:    cmplwi 3, 80
-; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB8_1
-; CHECK-NO-ISEL-NEXT:    b .LBB8_2
-; CHECK-NO-ISEL-NEXT:  .LBB8_1: # %entry
+; CHECK-NO-ISEL-NEXT:    bc 4, 1, .LBB8_2
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 3, 0
 ; CHECK-NO-ISEL-NEXT:  .LBB8_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    clrldi 3, 3, 32
