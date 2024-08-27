@@ -1104,7 +1104,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   }
 }
 
-const ProgramPointTag* ExprEngine::cleanupNodeTag() {
+const ProgramPointTag *ExprEngine::cleanupNodeTag() {
   static SimpleProgramPointTag cleanupTag(TagProviderName, "Clean Node");
   return &cleanupTag;
 }
