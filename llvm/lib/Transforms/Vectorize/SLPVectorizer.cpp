@@ -17583,7 +17583,7 @@ public:
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI) {
-    constexpr int ReductionLimit = 4;
+    const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -17799,13 +17799,15 @@ public:
 
       unsigned MaxVecRegSize = V.getMaxVecRegSize();
       unsigned EltSize = V.getVectorElementSize(Candidates[0]);
-      unsigned MaxElts =
-          RegMaxNumber * llvm::bit_floor(MaxVecRegSize / EltSize);
+      const unsigned MaxElts = std::clamp<unsigned>(
+          llvm::bit_floor(MaxVecRegSize / EltSize), RedValsMaxNumber,
+          RegMaxNumber * RedValsMaxNumber);
 
-      unsigned ReduxWidth = std::min<unsigned>(
-          llvm::bit_floor(NumReducedVals),
-          std::clamp<unsigned>(MaxElts, RedValsMaxNumber,
-                               RegMaxNumber * RedValsMaxNumber));
+      unsigned ReduxWidth = NumReducedVals;
+      if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
+        ReduxWidth = bit_floor(ReduxWidth);
+      ReduxWidth = std::min(ReduxWidth, MaxElts);
+
       unsigned Start = 0;
       unsigned Pos = Start;
       // Restarts vectorization attempt with lower vector factor.
@@ -17825,7 +17827,7 @@ public:
         if (Pos < NumReducedVals - ReduxWidth + 1)
           return IsAnyRedOpGathered;
         Pos = Start;
-        ReduxWidth /= 2;
+        ReduxWidth = bit_ceil(ReduxWidth) / 2;
         return IsAnyRedOpGathered;
       };
       bool AnyVectorized = false;
@@ -18014,12 +18016,10 @@ public:
                 createStrideMask(I, ScalarTyNumElements, VL.size());
             Value *Lane = Builder.CreateShuffleVector(VectorizedRoot, Mask);
             ReducedSubTree = Builder.CreateInsertElement(
-                ReducedSubTree, emitReduction(Lane, Builder, ReduxWidth, TTI),
-                I);
+                ReducedSubTree, emitReduction(Lane, Builder, TTI), I);
           }
         } else {
-          ReducedSubTree =
-              emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
+          ReducedSubTree = emitReduction(VectorizedRoot, Builder, TTI);
         }
         if (ReducedSubTree->getType() != VL.front()->getType()) {
           assert(ReducedSubTree->getType() != VL.front()->getType() &&
@@ -18301,10 +18301,8 @@ private:
 
   /// Emit a horizontal reduction of the vectorized value.
   Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
-                       unsigned ReduxWidth, const TargetTransformInfo *TTI) {
+                       const TargetTransformInfo *TTI) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
-    assert(has_single_bit(ReduxWidth) &&
-           "We only handle power-of-two reductions for now");
     assert(RdxKind != RecurKind::FMulAdd &&
            "A call to the llvm.fmuladd intrinsic is not handled yet");
 
