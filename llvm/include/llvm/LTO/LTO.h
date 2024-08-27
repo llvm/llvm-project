@@ -21,8 +21,10 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -36,6 +38,7 @@ class MemoryBufferRef;
 class Module;
 class raw_pwrite_stream;
 class ToolOutputFile;
+class UniqueStringSaver;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
 /// recorded in the index and the ThinLTO backends must apply the changes to
@@ -404,6 +407,10 @@ private:
       RegularLTO = 0,
     };
   };
+
+  std::unique_ptr<llvm::BumpPtrAllocator> Alloc =
+      std::make_unique<BumpPtrAllocator>();
+  llvm::UniqueStringSaver UniqueSymbolSaver{*Alloc};
 
   // Global mapping from mangled symbol names to resolutions.
   // Make this an optional to guard against accessing after it has been reset
