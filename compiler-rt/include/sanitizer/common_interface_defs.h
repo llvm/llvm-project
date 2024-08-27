@@ -213,7 +213,7 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
 /// \param old_storage_end End of the old container region.
 /// \param new_storage_beg Beginning of the new container region.
 /// \param new_storage_end End of the new container region.
-void SANITIZER_CDECL __sanitizer_move_contiguous_container_annotations(
+void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
     const void *old_storage_beg, const void *old_storage_end,
     const void *new_storage_beg, const void *new_storage_end);
 

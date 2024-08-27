@@ -576,6 +576,7 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
+// Checks if two pointers fall within the same memory granule.
 static bool WithinOneGranule(uptr p, uptr q) {
   if (p == q)
     return true;
@@ -583,25 +584,58 @@ static bool WithinOneGranule(uptr p, uptr q) {
          RoundDownTo(q - 1, ASAN_SHADOW_GRANULARITY);
 }
 
-static void PoisonContainer(uptr storage_beg, uptr storage_end) {
-  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
-  uptr internal_beg = RoundUpTo(storage_beg, granularity);
-  uptr external_beg = RoundDownTo(storage_beg, granularity);
-  uptr internal_end = RoundDownTo(storage_end, granularity);
+// Copies ASan memory annotation (a shadow memory value)
+// from one granule to another.
+static void CopyGranuleAnnotation(uptr dst, uptr src) {
+  *(u8 *)MemToShadow(dst) = *(u8 *)MemToShadow(src);
+}
 
-  if (internal_end > internal_beg)
-    PoisonShadow(internal_beg, internal_end - internal_beg,
-                 kAsanContiguousContainerOOBMagic);
-  // The new buffer may start in the middle of a granule.
-  if (internal_beg != storage_beg && internal_beg < internal_end &&
-      !AddressIsPoisoned(storage_beg)) {
-    *(u8 *)MemToShadow(external_beg) =
-        static_cast<u8>(storage_beg - external_beg);
+// Marks the specified number of bytes in a granule as accessible or
+// poisones the whole granule with kAsanContiguousContainerOOBMagic value.
+static void AnnotateContainerGranuleAccessibleBytes(uptr ptr, u8 n) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  if (n == granularity) {
+    *(u8 *)MemToShadow(ptr) = 0;
+  } else if (n == 0) {
+    *(u8 *)MemToShadow(ptr) = static_cast<u8>(kAsanContiguousContainerOOBMagic);
+  } else {
+    *(u8 *)MemToShadow(ptr) = n;
   }
-  // The new buffer may end in the middle of a granule.
-  if (internal_end != storage_end && AddressIsPoisoned(storage_end)) {
-    *(u8 *)MemToShadow(internal_end) =
-        static_cast<u8>(kAsanContiguousContainerOOBMagic);
+}
+
+// Performs a byte-by-byte copy of ASan annotations (shadow memory values).
+// Result may be different due to ASan limitations, but result cannot lead
+// to false positives (more memory than requested may get unpoisoned).
+static void SlowCopyContainerAnnotations(uptr old_storage_beg,
+                                         uptr old_storage_end,
+                                         uptr new_storage_beg,
+                                         uptr new_storage_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
+  uptr old_ptr = old_storage_beg;
+  uptr new_ptr = new_storage_beg;
+
+  while (new_ptr < new_storage_end) {
+    uptr next_new = RoundUpTo(new_ptr + 1, granularity);
+    uptr granule_begin = next_new - granularity;
+    uptr unpoisoned_bytes = 0;
+
+    for (; new_ptr != next_new && new_ptr != new_storage_end;
+         ++new_ptr, ++old_ptr) {
+      if (!AddressIsPoisoned(old_ptr)) {
+        unpoisoned_bytes = new_ptr - granule_begin + 1;
+      }
+    }
+    if (new_ptr < new_storage_end || new_ptr == new_internal_end ||
+        AddressIsPoisoned(new_storage_end)) {
+      if (unpoisoned_bytes != 0 || granule_begin >= new_storage_beg) {
+        AnnotateContainerGranuleAccessibleBytes(granule_begin,
+                                                unpoisoned_bytes);
+      } else if (!AddressIsPoisoned(new_storage_beg)) {
+        AnnotateContainerGranuleAccessibleBytes(
+            granule_begin, new_storage_beg - granule_begin);
+      }
+    }
   }
 }
 
@@ -616,7 +650,7 @@ static void PoisonContainer(uptr storage_beg, uptr storage_end) {
 // the function handles this by going byte by byte, slowing down performance.
 // The old buffer annotations are not removed. If necessary,
 // user can unpoison old buffer with __asan_unpoison_memory_region.
-void __sanitizer_move_contiguous_container_annotations(
+void __sanitizer_copy_contiguous_container_annotations(
     const void *old_storage_beg_p, const void *old_storage_end_p,
     const void *new_storage_beg_p, const void *new_storage_end_p) {
   if (!flags()->detect_container_overflow)
@@ -639,7 +673,7 @@ void __sanitizer_move_contiguous_container_annotations(
       (old_storage_end - old_storage_beg) !=
           (new_storage_end - new_storage_beg)) {
     GET_STACK_TRACE_FATAL_HERE;
-    ReportBadParamsToMoveContiguousContainerAnnotations(
+    ReportBadParamsToCopyContiguousContainerAnnotations(
         old_storage_beg, old_storage_end, new_storage_beg, new_storage_end,
         &stack);
   }
@@ -647,101 +681,44 @@ void __sanitizer_move_contiguous_container_annotations(
   if (old_storage_beg == old_storage_end)
     return;
 
+  if (old_storage_beg % granularity != new_storage_beg % granularity ||
+      WithinOneGranule(new_storage_beg, new_storage_end)) {
+    SlowCopyContainerAnnotations(old_storage_beg, old_storage_end,
+                                 new_storage_beg, new_storage_end);
+    return;
+  }
+
   uptr new_internal_beg = RoundUpTo(new_storage_beg, granularity);
-  uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
-  uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
-  uptr old_external_beg = RoundDownTo(old_storage_beg, granularity);
   uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
-  uptr old_internal_end = RoundDownTo(old_storage_end, granularity);
-
-  // At the very beginning we poison the whole buffer.
-  // Later we unpoison what is necessary.
-  PoisonContainer(new_storage_beg, new_storage_end);
-
-  // There are two cases.
-  // 1) Distance between buffers is granule-aligned.
-  // 2) It's not aligned, and therefore requires going byte by byte.
-  if (old_storage_beg % granularity == new_storage_beg % granularity) {
-    // When buffers are aligned in the same way, we can just copy shadow memory,
-    // except the first and the last granule.
-    if (new_internal_end > new_internal_beg)
-      __builtin_memcpy((u8 *)MemToShadow(new_internal_beg),
-                       (u8 *)MemToShadow(old_internal_beg),
-                       (new_internal_end - new_internal_beg) / granularity);
-    // If the beginning and the end of the storage are aligned, we are done.
-    // Otherwise, we have to handle remaining granules.
-    if (new_internal_beg != new_storage_beg ||
-        new_internal_end != new_storage_end) {
-      if (WithinOneGranule(new_storage_beg, new_storage_end)) {
-        if (new_internal_end == new_storage_end) {
-          if (!AddressIsPoisoned(old_storage_beg)) {
-            *(u8 *)MemToShadow(new_external_beg) =
-                *(u8 *)MemToShadow(old_external_beg);
-          } else if (!AddressIsPoisoned(new_storage_beg)) {
-            *(u8 *)MemToShadow(new_external_beg) =
-                new_storage_beg - new_external_beg;
-          }
-        } else if (AddressIsPoisoned(new_storage_end)) {
-          if (!AddressIsPoisoned(old_storage_beg)) {
-            *(u8 *)MemToShadow(new_external_beg) =
-                AddressIsPoisoned(old_storage_end)
-                    ? *(u8 *)MemToShadow(old_internal_end)
-                    : new_storage_end - new_external_beg;
-          } else if (!AddressIsPoisoned(new_storage_beg)) {
-            *(u8 *)MemToShadow(new_external_beg) =
-                (new_storage_beg == new_external_beg)
-                    ? static_cast<u8>(kAsanContiguousContainerOOBMagic)
-                    : new_storage_beg - new_external_beg;
-          }
-        }
-      } else {
-        // Buffer is not within one granule!
-        if (new_internal_beg != new_storage_beg) {
-          if (!AddressIsPoisoned(old_storage_beg)) {
-            *(u8 *)MemToShadow(new_external_beg) =
-                *(u8 *)MemToShadow(old_external_beg);
-          } else if (!AddressIsPoisoned(new_storage_beg)) {
-            *(u8 *)MemToShadow(new_external_beg) =
-                new_storage_beg - new_external_beg;
-          }
-        }
-        if (new_internal_end != new_storage_end &&
-            AddressIsPoisoned(new_storage_end)) {
-          *(u8 *)MemToShadow(new_internal_end) =
-              AddressIsPoisoned(old_storage_end)
-                  ? *(u8 *)MemToShadow(old_internal_end)
-                  : old_storage_end - old_internal_end;
-        }
-      }
+  if (new_internal_end > new_internal_beg) {
+    uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
+    __builtin_memcpy((u8 *)MemToShadow(new_internal_beg),
+                     (u8 *)MemToShadow(old_internal_beg),
+                     (new_internal_end - new_internal_beg) / granularity);
+  }
+  // The only remaining cases involve edge granules when the container starts or
+  // ends within a granule. We already know that the container's start and end
+  // points lie in different granules.
+  if (new_internal_beg != new_storage_beg) {
+    // First granule
+    uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
+    uptr old_external_beg = RoundDownTo(old_storage_beg, granularity);
+    if (!AddressIsPoisoned(old_storage_beg)) {
+      CopyGranuleAnnotation(new_external_beg, old_external_beg);
+    } else if (!AddressIsPoisoned(new_storage_beg)) {
+      AnnotateContainerGranuleAccessibleBytes(
+          new_external_beg, new_storage_beg - new_external_beg);
     }
-  } else {
-    // If buffers are not aligned, we have to go byte by byte.
-    uptr old_ptr = old_storage_beg;
-    uptr new_ptr = new_storage_beg;
-    uptr next_new;
-    for (; new_ptr < new_storage_end;) {
-      next_new = RoundUpTo(new_ptr + 1, granularity);
-      uptr unpoison_to = 0;
-      for (; new_ptr != next_new && new_ptr != new_storage_end;
-           ++new_ptr, ++old_ptr) {
-        if (!AddressIsPoisoned(old_ptr)) {
-          unpoison_to = new_ptr + 1;
-        }
-      }
-      if (new_ptr < new_storage_end || new_ptr == new_internal_end ||
-          AddressIsPoisoned(new_storage_end)) {
-        uptr granule_beg = RoundDownTo(new_ptr - 1, granularity);
-        if (unpoison_to != 0) {
-          uptr value =
-              (unpoison_to == next_new) ? 0 : unpoison_to - granule_beg;
-          *(u8 *)MemToShadow(granule_beg) = static_cast<u8>(value);
-        } else {
-          *(u8 *)MemToShadow(granule_beg) =
-              (granule_beg >= new_storage_beg)
-                  ? static_cast<u8>(kAsanContiguousContainerOOBMagic)
-                  : new_storage_beg - granule_beg;
-        }
-      }
+  }
+  if (new_internal_end != new_storage_end &&
+      AddressIsPoisoned(new_storage_end)) {
+    // Last granule
+    uptr old_internal_end = RoundDownTo(old_storage_end, granularity);
+    if (AddressIsPoisoned(old_storage_end)) {
+      CopyGranuleAnnotation(new_internal_end, old_internal_end);
+    } else {
+      AnnotateContainerGranuleAccessibleBytes(
+          new_internal_end, old_storage_end - old_internal_end);
     }
   }
 }

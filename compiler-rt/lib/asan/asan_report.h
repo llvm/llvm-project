@@ -88,7 +88,7 @@ void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
     uptr storage_beg, uptr storage_end, uptr old_container_beg,
     uptr old_container_end, uptr new_container_beg, uptr new_container_end,
     BufferedStackTrace *stack);
-void ReportBadParamsToMoveContiguousContainerAnnotations(
+void ReportBadParamsToCopyContiguousContainerAnnotations(
     uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
     uptr new_storage_end, BufferedStackTrace *stack);
 
