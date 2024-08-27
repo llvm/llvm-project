@@ -54,7 +54,7 @@ public:
 } // namespace
 
 static bool ParseParams;
-static bool StripUnderscore = false;
+static bool StripUnderscore;
 static bool Types;
 
 static StringRef ToolName;
@@ -165,9 +165,7 @@ int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
     return 0;
   }
 
-  if (opt::Arg *A =
-          Args.getLastArg(OPT_strip_underscore, OPT_no_strip_underscore))
-    StripUnderscore = A->getOption().matches(OPT_strip_underscore);
+  StripUnderscore = Args.hasFlag(OPT_strip_underscore, OPT_no_strip_underscore, false);
 
   ParseParams = !Args.hasArg(OPT_no_params);
 
