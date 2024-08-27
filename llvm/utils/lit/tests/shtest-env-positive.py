@@ -33,7 +33,13 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
-# CHECK: PASS: shtest-env :: env-args-none.txt ({{[^)]*}})
+# CHECK: PASS: shtest-env :: env-calls-env.txt ({{[^)]*}})
+# CHECK: env env | {{.*}}
+# CHECK: # executed command: env env
+# CHECK-NOT: # error:
+# CHECK: --
+
+# CHECK: PASS: shtest-env :: env-no-subcommand.txt ({{[^)]*}})
 # CHECK: env | {{.*}}
 # CHECK: # executed command: env
 # CHECK: env FOO=2 BAR=1 | {{.*}}
@@ -41,17 +47,10 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
-# CHECK: PASS: shtest-env :: env-calls-env.txt ({{[^)]*}})
-# CHECK: env env | {{.*}}
-# CHECK: # executed command: env env
-# CHECK-NOT: # error:
-# CHECK: --
-
 # CHECK: PASS: shtest-env :: env-u.txt ({{[^)]*}})
 # CHECK: env -u FOO | {{.*}}
 # CHECK: # executed command: env -u FOO
 # CHECK-NOT: # error:
-# CHECK: --
 
 # CHECK: PASS: shtest-env :: env.txt ({{[^)]*}})
 # CHECK: env A_FOO=999 | {{.*}}
