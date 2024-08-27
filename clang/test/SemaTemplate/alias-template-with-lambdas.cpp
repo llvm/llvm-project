@@ -91,7 +91,7 @@ void bar() {
 
 namespace GH82104 {
 
-template <typename, typename... D> int Value = sizeof...(D);
+template <typename, typename... D> constexpr int Value = sizeof...(D);
 
 template <typename T, typename... U>
 using T14 = decltype([]<int V = 0>(auto Param) {
