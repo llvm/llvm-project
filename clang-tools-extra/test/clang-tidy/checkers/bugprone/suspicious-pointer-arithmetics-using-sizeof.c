@@ -2,8 +2,14 @@
 
 typedef __typeof__(sizeof(void*)) size_t;
 #define offsetof(type, member) __builtin_offsetof(type, member)
-extern void *memset(void *Dst, int Ch, size_t Count);
+extern void *memset(void *Dest, int Ch, size_t Count);
 extern void sink(const void *P);
+extern size_t strlen(const char *Str);
+extern size_t wcslen(const wchar_t *Str);
+extern char *strcpy(char *Dest, const char *Src);
+extern wchar_t *wcscpy(wchar_t *Dest, const wchar_t *Src);
+extern int scanf(const char *Format, ...);
+extern int wscanf(const wchar_t *Format, ...);
 
 enum { BufferSize = 1024 };
 
@@ -310,4 +316,24 @@ void good11(void) {
   int I = sizeof(Q) - sizeof(*P);
 
   sink(&I);
+}
+
+void bad12(void) {
+  wchar_t Message[BufferSize];
+  wcscpy(Message, L"Message: ");
+  wscanf(L"%s", Message + wcslen(Message) * sizeof(wchar_t));
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: pointer arithmetic using a number scaled by 'sizeof'; this value will be scaled again by the '+' operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:15: note: '+' scales with 'sizeof(wchar_t)' == {{[0-9]+}}
+}
+
+void silenced12(void) {
+  char Message[BufferSize];
+  strcpy(Message, "Message: ");
+  scanf("%s", Message + strlen(Message) * sizeof(char));
+}
+
+void good12(void) {
+  wchar_t Message[BufferSize];
+  wcscpy(Message, L"Message: ");
+  wscanf(L"%s", Message + wcslen(Message));
 }
