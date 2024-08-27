@@ -302,13 +302,6 @@ Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
   return builder.createOrFold<arith::ConstantOp>(loc, type, splat);
 }
 
-Value mlir::createIntOrIndexConstant(OpBuilder &b, Location loc, Type type,
-                                     int64_t value) {
-  assert(type.isIntOrIndex() &&
-         "unexpected type other than integers and index");
-  return b.create<arith::ConstantOp>(loc, b.getIntegerAttr(type, value));
-}
-
 Type mlir::getType(OpFoldResult ofr) {
   if (auto value = dyn_cast_if_present<Value>(ofr))
     return value.getType();
