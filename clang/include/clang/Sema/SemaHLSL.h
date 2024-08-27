@@ -62,12 +62,12 @@ public:
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
-private:
-  llvm::DenseMap<const Type *, bool> IsIntangibleTypeCache;
-
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
   bool IsIntangibleType(const QualType T1);
+
+private:
+  llvm::DenseMap<const Type *, bool> IsIntangibleTypeCache;
 };
 
 } // namespace clang

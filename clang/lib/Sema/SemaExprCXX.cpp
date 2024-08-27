@@ -5697,6 +5697,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return false;
   }
   case UTT_IsIntangibleType:
+    assert(Self.getLangOpts().HLSL && "intangible types are HLSL-only feature");
     if (!T->isVoidType() && !T->isIncompleteArrayType())
       if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
                                    diag::err_incomplete_type))

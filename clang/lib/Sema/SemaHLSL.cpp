@@ -29,7 +29,7 @@
 
 using namespace clang;
 
-SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S), IsIntangibleTypeCache(8) {}
+SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S), IsIntangibleTypeCache() {}
 
 Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
                                  SourceLocation KwLoc, IdentifierInfo *Ident,
@@ -1528,11 +1528,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 }
 
 static bool calculateIsIntangibleType(QualType Ty) {
-  Ty = Ty->getCanonicalTypeUnqualified();
-  if (Ty->isBuiltinType())
-    return Ty->isHLSLSpecificType();
+  assert(!Ty.getCanonicalType().getUnqualifiedType()->isBuiltinType() &&
+         "builtin types should be taken care of in IsIntangibleType");
 
-  llvm::SmallVector<QualType, 8> TypesToScan;
+  llvm::SmallVector<QualType> TypesToScan;
   TypesToScan.push_back(Ty);
   while (!TypesToScan.empty()) {
     QualType T = TypesToScan.pop_back_val();
@@ -1582,6 +1581,12 @@ bool SemaHLSL::IsIntangibleType(const clang::QualType Ty) {
   if (Ty.isNull())
     return false;
 
+  // check if it's a builtin type first (simple check, no need to cache it)
+  QualType CT = Ty->getCanonicalTypeUnqualified();
+  if (CT->isBuiltinType())
+    return CT->isHLSLIntangibleType();
+
+  // more complex type -> check if we already have it in the cache
   const auto CachedEntry = IsIntangibleTypeCache.find(Ty.getTypePtr());
   if (CachedEntry != IsIntangibleTypeCache.end()) {
     assert(CachedEntry->second == calculateIsIntangibleType(Ty) &&
@@ -1589,9 +1594,12 @@ bool SemaHLSL::IsIntangibleType(const clang::QualType Ty) {
     return CachedEntry->second;
   }
 
+  // calculate and add to cache
   bool IsIntangible = calculateIsIntangibleType(Ty);
   IsIntangibleTypeCache[Ty.getTypePtr()] = IsIntangible;
   return IsIntangible;
+}
+
 static void BuildFlattenedTypeList(QualType BaseTy,
                                    llvm::SmallVectorImpl<QualType> &List) {
   llvm::SmallVector<QualType, 16> WorkList;
@@ -1672,5 +1680,4 @@ bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
                      [this](QualType LHS, QualType RHS) -> bool {
                        return SemaRef.IsLayoutCompatible(LHS, RHS);
                      });
-}
 }
