@@ -173,6 +173,13 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- The ``-fc++-static-destructors={all,thread-local,none}`` flag was
+  added to control which C++ variables have static destructors
+  registered: all (the default) does so for all variables, thread-local
+  only for thread-local variables, and none (which corresponds to the
+  existing ``-fno-c++-static-destructors`` flag) skips all static
+  destructors registration.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -249,6 +256,11 @@ Improvements to Clang's diagnostics
   a warning which defaults to being an error, is enabled by default, and is
   also controlled by the now-deprecated ``-fheinous-gnu-extensions`` flag.
 
+- Added the ``-Wdecls-in-multiple-modules`` option to assist users to identify
+  multiple declarations in different modules, which is the major reason of the slow
+  compilation speed with modules. This warning is disabled by default and it needs
+  to be explicitly enabled or by ``-Weverything``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -304,6 +316,8 @@ Bug Fixes to C++ Support
   template depth than the friend function template. (#GH98258)
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
   of the current instantiation in all cases.
+- Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
+- Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -211,6 +211,7 @@ namespace std {
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__fwd/ostream.h>
+#include <__fwd/string.h>
 #include <__fwd/string_view.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
@@ -689,6 +690,9 @@ private:
 
   const value_type* __data_;
   size_type __size_;
+
+  template <class, class, class>
+  friend class basic_string;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 

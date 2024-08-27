@@ -352,6 +352,13 @@ void FunctionImporter::ImportMapTy::maybeAddDeclaration(
   ImportMap[FromModule].try_emplace(GUID, GlobalValueSummary::Declaration);
 }
 
+SmallVector<StringRef, 0>
+FunctionImporter::ImportMapTy::getSourceModules() const {
+  SmallVector<StringRef, 0> Modules(make_first_range(ImportMap));
+  llvm::sort(Modules);
+  return Modules;
+}
+
 /// Import globals referenced by a function or other globals that are being
 /// imported, if importing such global is possible.
 class GlobalsImporter final {
@@ -1770,11 +1777,6 @@ Expected<bool> FunctionImporter::importFunctions(
   unsigned ImportedCount = 0, ImportedGVCount = 0;
 
   IRMover Mover(DestModule);
-  // Do the actual import of functions now, one Module at a time
-  std::set<StringRef> ModuleNameOrderedList;
-  for (const auto &FunctionsToImportPerModule : ImportList.getImportMap()) {
-    ModuleNameOrderedList.insert(FunctionsToImportPerModule.first);
-  }
 
   auto getImportType = [&](const FunctionsToImportTy &GUIDToImportType,
                            GlobalValue::GUID GUID)
@@ -1785,7 +1787,8 @@ Expected<bool> FunctionImporter::importFunctions(
     return Iter->second;
   };
 
-  for (const auto &Name : ModuleNameOrderedList) {
+  // Do the actual import of functions now, one Module at a time
+  for (const auto &Name : ImportList.getSourceModules()) {
     // Get the module for the import
     const auto &FunctionsToImportPerModule =
         ImportList.getImportMap().find(Name);

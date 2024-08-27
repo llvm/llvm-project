@@ -511,6 +511,12 @@ define void @f92() sanitize_realtime
         ret void;
 }
 
+; CHECK: define void @f93() #54
+define void @f93() nosanitize_realtime
+{
+        ret void;
+}
+
 ; CHECK: define void @f87() [[FNRETTHUNKEXTERN:#[0-9]+]]
 define void @f87() fn_ret_thunk_extern { ret void }
 
@@ -606,6 +612,7 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
 ; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes #53 = { sanitize_realtime }
+; CHECK: attributes #54 = { nosanitize_realtime }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }

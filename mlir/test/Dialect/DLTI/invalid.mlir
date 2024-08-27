@@ -34,6 +34,14 @@
 // -----
 
 // expected-error@below {{repeated layout entry key: 'i32'}}
+"test.unknown_op"() { test.unknown_attr = #dlti.map<
+  #dlti.dl_entry<i32, 42>,
+  #dlti.dl_entry<i32, 42>
+>} : () -> ()
+
+// -----
+
+// expected-error@below {{repeated layout entry key: 'i32'}}
 "test.unknown_op"() { test.unknown_attr = #dlti.dl_spec<
   #dlti.dl_entry<i32, 42>,
   #dlti.dl_entry<i32, 42>
