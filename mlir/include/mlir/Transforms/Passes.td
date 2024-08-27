@@ -93,6 +93,20 @@ def CSE : Pass<"cse"> {
   ];
 }
 
+def DeadCodeElimination : Pass<"dce"> {
+  let summary = "Remove dead operations and blocks";
+  let description = [{
+    This pass eliminates dead operations and blocks.
+
+    Operations are eliminated if they have no users and no side effects. Blocks
+    are eliminated if they are not reachable.
+
+    Note: Graph regions are currently not supported and skipped by this pass.
+  }];
+
+  let constructor = "mlir::createDeadCodeEliminationPass()";
+}
+
 def RemoveDeadValues : Pass<"remove-dead-values"> {
   let summary = "Remove dead values";
   let description = [{
