@@ -154,7 +154,7 @@ _BitInt(129) *f1(_BitInt(129) *p) {
 }
 
 char *f2(char *p) {
-  // CHECK64: getelementptr inbounds i8, {{.*}} i64 24
+  // CHECK64: getelementptr inbounds nuw i8, {{.*}} i64 24
   return p + sizeof(_BitInt(129));
 }
 

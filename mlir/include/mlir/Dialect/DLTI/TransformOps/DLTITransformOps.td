@@ -26,9 +26,10 @@ def QueryOp : Op<Transform_Dialect, "dlti.query", [
 
     A lookup is performed for the given `keys` at `target` op - or its closest
     interface-implementing ancestor - by way of the `DLTIQueryInterface`, which
-    returns an attribute for a key. If more than one key is provided, the lookup
-    continues recursively, now on the returned attributes, with the condition
-    that these implement the above interface. For example if the payload IR is
+    returns an attribute for a key. Each key should be either a (quoted) string
+    or a type. If more than one key is provided, the lookup continues
+    recursively, now on the returned attributes, with the condition that these
+    implement the above interface. For example if the payload IR is
 
     ```
     module attributes {#dlti.map = #dlti.map<#dlti.dl_entry<"A",
@@ -52,7 +53,7 @@ def QueryOp : Op<Transform_Dialect, "dlti.query", [
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                       StrArrayAttr:$keys);
+                       ArrayAttr:$keys);
   let results = (outs TransformParamTypeInterface:$associated_attr);
   let assemblyFormat =
       "$keys `at` $target attr-dict `:` functional-type(operands, results)";

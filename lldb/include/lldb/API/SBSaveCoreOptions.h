@@ -80,6 +80,17 @@ public:
   /// \return True if the thread was removed, false if it was not in the list.
   bool RemoveThread(lldb::SBThread thread);
 
+  /// Add a memory region to save in the core file.
+  ///
+  /// \param region The memory region to save.
+  /// \returns An empty SBError upon success, or an error if the region is
+  /// invalid.
+  /// \note Ranges that overlapped will be unioned into a single region, this
+  /// also supercedes stack minification. Specifying full regions and a
+  /// non-custom core style will include the specified regions and union them
+  /// with all style specific regions.
+  SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
+
   /// Reset all options.
   void Clear();
 
