@@ -45,7 +45,7 @@ char CPPLanguageRuntime::ID = 0;
 /// A frame recognizer that is installed to hide libc++ implementation
 /// details from the backtrace.
 class LibCXXFrameRecognizer : public StackFrameRecognizer {
-  std::array<RegularExpression, 4> m_hidden_regex;
+  std::array<RegularExpression, 2> m_hidden_regex;
   RecognizedStackFrameSP m_hidden_frame;
 
   struct LibCXXHiddenFrame : public RecognizedStackFrame {
@@ -55,28 +55,17 @@ class LibCXXFrameRecognizer : public StackFrameRecognizer {
 public:
   LibCXXFrameRecognizer()
       : m_hidden_regex{
-            // internal implementation details of std::function
+            // internal implementation details in the `std::` namespace
             //    std::__1::__function::__alloc_func<void (*)(), std::__1::allocator<void (*)()>, void ()>::operator()[abi:ne200000]
             //    std::__1::__function::__func<void (*)(), std::__1::allocator<void (*)()>, void ()>::operator()
             //    std::__1::__function::__value_func<void ()>::operator()[abi:ne200000]() const
-            RegularExpression{""
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__function::.*::operator\(\))"},
-            // internal implementation details of std::function in ABI v2
             //    std::__2::__function::__policy_invoker<void (int, int)>::__call_impl[abi:ne200000]<std::__2::__function::__default_alloc_func<int (*)(int, int), int (int, int)>>
-            RegularExpression{""
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__function::.*::__call_impl)"},
-            // internal implementation details of std::invoke
-            //   std::__1::__invoke[abi:ne200000]<void (*&)()>
-            RegularExpression{
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__invoke)"},
-            // internal implementation details of std::invoke
-            //   std::__1::__invoke_void_return_wrapper<void, true>::__call[abi:ne200000]<void (*&)()>
-            RegularExpression{
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__invoke_void_return_wrapper<.*>::__call)"}
+            //    std::__1::__invoke[abi:ne200000]<void (*&)()>
+            //    std::__1::__invoke_void_return_wrapper<void, true>::__call[abi:ne200000]<void (*&)()>
+            RegularExpression{R"(^std::__[^:]*::__)"},
+            // internal implementation details in the `std::ranges` namespace
+            //    std::__1::ranges::__sort::__sort_fn_impl[abi:ne200000]<std::__1::__wrap_iter<int*>, std::__1::__wrap_iter<int*>, bool (*)(int, int), std::__1::identity>
+            RegularExpression{R"(^std::__[^:]*::ranges::__)"},
         },
         m_hidden_frame(new LibCXXHiddenFrame()) {}
 
