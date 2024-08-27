@@ -14114,13 +14114,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
           if (ShAmtC->getAPIntValue().ugt(KnownZeroBits)) {
             // If the shift is too large, then see if we can deduce that the
             // shift is safe anyway.
-            // Create a mask that has ones for the bits being shifted out.
-            APInt ShiftOutMask =
-                APInt::getHighBitsSet(ShVal.getValueSizeInBits(),
-                                      ShAmtC->getAPIntValue().getZExtValue());
 
             // Check if the bits being shifted out are known to be zero.
-            if (!DAG.MaskedValueIsZero(ShVal, ShiftOutMask))
+            KnownBits KnownShVal = DAG.computeKnownBits(ShVal);
+            if (ShAmtC->getAPIntValue().ugt(KnownShVal.countMinLeadingZeros()))
               return SDValue();
           }
         }
