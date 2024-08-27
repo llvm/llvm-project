@@ -994,7 +994,7 @@ Finds implementation-defined behavior in UNIX/Posix functions.
 
 
 optin.taint
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^
 
 Checkers implementing
 `taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
@@ -1002,7 +1002,7 @@ Checkers implementing
 .. _optin-taint-GenericTaint:
 
 optin.taint.GenericTaint (C, C++)
-""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""
 
 Taint analysis identifies potential security vulnerabilities where the
 attacker can inject malicious data to the program to execute an attack
