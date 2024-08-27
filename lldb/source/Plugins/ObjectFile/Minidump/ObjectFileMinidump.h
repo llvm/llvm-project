@@ -21,7 +21,6 @@
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_OBJECTFILEMINIDUMP_H
 
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/ArchSpec.h"
 
 class ObjectFileMinidump : public lldb_private::PluginInterface {

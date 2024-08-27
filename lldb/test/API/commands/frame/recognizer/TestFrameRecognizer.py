@@ -58,7 +58,7 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer list",
             substrs=[
-                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol bar (regexp)"
+                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol regex bar"
             ],
         )
         self.expect(
@@ -81,7 +81,7 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer list",
             substrs=[
-                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol regexp bar"
+                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol regex bar"
             ],
         )
         self.expect(
