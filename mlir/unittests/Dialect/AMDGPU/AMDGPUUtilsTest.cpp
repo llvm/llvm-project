@@ -53,6 +53,5 @@ TEST(ChipsetTest, Comparison) {
   EXPECT_FALSE(Chipset(9, 0x42) < Chipset(9, 0x40));
 }
 
-
 } // namespace
 } // namespace mlir::amdgpu
