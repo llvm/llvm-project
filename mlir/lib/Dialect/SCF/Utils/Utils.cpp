@@ -391,7 +391,8 @@ LogicalResult mlir::loopUnrollByFactor(
     generateEpilogueLoop = upperBoundUnrolledCst < ubCst;
     if (generateEpilogueLoop)
       upperBoundUnrolled = createIntOrIndexConstant(
-          boundsBuilder, loc, forOp.getUpperBound().getType(), upperBoundUnrolledCst);
+          boundsBuilder, loc, forOp.getUpperBound().getType(),
+          upperBoundUnrolledCst);
     else
       upperBoundUnrolled = forOp.getUpperBound();
 

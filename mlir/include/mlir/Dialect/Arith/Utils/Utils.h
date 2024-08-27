@@ -93,6 +93,9 @@ Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   int64_t value);
 Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   const APFloat &value);
+
+/// Create a constant of type `type` at location `loc` whose value is `value`.
+/// This works for integer type or the index type only.
 Value createIntOrIndexConstant(OpBuilder &builder, Location loc, Type type,
                                int64_t value);
 

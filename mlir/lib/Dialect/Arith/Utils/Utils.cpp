@@ -306,10 +306,7 @@ Value mlir::createIntOrIndexConstant(OpBuilder &b, Location loc, Type type,
                                      int64_t value) {
   assert(type.isIntOrIndex() &&
          "unexpected type other than integers and index");
-  if (type.isIndex())
-    return b.create<arith::ConstantIndexOp>(loc, value);
-  else
-    return b.create<arith::ConstantOp>(loc, b.getIntegerAttr(type, value));
+  return b.create<arith::ConstantOp>(loc, b.getIntegerAttr(type, value));
 }
 
 Type mlir::getType(OpFoldResult ofr) {
