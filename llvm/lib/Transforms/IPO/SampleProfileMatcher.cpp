@@ -40,7 +40,8 @@ static cl::opt<bool> LoadFuncProfileforCGMatching(
     "load-func-profile-for-cg-matching", cl::Hidden, cl::init(false),
     cl::desc(
         "Load top-level profiles that the sample reader initially skipped for "
-        "the call-graph matching(only meaningful for extended binary format)"));
+        "the call-graph matching (only meaningful for extended binary "
+        "format)"));
 
 extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> SalvageUnusedProfile;
