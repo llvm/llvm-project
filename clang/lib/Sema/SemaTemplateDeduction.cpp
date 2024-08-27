@@ -3091,10 +3091,10 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
       continue;
     }
 
-    // [temp.deduct.partial]p12 - When partial ordering, it's ok for template
-    // parameters to remain not deduced. As a provisional fix for a core issue
-    // that does not exist yet, which may be related to CWG2160, only consider
-    // template parameters that were deduced, disregarding any default
+    // [C++26][temp.deduct.partial]p12 - When partial ordering, it's ok for
+    // template parameters to remain not deduced. As a provisional fix for a
+    // core issue that does not exist yet, which may be related to CWG2160, only
+    // consider template parameters that were deduced, disregarding any default
     // arguments.
     if (IsIncomplete) {
       *IsIncomplete = true;
