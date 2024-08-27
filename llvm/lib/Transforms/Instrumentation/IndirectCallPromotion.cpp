@@ -117,7 +117,7 @@ static cl::opt<bool>
 // Indirect call promotion pass will fall back to function-based comparison if
 // vtable-count / function-count is smaller than this threshold.
 static cl::opt<float> ICPVTablePercentageThreshold(
-    "icp-vtable-percentage-threshold", cl::init(0.99), cl::Hidden,
+    "icp-vtable-percentage-threshold", cl::init(0.995), cl::Hidden,
     cl::desc("The percentage threshold of vtable-count / function-count for "
              "cost-benefit analysis."));
 
@@ -886,14 +886,6 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
                         << " vtables. Bail out for vtable comparison.\n");
       return false;
     }
-  }
-
-  // If the indirect fallback is not cold, don't compare vtables.
-  if (PSI && PSI->hasProfileSummary() &&
-      !PSI->isColdCount(RemainingVTableCount)) {
-    LLVM_DEBUG(dbgs() << "    Indirect fallback basic block is not cold. Bail "
-                         "out for vtable comparison.\n");
-    return false;
   }
 
   return true;
