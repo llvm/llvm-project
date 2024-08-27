@@ -8,23 +8,15 @@ define i1 @is_usub_overflow_i32_with_two_i16(i16 %a0, i16 %a1, i16 %b0, i16 %b1)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
-; X86-NEXT:    setb %cl
-; X86-NEXT:    cmpw {{[0-9]+}}(%esp), %ax
-; X86-NEXT:    setb %dl
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %cl, %al
-; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    sbbw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_usub_overflow_i32_with_two_i16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpw %si, %di
-; X64-NEXT:    setb %sil
-; X64-NEXT:    cmpw %cx, %dx
-; X64-NEXT:    setb %cl
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    sbbw %cx, %dx
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
   %carry.A = icmp ult i16 %a0, %a1
@@ -43,23 +35,15 @@ define i1 @is_usub_overflow_i64_with_two_i32(i32 %a0, i32 %a1, i32 %b0, i32 %b1)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    setb %cl
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    setb %dl
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %cl, %al
-; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_usub_overflow_i64_with_two_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    setb %sil
-; X64-NEXT:    cmpl %ecx, %edx
-; X64-NEXT:    setb %cl
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    sbbl %ecx, %edx
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
   %carry.A = icmp ult i32 %a0, %a1
@@ -75,51 +59,27 @@ entry:
 define i1 @is_usub_overflow_i128_with_two_i64(i64 %a0, i64 %a1, i64 %b0, i64 %b1) {
 ; X86-LABEL: is_usub_overflow_i128_with_two_i64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    setb %bl
-; X86-NEXT:    cmpl %ecx, %eax
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    sbbl %esi, %edi
-; X86-NEXT:    setb %bh
-; X86-NEXT:    xorl %esi, %edx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %bl, %al
-; X86-NEXT:    orb %bh, %al
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    setb %al
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_usub_overflow_i128_with_two_i64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpq %rsi, %rdi
-; X64-NEXT:    setb %sil
-; X64-NEXT:    cmpq %rcx, %rdx
-; X64-NEXT:    setb %cl
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    sbbq %rcx, %rdx
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
   %carry.A = icmp ult i64 %a0, %a1
@@ -132,59 +92,35 @@ entry:
   ret i1 %carry.B.with.borrow.A
 }
 
-; check GE/UGE are supported too
-define i1 @i128_with_ge(i64 %a0, i64 %a1, i64 %b0, i64 %b1) {
-; X86-LABEL: i128_with_ge:
+; check GT/UGT are supported too
+define i1 @i128_with_gt(i64 %a0, i64 %a1, i64 %b0, i64 %b1) {
+; X86-LABEL: i128_with_gt:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    setae %bl
-; X86-NEXT:    cmpl %eax, %edx
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    sbbl %ecx, %edi
-; X86-NEXT:    setae %bh
-; X86-NEXT:    xorl %esi, %ecx
-; X86-NEXT:    xorl %edx, %eax
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %bl, %al
-; X86-NEXT:    orb %bh, %al
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    setb %al
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: i128_with_ge:
+; X64-LABEL: i128_with_gt:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    cmpq %rdi, %rsi
-; X64-NEXT:    setae %sil
-; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    setae %cl
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    cmpq %rsi, %rdi
+; X64-NEXT:    sbbq %rcx, %rdx
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
-  %carry.A = icmp uge i64 %a1, %a0
-  %carry.B = icmp uge i64 %b1, %b0
+  %carry.A = icmp ugt i64 %a1, %a0
+  %carry.B = icmp ugt i64 %b1, %b0
   %equal.B = icmp eq i64 %b0, %b1
 
   ; propagate carry only if B0 == B1
@@ -233,23 +169,19 @@ define i1 @is_ssub_overflow_i64_with_two_i32(i32 %a0, i32 %a1, i32 %b0, i32 %b1)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    setl %cl
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    setl %dl
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %cl, %al
-; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    seto %cl
+; X86-NEXT:    addb $-1, %cl
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    seto %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_ssub_overflow_i64_with_two_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    setl %sil
-; X64-NEXT:    cmpl %ecx, %edx
-; X64-NEXT:    setl %cl
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    seto %al
+; X64-NEXT:    addb $-1, %al
+; X64-NEXT:    sbbl %ecx, %edx
+; X64-NEXT:    seto %al
 ; X64-NEXT:    retq
 entry:
   %carry.A = icmp slt i32 %a0, %a1

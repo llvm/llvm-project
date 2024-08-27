@@ -4,13 +4,15 @@
 define i1 @is_usub_overflow_i32_with_two_i16(i16 %a0, i16 %a1, i16 %b0, i16 %b1) {
 ; CHECK-LABEL: is_usub_overflow_i32_with_two_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w9, w0, #0xffff
-; CHECK-NEXT:    and w8, w2, #0xffff
-; CHECK-NEXT:    cmp w9, w1, uxth
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    cmp w8, w3, uxth
-; CHECK-NEXT:    csel w8, wzr, w9, ne
-; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    sxth w9, w2
+; CHECK-NEXT:    sub w8, w8, w1, uxth
+; CHECK-NEXT:    tst w8, #0xffff0000
+; CHECK-NEXT:    sxth w8, w3
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    cmp wzr, w10
+; CHECK-NEXT:    sbcs wzr, w9, w8
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %carry.A = icmp ult i16 %a0, %a1
@@ -27,10 +29,8 @@ define i1 @is_usub_overflow_i64_with_two_i32(i32 %a0, i32 %a1, i32 %b0, i32 %b1)
 ; CHECK-LABEL: is_usub_overflow_i64_with_two_i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    sbcs wzr, w2, w3
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %carry.A = icmp ult i32 %a0, %a1
@@ -48,10 +48,8 @@ define i1 @is_usub_overflow_i128_with_two_i64(i64 %a0, i64 %a1, i64 %b0, i64 %b1
 ; CHECK-LABEL: is_usub_overflow_i128_with_two_i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp x2, x3
-; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    sbcs xzr, x2, x3
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %carry.A = icmp ult i64 %a0, %a1
@@ -65,18 +63,16 @@ entry:
 }
 
 ; check GE/UGE are supported too
-define i1 @i128_with_ge(i64 %a0, i64 %a1, i64 %b0, i64 %b1) {
-;
-; CHECK-LABEL: i128_with_ge:
+define i1 @i128_with_gt(i64 %a0, i64 %a1, i64 %b0, i64 %b1) {
+; CHECK-LABEL: i128_with_gt:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x1, x0
-; CHECK-NEXT:    ccmp x2, x3, #0, hs
-; CHECK-NEXT:    ccmp x3, x2, #2, ne
-; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    cmp x0, x1
+; CHECK-NEXT:    sbcs xzr, x2, x3
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
-  %carry.A = icmp uge i64 %a1, %a0
-  %carry.B = icmp uge i64 %b1, %b0
+  %carry.A = icmp ugt i64 %a1, %a0
+  %carry.B = icmp ugt i64 %b1, %b0
   %equal.B = icmp eq i64 %b0, %b1
 
   ; propagate carry only if B0 == B1
@@ -111,10 +107,10 @@ define i1 @is_ssub_overflow_i64_with_two_i32(i32 %a0, i32 %a1, i32 %b0, i32 %b1)
 ; CHECK-LABEL: is_ssub_overflow_i64_with_two_i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    csinc w0, w8, wzr, ge
+; CHECK-NEXT:    cset w8, vs
+; CHECK-NEXT:    cmp wzr, w8
+; CHECK-NEXT:    sbcs wzr, w2, w3
+; CHECK-NEXT:    cset w0, vs
 ; CHECK-NEXT:    ret
 entry:
   %carry.A = icmp slt i32 %a0, %a1
