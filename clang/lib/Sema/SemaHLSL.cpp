@@ -1534,42 +1534,44 @@ static bool calculateIsIntangibleType(QualType Ty) {
   llvm::SmallVector<QualType> TypesToScan;
   TypesToScan.push_back(Ty);
   while (!TypesToScan.empty()) {
-    QualType T = TypesToScan.pop_back_val();
-    assert(T == T->getCanonicalTypeUnqualified() && "expected sugar-free type");
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+    QualType T = TypesToScan.pop_back_val()->getCanonicalTypeUnqualified();
+
+    if (T->isBuiltinType()) {
+      if (T->isHLSLIntangibleType())
+        return true;
+    }
 
     if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
-      QualType ElTy = AT->getElementType()->getCanonicalTypeUnqualified();
-      if (ElTy->isBuiltinType())
-        return ElTy->isHLSLSpecificType();
-      TypesToScan.push_back(ElTy);
+      TypesToScan.push_back(AT->getElementType());
       continue;
     }
 
     if (const auto *VT = dyn_cast<VectorType>(T)) {
-      QualType ElTy = VT->getElementType()->getCanonicalTypeUnqualified();
-      assert(ElTy->isBuiltinType() && "vectors can only contain builtin types");
-      if (ElTy->isHLSLSpecificType())
-        return true;
+      assert(!VT->getElementType()
+                  .getCanonicalType()
+                  .getUnqualifiedType()
+                  ->isHLSLIntangibleType() &&
+             "vectors can only contain builtin types that are not intangible");
+      continue;
+    }
+
+    if (const auto *MT = dyn_cast<MatrixType>(T)) {
+      assert(!MT->getElementType()
+                  .getCanonicalType()
+                  .getUnqualifiedType()
+                  ->isHLSLIntangibleType() &&
+             "matrices can only contain builtin types that are not intangible");
       continue;
     }
 
     if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *RD = RT->getDecl();
-      for (const auto *FD : RD->fields()) {
-        QualType FieldTy = FD->getType()->getCanonicalTypeUnqualified();
-        if (FieldTy->isBuiltinType()) {
-          if (FieldTy->isHLSLSpecificType())
-            return true;
-        } else {
-          TypesToScan.push_back(FieldTy);
-        }
-      }
+      for (const auto *FD : RD->fields())
+        TypesToScan.push_back(FD->getType());
 
       if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-        for (const CXXBaseSpecifier &B : CXXRD->bases()) {
-          TypesToScan.push_back(B.getType()->getCanonicalTypeUnqualified());
-        }
+        for (const CXXBaseSpecifier &B : CXXRD->bases())
+          TypesToScan.push_back(B.getType());
       }
       continue;
     }
