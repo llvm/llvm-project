@@ -40,6 +40,9 @@
 #include <string.h>
 
 # undef unsetenv
+#ifdef _WIN32
+#define unsetenv(name) _putenv_s(name, "")
+#else
 # if !HAVE_DECL_UNSETENV
 #  if VOID_UNSETENV
 extern void unsetenv (const char *);
@@ -47,6 +50,7 @@ extern void unsetenv (const char *);
 extern int unsetenv (const char *);
 #  endif
 # endif
+#endif
 
 int main(int argc, char *argv[]) {
 
