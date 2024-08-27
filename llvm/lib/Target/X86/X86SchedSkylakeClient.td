@@ -818,10 +818,10 @@ def SKLWriteResGroup36 : SchedWriteRes<[SKLPort5,SKLPort01]> {
 def: InstRW<[SKLWriteResGroup36], (instregex "(V?)PHADDSW(Y?)rr",
                                              "(V?)PHSUBSW(Y?)rr")>;
 
-def SKLWriteResGroup39 : SchedWriteRes<[SKLPort5,SKLPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+def SKLWriteResGroup39 : SchedWriteRes<[SKLPort5]> {
+  let Latency = 2;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[SKLWriteResGroup39], (instrs MMX_PACKSSDWrr,
                                           MMX_PACKSSWBrr,
