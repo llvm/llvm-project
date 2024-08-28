@@ -1991,21 +1991,12 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
 
-  VectorType *RetTy = dyn_cast<VectorType>(I->getType());
-  if (!RetTy || !RetTy->isScalableTy())
+  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
     return true;
 
-  if (RetTy->getScalarType()->isIntegerTy(32) &&
-      RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
-    return false;
-  if (RetTy->getScalarType()->isIntegerTy(64) &&
-      RetTy->getElementCount() == ElementCount::get(2, RetTy->isScalableTy()))
-    return false;
-  if (RetTy->getScalarType()->isIntegerTy(64) &&
-      RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
-    return false;
+  EVT VT = EVT::getEVT(I->getType());
 
-  return true;
+  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::nxv4i64;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
