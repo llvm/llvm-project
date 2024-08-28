@@ -57,7 +57,6 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     MLIRExecutionEngine
     MLIRFuncDialect
     MLIRGPUDialect
-    MLIRIndexDialect
     MLIRIR
     MLIRJitRunner
     MLIRLLVMDialect
