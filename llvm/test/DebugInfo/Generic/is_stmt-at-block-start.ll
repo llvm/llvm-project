@@ -6,7 +6,7 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump --debug-line - | FileCheck %s
 
 ; CHECK:      {{0x[0-9a-f]+}}     13      5 {{.+}} is_stmt
-; CHECK-NEXT: {{0x[0-9a-f]+}}     13     25 {{.+}} is_stmt
+; CHECK-NEXT: {{0x[0-9a-f]+}}     13      5 {{.+}} is_stmt
 
 define void @_Z1fi(i1 %cond) !dbg !21 {
 entry:
@@ -16,7 +16,7 @@ if.then2:                                         ; preds = %entry
   br label %if.end8, !dbg !24
 
 if.else4:                                         ; preds = %entry
-  %0 = load i32, ptr null, align 4, !dbg !28
+  %0 = load i32, ptr null, align 4, !dbg !24
   %call5 = call i1 null(i32 %0)
   ret void
 
@@ -35,4 +35,3 @@ if.end8:                                          ; preds = %if.then2
 !23 = !{null}
 !24 = !DILocation(line: 13, column: 5, scope: !25)
 !25 = distinct !DILexicalBlock(scope: !21, file: !1, line: 11, column: 27)
-!28 = !DILocation(line: 13, column: 25, scope: !25)
