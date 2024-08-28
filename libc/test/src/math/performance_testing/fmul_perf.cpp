@@ -15,19 +15,20 @@ static constexpr size_t DOUBLE_ROUNDS = 40;
 static constexpr size_t LONG_DOUBLE_ROUNDS = 40;
 
 float fmul_placeholder_binary(double x, double y) {
-  return static_cast<float>(x * y);
+  return static_cast<float>(x*y);
 }
 
 float fmull_placeholder_binary(long double x, long double y) {
-  return static_cast<float>(x * y);
+  return static_cast<float>(x*y);
 }
 
 int main() {
-  BINARY_OP_SINGLE_DIFFERENT_TYPE_OUTPUT_PERF_EX(
-      float, double, LIBC_NAMESPACE::fmul, fmul_placeholder_binary,
-      DOUBLE_ROUNDS, "fmul_perf.log")
-  BINARY_OP_SINGLE_DIFFERENT_TYPE_OUTPUT_PERF_EX(
-      float, long double, LIBC_NAMESPACE::fmull, fmull_placeholder_binary,
-      LONG_DOUBLE_ROUNDS, "fmull_perf.log")
+  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, double, LIBC_NAMESPACE::fmul,
+				  fmul_placeholder_binary, DOUBLE_ROUNDS,
+				  "fmul_perf.log")
+  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, long double, LIBC_NAMESPACE::fmull,
+				  fmull_placeholder_binary, LONG_DOUBLE_ROUNDS,
+				  "fmull_perf.log")
   return 0;
 }
+    
