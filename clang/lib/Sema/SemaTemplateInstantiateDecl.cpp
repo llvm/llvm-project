@@ -35,7 +35,6 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -2177,7 +2176,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
-  if (false && TemplateParams && TemplateParams->size()) {
+  if (TemplateParams && TemplateParams->size()) {
     auto *LastParam =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
     if (LastParam && LastParam->isImplicit() &&
@@ -2589,7 +2588,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
-  if (false && TemplateParams && TemplateParams->size()) {
+  if (TemplateParams && TemplateParams->size()) {
     auto *LastParam =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
     if (LastParam && LastParam->isImplicit() &&
