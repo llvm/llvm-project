@@ -43,8 +43,7 @@ define i1 @test_dereferenceable(ptr dereferenceable(4) %p) {
 define i1 @test_alloca() {
 ; CHECK-LABEL: define i1 @test_alloca() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = alloca i32
   %cmp = icmp ne ptr %a, null
@@ -88,8 +87,7 @@ define i1 @test_load_nonnull(ptr %p) {
 define i1 @test_call_nonnull() {
 ; CHECK-LABEL: define i1 @test_call_nonnull() {
 ; CHECK-NEXT:    [[P:%.*]] = call nonnull ptr @get()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %p = call nonnull ptr @get()
   %cmp = icmp ne ptr %p, null
@@ -99,8 +97,7 @@ define i1 @test_call_nonnull() {
 define i1 @test_call_dereferenceable() {
 ; CHECK-LABEL: define i1 @test_call_dereferenceable() {
 ; CHECK-NEXT:    [[P:%.*]] = call dereferenceable(4) ptr @get()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %p = call dereferenceable(4) ptr @get()
   %cmp = icmp ne ptr %p, null

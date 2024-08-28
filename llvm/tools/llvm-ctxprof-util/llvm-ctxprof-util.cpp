@@ -46,90 +46,22 @@ static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                            cl::desc("Output file"),
                                            cl::sub(FromJSON));
 
-namespace {
-// A structural representation of the JSON input.
-struct DeserializableCtx {
-  GlobalValue::GUID Guid = 0;
-  std::vector<uint64_t> Counters;
-  std::vector<std::vector<DeserializableCtx>> Callsites;
-};
-
-ctx_profile::ContextNode *
-createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const std::vector<DeserializableCtx> &DCList);
-
-// Convert a DeserializableCtx into a ContextNode, potentially linking it to
-// its sibling (e.g. callee at same callsite) "Next".
-ctx_profile::ContextNode *
-createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const DeserializableCtx &DC,
-           ctx_profile::ContextNode *Next = nullptr) {
-  auto AllocSize = ctx_profile::ContextNode::getAllocSize(DC.Counters.size(),
-                                                          DC.Callsites.size());
-  auto *Mem = Nodes.emplace_back(std::make_unique<char[]>(AllocSize)).get();
-  std::memset(Mem, 0, AllocSize);
-  auto *Ret = new (Mem) ctx_profile::ContextNode(DC.Guid, DC.Counters.size(),
-                                                 DC.Callsites.size(), Next);
-  std::memcpy(Ret->counters(), DC.Counters.data(),
-              sizeof(uint64_t) * DC.Counters.size());
-  for (const auto &[I, DCList] : llvm::enumerate(DC.Callsites))
-    Ret->subContexts()[I] = createNode(Nodes, DCList);
-  return Ret;
-}
-
-// Convert a list of DeserializableCtx into a linked list of ContextNodes.
-ctx_profile::ContextNode *
-createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const std::vector<DeserializableCtx> &DCList) {
-  ctx_profile::ContextNode *List = nullptr;
-  for (const auto &DC : DCList)
-    List = createNode(Nodes, DC, List);
-  return List;
-}
-} // namespace
-
-namespace llvm {
-namespace json {
-// Hook into the JSON deserialization.
-bool fromJSON(const Value &E, DeserializableCtx &R, Path P) {
-  json::ObjectMapper Mapper(E, P);
-  return Mapper && Mapper.map("Guid", R.Guid) &&
-         Mapper.map("Counters", R.Counters) &&
-         Mapper.mapOptional("Callsites", R.Callsites);
-}
-} // namespace json
-} // namespace llvm
-
 // Save the bitstream profile from the JSON representation.
 Error convertFromJSON() {
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (!BufOrError)
     return createFileError(InputFilename, BufOrError.getError());
-  auto P = json::parse(BufOrError.get()->getBuffer());
-  if (!P)
-    return P.takeError();
 
-  std::vector<DeserializableCtx> DCList;
-  json::Path::Root R("");
-  if (!fromJSON(*P, DCList, R))
-    return R.getError();
-  // Nodes provides memory backing for the ContextualNodes.
-  std::vector<std::unique_ptr<char[]>> Nodes;
   std::error_code EC;
-  raw_fd_stream Out(OutputFilename, EC);
+  // Using a fd_ostream instead of a fd_stream. The latter would be more
+  // efficient as the bitstream writer supports incremental flush to it, but the
+  // json scenario is for test, and file size scalability doesn't really concern
+  // us.
+  raw_fd_ostream Out(OutputFilename, EC);
   if (EC)
     return createStringError(EC, "failed to open output");
-  PGOCtxProfileWriter Writer(Out);
-  for (const auto &DC : DCList) {
-    auto *TopList = createNode(Nodes, DC);
-    if (!TopList)
-      return createStringError(
-          "Unexpected error converting internal structure to ctx profile");
-    Writer.write(*TopList);
-  }
-  if (EC)
-    return createStringError(EC, "failed to write output");
-  return Error::success();
+
+  return llvm::createCtxProfFromJSON(BufOrError.get()->getBuffer(), Out);
 }
 
 int main(int argc, const char **argv) {
