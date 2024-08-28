@@ -220,6 +220,11 @@ Attribute Changes in Clang
 - ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
   where they were previously silently ignored.
 
+- Clang now automatically adds ``[[clang::lifetimebound]]`` to the parameters of
+  ``std::span, std::string_view`` constructors, this enables Clang to capture
+  more cases where the returned reference outlives the object.
+  (#GH100567)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
