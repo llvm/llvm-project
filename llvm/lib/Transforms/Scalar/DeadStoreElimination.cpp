@@ -48,6 +48,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -558,9 +559,10 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   for_each(LinkedDVRAssigns, InsertAssignForOverlap);
 }
 
-static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
-                         uint64_t &DeadSize, int64_t KillingStart,
-                         uint64_t KillingSize, bool IsOverwriteEnd) {
+static bool tryToShorten(Instruction *DeadI, int64_t DeadStart,
+                         uint64_t DeadSize, int64_t KillingStart,
+                         uint64_t KillingSize, bool IsOverwriteEnd,
+                         const TargetTransformInfo &TTI) {
   auto *DeadIntrinsic = cast<AnyMemIntrinsic>(DeadI);
   Align PrefAlign = DeadIntrinsic->getDestAlign().valueOrOne();
 
@@ -583,11 +585,7 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   // Compute start and size of the region to remove. Make sure 'PrefAlign' is
   // maintained on the remaining store.
   if (IsOverwriteEnd) {
-    // Calculate required adjustment for 'KillingStart' in order to keep
-    // remaining store size aligned on 'PerfAlign'.
-    uint64_t Off =
-        offsetToAlignment(uint64_t(KillingStart - DeadStart), PrefAlign);
-    ToRemoveStart = KillingStart + Off;
+    ToRemoveStart = KillingStart;
     if (DeadSize <= uint64_t(ToRemoveStart - DeadStart))
       return false;
     ToRemoveSize = DeadSize - uint64_t(ToRemoveStart - DeadStart);
@@ -612,6 +610,108 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   assert(DeadSize > ToRemoveSize && "Can't remove more than original size");
 
   uint64_t NewSize = DeadSize - ToRemoveSize;
+
+  // Try to coerce the new memcpy/memset size to a "fast" value. This typically
+  // means some exact multiple of the register width of the loads/stores.
+
+  // If scalar size >= vec size, assume target will use scalars for implementing
+  // memset/memcpy.
+  TypeSize ScalarSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar);
+  TypeSize VecSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  uint64_t MemUnit = 0;
+  if (ScalarSize >= VecSize)
+    MemUnit = ScalarSize.getFixedValue();
+  // Otherwise assume memset/memcpy will be lowered with Vec's
+  else
+    MemUnit =
+        TTI.getLoadStoreVecRegBitWidth(DeadIntrinsic->getDestAddressSpace());
+
+  MemUnit /= 8U;
+
+  // Assume loads/stores are issued by power of 2 regions. Try to minimize
+  // number of power of 2 blocks.
+  // ie if we have DeadSize = 15
+  //    NewSize = 7  -> 8   (4 + 3 + 2 + 1) -> (8)
+  //    NewSize = 9  -> 9   (8 + 1)         == (8 + 1)
+  //    NewSize = 11 -> 12  (8 + 2 + 1)     -> (8 + 4)
+  uint64_t Upper = DeadSize;
+  uint64_t Lower = NewSize;
+
+  uint64_t RoundLower = MemUnit * (Lower / MemUnit);
+
+  // We have some trailing loads/stores we can try to optimize.
+  if (RoundLower != Lower && Lower != 0 && (RoundLower + MemUnit) != 0) {
+    Upper = std::min(Upper, RoundLower + MemUnit - 1);
+    // Don't bust inlining doing this.
+    uint64_t InlineThresh = TTI.getMaxMemIntrinsicInlineSizeThreshold();
+    if (Upper > InlineThresh && Lower <= InlineThresh)
+      Upper = InlineThresh;
+
+    // Replace Lower with value in range [Lower, Upper] that has min popcount
+    // (selecting for minimum value as tiebreaker when popcount is the same).
+    // The idea here is this will require the minimum number of load/stores and
+    // within that will use the presumably preferable minimum width.
+
+    // Get highest bit that differs between Lower and Upper. Anything above this
+    // bit must be in the new value. Anything below it thats larger than Lower
+    // is fair game.
+    uint64_t Dif = (Lower - 1) ^ Upper;
+    uint64_t HighestBit = 63 - llvm::countl_zero(Dif);
+
+    // Make Lo/Hi masks from the HighestDif bit. Lo mask is use to find value we
+    // can roundup for minimum power of 2 chunk, Hi mask is preserved.
+    uint64_t HighestP2 = static_cast<uint64_t>(1) << HighestBit;
+    uint64_t LoMask = HighestP2 - 1;
+    uint64_t HiMask = -HighestP2;
+
+    // Minimum power of 2 for the "tail"
+    uint64_t LoVal = Lower & LoMask;
+    if (LoVal)
+      LoVal = llvm::bit_ceil(LoVal);
+    // Preserved high bits to stay in range.
+    uint64_t HiVal = Lower & HiMask;
+    Lower = LoVal | HiVal;
+
+    // If we have more than two tail stores see if we can just roundup the next
+    // memunit.
+    if (llvm::popcount(Lower % MemUnit) > 1 &&
+        DeadSize >= (RoundLower + MemUnit))
+      Lower = RoundLower + MemUnit;
+
+    uint64_t OptimizedNewSize = NewSize;
+    // If we are over-writing the begining, make sure we don't mess up the
+    // alignment.
+    if (IsOverwriteEnd || isAligned(PrefAlign, DeadSize - Lower)) {
+      OptimizedNewSize = Lower;
+    } else {
+      // Our minimal value isn't properly aligned, see if we can
+      // increase the size of a tail loads/stores.
+      Lower = HiVal | HighestP2;
+      if (isAligned(PrefAlign, DeadSize - Lower))
+        OptimizedNewSize = Lower;
+      // If we can't adjust size without messing up alignment, see if the new
+      // size is actually preferable.
+      // TODO: We should probably do better here than just giving up.
+      else if ((NewSize <= InlineThresh) == (DeadSize <= InlineThresh) &&
+               llvm::popcount(NewSize) > llvm::popcount(DeadSize) &&
+               DeadSize / MemUnit == NewSize / MemUnit)
+        return false;
+    }
+
+    // Adjust new starting point for the memset/memcpy.
+    if (OptimizedNewSize != NewSize) {
+      if (!IsOverwriteEnd)
+        ToRemoveSize = DeadSize - OptimizedNewSize;
+      NewSize = OptimizedNewSize;
+    }
+
+    // Our optimal length is the original length, skip the transform.
+    if (NewSize == DeadSize)
+      return false;
+  }
+
   if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {
     // When shortening an atomic memory intrinsic, the newly shortened
     // length must remain an integer multiple of the element size.
@@ -654,7 +754,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
 }
 
 static bool tryToShortenEnd(Instruction *DeadI, OverlapIntervalsTy &IntervalMap,
-                            int64_t &DeadStart, uint64_t &DeadSize) {
+                            int64_t &DeadStart, uint64_t &DeadSize,
+                            const TargetTransformInfo &TTI) {
   if (IntervalMap.empty() || !isShortenableAtTheEnd(DeadI))
     return false;
 
@@ -672,7 +773,7 @@ static bool tryToShortenEnd(Instruction *DeadI, OverlapIntervalsTy &IntervalMap,
       // be non negative due to preceding checks.
       KillingSize >= DeadSize - (uint64_t)(KillingStart - DeadStart)) {
     if (tryToShorten(DeadI, DeadStart, DeadSize, KillingStart, KillingSize,
-                     true)) {
+                     true, TTI)) {
       IntervalMap.erase(OII);
       return true;
     }
@@ -682,7 +783,8 @@ static bool tryToShortenEnd(Instruction *DeadI, OverlapIntervalsTy &IntervalMap,
 
 static bool tryToShortenBegin(Instruction *DeadI,
                               OverlapIntervalsTy &IntervalMap,
-                              int64_t &DeadStart, uint64_t &DeadSize) {
+                              int64_t &DeadStart, uint64_t &DeadSize,
+                              const TargetTransformInfo &TTI) {
   if (IntervalMap.empty() || !isShortenableAtTheBeginning(DeadI))
     return false;
 
@@ -701,7 +803,7 @@ static bool tryToShortenBegin(Instruction *DeadI,
     assert(KillingSize - (uint64_t)(DeadStart - KillingStart) < DeadSize &&
            "Should have been handled as OW_Complete");
     if (tryToShorten(DeadI, DeadStart, DeadSize, KillingStart, KillingSize,
-                     false)) {
+                     false, TTI)) {
       IntervalMap.erase(OII);
       return true;
     }
@@ -852,6 +954,7 @@ struct DSEState {
   DominatorTree &DT;
   PostDominatorTree &PDT;
   const TargetLibraryInfo &TLI;
+  const TargetTransformInfo &TTI;
   const DataLayout &DL;
   const LoopInfo &LI;
 
@@ -896,9 +999,9 @@ struct DSEState {
 
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
-           const LoopInfo &LI)
+           const TargetTransformInfo &TTI, const LoopInfo &LI)
       : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
-        PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI) {
+        PDT(PDT), TLI(TLI), TTI(TTI), DL(F.getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
@@ -2103,10 +2206,10 @@ struct DSEState {
       uint64_t DeadSize = Loc.Size.getValue();
       GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
       OverlapIntervalsTy &IntervalMap = OI.second;
-      Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
+      Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
       if (IntervalMap.empty())
         continue;
-      Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize);
+      Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
     }
     return Changed;
   }
@@ -2347,9 +2450,10 @@ bool DSEState::eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper) {
 static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
+                                const TargetTransformInfo &TTI,
                                 const LoopInfo &LI) {
   bool MadeChange = false;
-  DSEState State(F, AA, MSSA, DT, PDT, TLI, LI);
+  DSEState State(F, AA, MSSA, DT, PDT, TLI, TTI, LI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {
     MemoryDef *KillingDef = State.MemDefs[I];
@@ -2383,12 +2487,13 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
 
-  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, LI);
+  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, TTI, LI);
 
 #ifdef LLVM_ENABLE_STATS
   if (AreStatisticsEnabled())

@@ -68,12 +68,19 @@ entry:
 }
 
 define void @write28to32(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write28to32(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 28, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @write28to32(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM4-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @write28to32(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM16-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   call void @llvm.memset.p0.i64(ptr align 4 %p, i8 0, i64 32, i1 false)
@@ -83,12 +90,19 @@ entry:
 }
 
 define void @write28to32_atomic(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write28to32_atomic(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 28, i32 4)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @write28to32_atomic(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 28, i32 4)
+; CHECK-MEM4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM4-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @write28to32_atomic(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 32, i32 4)
+; CHECK-MEM16-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM16-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 4 %p, i8 0, i64 32, i32 4)
@@ -98,12 +112,19 @@ entry:
 }
 
 define void @dontwrite28to32memset(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @dontwrite28to32memset(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @dontwrite28to32memset(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM4-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @dontwrite28to32memset(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM16-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   call void @llvm.memset.p0.i64(ptr align 16 %p, i8 0, i64 32, i1 false)
@@ -113,12 +134,19 @@ entry:
 }
 
 define void @dontwrite28to32memset_atomic(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @dontwrite28to32memset_atomic(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 32, i32 4)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @dontwrite28to32memset_atomic(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 28, i32 4)
+; CHECK-MEM4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM4-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @dontwrite28to32memset_atomic(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 32, i32 4)
+; CHECK-MEM16-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-MEM16-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 %p, i8 0, i64 32, i32 4)
@@ -204,12 +232,19 @@ entry:
 }
 
 define void @dontwrite28to32memcpy(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @dontwrite28to32memcpy(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
-; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @dontwrite28to32memcpy(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
+; CHECK-MEM4-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @dontwrite28to32memcpy(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
+; CHECK-MEM16-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 %p, ptr align 16 @glob1, i64 32, i1 false)
@@ -219,12 +254,19 @@ entry:
 }
 
 define void @dontwrite28to32memcpy_atomic(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @dontwrite28to32memcpy_atomic(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i32 4)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
-; CHECK-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @dontwrite28to32memcpy_atomic(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 28, i32 4)
+; CHECK-MEM4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
+; CHECK-MEM4-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @dontwrite28to32memcpy_atomic(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i32 4)
+; CHECK-MEM16-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
+; CHECK-MEM16-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 %p, ptr align 16 @glob1, i64 32, i32 4)
@@ -351,13 +393,21 @@ entry:
 }
 
 define void @ow_end_align1(ptr nocapture %p) {
-; CHECK-LABEL: @ow_end_align1(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P1]], i8 0, i64 27, i1 false)
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
-; CHECK-NEXT:    store i64 1, ptr [[P2]], align 1
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @ow_end_align1(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P1]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-MEM4-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @ow_end_align1(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P1]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-MEM16-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
@@ -368,13 +418,21 @@ entry:
 }
 
 define void @ow_end_align4(ptr nocapture %p) {
-; CHECK-LABEL: @ow_end_align4(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P1]], i8 0, i64 28, i1 false)
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
-; CHECK-NEXT:    store i64 1, ptr [[P2]], align 1
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @ow_end_align4(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P1]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-MEM4-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @ow_end_align4(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P1]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-MEM16-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
@@ -385,13 +443,21 @@ entry:
 }
 
 define void @ow_end_align8(ptr nocapture %p) {
-; CHECK-LABEL: @ow_end_align8(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P1]], i8 0, i64 32, i1 false)
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
-; CHECK-NEXT:    store i64 1, ptr [[P2]], align 1
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @ow_end_align8(
+; CHECK-MEM4-NEXT:  entry:
+; CHECK-MEM4-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P1]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-MEM4-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @ow_end_align8(
+; CHECK-MEM16-NEXT:  entry:
+; CHECK-MEM16-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P1]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-MEM16-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-MEM16-NEXT:    ret void
 ;
 entry:
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
@@ -405,7 +471,7 @@ define void @memset_optimize_size_hi_31_to_24(ptr %p) {
 ; CHECK-LABEL: @memset_optimize_size_hi_31_to_24(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 23
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P0]], i8 0, i64 23, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P0]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    store i64 0, ptr [[P1]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -417,12 +483,19 @@ define void @memset_optimize_size_hi_31_to_24(ptr %p) {
 }
 
 define void @memset_optimize_size_hi_32_no_change_x86_change_generic(ptr %p) {
-; CHECK-LABEL: @memset_optimize_size_hi_32_no_change_x86_change_generic(
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P0]], i8 0, i64 28, i1 false)
-; CHECK-NEXT:    store i64 0, ptr [[P1]], align 1
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @memset_optimize_size_hi_32_no_change_x86_change_generic(
+; CHECK-MEM4-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
+; CHECK-MEM4-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P0]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    store i64 0, ptr [[P1]], align 1
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @memset_optimize_size_hi_32_no_change_x86_change_generic(
+; CHECK-MEM16-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
+; CHECK-MEM16-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P0]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    store i64 0, ptr [[P1]], align 1
+; CHECK-MEM16-NEXT:    ret void
 ;
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
   %p1 = getelementptr inbounds i8, ptr %p, i64 28
@@ -432,12 +505,19 @@ define void @memset_optimize_size_hi_32_no_change_x86_change_generic(ptr %p) {
 }
 
 define void @memset_optimize_size_hi_28_to_24(ptr %p) {
-; CHECK-LABEL: @memset_optimize_size_hi_28_to_24(
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 21
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P0]], i8 0, i64 24, i1 false)
-; CHECK-NEXT:    store i64 0, ptr [[P1]], align 1
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @memset_optimize_size_hi_28_to_24(
+; CHECK-MEM4-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
+; CHECK-MEM4-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 21
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P0]], i8 0, i64 21, i1 false)
+; CHECK-MEM4-NEXT:    store i64 0, ptr [[P1]], align 1
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @memset_optimize_size_hi_28_to_24(
+; CHECK-MEM16-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
+; CHECK-MEM16-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 21
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P0]], i8 0, i64 24, i1 false)
+; CHECK-MEM16-NEXT:    store i64 0, ptr [[P1]], align 1
+; CHECK-MEM16-NEXT:    ret void
 ;
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
   %p1 = getelementptr inbounds i8, ptr %p, i64 21
@@ -462,12 +542,19 @@ define void @memset_optimize_size_hi_31_to_28(ptr %p) {
 }
 
 define void @memset_optimize_size_hi_33_to_x86_32_generic_28(ptr %p) {
-; CHECK-LABEL: @memset_optimize_size_hi_33_to_x86_32_generic_28(
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 27
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P0]], i8 0, i64 28, i1 false)
-; CHECK-NEXT:    store i64 0, ptr [[P1]], align 1
-; CHECK-NEXT:    ret void
+; CHECK-MEM4-LABEL: @memset_optimize_size_hi_33_to_x86_32_generic_28(
+; CHECK-MEM4-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
+; CHECK-MEM4-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 27
+; CHECK-MEM4-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P0]], i8 0, i64 28, i1 false)
+; CHECK-MEM4-NEXT:    store i64 0, ptr [[P1]], align 1
+; CHECK-MEM4-NEXT:    ret void
+;
+; CHECK-MEM16-LABEL: @memset_optimize_size_hi_33_to_x86_32_generic_28(
+; CHECK-MEM16-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 0
+; CHECK-MEM16-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 27
+; CHECK-MEM16-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P0]], i8 0, i64 32, i1 false)
+; CHECK-MEM16-NEXT:    store i64 0, ptr [[P1]], align 1
+; CHECK-MEM16-NEXT:    ret void
 ;
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
   %p1 = getelementptr inbounds i8, ptr %p, i64 27
@@ -475,6 +562,3 @@ define void @memset_optimize_size_hi_33_to_x86_32_generic_28(ptr %p) {
   store i64 0, ptr %p1, align 1
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-MEM16: {{.*}}
-; CHECK-MEM4: {{.*}}
