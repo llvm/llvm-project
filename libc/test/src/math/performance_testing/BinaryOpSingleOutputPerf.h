@@ -16,11 +16,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
-template <typename T, typename R>
-class BinaryOpSingleOutputPerf {
+template <typename T, typename R> class BinaryOpSingleOutputPerf {
   using FPBits = fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  static constexpr StorageType UIntMax = cpp::numeric_limits<StorageType>::max();
+  static constexpr StorageType UIntMax =
+      cpp::numeric_limits<StorageType>::max();
 
 public:
   typedef T Func(R, R);
@@ -121,22 +121,21 @@ public:
   }
 };
 
-
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
 
-#define BINARY_OP_SINGLE_OUTPUT_PERF(T, R, myFunc, otherFunc, filename)	\
+#define BINARY_OP_SINGLE_OUTPUT_PERF(T, R, myFunc, otherFunc, filename)        \
   int main() {                                                                 \
-    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(	\
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(         \
         &myFunc, &otherFunc, 1, filename);                                     \
     return 0;                                                                  \
   }
 
-#define BINARY_OP_SINGLE_OUTPUT_PERF_EX(T, R, myFunc, otherFunc, rounds, \
+#define BINARY_OP_SINGLE_OUTPUT_PERF_EX(T, R, myFunc, otherFunc, rounds,       \
                                         filename)                              \
   {                                                                            \
-    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(	\
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(         \
         &myFunc, &otherFunc, rounds, filename);                                \
-    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(	\
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(         \
         &myFunc, &otherFunc, rounds, filename);                                \
   }
