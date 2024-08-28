@@ -149,6 +149,8 @@ void PrimitiveTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Double, "double");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Ldouble, "long double");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Nullptr, "std::nullptr_t");
+    OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Auto, "auto");
+    OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, DecltypeAuto, "decltype(auto)");
   }
   outputQualifiers(OB, Quals, true, false);
 }
