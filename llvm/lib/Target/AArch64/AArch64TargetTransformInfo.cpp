@@ -1093,7 +1093,7 @@ static std::optional<Instruction *>
 instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
   if (isAllActivePredicate(II.getOperand(1)) &&
       !isa<llvm::UndefValue>(II.getOperand(0)) &&
-      !isa<llvm::PoisonValue>(II.getOperand(0)) {
+      !isa<llvm::PoisonValue>(II.getOperand(0))) {
     Value *Undef = llvm::UndefValue::get(II.getType());
     return IC.replaceOperand(II, 0, Undef);
   }
