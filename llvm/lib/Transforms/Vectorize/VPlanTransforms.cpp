@@ -17,6 +17,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -715,47 +716,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   //      2. Replace vector loop region with VPBasicBlock.
 }
 
-#ifndef NDEBUG
-static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
-  auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
-  if (Region && Region->isReplicator()) {
-    assert(Region->getNumSuccessors() == 1 &&
-           Region->getNumPredecessors() == 1 && "Expected SESE region!");
-    assert(R->getParent()->size() == 1 &&
-           "A recipe in an original replicator region must be the only "
-           "recipe in its block");
-    return Region;
-  }
-  return nullptr;
-}
-#endif
-
-static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
-                              VPDominatorTree &VPDT) {
-  if (A == B)
-    return false;
-
-  auto LocalComesBefore = [](const VPRecipeBase *A, const VPRecipeBase *B) {
-    for (auto &R : *A->getParent()) {
-      if (&R == A)
-        return true;
-      if (&R == B)
-        return false;
-    }
-    llvm_unreachable("recipe not found");
-  };
-  const VPBlockBase *ParentA = A->getParent();
-  const VPBlockBase *ParentB = B->getParent();
-  if (ParentA == ParentB)
-    return LocalComesBefore(A, B);
-
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
-         "No replicate regions expected at this point");
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
-         "No replicate regions expected at this point");
-  return VPDT.properlyDominates(ParentA, ParentB);
-}
-
 /// Sink users of \p FOR after the recipe defining the previous value \p
 /// Previous of the recurrence. \returns true if all users of \p FOR could be
 /// re-arranged as needed or false if it is not possible.
@@ -775,7 +735,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 
     if (isa<VPHeaderPHIRecipe>(SinkCandidate) ||
         !Seen.insert(SinkCandidate).second ||
-        properlyDominates(Previous, SinkCandidate, VPDT))
+        VPDT.properlyDominates(Previous, SinkCandidate))
       return true;
 
     if (SinkCandidate->mayHaveSideEffects())
@@ -802,7 +762,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
   // Keep recipes to sink ordered by dominance so earlier instructions are
   // processed first.
   sort(WorkList, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
-    return properlyDominates(A, B, VPDT);
+    return VPDT.properlyDominates(A, B);
   });
 
   for (VPRecipeBase *SinkCandidate : WorkList) {
@@ -1558,5 +1518,40 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         }
       }
     }
+  }
+}
+
+void VPlanTransforms::createInterleaveGroups(
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+    VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  for (const auto *IG : InterleaveGroups) {
+    auto *Recipe =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
+    SmallVector<VPValue *, 4> StoredValues;
+    for (unsigned i = 0; i < IG->getFactor(); ++i)
+      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
+        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
+        StoredValues.push_back(StoreR->getStoredValue());
+      }
+
+    bool NeedsMaskForGaps =
+        IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed;
+    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
+                                        Recipe->getMask(), NeedsMaskForGaps);
+    VPIG->insertBefore(Recipe);
+    unsigned J = 0;
+    for (unsigned i = 0; i < IG->getFactor(); ++i)
+      if (Instruction *Member = IG->getMember(i)) {
+        VPRecipeBase *MemberR = RecipeBuilder.getRecipe(Member);
+        if (!Member->getType()->isVoidTy()) {
+          VPValue *OriginalV = MemberR->getVPSingleValue();
+          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
+          J++;
+        }
+        MemberR->eraseFromParent();
+      }
   }
 }
