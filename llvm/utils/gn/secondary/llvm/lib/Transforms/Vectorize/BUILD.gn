@@ -18,6 +18,7 @@ static_library("Vectorize") {
     "VPlanRecipes.cpp",
     "VPlanSLP.cpp",
     "VPlanTransforms.cpp",
+    "VPlanUtils.cpp",
     "VPlanVerifier.cpp",
     "VectorCombine.cpp",
     "Vectorize.cpp",
