@@ -15,6 +15,8 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__utility/convert_to_integral.h>
+#include <__iterator/segmented_iterator.h>
+#include <__type_traits/enable_if.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,8 +28,15 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // fill_n isn't specialized for std::memset, because the compiler already optimizes the loop to a call to std::memset.
+template <class _ForwardIterator, class _Tp>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value);
 
-template <class _OutputIterator, class _Size, class _Tp>
+template <class _OutputIterator, class _Size, class _Tp, enable_if_t<!__is_segmented_iterator<_OutputIterator>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
+
+template <class _OutputIterator, class _Size, class _Tp, enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
 
@@ -77,12 +86,19 @@ __fill_n(__bit_iterator<_Cp, false> __first, _Size __n, const bool& __value) {
   return __first + __n;
 }
 
-template <class _OutputIterator, class _Size, class _Tp>
+template <class _OutputIterator, class _Size, class _Tp, enable_if_t<!__is_segmented_iterator<_OutputIterator>::value, int>>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
   for (; __n > 0; ++__first, (void)--__n)
     *__first = __value;
   return __first;
+}
+
+template <class _OutputIterator, class _Size, class _Tp, enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int>>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
+  std::fill(__first, __first + __n, __value);
+  return __n > 0 ? __first + __n : __first;
 }
 
 template <class _OutputIterator, class _Size, class _Tp>
