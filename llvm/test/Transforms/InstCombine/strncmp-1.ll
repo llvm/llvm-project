@@ -68,8 +68,8 @@ define i32 @test5() {
 define i32 @test6(ptr %str1, ptr %str2) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[LHSC:%.*]] = load i8, ptr [[STR1:%.*]], align 1
-; CHECK-NEXT:    [[LHSV:%.*]] = zext i8 [[LHSC]] to i32
 ; CHECK-NEXT:    [[RHSC:%.*]] = load i8, ptr [[STR2:%.*]], align 1
+; CHECK-NEXT:    [[LHSV:%.*]] = zext i8 [[LHSC]] to i32
 ; CHECK-NEXT:    [[RHSV:%.*]] = zext i8 [[RHSC]] to i32
 ; CHECK-NEXT:    [[CHARDIFF:%.*]] = sub nsw i32 [[LHSV]], [[RHSV]]
 ; CHECK-NEXT:    ret i32 [[CHARDIFF]]
