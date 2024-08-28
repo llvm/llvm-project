@@ -1753,7 +1753,8 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   Value *Step = nullptr;
   bool StepMatch =
       PN->getType()->isPointerTy()
-          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          ? match(StepInst,
+                  m_PtrAdd(PN->getDataLayout(), m_Specific(PN), m_Value(Step)))
           : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
   if (!StepMatch || !L->isLoopInvariant(Step))
     return false;
