@@ -245,7 +245,7 @@ struct basic_string_view {
 
 template <class T> struct span {
   template<size_t _ArrayExtent>
-	span(T (&__arr)[_ArrayExtent]) noexcept;
+	span(const T (&__arr)[_ArrayExtent]) noexcept;
 };
 
 } // namespace foo
