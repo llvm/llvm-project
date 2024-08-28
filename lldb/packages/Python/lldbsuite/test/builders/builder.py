@@ -153,7 +153,7 @@ class Builder:
 
             def getLlvmUtil(util_name):
                 llvm_tools_dir = os.getenv("LLVM_TOOLS_DIR", cc_dir.as_posix())
-                return llvm_tools_dir + "/" + util_name + exe_ext
+                return os.path.join(llvm_tools_dir, util_name + exe_ext)
 
             def getToolchainUtil(util_name):
                 return (cc_dir / (cc_prefix + util_name + cc_ext)).as_posix()
