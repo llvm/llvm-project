@@ -1716,8 +1716,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Synthesize entry counts for functions in the CombinedIndex.
   computeSyntheticCounts(ThinLTO.CombinedIndex);
 
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(
-      ThinLTO.ModuleMap.size());
+  FunctionImporter::ImportListsTy ImportLists(ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(
       ThinLTO.ModuleMap.size());
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;

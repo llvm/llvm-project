@@ -1111,7 +1111,7 @@ collectImportStatistics(const ModuleSummaryIndex &Index,
 #ifndef NDEBUG
 static bool checkVariableImport(
     const ModuleSummaryIndex &Index,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   DenseSet<GlobalValue::GUID> FlattenedImports;
 
@@ -1152,7 +1152,7 @@ void llvm::ComputeCrossModuleImport(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   auto MIS = ModuleImportsManager::create(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
