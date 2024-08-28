@@ -250,7 +250,7 @@ static Value *callBufferedPrintfStart(
   for (size_t i = 1; i < Args.size(); i++) {
     if (SpecIsCString.test(i)) {
       StringRef ArgStr;
-      if (getConstantStringInfo(Args[i], ArgStr)) {
+      if (getConstantStringInfo(Args[i], ArgStr, /*CharWidth=*/8)) {
         auto alignedLen = alignTo(ArgStr.size() + 1, 8);
         StringContents.push_back(StringData(
             ArgStr,
@@ -432,7 +432,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   SparseBitVector<8> SpecIsCString;
   StringRef FmtStr;
 
-  if (getConstantStringInfo(Fmt, FmtStr))
+  if (getConstantStringInfo(Fmt, FmtStr, /*CharWidth=*/8))
     locateCStrings(SpecIsCString, FmtStr);
 
   if (IsBuffered) {
