@@ -7083,7 +7083,7 @@ private:
 /// of the temporary an inverse conversion sequence is applied as a write-back
 /// conversion to the source l-value.
 ///
-///This AST node has three sub-expressions:
+/// This AST node has three sub-expressions:
 ///  - An OpaqueValueExpr with a source that is the argument lvalue expression.
 ///  - An OpaqueValueExpr with a source that is a an implicit conversion
 ///    sequence from the source lvalue to the argument type.
