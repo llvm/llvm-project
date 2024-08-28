@@ -495,7 +495,7 @@ public:
     return IsPointerOrReferenceType(type, nullptr);
   }
 
-  virtual UserExpression *GetUserExpression(
+  virtual std::unique_ptr<UserExpression> GetUserExpression(
       llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
       Expression::ResultType desired_type,
       const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
