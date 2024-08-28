@@ -134,26 +134,29 @@ namespace llvm {
 /// strictly speaking that's not allowed by the C++ standard (we would need to
 /// have explicit specialization declarations in all translation units where the
 /// specialization is used) so we don't.
-#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS) \
-  namespace llvm { \
-  template<typename T> typename Registry<T>::node *Registry<T>::Head = nullptr;\
-  template<typename T> typename Registry<T>::node *Registry<T>::Tail = nullptr;\
-  template<typename T> \
-  void Registry<T>::add_node(typename Registry<T>::node *N) { \
-    if (Tail) \
-      Tail->Next = N; \
-    else \
-      Head = N; \
-    Tail = N; \
-  } \
-  template<typename T> typename Registry<T>::iterator Registry<T>::begin() { \
-    return iterator(Head); \
-  } \
-  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Head; \
-  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Tail; \
-  template \
-  void Registry<REGISTRY_CLASS::type>::add_node(REGISTRY_CLASS::node*); \
-  template REGISTRY_CLASS::iterator Registry<REGISTRY_CLASS::type>::begin(); \
+#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
+  namespace llvm {                                                             \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
+  template <typename T>                                                        \
+  void Registry<T>::add_node(typename Registry<T>::node *N) {                  \
+    if (Tail)                                                                  \
+      Tail->Next = N;                                                          \
+    else                                                                       \
+      Head = N;                                                                \
+    Tail = N;                                                                  \
+  }                                                                            \
+  template <typename T> typename Registry<T>::iterator Registry<T>::begin() {  \
+    return iterator(Head);                                                     \
+  }                                                                            \
+  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Head;         \
+  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Tail;         \
+  template LLVM_ABI_EXPORT void                                                \
+  Registry<REGISTRY_CLASS::type>::add_node(REGISTRY_CLASS::node *);            \
+  template LLVM_ABI_EXPORT REGISTRY_CLASS::iterator                            \
+  Registry<REGISTRY_CLASS::type>::begin();                                     \
   }
 
 #endif // LLVM_SUPPORT_REGISTRY_H
