@@ -8,9 +8,9 @@
 
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -44,9 +44,11 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
 
-    FunctionProperties EFP{};
+    EntryProperties EFP{};
     // Get "hlsl.shader" attribute
     Attribute EntryAttr = F.getFnAttribute("hlsl.shader");
+    assert(EntryAttr.isValid() &&
+           "Invalid value specified for HLSL function attribute hlsl.shader");
     StringRef EntryProfile = EntryAttr.getValueAsString();
     Triple T("", "", "", EntryProfile);
     EFP.ShaderStage = T.getEnvironment();
@@ -56,23 +58,16 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     if (!NumThreadsStr.empty()) {
       SmallVector<StringRef> NumThreadsVec;
       NumThreadsStr.split(NumThreadsVec, ',');
-      if (NumThreadsVec.size() != 3) {
-        report_fatal_error(Twine(F.getName()) +
-                               ": Invalid numthreads specified",
-                           /* gen_crash_diag */ false);
-      }
-      auto Zip =
-          llvm::zip(NumThreadsVec, MutableArrayRef<unsigned>(EFP.NumThreads));
-      for (auto It : Zip) {
-        StringRef Str = std::get<0>(It);
-        APInt V;
-        assert(!Str.getAsInteger(10, V) &&
-               "Failed to parse numthreads components as integer values");
-        unsigned &Num = std::get<1>(It);
-        Num = V.getLimitedValue();
-      }
+      assert(NumThreadsVec.size() == 3 && "Invalid numthreads specified");
+      // Read in the three component values of numthreads
+      if (!llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10))
+        assert(false && "Failed to parse X component of numthreads");
+      if (!llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10))
+        assert(false && "Failed to parse Y component of numthreads");
+      if (!llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10))
+        assert(false && "Failed to parse Z component of numthreads");
     }
-    MMDAI.FunctionPropertyMap.emplace(std::make_pair(std::addressof(F), EFP));
+    MMDAI.EntryPropertyMap.insert(std::make_pair(std::addressof(F), EFP));
   }
   return MMDAI;
 }
@@ -80,21 +75,15 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
 void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Shader Model Version : " << ShaderModelVersion.getAsString() << "\n";
   OS << "DXIL Version : " << DXILVersion.getAsString() << "\n";
-  OS << "Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
+  OS << "Target Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
-  for (auto MapItem : FunctionPropertyMap) {
-    MapItem.first->getReturnType()->print(OS, false, true);
-    OS << " " << MapItem.first->getName() << "(";
-    FunctionType *FT = MapItem.first->getFunctionType();
-    for (unsigned I = 0, Sz = FT->getNumParams(); I < Sz; ++I) {
-      if (I)
-        OS << ",";
-      FT->getParamType(I)->print(OS);
-    }
-    OS << ")\n";
-    OS << "  NumThreads: " << MapItem.second.NumThreads[0] << ","
-       << MapItem.second.NumThreads[1] << "," << MapItem.second.NumThreads[2]
+  for (auto MapItem : EntryPropertyMap) {
+    OS << " " << MapItem.first->getName() << "\n";
+    OS << "  Function Shader Stage : "
+       << Triple::getEnvironmentTypeName(MapItem.second.ShaderStage) << "\n";
+    OS << "  NumThreads: " << MapItem.second.NumThreadsX << ","
+       << MapItem.second.NumThreadsY << "," << MapItem.second.NumThreadsZ
        << "\n";
   }
 }
