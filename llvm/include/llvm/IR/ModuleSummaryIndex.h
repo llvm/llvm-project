@@ -1293,7 +1293,8 @@ using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
 /// Map of a module name to the GUIDs and summaries we will import from that
 /// module.
-using ModuleToSummariesForIndexTy = std::map<std::string, GVSummaryMapTy>;
+using ModuleToSummariesForIndexTy =
+    std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
 using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
@@ -1449,7 +1450,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 10;
+  static constexpr uint64_t BitcodeSummaryVersion = 11;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {

@@ -232,11 +232,11 @@ lldb::REPLSP Target::GetREPL(Status &err, lldb::LanguageType language,
     if (auto single_lang = repl_languages.GetSingularLanguage()) {
       language = *single_lang;
     } else if (repl_languages.Empty()) {
-      err.SetErrorString(
+      err = Status::FromErrorString(
           "LLDB isn't configured with REPL support for any languages.");
       return REPLSP();
     } else {
-      err.SetErrorString(
+      err = Status::FromErrorString(
           "Multiple possible REPL languages.  Please specify a language.");
       return REPLSP();
     }
@@ -249,7 +249,7 @@ lldb::REPLSP Target::GetREPL(Status &err, lldb::LanguageType language,
   }
 
   if (!can_create) {
-    err.SetErrorStringWithFormat(
+    err = Status::FromErrorStringWithFormat(
         "Couldn't find an existing REPL for %s, and can't create a new one",
         Language::GetNameForLanguageType(language));
     return lldb::REPLSP();
@@ -264,8 +264,9 @@ lldb::REPLSP Target::GetREPL(Status &err, lldb::LanguageType language,
   }
 
   if (err.Success()) {
-    err.SetErrorStringWithFormat("Couldn't create a REPL for %s",
-                                 Language::GetNameForLanguageType(language));
+    err = Status::FromErrorStringWithFormat(
+        "Couldn't create a REPL for %s",
+        Language::GetNameForLanguageType(language));
   }
 
   return lldb::REPLSP();
@@ -348,7 +349,7 @@ lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
   for (LanguageType lang_type : Language::GetSupportedLanguages()) {
     Language *lang = Language::FindPlugin(lang_type);
     if (!lang) {
-      error.SetErrorString("Language not found\n");
+      error = Status::FromErrorString("Language not found\n");
       return lldb::BreakpointSP();
     }
     std::string entryPointName = lang->GetUserEntryPointName().str();
@@ -356,7 +357,7 @@ lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
       entryPointNamesSet.insert(entryPointName);
   }
   if (entryPointNamesSet.empty()) {
-    error.SetErrorString("No entry point name found\n");
+    error = Status::FromErrorString("No entry point name found\n");
     return lldb::BreakpointSP();
   }
   BreakpointSP bp_sp = CreateBreakpoint(
@@ -369,7 +370,7 @@ lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
       /*internal=*/false,
       /*hardware=*/false);
   if (!bp_sp) {
-    error.SetErrorString("Breakpoint creation failed.\n");
+    error = Status::FromErrorString("Breakpoint creation failed.\n");
     return lldb::BreakpointSP();
   }
   bp_sp->SetOneShot(true);
@@ -736,7 +737,8 @@ void Target::AddNameToBreakpoint(BreakpointID &id, llvm::StringRef name,
   if (!bp_sp) {
     StreamString s;
     id.GetDescription(&s, eDescriptionLevelBrief);
-    error.SetErrorStringWithFormat("Could not find breakpoint %s", s.GetData());
+    error = Status::FromErrorStringWithFormat("Could not find breakpoint %s",
+                                              s.GetData());
     return;
   }
   AddNameToBreakpoint(bp_sp, name, error);
@@ -772,9 +774,10 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   if (!can_create) {
-    error.SetErrorStringWithFormat("Breakpoint name \"%s\" doesn't exist and "
-                                   "can_create is false.",
-                                   name.AsCString());
+    error = Status::FromErrorStringWithFormat(
+        "Breakpoint name \"%s\" doesn't exist and "
+        "can_create is false.",
+        name.AsCString());
     return nullptr;
   }
 
@@ -843,7 +846,7 @@ static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
     return true;
 
   if (*num_supported_hardware_watchpoints == 0) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Target supports (%u) hardware watchpoint slots.\n",
         *num_supported_hardware_watchpoints);
     return false;
@@ -864,20 +867,23 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
 
   WatchpointSP wp_sp;
   if (!ProcessIsValid()) {
-    error.SetErrorString("process is not alive");
+    error = Status::FromErrorString("process is not alive");
     return wp_sp;
   }
 
   if (addr == LLDB_INVALID_ADDRESS || size == 0) {
     if (size == 0)
-      error.SetErrorString("cannot set a watchpoint with watch_size of 0");
+      error = Status::FromErrorString(
+          "cannot set a watchpoint with watch_size of 0");
     else
-      error.SetErrorStringWithFormat("invalid watch address: %" PRIu64, addr);
+      error = Status::FromErrorStringWithFormat(
+          "invalid watch address: %" PRIu64, addr);
     return wp_sp;
   }
 
   if (!LLDB_WATCH_TYPE_IS_VALID(kind)) {
-    error.SetErrorStringWithFormat("invalid watchpoint type: %d", kind);
+    error =
+        Status::FromErrorStringWithFormat("invalid watchpoint type: %d", kind);
   }
 
   if (!CheckIfWatchpointsSupported(this, error))
@@ -1069,7 +1075,7 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
   Status error;
 
   if (!file) {
-    error.SetErrorString("Invalid FileSpec.");
+    error = Status::FromErrorString("Invalid FileSpec.");
     return error;
   }
 
@@ -1084,7 +1090,7 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
     if (error.Success()) {
       break_store_ptr = input_data_sp->GetAsArray();
       if (!break_store_ptr) {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "Tried to append to invalid input file %s", path.c_str());
         return error;
       }
@@ -1102,8 +1108,8 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
                           File::eOpenOptionCloseOnExec,
                       lldb::eFilePermissionsFileDefault);
   if (!out_file.GetFile().IsValid()) {
-    error.SetErrorStringWithFormat("Unable to open output file: %s.",
-                                   path.c_str());
+    error = Status::FromErrorStringWithFormat("Unable to open output file: %s.",
+                                              path.c_str());
     return error;
   }
 
@@ -1141,8 +1147,8 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
         // If the user explicitly asked to serialize a breakpoint, and we
         // can't, then raise an error:
         if (!bkpt_save_sp) {
-          error.SetErrorStringWithFormat("Unable to serialize breakpoint %d",
-                                         bp_id);
+          error = Status::FromErrorStringWithFormat(
+              "Unable to serialize breakpoint %d", bp_id);
           return error;
         }
         break_store_ptr->AddItem(bkpt_save_sp);
@@ -1173,14 +1179,14 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
   if (!error.Success()) {
     return error;
   } else if (!input_data_sp || !input_data_sp->IsValid()) {
-    error.SetErrorStringWithFormat("Invalid JSON from input file: %s.",
-                                   file.GetPath().c_str());
+    error = Status::FromErrorStringWithFormat(
+        "Invalid JSON from input file: %s.", file.GetPath().c_str());
     return error;
   }
 
   StructuredData::Array *bkpt_array = input_data_sp->GetAsArray();
   if (!bkpt_array) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Invalid breakpoint data from input file: %s.", file.GetPath().c_str());
     return error;
   }
@@ -1193,7 +1199,7 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
     // Peel off the breakpoint key, and feed the rest to the Breakpoint:
     StructuredData::Dictionary *bkpt_dict = bkpt_object_sp->GetAsDictionary();
     if (!bkpt_dict) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Invalid breakpoint data for element %zu from input file: %s.", i,
           file.GetPath().c_str());
       return error;
@@ -1207,7 +1213,7 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
     BreakpointSP bkpt_sp = Breakpoint::CreateFromStructuredData(
         shared_from_this(), bkpt_data_sp, error);
     if (!error.Success()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Error restoring breakpoint %zu from %s: %s.", i,
           file.GetPath().c_str(), error.AsCString());
       return error;
@@ -1801,7 +1807,7 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
     // If the contents of this section are encrypted, the on-disk file is
     // unusable.  Read only from live memory.
     if (section_sp->IsEncrypted()) {
-      error.SetErrorString("section is encrypted");
+      error = Status::FromErrorString("section is encrypted");
       return 0;
     }
     ModuleSP module_sp(section_sp->GetModule());
@@ -1813,15 +1819,17 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
         if (bytes_read > 0)
           return bytes_read;
         else
-          error.SetErrorStringWithFormat("error reading data from section %s",
-                                         section_sp->GetName().GetCString());
+          error = Status::FromErrorStringWithFormat(
+              "error reading data from section %s",
+              section_sp->GetName().GetCString());
       } else
-        error.SetErrorString("address isn't from a object file");
+        error = Status::FromErrorString("address isn't from a object file");
     } else
-      error.SetErrorString("address isn't in a module");
+      error = Status::FromErrorString("address isn't in a module");
   } else
-    error.SetErrorString("address doesn't contain a section that points to a "
-                         "section in a object file");
+    error = Status::FromErrorString(
+        "address doesn't contain a section that points to a "
+        "section in a object file");
 
   return 0;
 }
@@ -1904,21 +1912,21 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
     if (load_addr == LLDB_INVALID_ADDRESS) {
       ModuleSP addr_module_sp(resolved_addr.GetModule());
       if (addr_module_sp && addr_module_sp->GetFileSpec())
-        error.SetErrorStringWithFormatv(
+        error = Status::FromErrorStringWithFormatv(
             "{0:F}[{1:x+}] can't be resolved, {0:F} is not currently loaded",
             addr_module_sp->GetFileSpec(), resolved_addr.GetFileAddress());
       else
-        error.SetErrorStringWithFormat("0x%" PRIx64 " can't be resolved",
-                                       resolved_addr.GetFileAddress());
+        error = Status::FromErrorStringWithFormat(
+            "0x%" PRIx64 " can't be resolved", resolved_addr.GetFileAddress());
     } else {
       bytes_read = m_process_sp->ReadMemory(load_addr, dst, dst_len, error);
       if (bytes_read != dst_len) {
         if (error.Success()) {
           if (bytes_read == 0)
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "read memory from 0x%" PRIx64 " failed", load_addr);
           else
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "only %" PRIu64 " of %" PRIu64
                 " bytes were read from memory at 0x%" PRIx64,
                 (uint64_t)bytes_read, (uint64_t)dst_len, load_addr);
@@ -2017,7 +2025,7 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
     }
   } else {
     if (dst == nullptr)
-      result_error.SetErrorString("invalid arguments");
+      result_error = Status::FromErrorString("invalid arguments");
     else
       result_error.Clear();
   }
@@ -2109,7 +2117,7 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
       return bytes_read;
     }
   } else {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "byte size of %u is too large for integer scalar type", byte_size);
   }
   return 0;
@@ -2253,7 +2261,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
               module_spec, m_process_sp.get(), module_sp, &search_paths,
               &old_modules, &did_create_module);
         } else {
-          error.SetErrorString("no platform is currently set");
+          error = Status::FromErrorString("no platform is currently set");
         }
       }
     }
@@ -2277,19 +2285,21 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         case ObjectFile::eTypeDebugInfo: /// An object file that contains only
                                          /// debug information
           if (error_ptr)
-            error_ptr->SetErrorString("debug info files aren't valid target "
-                                      "modules, please specify an executable");
+            *error_ptr = Status::FromErrorString(
+                "debug info files aren't valid target "
+                "modules, please specify an executable");
           return ModuleSP();
         case ObjectFile::eTypeStubLibrary: /// A library that can be linked
                                            /// against but not used for
                                            /// execution
           if (error_ptr)
-            error_ptr->SetErrorString("stub libraries aren't valid target "
-                                      "modules, please specify an executable");
+            *error_ptr = Status::FromErrorString(
+                "stub libraries aren't valid target "
+                "modules, please specify an executable");
           return ModuleSP();
         default:
           if (error_ptr)
-            error_ptr->SetErrorString(
+            *error_ptr = Status::FromErrorString(
                 "unsupported file type, please specify an executable");
           return ModuleSP();
         }
@@ -2519,7 +2529,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   auto type_system_or_err =
       GetScratchTypeSystemForLanguage(language.AsLanguageType());
   if (auto err = type_system_or_err.takeError()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language.AsLanguageType()),
         llvm::toString(std::move(err)).c_str());
@@ -2528,7 +2538,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
 
   auto ts = *type_system_or_err;
   if (!ts) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Type system for language %s is no longer live",
         language.GetDescription().data());
     return nullptr;
@@ -2537,7 +2547,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   auto *user_expr = ts->GetUserExpression(expr, prefix, language, desired_type,
                                           options, ctx_obj);
   if (!user_expr)
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Could not create an expression for language %s",
         language.GetDescription().data());
 
@@ -2550,7 +2560,7 @@ FunctionCaller *Target::GetFunctionCallerForLanguage(
     const char *name, Status &error) {
   auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
   if (auto err = type_system_or_err.takeError()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
         llvm::toString(std::move(err)).c_str());
@@ -2558,7 +2568,7 @@ FunctionCaller *Target::GetFunctionCallerForLanguage(
   }
   auto ts = *type_system_or_err;
   if (!ts) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Type system for language %s is no longer live",
         Language::GetNameForLanguageType(language));
     return nullptr;
@@ -2566,7 +2576,7 @@ FunctionCaller *Target::GetFunctionCallerForLanguage(
   auto *persistent_fn = ts->GetFunctionCaller(return_type, function_address,
                                               arg_value_list, name);
   if (!persistent_fn)
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Could not create an expression for language %s",
         Language::GetNameForLanguageType(language));
 
@@ -3248,11 +3258,9 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   FinalizeFileActions(launch_info);
 
   if (state == eStateConnected) {
-    if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY)) {
-      error.SetErrorString(
+    if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY))
+      return Status::FromErrorString(
           "can't launch in tty when launching through a remote connection");
-      return error;
-    }
   }
 
   if (!launch_info.GetArchitecture().IsValid())
@@ -3304,11 +3312,11 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     }
   }
 
-  if (!m_process_sp && error.Success())
-    error.SetErrorString("failed to launch or debug process");
-
   if (!error.Success())
     return error;
+
+  if (!m_process_sp)
+    return Status::FromErrorString("failed to launch or debug process");
 
   bool rebroadcast_first_stop =
       !synchronous_execution &&
@@ -3341,7 +3349,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       error = m_process_sp->Resume();
     if (!error.Success()) {
       Status error2;
-      error2.SetErrorStringWithFormat(
+      error2 = Status::FromErrorStringWithFormat(
           "process resume at entry point failed: %s", error.AsCString());
       error = error2;
     }
@@ -3354,7 +3362,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     if (exit_desc && exit_desc[0])
       desc = " (" + std::string(exit_desc) + ')';
     if (with_shell)
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "process exited with status %i%s\n"
           "'r' and 'run' are aliases that default to launching through a "
           "shell.\n"
@@ -3362,12 +3370,12 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
           "'process launch'.",
           exit_status, desc.c_str());
     else
-      error.SetErrorStringWithFormat("process exited with status %i%s",
-                                     exit_status, desc.c_str());
+      error = Status::FromErrorStringWithFormat(
+          "process exited with status %i%s", exit_status, desc.c_str());
   } break;
   default:
-    error.SetErrorStringWithFormat("initial process state wasn't stopped: %s",
-                                   StateAsCString(state));
+    error = Status::FromErrorStringWithFormat(
+        "initial process state wasn't stopped: %s", StateAsCString(state));
     break;
   }
   return error;
@@ -3416,8 +3424,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     state = process_sp->GetState();
     if (process_sp->IsAlive() && state != eStateConnected) {
       if (state == eStateAttaching)
-        return Status("process attach is in progress");
-      return Status("a process is already being debugged");
+        return Status::FromErrorString("process attach is in progress");
+      return Status::FromErrorString("a process is already being debugged");
     }
   }
 
@@ -3431,8 +3439,9 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
             old_exec_module_sp->GetPlatformFileSpec().GetFilename());
 
     if (!attach_info.ProcessInfoSpecified()) {
-      return Status("no process specified, create a target with a file, or "
-                    "specify the --pid or --name");
+      return Status::FromErrorString(
+          "no process specified, create a target with a file, or "
+          "specify the --pid or --name");
     }
   }
 
@@ -3459,7 +3468,7 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
           CreateProcess(attach_info.GetListenerForProcess(GetDebugger()),
                         plugin_name, nullptr, false);
       if (!process_sp) {
-        error.SetErrorStringWithFormatv(
+        error = Status::FromErrorStringWithFormatv(
             "failed to create process using plugin '{0}'",
             plugin_name.empty() ? "<empty>" : plugin_name);
         return error;
@@ -3483,9 +3492,9 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
       if (state != eStateStopped) {
         const char *exit_desc = process_sp->GetExitDescription();
         if (exit_desc)
-          error.SetErrorStringWithFormat("%s", exit_desc);
+          error = Status::FromErrorStringWithFormat("%s", exit_desc);
         else
-          error.SetErrorString(
+          error = Status::FromErrorString(
               "process did not stop (no such process or permission problem?)");
         process_sp->Destroy(false);
       }
@@ -3847,7 +3856,7 @@ Status Target::StopHookScripted::SetScriptCallback(
   ScriptInterpreter *script_interp =
       GetTarget()->GetDebugger().GetScriptInterpreter();
   if (!script_interp) {
-    error.SetErrorString("No script interpreter installed.");
+    error = Status::FromErrorString("No script interpreter installed.");
     return error;
   }
 
