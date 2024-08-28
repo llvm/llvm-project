@@ -3394,8 +3394,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (MadeChange)
     return &GEP;
 
-  // Canonicalize constant GEPs to i8 type.
-  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+  // Canonicalize constant GEPs to byte type.
+  if (!GEPEltType->isIntegerTy(DL.getByteWidth()) &&
+      GEP.hasAllConstantIndices()) {
     APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
     if (GEP.accumulateConstantOffset(DL, Offset))
       return replaceInstUsesWith(
@@ -3485,15 +3486,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
 
   // Canonicalize gep %T to gep [sizeof(%T) x i8]:
-  auto IsCanonicalType = [](Type *Ty) {
+  auto IsCanonicalType = [this](Type *Ty) {
     if (auto *AT = dyn_cast<ArrayType>(Ty))
       Ty = AT->getElementType();
-    return Ty->isIntegerTy(8);
+    return Ty->isIntegerTy(DL.getByteWidth());
   };
   if (Indices.size() == 1 && !IsCanonicalType(GEPEltType)) {
     TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
     assert(!Scale.isScalable() && "Should have been handled earlier");
-    Type *NewElemTy = Builder.getInt8Ty();
+    Type *NewElemTy = Builder.getByteTy();
     if (Scale.getFixedValue() != 1)
       NewElemTy = ArrayType::get(NewElemTy, Scale.getFixedValue());
     GEP.setSourceElementType(NewElemTy);
