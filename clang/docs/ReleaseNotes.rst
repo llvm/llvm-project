@@ -220,6 +220,11 @@ Attribute Changes in Clang
 - ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
   where they were previously silently ignored.
 
+- Clang now automatically adds ``[[clang::lifetimebound]]`` to the parameters of
+  ``std::span, std::string_view`` constructors, this enables Clang to capture
+  more cases where the returned reference outlives the object.
+  (#GH100567)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -318,6 +323,7 @@ Bug Fixes to C++ Support
   of the current instantiation in all cases.
 - Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
 - Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
+- Clang now correctly handles direct-list-initialization of a structured bindings from an array. (#GH31813)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
