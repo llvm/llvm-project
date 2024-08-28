@@ -49,7 +49,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__scoped_temporary_buffer() _NOEXCEPT {
     if (__libcpp_is_constant_evaluated()) {
-      allocator<_Tp>().deallocate(__ptr_, __count_);
+      if (__ptr_)
+        allocator<_Tp>().deallocate(__ptr_, __count_);
+      return;
     }
 
     std::__libcpp_deallocate_unsized((void*)__ptr_, _LIBCPP_ALIGNOF(_Tp));
