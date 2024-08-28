@@ -19,6 +19,9 @@ The check implements the following rules from the CERT C Coding Standard:
 Unsafe functions
 ----------------
 
+The following functions are reported if `ReportDefaultFunctions
+<unsafe-functions.html#cmdoption-arg-ReportDefaultFunctions>`_ is enabled.
+
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
 
@@ -74,6 +77,36 @@ Both macros have to be defined to suggest replacement functions from *Annex K.*
 ``__STDC_WANT_LIB_EXT1__`` must be defined to ``1`` by the user **before**
 including any system headers.
 
+Custom functions
+----------------
+
+The options `CustomNormalFunctions` and `CustomAnnexKFunctions` allow the user
+to define custom functions to be checked. The format is the following, without
+newlines:
+
+.. code::
+
+   bugprone-unsafe-functions.CustomNormalFunctions="
+     functionRegex1, replacement1[, reason1]; 
+     functionRegex2, replacement2[, reason2];
+     ...
+   "
+
+The functions are matched using POSIX extended regular expressions.
+*(Note: The regular expressions do not support negative* ``(?!)`` *matches)*
+
+The `reason` is optional and is used to provide additional information about the
+reasoning behind the replacement. The default reason is ``is marked as unsafe``.
+
+As an example, the configuration ``^original$, replacement, is deprecated;``
+will produce the following diagnostic message.
+
+.. code:: c
+  
+   original(); // warning: function 'original' is deprecated; 'replacement' should be used instead.
+   ::std::original(); // no-warning
+   original_function(); // no-warning
+
 
 Options
 -------
@@ -86,6 +119,22 @@ Options
    this option enables.
    Default is `true`.
 
+.. option:: ReportDefaultFunctions
+
+    When `true`, the check reports the default set of functions.
+    Default is `true`.
+
+.. option:: CustomNormalFunctions
+
+    A comma-separated list of regular expressions, their replacements, and an
+    optional reason. For more information, see `Custom functions
+    <unsafe-functions.html#custom-functions>`_.
+
+.. option:: CustomAnnexKFunctions
+
+    A comma-separated list of regular expressions, their replacements, and an
+    optional reason. For more information, see `Custom functions
+    <unsafe-functions.html#custom-functions>`_.
 
 Examples
 --------

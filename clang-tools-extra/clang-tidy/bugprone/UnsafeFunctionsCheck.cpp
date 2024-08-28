@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnsafeFunctionsCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -18,6 +20,12 @@ using namespace llvm;
 
 namespace clang::tidy::bugprone {
 
+static constexpr llvm::StringLiteral OptionNameCustomNormalFunctions =
+    "CustomNormalFunctions";
+static constexpr llvm::StringLiteral OptionNameCustomAnnexKFunctions =
+    "CustomAnnexKFunctions";
+static constexpr llvm::StringLiteral OptionNameReportDefaultFunctions =
+    "ReportDefaultFunctions";
 static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
     "ReportMoreUnsafeFunctions";
 
@@ -26,6 +34,10 @@ static constexpr llvm::StringLiteral FunctionNamesWithAnnexKReplacementId =
 static constexpr llvm::StringLiteral FunctionNamesId = "FunctionsNames";
 static constexpr llvm::StringLiteral AdditionalFunctionNamesId =
     "AdditionalFunctionsNames";
+static constexpr llvm::StringLiteral CustomFunctionNamesId =
+    "CustomFunctionNames";
+static constexpr llvm::StringLiteral CustomAnnexKFunctionNamesId =
+    "CustomAnnexKFunctionNames";
 static constexpr llvm::StringLiteral DeclRefId = "DRE";
 
 static std::optional<std::string>
@@ -127,57 +139,155 @@ static bool isAnnexKAvailable(std::optional<bool> &CacheVar, Preprocessor *PP,
   return CacheVar.value();
 }
 
+static std::vector<UnsafeFunctionsCheck::CheckedFunction>
+ParseCheckedFunctions(StringRef Option, StringRef OptionName,
+                      ClangTidyContext *Context) {
+  std::vector<StringRef> Functions = utils::options::parseStringList(Option);
+  std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
+  Result.reserve(Functions.size());
+
+  for (StringRef Function : Functions) {
+    if (Function.empty()) {
+      continue;
+    }
+
+    auto [Name, Rest] = Function.split(',');
+    auto [Replacement, Reason] = Rest.split(',');
+
+    if (Name.trim().empty()) {
+      Context->configurationDiag("invalid configuration value for option '%0'; "
+                                 "expected the name of an unsafe function")
+          << OptionName;
+    }
+
+    if (Replacement.trim().empty()) {
+      Context->configurationDiag(
+          "invalid configuration value '%0' for option '%1'; "
+          "expected a replacement function name")
+          << Name.trim() << OptionName;
+    }
+
+    Result.push_back({Name.trim().str(), llvm::Regex(Name.trim()),
+                      Replacement.trim().str(), Reason.trim().str()});
+  }
+
+  return Result;
+}
+
+static std::string SerializeCheckedFunctions(
+    const std::vector<UnsafeFunctionsCheck::CheckedFunction> &Functions) {
+  std::vector<std::string> Result;
+  Result.reserve(Functions.size());
+
+  for (const auto &Entry : Functions) {
+    if (Entry.Reason.empty())
+      Result.push_back(Entry.Name + "," + Entry.Replacement);
+    else
+      Result.push_back(Entry.Name + "," + Entry.Replacement + "," +
+                       Entry.Reason);
+  }
+
+  return llvm::join(Result, ";");
+}
+
 UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      CustomNormalFunctions(ParseCheckedFunctions(
+          Options.get(OptionNameCustomNormalFunctions, ""),
+          OptionNameCustomNormalFunctions, Context)),
+      CustomAnnexKFunctions(ParseCheckedFunctions(
+          Options.get(OptionNameCustomAnnexKFunctions, ""),
+          OptionNameCustomAnnexKFunctions, Context)),
+      ReportDefaultFunctions(
+          Options.get(OptionNameReportDefaultFunctions, true)),
       ReportMoreUnsafeFunctions(
           Options.get(OptionNameReportMoreUnsafeFunctions, true)) {}
 
 void UnsafeFunctionsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, OptionNameCustomNormalFunctions,
+                SerializeCheckedFunctions(CustomNormalFunctions));
+  Options.store(Opts, OptionNameCustomAnnexKFunctions,
+                SerializeCheckedFunctions(CustomAnnexKFunctions));
+  Options.store(Opts, OptionNameReportDefaultFunctions, ReportDefaultFunctions);
   Options.store(Opts, OptionNameReportMoreUnsafeFunctions,
                 ReportMoreUnsafeFunctions);
 }
 
 void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
-  if (getLangOpts().C11) {
-    // Matching functions with safe replacements only in Annex K.
-    auto FunctionNamesWithAnnexKReplacementMatcher = hasAnyName(
-        "::bsearch", "::ctime", "::fopen", "::fprintf", "::freopen", "::fscanf",
-        "::fwprintf", "::fwscanf", "::getenv", "::gmtime", "::localtime",
-        "::mbsrtowcs", "::mbstowcs", "::memcpy", "::memmove", "::memset",
-        "::printf", "::qsort", "::scanf", "::snprintf", "::sprintf", "::sscanf",
-        "::strcat", "::strcpy", "::strerror", "::strlen", "::strncat",
-        "::strncpy", "::strtok", "::swprintf", "::swscanf", "::vfprintf",
-        "::vfscanf", "::vfwprintf", "::vfwscanf", "::vprintf", "::vscanf",
-        "::vsnprintf", "::vsprintf", "::vsscanf", "::vswprintf", "::vswscanf",
-        "::vwprintf", "::vwscanf", "::wcrtomb", "::wcscat", "::wcscpy",
-        "::wcslen", "::wcsncat", "::wcsncpy", "::wcsrtombs", "::wcstok",
-        "::wcstombs", "::wctomb", "::wmemcpy", "::wmemmove", "::wprintf",
-        "::wscanf");
+  if (ReportDefaultFunctions) {
+    if (getLangOpts().C11) {
+      // Matching functions with safe replacements only in Annex K.
+      auto FunctionNamesWithAnnexKReplacementMatcher = hasAnyName(
+          "::bsearch", "::ctime", "::fopen", "::fprintf", "::freopen",
+          "::fscanf", "::fwprintf", "::fwscanf", "::getenv", "::gmtime",
+          "::localtime", "::mbsrtowcs", "::mbstowcs", "::memcpy", "::memmove",
+          "::memset", "::printf", "::qsort", "::scanf", "::snprintf",
+          "::sprintf", "::sscanf", "::strcat", "::strcpy", "::strerror",
+          "::strlen", "::strncat", "::strncpy", "::strtok", "::swprintf",
+          "::swscanf", "::vfprintf", "::vfscanf", "::vfwprintf", "::vfwscanf",
+          "::vprintf", "::vscanf", "::vsnprintf", "::vsprintf", "::vsscanf",
+          "::vswprintf", "::vswscanf", "::vwprintf", "::vwscanf", "::wcrtomb",
+          "::wcscat", "::wcscpy", "::wcslen", "::wcsncat", "::wcsncpy",
+          "::wcsrtombs", "::wcstok", "::wcstombs", "::wctomb", "::wmemcpy",
+          "::wmemmove", "::wprintf", "::wscanf");
+      Finder->addMatcher(
+          declRefExpr(to(functionDecl(FunctionNamesWithAnnexKReplacementMatcher)
+                             .bind(FunctionNamesWithAnnexKReplacementId)))
+              .bind(DeclRefId),
+          this);
+    }
+
+    // Matching functions with replacements without Annex K.
+    auto FunctionNamesMatcher =
+        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
     Finder->addMatcher(
-        declRefExpr(to(functionDecl(FunctionNamesWithAnnexKReplacementMatcher)
-                           .bind(FunctionNamesWithAnnexKReplacementId)))
+        declRefExpr(
+            to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
             .bind(DeclRefId),
         this);
+
+    if (ReportMoreUnsafeFunctions) {
+      // Matching functions with replacements without Annex K, at user request.
+      auto AdditionalFunctionNamesMatcher =
+          hasAnyName("::bcmp", "::bcopy", "::bzero", "::getpw", "::vfork");
+      Finder->addMatcher(
+          declRefExpr(to(functionDecl(AdditionalFunctionNamesMatcher)
+                             .bind(AdditionalFunctionNamesId)))
+              .bind(DeclRefId),
+          this);
+    }
   }
 
-  // Matching functions with replacements without Annex K.
-  auto FunctionNamesMatcher =
-      hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
-  Finder->addMatcher(
-      declRefExpr(to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
-          .bind(DeclRefId),
-      this);
+  if (!CustomAnnexKFunctions.empty()) {
+    std::vector<llvm::StringRef> FunctionNames;
+    FunctionNames.reserve(CustomAnnexKFunctions.size());
 
-  if (ReportMoreUnsafeFunctions) {
-    // Matching functions with replacements without Annex K, at user request.
-    auto AdditionalFunctionNamesMatcher =
-        hasAnyName("::bcmp", "::bcopy", "::bzero", "::getpw", "::vfork");
-    Finder->addMatcher(
-        declRefExpr(to(functionDecl(AdditionalFunctionNamesMatcher)
-                           .bind(AdditionalFunctionNamesId)))
-            .bind(DeclRefId),
-        this);
+    for (const auto &Entry : CustomAnnexKFunctions)
+      FunctionNames.push_back(Entry.Name);
+
+    auto CustomAnnexKFunctionsMatcher =
+        matchers::matchesAnyListedName(FunctionNames);
+
+    Finder->addMatcher(declRefExpr(to(functionDecl(CustomAnnexKFunctionsMatcher)
+                                          .bind(CustomAnnexKFunctionNamesId)))
+                           .bind(DeclRefId),
+                       this);
+  }
+
+  if (!CustomNormalFunctions.empty()) {
+    std::vector<llvm::StringRef> FunctionNames;
+    FunctionNames.reserve(CustomNormalFunctions.size());
+
+    for (const auto &Entry : CustomNormalFunctions)
+      FunctionNames.push_back(Entry.Name);
+
+    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+
+    Finder->addMatcher(declRefExpr(to(functionDecl(CustomFunctionsMatcher)
+                                          .bind(CustomFunctionNamesId)))
+                           .bind(DeclRefId),
+                       this);
   }
 }
 
@@ -186,16 +296,61 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FuncDecl = cast<FunctionDecl>(DeclRef->getDecl());
   assert(DeclRef && FuncDecl && "No valid matched node in check()");
 
+  // Only one of these are matched at a time.
   const auto *AnnexK = Result.Nodes.getNodeAs<FunctionDecl>(
       FunctionNamesWithAnnexKReplacementId);
   const auto *Normal = Result.Nodes.getNodeAs<FunctionDecl>(FunctionNamesId);
   const auto *Additional =
       Result.Nodes.getNodeAs<FunctionDecl>(AdditionalFunctionNamesId);
-  assert((AnnexK || Normal || Additional) && "No valid match category.");
+  const auto *CustomAnnexK =
+      Result.Nodes.getNodeAs<FunctionDecl>(CustomAnnexKFunctionNamesId);
+  const auto *CustomNormal =
+      Result.Nodes.getNodeAs<FunctionDecl>(CustomFunctionNamesId);
+  assert((AnnexK || Normal || Additional || CustomAnnexK || CustomNormal) &&
+         "No valid match category.");
 
   bool AnnexKIsAvailable =
       isAnnexKAvailable(IsAnnexKAvailable, PP, getLangOpts());
   StringRef FunctionName = FuncDecl->getName();
+
+  if (CustomAnnexK || CustomNormal) {
+    const auto ShowCheckedFunctionWarning = [&](const CheckedFunction &Entry) {
+      StringRef Reason =
+          Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
+      diag(DeclRef->getExprLoc(), "function %0 %1; '%2' should be used instead")
+          << FuncDecl << Reason << Entry.Replacement
+          << DeclRef->getSourceRange();
+    };
+
+    if (AnnexKIsAvailable) {
+      for (const auto &Entry : CustomAnnexKFunctions) {
+        if (Entry.Pattern.match(FunctionName)) {
+          // If both Annex K and Normal are matched, show Annex K warning only.
+          if (CustomAnnexK)
+            ShowCheckedFunctionWarning(Entry);
+
+          return;
+        }
+      }
+
+      assert(!CustomAnnexK && "No custom Annex K function was matched.");
+    }
+
+    // Annex K was not available, or the assertion failed.
+    if (CustomAnnexK)
+      return;
+
+    for (const auto &Entry : CustomNormalFunctions) {
+      if (Entry.Pattern.match(FunctionName)) {
+        ShowCheckedFunctionWarning(Entry);
+        return;
+      }
+    }
+
+    assert(false && "No custom function was matched.");
+    return;
+  }
+
   const std::optional<std::string> ReplacementFunctionName =
       [&]() -> std::optional<std::string> {
     if (AnnexK) {

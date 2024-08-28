@@ -32,7 +32,19 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void onEndOfTranslationUnit() override;
 
+  struct CheckedFunction {
+    std::string Name;
+    llvm::Regex Pattern;
+    std::string Replacement;
+    std::string Reason;
+  };
+
 private:
+  const std::vector<CheckedFunction> CustomNormalFunctions;
+  const std::vector<CheckedFunction> CustomAnnexKFunctions;
+
+  // If true, the default set of functions are reported.
+  const bool ReportDefaultFunctions;
   /// If true, additional functions from widely used API-s (such as POSIX) are
   /// added to the list of reported functions.
   const bool ReportMoreUnsafeFunctions;
