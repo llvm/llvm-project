@@ -173,7 +173,7 @@ func.func @ceildivsi() {
   // CHECK-NEXT:  3
   func.call @ceildivsi_i8(%c7, %c3) : (i8, i8) -> ()
 
-  // ceildivsi 7 -3 == -1 (-2.3333 round towards +inf)
+  // ceildivsi 7 -3 == -2 (-2.3333 round towards +inf)
   // CHECK-LABEL: @ceildivsi_i8
   // CHECK-NEXT:  -2
   func.call @ceildivsi_i8(%c7, %cn3) : (i8, i8) -> ()
