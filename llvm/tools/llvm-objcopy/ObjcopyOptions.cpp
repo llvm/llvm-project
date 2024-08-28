@@ -556,9 +556,9 @@ static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
                                                StringRef OptionName) {
   StringRef StringValue;
   if (ArgValue.starts_with("*+")) {
-    StringValue = ArgValue.slice(2, StringRef::npos);
+    StringValue = ArgValue.substr(2);
   } else if (ArgValue.starts_with("*-")) {
-    StringValue = ArgValue.slice(1, StringRef::npos);
+    StringValue = ArgValue.substr(1);
   } else if (ArgValue.contains("=")) {
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName +
@@ -608,7 +608,7 @@ parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
           SectionPattern, SectionMatchStyle, ErrorCallback)))
     return std::move(E);
 
-  StringRef Value = ArgValue.slice(LastSymbolIndex + 1, StringRef::npos);
+  StringRef Value = ArgValue.substr(LastSymbolIndex + 1);
   if (Value.empty()) {
     switch (UpdateSymbol) {
     case '+':
