@@ -643,7 +643,7 @@ private:
       return 0;
 
     // Check if it's a namespace inside a namespace, and call recursively if so
-    // '3' is the sizes of the whitespace and closing brace for " _inner_ }"
+    // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
     if (I[1]->First->is(tok::kw_namespace)) {
       if (I[1]->Last->is(TT_LineComment))
         return 0;
@@ -652,11 +652,11 @@ private:
       const unsigned MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
       if (!MergedLines)
         return 0;
-      // check if there is even a line after the inner result
-      if (I + 2 + MergedLines >= E)
+      // Check if there is even a line after the inner result.
+      if (std::distance(I, E) <= MergedLines + 2)
         return 0;
-      // check that the line after the inner result starts with a closing brace
-      // which we are permitted to merge into one line
+      // Check that the line after the inner result starts with a closing brace
+      // which we are permitted to merge into one line.
       if (I[2 + MergedLines]->First->is(tok::r_brace) &&
           !I[2 + MergedLines]->First->MustBreakBefore &&
           !I[1 + MergedLines]->Last->is(TT_LineComment) &&
@@ -669,7 +669,7 @@ private:
     // There's no inner namespace, so we are considering to merge at most one
     // line.
 
-    // The line which is in the namespace should end with semicolon
+    // The line which is in the namespace should end with semicolon.
     if (I[1]->Last->isNot(tok::semi))
       return 0;
 
@@ -984,15 +984,13 @@ private:
   bool nextNLinesFitInto(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
                          SmallVectorImpl<AnnotatedLine *>::const_iterator E,
                          unsigned Limit) {
-    unsigned joinedLength = 0;
-    for (SmallVectorImpl<AnnotatedLine *>::const_iterator J = I + 1; J != E;
-         ++J) {
-
+    unsigned JoinedLength = 0;
+    for (auto J = I + 1; J != E; ++J) {
       if ((*J)->First->MustBreakBefore)
         return false;
 
-      joinedLength += 1 + (*J)->Last->TotalLength;
-      if (joinedLength > Limit)
+      JoinedLength += 1 + (*J)->Last->TotalLength;
+      if (JoinedLength > Limit)
         return false;
     }
     return true;
