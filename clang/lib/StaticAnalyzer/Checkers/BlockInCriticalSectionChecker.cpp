@@ -242,13 +242,12 @@ BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
 }
 
 static const MemRegion *skipStdBaseClassRegion(const MemRegion *Reg) {
-  do {
-    assert(Reg);
+  while (Reg) {
     const auto *BaseClassRegion = dyn_cast<CXXBaseObjectRegion>(Reg);
     if (!BaseClassRegion || !BaseClassRegion->getDecl()->isInStdNamespace())
       break;
     Reg = BaseClassRegion->getSuperRegion();
-  } while (true);
+  }
   return Reg;
 }
 
