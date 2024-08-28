@@ -47,7 +47,7 @@ bool SaveMiniDump(const lldb::ProcessSP &process_sp,
   ::CloseHandle(file_handle);
   ::CloseHandle(process_handle);
   if (!result) {
-    error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
+    error = Status(::GetLastError(), lldb::eErrorTypeWin32);
     return false;
   }
   return true;
