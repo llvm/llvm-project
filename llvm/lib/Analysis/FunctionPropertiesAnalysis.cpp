@@ -478,6 +478,9 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
 bool FunctionPropertiesUpdater::isUpdateValid(Function &F,
                                               const FunctionPropertiesInfo &FPI,
                                               FunctionAnalysisManager &FAM) {
+  if (!FAM.getResult<DominatorTreeAnalysis>(F).verify(
+          DominatorTree::VerificationLevel::Full))
+    return false;
   DominatorTree DT(F);
   LoopInfo LI(DT);
   auto Fresh = FunctionPropertiesInfo::getFunctionPropertiesInfo(F, DT, LI);
