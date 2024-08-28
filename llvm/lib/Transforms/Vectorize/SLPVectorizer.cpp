@@ -136,13 +136,6 @@ static cl::opt<bool> ShouldStartVectorizeHorAtStore(
     cl::desc(
         "Attempt to vectorize horizontal reductions feeding into a store"));
 
-// NOTE: If AllowHorRdxIdenityOptimization is true, the optimization will run
-// even if we match a reduction but do not vectorize in the end.
-static cl::opt<bool> AllowHorRdxIdenityOptimization(
-    "slp-optimize-identity-hor-reduction-ops", cl::init(true), cl::Hidden,
-    cl::desc("Allow optimization of original scalar identity operations on "
-             "matched horizontal reductions."));
-
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -2448,7 +2441,7 @@ public:
         }
         // TODO: Check if we can remove a check for non-power-2 number of
         // scalars after full support of non-power-2 vectorization.
-        return UniqueValues.size() != 2 && isPowerOf2_32(UniqueValues.size());
+        return UniqueValues.size() != 2 && has_single_bit(UniqueValues.size());
       };
 
       // If the initial strategy fails for any of the operand indexes, then we
@@ -3011,7 +3004,8 @@ private:
     }
 
     bool isOperandGatherNode(const EdgeInfo &UserEI) const {
-      return isGather() && UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
+      return isGather() && (Idx > 0 || !UserTreeIndices.empty()) &&
+             UserTreeIndices.front().EdgeIdx == UserEI.EdgeIdx &&
              UserTreeIndices.front().UserTE == UserEI.UserTE;
     }
 
@@ -3239,7 +3233,7 @@ private:
 
     /// Return true if this is a non-power-of-2 node.
     bool isNonPowOf2Vec() const {
-      bool IsNonPowerOf2 = !isPowerOf2_32(Scalars.size());
+      bool IsNonPowerOf2 = !has_single_bit(Scalars.size());
       assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
              "Reshuffling not supported with non-power-of-2 vectors yet.");
       return IsNonPowerOf2;
@@ -4695,7 +4689,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   // Check the order of pointer operands or that all pointers are the same.
   bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
   // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
-  if (!Order.empty() && !isPowerOf2_32(VL.size())) {
+  if (!Order.empty() && !has_single_bit(VL.size())) {
     assert(VectorizeNonPowerOf2 && "non-power-of-2 number of loads only "
                                    "supported with VectorizeNonPowerOf2");
     return LoadsState::Gather;
@@ -4706,208 +4700,211 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       TTI->isLegalStridedLoadStore(VecTy, CommonAlignment) &&
       calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order))
     return LoadsState::StridedVectorize;
-  if (IsSorted || all_of(PointerOps, [&](Value *P) {
+
+  if (!IsSorted && !all_of(PointerOps, [&](Value *P) {
         return arePointersCompatible(P, PointerOps.front(), *TLI);
-      })) {
-    if (IsSorted) {
-      Value *Ptr0;
-      Value *PtrN;
-      if (Order.empty()) {
-        Ptr0 = PointerOps.front();
-        PtrN = PointerOps.back();
-      } else {
-        Ptr0 = PointerOps[Order.front()];
-        PtrN = PointerOps[Order.back()];
-      }
-      std::optional<int> Diff =
-          getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
-      // Check that the sorted loads are consecutive.
-      if (static_cast<unsigned>(*Diff) == Sz - 1)
-        return LoadsState::Vectorize;
-      // Simple check if not a strided access - clear order.
-      bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
-      // Try to generate strided load node if:
-      // 1. Target with strided load support is detected.
-      // 2. The number of loads is greater than MinProfitableStridedLoads,
-      // or the potential stride <= MaxProfitableLoadStride and the
-      // potential stride is power-of-2 (to avoid perf regressions for the very
-      // small number of loads) and max distance > number of loads, or potential
-      // stride is -1.
-      // 3. The loads are ordered, or number of unordered loads <=
-      // MaxProfitableUnorderedLoads, or loads are in reversed order.
-      // (this check is to avoid extra costs for very expensive shuffles).
-      // 4. Any pointer operand is an instruction with the users outside of the
-      // current graph (for masked gathers extra extractelement instructions
-      // might be required).
-      auto IsAnyPointerUsedOutGraph =
-          IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
-            return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
-                     return !getTreeEntry(U) && !MustGather.contains(U);
-                   });
-          });
-      if (IsPossibleStrided && (IsAnyPointerUsedOutGraph ||
-                                ((Sz > MinProfitableStridedLoads ||
-                                  (static_cast<unsigned>(std::abs(*Diff)) <=
-                                       MaxProfitableLoadStride * Sz &&
-                                   isPowerOf2_32(std::abs(*Diff)))) &&
-                                 static_cast<unsigned>(std::abs(*Diff)) > Sz) ||
-                                *Diff == -(static_cast<int>(Sz) - 1))) {
-        int Stride = *Diff / static_cast<int>(Sz - 1);
-        if (*Diff == Stride * static_cast<int>(Sz - 1)) {
-          Align Alignment =
-              cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
-                  ->getAlign();
-          if (TTI->isLegalStridedLoadStore(VecTy, Alignment)) {
-            // Iterate through all pointers and check if all distances are
-            // unique multiple of Dist.
-            SmallSet<int, 4> Dists;
-            for (Value *Ptr : PointerOps) {
-              int Dist = 0;
-              if (Ptr == PtrN)
-                Dist = *Diff;
-              else if (Ptr != Ptr0)
-                Dist =
-                    *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
-              // If the strides are not the same or repeated, we can't
-              // vectorize.
-              if (((Dist / Stride) * Stride) != Dist ||
-                  !Dists.insert(Dist).second)
-                break;
-            }
-            if (Dists.size() == Sz)
-              return LoadsState::StridedVectorize;
+      }))
+    return LoadsState::Gather;
+
+  if (IsSorted) {
+    Value *Ptr0;
+    Value *PtrN;
+    if (Order.empty()) {
+      Ptr0 = PointerOps.front();
+      PtrN = PointerOps.back();
+    } else {
+      Ptr0 = PointerOps[Order.front()];
+      PtrN = PointerOps[Order.back()];
+    }
+    std::optional<int> Diff =
+        getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
+    // Check that the sorted loads are consecutive.
+    if (static_cast<unsigned>(*Diff) == Sz - 1)
+      return LoadsState::Vectorize;
+    // Simple check if not a strided access - clear order.
+    bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
+    // Try to generate strided load node if:
+    // 1. Target with strided load support is detected.
+    // 2. The number of loads is greater than MinProfitableStridedLoads,
+    // or the potential stride <= MaxProfitableLoadStride and the
+    // potential stride is power-of-2 (to avoid perf regressions for the very
+    // small number of loads) and max distance > number of loads, or potential
+    // stride is -1.
+    // 3. The loads are ordered, or number of unordered loads <=
+    // MaxProfitableUnorderedLoads, or loads are in reversed order.
+    // (this check is to avoid extra costs for very expensive shuffles).
+    // 4. Any pointer operand is an instruction with the users outside of the
+    // current graph (for masked gathers extra extractelement instructions
+    // might be required).
+    auto IsAnyPointerUsedOutGraph =
+        IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
+          return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                   return !getTreeEntry(U) && !MustGather.contains(U);
+                 });
+        });
+    const unsigned AbsoluteDiff = std::abs(*Diff);
+    if (IsPossibleStrided &&
+        (IsAnyPointerUsedOutGraph ||
+         ((Sz > MinProfitableStridedLoads ||
+           (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+            has_single_bit(AbsoluteDiff))) &&
+          AbsoluteDiff > Sz) ||
+         *Diff == -(static_cast<int>(Sz) - 1))) {
+      int Stride = *Diff / static_cast<int>(Sz - 1);
+      if (*Diff == Stride * static_cast<int>(Sz - 1)) {
+        Align Alignment =
+            cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
+                ->getAlign();
+        if (TTI->isLegalStridedLoadStore(VecTy, Alignment)) {
+          // Iterate through all pointers and check if all distances are
+          // unique multiple of Dist.
+          SmallSet<int, 4> Dists;
+          for (Value *Ptr : PointerOps) {
+            int Dist = 0;
+            if (Ptr == PtrN)
+              Dist = *Diff;
+            else if (Ptr != Ptr0)
+              Dist =
+                  *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
+            // If the strides are not the same or repeated, we can't
+            // vectorize.
+            if (((Dist / Stride) * Stride) != Dist ||
+                !Dists.insert(Dist).second)
+              break;
           }
+          if (Dists.size() == Sz)
+            return LoadsState::StridedVectorize;
         }
       }
     }
-    auto CheckForShuffledLoads = [&, &TTI = *TTI](Align CommonAlignment) {
-      unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
-      unsigned MinVF = getMinVF(Sz);
-      unsigned MaxVF = std::max<unsigned>(bit_floor(VL.size() / 2), MinVF);
-      MaxVF = std::min(getMaximumVF(Sz, Instruction::Load), MaxVF);
-      for (unsigned VF = MaxVF; VF >= MinVF; VF /= 2) {
-        unsigned VectorizedCnt = 0;
-        SmallVector<LoadsState> States;
-        for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End;
-             Cnt += VF, ++VectorizedCnt) {
-          ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
-          SmallVector<unsigned> Order;
-          SmallVector<Value *> PointerOps;
-          LoadsState LS =
-              canVectorizeLoads(Slice, Slice.front(), Order, PointerOps,
-                                /*TryRecursiveCheck=*/false);
-          // Check that the sorted loads are consecutive.
-          if (LS == LoadsState::Gather)
+  }
+  auto CheckForShuffledLoads = [&, &TTI = *TTI](Align CommonAlignment) {
+    unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
+    unsigned MinVF = getMinVF(Sz);
+    unsigned MaxVF = std::max<unsigned>(bit_floor(VL.size() / 2), MinVF);
+    MaxVF = std::min(getMaximumVF(Sz, Instruction::Load), MaxVF);
+    for (unsigned VF = MaxVF; VF >= MinVF; VF /= 2) {
+      unsigned VectorizedCnt = 0;
+      SmallVector<LoadsState> States;
+      for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End;
+           Cnt += VF, ++VectorizedCnt) {
+        ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+        SmallVector<unsigned> Order;
+        SmallVector<Value *> PointerOps;
+        LoadsState LS =
+            canVectorizeLoads(Slice, Slice.front(), Order, PointerOps,
+                              /*TryRecursiveCheck=*/false);
+        // Check that the sorted loads are consecutive.
+        if (LS == LoadsState::Gather)
+          break;
+        // If need the reorder - consider as high-cost masked gather for now.
+        if ((LS == LoadsState::Vectorize ||
+             LS == LoadsState::StridedVectorize) &&
+            !Order.empty() && !isReverseOrder(Order))
+          LS = LoadsState::ScatterVectorize;
+        States.push_back(LS);
+      }
+      // Can be vectorized later as a serie of loads/insertelements.
+      if (VectorizedCnt == VL.size() / VF) {
+        // Compare masked gather cost and loads + insersubvector costs.
+        TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+        auto [ScalarGEPCost, VectorGEPCost] = getGEPCosts(
+            TTI, PointerOps, PointerOps.front(), Instruction::GetElementPtr,
+            CostKind, ScalarTy, VecTy);
+        InstructionCost MaskedGatherCost =
+            TTI.getGatherScatterOpCost(
+                Instruction::Load, VecTy,
+                cast<LoadInst>(VL0)->getPointerOperand(),
+                /*VariableMask=*/false, CommonAlignment, CostKind) +
+            VectorGEPCost - ScalarGEPCost;
+        InstructionCost VecLdCost = 0;
+        auto *SubVecTy = getWidenedType(ScalarTy, VF);
+        for (auto [I, LS] : enumerate(States)) {
+          auto *LI0 = cast<LoadInst>(VL[I * VF]);
+          switch (LS) {
+          case LoadsState::Vectorize: {
+            auto [ScalarGEPCost, VectorGEPCost] =
+                getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
+                            LI0->getPointerOperand(), Instruction::Load,
+                            CostKind, ScalarTy, SubVecTy);
+            VecLdCost += TTI.getMemoryOpCost(
+                             Instruction::Load, SubVecTy, LI0->getAlign(),
+                             LI0->getPointerAddressSpace(), CostKind,
+                             TTI::OperandValueInfo()) +
+                         VectorGEPCost - ScalarGEPCost;
             break;
-          // If need the reorder - consider as high-cost masked gather for now.
-          if ((LS == LoadsState::Vectorize ||
-               LS == LoadsState::StridedVectorize) &&
-              !Order.empty() && !isReverseOrder(Order))
-            LS = LoadsState::ScatterVectorize;
-          States.push_back(LS);
-        }
-        // Can be vectorized later as a serie of loads/insertelements.
-        if (VectorizedCnt == VL.size() / VF) {
-          // Compare masked gather cost and loads + insersubvector costs.
-          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-          auto [ScalarGEPCost, VectorGEPCost] = getGEPCosts(
-              TTI, PointerOps, PointerOps.front(), Instruction::GetElementPtr,
-              CostKind, ScalarTy, VecTy);
-          InstructionCost MaskedGatherCost =
-              TTI.getGatherScatterOpCost(
-                  Instruction::Load, VecTy,
-                  cast<LoadInst>(VL0)->getPointerOperand(),
-                  /*VariableMask=*/false, CommonAlignment, CostKind) +
-              VectorGEPCost - ScalarGEPCost;
-          InstructionCost VecLdCost = 0;
-          auto *SubVecTy = getWidenedType(ScalarTy, VF);
-          for (auto [I, LS] : enumerate(States)) {
-            auto *LI0 = cast<LoadInst>(VL[I * VF]);
-            switch (LS) {
-            case LoadsState::Vectorize: {
-              auto [ScalarGEPCost, VectorGEPCost] =
-                  getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
-                              LI0->getPointerOperand(), Instruction::Load,
-                              CostKind, ScalarTy, SubVecTy);
-              VecLdCost += TTI.getMemoryOpCost(
-                               Instruction::Load, SubVecTy, LI0->getAlign(),
-                               LI0->getPointerAddressSpace(), CostKind,
-                               TTI::OperandValueInfo()) +
-                           VectorGEPCost - ScalarGEPCost;
-              break;
-            }
-            case LoadsState::StridedVectorize: {
-              auto [ScalarGEPCost, VectorGEPCost] =
-                  getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
-                              LI0->getPointerOperand(), Instruction::Load,
-                              CostKind, ScalarTy, SubVecTy);
-              VecLdCost +=
-                  TTI.getStridedMemoryOpCost(
-                      Instruction::Load, SubVecTy, LI0->getPointerOperand(),
-                      /*VariableMask=*/false, CommonAlignment, CostKind) +
-                  VectorGEPCost - ScalarGEPCost;
-              break;
-            }
-            case LoadsState::ScatterVectorize: {
-              auto [ScalarGEPCost, VectorGEPCost] = getGEPCosts(
-                  TTI, ArrayRef(PointerOps).slice(I * VF, VF),
-                  LI0->getPointerOperand(), Instruction::GetElementPtr,
-                  CostKind, ScalarTy, SubVecTy);
-              VecLdCost +=
-                  TTI.getGatherScatterOpCost(
-                      Instruction::Load, SubVecTy, LI0->getPointerOperand(),
-                      /*VariableMask=*/false, CommonAlignment, CostKind) +
-                  VectorGEPCost - ScalarGEPCost;
-              break;
-            }
-            case LoadsState::Gather:
-              llvm_unreachable(
-                  "Expected only consecutive, strided or masked gather loads.");
-            }
-            SmallVector<int> ShuffleMask(VL.size());
-            for (int Idx : seq<int>(0, VL.size()))
-              ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
-            VecLdCost +=
-                ::getShuffleCost(TTI, TTI::SK_InsertSubvector, VecTy,
-                                 ShuffleMask, CostKind, I * VF, SubVecTy);
           }
-          // If masked gather cost is higher - better to vectorize, so
-          // consider it as a gather node. It will be better estimated
-          // later.
-          if (MaskedGatherCost >= VecLdCost)
-            return true;
+          case LoadsState::StridedVectorize: {
+            auto [ScalarGEPCost, VectorGEPCost] =
+                getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
+                            LI0->getPointerOperand(), Instruction::Load,
+                            CostKind, ScalarTy, SubVecTy);
+            VecLdCost +=
+                TTI.getStridedMemoryOpCost(
+                    Instruction::Load, SubVecTy, LI0->getPointerOperand(),
+                    /*VariableMask=*/false, CommonAlignment, CostKind) +
+                VectorGEPCost - ScalarGEPCost;
+            break;
+          }
+          case LoadsState::ScatterVectorize: {
+            auto [ScalarGEPCost, VectorGEPCost] = getGEPCosts(
+                TTI, ArrayRef(PointerOps).slice(I * VF, VF),
+                LI0->getPointerOperand(), Instruction::GetElementPtr,
+                CostKind, ScalarTy, SubVecTy);
+            VecLdCost +=
+                TTI.getGatherScatterOpCost(
+                    Instruction::Load, SubVecTy, LI0->getPointerOperand(),
+                    /*VariableMask=*/false, CommonAlignment, CostKind) +
+                VectorGEPCost - ScalarGEPCost;
+            break;
+          }
+          case LoadsState::Gather:
+            llvm_unreachable(
+                "Expected only consecutive, strided or masked gather loads.");
+          }
+          SmallVector<int> ShuffleMask(VL.size());
+          for (int Idx : seq<int>(0, VL.size()))
+            ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
+          VecLdCost +=
+              ::getShuffleCost(TTI, TTI::SK_InsertSubvector, VecTy,
+                               ShuffleMask, CostKind, I * VF, SubVecTy);
         }
+        // If masked gather cost is higher - better to vectorize, so
+        // consider it as a gather node. It will be better estimated
+        // later.
+        if (MaskedGatherCost >= VecLdCost)
+          return true;
       }
-      return false;
-    };
-    // TODO: need to improve analysis of the pointers, if not all of them are
-    // GEPs or have > 2 operands, we end up with a gather node, which just
-    // increases the cost.
-    Loop *L = LI->getLoopFor(cast<LoadInst>(VL0)->getParent());
-    bool ProfitableGatherPointers =
-        L && Sz > 2 &&
-        static_cast<unsigned>(count_if(PointerOps, [L](Value *V) {
-          return L->isLoopInvariant(V);
-        })) <= Sz / 2;
-    if (ProfitableGatherPointers || all_of(PointerOps, [IsSorted](Value *P) {
-          auto *GEP = dyn_cast<GetElementPtrInst>(P);
-          return (IsSorted && !GEP && doesNotNeedToBeScheduled(P)) ||
-                 (GEP && GEP->getNumOperands() == 2 &&
-                  isa<Constant, Instruction>(GEP->getOperand(1)));
-        })) {
-      Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
-      if (TTI->isLegalMaskedGather(VecTy, CommonAlignment) &&
-          !TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment)) {
-        // Check if potential masked gather can be represented as series
-        // of loads + insertsubvectors.
-        if (TryRecursiveCheck && CheckForShuffledLoads(CommonAlignment)) {
-          // If masked gather cost is higher - better to vectorize, so
-          // consider it as a gather node. It will be better estimated
-          // later.
-          return LoadsState::Gather;
-        }
-        return LoadsState::ScatterVectorize;
+    }
+    return false;
+  };
+  // TODO: need to improve analysis of the pointers, if not all of them are
+  // GEPs or have > 2 operands, we end up with a gather node, which just
+  // increases the cost.
+  Loop *L = LI->getLoopFor(cast<LoadInst>(VL0)->getParent());
+  bool ProfitableGatherPointers =
+      L && Sz > 2 &&
+      static_cast<unsigned>(count_if(PointerOps, [L](Value *V) {
+        return L->isLoopInvariant(V);
+      })) <= Sz / 2;
+  if (ProfitableGatherPointers || all_of(PointerOps, [IsSorted](Value *P) {
+        auto *GEP = dyn_cast<GetElementPtrInst>(P);
+        return (IsSorted && !GEP && doesNotNeedToBeScheduled(P)) ||
+               (GEP && GEP->getNumOperands() == 2 &&
+                isa<Constant, Instruction>(GEP->getOperand(1)));
+      })) {
+    Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
+    if (TTI->isLegalMaskedGather(VecTy, CommonAlignment) &&
+        !TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment)) {
+      // Check if potential masked gather can be represented as series
+      // of loads + insertsubvectors.
+      if (TryRecursiveCheck && CheckForShuffledLoads(CommonAlignment)) {
+        // If masked gather cost is higher - better to vectorize, so
+        // consider it as a gather node. It will be better estimated
+        // later.
+        return LoadsState::Gather;
       }
+      return LoadsState::ScatterVectorize;
     }
   }
 
@@ -4990,9 +4987,9 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
     auto *Mid = std::stable_partition(
         Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
     DenseMap<Value *, DenseMap<Value *, bool>> LessThan;
-    for (auto I = Begin; I < Mid; ++I)
+    for (auto *I = Begin; I < Mid; ++I)
       LessThan.try_emplace(std::get<1>(*I));
-    for (auto I = Begin; I < Mid; ++I) {
+    for (auto *I = Begin; I < Mid; ++I) {
       Value *V = std::get<1>(*I);
       while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
         V = Gep->getOperand(0);
@@ -6494,7 +6491,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractElement: {
     bool Reuse = canReuseExtract(VL, VL0, CurrentOrder);
     // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
-    if (!isPowerOf2_32(VL.size()))
+    if (!has_single_bit(VL.size()))
       return TreeEntry::NeedToGather;
     if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
@@ -9454,7 +9451,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto It = MinBWs.find(E);
   Type *OrigScalarTy = ScalarTy;
   if (It != MinBWs.end()) {
-    auto VecTy = dyn_cast<FixedVectorType>(ScalarTy);
+    auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
@@ -10840,17 +10837,22 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
         Entry->getOpcode() == Instruction::Load) {
+      // Checks if the user of the external scalar is phi in loop body.
+      auto IsPhiInLoop = [&](const ExternalUser &U) {
+        if (auto *Phi = dyn_cast_if_present<PHINode>(U.User)) {
+          auto *I = cast<Instruction>(U.Scalar);
+          const Loop *L = LI->getLoopFor(Phi->getParent());
+          return L && (Phi->getParent() == I->getParent() ||
+                       L == LI->getLoopFor(I->getParent()));
+        }
+        return false;
+      };
       if (!ValueToExtUses) {
         ValueToExtUses.emplace();
         for_each(enumerate(ExternalUses), [&](const auto &P) {
           // Ignore phis in loops.
-          if (auto *Phi = dyn_cast_if_present<PHINode>(P.value().User)) {
-            auto *I = cast<Instruction>(P.value().Scalar);
-            const Loop *L = LI->getLoopFor(Phi->getParent());
-            if (L && (Phi->getParent() == I->getParent() ||
-                      L == LI->getLoopFor(I->getParent())))
-              return;
-          }
+          if (IsPhiInLoop(P.value()))
+            return;
 
           ValueToExtUses->try_emplace(P.value().Scalar, P.index());
         });
@@ -10901,12 +10903,16 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
             return ValueToExtUses->contains(V);
           });
           auto It = ExtractsCount.find(Entry);
-          if (It != ExtractsCount.end())
+          if (It != ExtractsCount.end()) {
+            assert(ScalarUsesCount >= It->getSecond().size() &&
+                   "Expected total number of external uses not less than "
+                   "number of scalar uses.");
             ScalarUsesCount -= It->getSecond().size();
+          }
           // Keep original scalar if number of externally used instructions in
           // the same entry is not power of 2. It may help to do some extra
           // vectorization for now.
-          KeepScalar = ScalarUsesCount <= 1 || !isPowerOf2_32(ScalarUsesCount);
+          KeepScalar = ScalarUsesCount <= 1 || !has_single_bit(ScalarUsesCount);
         }
         if (KeepScalar) {
           ExternalUsesAsOriginalScalar.insert(EU.Scalar);
@@ -10918,7 +10924,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
             }
           });
           ExtraCost = ScalarCost;
-          ExtractsCount[Entry].insert(Inst);
+          if (!IsPhiInLoop(EU))
+            ExtractsCount[Entry].insert(Inst);
         }
       }
     }
@@ -13132,7 +13139,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     ScalarTy = IE->getOperand(1)->getType();
   auto It = MinBWs.find(E);
   if (It != MinBWs.end()) {
-    auto VecTy = dyn_cast<FixedVectorType>(ScalarTy);
+    auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
@@ -13763,6 +13770,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         if (E->VectorizedValue) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
+        }
+        if (isa<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          // CreateMaskedGather expects VecTy and VecPtr have same size. We need
+          // to expand VecPtr if ScalarTy is a vector type.
+          unsigned ScalarTyNumElements =
+              cast<FixedVectorType>(ScalarTy)->getNumElements();
+          unsigned VecTyNumElements =
+              cast<FixedVectorType>(VecTy)->getNumElements();
+          assert(VecTyNumElements % ScalarTyNumElements == 0 &&
+                 "Cannot expand getelementptr.");
+          unsigned VF = VecTyNumElements / ScalarTyNumElements;
+          SmallVector<Constant *> Indices(VecTyNumElements);
+          transform(seq(VecTyNumElements), Indices.begin(), [=](unsigned I) {
+            return Builder.getInt64(I % ScalarTyNumElements);
+          });
+          VecPtr = Builder.CreateGEP(
+              VecTy->getElementType(),
+              Builder.CreateShuffleVector(
+                  VecPtr, createReplicatedMask(ScalarTyNumElements, VF)),
+              ConstantVector::get(Indices));
         }
         // Use the minimum alignment of the gathered loads.
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
@@ -15974,6 +16002,10 @@ void BoUpSLP::computeMinimumValueSizes() {
                     auto It = MinBWs.find(TE);
                     if (It != MinBWs.end() && It->second.first > UserTESz)
                       return true;
+                    // The size of icmp is always 1 and should not be
+                    // considered.
+                    if (TE->getOpcode() == Instruction::ICmp)
+                      return true;
                     return DL->getTypeSizeInBits(U->getType()) > UserTESz;
                   }));
         })) {
@@ -16327,7 +16359,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
-  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF) {
+  if (!has_single_bit(Sz) || !has_single_bit(VF) || VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered. At
     // the moment, only consider cases where VF + 1 is a power-of-2, i.e. almost
     // all vector lanes are used.
@@ -16346,8 +16378,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
     bool IsPowerOf2 =
-        isPowerOf2_32(ValOps.size()) ||
-        (VectorizeNonPowerOf2 && isPowerOf2_32(ValOps.size() + 1));
+        has_single_bit(ValOps.size()) ||
+        (VectorizeNonPowerOf2 && has_single_bit(ValOps.size() + 1));
     if ((!IsPowerOf2 && S.getOpcode() && S.getOpcode() != Instruction::Load &&
          (!S.MainOp->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -16514,7 +16546,7 @@ bool SLPVectorizerPass::vectorizeStores(
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
         unsigned CandVF = Operands.size();
-        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxRegVF)
+        if (has_single_bit(CandVF + 1) && CandVF <= MaxRegVF)
           NonPowerOf2VF = CandVF;
       }
 
@@ -16920,7 +16952,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!isPowerOf2_32(ActualVF))
+      if (!has_single_bit(ActualVF))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
@@ -17546,24 +17578,23 @@ public:
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI) {
-    constexpr int ReductionLimit = 4;
+    const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
-    unsigned NumReducedVals =
-        std::accumulate(ReducedVals.begin(), ReducedVals.end(), 0,
-                        [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
-                          if (!isGoodForReduction(Vals))
-                            return Num;
-                          return Num + Vals.size();
-                        });
-    if (NumReducedVals < ReductionLimit &&
-        (!AllowHorRdxIdenityOptimization ||
-         all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
+    if (unsigned NumReducedVals = std::accumulate(
+            ReducedVals.begin(), ReducedVals.end(), 0,
+            [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
+              if (!isGoodForReduction(Vals))
+                return Num;
+              return Num + Vals.size();
+            });
+        NumReducedVals < ReductionLimit &&
+        all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
            return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
-         }))) {
+         })) {
       for (ReductionOpsType &RdxOps : ReductionOps)
         for (Value *RdxOp : RdxOps)
           V.analyzedReductionRoot(cast<Instruction>(RdxOp));
@@ -17693,8 +17724,7 @@ public:
       }
 
       // Emit code for constant values.
-      if (AllowHorRdxIdenityOptimization && Candidates.size() > 1 &&
-          allConstant(Candidates)) {
+      if (Candidates.size() > 1 && allConstant(Candidates)) {
         Value *Res = Candidates.front();
         ++VectorizedVals.try_emplace(Candidates.front(), 0).first->getSecond();
         for (Value *VC : ArrayRef(Candidates).drop_front()) {
@@ -17709,15 +17739,14 @@ public:
 
       unsigned NumReducedVals = Candidates.size();
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 || !AllowHorRdxIdenityOptimization ||
-           !isSplat(Candidates)))
+          (NumReducedVals < 2 || !isSplat(Candidates)))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
       // original scalar identity operations on matched horizontal reductions).
-      IsSupportedHorRdxIdentityOp =
-          AllowHorRdxIdenityOptimization && RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+      IsSupportedHorRdxIdentityOp = RdxKind != RecurKind::Mul &&
+                                    RdxKind != RecurKind::FMul &&
+                                    RdxKind != RecurKind::FMulAdd;
       // Gather same values.
       MapVector<Value *, unsigned> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -17762,13 +17791,15 @@ public:
 
       unsigned MaxVecRegSize = V.getMaxVecRegSize();
       unsigned EltSize = V.getVectorElementSize(Candidates[0]);
-      unsigned MaxElts =
-          RegMaxNumber * llvm::bit_floor(MaxVecRegSize / EltSize);
+      const unsigned MaxElts = std::clamp<unsigned>(
+          llvm::bit_floor(MaxVecRegSize / EltSize), RedValsMaxNumber,
+          RegMaxNumber * RedValsMaxNumber);
 
-      unsigned ReduxWidth = std::min<unsigned>(
-          llvm::bit_floor(NumReducedVals),
-          std::clamp<unsigned>(MaxElts, RedValsMaxNumber,
-                               RegMaxNumber * RedValsMaxNumber));
+      unsigned ReduxWidth = NumReducedVals;
+      if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
+        ReduxWidth = bit_floor(ReduxWidth);
+      ReduxWidth = std::min(ReduxWidth, MaxElts);
+
       unsigned Start = 0;
       unsigned Pos = Start;
       // Restarts vectorization attempt with lower vector factor.
@@ -17788,7 +17819,7 @@ public:
         if (Pos < NumReducedVals - ReduxWidth + 1)
           return IsAnyRedOpGathered;
         Pos = Start;
-        ReduxWidth /= 2;
+        ReduxWidth = bit_ceil(ReduxWidth) / 2;
         return IsAnyRedOpGathered;
       };
       bool AnyVectorized = false;
@@ -17977,12 +18008,10 @@ public:
                 createStrideMask(I, ScalarTyNumElements, VL.size());
             Value *Lane = Builder.CreateShuffleVector(VectorizedRoot, Mask);
             ReducedSubTree = Builder.CreateInsertElement(
-                ReducedSubTree, emitReduction(Lane, Builder, ReduxWidth, TTI),
-                I);
+                ReducedSubTree, emitReduction(Lane, Builder, TTI), I);
           }
         } else {
-          ReducedSubTree =
-              emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
+          ReducedSubTree = emitReduction(VectorizedRoot, Builder, TTI);
         }
         if (ReducedSubTree->getType() != VL.front()->getType()) {
           assert(ReducedSubTree->getType() != VL.front()->getType() &&
@@ -18264,10 +18293,8 @@ private:
 
   /// Emit a horizontal reduction of the vectorized value.
   Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
-                       unsigned ReduxWidth, const TargetTransformInfo *TTI) {
+                       const TargetTransformInfo *TTI) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
-    assert(isPowerOf2_32(ReduxWidth) &&
-           "We only handle power-of-two reductions for now");
     assert(RdxKind != RecurKind::FMulAdd &&
            "A call to the llvm.fmuladd intrinsic is not handled yet");
 

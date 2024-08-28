@@ -61,13 +61,14 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
 
   ProcessSP process_sp = m_jit_process_wp.lock();
   if (!process_sp) {
-    error.SetErrorString("Can't make a function caller without a process.");
+    error = Status::FromErrorString(
+        "Can't make a function caller without a process.");
     return nullptr;
   }
   // Since we might need to allocate memory and maybe call code to make
   // the caller, we need to be stopped.
   if (process_sp->GetState() != lldb::eStateStopped) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "Can't make a function caller while the process is {0}: the process "
         "must be stopped to allocate memory.",
         StateAsCString(process_sp->GetState()));
@@ -92,7 +93,7 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     unsigned num_errors =
         m_caller_up->CompileFunction(thread_to_use_sp, diagnostics);
     if (num_errors) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Error compiling %s caller function: \"%s\".",
           m_function_name.c_str(), diagnostics.GetString().c_str());
       m_caller_up.reset();
@@ -103,7 +104,7 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     ExecutionContext exe_ctx(process_sp);
 
     if (!m_caller_up->WriteFunctionWrapper(exe_ctx, diagnostics)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Error inserting caller function for %s: \"%s\".",
           m_function_name.c_str(), diagnostics.GetString().c_str());
       m_caller_up.reset();
