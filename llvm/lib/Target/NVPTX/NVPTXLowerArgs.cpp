@@ -79,15 +79,15 @@
 //
 //    define void @foo({i32*, i32*}* byval %input) {
 //      %b_param = addrspacecat ptr %input to ptr addrspace(101)
-//      %b_ptr = getelementptr {ptr, ptr}, ptr addrspace(101) %b_param, i64 0,
-//      i32 1 %b = load ptr, ptr addrspace(101) %b_ptr %b_global = addrspacecast
-//      ptr %b to ptr addrspace(1) ; use %b_generic
+//      %b_ptr = getelementptr {ptr, ptr}, ptr addrspace(101) %b_param, i64 0, i32 1
+//      %b = load ptr, ptr addrspace(101) %b_ptr
+//      %b_global = addrspacecast ptr %b to ptr addrspace(1)
+//      ; use %b_generic
 //    }
 //
-//    Create a local copy of kernel byval parameters used in a way that *might*
-//    mutate the parameter, by storing it in an alloca. Mutations to
-//    "grid_constant" parameters are undefined behaviour, and don't require
-//    local copies.
+//    Create a local copy of kernel byval parameters used in a way that *might* mutate
+//    the parameter, by storing it in an alloca. Mutations to "grid_constant" parameters
+//    are undefined behaviour, and don't require local copies.
 //
 //    define void @foo(ptr byval(%struct.s) align 4 %input) {
 //       store i32 42, ptr %input
@@ -124,11 +124,11 @@
 //
 //    define void @foo(ptr byval(%struct.s) %input) {
 //      %input1 = addrspacecast ptr %input to ptr addrspace(101)
-//      ; the following intrinsic converts pointer to generic. We don't use an
-//      addrspacecast ; to prevent generic -> param -> generic from getting
-//      cancelled out %input1.gen = call ptr
-//      @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) %input1) %call =
-//      call i32 @escape(ptr %input1.gen) ret void
+//      ; the following intrinsic converts pointer to generic. We don't use an addrspacecast
+//      ; to prevent generic -> param -> generic from getting cancelled out
+//      %input1.gen = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) %input1)
+//      %call = call i32 @escape(ptr %input1.gen)
+//      ret void
 //    }
 //
 // TODO: merge this pass with NVPTXInferAddressSpaces so that other passes don't
