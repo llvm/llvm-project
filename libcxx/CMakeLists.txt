@@ -131,7 +131,11 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
 elseif(MINGW)
-  set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-mingw.cfg.in")
+  if (LIBCXX_ENABLE_SHARED)
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-mingw.cfg.in")
+  else()
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-static-mingw.cfg.in")
+  endif()
 elseif(WIN32) # clang-cl
   if (LIBCXX_ENABLE_SHARED)
     set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-clangcl.cfg.in")
