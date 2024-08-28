@@ -138,6 +138,11 @@ void Writer::calculateCustomSections() {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
         continue;
+      // Ignore empty custom sections.  In particular objcopy/strip will
+      // sometimes replace stripped sections with empty custom sections to
+      // avoid section re-numbering.
+      if (section->getSize() == 0)
+        continue;
       StringRef name = section->name;
       // These custom sections are known the linker and synthesized rather than
       // blindly copied.

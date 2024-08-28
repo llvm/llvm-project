@@ -83,7 +83,7 @@ define double @fmul_fneg2(double %x, double %py, double %pz) {
 ; CHECK-LABEL: @fmul_fneg2(
 ; CHECK-NEXT:    [[Y:%.*]] = frem double -4.200000e+01, [[PY:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = frem double 4.200000e+01, [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul double [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul double [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub double [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -149,7 +149,7 @@ define double @fmul_fneg2_commute(double %x, double %py, double %pz) {
 ; CHECK-LABEL: @fmul_fneg2_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = frem double 4.100000e+01, [[PY:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = frem double 4.200000e+01, [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul double [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul double [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub double [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -207,7 +207,7 @@ define <2 x float> @fmul_fneg1_extra_use(<2 x float> %x, <2 x float> %y, <2 x fl
 ; CHECK-LABEL: @fmul_fneg1_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = frem <2 x float> <float 4.200000e+01, float -1.000000e+00>, [[PZ:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[MUL]])
 ; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[Z]], [[MUL]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
@@ -299,7 +299,7 @@ define float @fmul_fneg2_extra_use2(float %x, float %py, float %z) {
 ; CHECK-NEXT:    [[Y:%.*]] = frem float -4.200000e+01, [[PY:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -355,7 +355,7 @@ define <2 x float> @fmul_fneg1_extra_use3(<2 x float> %x, <2 x float> %y, <2 x f
 ; CHECK-LABEL: @fmul_fneg1_extra_use3(
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[NEG]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[MUL]])
 ; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[MUL]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]

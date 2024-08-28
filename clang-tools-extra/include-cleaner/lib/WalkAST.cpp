@@ -351,11 +351,11 @@ public:
   }
 
   bool VisitCXXNewExpr(CXXNewExpr *E) {
-    report(E->getExprLoc(), E->getOperatorNew());
+    report(E->getExprLoc(), E->getOperatorNew(), RefType::Ambiguous);
     return true;
   }
   bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
-    report(E->getExprLoc(), E->getOperatorDelete());
+    report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
 };

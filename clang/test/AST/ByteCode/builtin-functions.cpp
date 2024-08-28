@@ -193,6 +193,51 @@ namespace isfpclass {
   char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
 }
 
+namespace signbit {
+  static_assert(
+    !__builtin_signbit(1.0) && __builtin_signbit(-1.0) && !__builtin_signbit(0.0) && __builtin_signbit(-0.0) &&
+    !__builtin_signbitf(1.0f) && __builtin_signbitf(-1.0f) && !__builtin_signbitf(0.0f) && __builtin_signbitf(-0.0f) &&
+    !__builtin_signbitl(1.0L) && __builtin_signbitf(-1.0L) && !__builtin_signbitf(0.0L) && __builtin_signbitf(-0.0L) &&
+    !__builtin_signbit(1.0f) && __builtin_signbit(-1.0f) && !__builtin_signbit(0.0f) && __builtin_signbit(-0.0f) &&
+    !__builtin_signbit(1.0L) && __builtin_signbit(-1.0L) && !__builtin_signbit(0.0L) && __builtin_signbit(-0.0L) &&
+    true, ""
+  );
+}
+
+namespace floating_comparison {
+#define LESS(X, Y) \
+  !__builtin_isgreater(X, Y) && __builtin_isgreater(Y, X) &&             \
+  !__builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&   \
+  __builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                   \
+  __builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&         \
+  __builtin_islessgreater(X, Y) && __builtin_islessgreater(Y, X) &&      \
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+#define EQUAL(X, Y) \
+  !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
+  __builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&    \
+  !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
+  __builtin_islessequal(X, Y) && __builtin_islessequal(Y, X) &&          \
+  !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+#define UNORDERED(X, Y) \
+  !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
+  !__builtin_isgreaterequal(X, Y) && !__builtin_isgreaterequal(Y, X) &&  \
+  !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
+  !__builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&        \
+  !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
+  __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X)
+
+  static_assert(
+    LESS(0.0, 1.0) && EQUAL(1.0, 1.0) && EQUAL(0.0, -0.0) &&
+    UNORDERED(__builtin_nan(""), 1.0) && UNORDERED(__builtin_nan(""), __builtin_inf()) && LESS(0.0, __builtin_inf()) &&
+    LESS(0.0f, 1.0f) && EQUAL(1.0f, 1.0f) && EQUAL(0.0f, -0.0f) &&
+    UNORDERED(__builtin_nanf(""), 1.0f) && UNORDERED(__builtin_nanf(""), __builtin_inff()) && LESS(0.0f, __builtin_inff()) &&
+    LESS(0.0L, 1.0L) && EQUAL(1.0L, 1.0L) && EQUAL(0.0L, -0.0L) &&
+    UNORDERED(__builtin_nanl(""), 1.0L) && UNORDERED(__builtin_nanl(""), __builtin_infl()) && LESS(0.0L, __builtin_infl()) &&
+    true, ""
+  );
+}
+
 namespace fpclassify {
   char classify_nan     [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nan(""))];
   char classify_snan    [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nans(""))];

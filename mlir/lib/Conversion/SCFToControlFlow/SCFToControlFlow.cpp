@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
@@ -378,8 +379,8 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   // llvm.loop_annotation attribute.
   SmallVector<NamedAttribute> llvmAttrs;
   llvm::copy_if(forOp->getAttrs(), std::back_inserter(llvmAttrs),
-                [](NamedAttribute attr) {
-                  return attr.getValue().getDialect().getNamespace() == "llvm";
+                [](auto attr) {
+                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
                 });
   condBranchOp->setDiscardableAttrs(llvmAttrs);
   // The result of the loop operation is the values of the condition block

@@ -2015,6 +2015,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   // initialize X or A by name, but not both.
   auto components{semantics::OrderedComponentIterator{spec}};
   auto nextAnonymous{components.begin()};
+  auto afterLastParentComponentIter{components.end()};
+  if (parentComponent) {
+    for (auto iter{components.begin()}; iter != components.end(); ++iter) {
+      if (iter->test(Symbol::Flag::ParentComp)) {
+        afterLastParentComponentIter = iter;
+        ++afterLastParentComponentIter;
+      }
+    }
+  }
 
   std::set<parser::CharBlock> unavailable;
   bool anyKeyword{false};
@@ -2060,20 +2069,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       // Here's a regrettably common extension of the standard: anonymous
       // initialization of parent components, e.g., T(PT(1)) rather than
-      // T(1) or T(PT=PT(1)).
-      if (nextAnonymous == components.begin() && parentComponent &&
-          valueType == DynamicType::From(*parentComponent) &&
+      // T(1) or T(PT=PT(1)).  There may be multiple parent components.
+      if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
-        auto iter{
-            std::find(components.begin(), components.end(), *parentComponent)};
-        if (iter != components.end()) {
-          symbol = parentComponent;
-          nextAnonymous = ++iter;
-          if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
-            Say(source,
-                "Whole parent component '%s' in structure "
-                "constructor should not be anonymous"_port_en_US,
-                symbol->name());
+        for (auto parent{components.begin()};
+             parent != afterLastParentComponentIter; ++parent) {
+          if (auto parentType{DynamicType::From(*parent)}; parentType &&
+              parent->test(Symbol::Flag::ParentComp) &&
+              valueType->IsEquivalentTo(*parentType)) {
+            symbol = &*parent;
+            nextAnonymous = ++parent;
+            if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
+              Say(source,
+                  "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
+                  symbol->name());
+            }
+            break;
           }
         }
       }

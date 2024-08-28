@@ -31,10 +31,9 @@ static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
 }
 
 template <typename T>
-static void moveTy(Block *, const std::byte *Src, std::byte *Dst,
+static void moveTy(Block *, std::byte *Src, std::byte *Dst,
                    const Descriptor *) {
-  // FIXME: Get rid of the const_cast.
-  auto *SrcPtr = reinterpret_cast<T *>(const_cast<std::byte *>(Src));
+  auto *SrcPtr = reinterpret_cast<T *>(Src);
   auto *DstPtr = reinterpret_cast<T *>(Dst);
   new (DstPtr) T(std::move(*SrcPtr));
 }
@@ -63,11 +62,9 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 }
 
 template <typename T>
-static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
+static void moveArrayTy(Block *, std::byte *Src, std::byte *Dst,
                         const Descriptor *D) {
-  // FIXME: Get rid of the const_cast.
-  InitMapPtr &SrcIMP =
-      *reinterpret_cast<InitMapPtr *>(const_cast<std::byte *>(Src));
+  InitMapPtr &SrcIMP = *reinterpret_cast<InitMapPtr *>(Src);
   if (SrcIMP) {
     // We only ever invoke the moveFunc when moving block contents to a
     // DeadBlock. DeadBlocks don't need InitMaps, so we destroy them here.
@@ -76,7 +73,7 @@ static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
   Src += sizeof(InitMapPtr);
   Dst += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    auto *SrcPtr = &reinterpret_cast<T *>(const_cast<std::byte *>(Src))[I];
+    auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
     new (DstPtr) T(std::move(*SrcPtr));
   }
@@ -126,7 +123,7 @@ static void dtorArrayDesc(Block *B, std::byte *Ptr, const Descriptor *D) {
   }
 }
 
-static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
+static void moveArrayDesc(Block *B, std::byte *Src, std::byte *Dst,
                           const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
@@ -134,11 +131,11 @@ static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
 
   unsigned ElemOffset = 0;
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
-    const auto *SrcPtr = Src + ElemOffset;
+    auto *SrcPtr = Src + ElemOffset;
     auto *DstPtr = Dst + ElemOffset;
 
-    const auto *SrcDesc = reinterpret_cast<const InlineDescriptor *>(SrcPtr);
-    const auto *SrcElemLoc = reinterpret_cast<const std::byte *>(SrcDesc + 1);
+    auto *SrcDesc = reinterpret_cast<InlineDescriptor *>(SrcPtr);
+    auto *SrcElemLoc = reinterpret_cast<std::byte *>(SrcDesc + 1);
     auto *DstDesc = reinterpret_cast<InlineDescriptor *>(DstPtr);
     auto *DstElemLoc = reinterpret_cast<std::byte *>(DstDesc + 1);
 
@@ -233,7 +230,7 @@ static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
     destroyBase(B, Ptr, F.Desc, F.Offset);
 }
 
-static void moveRecord(Block *B, const std::byte *Src, std::byte *Dst,
+static void moveRecord(Block *B, std::byte *Src, std::byte *Dst,
                        const Descriptor *D) {
   assert(D);
   assert(D->ElemRecord);

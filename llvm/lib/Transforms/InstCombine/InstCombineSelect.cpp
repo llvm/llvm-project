@@ -3560,7 +3560,9 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
 
 // This function tries to fold the following operations:
 //   (x < y) ? -1 : zext(x != y)
+//   (x < y) ? -1 : zext(x > y)
 //   (x > y) ? 1 : sext(x != y)
+//   (x > y) ? 1 : sext(x < y)
 // Into ucmp/scmp(x, y), where signedness is determined by the signedness
 // of the comparison in the original sequence.
 Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
@@ -3589,16 +3591,23 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
       ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
 
   bool Replace = false;
+  ICmpInst::Predicate ExtendedCmpPredicate;
   // (x < y) ? -1 : zext(x != y)
+  // (x < y) ? -1 : zext(x > y)
   if (ICmpInst::isLT(Pred) && match(TV, m_AllOnes()) &&
-      match(FV, m_ZExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS),
-                                        m_Specific(RHS)))))
+      match(FV, m_ZExt(m_c_ICmp(ExtendedCmpPredicate, m_Specific(LHS),
+                                m_Specific(RHS)))) &&
+      (ExtendedCmpPredicate == ICmpInst::ICMP_NE ||
+       ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
     Replace = true;
 
   // (x > y) ? 1 : sext(x != y)
+  // (x > y) ? 1 : sext(x < y)
   if (ICmpInst::isGT(Pred) && match(TV, m_One()) &&
-      match(FV, m_SExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS),
-                                        m_Specific(RHS)))))
+      match(FV, m_SExt(m_c_ICmp(ExtendedCmpPredicate, m_Specific(LHS),
+                                m_Specific(RHS)))) &&
+      (ExtendedCmpPredicate == ICmpInst::ICMP_NE ||
+       ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
     Replace = true;
 
   if (Replace)
@@ -4190,6 +4199,25 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                 ConstantInt::get(SelType, Known.getConstant()));
       }
     }
+  }
+
+  // select (trunc nuw X to i1), X, Y --> select (trunc nuw X to i1), 1, Y
+  // select (trunc nuw X to i1), Y, X --> select (trunc nuw X to i1), Y, 0
+  // select (trunc nsw X to i1), X, Y --> select (trunc nsw X to i1), -1, Y
+  // select (trunc nsw X to i1), Y, X --> select (trunc nsw X to i1), Y, 0
+  Value *Trunc;
+  if (match(CondVal, m_NUWTrunc(m_Value(Trunc)))) {
+    if (TrueVal == Trunc)
+      return replaceOperand(SI, 1, ConstantInt::get(TrueVal->getType(), 1));
+    if (FalseVal == Trunc)
+      return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
+  }
+  if (match(CondVal, m_NSWTrunc(m_Value(Trunc)))) {
+    if (TrueVal == Trunc)
+      return replaceOperand(SI, 1,
+                            Constant::getAllOnesValue(TrueVal->getType()));
+    if (FalseVal == Trunc)
+      return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
   }
 
   return nullptr;

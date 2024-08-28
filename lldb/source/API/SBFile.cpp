@@ -59,7 +59,7 @@ SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
 
   SBError error;
   if (!m_opaque_sp) {
-    error.SetErrorString("invalid SBFile");
+    error = Status::FromErrorString("invalid SBFile");
     *bytes_read = 0;
   } else {
     Status status = m_opaque_sp->Read(buf, num_bytes);
@@ -75,7 +75,7 @@ SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
 
   SBError error;
   if (!m_opaque_sp) {
-    error.SetErrorString("invalid SBFile");
+    error = Status::FromErrorString("invalid SBFile");
     *bytes_written = 0;
   } else {
     Status status = m_opaque_sp->Write(buf, num_bytes);
@@ -90,7 +90,7 @@ SBError SBFile::Flush() {
 
   SBError error;
   if (!m_opaque_sp) {
-    error.SetErrorString("invalid SBFile");
+    error = Status::FromErrorString("invalid SBFile");
   } else {
     Status status = m_opaque_sp->Flush();
     error.SetError(status);

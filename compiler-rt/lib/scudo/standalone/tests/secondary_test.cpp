@@ -327,8 +327,7 @@ TEST_F(MapAllocatorCacheTest, CacheOrder) {
   for (scudo::uptr I = CacheConfig::getEntriesArraySize(); I > 0; I--) {
     scudo::uptr EntryHeaderPos;
     scudo::CachedBlock Entry =
-        Cache->retrieve(scudo::MaxUnusedCachePages * PageSize, TestAllocSize,
-                        PageSize, 0, EntryHeaderPos);
+        Cache->retrieve(0, TestAllocSize, PageSize, 0, EntryHeaderPos);
     EXPECT_EQ(Entry.MemMap.getBase(), MemMaps[I - 1].getBase());
   }
 
@@ -338,26 +337,24 @@ TEST_F(MapAllocatorCacheTest, CacheOrder) {
 }
 
 TEST_F(MapAllocatorCacheTest, PartialChunkHeuristicRetrievalTest) {
-  const scudo::uptr MaxUnusedCacheBytes = PageSize;
-  const scudo::uptr FragmentedBytes =
-      MaxUnusedCacheBytes + scudo::CachedBlock::ReleaseMemoryUpperBound;
-
+  const scudo::uptr FragmentedPages =
+      1 + scudo::CachedBlock::MaxReleasedCachePages;
   scudo::uptr EntryHeaderPos;
   scudo::CachedBlock Entry;
-  scudo::MemMapT MemMap = allocate(PageSize + FragmentedBytes);
+  scudo::MemMapT MemMap = allocate(PageSize + FragmentedPages * PageSize);
   Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
                MemMap.getBase(), MemMap);
 
-  // FragmentedBytes > MaxAllowedFragmentedBytes so PageSize
+  // FragmentedPages > MaxAllowedFragmentedPages so PageSize
   // cannot be retrieved from the cache
-  Entry = Cache->retrieve(/*MaxAllowedFragmentedBytes=*/0, PageSize, PageSize,
+  Entry = Cache->retrieve(/*MaxAllowedFragmentedPages=*/0, PageSize, PageSize,
                           0, EntryHeaderPos);
   EXPECT_FALSE(Entry.isValid());
 
-  // FragmentedBytes <= MaxAllowedFragmentedBytes so PageSize
+  // FragmentedPages == MaxAllowedFragmentedPages so PageSize
   // can be retrieved from the cache
   Entry =
-      Cache->retrieve(FragmentedBytes, PageSize, PageSize, 0, EntryHeaderPos);
+      Cache->retrieve(FragmentedPages, PageSize, PageSize, 0, EntryHeaderPos);
   EXPECT_TRUE(Entry.isValid());
 
   MemMap.unmap();
@@ -378,8 +375,7 @@ TEST_F(MapAllocatorCacheTest, MemoryLeakTest) {
   for (scudo::uptr I = CacheConfig::getDefaultMaxEntriesCount(); I > 0; I--) {
     scudo::uptr EntryHeaderPos;
     RetrievedEntries.push_back(
-        Cache->retrieve(scudo::MaxUnusedCachePages * PageSize, TestAllocSize,
-                        PageSize, 0, EntryHeaderPos));
+        Cache->retrieve(0, TestAllocSize, PageSize, 0, EntryHeaderPos));
     EXPECT_EQ(MemMaps[I].getBase(), RetrievedEntries.back().MemMap.getBase());
   }
 

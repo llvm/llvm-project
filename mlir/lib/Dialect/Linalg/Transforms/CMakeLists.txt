@@ -60,6 +60,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRFuncDialect
+  MLIRFuncToLLVM
   MLIRFuncTransforms
   MLIRIndexDialect
   MLIRInferTypeOpInterface
@@ -86,5 +87,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRVectorDialect
   MLIRVectorTransforms
   MLIRVectorUtils
+  MLIRX86VectorTransforms
   MLIRVectorToSCF
 )
