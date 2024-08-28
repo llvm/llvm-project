@@ -5,6 +5,8 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -fexceptions -fcxx-exceptions %s -o %t.eh.cir 2>&1
 // RUN: FileCheck %s -check-prefix=CIR_EH --input-file=%t.eh.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir-flat -fexceptions -fcxx-exceptions %s -o %t.eh.flat.cir 2>&1
+// RUN: FileCheck %s -check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir
 
 struct e { e(int); };
 e *g = new e(0);
@@ -33,6 +35,12 @@ e *g = new e(0);
 // CIR_EH: } catch [#cir.unwind {
 // CIR_EH:   cir.resume
 // CIR_EH: }]
+
+// CIR_FLAT_EH: cir.func internal private  @__cxx_global_var_init()
+// CIR_FLAT_EH: ^bb3:
+// CIR_FLAT_EH:   %exception_ptr, %type_id = cir.eh.inflight_exception
+// CIR_FLAT_EH:   cir.call @_ZdlPvm({{.*}}) : (!cir.ptr<!void>, !u64i) -> ()
+// CIR_FLAT_EH:   cir.br ^bb4(%exception_ptr, %type_id : !cir.ptr<!void>, !u32i)
 
 // LLVM-DAG: @llvm.global_ctors = appending constant [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init, ptr null }, { i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init.1, ptr null }]
 // LLVM: define internal void @__cxx_global_var_init()
