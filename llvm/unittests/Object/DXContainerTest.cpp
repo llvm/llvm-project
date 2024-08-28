@@ -309,13 +309,13 @@ Parts:
 
   Binding = *It;
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   --It;
   Binding = *It;
@@ -323,25 +323,25 @@ Parts:
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   --It;
   Binding = *It;
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   EXPECT_FALSE(It == PSVInfo->getResources().end());
 
@@ -352,7 +352,7 @@ Parts:
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   {
     auto Old = It++;
@@ -362,7 +362,7 @@ Parts:
     EXPECT_FALSE(Old != PSVInfo->getResources().end());
 
     EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
-    EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+    EXPECT_EQ(Binding.Flags, 0u);
   }
 
   Binding = *It;
@@ -370,7 +370,7 @@ Parts:
   EXPECT_TRUE(It == PSVInfo->getResources().end());
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 
   {
     auto Old = It--;
@@ -378,13 +378,13 @@ Parts:
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
 
     EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
-    EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+    EXPECT_EQ(Binding.Flags, 0u);
   }
 
   Binding = *It;
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 }
 
 // The malicious file bits in these tests are mutations of the binary produced
@@ -636,7 +636,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
   EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
-  EXPECT_EQ(Binding.Flags, dxbc::PSV::ResourceFlag::None);
+  EXPECT_EQ(Binding.Flags, 0u);
 }
 
 // This test binary is created using mutations of the yaml in the SigElements

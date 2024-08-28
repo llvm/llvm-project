@@ -439,7 +439,7 @@ struct RuntimeInfo : public v1::RuntimeInfo {
 
 struct ResourceBindInfo : public v0::ResourceBindInfo {
   ResourceKind Kind;
-  ResourceFlag Flags;
+  uint32_t Flags;
 
   void swapBytes() {
     v0::ResourceBindInfo::swapBytes();
