@@ -585,8 +585,8 @@ private:
   /// \param [in] Call The expression that allocates memory.
   /// \param [in] State The \c ProgramState right before allocation.
   /// \param [in] isAlloca Is the allocation function alloca-like
-  /// \returns The ProgramState with returnValue bindinded
-  [[nodiscard]] ProgramStateRef MallocBindRetval(CheckerContext &C,
+  /// \returns The ProgramState with returnValue bound
+  [[nodiscard]] ProgramStateRef MallocBindRetVal(CheckerContext &C,
                                                  const CallEvent &Call,
                                                  ProgramStateRef State,
                                                  bool isAlloca) const;
@@ -1106,7 +1106,7 @@ static bool isStandardDelete(const FunctionDecl *FD) {
 bool MallocChecker::isFreeingOwnershipAttrCall(const CallEvent &Call) {
   const auto *Func = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
 
-  return Func ? isFreeingOwnershipAttrCall(Func) : false;
+  return Func && isFreeingOwnershipAttrCall(Func);
 }
 
 bool MallocChecker::isFreeingOwnershipAttrCall(const FunctionDecl *Func) {
@@ -1130,7 +1130,7 @@ bool MallocChecker::isFreeingCall(const CallEvent &Call) const {
 bool MallocChecker::isAllocatingOwnershipAttrCall(const CallEvent &Call) {
   const auto *Func = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
 
-  return Func ? isAllocatingOwnershipAttrCall(Func) : false;
+  return Func && isAllocatingOwnershipAttrCall(Func);
 }
 
 bool MallocChecker::isAllocatingOwnershipAttrCall(const FunctionDecl *Func) {
@@ -1557,27 +1557,30 @@ bool MallocChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   }
 
   if (const CheckFn *Callback = AllocatingMemFnMap.lookup(Call)) {
-    State = MallocBindRetval(C, Call, State, false);
+    State = MallocBindRetVal(C, Call, State, false);
     (*Callback)(this, State, Call, C);
     return true;
   }
 
   if (const CheckFn *Callback = ReallocatingMemFnMap.lookup(Call)) {
-    State = MallocBindRetval(C, Call, State, false);
+    State = MallocBindRetVal(C, Call, State, false);
     (*Callback)(this, State, Call, C);
     return true;
   }
 
-  if (isStandardNewDelete(Call)) {
-    if (isStandardNew(Call))
-      State = MallocBindRetval(C, Call, State, false);
+  if (isStandardNew(Call)) {
+    State = MallocBindRetVal(C, Call, State, false);
+    checkCXXNewOrCXXDelete(State, Call, C);
+    return true;
+  }
 
+  if (isStandardDelete(Call)) {
     checkCXXNewOrCXXDelete(State, Call, C);
     return true;
   }
 
   if (const CheckFn *Callback = AllocaMemFnMap.lookup(Call)) {
-    State = MallocBindRetval(C, Call, State, true);
+    State = MallocBindRetVal(C, Call, State, true);
     (*Callback)(this, State, Call, C);
     return true;
   }
@@ -1588,7 +1591,7 @@ bool MallocChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   }
 
   if (isAllocatingOwnershipAttrCall(Call)) {
-    State = MallocBindRetval(C, Call, State, false);
+    State = MallocBindRetVal(C, Call, State, false);
     checkOwnershipAttr(State, Call, C);
     return true;
   }
@@ -1607,16 +1610,10 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
 
   if (const CallExpr *CE = dyn_cast<CallExpr>(Call.getOriginExpr())) {
     Arg = CE->getArg(IndexOfSizeArg);
-    if (!RetVal)
-      RetVal = State->getSVal(CE, C.getLocationContext());
-    ;
   } else if (const CXXNewExpr *NE =
                  dyn_cast<CXXNewExpr>(Call.getOriginExpr())) {
     if (NE->isArray()) {
       Arg = *NE->getArraySize();
-      if (!RetVal)
-        RetVal = State->getSVal(NE, C.getLocationContext());
-      ;
     } else {
       return State;
     }
@@ -1624,6 +1621,9 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
     assert(false && "not a CallExpr or CXXNewExpr");
     return nullptr;
   }
+
+  if (!RetVal)
+    RetVal = State->getSVal(Call.getOriginExpr(), C.getLocationContext());
 
   assert(Arg);
 
@@ -1816,7 +1816,7 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallEvent &Call,
   return MallocMemAux(C, Call, UnknownVal(), UndefinedVal(), State, Family);
 }
 
-ProgramStateRef MallocChecker::MallocBindRetval(CheckerContext &C,
+ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
                                                 const CallEvent &Call,
                                                 ProgramStateRef State,
                                                 bool isAlloca) const {
@@ -1953,19 +1953,15 @@ static ProgramStateRef MallocUpdateRefState(CheckerContext &C, const Expr *E,
 
   SymbolRef Sym = RetVal->getAsLocSymbol();
 
-  // FIXME: Following if fails for `alloca()` calls (because
-  // `AllocaRegion`s are not symbolic);
-  // As the current code appears to work correctly, I'm not touching this issue
-  // now, but it would be good to investigate and clarify this.
-  // Also note that perhaps the special `AllocaRegion` should be replaced by
-  // `SymbolicRegion` (or turned into a subclass of `SymbolicRegion`) to enable
-  // proper tracking of memory allocated by `alloca()` -- and after that change
-  // this assertion would become valid again.
+  // NOTE: If this was an `alloca()` call, then `RetVal` holds an
+  // `AllocaRegion`, so `Sym` will be a nullpointer because `AllocaRegion`s do
+  // not have an associated symbol. However, this distinct region type means
+  // that we don't need to store anything about them in `RegionState`.
 
   if (Sym)
     return State->set<RegionState>(Sym, RefState::getAllocated(Family, E));
-  else
-    return State;
+
+  return State;
 }
 
 ProgramStateRef MallocChecker::FreeMemAttr(CheckerContext &C,
