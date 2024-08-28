@@ -507,7 +507,7 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
     // Storing the pointer escapes it.
     if (U->get() == SI.getValueOperand())
       return PI.setEscapedAndAborted(&SI);
-    // Writes to the pointer are UB w/ __gid_constant__, but do not force a
+    // Writes to the pointer are UB w/ __grid_constant__, but do not force a
     // copy.
     if (!IsGridConstant)
       return PI.setAborted(&SI);
