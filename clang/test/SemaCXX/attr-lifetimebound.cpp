@@ -287,3 +287,18 @@ std::span<int> test2() {
   return abc; // expected-warning {{address of stack memory associated with local variable}}
 }
 } // namespace ctor_cases
+
+namespace GH106372 {
+class [[gsl::Owner]] Foo {};
+class [[gsl::Pointer]] FooView {};
+
+template <typename T>
+struct StatusOr {
+  template <typename U = T>
+  StatusOr& operator=(U&& v [[clang::lifetimebound]]);
+};
+
+void test(StatusOr<FooView> foo) {
+  foo = Foo(); // expected-warning {{object backing the pointer foo will be destroyed at the end}}
+}
+} // namespace GH106372

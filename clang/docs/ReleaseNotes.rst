@@ -268,6 +268,8 @@ Improvements to Clang's diagnostics
 
 - Improved diagnostic when trying to overload a function in an ``extern "C"`` context. (#GH80235)
 
+- Clang now respects lifetimebound attribute for the assignment operator parameter. (#GH106372).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
