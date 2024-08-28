@@ -48,6 +48,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
+  case Intrinsic::dx_step:
     return true;
   }
   return false;
@@ -320,6 +321,28 @@ static Value *expandPowIntrinsic(CallInst *Orig) {
   return Exp2Call;
 }
 
+static Value *expandStepIntrinsic(CallInst *Orig) {
+
+  Value *X = Orig->getOperand(0);
+  Value *Y = Orig->getOperand(1);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+
+  Constant *one = ConstantFP::get(Ty->getScalarType(), 1.0);
+  Constant *zero = ConstantFP::get(Ty->getScalarType(), 0.0);
+  Value *cond = Builder.CreateFCmpOLT(Y, X);
+
+  if (Ty != Ty->getScalarType()) {
+    auto *XVec = dyn_cast<FixedVectorType>(Ty);
+    one = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), one);
+    zero = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), zero);
+  }
+
+  return Builder.CreateSelect(cond, zero, one);
+}
+
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
                                     Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
@@ -401,6 +424,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     Result = expandIntegerDotIntrinsic(Orig, IntrinsicId);
+    break;
+  case Intrinsic::dx_step:
+    Result = expandStepIntrinsic(Orig);
     break;
   }
 
