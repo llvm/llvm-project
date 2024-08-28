@@ -138,6 +138,7 @@ static bool Notes;
 static bool ProgramHeaders;
 static bool SectionGroups;
 static bool VersionInfo;
+static bool Offloading;
 
 // Mach-O specific options.
 static bool MachODataInCode;
@@ -288,6 +289,7 @@ static void parseOptions(const opt::InputArgList &Args) {
     }
   }
   opts::VersionInfo = Args.hasArg(OPT_version_info);
+  opts::Offloading = Args.hasArg(OPT_offloading);
 
   // Mach-O specific options.
   opts::MachODataInCode = Args.hasArg(OPT_macho_data_in_code);
@@ -455,6 +457,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     Dumper->printGnuHashTable();
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
+  if (opts::Offloading)
+    Dumper->printOffloading(Obj);
   if (opts::StringTable)
     Dumper->printStringTable();
   if (Obj.isELF()) {
@@ -699,6 +703,7 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
     opts::DynamicTable = true;
     opts::Notes = true;
     opts::VersionInfo = true;
+    opts::Offloading = true;
     opts::UnwindInfo = true;
     opts::SectionGroups = true;
     opts::HashHistogram = true;
