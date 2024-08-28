@@ -1911,7 +1911,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *sec : ctx.outputSections) {
     auto i = config->sectionStartMap.find(sec->name);
     if (i != config->sectionStartMap.end())
-      sec->addrExpr = make<DynamicExpr>([=] { return i->second; });
+      sec->addrExpr = make<ConstantExpr>(i->second);
   }
 
   // With the ctx.outputSections available check for GDPLT relocations
@@ -2387,8 +2387,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     OutputSection *cmd = p->firstSec;
     if (!cmd)
       return;
-    cmd->alignExpr =
-        make<DynamicExpr>([align = cmd->addralign]() { return align; });
+    cmd->alignExpr = make<ConstantExpr>(cmd->addralign);
     if (!cmd->addrExpr) {
       // Prefer advancing to align(dot, maxPageSize) + dot%maxPageSize to avoid
       // padding in the file contents.

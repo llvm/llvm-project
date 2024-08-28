@@ -1544,7 +1544,7 @@ ScriptExpr *ScriptParser::readPrimary() {
 
   // Tok is a literal number.
   if (std::optional<uint64_t> val = parseInt(tok))
-    return make<DynamicExpr>([=] { return *val; });
+    return make<ConstantExpr>(*val);
 
   // Tok is a symbol name.
   if (tok.starts_with("\""))
