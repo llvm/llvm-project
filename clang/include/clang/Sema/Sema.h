@@ -1806,6 +1806,9 @@ public:
   /// Add [[gsl::Owner]] and [[gsl::Pointer]] attributes for std:: types.
   void inferGslOwnerPointerAttribute(CXXRecordDecl *Record);
 
+  /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
+  void inferLifetimeBoundAttribute(FunctionDecl *FD);
+
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
