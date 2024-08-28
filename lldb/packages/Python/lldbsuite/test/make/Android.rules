@@ -8,6 +8,14 @@ else
 	HOST_TAG := windows-x86_64
 endif
 
+TOOLCHAIN_SYSROOT := $(NDK_ROOT)/toolchains/llvm/prebuilt/$(HOST_TAG)/sysroot
+
+ifeq "$(wildcard $(TOOLCHAIN_SYSROOT)/.)" ""
+# Compiling test inferiors for Android requires an NDK with the unified
+# toolchain introduced in version r19.
+$(error "No unified toolchain sysroot found in $(NDK_ROOT). NDK must be r19 or later.")
+endif
+
 ifeq "$(ARCH)" "arm"
 	TRIPLE := armv7-none-linux-androideabi
 	ARCH_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm
@@ -18,8 +26,6 @@ else ifeq "$(ARCH)" "i386"
 else
 	TRIPLE := $(ARCH)-none-linux-android
 endif
-
-TOOLCHAIN_SYSROOT := $(NDK_ROOT)/toolchains/llvm/prebuilt/$(HOST_TAG)/sysroot
 
 # lowest 64-bit API level
 API_LEVEL := 21
