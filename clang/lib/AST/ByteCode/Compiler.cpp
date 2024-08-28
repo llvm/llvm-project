@@ -5322,24 +5322,30 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
   if (DiscardResult)
     return this->discard(SubExpr);
 
-  auto prepareResult = [=]() -> bool {
-    if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
-      if (!LocalIndex)
-        return false;
-      return this->emitGetPtrLocal(*LocalIndex, E);
-    }
-    return true;
-  };
+  auto UnaryOp = E->getOpcode();
+  if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
+      UnaryOp != UO_Not)
+    return this->emitInvalid(E);
+
+  // Nothing to do here.
+  if (UnaryOp == UO_Plus)
+    return this->delegate(SubExpr);
+
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   // The offset of the temporary, if we created one.
-  unsigned SubExprOffset = ~0u;
-  auto createTemp = [=, &SubExprOffset]() -> bool {
-    SubExprOffset = this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
-    if (!this->visit(SubExpr))
-      return false;
-    return this->emitSetLocal(PT_Ptr, SubExprOffset, E);
-  };
+  unsigned SubExprOffset =
+      this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SubExprOffset, E))
+    return false;
 
   const auto *VecTy = SubExpr->getType()->getAs<VectorType>();
   PrimType ElemT = classifyVectorElementType(SubExpr->getType());
@@ -5349,14 +5355,8 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     return this->emitArrayElemPop(ElemT, Index, E);
   };
 
-  switch (E->getOpcode()) {
-  case UO_Plus: // +x
-    return this->delegate(SubExpr);
+  switch (UnaryOp) {
   case UO_Minus:
-    if (!prepareResult())
-      return false;
-    if (!createTemp())
-      return false;
     for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
@@ -5367,11 +5367,6 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     }
     break;
   case UO_LNot: { // !x
-    if (!prepareResult())
-      return false;
-    if (!createTemp())
-      return false;
-
     // In C++, the logic operators !, &&, || are available for vectors. !v is
     // equivalent to v == 0.
     //
@@ -5379,9 +5374,9 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     // elements as the comparison operands with a signed integral element type.
     //
     // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
-    QualType SignedVecTy = E->getType();
-    PrimType SignedElemT =
-        classifyPrim(SignedVecTy->getAs<VectorType>()->getElementType());
+    QualType ResultVecTy = E->getType();
+    PrimType ResultVecElemT =
+        classifyPrim(ResultVecTy->getAs<VectorType>()->getElementType());
     for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
@@ -5394,19 +5389,15 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitNeg(ElemT, E))
         return false;
-      if (ElemT != SignedElemT &&
-          !this->emitPrimCast(ElemT, SignedElemT, SignedVecTy, E))
+      if (ElemT != ResultVecElemT &&
+          !this->emitPrimCast(ElemT, ResultVecElemT, ResultVecTy, E))
         return false;
-      if (!this->emitInitElem(SignedElemT, I, E))
+      if (!this->emitInitElem(ResultVecElemT, I, E))
         return false;
     }
     break;
   }
   case UO_Not: // ~x
-    if (!prepareResult())
-      return false;
-    if (!createTemp())
-      return false;
     for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
       if (!getElem(SubExprOffset, I))
         return false;
@@ -5422,9 +5413,8 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     }
     break;
   default:
-    return this->emitInvalid(E);
+    llvm_unreachable("Unsupported unary operators should be handled up front");
   }
-
   return true;
 }
 
