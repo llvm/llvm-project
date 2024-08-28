@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-uninitialized -std=c++14 -fsyntax-only -verify
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter -Wno-uninitialized -std=c++14 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++14 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter -std=c++14 -fsyntax-only -verify
 
 using FourCharsVecSize __attribute__((vector_size(4))) = char;
 using FourIntsVecSize __attribute__((vector_size(16))) = int;
