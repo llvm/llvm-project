@@ -4759,7 +4759,8 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   StringRef FormatStr;
 
   std::optional<Bitset<256>> Specifiers;
-  if (getConstantStringInfo(FormatVal, FormatStr))
+  if (getConstantStringInfo(FormatVal, FormatStr,
+                            B.getDataLayout().getByteWidth()))
     Specifiers = parseFormatStringSpecifiers(FormatStr);
 
   SmallVector<StringRef> NeededAspects;

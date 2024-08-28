@@ -456,7 +456,7 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   // Some of the atomic builtins take the scope as a string name.
   const llvm::Triple &TargetTriple = getTarget().getTriple();
   StringRef scp;
-  if (llvm::getConstantStringInfo(Scope, scp)) {
+  if (llvm::getConstantStringInfo(Scope, scp, /*CharWidth=*/8)) {
     if (TargetTriple.isSPIRV())
       scp = mapScopeToSPIRV(TargetTriple, scp);
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
@@ -477,7 +477,7 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   for (unsigned K = 2; K < E->getNumArgs(); ++K) {
     llvm::Value *V = EmitScalarExpr(E->getArg(K));
     StringRef AS;
-    if (llvm::getConstantStringInfo(V, AS)) {
+    if (llvm::getConstantStringInfo(V, AS, /*CharWidth=*/8)) {
       MMRAs.push_back({Tag, AS});
       // TODO: Delete the resulting unused constant?
       continue;
