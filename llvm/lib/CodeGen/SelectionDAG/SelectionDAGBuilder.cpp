@@ -7781,7 +7781,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_deoptimize:
     LowerDeoptimizeCall(&I);
     return;
-  case Intrinsic::experimental_stepvector:
+  case Intrinsic::stepvector:
     visitStepVector(I);
     return;
   case Intrinsic::vector_reduce_fadd:
