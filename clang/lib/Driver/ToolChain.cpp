@@ -222,7 +222,8 @@ static void getAArch64MultilibFlags(const Driver &D,
   MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
 
-  const Arg *BranchProtectionArg = Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
   if (BranchProtectionArg) {
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
@@ -274,7 +275,8 @@ static void getARMMultilibFlags(const Driver &D,
     llvm_unreachable("Invalid float ABI");
   }
 
-  const Arg *BranchProtectionArg = Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
   if (BranchProtectionArg) {
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
