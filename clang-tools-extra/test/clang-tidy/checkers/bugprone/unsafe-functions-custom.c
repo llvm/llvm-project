@@ -15,9 +15,6 @@
 // RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.CustomAnnexKFunctions: '^annex_k_only$,replacement;^both$,replacement,is an Annex K function'}}"\
 // RUN:   -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
 
-typedef __SIZE_TYPE__ size_t;
-typedef __WCHAR_TYPE__ wchar_t;
-
 void non_annex_k_only(void);
 void annex_k_only(void);
 void both(void);

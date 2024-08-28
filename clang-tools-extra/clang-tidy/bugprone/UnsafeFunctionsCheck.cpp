@@ -167,8 +167,10 @@ ParseCheckedFunctions(StringRef Option, StringRef OptionName,
           << Name.trim() << OptionName;
     }
 
-    Result.push_back({Name.trim().str(), llvm::Regex(Name.trim()),
-                      Replacement.trim().str(), Reason.trim().str()});
+    Result.push_back(
+        {Name.trim().str(),
+         matchers::MatchesAnyListedNameMatcher::NameMatcher(Name.trim()),
+         Replacement.trim().str(), Reason.trim().str()});
   }
 
   return Result;
@@ -324,7 +326,7 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (AnnexKIsAvailable) {
       for (const auto &Entry : CustomAnnexKFunctions) {
-        if (Entry.Pattern.match(FunctionName)) {
+        if (Entry.Pattern.match(*FuncDecl)) {
           // If both Annex K and Normal are matched, show Annex K warning only.
           if (CustomAnnexK)
             ShowCheckedFunctionWarning(Entry);
@@ -341,7 +343,8 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     for (const auto &Entry : CustomNormalFunctions) {
-      if (Entry.Pattern.match(FunctionName)) {
+
+      if (Entry.Pattern.match(*FuncDecl)) {
         ShowCheckedFunctionWarning(Entry);
         return;
       }

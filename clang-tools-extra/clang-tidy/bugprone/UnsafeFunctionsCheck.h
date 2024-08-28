@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFEFUNCTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/Matchers.h"
 #include <optional>
 
 namespace clang::tidy::bugprone {
@@ -34,7 +35,7 @@ public:
 
   struct CheckedFunction {
     std::string Name;
-    llvm::Regex Pattern;
+    matchers::MatchesAnyListedNameMatcher::NameMatcher Pattern;
     std::string Replacement;
     std::string Reason;
   };

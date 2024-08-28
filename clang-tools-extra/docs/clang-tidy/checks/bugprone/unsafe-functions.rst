@@ -107,6 +107,10 @@ will produce the following diagnostic message.
    ::std::original(); // no-warning
    original_function(); // no-warning
 
+If the regular expression contains the character ``:``, it is matched against the
+qualified name (i.e. ``std::original``), otherwise the regex is matched against the unqualified name (``original``).
+If the regular expression starts with ``::`` (or ``^::``), it is matched against the
+fully qualified name (``::std::original``).
 
 Options
 -------
