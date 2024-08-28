@@ -187,7 +187,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
     // thread.
     if (!::DebugBreakProcess(
             GetProcess().GetNativeProcess().GetSystemHandle())) {
-      error.SetError(::GetLastError(), eErrorTypeWin32);
+      error = Status(::GetLastError(), eErrorTypeWin32);
     }
   }
 
@@ -195,7 +195,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
 
   DWORD wait_result = WaitForSingleObject(m_debugging_ended_event, 5000);
   if (wait_result != WAIT_OBJECT_0) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "error: WaitForSingleObject({0}, 5000) returned {1}",
              m_debugging_ended_event, wait_result);
   } else

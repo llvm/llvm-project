@@ -252,7 +252,7 @@ Status ProcessDebugger::HaltProcess(bool &caused_stop) {
                                         .GetNativeProcess()
                                         .GetSystemHandle());
   if (!caused_stop) {
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+    error = Status(::GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "DebugBreakProcess failed with error {0}", error);
   }
 
@@ -281,7 +281,7 @@ Status ProcessDebugger::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   SIZE_T num_of_bytes_read = 0;
   if (!::ReadProcessMemory(process.GetNativeProcess().GetSystemHandle(), addr,
                            buf, size, &num_of_bytes_read)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "reading failed with error: {0}", error);
   } else {
     bytes_read = num_of_bytes_read;
@@ -313,7 +313,7 @@ Status ProcessDebugger::WriteMemory(lldb::addr_t vm_addr, const void *buf,
     FlushInstructionCache(handle, addr, num_of_bytes_written);
     bytes_written = num_of_bytes_written;
   } else {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "writing failed with error: {0}", error);
   }
   return error;
@@ -340,7 +340,7 @@ Status ProcessDebugger::AllocateMemory(size_t size, uint32_t permissions,
   auto protect = ConvertLldbToWinApiProtect(permissions);
   auto result = ::VirtualAllocEx(handle, nullptr, size, MEM_COMMIT, protect);
   if (!result) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "allocating failed with error: {0}", error);
   } else {
     addr = reinterpret_cast<addr_t>(result);
@@ -366,7 +366,7 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
   lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
   if (!::VirtualFreeEx(handle, reinterpret_cast<LPVOID>(vm_addr), 0,
                        MEM_RELEASE)) {
-    result.SetError(GetLastError(), eErrorTypeWin32);
+    result = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "deallocating failed with error: {0}", result);
   }
 
@@ -414,7 +414,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
       info.SetMapped(MemoryRegionInfo::eNo);
       return error;
     } else {
-      error.SetError(last_error, eErrorTypeWin32);
+      error = Status(last_error, eErrorTypeWin32);
       LLDB_LOG(log,
                "VirtualQueryEx returned error {0} while getting memory "
                "region info for address {1:x}",
