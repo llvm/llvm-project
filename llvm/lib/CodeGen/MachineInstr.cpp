@@ -1041,10 +1041,9 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (const MachineOperand &MO : operands()) {
-    if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == Reg)
+  for (const MachineOperand &MO : all_uses())
+    if (MO.isImplicit() && MO.getReg() == Reg)
       return true;
-  }
   return false;
 }
 
@@ -1264,10 +1263,8 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
 /// clearKillInfo - Clears kill flags on all operands.
 ///
 void MachineInstr::clearKillInfo() {
-  for (MachineOperand &MO : operands()) {
-    if (MO.isReg() && MO.isUse())
-      MO.setIsKill(false);
-  }
+  for (MachineOperand &MO : all_uses())
+    MO.setIsKill(false);
 }
 
 void MachineInstr::substituteRegister(Register FromReg, Register ToReg,
@@ -1549,12 +1546,9 @@ bool MachineInstr::isLoadFoldBarrier() const {
 /// allDefsAreDead - Return true if all the defs of this instruction are dead.
 ///
 bool MachineInstr::allDefsAreDead() const {
-  for (const MachineOperand &MO : operands()) {
-    if (!MO.isReg() || MO.isUse())
-      continue;
+  for (const MachineOperand &MO : all_defs())
     if (!MO.isDead())
       return false;
-  }
   return true;
 }
 
@@ -2063,8 +2057,8 @@ void MachineInstr::clearRegisterKills(Register Reg,
                                       const TargetRegisterInfo *RegInfo) {
   if (!Reg.isPhysical())
     RegInfo = nullptr;
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isUse() || !MO.isKill())
+  for (MachineOperand &MO : all_uses()) {
+    if (!MO.isKill())
       continue;
     Register OpReg = MO.getReg();
     if ((RegInfo && RegInfo->regsOverlap(Reg, OpReg)) || Reg == OpReg)
