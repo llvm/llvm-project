@@ -186,6 +186,37 @@ define <vscale x 16 x i8> @test_compress_nxv16i8(<vscale x 16 x i8> %vec, <vscal
     ret <vscale x 16 x i8> %out
 }
 
+define <vscale x 8 x i16> @test_compress_nxv8i16_with_0_passthru(<vscale x 8 x i16> %vec, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv8i16_with_0_passthru:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    uunpklo z1.s, z0.h
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    cntp x8, p1, p1.s
+; CHECK-NEXT:    compact z1.s, p1, z1.s
+; CHECK-NEXT:    compact z0.s, p2, z0.s
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cntp x9, p0, p0.h
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    st1h { z1.s }, p1, [sp]
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    st1h { z0.s }, p1, [x10, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [sp]
+; CHECK-NEXT:    whilelo p0.h, xzr, x9
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+    %out = call <vscale x 8 x i16> @llvm.experimental.vector.compress(<vscale x 8 x i16> %vec, <vscale x 8 x i1> %mask, <vscale x 8 x i16> splat (i16 0))
+    ret <vscale x 8 x i16> %out
+}
+
 define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_illegal_element_type:
 ; CHECK:       // %bb.0:

@@ -6650,6 +6650,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
   EVT ElmtVT = VecVT.getVectorElementType();
   const bool IsFixedLength = VecVT.isFixedLengthVector();
   const bool HasPassthru = !Passthru.isUndef();
+  bool CompressedViaStack = false;
   unsigned MinElmts = VecVT.getVectorElementCount().getKnownMinValue();
   EVT FixedVecVT = MVT::getVectorVT(ElmtVT.getSimpleVT(), MinElmts);
 
@@ -6704,12 +6705,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
     SDValue Offset = DAG.getConstant(0, DL, OffsetVT);
 
     for (unsigned I = 0; I < MinElmts; I += 4) {
-      SDValue PartialVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, PartialVecVT,
-                                       Vec, DAG.getVectorIdxConstant(I, DL));
+      SDValue VectorIdx = DAG.getVectorIdxConstant(I, DL);
+      SDValue PartialVec =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, PartialVecVT, Vec, VectorIdx);
       PartialVec = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::nxv4i32, PartialVec);
 
-      SDValue PartialMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::nxv4i1,
-                                        Mask, DAG.getVectorIdxConstant(I, DL));
+      SDValue PartialMask =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::nxv4i1, Mask, VectorIdx);
 
       SDValue PartialCompressed = DAG.getNode(
           ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4i32,
@@ -6736,6 +6738,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
     MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
         MF, cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
     Compressed = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+    CompressedViaStack = true;
   } else {
     // Convert to i32 or i64 for smaller types, as these are the only supported
     // sizes for compact.
@@ -6751,7 +6754,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
   }
 
   // compact fills with 0s, so if our passthru is all 0s, do nothing here.
-  if (HasPassthru && !ISD::isConstantSplatVectorAllZeros(Passthru.getNode())) {
+  if (HasPassthru && (!ISD::isConstantSplatVectorAllZeros(Passthru.getNode()) ||
+                      CompressedViaStack)) {
     SDValue Offset = DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
         DAG.getConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask, Mask);
