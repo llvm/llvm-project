@@ -531,7 +531,7 @@ namespace cwg2397 { // cwg2397: 17
 
 #if __cplusplus >= 202002L
 
-namespace cwg2369 { // cwg2369: 20
+namespace cwg2369 { // cwg2369: partial
 
 template <class T> struct Z {
   typedef typename T::x xx;

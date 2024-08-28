@@ -1927,6 +1927,9 @@ bool TemplateInstantiator::instantiateParameterToScope(
 
     return false;
   }
+  // FIXME: The index of the instantiated parameter might be wrong because we
+  // don't know the offset of the prior parameters. But it doesn't matter
+  // regarding constraint evaluation.
   ParmVarDecl *NewParm = SemaRef.SubstParmVarDecl(
       OldParm, TemplateArgs,
       /*indexAdjustment=*/IndexAdjustment, std::nullopt,

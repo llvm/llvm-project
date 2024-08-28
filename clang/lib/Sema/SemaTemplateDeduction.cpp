@@ -3865,15 +3865,17 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     Owner = FD->getLexicalDeclContext();
   }
 
-  // [DR2369]
-  // FIXME: We have to partially instantiate lambda's captures for constraint
-  // evaluation.
+  // C++20 [temp.deduct.general]p5: [DR2369]
+  // If the function template has associated constraints, those constraints are
+  // checked for satisfaction. If the constraints are not satisfied, type
+  // deduction fails.
   bool NeedConstraintChecking =
       !PartialOverloading ||
       CanonicalBuilder.size() ==
           FunctionTemplate->getTemplateParameters()->size();
+  // FIXME: We haven't implemented DR2369 for lambdas yet, because we need
+  // the captured variables to be instantiated in the scope.
   bool IsLambda = isLambdaCallOperator(FD) || isLambdaConversionOperator(FD);
-#if 1
   if (!IsLambda && NeedConstraintChecking) {
     if (CheckFunctionConstraintsWithoutInstantiation(
             Info.getLocation(), FunctionTemplate->getCanonicalDecl(),
@@ -3885,7 +3887,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
-#endif
   // C++ [temp.deduct.call]p10: [DR1391]
   //   If deduction succeeds for all parameters that contain
   //   template-parameters that participate in template argument deduction,

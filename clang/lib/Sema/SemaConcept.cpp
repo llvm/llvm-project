@@ -470,6 +470,9 @@ static ExprResult calculateConstraintSatisfaction(
 
         SatisfactionStackRAII StackRAII(S, Template, ID);
 
+        // [CWG2770] Function parameters should be instantiated when they are
+        // needed by a satisfaction check of an atomic constraint or
+        // (recursively) by another function parameter.
         DeclContext *FunctionDC = nullptr;
         if (auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(Template)) {
           FunctionDecl *FD = FTD->getTemplatedDecl();
