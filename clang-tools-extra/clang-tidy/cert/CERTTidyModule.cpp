@@ -14,9 +14,9 @@
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
+#include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
-#include "../bugprone/SuspiciousPointerArithmeticsUsingSizeofCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
@@ -283,9 +283,8 @@ public:
 
     // C checkers
     // ARR
-    CheckFactories
-        .registerCheck<bugprone::SuspiciousPointerArithmeticsUsingSizeofCheck>(
-            "cert-arr39-c");
+    CheckFactories.registerCheck<bugprone::SizeofExpressionCheck>(
+        "cert-arr39-c");
     // CON
     CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
         "cert-con36-c");
@@ -337,6 +336,12 @@ public:
   ClangTidyOptions getModuleOptions() override {
     ClangTidyOptions Options;
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
+    Opts["cert-arr39-c.WarnOnSizeOfConstant"] = "false";
+    Opts["cert-arr39-c.WarnOnSizeOfIntegerExpression"] = "false";
+    Opts["cert-arr39-c.WarnOnSizeOfThis"] = "false";
+    Opts["cert-arr39-c.WarnOnSizeOfCompareToConstant"] = "false";
+    Opts["cert-arr39-c.WarnOnSizeOfPointer"] = "false";
+    Opts["cert-arr39-c.WarnOnSizeOfPointerToAggregate"] = "false";
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
     Opts["cert-err33-c.CheckedFunctions"] = CertErr33CCheckedFunctions;
     Opts["cert-err33-c.AllowCastToVoid"] = "true";
