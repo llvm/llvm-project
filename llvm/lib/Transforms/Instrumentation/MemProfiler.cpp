@@ -39,6 +39,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -54,7 +55,6 @@ namespace llvm {
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
-using AllocMatchInfo = ::llvm::MemProfUsePass::AllocMatchInfo;
 } // namespace llvm
 
 constexpr int LLVM_MEM_PROFILER_VERSION = 1;
@@ -148,11 +148,10 @@ static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
 
 // By default disable matching of allocation profiles onto operator new that
 // already explicitly pass a hot/cold hint, since we don't currently
-// override these hints anyway. Not static so that it can be set in the unit
-// test too.
-cl::opt<bool> ClMemProfMatchHotColdNew(
+// override these hints anyway.
+static cl::opt<bool> ClMemProfMatchHotColdNew(
     "memprof-match-hot-cold-new",
-    cl::desc(
+ cl::desc(
         "Match allocation profiles onto existing hot/cold operator new calls"),
     cl::Hidden, cl::init(false));
 
@@ -790,11 +789,17 @@ static bool isAllocationWithHotColdVariant(Function *Callee,
   }
 }
 
-void MemProfUsePass::readMemprof(
-    Function &F, const IndexedMemProfReader &MemProfReader,
-    const TargetLibraryInfo &TLI,
-    std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo) {
-  auto &Ctx = F.getContext();
+struct AllocMatchInfo {
+  uint64_t TotalSize = 0;
+  AllocationType AllocType = AllocationType::None;
+  bool Matched = false;
+};
+
+static void
+readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
+            const TargetLibraryInfo &TLI,
+            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo) {
+  auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
   // llvm-profdata uses FuncName in dwarf to create GUID which doesn't
@@ -805,7 +810,7 @@ void MemProfUsePass::readMemprof(
   auto FuncName = F.getName();
   auto FuncGUID = Function::getGUID(FuncName);
   std::optional<memprof::MemProfRecord> MemProfRec;
-  auto Err = MemProfReader.getMemProfRecord(FuncGUID).moveInto(MemProfRec);
+  auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
   if (Err) {
     handleAllErrors(std::move(Err), [&](const InstrProfError &IPE) {
       auto Err = IPE.get();
@@ -833,8 +838,8 @@ void MemProfUsePass::readMemprof(
                          Twine(" Hash = ") + std::to_string(FuncGUID))
                             .str();
 
-      Ctx.diagnose(DiagnosticInfoPGOProfile(F.getParent()->getName().data(),
-                                            Msg, DS_Warning));
+      Ctx.diagnose(
+          DiagnosticInfoPGOProfile(M.getName().data(), Msg, DS_Warning));
     });
     return;
   }
@@ -1031,15 +1036,15 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::all();
   }
 
-  std::unique_ptr<IndexedInstrProfReader> IndexedReader =
+  std::unique_ptr<IndexedInstrProfReader> MemProfReader =
       std::move(ReaderOrErr.get());
-  if (!IndexedReader) {
+  if (!MemProfReader) {
     Ctx.diagnose(DiagnosticInfoPGOProfile(
-        MemoryProfileFileName.data(), StringRef("Cannot get IndexedReader")));
+        MemoryProfileFileName.data(), StringRef("Cannot get MemProfReader")));
     return PreservedAnalyses::all();
   }
 
-  if (!IndexedReader->hasMemoryProfile()) {
+  if (!MemProfReader->hasMemoryProfile()) {
     Ctx.diagnose(DiagnosticInfoPGOProfile(MemoryProfileFileName.data(),
                                           "Not a memory profile"));
     return PreservedAnalyses::all();
@@ -1052,13 +1057,12 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   // it to an allocation in the IR.
   std::map<uint64_t, AllocMatchInfo> FullStackIdToAllocMatchInfo;
 
-  const auto &MemProfReader = IndexedReader->getIndexedMemProfReader();
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-    readMemprof(F, MemProfReader, TLI, FullStackIdToAllocMatchInfo);
+    readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo);
   }
 
   if (ClPrintMemProfMatchInfo) {
