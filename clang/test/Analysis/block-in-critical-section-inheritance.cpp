@@ -57,6 +57,7 @@ void two_mutexes_no_false_negative(TwoMutexes &tm) {
 
 struct MyMutexBase1 : std::mutex {
   void lock1() { lock(); }
+  // expected-note@-1 {{Entering critical section here}}
   void unlock1() { unlock(); }
 };
 struct MyMutexBase2 : std::mutex {
@@ -96,13 +97,14 @@ void custom_mutex_cast_tn(MyMutexBase1 &mb) {
   sleep(10);
 }
 
-void two_custom_mutex_bases_fn(MyMutex &m) {
+void two_custom_mutex_bases_tp(MyMutex &m) {
   m.lock1();
+  // expected-note@-1 {{Calling 'MyMutexBase1::lock1'}}
+  // expected-note@-2 {{Returning from 'MyMutexBase1::lock1'}}
   m.unlock2();
-  // The critical section is associated with `m` ignoring the fact that m holds
-  // two mutexes. hense unlock2 is considered to unlock the same mutex as lock1
-  // locks
-  sleep(10); // False negative
+  sleep(10);
+  // expected-warning@-1 {{Call to blocking function 'sleep' inside of critical section}}
+  // expected-note@-2 {{Call to blocking function 'sleep' inside of critical section}}
   m.unlock1();
 }
 
@@ -112,13 +114,13 @@ void two_custom_mutex_bases_tn(MyMutex &m) {
   sleep(10);
 }
 
-void two_custom_mutex_bases_casts_fn(MyMutex &m) {
+void two_custom_mutex_bases_casts_tp(MyMutex &m) {
   static_cast<MyMutexBase1&>(m).lock();
+  // expected-note@-1 {{Entering critical section here}}
   static_cast<MyMutexBase2&>(m).unlock();
-  // The critical section is associated with `m` ignoring the fact that m holds
-  // two mutexes. hense MyMutexBase2::unlock is considered to unlock the same
-  // mutex as MyMutexBase1::lock locks
-  sleep(10); // False negative
+  sleep(10);
+  // expected-warning@-1 {{Call to blocking function 'sleep' inside of critical section}}
+  // expected-note@-2 {{Call to blocking function 'sleep' inside of critical section}}
   static_cast<MyMutexBase1&>(m).unlock();
 }
 
