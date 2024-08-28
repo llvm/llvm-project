@@ -17,6 +17,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
