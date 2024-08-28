@@ -68,7 +68,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
             for x in register_val_list:
-                self.assertEqual(x.GetValueAsUnsigned(), frame_register_list.GetFirstValueByName(x.GetName()).GetValueAsUnsigned())
+                self.assertEqual(
+                    x.GetValueAsUnsigned(),
+                    frame_register_list.GetFirstValueByName(
+                        x.GetName()
+                    ).GetValueAsUnsigned(),
+                )
 
         self.dbg.DeleteTarget(target)
 
@@ -107,7 +112,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
-                stakcs_to_registers_map[thread_id] = thread.GetFrameAtIndex(0).GetRegisters()
+                stakcs_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                    0
+                ).GetRegisters()
 
             # save core and, kill process and verify corefile existence
             base_command = "process save-core --plugin-name=minidump "
@@ -119,7 +126,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map
+                stakcs_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
@@ -130,7 +137,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map
+                stakcs_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
@@ -141,7 +148,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map
+                stakcs_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -159,7 +166,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map
+                stakcs_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -176,7 +183,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map
+                stakcs_to_registers_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
@@ -195,7 +202,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map
+                stakcs_to_registers_map,
             )
 
             self.assertSuccess(process.Kill())
@@ -298,8 +305,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
-                stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(0).GetRegisters()
-
+                stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                    0
+                ).GetRegisters()
 
             # This is almost identical to the single thread test case because
             # minidump defaults to stacks only, so we want to see if the
@@ -317,7 +325,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stacks_to_registers_map
+                stacks_to_registers_map,
             )
 
         finally:
