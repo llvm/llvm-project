@@ -10522,10 +10522,11 @@ FunctionPass *llvm::createCleanupLocalDynamicTLSPass() {
 ///
 enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
-std::optional<outliner::OutlinedFunction>
+std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 X86InstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
     // FIXME: x86 doesn't implement getInstSizeInBytes, so
@@ -10562,9 +10563,10 @@ X86InstrInfo::getOutliningCandidateInfo(
     for (outliner::Candidate &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 1);
 
-    return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
-                                      0, // Number of bytes to emit frame.
-                                      MachineOutlinerTailCall // Type of frame.
+    return std::make_unique<outliner::OutlinedFunction>(
+        RepeatedSequenceLocs, SequenceSize,
+        0,                      // Number of bytes to emit frame.
+        MachineOutlinerTailCall // Type of frame.
     );
   }
 
@@ -10574,8 +10576,8 @@ X86InstrInfo::getOutliningCandidateInfo(
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     C.setCallInfo(MachineOutlinerDefault, 1);
 
-  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize, 1,
-                                    MachineOutlinerDefault);
+  return std::make_unique<outliner::OutlinedFunction>(
+      RepeatedSequenceLocs, SequenceSize, 1, MachineOutlinerDefault);
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(

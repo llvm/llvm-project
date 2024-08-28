@@ -580,6 +580,39 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, VAArgInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %va) {
+  %va_arg = va_arg ptr %va, i32
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *VA = cast<sandboxir::VAArgInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getPointerOperand().
+  EXPECT_EQ(VA->getPointerOperand(), Arg);
+  // Check getPOinterOperandIndex().
+  EXPECT_EQ(sandboxir::VAArgInst::getPointerOperandIndex(),
+            llvm::VAArgInst::getPointerOperandIndex());
+  // Check create().
+  auto *NewVATy = Type::getInt8Ty(C);
+  auto *NewVA = sandboxir::VAArgInst::create(Arg, NewVATy, Ret->getIterator(),
+                                             Ret->getParent(), Ctx, "NewVA");
+  EXPECT_EQ(NewVA->getNextNode(), Ret);
+  EXPECT_EQ(NewVA->getType(), NewVATy);
+#ifndef NDEBUG
+  EXPECT_EQ(NewVA->getName(), "NewVA");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FreezeInst) {
   parseIR(C, R"IR(
 define void @foo(i8 %arg) {
@@ -2521,6 +2554,45 @@ define void @foo(i32 %cond0, i32 %cond1) {
       CS0, Cleanup, 2, BB1->begin(), BB1, Ctx, "NewCSI");
   EXPECT_TRUE(isa<sandboxir::CatchSwitchInst>(NewCSI));
   EXPECT_EQ(NewCSI->getParentPad(), CS0);
+}
+
+TEST_F(SandboxIRTest, ResumeInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+bb:
+  ret void
+unwind:
+  %lpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } %lpad
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwindBB = getBasicBlockByName(LLVMF, "unwind");
+  auto LLVMIt = LLVMUnwindBB->begin();
+  [[maybe_unused]] auto *LLVMLPad = cast<llvm::LandingPadInst>(&*LLVMIt++);
+  auto *LLVMResume = cast<llvm::ResumeInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *UnwindBB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwindBB));
+  auto It = UnwindBB->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  auto *Resume = cast<sandboxir::ResumeInst>(&*It++);
+  // Check getValue().
+  EXPECT_EQ(Resume->getValue(), LPad);
+  EXPECT_EQ(Resume->getValue(), Ctx.getValue(LLVMResume->getValue()));
+  // Check getNumSuccessors().
+  EXPECT_EQ(Resume->getNumSuccessors(), LLVMResume->getNumSuccessors());
+  // Check create().
+  auto *NewResume =
+      sandboxir::ResumeInst::create(LPad, UnwindBB->end(), UnwindBB, Ctx);
+  EXPECT_EQ(NewResume->getValue(), LPad);
+  EXPECT_EQ(NewResume->getParent(), UnwindBB);
+  EXPECT_EQ(NewResume->getNextNode(), nullptr);
 }
 
 TEST_F(SandboxIRTest, SwitchInst) {
