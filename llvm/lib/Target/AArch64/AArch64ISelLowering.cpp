@@ -1777,8 +1777,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::i8, Promote);
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::i16, Promote);
       setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv4i32,
                          Custom);
       setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
