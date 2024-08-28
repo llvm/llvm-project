@@ -119,6 +119,13 @@ Examples of transformations for which this rule *does not* apply include:
   single-stepping experience. The rule for
   :ref:`dropping locations<WhenToDropLocation>` should apply here.
 
+* Hoisting/sinking a part of the identical instructions with the same location.
+  Consider hoisting two identical instructions with the same location from
+  first two cases of a switch that has three cases. Merging their locations
+  would make the location from the first two cases reachable when the third
+  case is taken. The rule for :ref:`dropping locations<WhenToDropLocation>`
+  applies.
+
 .. _WhenToDropLocation:
 
 When to drop an instruction location
