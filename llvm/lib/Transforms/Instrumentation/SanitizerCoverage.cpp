@@ -196,7 +196,8 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TraceStores |= ClStoreTracing;
   if (!Options.TracePCGuard && !Options.TracePC &&
       !Options.Inline8bitCounters && !Options.StackDepth &&
-      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores)
+      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores &&
+      !Options.TraceCmp && !Options.TraceDiv && !Options.TraceGep)
     Options.TracePCGuard = true; // TracePCGuard is default.
   Options.CollectControlFlow |= ClCollectCF;
   return Options;

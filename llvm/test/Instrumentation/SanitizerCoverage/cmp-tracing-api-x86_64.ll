@@ -7,7 +7,6 @@ entry:
   ret i32 0
 }
 
-; CHECK-DAG: declare void @__sanitizer_cov_trace_pc_indir(i64)
 ; CHECK-DAG: declare void @__sanitizer_cov_trace_cmp1(i8 zeroext, i8 zeroext)
 ; CHECK-DAG: declare void @__sanitizer_cov_trace_cmp2(i16 zeroext, i16 zeroext)
 ; CHECK-DAG: declare void @__sanitizer_cov_trace_cmp4(i32 zeroext, i32 zeroext)
@@ -17,6 +16,4 @@ entry:
 ; CHECK-DAG: declare void @__sanitizer_cov_trace_gep(i64)
 ; CHECK-DAG: declare void @__sanitizer_cov_trace_switch(i64, ptr)
 ; CHECK-DAG: declare void @__sanitizer_cov_trace_pc()
-; CHECK-DAG: declare void @__sanitizer_cov_trace_pc_guard(ptr)
-; CHECK-DAG: declare void @__sanitizer_cov_trace_pc_guard_init(ptr, ptr)
 ; CHECK-NOT: declare
