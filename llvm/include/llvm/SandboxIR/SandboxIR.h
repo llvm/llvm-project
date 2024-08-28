@@ -2744,6 +2744,10 @@ public:
          AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
          BasicBlock *InsertAtEnd, Context &Ctx,
          SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::AtomicCmpXchg;
+  }
 };
 
 class AllocaInst final : public UnaryInstruction {
