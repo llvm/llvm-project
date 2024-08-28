@@ -10001,7 +10001,6 @@ cc_binary(
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
         ":GPUTransforms",
-        ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LLVMIRTransforms",
