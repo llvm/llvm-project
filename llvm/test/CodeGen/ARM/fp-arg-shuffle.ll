@@ -3,6 +3,7 @@
 ; CHECK: function1
 ; CHECK-NOT: vmov
 define double @function1(double %a, double %b, double %c, double %d, double %e, double %f) nounwind noinline ssp {
+entry:
 ; CHECK-LABEL: function1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r11, lr}
@@ -25,7 +26,6 @@ define double @function1(double %a, double %b, double %c, double %d, double %e, 
 ; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    pop {r4, r5, r11, lr}
 ; CHECK-NEXT:    b function2
-entry:
   %call = tail call double @function2(double %f, double %e, double %d, double %c, double %b, double %a) nounwind
   ret double %call
 }

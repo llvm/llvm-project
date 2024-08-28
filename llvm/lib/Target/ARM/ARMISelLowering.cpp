@@ -2407,8 +2407,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     isTailCall = false;
 
   // For both the non-secure calls and the returns from a CMSE entry function,
-  // the function needs to do some extra work after the call, or before the
-  // return, respectively, thus it cannot end with a tail call
+  // the function needs to do some extra work afte r the call, or before the
+  // return, respectively, thus it cannot end with atail call
   if (isCmseNSCall || AFI->isCmseNSEntryFunction())
     isTailCall = false;
 
@@ -3026,12 +3026,12 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     return CalleeCC == CallerCC;
   }
 
-  // Also avoid sibcall optimization if only one of caller or callee uses
-  // struct return semantics.
+  // Also avoid sibcall optimization if either caller or callee uses struct
+  // return semantics.
   bool isCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   bool isCallerStructRet = MF.getFunction().hasStructRetAttr();
   if (isCalleeStructRet != isCallerStructRet) {
-    LLVM_DEBUG(dbgs() << "false (struct-ret)\n");
+    LLVM_DEBUG(dbgs() << "false (mismatched sret)\n");
     return false;
   }
 
@@ -3059,29 +3059,23 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
           getEffectiveCallingConv(CalleeCC, isVarArg),
           getEffectiveCallingConv(CallerCC, CallerF.isVarArg()), MF, C, Ins,
           CCAssignFnForReturn(CalleeCC, isVarArg),
-          CCAssignFnForReturn(CallerCC, CallerF.isVarArg()))) {
-    LLVM_DEBUG(dbgs() << "false (incompatible results)\n");
+          CCAssignFnForReturn(CallerCC, CallerF.isVarArg())))
     return false;
-  }
   // The callee has to preserve all registers the caller needs to preserve.
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   if (CalleeCC != CallerCC) {
     const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
-    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved)) {
-      LLVM_DEBUG(dbgs() << "false (not all registers preserved)\n");
+    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
-    }
   }
 
-  // If Caller's vararg argument has been split between registers and
+  // If Caller's vararg or byval argument has been split between registers and
   // stack, do not perform tail call, since part of the argument is in caller's
   // local frame.
   const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
-  if (CLI.IsVarArg && AFI_Caller->getArgRegsSaveSize()) {
-    LLVM_DEBUG(dbgs() << "false (vararg arg reg save area)\n");
+  if (AFI_Caller->getArgRegsSaveSize())
     return false;
-  }
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
@@ -3096,7 +3090,6 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   if (CCInfo.getStackSize() > AFI_Caller->getArgumentStackSize())
     return false;
 
-  LLVM_DEBUG(dbgs() << "true\n");
   return true;
 }
 
