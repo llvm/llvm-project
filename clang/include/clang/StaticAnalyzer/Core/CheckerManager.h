@@ -221,6 +221,11 @@ public:
     return static_cast<CHECKER *>(CheckerTags[tag]);
   }
 
+  template <typename CHECKER> bool isRegisteredChecker() {
+    CheckerTag tag = getTag<CHECKER>();
+    return (CheckerTags.count(tag) != 0);
+  }
+
 //===----------------------------------------------------------------------===//
 // Functions for running checkers for AST traversing.
 //===----------------------------------------------------------------------===//

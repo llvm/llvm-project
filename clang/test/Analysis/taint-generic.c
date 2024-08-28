@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-checker=debug.ExprInspection \
@@ -11,6 +12,7 @@
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -DFILE_IS_STRUCT \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-checker=debug.ExprInspection \
@@ -20,6 +22,7 @@
 // RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint  \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=justguessit \

@@ -26,8 +26,6 @@ using namespace taint;
 
 namespace {
 class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
-  const BugType BT{this, "Division by zero"};
-  const BugType TaintBT{this, "Division by zero", categories::TaintedData};
   void reportBug(StringRef Msg, ProgramStateRef StateZero,
                  CheckerContext &C) const;
   void reportTaintBug(StringRef Msg, ProgramStateRef StateZero,
@@ -35,6 +33,12 @@ class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
                       llvm::ArrayRef<SymbolRef> TaintedSyms) const;
 
 public:
+  /// This checker class implements multiple user facing checker
+  enum CheckKind { CK_DivZeroChecker, CK_TaintedDivChecker, CK_NumCheckKinds };
+  bool ChecksEnabled[CK_NumCheckKinds] = {false};
+  CheckerNameRef CheckNames[CK_NumCheckKinds];
+  mutable std::unique_ptr<BugType> BugTypes[CK_NumCheckKinds];
+
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 };
 } // end anonymous namespace
@@ -48,8 +52,14 @@ static const Expr *getDenomExpr(const ExplodedNode *N) {
 
 void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
                                CheckerContext &C) const {
+  if (!ChecksEnabled[CK_DivZeroChecker])
+    return;
+  if (!BugTypes[CK_DivZeroChecker])
+    BugTypes[CK_DivZeroChecker].reset(
+        new BugType(CheckNames[CK_DivZeroChecker], "Division by zero"));
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(
+        *BugTypes[CK_DivZeroChecker], Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
@@ -58,8 +68,15 @@ void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
 void DivZeroChecker::reportTaintBug(
     StringRef Msg, ProgramStateRef StateZero, CheckerContext &C,
     llvm::ArrayRef<SymbolRef> TaintedSyms) const {
+  if (!ChecksEnabled[CK_TaintedDivChecker])
+    return;
+  if (!BugTypes[CK_TaintedDivChecker])
+    BugTypes[CK_TaintedDivChecker].reset(
+        new BugType(CheckNames[CK_TaintedDivChecker], "Division by zero",
+                    categories::TaintedData));
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    auto R = std::make_unique<PathSensitiveBugReport>(TaintBT, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(
+        *BugTypes[CK_TaintedDivChecker], Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     for (auto Sym : TaintedSyms)
       R->markInteresting(Sym);
@@ -113,9 +130,28 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
 }
 
 void ento::registerDivZeroChecker(CheckerManager &mgr) {
-  mgr.registerChecker<DivZeroChecker>();
+  DivZeroChecker *checker = mgr.registerChecker<DivZeroChecker>();
+  ;
+  checker->ChecksEnabled[DivZeroChecker::CK_DivZeroChecker] = true;
+  checker->CheckNames[DivZeroChecker::CK_DivZeroChecker] =
+      mgr.getCurrentCheckerName();
 }
 
 bool ento::shouldRegisterDivZeroChecker(const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerTaintedDivChecker(CheckerManager &mgr) {
+  DivZeroChecker *checker;
+  if (!mgr.isRegisteredChecker<DivZeroChecker>())
+    checker = mgr.registerChecker<DivZeroChecker>();
+  else
+    checker = mgr.getChecker<DivZeroChecker>();
+  checker->ChecksEnabled[DivZeroChecker::CK_TaintedDivChecker] = true;
+  checker->CheckNames[DivZeroChecker::CK_TaintedDivChecker] =
+      mgr.getCurrentCheckerName();
+}
+
+bool ento::shouldRegisterTaintedDivChecker(const CheckerManager &mgr) {
   return true;
 }
