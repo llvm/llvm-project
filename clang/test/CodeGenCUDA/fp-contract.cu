@@ -68,6 +68,29 @@
 // RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
+// Explicit -ffp-contract=fast (was fast-honor-pragmas)
+// In IR, fmul/fadd instructions with contract flag are emitted.
+// In backend
+//    nvptx/amdgcn - assumes standard fp fuse option, which only
+//                   fuses mult/add insts with contract flag or
+//                   llvm.fmuladd intrinsics.
+
+// RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
+// RUN:   -ffp-contract=fast -disable-llvm-passes -o - %s \
+// RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
+// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN:   -ffp-contract=fast \
+// RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
+// RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
+// RUN:   -O3 -o - %s \
+// RUN:   -ffp-contract=fast \
+// RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-FASTSTD %s
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
+// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
+// RUN:   -ffp-contract=fast \
+// RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
+
 // Check separate compile/backend steps corresponding to -save-temps.
 // When input is IR, -ffp-contract has no effect. Backend uses default
 // default FP fuse option.
@@ -231,19 +254,16 @@ __host__ __device__ float func2(float a, float b, float c) {
 
 // Test multiply/add in the different statements, which is forced
 // to be compiled with fp contract on. fmul/fadd without contract
-// flags are emitted in IR. In nvptx, they are emitted as FMA in
-// fp-contract is fast but not on, as nvptx backend uses the same
-// fp fuse option as front end, whereas fast fp fuse option in
-// backend fuses fadd/fmul disregarding contract flag. In amdgcn
-// they are not fused as amdgcn always use standard fp fusion
-// option which respects contract flag.
-  __host__ __device__ float func3(float a, float b, float c) {
+// flags are emitted in IR. The operations should not be fused
+// because the mul and add occurs in different statements.
+__host__ __device__ float func3(float a, float b, float c) {
 #pragma clang fp contract(on)
   float t = b * c;
   return t + a;
 }
 // COMMON-LABEL: _Z5func3fff
-// NV-OPT-FAST: fma.rn.f32
+// NV-OPT-FAST: mul.rn.f32
+// NV-OPT-FAST: add.rn.f32
 // NV-OPT-FAST-NEXT: st.param.b32
 // NV-OPT-FASTSTD: mul.rn.f32
 // NV-OPT-FASTSTD: add.rn.f32
@@ -262,7 +282,8 @@ __host__ __device__ float func2(float a, float b, float c) {
 // AMD-OPT-OFF-IR: fmul float
 // AMD-OPT-OFF-IR: fadd float
 
-// AMD-OPT-FAST: v_fmac_f32_e32
+// AMD-OPT-FAST: v_mul_f32_e32
+// AMD-OPT-FAST-NEXT: v_add_f32_e32
 // AMD-OPT-FAST-NEXT: s_setpc_b64
 // AMD-OPT-FASTSTD: v_mul_f32_e32
 // AMD-OPT-FASTSTD-NEXT: v_add_f32_e32
