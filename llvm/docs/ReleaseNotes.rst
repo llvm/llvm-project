@@ -189,6 +189,9 @@ Changes to the C API
     Because of backwards compatibility, ``LLVMIsAtomicSingleThread`` and
     ``LLVMSetAtomicSingleThread`` continue to work with any instruction type.
 
+* The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
+  personality function and initializer respectively by passing a null pointer.
+
 
 Changes to the CodeGen infrastructure
 -------------------------------------
