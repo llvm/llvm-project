@@ -249,7 +249,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
     return false;
   }
 
-  if (!Predicate.canConvertIf(Tail)) {
+  if (!Predicate.canConvertIf(Head, TBB, FBB, Tail, Cond)) {
     return false;
   }
 

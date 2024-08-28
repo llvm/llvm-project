@@ -5,10 +5,9 @@ define amdgpu_kernel void @scalar_cmp(i32 noundef %value, ptr addrspace(8) nocap
 ; GCN-LABEL: scalar_cmp:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s0, s[2:3], 0x4c
+; GCN-NEXT:    s_or_saveexec_b32 s105, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lt_i32 s0, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
-; GCN-NEXT:  ; %bb.1: ; %if.then
+; GCN-NEXT:    v_cmpx_ge_i32_e64 s0, 1
 ; GCN-NEXT:    s_clause 0x2
 ; GCN-NEXT:    s_load_dword s4, s[2:3], 0x24
 ; GCN-NEXT:    s_load_dword s5, s[2:3], 0x44
@@ -17,7 +16,6 @@ define amdgpu_kernel void @scalar_cmp(i32 noundef %value, ptr addrspace(8) nocap
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GCN-NEXT:  .LBB0_2: ; %if.end
 ; GCN-NEXT:    s_endpgm
 entry:
   %cmp = icmp sgt i32 %flag, 0

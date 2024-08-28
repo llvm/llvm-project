@@ -82,7 +82,11 @@ public:
   SmallVector<MachineOperand, 4> Cond;
 
   struct PredicationStrategyBase {
-    virtual bool canConvertIf(MachineBasicBlock *Tail) { return true; }
+    virtual bool canConvertIf(MachineBasicBlock *Head, MachineBasicBlock *TBB,
+                              MachineBasicBlock *FBB, MachineBasicBlock *Tail,
+                              ArrayRef<MachineOperand> Cond) {
+      return true;
+    }
     virtual bool canPredicateInstr(const MachineInstr &I) = 0;
     /// Apply cost model and heuristics to the if-conversion in IfConv.
     /// Return true if the conversion is a good idea.

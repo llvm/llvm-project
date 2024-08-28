@@ -76,7 +76,9 @@ struct SpeculateStrategy : SSAIfConv::PredicationStrategyBase {
                     MachineTraceMetrics *Traces = nullptr)
       : Loops(Loops), SchedModel(SchedModel), Traces(Traces) {}
 
-  bool canConvertIf(MachineBasicBlock *Tail) override {
+  bool canConvertIf(MachineBasicBlock *Head, MachineBasicBlock *TBB,
+                    MachineBasicBlock *FBB, MachineBasicBlock *Tail,
+                    ArrayRef<MachineOperand> Cond) override {
     // This is a triangle or a diamond.
     // Skip if we cannot predicate and there are no phis skip as there must
     // be side effects that can only be handled with predication.
