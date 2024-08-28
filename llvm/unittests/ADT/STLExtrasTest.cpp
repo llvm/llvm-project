@@ -839,7 +839,6 @@ TEST(STLExtrasTest, AllEqualNonRandomAccess) {
   static_assert(!std::is_convertible_v<
                 std::iterator_traits<decltype(V)::iterator>::iterator_category,
                 std::random_access_iterator_tag>);
-  
   EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
