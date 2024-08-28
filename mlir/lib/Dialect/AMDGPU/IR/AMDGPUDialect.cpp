@@ -235,7 +235,9 @@ LogicalResult WMMAOp::verify() {
 
   bool isDestFloat =
       (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
-  bool isSrcFloat = (sourceAElemType.isF16() || sourceAElemType.isBF16());
+  bool isSrcFloat =
+      (sourceAElemType.isF16() || sourceAElemType.isBF16() ||
+       sourceAElemType.isFloat8E4M3FN() || sourceAElemType.isFloat8E5M2());
 
   if (isDestFloat && !isSrcFloat) {
     return emitOpError("Expected float sources with float destination");
