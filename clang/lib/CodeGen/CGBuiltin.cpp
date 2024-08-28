@@ -18695,6 +18695,47 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.saturate");
   }
+  case Builtin::BI__builtin_hlsl_select: {
+    Value *OpCond = EmitScalarExpr(E->getArg(0));
+    Value *OpTrue = EmitScalarExpr(E->getArg(1));
+    Value *OpFalse = EmitScalarExpr(E->getArg(2));
+    llvm::Type *TCond = OpCond->getType();
+
+    // if cond is a bool emit a select instruction
+    if (TCond->isIntegerTy(1))
+      return Builder.CreateSelect(OpCond, OpTrue, OpFalse);
+
+    // if cond is a vector of bools lower to a shufflevector
+    // todo check if that true and false are vectors
+    // todo check that the size of true and false and cond are the same
+    if (TCond->isVectorTy() &&
+	E->getArg(0)->getType()->getAs<VectorType>()->isBooleanType()) {
+      assert(OpTrue->getType()->isVectorTy() && OpFalse->getType()->isVectorTy() &&
+	     "Select's second and third operands must be vectors if first operand is a vector.");
+
+      auto *VecTyTrue = E->getArg(1)->getType()->getAs<VectorType>();
+      auto *VecTyFalse = E->getArg(2)->getType()->getAs<VectorType>();
+
+      assert(VecTyTrue->getElementType() == VecTyFalse->getElementType() &&
+	     "Select's second and third vectors need the same element types.");
+
+      const unsigned N = VecTyTrue->getNumElements();
+      assert(N == VecTyFalse->getNumElements() &&
+	     N == E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() &&
+	     "Select requires vectors to be of the same size.");
+      
+      llvm::SmallVector<Value *> Mask;
+      for (unsigned I = 0; I < N; I++) {
+	Value *Index = ConstantInt::get(IntTy, I);
+	Value *IndexBool = Builder.CreateExtractElement(OpCond, Index);
+	Mask.push_back(Builder.CreateSelect(IndexBool, Index, ConstantInt::get(IntTy, I + N)));
+      }
+      
+      return Builder.CreateShuffleVector(OpTrue, OpFalse, BuildVector(Mask));
+    }
+    
+    llvm_unreachable("Select requires a bool or vector of bools as its first operand.");
+  }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",

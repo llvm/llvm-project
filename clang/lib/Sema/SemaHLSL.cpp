@@ -1512,6 +1512,66 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
   TheCall->setType(ReturnType);
 }
 
+bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() == 3);
+  Expr *Arg1 = TheCall->getArg(1);
+  Expr *Arg2 = TheCall->getArg(2);
+  if(!S->Context.hasSameUnqualifiedType(Arg1->getType(),
+					Arg2->getType())) {
+    S->Diag(TheCall->getBeginLoc(),
+	    diag::err_typecheck_call_different_arg_types)
+      << Arg1->getType() << Arg2->getType()
+      << Arg1->getSourceRange() << Arg2->getSourceRange();
+    return true;
+  }
+
+  TheCall->setType(Arg1->getType());
+  return false;
+}
+
+bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() == 3);
+  Expr *Arg1 = TheCall->getArg(1);
+  Expr *Arg2 = TheCall->getArg(2);
+  if(!Arg1->getType()->isVectorType()) {
+    S->Diag(Arg1->getBeginLoc(),
+	    diag::err_builtin_non_vector_type)
+      << "Second" << "__builtin_hlsl_select" << Arg1->getType()
+      << Arg1->getSourceRange();
+    return true;
+  }
+  
+  if(!Arg2->getType()->isVectorType()) {
+    S->Diag(Arg2->getBeginLoc(),
+	    diag::err_builtin_non_vector_type)
+      << "Third" << "__builtin_hlsl_select" << Arg2->getType()
+      << Arg2->getSourceRange();
+    return true;
+  }
+
+  if(!S->Context.hasSameUnqualifiedType(Arg1->getType(),
+					Arg2->getType())) {
+    S->Diag(TheCall->getBeginLoc(),
+	    diag::err_typecheck_call_different_arg_types)
+      << Arg1->getType() << Arg2->getType()
+      << Arg1->getSourceRange() << Arg2->getSourceRange();
+    return true;
+  }
+
+  // caller has checked that Arg0 is a vector.
+  // check all three args have the same length.
+  if(TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements() !=
+     Arg1->getType()->getAs<VectorType>()->getNumElements()) {
+    S->Diag(TheCall->getBeginLoc(),
+	    diag::err_typecheck_vector_lengths_not_equal)
+      << TheCall->getArg(0)->getType() << Arg1->getType()
+      << TheCall->getArg(0)->getSourceRange() << Arg1->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -1545,6 +1605,30 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_saturate:
+  case Builtin::BI__builtin_hlsl_select: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (ArgTy->isBooleanType()) {
+      if (CheckBoolSelect(&SemaRef, TheCall))
+	return true;
+    } else if (ArgTy->isVectorType() &&
+	       ArgTy->getAs<VectorType>()->getElementType()->isBooleanType()) {
+      if (CheckVectorSelect(&SemaRef, TheCall))
+	return true;
+    } else { // first operand is not a bool or a vector of bools.
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+		   diag::err_typecheck_convert_incompatible)
+	<< TheCall->getArg(0)->getType() << SemaRef.Context.getBOOLType()
+	<< 1 << 0 << 0;
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+		   diag::err_builtin_non_vector_type)
+	<< "First" << "__builtin_hlsl_select" << TheCall->getArg(0)->getType()
+	<< TheCall->getArg(0)->getSourceRange();
+      return true;
+    }
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
       return true;
