@@ -161,6 +161,37 @@ INTERCEPTOR(int, puts, const char *s) {
   return REAL(puts)(s);
 }
 
+INTERCEPTOR(ssize_t, read, int fd, void *buf, size_t count) {
+  ExpectNotRealtime("read");
+  return REAL(read)(fd, buf, count);
+}
+
+INTERCEPTOR(ssize_t, write, int fd, const void *buf, size_t count) {
+  ExpectNotRealtime("write");
+  return REAL(write)(fd, buf, count);
+}
+
+INTERCEPTOR(ssize_t, pread, int fd, void *buf, size_t count, off_t offset) {
+  ExpectNotRealtime("pread");
+  return REAL(pread)(fd, buf, count, offset);
+}
+
+INTERCEPTOR(ssize_t, readv, int fd, const struct iovec *iov, int iovcnt) {
+  ExpectNotRealtime("readv");
+  return REAL(readv)(fd, iov, iovcnt);
+}
+
+INTERCEPTOR(ssize_t, pwrite, int fd, const void *buf, size_t count,
+            off_t offset) {
+  ExpectNotRealtime("pwrite");
+  return REAL(pwrite)(fd, buf, count, offset);
+}
+
+INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
+  ExpectNotRealtime("writev");
+  return REAL(writev)(fd, iov, iovcnt);
+}
+
 // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
@@ -400,6 +431,12 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(fopen);
   INTERCEPT_FUNCTION(fread);
+  INTERCEPT_FUNCTION(read);
+  INTERCEPT_FUNCTION(write);
+  INTERCEPT_FUNCTION(pread);
+  INTERCEPT_FUNCTION(readv);
+  INTERCEPT_FUNCTION(pwrite);
+  INTERCEPT_FUNCTION(writev);
   INTERCEPT_FUNCTION(fwrite);
   INTERCEPT_FUNCTION(fclose);
   INTERCEPT_FUNCTION(fcntl);

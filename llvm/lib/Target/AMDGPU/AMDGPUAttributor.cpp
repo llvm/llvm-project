@@ -32,6 +32,12 @@ static cl::opt<unsigned> KernargPreloadCount(
     "amdgpu-kernarg-preload-count",
     cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
 
+static cl::opt<unsigned> IndirectCallSpecializationThreshold(
+    "amdgpu-indirect-call-specialization-threshold",
+    cl::desc(
+        "A threshold controls whether an indirect call will be specialized"),
+    cl::init(3));
+
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
 enum ImplicitArgumentPositions {
