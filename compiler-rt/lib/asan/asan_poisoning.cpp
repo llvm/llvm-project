@@ -639,6 +639,42 @@ static void SlowCopyContainerAnnotations(uptr old_storage_beg,
   }
 }
 
+// This function is basically the same as SlowCopyContainerAnnotations,
+// but goes through elements in reversed order
+static void SlowRCopyContainerAnnotations(uptr old_storage_beg,
+                                          uptr old_storage_end,
+                                          uptr new_storage_beg,
+                                          uptr new_storage_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  uptr new_internal_beg = RoundDownTo(new_storage_beg, granularity);
+  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
+  uptr old_ptr = old_storage_end;
+  uptr new_ptr = new_storage_end;
+
+  while (new_ptr > new_storage_beg) {
+    uptr granule_begin = RoundDownTo(new_ptr - 1, granularity);
+    uptr unpoisoned_bytes = 0;
+
+    for (; new_ptr != granule_begin && new_ptr != new_storage_beg;
+         --new_ptr, --old_ptr) {
+      if (unpoisoned_bytes == 0 && !AddressIsPoisoned(old_ptr - 1)) {
+        unpoisoned_bytes = new_ptr - granule_begin;
+      }
+    }
+
+    if (new_ptr >= new_internal_end && !AddressIsPoisoned(new_storage_end)) {
+      continue;
+    }
+
+    if (granule_begin == new_ptr || unpoisoned_bytes != 0) {
+      AnnotateContainerGranuleAccessibleBytes(granule_begin, unpoisoned_bytes);
+    } else if (!AddressIsPoisoned(new_storage_beg)) {
+      AnnotateContainerGranuleAccessibleBytes(granule_begin,
+                                              new_storage_beg - granule_begin);
+    }
+  }
+}
+
 // This function copies ASan memory annotations (poisoned/unpoisoned states)
 // from one buffer to another.
 // It's main purpose is to help with relocating trivially relocatable objects,
@@ -678,9 +714,61 @@ void __sanitizer_copy_contiguous_container_annotations(
         &stack);
   }
 
-  if (old_storage_beg == old_storage_end)
+  if (old_storage_beg == old_storage_end || old_storage_beg == new_storage_beg)
     return;
+  // The only edge cases involve edge granules when the container starts or
+  // ends within a granule. We already know that the container's start and end
+  // points lie in different granules.
+  uptr old_external_end = RoundUpTo(old_storage_end, granularity);
+  if (old_storage_beg < new_storage_beg &&
+      new_storage_beg <= old_external_end) {
+    // In this case, we have to copy elements in reversed order, because
+    // destination buffer starts in the middle of the source buffer (or shares
+    // first granule with it).
+    // It still may be possible to optimize, but reversed order has to be kept.
+    if (old_storage_beg % granularity != new_storage_beg % granularity ||
+        WithinOneGranule(new_storage_beg, new_storage_end)) {
+      SlowRCopyContainerAnnotations(old_storage_beg, old_storage_end,
+                                    new_storage_beg, new_storage_end);
+      return;
+    }
 
+    uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
+    if (new_internal_end != new_storage_end &&
+        AddressIsPoisoned(new_storage_end)) {
+      // Last granule
+      uptr old_internal_end = RoundDownTo(old_storage_end, granularity);
+      if (AddressIsPoisoned(old_storage_end)) {
+        CopyGranuleAnnotation(new_internal_end, old_internal_end);
+      } else {
+        AnnotateContainerGranuleAccessibleBytes(
+            new_internal_end, old_storage_end - old_internal_end);
+      }
+    }
+
+    uptr new_internal_beg = RoundUpTo(new_storage_beg, granularity);
+    if (new_internal_end > new_internal_beg) {
+      uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
+      __builtin_memmove((u8 *)MemToShadow(new_internal_beg),
+                        (u8 *)MemToShadow(old_internal_beg),
+                        (new_internal_end - new_internal_beg) / granularity);
+    }
+
+    if (new_internal_beg != new_storage_beg) {
+      // First granule
+      uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
+      uptr old_external_beg = RoundDownTo(old_storage_beg, granularity);
+      if (!AddressIsPoisoned(old_storage_beg)) {
+        CopyGranuleAnnotation(new_external_beg, old_external_beg);
+      } else if (!AddressIsPoisoned(new_storage_beg)) {
+        AnnotateContainerGranuleAccessibleBytes(
+            new_external_beg, new_storage_beg - new_external_beg);
+      }
+    }
+    return;
+  }
+
+  // Simple copy of annotations of all internal granules.
   if (old_storage_beg % granularity != new_storage_beg % granularity ||
       WithinOneGranule(new_storage_beg, new_storage_end)) {
     SlowCopyContainerAnnotations(old_storage_beg, old_storage_end,
@@ -689,16 +777,6 @@ void __sanitizer_copy_contiguous_container_annotations(
   }
 
   uptr new_internal_beg = RoundUpTo(new_storage_beg, granularity);
-  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
-  if (new_internal_end > new_internal_beg) {
-    uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
-    __builtin_memcpy((u8 *)MemToShadow(new_internal_beg),
-                     (u8 *)MemToShadow(old_internal_beg),
-                     (new_internal_end - new_internal_beg) / granularity);
-  }
-  // The only remaining cases involve edge granules when the container starts or
-  // ends within a granule. We already know that the container's start and end
-  // points lie in different granules.
   if (new_internal_beg != new_storage_beg) {
     // First granule
     uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
@@ -710,6 +788,15 @@ void __sanitizer_copy_contiguous_container_annotations(
           new_external_beg, new_storage_beg - new_external_beg);
     }
   }
+
+  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
+  if (new_internal_end > new_internal_beg) {
+    uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
+    __builtin_memmove((u8 *)MemToShadow(new_internal_beg),
+                      (u8 *)MemToShadow(old_internal_beg),
+                      (new_internal_end - new_internal_beg) / granularity);
+  }
+
   if (new_internal_end != new_storage_end &&
       AddressIsPoisoned(new_storage_end)) {
     // Last granule
