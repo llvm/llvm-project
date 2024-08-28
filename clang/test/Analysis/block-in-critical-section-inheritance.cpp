@@ -45,11 +45,12 @@ struct TwoMutexes {
   std::mutex m2;
 };
 
-void two_mutexes_false_negative(TwoMutexes &tm) {
+void two_mutexes_no_false_negative(TwoMutexes &tm) {
   tm.m1.lock();
+  // expected-note@-1 {{Entering critical section here}}
   tm.m2.unlock();
-  // Critical section is associated with tm now so tm.m1 and tm.m2 are
-  // undistinguishiable
-  sleep(10); // False-negative
+  sleep(10);
+  // expected-warning@-1 {{Call to blocking function 'sleep' inside of critical section}}
+  // expected-note@-2 {{Call to blocking function 'sleep' inside of critical section}}
   tm.m1.unlock();
 }
