@@ -2630,7 +2630,7 @@ func.func @create_mask_1d_scalable(%a : index) -> vector<[4]xi1> {
 
 // CHECK-LABEL: func @create_mask_1d_scalable
 // CHECK-SAME: %[[arg:.*]]: index
-// CHECK:  %[[indices:.*]] = llvm.intr.experimental.stepvector : vector<[4]xi32>
+// CHECK:  %[[indices:.*]] = llvm.intr.stepvector : vector<[4]xi32>
 // CHECK:  %[[arg_i32:.*]] = arith.index_cast %[[arg]] : index to i32
 // CHECK:  %[[boundsInsert:.*]] = llvm.insertelement %[[arg_i32]], {{.*}} : vector<[4]xi32>
 // CHECK:  %[[bounds:.*]] = llvm.shufflevector %[[boundsInsert]], {{.*}} : vector<[4]xi32>
@@ -3254,7 +3254,7 @@ func.func @vector_from_elements_0d(%a: f32) -> vector<f32> {
 // -----
 
 // CHECK-LABEL: @vector_step_scalable
-// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.experimental.stepvector : vector<[4]xi64>
+// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.stepvector : vector<[4]xi64>
 // CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[STEPVECTOR]] : vector<[4]xi64> to vector<[4]xindex>
 // CHECK: return %[[CAST]] : vector<[4]xindex>
 func.func @vector_step_scalable() -> vector<[4]xindex> {

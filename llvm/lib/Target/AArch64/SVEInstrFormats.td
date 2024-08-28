@@ -10,11 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Helper class to find the largest legal scalable vector type that can hold VT.
-// Non-matches return VT, which often means VT is the container type.
-class SVEContainerVT<ValueType VT> {
-  ValueType Value = !cond(
-    // fixed length vectors
+// Helper class to hold conversions of legal fixed-length vector types.
+class NEONType<ValueType VT> {
+  // The largest legal scalable vector type that can hold VT.
+  ValueType SVEContainer = !cond(
     !eq(VT, v8i8): nxv16i8,
     !eq(VT, v16i8): nxv16i8,
     !eq(VT, v4i16): nxv8i16,
@@ -31,13 +30,35 @@ class SVEContainerVT<ValueType VT> {
     !eq(VT, v2f64): nxv2f64,
     !eq(VT, v4bf16): nxv8bf16,
     !eq(VT, v8bf16): nxv8bf16,
-    // unpacked scalable vectors
+    true : untyped);
+}
+
+// Helper class to hold conversions of legal scalable vector types.
+class SVEType<ValueType VT> {
+  // The largest legal scalable vector type that can hold VT.
+  // Non-matches return VT because only packed types remain.
+  ValueType Packed = !cond(
     !eq(VT, nxv2f16): nxv8f16,
     !eq(VT, nxv4f16): nxv8f16,
     !eq(VT, nxv2f32): nxv4f32,
     !eq(VT, nxv2bf16): nxv8bf16,
     !eq(VT, nxv4bf16): nxv8bf16,
     true : VT);
+
+  // The legal scalable vector that is half the length of VT.
+  ValueType HalfLength = !cond(
+    !eq(VT, nxv8f16): nxv4f16,
+    !eq(VT, nxv4f16): nxv2f16,
+    !eq(VT, nxv4f32): nxv2f32,
+    !eq(VT, nxv8bf16): nxv4bf16,
+    !eq(VT, nxv4bf16): nxv2bf16,
+    true : untyped);
+
+  // The legal scalable vector that is quarter the length of VT.
+  ValueType QuarterLength = !cond(
+    !eq(VT, nxv8f16): nxv2f16,
+    !eq(VT, nxv8bf16): nxv2bf16,
+    true : untyped);
 }
 
 def SDT_AArch64Setcc : SDTypeProfile<1, 4, [
@@ -2959,10 +2980,10 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>,
              SVEPseudo2Instr<NAME, 1>;
   // convert vt1 to a packed type for the intrinsic patterns
-  defvar packedvt1 = SVEContainerVT<vt1>.Value;
+  defvar packedvt1 = SVEType<vt1>.Packed;
 
   // convert vt3 to a packed type for the intrinsic patterns
-  defvar packedvt3 = SVEContainerVT<vt3>.Value;
+  defvar packedvt3 = SVEType<vt3>.Packed;
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
@@ -2982,7 +3003,7 @@ multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
              SVEPseudo2Instr<NAME, 1>;
 
   // convert vt1 to a packed type for the intrinsic patterns
-  defvar packedvt1 = SVEContainerVT<vt1>.Value;
+  defvar packedvt1 = SVEType<vt1>.Packed;
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, vt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
