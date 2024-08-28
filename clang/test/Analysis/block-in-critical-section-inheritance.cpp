@@ -151,3 +151,32 @@ void virt_inherited_mutexes_different_bases_tn(CombinedVirtMutex &cvt) {
   cvt.unlock2(); // Despite a different name, unlock2 acts on the same mutex as lock1
   sleep(10);
 }
+namespace std {
+template <class... MutexTypes> struct scoped_lock {
+  explicit scoped_lock(MutexTypes&... m);
+  ~scoped_lock();
+};
+template <class MutexType> class scoped_lock<MutexType> {
+public:
+  explicit scoped_lock(MutexType& m) : m(m) { m.lock(); }
+  ~scoped_lock() { m.unlock(); }
+private:
+  MutexType& m;
+};
+} // namespace std
+
+namespace gh_104241 {
+int magic_number;
+std::mutex m;
+
+void fixed() {
+  int current;
+  for (int items_processed = 0; items_processed < 100; ++items_processed) {
+    {
+      std::scoped_lock<std::mutex> guard(m);
+      current = magic_number;
+    }
+    sleep(current); // expected no warning
+  }
+}
+} // namespace gh_104241
