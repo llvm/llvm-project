@@ -21,6 +21,7 @@ unsigned long long tc() {
     a++;
 
   } catch (int idx) {
+    // CHECK: } cleanup {
     // CHECK: } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i> {
     // CHECK:   %[[catch_idx_addr:.*]] = cir.catch_param -> !cir.ptr<!s32i>
     // CHECK:   %[[idx_load:.*]] = cir.load %[[catch_idx_addr]] : !cir.ptr<!s32i>, !s32i
