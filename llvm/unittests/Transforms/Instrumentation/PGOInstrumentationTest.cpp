@@ -24,7 +24,6 @@ using namespace llvm;
 using testing::_;
 using ::testing::DoDefault;
 using ::testing::Invoke;
-using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::Ref;
 using ::testing::Return;
@@ -107,7 +106,6 @@ public:
 struct PGOInstrumentationGenTest
     : public Test,
       WithParamInterface<std::tuple<StringRef, StringRef>> {
-  LLVMContext Ctx;
   ModulePassManager MPM;
   PassBuilder PB;
   MockModuleAnalysisHandle MMAHandle;

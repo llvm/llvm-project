@@ -309,8 +309,8 @@
 // HRESET: "-target-feature" "+hreset"
 // NO-HRESET: "-target-feature" "-hreset"
 
-// RUN: %clang --target=i386 -march=i386 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
-// RUN: %clang --target=i386 -march=i386 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
+// RUN: %clang --target=x86_64 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
+// RUN: %clang --target=x86_64 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
 // UINTR: "-target-feature" "+uintr"
 // NO-UINTR: "-target-feature" "-uintr"
 
@@ -386,6 +386,13 @@
 // RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-avx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
 // RUN: %clang --target=i386 -march=i386 -mavx10.1 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
 // RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
+// RUN: %clang --target=i386 -mavx10.2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_2_256 %s
+// RUN: %clang --target=i386 -mavx10.2-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_2_256 %s
+// RUN: %clang --target=i386 -mavx10.2-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_2_512 %s
+// RUN: %clang --target=i386 -mavx10.2-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,AVX10_1_512 %s
+// RUN: %clang --target=i386 -mavx10.2-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,AVX10_1_256 %s
+// AVX10_2_256: "-target-feature" "+avx10.2-256"
+// AVX10_2_512: "-target-feature" "+avx10.2-512"
 // AVX10_1_256: "-target-feature" "+avx10.1-256"
 // AVX10_1_512: "-target-feature" "+avx10.1-512"
 // BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
@@ -408,6 +415,15 @@
 /// TODO: This warning is a workaround for https://github.com/llvm/llvm-project/issues/63270
 // NONX86-NEXT: warning: argument unused during compilation: '-msse4.2' [-Wunused-command-line-argument]
 // NONX86-NEXT: error: unsupported option '-mno-sgx' for target 'aarch64'
+
+// RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
+// RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
+// NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
+// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s

@@ -145,106 +145,106 @@ float4 acos(float4);
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int16_t2);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int16_t4);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint16_t2);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint16_t4);
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(half);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(half2);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(half4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(bool);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(bool2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(bool3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(bool4);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(float);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(int64_t4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(uint64_t4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double4);
 
 //===----------------------------------------------------------------------===//
@@ -257,106 +257,106 @@ bool all(double4);
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int16_t2);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int16_t4);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint16_t2);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint16_t4);
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(half);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(half2);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(half4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(bool);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(bool2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(bool3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(bool4);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(float);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(int64_t4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(uint64_t4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
@@ -909,6 +909,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
 float4 lerp(float4, float4, float4);
 
 //===----------------------------------------------------------------------===//
+// length builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T length(T x)
+/// \brief Returns the length of the specified floating-point vector.
+/// \param x [in] The vector of floats, or a scalar float.
+///
+/// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float4);
+
+//===----------------------------------------------------------------------===//
 // log builtins
 //===----------------------------------------------------------------------===//
 
@@ -1321,6 +1353,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double4 min(double4, double4);
 
 //===----------------------------------------------------------------------===//
+// normalize builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T normalize(T x)
+/// \brief Returns the normalized unit vector of the specified floating-point
+/// vector. \param x [in] The vector of floats.
+///
+/// Normalize is based on the following formula: x / length(x).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+half normalize(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+half2 normalize(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+half3 normalize(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+half4 normalize(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+float normalize(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+float2 normalize(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+float3 normalize(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
+float4 normalize(float4);
+
+//===----------------------------------------------------------------------===//
 // pow builtins
 //===----------------------------------------------------------------------===//
 
@@ -1499,6 +1563,45 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 float3 round(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 float4 round(float4);
+
+//===----------------------------------------------------------------------===//
+// saturate builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T saturate(T Val)
+/// \brief Returns input value, \a Val, clamped within the range of 0.0f
+/// to 1.0f. \param Val The input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+half saturate(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+half2 saturate(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+half3 saturate(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+half4 saturate(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+float saturate(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+float2 saturate(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+float3 saturate(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+float4 saturate(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+double saturate(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+double2 saturate(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+double3 saturate(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
+double4 saturate(double4);
 
 //===----------------------------------------------------------------------===//
 // sin builtins

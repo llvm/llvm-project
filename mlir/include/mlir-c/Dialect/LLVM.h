@@ -309,14 +309,15 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILocalVariableAttrGet(
     MlirContext ctx, MlirAttribute scope, MlirAttribute name,
     MlirAttribute diFile, unsigned int line, unsigned int arg,
-    unsigned int alignInBits, MlirAttribute diType);
+    unsigned int alignInBits, MlirAttribute diType, int64_t flags);
 
 /// Creates a LLVM DISubprogramAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
     MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
     MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type);
+    uint64_t subprogramFlags, MlirAttribute type, intptr_t nRetainedNodes,
+    MlirAttribute const *retainedNodes);
 
 /// Gets the scope from this DISubprogramAttr.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -352,6 +353,12 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIModuleAttrGet(
     MlirContext ctx, MlirAttribute file, MlirAttribute scope,
     MlirAttribute name, MlirAttribute configMacros, MlirAttribute includePath,
     MlirAttribute apinotes, unsigned int line, bool isDecl);
+
+/// Creates a LLVM DIImportedEntityAttr attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIImportedEntityAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute entity, MlirAttribute file,
+    unsigned int line, MlirAttribute name, intptr_t nElements,
+    MlirAttribute const *elements);
 
 /// Gets the scope of this DIModuleAttr.
 MLIR_CAPI_EXPORTED MlirAttribute

@@ -200,8 +200,7 @@ LogicalResult mlir::tryToDestructureMemorySlots(
     SROAStatistics statistics) {
   bool destructuredAny = false;
 
-  SmallVector<DestructurableAllocationOpInterface> workList(allocators.begin(),
-                                                            allocators.end());
+  SmallVector<DestructurableAllocationOpInterface> workList(allocators);
   SmallVector<DestructurableAllocationOpInterface> newWorkList;
   newWorkList.reserve(allocators.size());
   // Destructuring a slot can allow for further destructuring of other

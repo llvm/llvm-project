@@ -9,7 +9,7 @@ declare <vscale x 1 x half> @llvm.riscv.vfmv.s.f.nxv1f16(<vscale x 1 x half>, ha
 define <vscale x 1 x half> @intrinsic_vfmv.s.f_f_nxv1f16(<vscale x 1 x half> %0, half %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
 entry:
@@ -22,7 +22,7 @@ declare <vscale x 2 x half> @llvm.riscv.vfmv.s.f.nxv2f16(<vscale x 2 x half>, ha
 define <vscale x 2 x half> @intrinsic_vfmv.s.f_f_nxv2f16(<vscale x 2 x half> %0, half %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
 entry:
@@ -87,7 +87,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfmv.s.f.nxv1f32(<vscale x 1 x float>, 
 define <vscale x 1 x float> @intrinsic_vfmv.s.f_f_nxv1f32(<vscale x 1 x float> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
 entry:

@@ -1,5 +1,5 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+half-precision,+simd128 | FileCheck %s
-; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+half-precision,+simd128 | FileCheck %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+fp16,+simd128 | FileCheck %s
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+fp16,+simd128 | FileCheck %s
 
 declare float @llvm.wasm.loadf32.f16(ptr)
 declare void @llvm.wasm.storef16.f32(float, ptr)
@@ -34,6 +34,14 @@ define <8 x half> @splat_v8f16(float %x) {
 define float @extract_lane_v8f16(<8 x half> %v) {
   %r = call float @llvm.wasm.extract.lane.f16x8(<8 x half> %v, i32 1)
   ret float %r
+}
+
+; CHECK-LABEL: replace_lane_v8f16:
+; CHECK:       f16x8.replace_lane $push0=, $0, 1, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @replace_lane_v8f16(<8 x half> %v, float %f) {
+  %r = call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %v, i32 1, float %f)
+  ret <8 x half> %r
 }
 
 ; CHECK-LABEL: add_v8f16:

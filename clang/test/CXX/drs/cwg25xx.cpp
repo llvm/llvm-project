@@ -92,6 +92,30 @@ using ::cwg2521::operator""_div;
 #endif
 } // namespace cwg2521
 
+namespace cwg2547 { // cwg2547: 20
+#if __cplusplus >= 202302L
+struct S;
+// since-cxx23-note@-1 {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-note@-2 {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-note@-3 {{forward declaration of 'cwg2547::S'}}
+bool operator==(S, S) = default;  // error: S is not complete
+// since-cxx23-error@-1 {{variable has incomplete type 'S'}}
+// since-cxx23-error@-2 {{variable has incomplete type 'S'}}
+// since-cxx23-error@-3 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
+struct S {
+  friend bool operator==(S, const S&) = default; // error: parameters of different types
+  // since-cxx23-error@-1 {{parameters for defaulted equality comparison operator must have the same type (found 'S' vs 'const S &')}}
+};
+enum E { };
+bool operator==(E, E) = default;  // error: not a member or friend of a class
+// since-cxx23-error@-1 {{invalid parameter type for non-member defaulted equality comparison operator; found 'E', expected class or reference to a constant class}}
+
+struct S2 {
+  bool operator==(this int, S2) = default;
+  // since-cxx23-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'int', expected 'const cwg2547::S2 &'}}
+};
+#endif
+} // namespace cwg2547
 
 #if __cplusplus >= 202302L
 namespace cwg2553 { // cwg2553: 18 review 2023-07-14
@@ -139,7 +163,7 @@ struct D3 : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace cwg2561 { // cwg2561: no tentatively ready 2024-03-18
+namespace cwg2561 { // cwg2561: no
 struct C {
     constexpr C(auto) { }
 };
@@ -201,7 +225,9 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
 
   template<typename T>
   concept ErrorRequires = requires (ErrorRequires auto x) {
-  // since-cxx20-error@-1 {{unknown type name 'ErrorRequires'}}
+  // since-cxx20-error@-1 {{a concept definition cannot refer to itself}} \
+  // since-cxx20-error@-1 {{'auto' not allowed in requires expression parameter}} \
+  // since-cxx20-note@-1 {{declared here}}
     x;
   };
   static_assert(ErrorRequires<int>);
@@ -209,9 +235,11 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
-  concept NestedErrorInRequires = requires (T x) {
+  concept NestedErrorInRequires = requires (T x) { //
+    // since-cxx20-note@-1 {{declared here}}
     requires requires (NestedErrorInRequires auto y) {
-    // since-cxx20-error@-1 {{unknown type name 'NestedErrorInRequires'}}
+    // since-cxx20-error@-1 {{a concept definition cannot refer to itself}} \
+    // since-cxx20-error@-1 {{'auto' not allowed in requires expression parameter}}
       y;
     };
   };
@@ -248,6 +276,41 @@ static_assert(!__is_layout_compatible(A, B), "");
 static_assert(__is_layout_compatible(U, V), "");
 #endif
 } // namespace cwg2583
+
+namespace cwg2586 { // cwg2586: 20
+#if __cplusplus >= 202302L
+struct X {
+  X& operator=(this X&, const X&) = default;
+  X& operator=(this X&, X&) = default;
+  X& operator=(this X&&, X&&) = default;
+  // FIXME: The notes could be clearer on *how* the type differs
+  // e.g., "if an explicit object parameter is used it must be of type reference to 'X'"
+  X& operator=(this int, const X&) = default;
+  // since-cxx23-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // since-cxx23-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  X& operator=(this X, const X&) = default;
+  // since-cxx23-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // since-cxx23-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+};
+struct Y {
+  void operator=(this int, const Y&); // This is copy constructor, suppresses implicit declaration
+};
+static_assert([]<typename T = Y>{
+  return !requires(T t, const T& ct) { t = ct; };
+}());
+
+struct Z {
+  bool operator==(this const Z&, const Z&) = default;
+  bool operator==(this Z, Z) = default;
+  bool operator==(this Z, const Z&) = default;
+  // since-cxx23-error@-1 {{parameters for defaulted equality comparison operator must have the same type (found 'Z' vs 'const Z &')}}
+  bool operator==(this const Z&, Z) = default;
+  // since-cxx23-error@-1 {{parameters for defaulted equality comparison operator must have the same type (found 'const Z &' vs 'Z')}}
+  bool operator==(this int, Z) = default;
+  // since-cxx23-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'int', expected 'const cwg2586::Z &'}}
+};
+#endif
+} // namespace cwg2586
 
 namespace cwg2598 { // cwg2598: 18
 #if __cplusplus >= 201103L

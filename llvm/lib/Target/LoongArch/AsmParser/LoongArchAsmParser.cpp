@@ -450,6 +450,24 @@ public:
                      IsValidKind;
   }
 
+  bool isSImm20pcaddi() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PCREL20_S2;
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
   bool isSImm21lsl2() const {
     if (!isImm())
       return false;
@@ -1296,8 +1314,8 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcaddu18i $rj, %call36(sym)
   //   jirl      $r0, $rj, 0
-  unsigned ScratchReg =
-      IsTailCall ? Inst.getOperand(0).getReg() : (unsigned)LoongArch::R1;
+  MCRegister ScratchReg =
+      IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
   const LoongArchMCExpr *LE = LoongArchMCExpr::create(
@@ -1308,7 +1326,7 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
       getSTI());
   Out.emitInstruction(
       MCInstBuilder(LoongArch::JIRL)
-          .addReg(IsTailCall ? (unsigned)LoongArch::R0 : ScratchReg)
+          .addReg(IsTailCall ? MCRegister(LoongArch::R0) : ScratchReg)
           .addReg(ScratchReg)
           .addImm(0),
       getSTI());
@@ -1675,6 +1693,12 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, /*Lower=*/-(1 << 19),
         /*Upper=*/(1 << 19) - 1,
         "operand must be a symbol with modifier (e.g. %call36) or an integer "
+        "in the range");
+  case Match_InvalidSImm20pcaddi:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %pcrel_20) or an integer "
         "in the range");
   case Match_InvalidSImm21lsl2:
     return generateImmOutOfRangeError(

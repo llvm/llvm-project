@@ -8,7 +8,10 @@
 //
 // This file provides types and functions for computing and combining stable
 // hashes. Stable hashes can be useful for hashing across different modules,
-// processes, or compiler runs.
+// processes, machines, or compiler runs for a specific compiler version. It
+// currently employs the xxh3_64bits hashing algorithm. Be aware that this
+// implementation may be adjusted or updated as improvements to the compiler are
+// made.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +19,7 @@
 #define LLVM_ADT_STABLEHASHING_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/xxhash.h"
 
 namespace llvm {
 
@@ -23,88 +27,44 @@ namespace llvm {
 /// deserialized, and is stable across processes and executions.
 using stable_hash = uint64_t;
 
-// Implementation details
-namespace hashing {
-namespace detail {
-
-// Stable hashes are based on the 64-bit FNV-1 hash:
-// https://en.wikipedia.org/wiki/Fowler-Noll-Vo_hash_function
-
-const uint64_t FNV_PRIME_64 = 1099511628211u;
-const uint64_t FNV_OFFSET_64 = 14695981039346656037u;
-
-inline void stable_hash_append(stable_hash &Hash, const char Value) {
-  Hash = Hash ^ (Value & 0xFF);
-  Hash = Hash * FNV_PRIME_64;
+inline stable_hash stable_hash_combine(ArrayRef<stable_hash> Buffer) {
+  const uint8_t *Ptr = reinterpret_cast<const uint8_t *>(Buffer.data());
+  size_t Size = Buffer.size() * sizeof(stable_hash);
+  return xxh3_64bits(ArrayRef<uint8_t>(Ptr, Size));
 }
-
-inline void stable_hash_append(stable_hash &Hash, stable_hash Value) {
-  for (unsigned I = 0; I < 8; ++I) {
-    stable_hash_append(Hash, static_cast<char>(Value));
-    Value >>= 8;
-  }
-}
-
-} // namespace detail
-} // namespace hashing
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  hashing::detail::stable_hash_append(Hash, A);
-  hashing::detail::stable_hash_append(Hash, B);
-  return Hash;
+  stable_hash Hashes[2] = {A, B};
+  return stable_hash_combine(Hashes);
 }
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
                                        stable_hash C) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  hashing::detail::stable_hash_append(Hash, A);
-  hashing::detail::stable_hash_append(Hash, B);
-  hashing::detail::stable_hash_append(Hash, C);
-  return Hash;
+  stable_hash Hashes[3] = {A, B, C};
+  return stable_hash_combine(Hashes);
 }
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
                                        stable_hash C, stable_hash D) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  hashing::detail::stable_hash_append(Hash, A);
-  hashing::detail::stable_hash_append(Hash, B);
-  hashing::detail::stable_hash_append(Hash, C);
-  hashing::detail::stable_hash_append(Hash, D);
-  return Hash;
+  stable_hash Hashes[4] = {A, B, C, D};
+  return stable_hash_combine(Hashes);
 }
 
-/// Compute a stable_hash for a sequence of values.
-///
-/// This hashes a sequence of values. It produces the same stable_hash as
-/// 'stable_hash_combine(a, b, c, ...)', but can run over arbitrary sized
-/// sequences and is significantly faster given pointers and types which
-/// can be hashed as a sequence of bytes.
-template <typename InputIteratorT>
-stable_hash stable_hash_combine_range(InputIteratorT First,
-                                      InputIteratorT Last) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  for (auto I = First; I != Last; ++I)
-    hashing::detail::stable_hash_append(Hash, *I);
-  return Hash;
+// Removes suffixes introduced by LLVM from the name to enhance stability and
+// maintain closeness to the original name across different builds.
+inline StringRef get_stable_name(StringRef Name) {
+  auto [P1, S1] = Name.rsplit(".llvm.");
+  auto [P2, S2] = P1.rsplit(".__uniq.");
+  return P2;
 }
 
-inline stable_hash stable_hash_combine_array(const stable_hash *P, size_t C) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  for (size_t I = 0; I < C; ++I)
-    hashing::detail::stable_hash_append(Hash, P[I]);
-  return Hash;
-}
-
-inline stable_hash stable_hash_combine_string(const StringRef &S) {
-  return stable_hash_combine_range(S.begin(), S.end());
-}
-
-inline stable_hash stable_hash_combine_string(const char *C) {
-  stable_hash Hash = hashing::detail::FNV_OFFSET_64;
-  while (*C)
-    hashing::detail::stable_hash_append(Hash, *(C++));
-  return Hash;
+// Generates a consistent hash value for a given input name across different
+// program executions and environments. This function first converts the input
+// name into a stable form using the `get_stable_name` function, and then
+// computes a hash of this stable name. For instance, `foo.llvm.1234` would have
+// the same hash as `foo.llvm.5678.
+inline stable_hash stable_hash_name(StringRef Name) {
+  return xxh3_64bits(get_stable_name(Name));
 }
 
 } // namespace llvm

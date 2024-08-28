@@ -914,8 +914,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   case pp_import:
     // Ignore missing filenames in include or import directives.
     if (lexIncludeFilename(First, End).is(tok::eod)) {
-      skipDirective(Id, First, End);
-      return true;
+      return false;
     }
     break;
   default:

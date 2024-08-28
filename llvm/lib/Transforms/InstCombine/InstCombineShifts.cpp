@@ -511,6 +511,21 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   if (match(Op1, m_Or(m_Value(), m_SpecificInt(BitWidth - 1))))
     return replaceOperand(I, 1, ConstantInt::get(Ty, BitWidth - 1));
 
+  Instruction *CmpIntr;
+  if ((I.getOpcode() == Instruction::LShr ||
+       I.getOpcode() == Instruction::AShr) &&
+      match(Op0, m_OneUse(m_Instruction(CmpIntr))) &&
+      isa<CmpIntrinsic>(CmpIntr) &&
+      match(Op1, m_SpecificInt(Ty->getScalarSizeInBits() - 1))) {
+    Value *Cmp =
+        Builder.CreateICmp(cast<CmpIntrinsic>(CmpIntr)->getLTPredicate(),
+                           CmpIntr->getOperand(0), CmpIntr->getOperand(1));
+    return CastInst::Create(I.getOpcode() == Instruction::LShr
+                                ? Instruction::ZExt
+                                : Instruction::SExt,
+                            Cmp, Ty);
+  }
+
   return nullptr;
 }
 

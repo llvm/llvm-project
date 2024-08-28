@@ -175,6 +175,7 @@ class Queue;
 class QueueImpl;
 class QueueItem;
 class REPL;
+class RealpathPrefixes;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;

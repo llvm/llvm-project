@@ -102,6 +102,7 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
@@ -1976,6 +1977,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
          isLineComment(*Previous) &&
          FormatTok.OriginalColumn >= MinContinueColumn;
 }
+
+// Returns \c true if \c Current starts a new parameter.
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style);
 
 } // namespace format
 } // namespace clang

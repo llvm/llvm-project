@@ -294,7 +294,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
 
   // CHECK: #llvm.di_local_variable<{{.*}}>
   MlirAttribute local_var = mlirLLVMDILocalVariableAttrGet(
-      ctx, compile_unit, foo, file, 1, 0, 8, di_type);
+      ctx, compile_unit, foo, file, 1, 0, 8, di_type, 0);
   mlirAttributeDump(local_var);
   // CHECK: #llvm.di_derived_type<{{.*}}>
   // CHECK-NOT: dwarfAddressSpace
@@ -312,9 +312,15 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_subroutine_type<{{.*}}>
   mlirAttributeDump(subroutine_type);
 
-  MlirAttribute di_subprogram =
-      mlirLLVMDISubprogramAttrGet(ctx, id, compile_unit, compile_unit, foo, bar,
-                                  file, 1, 2, 0, subroutine_type);
+  MlirAttribute di_imported_entity = mlirLLVMDIImportedEntityAttrGet(
+      ctx, 0, di_module, file, 1, foo, 1, &local_var);
+
+  mlirAttributeDump(di_imported_entity);
+  // CHECK: #llvm.di_imported_entity<{{.*}}>
+
+  MlirAttribute di_subprogram = mlirLLVMDISubprogramAttrGet(
+      ctx, id, compile_unit, compile_unit, foo, bar, file, 1, 2, 0,
+      subroutine_type, 1, &di_imported_entity);
   // CHECK: #llvm.di_subprogram<{{.*}}>
   mlirAttributeDump(di_subprogram);
 

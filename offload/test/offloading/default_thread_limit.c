@@ -2,6 +2,9 @@
 // RUN: %libomptarget-compile-generic
 // RUN: env LIBOMPTARGET_INFO=16 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
+// RUN: %libomptarget-compile-generic -g
+// RUN: env LIBOMPTARGET_INFO=16 \
+// RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 
 // REQUIRES: amdgpu
 

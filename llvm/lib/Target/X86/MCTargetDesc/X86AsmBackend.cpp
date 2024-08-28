@@ -201,7 +201,7 @@ public:
   bool padInstructionEncoding(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  bool finishLayout(const MCAssembler &Asm) const override;
+  void finishLayout(const MCAssembler &Asm) const override;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -437,8 +437,6 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
     return cast<MCDataFragment>(*F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(*F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
   }
 }
 
@@ -856,7 +854,7 @@ bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
   return Changed;
 }
 
-bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
+void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -864,7 +862,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
   // (i.e. eliminate nops) even at the cost of increasing the size and
   // complexity of others.
   if (!X86PadForAlign && !X86PadForBranchAlign)
-    return false;
+    return;
 
   // The processed regions are delimitered by LabeledFragments. -g may have more
   // MCSymbols and therefore different relaxation results. X86PadForAlign is
@@ -884,9 +882,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       if (LabeledFragments.count(&F))
         Relaxable.clear();
 
-      if (F.getKind() == MCFragment::FT_Data ||
-          F.getKind() == MCFragment::FT_CompactEncodedInst)
-        // Skip and ignore
+      if (F.getKind() == MCFragment::FT_Data) // Skip and ignore
         continue;
 
       if (F.getKind() == MCFragment::FT_Relaxable) {
@@ -911,6 +907,9 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         continue;
       }
 
+#ifndef NDEBUG
+      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
+#endif
       const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
       // To keep the effects local, prefer to relax instructions closest to
@@ -923,7 +922,8 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         // Give the backend a chance to play any tricks it wishes to increase
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
-        padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
+        if (padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize))
+          Sec.setHasLayout(false);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting
@@ -940,6 +940,14 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       if (F.getKind() == MCFragment::FT_BoundaryAlign)
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
+#ifndef NDEBUG
+      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
+      const uint64_t FinalSize = Asm.computeFragmentSize(F);
+      assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
+             "can't move start of next fragment!");
+      assert(FinalSize == RemainingSize && "inconsistent size computation?");
+#endif
+
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
       // break the alignment of the current boundary align.
@@ -953,7 +961,11 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
     }
   }
 
-  return true;
+  // The layout is done. Mark every fragment as valid.
+  for (MCSection &Section : Asm) {
+    Asm.getFragmentOffset(*Section.curFragList()->Tail);
+    Asm.computeFragmentSize(*Section.curFragList()->Tail);
+  }
 }
 
 unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {
@@ -1312,7 +1324,7 @@ public:
 
   /// Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
-  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty()) return 0;
@@ -1327,13 +1339,13 @@ public:
     bool HasFP = false;
 
     // Encode that we are using EBP/RBP as the frame pointer.
-    uint32_t CompactUnwindEncoding = 0;
+    uint64_t CompactUnwindEncoding = 0;
 
     unsigned SubtractInstrIdx = Is64Bit ? 3 : 2;
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
-    unsigned StackSize = 0;
-    int MinAbsOffset = std::numeric_limits<int>::max();
+    uint64_t StackSize = 0;
+    int64_t MinAbsOffset = std::numeric_limits<int64_t>::max();
 
     for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
@@ -1360,7 +1372,7 @@ public:
         memset(SavedRegs, 0, sizeof(SavedRegs));
         StackAdjust = 0;
         SavedRegIdx = 0;
-        MinAbsOffset = std::numeric_limits<int>::max();
+        MinAbsOffset = std::numeric_limits<int64_t>::max();
         InstrOffset += MoveInstrSize;
         break;
       }
@@ -1403,7 +1415,7 @@ public:
         unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
-        MinAbsOffset = std::min(MinAbsOffset, abs(Inst.getOffset()));
+        MinAbsOffset = std::min(MinAbsOffset, std::abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);
         break;
       }

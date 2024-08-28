@@ -60,6 +60,7 @@ public:
 private:
   SemanticsContext &context_;
   int exprDepth_{0};
+  int constructNesting_{0};
 
   void SayBadLeave(
       StmtType, const char *enclosingStmt, const ConstructNode &) const;

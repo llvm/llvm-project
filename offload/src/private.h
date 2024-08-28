@@ -37,7 +37,6 @@ extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
-extern bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Print out the names and properties of the arguments to each kernel
