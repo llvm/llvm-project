@@ -21883,8 +21883,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::experimental_vector_partial_reduce_add: {
     if (auto Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
       return Dot;
-    return DAG.expandPartialReductionIntrinsic(
-        N->getValueType(0), N->getOperand(1), N->getOperand(2), SDLoc(N));
+    return DAG.getPartialReduceAdd(SDLoc(N), N->getValueType(0),
+                                   N->getOperand(1), N->getOperand(2));
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:

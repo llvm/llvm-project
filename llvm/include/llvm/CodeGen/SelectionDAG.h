@@ -1596,8 +1596,8 @@ public:
 
   /// Expand a partial reduction intrinsic call.
   /// Op1 and Op2 are its operands and ReducedTY is the intrinsic's return type.
-  SDValue expandPartialReductionIntrinsic(EVT ReducedTy, SDValue Op1,
-                                          SDValue Op2, SDLoc DL);
+  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                              SDValue Op2);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);
