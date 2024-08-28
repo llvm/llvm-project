@@ -73,6 +73,12 @@ public:
     return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex++;
   }
 
+  using ConstVisitor = function_ref<void(const PGOCtxProfContext &)>;
+  using Visitor = function_ref<void(PGOCtxProfContext &)>;
+
+  void update(Visitor, const Function *F = nullptr);
+  void visit(ConstVisitor, const Function *F = nullptr) const;
+
   const CtxProfFlatProfile flatten() const;
 
   bool invalidate(Module &, const PreservedAnalyses &PA,
@@ -105,13 +111,18 @@ public:
 
 class CtxProfAnalysisPrinterPass
     : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
-  raw_ostream &OS;
-
 public:
-  explicit CtxProfAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+  enum class PrintMode { Everything, JSON };
+  explicit CtxProfAnalysisPrinterPass(raw_ostream &OS,
+                                      PrintMode Mode = PrintMode::Everything)
+      : OS(OS), Mode(Mode) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
+
+private:
+  raw_ostream &OS;
+  const PrintMode Mode;
 };
 
 /// Assign a GUID to functions as metadata. GUID calculation takes linkage into

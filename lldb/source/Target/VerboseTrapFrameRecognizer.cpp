@@ -116,7 +116,8 @@ void RegisterVerboseTrapFrameRecognizer(Process &process) {
       std::make_shared<VerboseTrapFrameRecognizer>();
 
   process.GetTarget().GetFrameRecognizerManager().AddRecognizer(
-      srf_recognizer_sp, module_regex_sp, symbol_regex_sp, false);
+      srf_recognizer_sp, module_regex_sp, symbol_regex_sp,
+      Mangled::ePreferDemangled, false);
 }
 
 } // namespace lldb_private
