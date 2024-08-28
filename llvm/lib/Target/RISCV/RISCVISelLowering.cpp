@@ -7430,16 +7430,6 @@ static SDValue getLargeExternalSymbol(ExternalSymbolSDNode *N, SDLoc DL, EVT Ty,
 }
 
 template <class NodeTy>
-static SDValue getLargeAddr(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG) {
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N))
-    return getLargeGlobalAddress(G, DL, Ty, DAG);
-
-  // Using pc-relative mode for other node type.
-  SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
-  return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
-}
-
-template <class NodeTy>
 SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
                                      bool IsLocal, bool IsExternWeak) const {
   SDLoc DL(N);
@@ -7508,7 +7498,12 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
   }
   case CodeModel::Large: {
-    return getLargeAddr(N, DL, Ty, DAG);
+    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N))
+      return getLargeGlobalAddress(G, DL, Ty, DAG);
+
+    // Using pc-relative mode for other node type.
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+    return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
   }
   }
 }
