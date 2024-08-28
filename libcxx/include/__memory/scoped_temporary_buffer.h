@@ -102,6 +102,7 @@ public:
     return __result;
   }
 
+  // This member function is only needed to implement get_temporary_buffer().
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __temporary_allocation_result<_Tp> __release_to_raw() _NOEXCEPT {
     __temporary_allocation_result<_Tp> __result = {__ptr_, __count_};
 
