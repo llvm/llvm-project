@@ -260,8 +260,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 
   // Detect sizeof usage in comparisons involving pointer arithmetics, such as
-  // N * sizeof(S) == P1 - P2 or (P1 - P2) / sizeof(S), where P1 and P2 are
-  // pointers to a type S.
+  // N * sizeof(T) == P1 - P2 or (P1 - P2) / sizeof(T), where P1 and P2 are
+  // pointers to a type T.
   const auto PtrDiffExpr = binaryOperator(
       hasOperatorName("-"),
       hasLHS(hasType(hasUnqualifiedDesugaredType(pointerType(pointee(
