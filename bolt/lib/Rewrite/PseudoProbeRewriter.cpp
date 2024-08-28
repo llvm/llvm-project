@@ -14,6 +14,7 @@
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "bolt/Utils/Utils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
@@ -49,7 +50,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::Hidden, cl::cat(BoltCategory));
 
-extern cl::opt<bool> ProfileUsePseudoProbes;
+extern cl::opt<bool> ProfileWritePseudoProbes;
 } // namespace opts
 
 namespace {
@@ -71,7 +72,8 @@ class PseudoProbeRewriter final : public MetadataRewriter {
 
   /// Parse .pseudo_probe_desc section and .pseudo_probe section
   /// Setup Pseudo probe decoder
-  void parsePseudoProbe();
+  /// If \p ProfiledOnly is set, only parse records for functions with profile.
+  void parsePseudoProbe(bool ProfiledOnly = false);
 
   /// PseudoProbe decoder
   std::shared_ptr<MCPseudoProbeDecoder> ProbeDecoderPtr;
@@ -90,21 +92,21 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  if (opts::ProfileUsePseudoProbes)
-    parsePseudoProbe();
+  if (opts::ProfileWritePseudoProbes)
+    parsePseudoProbe(true);
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  if (!opts::ProfileUsePseudoProbes)
+  if (!opts::ProfileWritePseudoProbes)
     parsePseudoProbe();
   updatePseudoProbes();
 
   return Error::success();
 }
 
-void PseudoProbeRewriter::parsePseudoProbe() {
+void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
   MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
   PseudoProbeDescSection = BC.getUniqueSectionByName(".pseudo_probe_desc");
   PseudoProbeSection = BC.getUniqueSectionByName(".pseudo_probe");
@@ -133,10 +135,19 @@ void PseudoProbeRewriter::parsePseudoProbe() {
 
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
   MCPseudoProbeDecoder::Uint64Map FuncStartAddrs;
+  SmallVector<StringRef, 3> Suffixes({".llvm.", ".destroy", ".resume"});
   for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
+    bool HasProfile = F->hasProfileAvailable();
     for (const MCSymbol *Sym : F->getSymbols()) {
-      FuncStartAddrs[Function::getGUID(NameResolver::restore(Sym->getName()))] =
-          F->getAddress();
+      StringRef SymName = NameResolver::restore(Sym->getName());
+      if (std::optional<StringRef> CommonName =
+              getCommonName(SymName, false, Suffixes)) {
+        SymName = *CommonName;
+      }
+      uint64_t GUID = Function::getGUID(SymName);
+      FuncStartAddrs[GUID] = F->getAddress();
+      if (ProfiledOnly && HasProfile)
+        GuidFilter.insert(GUID);
     }
   }
   Contents = PseudoProbeSection->getContents();
