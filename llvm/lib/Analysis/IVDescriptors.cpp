@@ -734,7 +734,8 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
   Value *FalseVal = SI->getFalseValue();
   // Handle only when either of operands of select instruction is a PHI
   // node for now.
-  if (!(isa<PHINode>(TrueVal) ^ isa<PHINode>(FalseVal)))
+  if ((isa<PHINode>(TrueVal) && isa<PHINode>(FalseVal)) ||
+      (!isa<PHINode>(TrueVal) && !isa<PHINode>(FalseVal)))
     return InstDesc(false, I);
 
   Instruction *I1 = isa<PHINode>(TrueVal) ? dyn_cast<Instruction>(FalseVal)
