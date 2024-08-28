@@ -636,6 +636,14 @@ func.func @pack_invalid_duplicate_element_in_outer_perm(%input: tensor<256x128xf
 
 // -----
 
+func.func @pack_invalid_output_rank(%input: tensor<256x128xf32>, %output: tensor<64x32x16xf32>) -> tensor<64x32x16xf32> {
+  // expected-error@+1 {{packed rank must equal unpacked rank + tiling factors}}
+  %0 = tensor.pack %input inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<64x32x16xf32>
+  return %0 : tensor<64x32x16xf32>
+}
+
+// -----
+
 func.func @unpack_invalid_out_of_bound_outer_perm(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
   // expected-error@+1 {{invalid outer_dims_perm vector}}
   %0 = tensor.unpack %output outer_dims_perm = [2, 1] inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %input : tensor<8x8x32x16xf32> -> tensor<256x128xf32>
