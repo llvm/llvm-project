@@ -1,6 +1,9 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s -Wno-undefined-bool-conversion
 
 typedef __INTPTR_TYPE__ intptr_t;
+
+template <typename T>
+void clang_analyzer_dump(T x);
 
 const int& g() {
   int s;
@@ -321,7 +324,7 @@ void param_ptr_to_ptr_to_ptr_top(void*** ppp) {
 
 void param_ptr_to_ptr_to_ptr_callee(void*** ppp) {
   int local = 42;
-  **ppp = &local; // no-warning FIXME
+  **ppp = &local; // expected-warning{{local variable 'local' is still referred to by the stack variable 'pp'}}
 }
 
 void param_ptr_to_ptr_to_ptr_caller(void** pp) {
@@ -331,7 +334,7 @@ void param_ptr_to_ptr_to_ptr_caller(void** pp) {
 void lambda_to_context_ptr_to_ptr(int **pp) {
   auto lambda = [&] {
     int local = 42;
-    *pp = &local; // no-warning FIXME
+    *pp = &local; // expected-warning{{local variable 'local' is still referred to by the stack variable 'pp'}}
   };
   lambda();
   (void)*pp;
@@ -734,7 +737,7 @@ void param_nested_and_transitive_top(NestedAndTransitive* nat) {
 
 void param_nested_and_transitive_callee(NestedAndTransitive* nat) {
   int local = 42;
-  *nat->next[2]->next[1]->p = &local; // no-warning FIXME
+  *nat->next[2]->next[1]->p = &local;  // expected-warning{{local variable 'local' is still referred to by the stack variable 'natCaller'}}
 }
 
 void param_nested_and_transitive_caller(NestedAndTransitive natCaller) {
@@ -757,3 +760,23 @@ class CPtr {
   }
 };
 } // namespace leaking_as_member
+
+namespace origin_region_limitation {
+void leaker(int ***leakerArg) {
+    int local;
+    clang_analyzer_dump(*leakerArg); // expected-warning{{&SymRegion{reg_$0<int ** arg>}}}
+    // Incorrect message: 'arg', after it is reinitialized with value returned by 'tweak'
+    // is no longer relevant.
+    // The message must refer to 'original_arg' instead, but there is no easy way to
+    // connect the SymRegion stored in 'original_arg' and 'original_arg' as variable.
+    **leakerArg = &local; // expected-warning{{ 'local' is still referred to by the stack variable 'arg'}}
+}
+
+int **tweak();
+
+void foo(int **arg) {
+    int **original_arg = arg;
+    arg = tweak();
+    leaker(&original_arg);
+}
+} // namespace origin_region_limitation

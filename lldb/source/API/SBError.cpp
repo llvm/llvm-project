@@ -11,6 +11,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/VASPrintf.h"
 
 #include <cstdarg>
 
@@ -107,7 +108,7 @@ void SBError::SetError(uint32_t err, ErrorType type) {
   LLDB_INSTRUMENT_VA(this, err, type);
 
   CreateIfNeeded();
-  m_opaque_up->SetError(err, type);
+  *m_opaque_up = Status(err, type);
 }
 
 void SBError::SetError(const Status &lldb_error) {
@@ -119,30 +120,36 @@ void SBError::SetErrorToErrno() {
   LLDB_INSTRUMENT_VA(this);
 
   CreateIfNeeded();
-  m_opaque_up->SetErrorToErrno();
+  *m_opaque_up = Status::FromErrno();
 }
 
 void SBError::SetErrorToGenericError() {
   LLDB_INSTRUMENT_VA(this);
 
   CreateIfNeeded();
-  m_opaque_up->SetErrorToGenericError();
+  *m_opaque_up = Status(std::string("generic error"));
 }
 
 void SBError::SetErrorString(const char *err_str) {
   LLDB_INSTRUMENT_VA(this, err_str);
 
   CreateIfNeeded();
-  m_opaque_up->SetErrorString(err_str);
+  *m_opaque_up = Status::FromErrorString(err_str);
 }
 
 int SBError::SetErrorStringWithFormat(const char *format, ...) {
   CreateIfNeeded();
+  std::string string;
   va_list args;
   va_start(args, format);
-  int num_chars = m_opaque_up->SetErrorStringWithVarArg(format, args);
+  if (format != nullptr && format[0]) {
+    llvm::SmallString<1024> buf;
+    VASprintf(buf, format, args);
+    string = std::string(buf.str());
+    *m_opaque_up = Status(std::move(string));
+  }
   va_end(args);
-  return num_chars;
+  return string.size();
 }
 
 bool SBError::IsValid() const {

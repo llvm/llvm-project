@@ -458,6 +458,16 @@ public:
     CX_None
   };
 
+  /// Controls which variables have static destructors registered.
+  enum class RegisterStaticDestructorsKind {
+    /// Register static destructors for all variables.
+    All,
+    /// Register static destructors only for thread-local variables.
+    ThreadLocal,
+    /// Don't register static destructors for any variables.
+    None,
+  };
+
   // Define simple language options (with no accessors).
 #define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description)

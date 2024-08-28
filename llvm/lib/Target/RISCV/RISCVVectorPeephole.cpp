@@ -131,6 +131,9 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
   case RISCV::VMV_V_V:
     SrcIdx = 2;
     break;
+  case RISCV::VMERGE_VVM:
+    SrcIdx = 3; // TODO: We can also handle the false operand.
+    break;
   }
 
   MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));

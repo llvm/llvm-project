@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FixedPointBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
@@ -5756,7 +5757,12 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         bool SignedIndices, bool IsSubtraction,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
-  Value *GEPVal = Builder.CreateInBoundsGEP(ElemTy, Ptr, IdxList, Name);
+
+  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+
+  Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
   // If the pointer overflow sanitizer isn't enabled, do nothing.
   if (!SanOpts.has(SanitizerKind::PointerOverflow))
@@ -5871,8 +5877,13 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     Address Addr, ArrayRef<Value *> IdxList, llvm::Type *elementType,
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
-  if (!SanOpts.has(SanitizerKind::PointerOverflow))
-    return Builder.CreateInBoundsGEP(Addr, IdxList, elementType, Align, Name);
+  if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
+    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
+    if (!SignedIndices && !IsSubtraction)
+      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+
+    return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
+  }
 
   return RawAddress(
       EmitCheckedInBoundsGEP(Addr.getElementType(), Addr.emitRawPointer(*this),

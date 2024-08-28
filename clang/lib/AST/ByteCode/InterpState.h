@@ -59,7 +59,7 @@ public:
   Expr::EvalStatus &getEvalStatus() const override {
     return Parent.getEvalStatus();
   }
-  ASTContext &getCtx() const override { return Parent.getCtx(); }
+  ASTContext &getASTContext() const override { return Parent.getASTContext(); }
 
   // Forward status checks and updates to the walker.
   bool checkingForUndefinedBehavior() const override {
