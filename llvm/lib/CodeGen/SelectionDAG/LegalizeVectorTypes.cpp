@@ -4280,11 +4280,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_CttzElements(SDNode *N) {
 SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
   MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(N);
   SDLoc DL(HG);
-  SDValue Chain = HG->getChain();
   SDValue Inc = HG->getInc();
-  SDValue Mask = HG->getMask();
   SDValue Ptr = HG->getBasePtr();
-  SDValue Index = HG->getIndex();
   SDValue Scale = HG->getScale();
   SDValue IntID = HG->getIntID();
   EVT MemVT = HG->getMemoryVT();
@@ -4292,14 +4289,14 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
   ISD::MemIndexType IndexType = HG->getIndexType();
 
   SDValue IndexLo, IndexHi, MaskLo, MaskHi;
-  std::tie(IndexLo, IndexHi) = DAG.SplitVector(Index, DL);
-  std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
-  SDValue HistogramOpsLo[] = {Chain, Inc, MaskLo, Ptr, IndexLo, Scale, IntID};
-  SDValue HChain = DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL,
-                                          HistogramOpsLo, MMO, IndexType);
-  SDValue HistogramOpsHi[] = {HChain, Inc, MaskHi, Ptr, IndexHi, Scale, IntID};
-  return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL,
-                                HistogramOpsHi, MMO, IndexType);
+  std::tie(IndexLo, IndexHi) = DAG.SplitVector(HG->getIndex(), DL);
+  std::tie(MaskLo, MaskHi) = DAG.SplitVector(HG->getMask(), DL);
+  SDValue OpsLo[] = {HG->getChain(), Inc, MaskLo, Ptr, IndexLo, Scale, IntID};
+  SDValue Lo = DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL,
+                                      OpsLo, MMO, IndexType);
+  SDValue OpsHi[] = {Lo, Inc, MaskHi, Ptr, IndexHi, Scale, IntID};
+  return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, OpsHi,
+                                MMO, IndexType);
 }
 
 //===----------------------------------------------------------------------===//
