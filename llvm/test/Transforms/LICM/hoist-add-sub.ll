@@ -374,17 +374,17 @@ out_of_bounds:
   ret i32 -1
 }
 
-define i32 @test_02_unsigned_neg(ptr %p, ptr %x_p, ptr %length_p) {
-; CHECK-LABEL: define i32 @test_02_unsigned_neg
+define i32 @test_02_unsigned(ptr %p, ptr %x_p, ptr %length_p) {
+; CHECK-LABEL: define i32 @test_02_unsigned
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[X_P:%.*]], ptr [[LENGTH_P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG1]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_P]], align 4, !range [[RNG2]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nuw i32 4, [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[ARITH:%.*]] = add nuw i32 [[X]], [[IV]]
-; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[ARITH]], 4
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -399,7 +399,7 @@ define i32 @test_02_unsigned_neg(ptr %p, ptr %x_p, ptr %length_p) {
 ; CHECK-NEXT:    ret i32 -1
 ;
 entry:
-  %x = load i32, ptr %x_p, !range !2
+  %x = load i32, ptr %x_p, !range !3
   %length = load i32, ptr %length_p, !range !1
   br label %loop
 
@@ -822,17 +822,17 @@ out_of_bounds:
   ret i32 -1
 }
 
-define i32 @test_04_unsigned_neg(ptr %p, ptr %x_p, ptr %length_p) {
-; CHECK-LABEL: define i32 @test_04_unsigned_neg
+define i32 @test_04_unsigned(ptr %p, ptr %x_p, ptr %length_p) {
+; CHECK-LABEL: define i32 @test_04_unsigned
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[X_P:%.*]], ptr [[LENGTH_P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG1]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG3]]
 ; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_P]], align 4, !range [[RNG2]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nuw i32 4, [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[ARITH:%.*]] = add nuw i32 [[IV]], [[X]]
-; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[ARITH]], 4
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -847,7 +847,7 @@ define i32 @test_04_unsigned_neg(ptr %p, ptr %x_p, ptr %length_p) {
 ; CHECK-NEXT:    ret i32 -1
 ;
 entry:
-  %x = load i32, ptr %x_p, !range !2
+  %x = load i32, ptr %x_p, !range !3
   %length = load i32, ptr %length_p, !range !1
   br label %loop
 
@@ -999,3 +999,4 @@ failed:
 !0 = !{i32 0, i32 2147483648}
 !1 = !{i32 0, i32 2147483640}
 !2 = !{i32 256, i32 32768}
+!3 = !{i32 0, i32 2}
