@@ -149,6 +149,9 @@ public:
     ImportMapTyImpl ImportMap;
   };
 
+  // A map from destination modules to lists of imports.
+  using ImportListsTy = DenseMap<StringRef, ImportMapTy>;
+
   /// The set contains an entry for every global value that the module exports.
   /// Depending on the user context, this container is allowed to contain
   /// definitions, declarations or a mix of both.
@@ -211,7 +214,7 @@ void ComputeCrossModuleImport(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists);
 
 /// PrevailingType enum used as a return type of callback passed
