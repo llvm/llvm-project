@@ -384,7 +384,7 @@ DominatorTree &FunctionPropertiesUpdater::getUpdatedDominatorTree(
   SmallVector<DominatorTree::UpdateType, 2> FinalDomTreeUpdates;
 
   for (auto &Upd : DomTreeUpdates)
-      FinalDomTreeUpdates.push_back(Upd);
+    FinalDomTreeUpdates.push_back(Upd);
 
   DenseSet<const BasicBlock *> Inserted;
   for (auto *Succ : successors(&CallSiteBB))
