@@ -689,7 +689,7 @@ let Class = BTFTagAttributedType in {
 
 let Class = HLSLAttributedResourceType in {
   def : Property<"resClass", UInt32> {
-    let Read = [{ node->getAttrs().ResourceClass }];
+    let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceClass) }];
   }
   def : Property<"isROV", Bool> {
     let Read = [{ node->getAttrs().IsROV }];
@@ -701,7 +701,7 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(resClass, isROV);
+    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }

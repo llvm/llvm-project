@@ -44,6 +44,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -6159,10 +6160,10 @@ class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
-    uint8_t ResourceClass; // maps to llvm::dxil::ResourceClass
+    llvm::dxil::ResourceClass ResourceClass;
     uint8_t IsROV : 1;
-    Attributes(uint8_t RC, bool rov) : ResourceClass(RC), IsROV(rov) {}
-    Attributes() : Attributes(0, 0) {}
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV)
+        : ResourceClass(ResourceClass), IsROV(IsROV) {}
   };
 
 private:
@@ -6193,7 +6194,7 @@ public:
                       QualType Contained, const Attributes &Attrs) {
     ID.AddPointer(Wrapped.getAsOpaquePtr());
     ID.AddPointer(Contained.getAsOpaquePtr());
-    ID.AddInteger(Attrs.ResourceClass);
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
   }
 

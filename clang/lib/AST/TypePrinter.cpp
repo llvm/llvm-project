@@ -2055,8 +2055,7 @@ void TypePrinter::printHLSLAttributedResourceBefore(
 
   const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
   OS << " [[hlsl::resource_class("
-     << HLSLResourceClassAttr::ConvertResourceClassToStr(
-            static_cast<llvm::dxil::ResourceClass>(Attrs.ResourceClass))
+     << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
      << ")]]";
   if (Attrs.IsROV)
     OS << " [[hlsl::is_rov()]]";
