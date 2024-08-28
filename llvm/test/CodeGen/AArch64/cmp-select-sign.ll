@@ -241,21 +241,18 @@ define <4 x i32> @not_sign_4xi32_3(<4 x i32> %a) {
 define <4 x i65> @sign_4xi65(<4 x i65> %a) {
 ; CHECK-LABEL: sign_4xi65:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sbfx x8, x1, #0, #1
-; CHECK-NEXT:    sbfx x9, x5, #0, #1
-; CHECK-NEXT:    sbfx x10, x3, #0, #1
-; CHECK-NEXT:    lsr x1, x8, #63
-; CHECK-NEXT:    orr x8, x8, #0x1
-; CHECK-NEXT:    lsr x3, x10, #63
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    sbfx x8, x7, #0, #1
-; CHECK-NEXT:    lsr x5, x9, #63
-; CHECK-NEXT:    orr x2, x10, #0x1
-; CHECK-NEXT:    orr x4, x9, #0x1
-; CHECK-NEXT:    lsr x7, x8, #63
-; CHECK-NEXT:    orr x6, x8, #0x1
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    sbfx x8, x5, #0, #1
+; CHECK-NEXT:    sbfx x9, x3, #0, #1
+; CHECK-NEXT:    sbfx x10, x1, #0, #1
+; CHECK-NEXT:    sbfx x11, x7, #0, #1
+; CHECK-NEXT:    lsr x1, x10, #63
+; CHECK-NEXT:    lsr x3, x9, #63
+; CHECK-NEXT:    lsr x5, x8, #63
+; CHECK-NEXT:    lsr x7, x11, #63
+; CHECK-NEXT:    orr x0, x10, #0x1
+; CHECK-NEXT:    orr x2, x9, #0x1
+; CHECK-NEXT:    orr x4, x8, #0x1
+; CHECK-NEXT:    orr x6, x11, #0x1
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i65> %a, <i65 -1, i65 -1, i65 -1, i65 -1>
   %res = select <4 x i1> %c, <4 x i65> <i65 1, i65 1, i65 1, i65 1>, <4 x i65 > <i65 -1, i65 -1, i65 -1, i65 -1>

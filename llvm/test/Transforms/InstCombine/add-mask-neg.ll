@@ -49,7 +49,7 @@ define i32 @dec_commute_mask_neg_i32(i32 %X) {
 define i32 @dec_mask_neg_multiuse_i32(i32 %X) {
 ; CHECK-LABEL: @dec_mask_neg_multiuse_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[MASK]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NEG]])
 ; CHECK-NEXT:    ret i32 [[DEC]]
@@ -64,7 +64,7 @@ define i32 @dec_mask_neg_multiuse_i32(i32 %X) {
 define i32 @dec_mask_multiuse_neg_i32(i32 %X) {
 ; CHECK-LABEL: @dec_mask_multiuse_neg_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[MASK]], -1
 ; CHECK-NEXT:    call void @use(i32 [[MASK]])
 ; CHECK-NEXT:    ret i32 [[DEC]]
@@ -105,7 +105,7 @@ define <2 x i32> @dec_mask_neg_v2i32_poison(<2 x i32> %X) {
 define <2 x i32> @dec_mask_multiuse_neg_multiuse_v2i32(<2 x i32> %X) {
 ; CHECK-LABEL: @dec_mask_multiuse_neg_multiuse_v2i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[NEG]], [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[X]], [[NEG]]
 ; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i32> [[MASK]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    call void @usev(<2 x i32> [[NEG]])
 ; CHECK-NEXT:    call void @usev(<2 x i32> [[MASK]])

@@ -115,6 +115,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+  void addPreEmitPass() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -206,6 +207,17 @@ bool SPIRVPassConfig::addLegalizeMachineIR() {
 bool SPIRVPassConfig::addRegBankSelect() {
   disablePass(&RegBankSelect::ID);
   return false;
+}
+
+static cl::opt<bool> SPVEnableNonSemanticDI(
+    "spv-emit-nonsemantic-debug-info",
+    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::Optional, cl::init(false));
+
+void SPIRVPassConfig::addPreEmitPass() {
+  if (SPVEnableNonSemanticDI) {
+    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  }
 }
 
 namespace {

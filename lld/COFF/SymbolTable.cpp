@@ -494,20 +494,8 @@ void SymbolTable::resolveRemainingUndefines() {
     StringRef name = undef->getName();
 
     // A weak alias may have been resolved, so check for that.
-    if (Defined *d = undef->getWeakAlias()) {
-      // We want to replace Sym with D. However, we can't just blindly
-      // copy sizeof(SymbolUnion) bytes from D to Sym because D may be an
-      // internal symbol, and internal symbols are stored as "unparented"
-      // Symbols. For that reason we need to check which type of symbol we
-      // are dealing with and copy the correct number of bytes.
-      if (isa<DefinedRegular>(d))
-        memcpy(sym, d, sizeof(DefinedRegular));
-      else if (isa<DefinedAbsolute>(d))
-        memcpy(sym, d, sizeof(DefinedAbsolute));
-      else
-        memcpy(sym, d, sizeof(SymbolUnion));
+    if (undef->resolveWeakAlias())
       continue;
-    }
 
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
@@ -551,6 +539,9 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
     sym->pendingArchiveLoad = false;
     sym->canInline = true;
     inserted = true;
+
+    if (isArm64EC(ctx.config.machine) && name.starts_with("EXP+"))
+      expSymbols.push_back(sym);
   }
   return {sym, inserted};
 }

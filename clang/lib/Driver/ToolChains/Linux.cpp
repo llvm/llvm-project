@@ -86,6 +86,9 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   case llvm::Triple::aarch64:
     if (IsAndroid)
       return "aarch64-linux-android";
+    if (hasEffectiveTriple() &&
+        getEffectiveTriple().getEnvironment() == llvm::Triple::PAuthTest)
+      return "aarch64-linux-pauthtest";
     return "aarch64-linux-gnu";
   case llvm::Triple::aarch64_be:
     return "aarch64_be-linux-gnu";
@@ -797,6 +800,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::KernelAddress;

@@ -26,10 +26,10 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -291,8 +291,7 @@ public:
   }
   HexagonTargetELFStreamer(MCStreamer &S, MCSubtargetInfo const &STI)
       : HexagonTargetStreamer(S) {
-    MCAssembler &MCA = getStreamer().getAssembler();
-    MCA.setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
+    getStreamer().getWriter().setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
   }
 
   void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,

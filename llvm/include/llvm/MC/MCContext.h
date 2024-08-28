@@ -468,6 +468,10 @@ public:
   /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
   MCSymbol *createBlockSymbol(const Twine &Name, bool AlwaysEmit = false);
 
+  /// Create a local, non-temporary symbol like an ELF mapping symbol. Calling
+  /// the function with the same name will generate new, unique instances.
+  MCSymbol *createLocalSymbol(StringRef Name);
+
   /// Create the definition of a directional local symbol for numbered label
   /// (used for "1:" definitions).
   MCSymbol *createDirectionalLocalSymbol(unsigned LocalLabelVal);

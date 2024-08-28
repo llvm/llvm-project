@@ -88,8 +88,8 @@ private:
   [[nodiscard]] dependency_directives_scan::Token &
   lexToken(const char *&First, const char *const End);
 
-  dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
-                                                        const char *const End);
+  [[nodiscard]] dependency_directives_scan::Token &
+  lexIncludeFilename(const char *&First, const char *const End);
 
   void skipLine(const char *&First, const char *const End);
   void skipDirective(StringRef Name, const char *&First, const char *const End);
@@ -544,7 +544,7 @@ Scanner::lexIncludeFilename(const char *&First, const char *const End) {
 void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
   while (true) {
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
-    if (Tok.is(tok::eod))
+    if (Tok.is(tok::eod) || Tok.is(tok::eof))
       break;
   }
 }
@@ -912,7 +912,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   case pp___include_macros:
   case pp_include_next:
   case pp_import:
-    lexIncludeFilename(First, End);
+    // Ignore missing filenames in include or import directives.
+    if (lexIncludeFilename(First, End).is(tok::eod)) {
+      return false;
+    }
     break;
   default:
     break;

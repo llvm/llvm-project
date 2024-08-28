@@ -1506,7 +1506,8 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(PrefAlign))
+    MaybeAlign StackAlign = DL.getStackAlignment();
+    if (StackAlign && PrefAlign > *StackAlign)
       return CurrentAlign;
     AI->setAlignment(PrefAlign);
     return PrefAlign;
@@ -1726,7 +1727,27 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
   // know nothing about the variable's content.
-  DV = UndefValue::get(DV->getType());
+  DV = PoisonValue::get(DV->getType());
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
+                                    SI->getIterator());
+}
+
+static DIExpression *dropInitialDeref(const DIExpression *DIExpr) {
+  int NumEltDropped = DIExpr->getElements()[0] == dwarf::DW_OP_LLVM_arg ? 3 : 1;
+  return DIExpression::get(DIExpr->getContext(),
+                           DIExpr->getElements().drop_front(NumEltDropped));
+}
+
+void llvm::InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
+                                      DIBuilder &Builder) {
+  auto *DIVar = DII->getVariable();
+  assert(DIVar && "Missing variable");
+  auto *DIExpr = DII->getExpression();
+  DIExpr = dropInitialDeref(DIExpr);
+  Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DII);
+
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
                                     SI->getIterator());
 }
@@ -1798,11 +1819,25 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
   // know nothing about the variable's content.
-  DV = UndefValue::get(DV->getType());
+  DV = PoisonValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DbgVariableRecord *NewDVR =
       new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
   SI->getParent()->insertDbgRecordBefore(NewDVR, SI->getIterator());
+}
+
+void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
+                                      DIBuilder &Builder) {
+  auto *DIVar = DVR->getVariable();
+  assert(DIVar && "Missing variable");
+  auto *DIExpr = DVR->getExpression();
+  DIExpr = dropInitialDeref(DIExpr);
+  Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DVR);
+
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
+                                    SI->getIterator());
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated

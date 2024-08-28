@@ -56,6 +56,8 @@ public:
 
   virtual bool NeedToDoInitialImageFetch() = 0;
 
+  std::optional<lldb_private::Address> GetStartAddress() override;
+
 protected:
   void PrivateInitialize(lldb_private::Process *process);
 
@@ -66,8 +68,6 @@ protected:
 
   // Clear method for classes derived from this one
   virtual void DoClear() = 0;
-
-  std::optional<lldb_private::Symbol> GetStartSymbol() override;
 
   void SetDYLDModule(lldb::ModuleSP &dyld_module_sp);
 

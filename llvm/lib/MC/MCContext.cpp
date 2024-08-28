@@ -349,6 +349,11 @@ MCSymbol *MCContext::createNamedTempSymbol() {
   return createNamedTempSymbol("tmp");
 }
 
+MCSymbol *MCContext::createLocalSymbol(StringRef Name) {
+  MCSymbolTableEntry &NameEntry = getSymbolTableEntry(Name);
+  return createSymbolImpl(&NameEntry, /*IsTemporary=*/false);
+}
+
 unsigned MCContext::NextInstance(unsigned LocalLabelVal) {
   MCLabel *&Label = Instances[LocalLabelVal];
   if (!Label)
@@ -692,10 +697,11 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   MCSymbol *COMDATSymbol = nullptr;
   if (!COMDATSymName.empty()) {
     COMDATSymbol = getOrCreateSymbol(COMDATSymName);
+    assert(COMDATSymbol && "COMDATSymbol is null");
     COMDATSymName = COMDATSymbol->getName();
     // A non-associative COMDAT is considered to define the COMDAT symbol. Check
     // the redefinition error.
-    if (Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE && COMDATSymbol &&
+    if (Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE &&
         COMDATSymbol->isDefined() &&
         (!COMDATSymbol->isInSection() ||
          cast<MCSectionCOFF>(COMDATSymbol->getSection()).getCOMDATSymbol() !=

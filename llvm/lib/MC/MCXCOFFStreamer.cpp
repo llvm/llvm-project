@@ -19,6 +19,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 
@@ -108,12 +109,14 @@ void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                                                unsigned Lang, unsigned Reason,
                                                unsigned FunctionSize,
                                                bool hasDebug) {
-  getAssembler().getWriter().addExceptionEntry(Symbol, Trap, Lang, Reason,
-                                               FunctionSize, hasDebug);
+  // TODO: Export XCOFFObjectWriter to llvm/MC/MCXCOFFObjectWriter.h and access
+  // it from MCXCOFFStreamer.
+  XCOFF::addExceptionEntry(getAssembler().getWriter(), Symbol, Trap, Lang,
+                           Reason, FunctionSize, hasDebug);
 }
 
 void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
-  getAssembler().getWriter().addCInfoSymEntry(Name, Metadata);
+  XCOFF::addCInfoSymEntry(getAssembler().getWriter(), Name, Metadata);
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

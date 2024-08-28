@@ -159,6 +159,7 @@ using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 // These clauses are still handled here to cover all alternatives in the
 // main clause variant.
 
+using Absent = tomp::clause::AbsentT<TypeTy, IdTy, ExprTy>;
 using AcqRel = tomp::clause::AcqRelT<TypeTy, IdTy, ExprTy>;
 using Acquire = tomp::clause::AcquireT<TypeTy, IdTy, ExprTy>;
 using AdjustArgs = tomp::clause::AdjustArgsT<TypeTy, IdTy, ExprTy>;
@@ -175,6 +176,7 @@ using Bind = tomp::clause::BindT<TypeTy, IdTy, ExprTy>;
 using Capture = tomp::clause::CaptureT<TypeTy, IdTy, ExprTy>;
 using Collapse = tomp::clause::CollapseT<TypeTy, IdTy, ExprTy>;
 using Compare = tomp::clause::CompareT<TypeTy, IdTy, ExprTy>;
+using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Copyin = tomp::clause::CopyinT<TypeTy, IdTy, ExprTy>;
 using Copyprivate = tomp::clause::CopyprivateT<TypeTy, IdTy, ExprTy>;
 using Defaultmap = tomp::clause::DefaultmapT<TypeTy, IdTy, ExprTy>;
@@ -199,6 +201,7 @@ using Full = tomp::clause::FullT<TypeTy, IdTy, ExprTy>;
 using Grainsize = tomp::clause::GrainsizeT<TypeTy, IdTy, ExprTy>;
 using HasDeviceAddr = tomp::clause::HasDeviceAddrT<TypeTy, IdTy, ExprTy>;
 using Hint = tomp::clause::HintT<TypeTy, IdTy, ExprTy>;
+using Holds = tomp::clause::HoldsT<TypeTy, IdTy, ExprTy>;
 using If = tomp::clause::IfT<TypeTy, IdTy, ExprTy>;
 using Inbranch = tomp::clause::InbranchT<TypeTy, IdTy, ExprTy>;
 using Inclusive = tomp::clause::InclusiveT<TypeTy, IdTy, ExprTy>;
@@ -213,6 +216,9 @@ using Map = tomp::clause::MapT<TypeTy, IdTy, ExprTy>;
 using Match = tomp::clause::MatchT<TypeTy, IdTy, ExprTy>;
 using Mergeable = tomp::clause::MergeableT<TypeTy, IdTy, ExprTy>;
 using Message = tomp::clause::MessageT<TypeTy, IdTy, ExprTy>;
+using NoOpenmp = tomp::clause::NoOpenmpT<TypeTy, IdTy, ExprTy>;
+using NoOpenmpRoutines = tomp::clause::NoOpenmpRoutinesT<TypeTy, IdTy, ExprTy>;
+using NoParallelism = tomp::clause::NoParallelismT<TypeTy, IdTy, ExprTy>;
 using Nocontext = tomp::clause::NocontextT<TypeTy, IdTy, ExprTy>;
 using Nogroup = tomp::clause::NogroupT<TypeTy, IdTy, ExprTy>;
 using Nontemporal = tomp::clause::NontemporalT<TypeTy, IdTy, ExprTy>;

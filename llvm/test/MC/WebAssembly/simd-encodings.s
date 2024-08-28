@@ -1,4 +1,4 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd,+half-precision < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd,+fp16 < %s | FileCheck %s
 
 main:
     .functype main () -> ()
@@ -850,6 +850,9 @@ main:
 
     # CHECK: f16x8.extract_lane 1 # encoding: [0xfd,0xa1,0x02,0x01]
     f16x8.extract_lane 1
+
+    # CHECK: f16x8.replace_lane 1 # encoding: [0xfd,0xa2,0x02,0x01]
+    f16x8.replace_lane 1
 
     # CHECK: f16x8.add # encoding: [0xfd,0xb4,0x02]
     f16x8.add

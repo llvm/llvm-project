@@ -17,6 +17,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/CommonTypeConstraints.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
 // This is to differentiate the types here with the ones in OpBase.td. We should
@@ -107,6 +108,25 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E4M3Type
+
+def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
+  let summary = "8-bit floating point with 3 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S1E4M3
+      * exponent bias: 7
+      * infinities: supported with exponent set to all 1s and mantissa 0s
+      * NaNs: supported with exponent bits set to all 1s and mantissa of
+        (001, 010, 011, 100, 101, 110, 111)
+      * denormals when exponent is 0
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Float8E4M3FNType
 
 def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN"> {
@@ -191,6 +211,25 @@ def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ", "f8E4M3B1
       * denormals when exponent is 0
 
     Related to: https://dl.acm.org/doi/10.5555/3454287.3454728
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Float8E3M4Type
+
+def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
+  let summary = "8-bit floating point with 3 bits exponent and 4 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 3 bits exponent and 4 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S1E3M4
+      * exponent bias: 3
+      * infinities: supported with exponent set to all 1s and mantissa 0s
+      * NaNs: supported with exponent bits set to all 1s and mantissa values of
+        {0,1}⁴ except S.111.0000
+      * denormals when exponent is 0
   }];
 }
 
@@ -1058,6 +1097,10 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
+def Builtin_VectorTypeElementType : AnyTypeOf<[AnyInteger, Index, AnyFloat]> {
+  let cppFunctionName = "isValidVectorTypeElementType";
+}
+
 def Builtin_Vector : Builtin_Type<"Vector", "vector",
     [ShapedTypeInterface, ValueSemantics], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
@@ -1108,7 +1151,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
-    "Type":$elementType,
+    Builtin_VectorTypeElementType:$elementType,
     ArrayRefParameter<"bool">:$scalableDims
   );
   let builders = [
@@ -1132,11 +1175,8 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
     class Builder;
 
     /// Returns true if the given type can be used as an element of a vector
-    /// type. In particular, vectors can consist of integer, index, or float
-    /// primitives.
-    static bool isValidElementType(Type t) {
-      return ::llvm::isa<IntegerType, IndexType, FloatType>(t);
-    }
+    /// type. See "Builtin_VectorTypeElementType" for allowed types.
+    static bool isValidElementType(Type t);
 
     /// Returns true if the vector contains scalable dimensions.
     bool isScalable() const {
@@ -1147,6 +1187,11 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
       if (getRank() == 0)
         return false;
       return !llvm::is_contained(getScalableDims(), false);
+    }
+
+    /// Get the number of scalable dimensions.
+    int64_t getNumScalableDims() const {
+      return llvm::count(getScalableDims(), true);
     }
 
     /// Get or create a new VectorType with the same shape as `this` and an

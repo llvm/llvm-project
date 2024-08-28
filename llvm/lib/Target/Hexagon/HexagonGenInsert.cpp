@@ -1451,7 +1451,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
         Opc == TargetOpcode::LIFETIME_END)
       continue;
     bool Store = false;
-    if (MI->isInlineAsm() || !MI->isSafeToMove(nullptr, Store))
+    if (MI->isInlineAsm() || !MI->isSafeToMove(Store))
       continue;
 
     bool AllDead = true;

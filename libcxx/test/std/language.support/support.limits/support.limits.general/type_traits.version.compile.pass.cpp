@@ -857,16 +857,16 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if __has_builtin(__builtin_is_virtual_base_of)
 #   ifndef __cpp_lib_is_virtual_base_of
 #     error "__cpp_lib_is_virtual_base_of should be defined in c++26"
 #   endif
 #   if __cpp_lib_is_virtual_base_of != 202406L
 #     error "__cpp_lib_is_virtual_base_of should have the value 202406L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_is_virtual_base_of
-#     error "__cpp_lib_is_virtual_base_of should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_is_virtual_base_of should not be defined when the requirement '__has_builtin(__builtin_is_virtual_base_of)' is not met!"
 #   endif
 # endif
 

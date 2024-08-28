@@ -7644,9 +7644,9 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX7-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB28_2
-; GFX7-NEXT:  ; %bb.3: ; %Flow22
+; GFX7-NEXT:  ; %bb.3: ; %Flow23
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GFX7-NEXT:  .LBB28_4: ; %Flow23
+; GFX7-NEXT:  .LBB28_4: ; %Flow24
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX7-NEXT:    v_readfirstlane_b32 s10, v1
@@ -7674,7 +7674,7 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX7-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB28_6
-; GFX7-NEXT:  .LBB28_7: ; %Flow21
+; GFX7-NEXT:  .LBB28_7: ; %Flow22
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX7-NEXT:    v_mul_f32_e32 v0, 0x42280000, v0
@@ -7723,7 +7723,7 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX7-NEXT:    s_cbranch_execnz .LBB28_11
 ; GFX7-NEXT:  ; %bb.12: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX7-NEXT:  .LBB28_13: ; %Flow19
+; GFX7-NEXT:  .LBB28_13: ; %Flow20
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
 ; GFX7-NEXT:    v_readfirstlane_b32 s4, v2
@@ -7768,9 +7768,9 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX6-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB28_2
-; GFX6-NEXT:  ; %bb.3: ; %Flow20
+; GFX6-NEXT:  ; %bb.3: ; %Flow21
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GFX6-NEXT:  .LBB28_4: ; %Flow21
+; GFX6-NEXT:  .LBB28_4: ; %Flow22
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX6-NEXT:    v_readfirstlane_b32 s10, v1
@@ -7798,7 +7798,7 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX6-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB28_6
-; GFX6-NEXT:  .LBB28_7: ; %Flow19
+; GFX6-NEXT:  .LBB28_7: ; %Flow20
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x42280000, v0
@@ -7847,7 +7847,7 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX6-NEXT:    s_cbranch_execnz .LBB28_11
 ; GFX6-NEXT:  ; %bb.12: ; %Flow
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX6-NEXT:  .LBB28_13: ; %Flow17
+; GFX6-NEXT:  .LBB28_13: ; %Flow18
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
 ; GFX6-NEXT:    v_readfirstlane_b32 s4, v2
@@ -8484,9 +8484,9 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX7-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB29_2
-; GFX7-NEXT:  ; %bb.3: ; %Flow22
+; GFX7-NEXT:  ; %bb.3: ; %Flow23
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GFX7-NEXT:  .LBB29_4: ; %Flow23
+; GFX7-NEXT:  .LBB29_4: ; %Flow24
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX7-NEXT:    v_readfirstlane_b32 s10, v1
@@ -8514,7 +8514,7 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX7-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB29_6
-; GFX7-NEXT:  .LBB29_7: ; %Flow21
+; GFX7-NEXT:  .LBB29_7: ; %Flow22
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX7-NEXT:    v_mul_f32_e32 v0, 0x42280000, v0
@@ -8563,7 +8563,7 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX7-NEXT:    s_cbranch_execnz .LBB29_11
 ; GFX7-NEXT:  ; %bb.12: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX7-NEXT:  .LBB29_13: ; %Flow19
+; GFX7-NEXT:  .LBB29_13: ; %Flow20
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
 ; GFX7-NEXT:    v_readfirstlane_b32 s4, v2
@@ -8608,9 +8608,9 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX6-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB29_2
-; GFX6-NEXT:  ; %bb.3: ; %Flow20
+; GFX6-NEXT:  ; %bb.3: ; %Flow21
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GFX6-NEXT:  .LBB29_4: ; %Flow21
+; GFX6-NEXT:  .LBB29_4: ; %Flow22
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX6-NEXT:    v_readfirstlane_b32 s10, v1
@@ -8638,7 +8638,7 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX6-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB29_6
-; GFX6-NEXT:  .LBB29_7: ; %Flow19
+; GFX6-NEXT:  .LBB29_7: ; %Flow20
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x42280000, v0
@@ -8687,7 +8687,7 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX6-NEXT:    s_cbranch_execnz .LBB29_11
 ; GFX6-NEXT:  ; %bb.12: ; %Flow
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX6-NEXT:  .LBB29_13: ; %Flow17
+; GFX6-NEXT:  .LBB29_13: ; %Flow18
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
 ; GFX6-NEXT:    v_readfirstlane_b32 s4, v2
