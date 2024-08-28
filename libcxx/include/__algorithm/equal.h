@@ -10,10 +10,10 @@
 #ifndef _LIBCPP___ALGORITHM_EQUAL_H
 #define _LIBCPP___ALGORITHM_EQUAL_H
 
-#include <__iterator/segmented_iterator.h>
 #include <__algorithm/comp.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
+#include <__iterator/segmented_iterator.h>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__iterator/distance.h>
@@ -55,64 +55,65 @@ __equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&)
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 
-template <class _SegmentedIterator1, class _SegmentedIterator2, class _BinaryPredicate>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_segment_iter(
-    _SegmentedIterator1 __first1, _SegmentedIterator1 __last1, _SegmentedIterator2 __first2, _BinaryPredicate __pred) {
-  using _Traits1 = __segmented_iterator_traits<_SegmentedIterator1>;
-  using _Traits2 = __segmented_iterator_traits<_SegmentedIterator2>;
+// template <class _SegmentedIterator1, class _SegmentedIterator2, class _BinaryPredicate, enable_if_t<__is_segmented_iterator<_SegmentedIterator1>::value && 
+// __is_segmented_iterator<_SegmentedIterator2>::value, int> = 0>
+// _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_segment_iter(
+//     _SegmentedIterator1 __first1, _SegmentedIterator1 __last1, _SegmentedIterator2 __first2, _BinaryPredicate __pred) {
+//   using _Traits1 = __segmented_iterator_traits<_SegmentedIterator1>;
+//   using _Traits2 = __segmented_iterator_traits<_SegmentedIterator2>;
 
-  auto __sfirst1 = _Traits1::__segment(__first1);
-  auto __slast1  = _Traits1::__segment(__last1);
+//   auto __sfirst1 = _Traits1::__segment(__first1);
+//   auto __slast1  = _Traits1::__segment(__last1);
 
-  auto __sfirst2 = _Traits2::__segment(__first2);
+//   auto __sfirst2 = _Traits2::__segment(__first2);
 
-  // Both have only 1 segment
-  if (__sfirst1 == __slast1)
-    return std::__equal_iter_impl(
-        std::__unwrap_iter(_Traits1::__local(__first1)),
-        std::__unwrap_iter(_Traits1::__local(__last1)),
-        std::__unwrap_iter(_Traits2::__local(__first2)),
-        __pred);
+//   // Both have only 1 segment
+//   if (__sfirst1 == __slast1)
+//     return std::__equal_iter_impl(
+//         std::__unwrap_iter(_Traits1::__local(__first1)),
+//         std::__unwrap_iter(_Traits1::__local(__last1)),
+//         std::__unwrap_iter(_Traits2::__local(__first2)),
+//         __pred);
 
-  { // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
-    if (!std::__equal_iter_impl(
-            std::__unwrap_iter(_Traits1::__local(__first1)),
-            std::__unwrap_iter(_Traits1::__end(__sfirst1)),
-            std::__unwrap_iter(_Traits2::__local(__first2)),
-            __pred)) {
-      return false;
-    }
-  }
-  ++__sfirst1;
-  ++__sfirst2;
+//   { // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
+//     if (!std::__equal_iter_impl(
+//             std::__unwrap_iter(_Traits1::__local(__first1)),
+//             std::__unwrap_iter(_Traits1::__end(__sfirst1)),
+//             std::__unwrap_iter(_Traits2::__local(__first2)),
+//             __pred)) {
+//       return false;
+//     }
+//   }
+//   ++__sfirst1;
+//   ++__sfirst2;
 
-  // Iterate over the segments which are guaranteed to be completely in the range
-  while (__sfirst1 != __slast1) {
-    if (!std::__equal_iter_impl(
-            std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
-            std::__unwrap_iter(_Traits1::__end(__sfirst1)),
-            std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
-            __pred)) {
-      return false;
-    }
-    ++__sfirst1;
-    ++__sfirst2;
-  }
+//   // Iterate over the segments which are guaranteed to be completely in the range
+//   while (__sfirst1 != __slast1) {
+//     if (!std::__equal_iter_impl(
+//             std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
+//             std::__unwrap_iter(_Traits1::__end(__sfirst1)),
+//             std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
+//             __pred)) {
+//       return false;
+//     }
+//     ++__sfirst1;
+//     ++__sfirst2;
+//   }
 
-  // Iterate over the last segment
-  return std::__equal_iter_impl(
-      std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
-      std::__unwrap_iter(_Traits1::__local(__last1)),
-      std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
-      __pred);
-}
+//   // Iterate over the last segment
+//   return std::__equal_iter_impl(
+//       std::__unwrap_iter(_Traits1::__begin(__sfirst1)),
+//       std::__unwrap_iter(_Traits1::__local(__last1)),
+//       std::__unwrap_iter(_Traits2::__begin(__sfirst2)),
+//       __pred);
+// }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred) {
-  if (__is_segmented_iterator<_InputIterator1>::value && __is_segmented_iterator<_InputIterator2>::value) {
-    return std::__equal_segment_iter(__first1, __last1, __first2, __pred);
-  }
+  // if (__is_segmented_iterator<_InputIterator1>::value && __is_segmented_iterator<_InputIterator2>::value) {
+  //   return std::__equal_segment_iter(__first1, __last1, __first2, __pred);
+  // }
   return std::__equal_iter_impl(
       std::__unwrap_iter(__first1), std::__unwrap_iter(__last1), std::__unwrap_iter(__first2), __pred);
 }
