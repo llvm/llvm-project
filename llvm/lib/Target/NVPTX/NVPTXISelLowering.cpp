@@ -207,6 +207,10 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       EVT EltVT = VT.getVectorElementType();
+      // We require power-of-2 sized vectors becuase
+      // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
+      // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
+      // vectors.
       if ((Is16bitsType(EltVT.getSimpleVT())) && NumElts % 2 == 0 &&
           isPowerOf2_32(NumElts)) {
         // Vectors with an even number of f16 elements will be passed to
