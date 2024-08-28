@@ -78,11 +78,10 @@ TEST_CONSTEXPR_CXX23 void test() {
   }
 }
 
-#if TEST_STD_VER >= 23
-static_assert((test(), true));
-#endif
-
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 23
+  static_assert((test(), true));
+#endif
   return 0;
 }
