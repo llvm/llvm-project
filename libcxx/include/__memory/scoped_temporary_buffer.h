@@ -41,11 +41,10 @@ public:
     __try_allocate(__count);
   }
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
+  // This constructor is only needed to implement get_temporary_buffer().
   // pre: __buf_ptr points to the beginning of a previously allocated scoped temporary buffer or is null
   // notes: __count_ is ignored in non-constant evaluation
   _LIBCPP_HIDE_FROM_ABI explicit __scoped_temporary_buffer(_Tp* __buf_ptr) _NOEXCEPT : __ptr_(__buf_ptr), __count_(0) {}
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__scoped_temporary_buffer() _NOEXCEPT {
     if (__libcpp_is_constant_evaluated()) {
@@ -103,7 +102,6 @@ public:
     return __result;
   }
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __temporary_allocation_result<_Tp> __release_to_raw() _NOEXCEPT {
     __temporary_allocation_result<_Tp> __result = {__ptr_, __count_};
 
@@ -112,7 +110,6 @@ public:
 
     return __result;
   }
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
 
 private:
   _Tp* __ptr_;
