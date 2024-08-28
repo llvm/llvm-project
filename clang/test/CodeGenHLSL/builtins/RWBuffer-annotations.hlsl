@@ -9,6 +9,8 @@ RWBuffer<vector<float, 4> > BufferArray2[4] : register(u4);
 RWBuffer<float> Buffer3 : register(u3, space1);
 RWBuffer<vector<float, 4> > BufferArray3[4] : register(u4, space1);
 
+
+
 [numthreads(1,1,1)]
 void main() {
 }
