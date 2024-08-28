@@ -93,12 +93,8 @@ public:
 
 class ConstantExpr : public ScriptExpr {
 public:
-  // ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
   ConstantExpr(uint64_t val) : ScriptExpr(ExprKind::Constant), val_(val) {}
-  std::function<ExprValue()> getConstantExpr() const {
-    return [=] { return val_; };
-  }
-  ExprValue getConstantExprValue() const { return ExprValue(val_); }
+  ExprValue getExprValue() const { return ExprValue(val_); }
 
 private:
   // ExprValue val_;
@@ -107,12 +103,10 @@ private:
 
 class DynamicExpr : public ScriptExpr {
 public:
-  // static DynamicExpr create(std::function<ExprValue()> impl) {
-  //   return DynamicExpr(impl);
-  // }
-  std::function<ExprValue()> getImpl() const { return impl_; }
+  // std::function<ExprValue()> getImpl() const { return impl_; }
   DynamicExpr(std::function<ExprValue()> impl)
       : ScriptExpr(ExprKind::Dynamic), impl_(impl) {}
+  ExprValue getExprValue() const { return impl_(); }
 
 private:
   std::function<ExprValue()> impl_;
@@ -123,7 +117,10 @@ public:
   static const UnaryExpr *create();
 
 private:
-  UnaryExpr() : ScriptExpr(ExprKind::Unary) {}
+  UnaryExpr(StringRef op, ScriptExpr *operand)
+      : ScriptExpr(ExprKind::Unary), op_(op), operand_(operand) {}
+  StringRef op_;
+  const ScriptExpr *operand_;
 };
 
 class BinaryExpr : public ScriptExpr {
@@ -163,7 +160,7 @@ public:
       : ScriptExpr(ExprKind::Binary), LHS(LHS), RHS(RHS), loc_(loc) {
     opcode = stringToOp(op);
   }
-  ExprValue evaluateBinaryOperands() const;
+  ExprValue getExprValue() const;
   // Some operations only support one non absolute value. Move the
   // absolute one to the right hand side for convenience.
   static void moveAbsRight(ExprValue &a, ExprValue &b);

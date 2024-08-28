@@ -131,31 +131,14 @@ uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
 
-std::function<ExprValue()> ScriptExpr::getExpr() const {
-  switch (kind_) {
-  case ExprKind::Constant:
-    return static_cast<const ConstantExpr *>(this)->getConstantExpr();
-  case ExprKind::Dynamic: {
-    auto expr = static_cast<const DynamicExpr *>(this);
-    return expr->getImpl();
-  }
-  case ExprKind::Binary: {
-    auto expr = static_cast<const BinaryExpr *>(this);
-    return [=] { return expr->evaluateBinaryOperands(); };
-  }
-  default:
-    return [] { return ExprValue(0); };
-  };
-}
-
 ExprValue ScriptExpr::getExprValue() const {
   switch (kind_) {
   case ExprKind::Constant:
-    return static_cast<const ConstantExpr *>(this)->getConstantExprValue();
+    return static_cast<const ConstantExpr *>(this)->getExprValue();
   case ExprKind::Dynamic:
-    return static_cast<const DynamicExpr *>(this)->getImpl()();
+    return static_cast<const DynamicExpr *>(this)->getExprValue();
   case ExprKind::Binary:
-    return static_cast<const BinaryExpr *>(this)->evaluateBinaryOperands();
+    return static_cast<const BinaryExpr *>(this)->getExprValue();
   default:
     return ExprValue(0);
   }
@@ -180,7 +163,7 @@ BinaryExpr::Op BinaryExpr::stringToOp(const StringRef op) {
   return Op::Invalid;
 }
 
-ExprValue BinaryExpr::evaluateBinaryOperands() const {
+ExprValue BinaryExpr::getExprValue() const {
   switch (opcode) {
   case Op::Add:
   case Op::AddAssign:
