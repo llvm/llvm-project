@@ -1,4 +1,4 @@
-// Tests division operations and their variants (e.g. ceil/floordiv, rem etc)
+// Tests division operations and their variants (e.g., ceil/floordiv, rem, etc.)
 
 // RUN: mlir-opt %s --arith-expand --test-lower-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
