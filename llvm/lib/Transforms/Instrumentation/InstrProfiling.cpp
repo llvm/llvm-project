@@ -132,6 +132,11 @@ cl::opt<bool> AtomicFirstCounter(
              "the entry counter)"),
     cl::init(false));
 
+cl::opt<bool> ConditionalCounterUpdate(
+    "conditional-counter-update",
+    cl::desc("Do conditional counter updates in single byte counters mode)"),
+    cl::init(false));
+
 // If the option is not specified, the default behavior about whether
 // counter promotion is done depends on how instrumentaiton lowering
 // pipeline is setup, i.e., the default value of true of this option
@@ -1054,6 +1059,8 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                       llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
+  auto *NormalizedDataVarPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      DataVar, PointerType::get(M.getContext(), 0));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -1062,11 +1069,13 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
-    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedDataVarPtr,
+                      Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(M, *TLI), Args,
                               OpBundles);
   } else {
-    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedDataVarPtr,
+                      Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(M, *TLI, ValueProfilingCallType::MemOp),
         Args, OpBundles);
@@ -1213,6 +1222,17 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  if (ConditionalCounterUpdate) {
+    Instruction *SplitBefore = CoverInstruction->getNextNode();
+    auto &Ctx = CoverInstruction->getParent()->getContext();
+    auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
+    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
+    Builder.SetInsertPoint(ThenBranch);
+  }
+
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();
@@ -1798,7 +1818,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
-    ValuesPtrExpr = ValuesVar;
+    ValuesPtrExpr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+        ValuesVar, PointerType::get(Fn->getContext(), 0));
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
@@ -1822,6 +1843,10 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
+  if (isGPUProfTarget(M)) {
+    Linkage = GlobalValue::ExternalLinkage;
+    Visibility = GlobalValue::ProtectedVisibility;
+  }
   // If the data variable is not referenced by code (if we don't emit
   // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
   // data variable live under linker GC, the data variable can be private. This
@@ -1833,9 +1858,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // If profd is in a deduplicate comdat, NS==0 with a hash suffix guarantees
   // that other copies must have the same CFG and cannot have value profiling.
   // If no hash suffix, other profd copies may be referenced by code.
-  if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
-      (TT.isOSBinFormatELF() ||
-       (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
+  else if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
+           (TT.isOSBinFormatELF() ||
+            (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
@@ -1958,6 +1983,13 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
+
+  // Make names variable public if current target is a GPU
+  if (isGPUProfTarget(M)) {
+    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
+    NamesVar->setVisibility(GlobalValue::VisibilityTypes::ProtectedVisibility);
+  }
+
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
   NamesVar->setSection(
@@ -2024,10 +2056,13 @@ void InstrLowerer::emitRegistration() {
   IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", RegisterF));
   for (Value *Data : CompilerUsedVars)
     if (!isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, Data);
+      // Check for addrspace cast when profiling GPU
+      IRB.CreateCall(RuntimeRegisterF,
+                     IRB.CreatePointerBitCastOrAddrSpaceCast(Data, VoidPtrTy));
   for (Value *Data : UsedVars)
     if (Data != NamesVar && !isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, Data);
+      IRB.CreateCall(RuntimeRegisterF,
+                     IRB.CreatePointerBitCastOrAddrSpaceCast(Data, VoidPtrTy));
 
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
@@ -2036,7 +2071,9 @@ void InstrLowerer::emitRegistration() {
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);
-    IRB.CreateCall(NamesRegisterF, {NamesVar, IRB.getInt64(NamesSize)});
+    IRB.CreateCall(NamesRegisterF, {IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                        NamesVar, VoidPtrTy),
+                                    IRB.getInt64(NamesSize)});
   }
 
   IRB.CreateRetVoid();
@@ -2057,7 +2094,10 @@ bool InstrLowerer::emitRuntimeHook() {
   auto *Var =
       new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
-  Var->setVisibility(GlobalValue::HiddenVisibility);
+  if (isGPUProfTarget(M))
+    Var->setVisibility(GlobalValue::ProtectedVisibility);
+  else
+    Var->setVisibility(GlobalValue::HiddenVisibility);
 
   if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.

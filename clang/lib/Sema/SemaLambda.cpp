@@ -14,6 +14,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
@@ -2393,11 +2394,10 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   if (!FDPattern)
     return;
 
-  SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
-
   if (!ShouldAddDeclsFromParentScope)
     return;
 
+  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
   llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
       ParentInstantiations;
   while (true) {
@@ -2421,5 +2421,11 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
     SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
     SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
+
+    if (isLambdaCallOperator(FD))
+      SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
   }
+
+  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
+                                         MLTAL);
 }

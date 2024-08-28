@@ -70,7 +70,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
   }
   if (Subtarget->hasReferenceTypes()) {
@@ -146,7 +146,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
@@ -1189,8 +1189,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+    MaybeAlign StackAlign = Layout.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;

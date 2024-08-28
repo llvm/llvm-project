@@ -46,7 +46,7 @@
 ; RUN: llvm-ctxprof-util fromJSON --input %t_exp/ctxprof.json --output %t_exp/ctxprof.bitstream
 ; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc \
 ; RUN:  -o %t_exp/result.o -save-temps \
-; RUN:  -thinlto-pgo-ctx-prof=%t_exp/ctxprof.bitstream \
+; RUN:  -use-ctx-profile=%t_exp/ctxprof.bitstream \
 ; RUN:  -r %t/m1.bc,m1_f1,plx \
 ; RUN:  -r %t/m2.bc,m2_f1,plx
 ; RUN: llvm-dis %t_exp/result.o.1.3.import.bc -o - | FileCheck %s --check-prefix=FIRST

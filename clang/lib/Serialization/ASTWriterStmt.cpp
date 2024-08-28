@@ -1063,6 +1063,7 @@ void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
   CurrentPackingBits.addBits(E->getOpcode(), /*Width=*/6);
   bool HasFPFeatures = E->hasStoredFPFeatures();
   CurrentPackingBits.addBit(HasFPFeatures);
+  CurrentPackingBits.addBit(E->hasExcludedOverflowPattern());
   Record.AddStmt(E->getLHS());
   Record.AddStmt(E->getRHS());
   Record.AddSourceLocation(E->getOperatorLoc());

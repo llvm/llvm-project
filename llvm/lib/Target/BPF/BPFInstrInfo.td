@@ -677,9 +677,7 @@ let isBranch = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1 in {
 }
 
 // Jump and link
-let isCall=1, hasDelaySlot=0, Uses = [R11],
-    // Potentially clobbered registers
-    Defs = [R0, R1, R2, R3, R4, R5] in {
+let isCall=1, hasDelaySlot=0, Uses = [R11] in {
   def JAL  : CALL<"call">;
   def JALX  : CALLX<"callx">;
 }

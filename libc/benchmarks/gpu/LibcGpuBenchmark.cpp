@@ -115,7 +115,7 @@ void print_results(Benchmark *b) {
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
   LIBC_NAMESPACE::printf(
-      "%-20s |%8ld |%8ld |%8ld |%11d |%14ld %2s |%9ld |%9d |\n",
+      "%-24s |%8ld |%8ld |%8ld |%11d |%14ld %2s |%9ld |%9d |\n",
       b->get_test_name().data(), result.cycles, result.min, result.max,
       result.total_iterations, result.total_time, time_unit,
       static_cast<uint64_t>(result.standard_deviation), num_threads);
@@ -127,7 +127,7 @@ void print_header() {
                          benchmarks[0]->get_suite_name().data());
   LIBC_NAMESPACE::printf("%s", RESET);
   cpp::string titles =
-      "Benchmark            |  Cycles |     Min |     Max | "
+      "Benchmark                |  Cycles |     Min |     Max | "
       "Iterations | Time / Iteration |   Stddev |  Threads |\n";
   LIBC_NAMESPACE::printf(titles.data());
 

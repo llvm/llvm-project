@@ -8,8 +8,8 @@
 // Classes to parse and store HW mode information for instruction selection.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
-#define LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -72,4 +72,4 @@ private:
 };
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H

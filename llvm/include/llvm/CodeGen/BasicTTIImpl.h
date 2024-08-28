@@ -394,11 +394,6 @@ public:
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
-  bool shouldFoldTerminatingConditionAfterLSR() const {
-    return TargetTransformInfoImplBase::
-        shouldFoldTerminatingConditionAfterLSR();
-  }
-
   bool shouldDropLSRSolutionIfLessProfitable() const {
     return TargetTransformInfoImplBase::shouldDropLSRSolutionIfLessProfitable();
   }
@@ -525,7 +520,7 @@ public:
         TM.getCodeModel() == CodeModel::Large)
       return false;
 
-    Triple TargetTriple = TM.getTargetTriple();
+    const Triple &TargetTriple = TM.getTargetTriple();
     if (!TargetTriple.isArch64Bit())
       return false;
 
@@ -2037,6 +2032,12 @@ public:
     case Intrinsic::maximum:
       ISD = ISD::FMAXIMUM;
       break;
+    case Intrinsic::minimumnum:
+      ISD = ISD::FMINIMUMNUM;
+      break;
+    case Intrinsic::maximumnum:
+      ISD = ISD::FMAXIMUMNUM;
+      break;
     case Intrinsic::copysign:
       ISD = ISD::FCOPYSIGN;
       break;
@@ -2120,20 +2121,9 @@ public:
     case Intrinsic::vector_reduce_fminimum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
-    case Intrinsic::abs: {
-      // abs(X) = select(icmp(X,0),X,sub(0,X))
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
-      InstructionCost Cost = 0;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                          Pred, CostKind);
-      // TODO: Should we add an OperandValueProperties::OP_Zero property?
-      Cost += thisT()->getArithmeticInstrCost(
-         BinaryOperator::Sub, RetTy, CostKind, {TTI::OK_UniformConstantValue, TTI::OP_None});
-      return Cost;
-    }
+    case Intrinsic::abs:
+      ISD = ISD::ABS;
+      break;
     case Intrinsic::smax:
       ISD = ISD::SMAX;
       break;
@@ -2183,31 +2173,11 @@ public:
       ISD = ISD::UMULO;
       break;
     case Intrinsic::fptosi_sat:
-    case Intrinsic::fptoui_sat: {
-      if (Tys.empty())
-        break;
-      Type *FromTy = Tys[0];
-      bool IsSigned = IID == Intrinsic::fptosi_sat;
-
-      InstructionCost Cost = 0;
-      IntrinsicCostAttributes Attrs1(Intrinsic::minnum, FromTy,
-                                     {FromTy, FromTy});
-      Cost += thisT()->getIntrinsicInstrCost(Attrs1, CostKind);
-      IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, FromTy,
-                                     {FromTy, FromTy});
-      Cost += thisT()->getIntrinsicInstrCost(Attrs2, CostKind);
-      Cost += thisT()->getCastInstrCost(
-          IsSigned ? Instruction::FPToSI : Instruction::FPToUI, RetTy, FromTy,
-          TTI::CastContextHint::None, CostKind);
-      if (IsSigned) {
-        Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost += thisT()->getCmpSelInstrCost(
-            BinaryOperator::FCmp, FromTy, CondTy, CmpInst::FCMP_UNO, CostKind);
-        Cost += thisT()->getCmpSelInstrCost(
-            BinaryOperator::Select, RetTy, CondTy, CmpInst::FCMP_UNO, CostKind);
-      }
-      return Cost;
-    }
+      ISD = ISD::FP_TO_SINT_SAT;
+      break;
+    case Intrinsic::fptoui_sat:
+      ISD = ISD::FP_TO_UINT_SAT;
+      break;
     case Intrinsic::ctpop:
       ISD = ISD::CTPOP;
       // In case of legalization use TCC_Expensive. This is cheaper than a
@@ -2420,6 +2390,47 @@ public:
           Instruction::Shl, RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
           {TTI::OK_UniformConstantValue, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      return Cost;
+    }
+    case Intrinsic::abs: {
+      // abs(X) = select(icmp(X,0),X,sub(0,X))
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
+      InstructionCost Cost = 0;
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          Pred, CostKind);
+      // TODO: Should we add an OperandValueProperties::OP_Zero property?
+      Cost += thisT()->getArithmeticInstrCost(
+          BinaryOperator::Sub, RetTy, CostKind,
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      return Cost;
+    }
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat: {
+      if (Tys.empty())
+        break;
+      Type *FromTy = Tys[0];
+      bool IsSigned = IID == Intrinsic::fptosi_sat;
+
+      InstructionCost Cost = 0;
+      IntrinsicCostAttributes Attrs1(Intrinsic::minnum, FromTy,
+                                     {FromTy, FromTy});
+      Cost += thisT()->getIntrinsicInstrCost(Attrs1, CostKind);
+      IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, FromTy,
+                                     {FromTy, FromTy});
+      Cost += thisT()->getIntrinsicInstrCost(Attrs2, CostKind);
+      Cost += thisT()->getCastInstrCost(
+          IsSigned ? Instruction::FPToSI : Instruction::FPToUI, RetTy, FromTy,
+          TTI::CastContextHint::None, CostKind);
+      if (IsSigned) {
+        Type *CondTy = RetTy->getWithNewBitWidth(1);
+        Cost += thisT()->getCmpSelInstrCost(
+            BinaryOperator::FCmp, FromTy, CondTy, CmpInst::FCMP_UNO, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(
+            BinaryOperator::Select, RetTy, CondTy, CmpInst::FCMP_UNO, CostKind);
+      }
       return Cost;
     }
     default:

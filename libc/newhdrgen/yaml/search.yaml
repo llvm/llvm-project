@@ -19,6 +19,16 @@ functions:
     arguments:
       - type: size_t
       - type: struct hsearch_data *
+  - name: hdestroy
+    standards: GNUExtensions
+    return_type: void
+    arguments: []
+  - name: hdestroy_r
+    standards:
+      - POSIX
+    return_type: void
+    arguments:
+      - type: struct hsearch_data *
   - name: hsearch
     standards:
       - POSIX
@@ -33,16 +43,6 @@ functions:
       - type: ENTRY
       - type: ACTION
       - type: ENTRY * *
-      - type: struct hsearch_data *
-  - name: hdestroy
-    standards: GNUExtensions
-    return_type: void
-    arguments: []
-  - name: hdestroy_r
-    standards:
-      - POSIX
-    return_type: void
-    arguments:
       - type: struct hsearch_data *
   - name: insque
     standards:

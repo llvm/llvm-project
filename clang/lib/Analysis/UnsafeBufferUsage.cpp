@@ -402,9 +402,9 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
 
   QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
 
-  if (Arg0Ty->isConstantArrayType()) {
-    const APSInt ConstArrSize =
-        APSInt(cast<ConstantArrayType>(Arg0Ty)->getSize());
+  if (auto *ConstArrTy =
+          Finder->getASTContext().getAsConstantArrayType(Arg0Ty)) {
+    const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
 
     // Check form 4:
     return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
@@ -926,22 +926,27 @@ public:
 /// A call of a function or method that performs unchecked buffer operations
 /// over one of its pointer parameters.
 class UnsafeBufferUsageAttrGadget : public WarningGadget {
-  constexpr static const char *const OpTag = "call_expr";
-  const CallExpr *Op;
+  constexpr static const char *const OpTag = "attr_expr";
+  const Expr *Op;
 
 public:
   UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::UnsafeBufferUsageAttr),
-        Op(Result.Nodes.getNodeAs<CallExpr>(OpTag)) {}
+        Op(Result.Nodes.getNodeAs<Expr>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::UnsafeBufferUsageAttr;
   }
 
   static Matcher matcher() {
+    auto HasUnsafeFieldDecl =
+        member(fieldDecl(hasAttr(attr::UnsafeBufferUsage)));
+
     auto HasUnsafeFnDecl =
         callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)));
-    return stmt(callExpr(HasUnsafeFnDecl).bind(OpTag));
+
+    return stmt(anyOf(callExpr(HasUnsafeFnDecl).bind(OpTag),
+                      memberExpr(HasUnsafeFieldDecl).bind(OpTag)));
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -2659,7 +2664,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
 
   // Note: the code below expects the declaration to not use any type sugar like
   // typedef.
-  if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
+  if (auto CAT = Ctx.getAsConstantArrayType(D->getType())) {
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
     // FIXME: support multi-dimensional arrays
@@ -2792,8 +2797,7 @@ fixVariable(const VarDecl *VD, FixitStrategy::Kind K,
     return {};
   }
   case FixitStrategy::Kind::Array: {
-    if (VD->isLocalVarDecl() &&
-        isa<clang::ConstantArrayType>(VD->getType().getCanonicalType()))
+    if (VD->isLocalVarDecl() && Ctx.getAsConstantArrayType(VD->getType()))
       return fixVariableWithArray(VD, Tracker, Ctx, Handler);
 
     DEBUG_NOTE_DECL_FAIL(VD, " : not a local const-size array");

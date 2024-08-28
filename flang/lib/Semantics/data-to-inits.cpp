@@ -522,11 +522,10 @@ static const DerivedTypeSpec *HasDefaultInitialization(const Symbol &symbol) {
     } else if (!object->isDummy() && object->type()) {
       if (const DerivedTypeSpec * derived{object->type()->AsDerived()}) {
         DirectComponentIterator directs{*derived};
-        if (std::find_if(
-                directs.begin(), directs.end(), [](const Symbol &component) {
-                  return !IsAllocatable(component) &&
-                      HasDeclarationInitializer(component);
-                }) != directs.end()) {
+        if (llvm::any_of(directs, [](const Symbol &component) {
+              return !IsAllocatable(component) &&
+                  HasDeclarationInitializer(component);
+            })) {
           return derived;
         }
       }

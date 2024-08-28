@@ -565,19 +565,21 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
     OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type
+    OptionalParameter<"DISubroutineTypeAttr">:$type,
+    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
       "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
       "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
+      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+      "ArrayRef<DINodeAttr>":$retainedNodes
     ), [{
       MLIRContext *ctx = file.getContext();
       return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
                    StringAttr::get(ctx, linkageName), file, line,
-                   scopeLine, subprogramFlags, type);
+                   scopeLine, subprogramFlags, type, retainedNodes);
     }]>
   ];
 
@@ -614,6 +616,29 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
     OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"DIScopeAttr">:$scope,
     "bool":$exportSymbols
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIImportedEntityAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIImportedEntityAttr : LLVM_Attr<"DIImportedEntity", "di_imported_entity",
+                                           /*traits=*/[], "DINodeAttr"> {
+  /// TODO: DIImportedEntity has a 'scope' field which represents the scope where
+  /// this entity is imported. Currently, we are not adding a 'scope' field in
+  /// DIImportedEntityAttr to avoid cyclic dependency. As DIImportedEntityAttr
+  /// entries will be contained inside a scope entity (e.g. DISubprogramAttr),
+  /// the scope can easily be inferred.
+  let parameters = (ins
+    LLVM_DITagParameter:$tag,
+    "DINodeAttr":$entity,
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"unsigned">:$line,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -1102,6 +1127,27 @@ def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
 def TailCallKindAttr : LLVM_Attr<"TailCallKind", "tailcallkind"> {
   let parameters = (ins "TailCallKind":$tailCallKind);
   let assemblyFormat = "`<` $tailCallKind `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// WorkgroupAttributionAttr
+//===----------------------------------------------------------------------===//
+
+def WorkgroupAttributionAttr
+    : LLVM_Attr<"WorkgroupAttribution", "mlir.workgroup_attribution"> {
+  let summary = "GPU workgroup attribution information";
+  let description = [{
+    GPU workgroup attributions are `gpu.func` attributes encoding memory
+    allocations in the workgroup address space. These might be encoded as
+    `llvm.ptr` function arguments in our dialect, but then type and size
+    information would be dropped. This attribute can be attached to `llvm.ptr`
+    function arguments encoding GPU workgroup attributions to mark them as
+    arguments encoding workgroup attributions and keeping type and size
+    information in our dialect.
+  }];
+  let parameters = (ins "IntegerAttr":$num_elements,
+                        "TypeAttr":$element_type);
+  let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

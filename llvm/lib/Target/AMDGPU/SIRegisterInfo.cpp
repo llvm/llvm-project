@@ -332,7 +332,7 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
   RegPressureIgnoredUnits.resize(getNumRegUnits());
   RegPressureIgnoredUnits.set(*regunits(MCRegister::from(AMDGPU::M0)).begin());
   for (auto Reg : AMDGPU::VGPR_16RegClass) {
-    if (AMDGPU::isHi(Reg, *this))
+    if (AMDGPU::isHi16Reg(Reg, *this))
       RegPressureIgnoredUnits.set(*regunits(Reg).begin());
   }
 
@@ -2432,7 +2432,94 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       MI->eraseFromParent();
       return true;
     }
+    case AMDGPU::S_ADD_I32: {
+      // TODO: Handle s_or_b32, s_and_b32.
+      unsigned OtherOpIdx = FIOperandNum == 1 ? 2 : 1;
+      MachineOperand &OtherOp = MI->getOperand(OtherOpIdx);
 
+      assert(FrameReg || MFI->isBottomOfStack());
+
+      MachineOperand &DstOp = MI->getOperand(0);
+      const DebugLoc &DL = MI->getDebugLoc();
+      Register MaterializedReg = FrameReg;
+
+      // Defend against live scc, which should never happen in practice.
+      bool DeadSCC = MI->getOperand(3).isDead();
+
+      Register TmpReg;
+
+      if (FrameReg && !ST.enableFlatScratch()) {
+        // FIXME: In the common case where the add does not also read its result
+        // (i.e. this isn't a reg += fi), it's not finding the dest reg as
+        // available.
+        TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass, MI,
+                                               false, 0);
+        BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
+            .addDef(TmpReg, RegState::Renamable)
+            .addReg(FrameReg)
+            .addImm(ST.getWavefrontSizeLog2())
+            .setOperandDead(3); // Set SCC dead
+        MaterializedReg = TmpReg;
+      }
+
+      int64_t Offset = FrameInfo.getObjectOffset(Index);
+
+      // For the non-immediate case, we could fall through to the default
+      // handling, but we do an in-place update of the result register here to
+      // avoid scavenging another register.
+      if (OtherOp.isImm()) {
+        OtherOp.setImm(OtherOp.getImm() + Offset);
+        Offset = 0;
+
+        if (MaterializedReg)
+          FIOp.ChangeToRegister(MaterializedReg, false);
+        else
+          FIOp.ChangeToImmediate(0);
+      } else if (MaterializedReg) {
+        // If we can't fold the other operand, do another increment.
+        Register DstReg = DstOp.getReg();
+
+        if (!TmpReg && MaterializedReg == FrameReg) {
+          TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                 MI, false, 0);
+          DstReg = TmpReg;
+        }
+
+        auto AddI32 = BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_ADD_I32))
+                          .addDef(DstReg, RegState::Renamable)
+                          .addReg(MaterializedReg, RegState::Kill)
+                          .add(OtherOp);
+        if (DeadSCC)
+          AddI32.setOperandDead(3);
+
+        MaterializedReg = DstReg;
+
+        OtherOp.ChangeToRegister(MaterializedReg, false);
+        OtherOp.setIsKill(true);
+        OtherOp.setIsRenamable(true);
+        FIOp.ChangeToImmediate(Offset);
+      } else {
+        // If we don't have any other offset to apply, we can just directly
+        // interpret the frame index as the offset.
+        FIOp.ChangeToImmediate(Offset);
+      }
+
+      if (DeadSCC && OtherOp.isImm() && OtherOp.getImm() == 0) {
+        assert(Offset == 0);
+        MI->removeOperand(3);
+        MI->removeOperand(OtherOpIdx);
+        MI->setDesc(TII->get(FIOp.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+      } else if (DeadSCC && FIOp.isImm() && FIOp.getImm() == 0) {
+        assert(Offset == 0);
+        MI->removeOperand(3);
+        MI->removeOperand(FIOperandNum);
+        MI->setDesc(
+            TII->get(OtherOp.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+      }
+
+      assert(!FIOp.isFI());
+      return true;
+    }
     default: {
       // Other access to frame index
       const DebugLoc &DL = MI->getDebugLoc();

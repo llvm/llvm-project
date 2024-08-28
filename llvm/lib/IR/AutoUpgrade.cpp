@@ -1034,7 +1034,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax")) {
+          Name.starts_with("ds.fmax") ||
+          Name.starts_with("global.atomic.fadd") ||
+          Name.starts_with("flat.atomic.fadd")) {
         // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
         // declaration.
         NewFn = nullptr;
@@ -4042,7 +4044,9 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("ds.fmin", AtomicRMWInst::FMin)
           .StartsWith("ds.fmax", AtomicRMWInst::FMax)
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
-          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
+          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
+          .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4097,8 +4101,10 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
   if (PtrTy->getAddressSpace() != 3) {
-    RMW->setMetadata("amdgpu.no.fine.grained.memory",
-                     MDNode::get(F->getContext(), {}));
+    MDNode *EmptyMD = MDNode::get(F->getContext(), {});
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+    if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
+      RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
   }
 
   if (IsVolatile)
@@ -5272,6 +5278,22 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
     Call.addFnAttr(Attribute::NoBuiltin);
   }
 };
+
+/// Replace "amdgpu-unsafe-fp-atomics" metadata with atomicrmw metadata
+struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
+    : public InstVisitor<AMDGPUUnsafeFPAtomicsUpgradeVisitor> {
+  AMDGPUUnsafeFPAtomicsUpgradeVisitor() = default;
+
+  void visitAtomicRMWInst(AtomicRMWInst &RMW) {
+    if (!RMW.isFloatingPointOperation())
+      return;
+
+    MDNode *Empty = MDNode::get(RMW.getContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
+    RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
+    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
+};
 } // namespace
 
 void llvm::UpgradeFunctionAttributes(Function &F) {
@@ -5293,6 +5315,24 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       A.isValid() && A.isStringAttribute()) {
     F.setSection(A.getValueAsString());
     F.removeFnAttr("implicit-section-name");
+  }
+
+  if (!F.empty()) {
+    // For some reason this is called twice, and the first time is before any
+    // instructions are loaded into the body.
+
+    if (Attribute A = F.getFnAttribute("amdgpu-unsafe-fp-atomics");
+        A.isValid()) {
+
+      if (A.getValueAsBool()) {
+        AMDGPUUnsafeFPAtomicsUpgradeVisitor Visitor;
+        Visitor.visit(F);
+      }
+
+      // We will leave behind dead attribute uses on external declarations, but
+      // clang never added these to declarations anyway.
+      F.removeFnAttr("amdgpu-unsafe-fp-atomics");
+    }
   }
 }
 

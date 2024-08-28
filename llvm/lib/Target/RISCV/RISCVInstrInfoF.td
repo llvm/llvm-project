@@ -603,6 +603,8 @@ def : Pat<(fneg (any_fma_nsz FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3)),
 foreach Ext = FExts in {
   defm : PatFprFpr_m<fminnum, FMIN_S, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_S, Ext>;
+  defm : PatFprFpr_m<fminimumnum, FMIN_S, Ext>;
+  defm : PatFprFpr_m<fmaximumnum, FMAX_S, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
 }

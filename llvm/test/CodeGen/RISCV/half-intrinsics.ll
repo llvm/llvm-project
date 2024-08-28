@@ -2982,3 +2982,191 @@ define half @tan_f16(half %a) nounwind {
   %1 = call half @llvm.tan.f16(half %a)
   ret half %1
 }
+
+declare half @llvm.maximumnum.f16(half, half)
+
+define half @maximumnum_half(half %x, half %y) {
+; CHECKIZFH-LABEL: maximumnum_half:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
+;
+; CHECKIZHINX-LABEL: maximumnum_half:
+; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    fmax.h a0, a0, a1
+; CHECKIZHINX-NEXT:    ret
+;
+; RV32I-LABEL: maximumnum_half:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    .cfi_offset s1, -12
+; RV32I-NEXT:    .cfi_offset s2, -16
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi s2, a1, -1
+; RV32I-NEXT:    and a0, a0, s2
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    and a0, s0, s2
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    call fmaximum_numf
+; RV32I-NEXT:    call __truncsfhf2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: maximumnum_half:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    .cfi_offset s1, -24
+; RV64I-NEXT:    .cfi_offset s2, -32
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    and a0, a0, s2
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    and a0, s0, s2
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    call fmaximum_numf
+; RV64I-NEXT:    call __truncsfhf2
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+;
+; CHECKIZFHMIN-LABEL: maximumnum_half:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmax.s fa5, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: maximumnum_half:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fmax.s a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
+  %z = call half @llvm.maximumnum.f16(half %x, half %y)
+  ret half %z
+}
+
+declare half @llvm.minimumnum.f16(half, half)
+
+define half @minimumnum_half(half %x, half %y) {
+; CHECKIZFH-LABEL: minimumnum_half:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
+;
+; CHECKIZHINX-LABEL: minimumnum_half:
+; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
+; CHECKIZHINX-NEXT:    ret
+;
+; RV32I-LABEL: minimumnum_half:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    .cfi_offset s1, -12
+; RV32I-NEXT:    .cfi_offset s2, -16
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi s2, a1, -1
+; RV32I-NEXT:    and a0, a0, s2
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    and a0, s0, s2
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    call fminimum_numf
+; RV32I-NEXT:    call __truncsfhf2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: minimumnum_half:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    .cfi_offset s1, -24
+; RV64I-NEXT:    .cfi_offset s2, -32
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw s2, a1, -1
+; RV64I-NEXT:    and a0, a0, s2
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    and a0, s0, s2
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    call fminimum_numf
+; RV64I-NEXT:    call __truncsfhf2
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+;
+; CHECKIZFHMIN-LABEL: minimumnum_half:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmin.s fa5, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: minimumnum_half:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fmin.s a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
+  %z = call half @llvm.minimumnum.f16(half %x, half %y)
+  ret half %z
+}
