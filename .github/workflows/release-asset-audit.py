@@ -56,7 +56,7 @@ def main():
             print(
                 f"{asset.name} : {asset.uploader.login} [{created_at} {updated_at}] ( {asset.download_count} )"
             )
-            if _is_valid(asset.uploader.login, uploaders, asset.name):
+            if not _is_valid(asset.uploader.login, uploaders, asset.name):
                 with open('comment', 'w') as file:
                     file.write(f'@{asset.uploader.login} is not a valid uploader.')
                 sys.exit(1)
