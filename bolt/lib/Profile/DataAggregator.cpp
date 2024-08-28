@@ -88,7 +88,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
-extern cl::opt<bool> ProfileUsePseudoProbes;
+extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
@@ -2300,7 +2300,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   yaml::bolt::BinaryProfile BP;
 
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   // Fill out the header info.
   BP.Header.Version = 1;
