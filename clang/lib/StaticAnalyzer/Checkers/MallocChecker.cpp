@@ -1829,9 +1829,8 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
   unsigned Count = C.blockCount();
   SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
-  DefinedSVal RetVal = (isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
-                                 : SVB.getConjuredHeapSymbolVal(CE, LCtx, Count)
-                                       .castAs<DefinedSVal>());
+  DefinedSVal RetVal = isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
+                                : SVB.getConjuredHeapSymbolVal(CE, LCtx, Count);
   return State->BindExpr(CE, C.getLocationContext(), RetVal);
 }
 
