@@ -483,8 +483,7 @@ void ScriptParser::readPhdrs() {
       else if (consume("AT"))
         cmd.lmaExpr = readParenExpr();
       else if (consume("FLAGS"))
-        // TODO flags
-        cmd.flags = readParenExpr()->getExprValueAlignValue();
+        cmd.flags = readParenExpr()->getExprValue().getValue();
       else
         setError("unexpected header attribute: " + next());
     }
@@ -565,7 +564,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     for (SectionCommand *cmd : v)
       max = std::max(max, cast<OutputDesc>(cmd)->osec.size);
     // return addrExpr().getValue() + max;
-    return addrExpr->getExprValueAlignValue() + max;
+    return addrExpr->getExprValue().getValue() + max;
   });
   v.push_back(make<SymbolAssignment>(".", moveDot, 0, getCurrentLocation()));
   return v;
@@ -856,7 +855,7 @@ ScriptExpr *ScriptParser::readAssert() {
   expect(")");
 
   return make<DynamicExpr>([=] {
-    if (!e->getExprValueAlignValue())
+    if (!e->getExprValue().getValue())
       errorOrWarn(msg);
     return script->getDot();
   });
@@ -893,7 +892,7 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
       setError("unknown section type " + value);
     } else {
       // Otherwise, read an expression.
-      cmd->type = readExpr()->getExprValueAlignValue();
+      cmd->type = readExpr()->getExprValue().getValue();
     }
     cmd->typeIsSet = true;
   } else {
@@ -937,7 +936,7 @@ void ScriptParser::readSectionAddressType(OutputSection *cmd) {
 
 static ScriptExpr *checkAlignment(ScriptExpr *e, std::string &loc) {
   return make<DynamicExpr>([=] {
-    uint64_t alignment = std::max((uint64_t)1, e->getExprValueAlignValue());
+    uint64_t alignment = std::max((uint64_t)1, e->getExprValue().getValue());
     if (!isPowerOf2_64(alignment)) {
       error(loc + ": alignment must be power of 2");
       return (uint64_t)1; // Return a dummy value.
@@ -1364,15 +1363,15 @@ ScriptExpr *ScriptParser::readPrimary() {
   if (consume("~")) {
     ScriptExpr *e = readPrimary();
     // return [=] { return ~e().getValue(); };
-    return make<DynamicExpr>([=] { return ~e->getExprValueAlignValue(); });
+    return make<DynamicExpr>([=] { return ~e->getExprValue().getValue(); });
   }
   if (consume("!")) {
     ScriptExpr *e = readPrimary();
-    return make<DynamicExpr>([=] { return !e->getExprValueAlignValue(); });
+    return make<DynamicExpr>([=] { return !e->getExprValue().getValue(); });
   }
   if (consume("-")) {
     ScriptExpr *e = readPrimary();
-    return make<DynamicExpr>([=] { return -e->getExprValueAlignValue(); });
+    return make<DynamicExpr>([=] { return -e->getExprValue().getValue(); });
   }
 
   StringRef tok = next();
@@ -1403,7 +1402,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     if (consume(")")) {
       e = checkAlignment(e, location);
       return make<DynamicExpr>([=] {
-        return alignToPowerOf2(script->getDot(), e->getExprValueAlignValue());
+        return alignToPowerOf2(script->getDot(), e->getExprValue().getValue());
       });
     }
     expect(",");
@@ -1411,7 +1410,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     expect(")");
     return make<DynamicExpr>([=] {
       ExprValue v = e->getExprValue();
-      v.alignment = e2->getExprValueAlignValue();
+      v.alignment = e2->getExprValue().getValue();
       return v;
     });
   }
@@ -1435,7 +1434,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     expect(")");
     script->seenDataAlign = true;
     return make<DynamicExpr>([=] {
-      uint64_t align = std::max(uint64_t(1), e->getExprValueAlignValue());
+      uint64_t align = std::max(uint64_t(1), e->getExprValue().getValue());
       return (script->getDot() + align - 1) & -align;
     });
   }
@@ -1495,7 +1494,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     return make<DynamicExpr>([=] {
       // LOG2CEIL(0) is defined to be 0.
       return llvm::Log2_64_Ceil(
-          std::max(a->getExprValueAlignValue(), UINT64_C(1)));
+          std::max(a->getExprValue().getValue(), UINT64_C(1)));
     });
   }
   if (tok == "MAX" || tok == "MIN") {
@@ -1506,11 +1505,12 @@ ScriptExpr *ScriptParser::readPrimary() {
     expect(")");
     if (tok == "MIN")
       return make<DynamicExpr>([=] {
-        return std::min(a->getExprValueAlignValue(),
-                        b->getExprValueAlignValue());
+        return std::min(a->getExprValue().getValue(),
+                        b->getExprValue().getValue());
       });
     return make<DynamicExpr>([=] {
-      return std::max(a->getExprValueAlignValue(), b->getExprValueAlignValue());
+      return std::max(a->getExprValue().getValue(),
+                      b->getExprValue().getValue());
     });
   }
   if (tok == "ORIGIN") {
@@ -1568,8 +1568,8 @@ ScriptExpr *ScriptParser::readTernary(ScriptExpr *cond) {
   expect(":");
   ScriptExpr *r = readExpr();
   return make<DynamicExpr>([=] {
-    return cond->getExprValueAlignValue() ? l->getExprValue()
-                                          : r->getExprValue();
+    return cond->getExprValue().getValue() ? l->getExprValue()
+                                           : r->getExprValue();
   });
 }
 

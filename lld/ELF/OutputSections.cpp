@@ -558,7 +558,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     if (auto *data = dyn_cast<ByteCommand>(cmd)) {
       if (!std::exchange(written, true))
         fn(0, numSections);
-      writeInt(buf + data->offset, data->expression->getExprValueAlignValue(),
+      writeInt(buf + data->offset, data->expression->getExprValue().getValue(),
                data->size);
     }
   if (written || !numSections)

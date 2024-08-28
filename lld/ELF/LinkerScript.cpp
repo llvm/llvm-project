@@ -161,11 +161,6 @@ ExprValue ScriptExpr::getExprValue() const {
   }
 }
 
-uint64_t ScriptExpr::getExprValueAlignValue() const {
-  auto e = getExprValue();
-  return e.getValue();
-}
-
 BinaryExpr::Op BinaryExpr::stringToOp(const StringRef op) {
   static const std::unordered_map<llvm::StringRef, Op> opMap = {
       {"+", Op::Add},        {"-", Op::Sub},         {"*", Op::Mul},
@@ -195,40 +190,42 @@ ExprValue BinaryExpr::evaluateBinaryOperands() const {
     return sub(LHS->getExprValue(), RHS->getExprValue());
   case Op::Mul:
   case Op::MulAssign:
-    return LHS->getExprValueAlignValue() * RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() * RHS->getExprValue().getValue();
   case Op::Div:
   case Op::DivAssign:
-    if (uint64_t rv = RHS->getExprValueAlignValue())
-      return LHS->getExprValueAlignValue() / rv;
+    if (uint64_t rv = RHS->getExprValue().getValue())
+      return LHS->getExprValue().getValue() / rv;
     error(loc_ + ": division by zero");
     return 0;
   case Op::Mod:
-    if (uint64_t rv = RHS->getExprValueAlignValue())
-      return LHS->getExprValueAlignValue() % rv;
+    if (uint64_t rv = RHS->getExprValue().getValue())
+      return LHS->getExprValue().getValue() % rv;
     error(loc_ + ": modulo by zero");
     return 0;
   case Op::Shl:
   case Op::ShlAssign:
-    return LHS->getExprValueAlignValue() << RHS->getExprValueAlignValue() % 64;
+    return LHS->getExprValue().getValue()
+           << RHS->getExprValue().getValue() % 64;
   case Op::Shr:
   case Op::ShrAssign:
-    return LHS->getExprValueAlignValue() >> RHS->getExprValueAlignValue() % 64;
+    return LHS->getExprValue().getValue() >>
+           RHS->getExprValue().getValue() % 64;
   case Op::Lt:
-    return LHS->getExprValueAlignValue() < RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() < RHS->getExprValue().getValue();
   case Op::Gt:
-    return LHS->getExprValueAlignValue() > RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() > RHS->getExprValue().getValue();
   case Op::Geq:
-    return LHS->getExprValueAlignValue() >= RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() >= RHS->getExprValue().getValue();
   case Op::Leq:
-    return LHS->getExprValueAlignValue() <= RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() <= RHS->getExprValue().getValue();
   case Op::Eq:
-    return LHS->getExprValueAlignValue() == RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() == RHS->getExprValue().getValue();
   case Op::Neq:
-    return LHS->getExprValueAlignValue() != RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() != RHS->getExprValue().getValue();
   case Op::LOr:
-    return LHS->getExprValueAlignValue() || RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() || RHS->getExprValue().getValue();
   case Op::LAnd:
-    return LHS->getExprValueAlignValue() && RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() && RHS->getExprValue().getValue();
   case Op::And:
     return bitAnd(LHS->getExprValue(), RHS->getExprValue());
   case Op::Xor:
@@ -236,11 +233,11 @@ ExprValue BinaryExpr::evaluateBinaryOperands() const {
   case Op::Or:
     return bitOr(LHS->getExprValue(), RHS->getExprValue());
   case Op::AndAssign:
-    return LHS->getExprValueAlignValue() & RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() & RHS->getExprValue().getValue();
   case Op::XorAssign:
-    return LHS->getExprValueAlignValue() ^ RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() ^ RHS->getExprValue().getValue();
   case Op::OrAssign:
-    return LHS->getExprValueAlignValue() | RHS->getExprValueAlignValue();
+    return LHS->getExprValue().getValue() | RHS->getExprValue().getValue();
   case Op::Invalid:
   default:
     llvm_unreachable("invalid operator");
@@ -328,7 +325,7 @@ void LinkerScript::expandOutputSection(uint64_t size) {
 }
 
 void LinkerScript::setDot(ScriptExpr *e, const Twine &loc, bool inSec) {
-  uint64_t val = e->getExprValueAlignValue();
+  uint64_t val = e->getExprValue().getValue();
   // If val is smaller and we are in an output section, record the error and
   // report it if this is the last assignAddresses iteration. dot may be smaller
   // if there is another assignAddresses iteration.
@@ -873,7 +870,7 @@ void LinkerScript::processSectionCommands() {
     // is given, input sections are aligned to that value, whether the
     // given value is larger or smaller than the original section alignment.
     if (osec->subalignExpr) {
-      uint32_t subalign = osec->subalignExpr->getExprValueAlignValue();
+      uint32_t subalign = osec->subalignExpr->getExprValue().getValue();
       for (InputSectionBase *s : v)
         s->addralign = subalign;
     }
@@ -1328,7 +1325,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // heuristics described in
   // https://sourceware.org/binutils/docs/ld/Output-Section-LMA.html
   if (sec->lmaExpr) {
-    state->lmaOffset = sec->lmaExpr->getExprValueAlignValue() - dot;
+    state->lmaOffset = sec->lmaExpr->getExprValue().getValue() - dot;
   } else if (MemoryRegion *mr = sec->lmaRegion) {
     uint64_t lmaStart = alignToPowerOf2(mr->curPos, sec->addralign);
     if (mr->curPos < lmaStart)
@@ -1481,7 +1478,7 @@ void LinkerScript::adjustOutputSections() {
     // Handle align (e.g. ".foo : ALIGN(16) { ... }").
     if (sec->alignExpr)
       sec->addralign = std::max<uint32_t>(
-          sec->addralign, sec->alignExpr->getExprValueAlignValue());
+          sec->addralign, sec->alignExpr->getExprValue().getValue());
 
     bool isEmpty = (getFirstInputSection(sec) == nullptr);
     bool discardable = isEmpty && isDiscardable(*sec);
@@ -1627,7 +1624,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 LinkerScript::AddressState::AddressState() {
   for (auto &mri : script->memoryRegions) {
     MemoryRegion *mr = mri.second;
-    mr->curPos = (mr->origin)->getExprValueAlignValue();
+    mr->curPos = (mr->origin)->getExprValue().getValue();
   }
 }
 
@@ -1798,7 +1795,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
       phdr->add(ctx.out.programHeaders);
 
     if (cmd.lmaExpr) {
-      phdr->p_paddr = cmd.lmaExpr->getExprValueAlignValue();
+      phdr->p_paddr = cmd.lmaExpr->getExprValue().getValue();
       phdr->hasLMA = true;
     }
     ret.push_back(phdr);

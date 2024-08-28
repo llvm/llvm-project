@@ -89,7 +89,6 @@ public:
   ExprKind getKind() const { return kind_; }
   std::function<ExprValue()> getExpr() const;
   ExprValue getExprValue() const;
-  uint64_t getExprValueAlignValue() const;
 };
 
 class ConstantExpr : public ScriptExpr {
@@ -272,10 +271,10 @@ struct MemoryRegion {
   uint64_t curPos = 0;
 
   uint64_t getOrigin() const {
-    return origin ? origin->getExprValueAlignValue() : 0;
+    return origin ? origin->getExprValue().getValue() : 0;
   }
   uint64_t getLength() const {
-    return length ? length->getExprValueAlignValue() : 0;
+    return length ? length->getExprValue().getValue() : 0;
   }
 
   bool compatibleWith(uint32_t secFlags) const {
