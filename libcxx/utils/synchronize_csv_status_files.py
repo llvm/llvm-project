@@ -303,18 +303,13 @@ CSV_FILES_TO_SYNC = [
 def main():
     libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    # Extract the list of PaperInfos from issues we're tracking on Github.
-    print("Loading all issues from Github")
-    gh_command_line = ['gh', 'project', 'item-list', LIBCXX_CONFORMANCE_PROJECT, '--owner', 'llvm', '--format', 'json', '--limit', '9999999']
-    project_info = json.loads(subprocess.check_output(gh_command_line))
-    from_github = [PaperInfo.from_github_issue(i) for i in project_info['items']]
-
     for filename in CSV_FILES_TO_SYNC:
-        print(f"Synchronizing {filename} with Github issues")
+        print(f"Updating {filename}")
         file = libcxx_root / 'docs' / 'Status' / filename
         csv = load_csv(file)
-        synced = sync_csv(csv, from_github)
-        write_csv(file, synced)
+        for row in csv:
+            del row[5]
+        write_csv(file, csv)
 
 if __name__ == '__main__':
     main()
