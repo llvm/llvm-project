@@ -1673,9 +1673,9 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   // Parameters are initialized via copy initialization. This allows for
   // overload resolution of argument constructors.
   InitializedEntity Entity =
-    InitializedEntity::InitializeParameter(Ctx, Ty, false);
+      InitializedEntity::InitializeParameter(Ctx, Ty, false);
   ExprResult Res =
-    SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), ArgOpV);
+      SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), ArgOpV);
   if (Res.isInvalid())
     return ExprError();
   Expr *Base = Res.get();
