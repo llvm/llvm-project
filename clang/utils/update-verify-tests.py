@@ -1,5 +1,6 @@
 import sys
 import re
+import argparse
 
 """
  Pipe output from clang's -verify into this script to have the test case updated to expect the actual diagnostic output.
@@ -10,7 +11,6 @@ import re
  diffs. If inaccurate their count will be updated, or the check removed entirely.
 
  Missing features:
-  - custom prefix support (-verify=my-prefix)
   - multiple prefixes on the same line (-verify=my-prefix,my-other-prefix)
   - multiple prefixes on separate RUN lines (RUN: -verify=my-prefix\nRUN: -verify my-other-prefix)
   - regexes with expected-*-re: existing ones will be left untouched if accurate, but the script will abort if there are any
@@ -27,16 +27,16 @@ class KnownException(Exception):
     pass
 
 
-def parse_error_category(s):
-    if "no expected directives found" in line:
+def parse_error_category(s, prefix):
+    if "no expected directives found" in s:
         return None
     parts = s.split("diagnostics")
     diag_category = parts[0]
     category_parts = parts[0].strip().strip("'").split("-")
     expected = category_parts[0]
-    if expected != "expected":
+    if expected != prefix:
         raise Exception(
-            f"expected 'expected', but found '{expected}'. Custom verify prefixes are not supported."
+            f"expected prefix '{prefix}', but found '{expected}'. Multiple verify prefixes are not supported."
         )
     diag_category = category_parts[1]
     if "seen but not expected" in parts[1]:
@@ -84,6 +84,7 @@ class Line:
 class Diag:
     def __init__(
         self,
+        prefix,
         diag_content,
         category,
         parsed_target_line_n,
@@ -94,6 +95,7 @@ class Diag:
         whitespace_strings,
         is_from_source_file,
     ):
+        self.prefix = prefix
         self.diag_content = diag_content
         self.category = category
         self.parsed_target_line_n = parsed_target_line_n
@@ -183,14 +185,14 @@ class Diag:
             been parsed as whitespace3_s.
             """
             whitespace2_s = ""
-        return f"//{whitespace1_s}expected-{self.category}{re_s}{line_location_s}{whitespace2_s}{count_s}{whitespace3_s}{{{{{self.diag_content}}}}}"
+        return f"//{whitespace1_s}{self.prefix}-{self.category}{re_s}{line_location_s}{whitespace2_s}{count_s}{whitespace3_s}{{{{{self.diag_content}}}}}"
 
 expected_diag_re = re.compile(
-    r"//(\s*)expected-(note|warning|error)(-re)?(@[+-]?\d+)?(?:(\s*)(\d+))?(\s*)\{\{(.*)\}\}"
+    r"//(\s*)([a-zA-Z]+)-(note|warning|error)(-re)?(@[+-]?\d+)?(?:(\s*)(\d+))?(\s*)\{\{(.*)\}\}"
 )
 
 
-def parse_diag(line, filename, lines):
+def parse_diag(line, filename, lines, prefix):
     s = line.content
     ms = expected_diag_re.findall(s)
     if not ms:
@@ -201,6 +203,7 @@ def parse_diag(line, filename, lines):
         )
     [
         whitespace1_s,
+        check_prefix,
         category_s,
         re_s,
         target_line_s,
@@ -209,6 +212,8 @@ def parse_diag(line, filename, lines):
         whitespace3_s,
         diag_s,
     ] = ms[0]
+    if check_prefix != prefix:
+        return None
     if not target_line_s:
         target_line_n = 0
         is_absolute = False
@@ -225,6 +230,7 @@ def parse_diag(line, filename, lines):
     line.content = expected_diag_re.sub("{{DIAG}}", s)
 
     return Diag(
+        prefix,
         diag_s,
         category_s,
         target_line_n,
@@ -263,7 +269,7 @@ def get_indent(s):
 def orig_line_n_to_new_line_n(line_n, orig_lines):
     return orig_lines[line_n - 1].line_n
 
-def add_diag(orig_line_n, diag_s, diag_category, lines, orig_lines):
+def add_diag(orig_line_n, diag_s, diag_category, lines, orig_lines, prefix):
     line_n = orig_line_n_to_new_line_n(orig_line_n, orig_lines)
     target = lines[line_n - 1]
     for other in target.targeting_diags:
@@ -301,7 +307,7 @@ def add_diag(orig_line_n, diag_s, diag_category, lines, orig_lines):
 
     whitespace_strings = prev_line.diag.whitespace_strings if prev_line.diag else None
     new_diag = Diag(
-        diag_s, diag_category, total_offset, False, 1, new_line, False, whitespace_strings, False,
+        prefix, diag_s, diag_category, total_offset, False, 1, new_line, False, whitespace_strings, False,
     )
     new_line.diag = new_diag
     new_diag.set_target(target)
@@ -328,16 +334,16 @@ def has_live_diags(lines):
             return True
     return False
 
-def get_expected_no_diags_line_n(lines):
+def get_expected_no_diags_line_n(lines, prefix):
     for line in lines:
-        if "expected-no-diagnostics" in line.content:
+        if f"{prefix}-no-diagnostics" in line.content:
             return line.line_n
     return None
 
 updated_test_files = set()
 
 
-def update_test_file(filename, diag_errors):
+def update_test_file(filename, diag_errors, prefix):
     print(f"updating test file {filename}")
     if filename in updated_test_files:
         print(
@@ -348,10 +354,10 @@ def update_test_file(filename, diag_errors):
     with open(filename, "r") as f:
         lines = [Line(line, i + 1) for i, line in enumerate(f.readlines())]
     orig_lines = list(lines)
-    expected_no_diags_line_n = get_expected_no_diags_line_n(orig_lines)
+    expected_no_diags_line_n = get_expected_no_diags_line_n(orig_lines, prefix)
 
     for line in lines:
-        diag = parse_diag(line, filename, lines)
+        diag = parse_diag(line, filename, lines, prefix)
         if diag:
             line.diag = diag
             diag.set_target(lines[diag.absolute_target() - 1])
@@ -385,7 +391,7 @@ def update_test_file(filename, diag_errors):
         if other_diag:
             other_diag.increment_count()
         else:
-            add_diag(line_n, diag_s, diag_category, lines, orig_lines)
+            add_diag(line_n, diag_s, diag_category, lines, orig_lines, prefix)
     remove_dead_diags(lines)
     has_diags = has_live_diags(lines)
     with open(filename, "w") as f:
@@ -397,7 +403,7 @@ def update_test_file(filename, diag_errors):
             f.write(line.render())
 
 
-def update_test_files(errors):
+def update_test_files(errors, prefix):
     errors_by_file = {}
     for (filename, line, diag_s), (diag_category, seen) in errors:
         if filename not in errors_by_file:
@@ -405,63 +411,72 @@ def update_test_files(errors):
         errors_by_file[filename].append((line, diag_s, diag_category, seen))
     for filename, diag_errors in errors_by_file.items():
         try:
-            update_test_file(filename, diag_errors)
+            update_test_file(filename, diag_errors, prefix)
         except KnownException as e:
             print(f"{filename} - ERROR: {e}")
             print("continuing...")
 
-
-curr = []
-curr_category = None
-curr_run_line = None
-lines_since_run = []
-skip_to_next_file = False
-for line in sys.stdin.readlines():
-    lines_since_run.append(line)
-    try:
-        if line.startswith("RUN:"):
-            if curr:
-                update_test_files(curr)
+def check_expectations(tool_output, prefix):
+    curr = []
+    curr_category = None
+    curr_run_line = None
+    lines_since_run = []
+    skip_to_next_file = False
+    for line in tool_output:
+        lines_since_run.append(line)
+        try:
+            if line.startswith("RUN:"):
+                if curr:
+                    update_test_files(curr, prefix)
+                    curr = []
+                    lines_since_run = [line]
+                    curr_run_line = line
+                else:
+                    for line in lines_since_run:
+                        print(line, end="")
+                        print("====================")
+                    if lines_since_run:
+                        print("no mismatching diagnostics found since last RUN line")
+                skip_to_next_file = False
+                continue
+            if skip_to_next_file:
+                continue
+            if line.startswith("error: "):
+                curr_category = parse_error_category(line[len("error: ") :], prefix)
+                continue
+    
+            diag_error = parse_diag_error(line.strip())
+            if diag_error:
+                curr.append((diag_error, curr_category))
+        except KnownException as e:
+                print(f"Error while parsing: {e}")
+                if curr:
+                    print("skipping to next file")
                 curr = []
-                lines_since_run = [line]
-                curr_run_line = line
-            else:
-                for line in lines_since_run:
-                    print(line, end="")
-                    print("====================")
-                if lines_since_run:
-                    print("no mismatching diagnostics found since last RUN line")
-            skip_to_next_file = False
-            continue
-        if skip_to_next_file:
-            continue
-        if line.startswith("error: "):
-            curr_category = parse_error_category(line[len("error: ") :])
-            continue
-
-        diag_error = parse_diag_error(line.strip())
-        if diag_error:
-            curr.append((diag_error, curr_category))
-    except KnownException as e:
-            print(f"Error while parsing: {e}")
-            if curr:
-                print("skipping to next file")
-            curr = []
-            curr_category = None
-            curr_run_line = None
-            lines_since_run = []
-            skip_to_next_file = True
-    except Exception as e:
+                curr_category = None
+                curr_run_line = None
+                lines_since_run = []
+                skip_to_next_file = True
+        except Exception as e:
+            for line in lines_since_run:
+                print(line, end="")
+                print("====================")
+                print(e)
+            sys.exit(1)
+    if curr:
+        update_test_files(curr, prefix)
+        print("done!")
+    else:
         for line in lines_since_run:
             print(line, end="")
             print("====================")
-            print(e)
-        sys.exit(1)
-if curr:
-    update_test_files(curr)
-    print("done!")
-else:
-    for line in lines_since_run:
-        print(line, end="")
-        print("====================")
-    print("no mismatching diagnostics found")
+        print("no mismatching diagnostics found")
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--prefix", default="expected", help="The prefix passed to -verify")
+    args = parser.parse_args()
+    check_expectations(sys.stdin.readlines(), args.prefix)
+
+if __name__ == "__main__":
+    main()
