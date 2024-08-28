@@ -35,14 +35,14 @@ fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value);
 template <class _OutputIterator,
           class _Size,
           class _Tp,
-          enable_if_t<!__is_segmented_iterator<_OutputIterator>::value, int> = 0>
+          __enable_if_t<!__is_segmented_iterator<_OutputIterator>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
 
 template <class _OutputIterator,
           class _Size,
           class _Tp,
-          enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
 
@@ -95,7 +95,7 @@ __fill_n(__bit_iterator<_Cp, false> __first, _Size __n, const bool& __value) {
 template <class _OutputIterator,
           class _Size,
           class _Tp,
-          enable_if_t<!__is_segmented_iterator<_OutputIterator>::value, int>>
+          __enable_if_t<!__is_segmented_iterator<_OutputIterator>::value, int> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
   for (; __n > 0; ++__first, (void)--__n)
@@ -106,7 +106,7 @@ __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
 template <class _OutputIterator,
           class _Size,
           class _Tp,
-          enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int>>
+          __enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
   std::fill(__first, __first + __n, __value);
