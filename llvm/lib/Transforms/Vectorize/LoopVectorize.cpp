@@ -61,6 +61,7 @@
 #include "VPlanHCFGBuilder.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -8647,6 +8648,11 @@ addUsersInExitBlock(VPlan &Plan,
 
   // Introduce VPUsers modeling the exit values.
   for (const auto &[ExitPhi, V] : ExitingValuesToFix) {
+    // Pass live-in values used by exit phis directly through to the live-out.
+    if (V->isLiveIn()) {
+      Plan.addLiveOut(ExitPhi, V);
+      continue;
+    }
     VPValue *Ext = B.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {V, Plan.getOrAddLiveIn(ConstantInt::get(
@@ -8987,35 +8993,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  for (const auto *IG : InterleaveGroups) {
-    auto *Recipe =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
-    SmallVector<VPValue *, 4> StoredValues;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
-        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
-        StoredValues.push_back(StoreR->getStoredValue());
-      }
-
-    bool NeedsMaskForGaps =
-        IG->requiresScalarEpilogue() && !CM.isScalarEpilogueAllowed();
-    assert((!NeedsMaskForGaps || useMaskedInterleavedAccesses(CM.TTI)) &&
-           "masked interleaved groups are not allowed.");
-    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                                        Recipe->getMask(), NeedsMaskForGaps);
-    VPIG->insertBefore(Recipe);
-    unsigned J = 0;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *Member = IG->getMember(i)) {
-        VPRecipeBase *MemberR = RecipeBuilder.getRecipe(Member);
-        if (!Member->getType()->isVoidTy()) {
-          VPValue *OriginalV = MemberR->getVPSingleValue();
-          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
-          J++;
-        }
-        MemberR->eraseFromParent();
-      }
-  }
+  VPlanTransforms::createInterleaveGroups(InterleaveGroups, RecipeBuilder,
+                                          CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
