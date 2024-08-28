@@ -282,7 +282,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     return 0;
 
   InstructionCost RecipeCost = computeCost(VF, Ctx);
-  if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
       RecipeCost.isValid())
     RecipeCost = InstructionCost(ForceTargetInstructionCost);
 
