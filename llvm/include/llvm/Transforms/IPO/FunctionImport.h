@@ -143,6 +143,10 @@ public:
     // order.
     SmallVector<StringRef, 0> getSourceModules() const;
 
+    std::optional<GlobalValueSummary::ImportKind>
+    getImportType(const FunctionsToImportTy &GUIDToImportType,
+                  GlobalValue::GUID GUID) const;
+
     const ImportMapTyImpl &getImportMap() const { return ImportMap; }
 
   private:
