@@ -112,6 +112,9 @@ typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
+/// Page size used for reporting addtional frames in the 'stackTrace' request.
+constexpr int StackPageSize = 20;
+
 /// Prints a welcome message on the editor if the preprocessor variable
 /// LLDB_DAP_WELCOME_MESSAGE is defined.
 static void PrintWelcomeMessage() {
@@ -3326,9 +3329,9 @@ void request_stackTrace(const llvm::json::Object &request) {
     }
 
     // If we loaded all the frames, set the total frame to the current total,
-    // otherwise use the totalFrames to indiciate more data is available.
+    // otherwise use the totalFrames to indicate more data is available.
     body.try_emplace("totalFrames",
-                     startFrame + stackFrames.size() + (done ? 0 : 1));
+                     startFrame + stackFrames.size() + (done ? 0 : StackPageSize));
   }
   body.try_emplace("stackFrames", std::move(stackFrames));
   response.try_emplace("body", std::move(body));
