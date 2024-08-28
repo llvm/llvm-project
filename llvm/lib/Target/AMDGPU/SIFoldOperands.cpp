@@ -135,8 +135,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    SIFoldOperandsImpl Impl;
-    return Impl.run(MF);
+    return SIFoldOperandsImpl().run(MF);
   }
 
   StringRef getPassName() const override { return "SI Fold Operands"; }
@@ -2257,8 +2256,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
 PreservedAnalyses SIFoldOperandsPass::run(MachineFunction &MF,
                                           MachineFunctionAnalysisManager &) {
-  SIFoldOperandsImpl Impl;
-  bool Changed = Impl.run(MF);
+  bool Changed = SIFoldOperandsImpl().run(MF);
   if (!Changed) {
     return PreservedAnalyses::all();
   }

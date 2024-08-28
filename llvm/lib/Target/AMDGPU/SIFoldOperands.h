@@ -20,4 +20,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AMDGPU_SIFOLDOPERANDS_H
