@@ -16,13 +16,13 @@ def SDT_LoongArchVreplve : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<0>,
 def SDT_LoongArchVecCond : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 
 def SDT_LoongArchVShuf : SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                         SDTCisInt<1>, SDTCisVec<1>,
-                                         SDTCisSameAs<0, 2>,
-                                         SDTCisSameAs<2, 3>]>;
+                                       SDTCisInt<1>, SDTCisVec<1>,
+                                       SDTCisSameAs<0, 2>,
+                                       SDTCisSameAs<2, 3>]>;
 def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                         SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
-def SDT_loongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                         SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
+                                     SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                        SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
 
 // Target nodes.
 def loongarch_vreplve : SDNode<"LoongArchISD::VREPLVE", SDT_LoongArchVreplve>;
@@ -31,9 +31,9 @@ def loongarch_vall_nonzero : SDNode<"LoongArchISD::VALL_NONZERO",
 def loongarch_vany_nonzero : SDNode<"LoongArchISD::VANY_NONZERO",
                                     SDT_LoongArchVecCond>;
 def loongarch_vall_zero : SDNode<"LoongArchISD::VALL_ZERO",
-                                SDT_LoongArchVecCond>;
+                                 SDT_LoongArchVecCond>;
 def loongarch_vany_zero : SDNode<"LoongArchISD::VANY_ZERO",
-                                SDT_LoongArchVecCond>;
+                                 SDT_LoongArchVecCond>;
 
 def loongarch_vpick_sext_elt : SDNode<"LoongArchISD::VPICK_SEXT_ELT",
                                       SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>>;
@@ -48,8 +48,8 @@ def loongarch_vpackod: SDNode<"LoongArchISD::VPACKOD", SDT_LoongArchV2R>;
 def loongarch_vilvl: SDNode<"LoongArchISD::VILVL", SDT_LoongArchV2R>;
 def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 
-def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_loongArchV1RUimm>;
-def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_loongArchV1RUimm>;
+def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
+def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
 
 def immZExt1 : ImmLeaf<i64, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i64, [{return isUInt<2>(Imm);}]>;

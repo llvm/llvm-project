@@ -22,7 +22,7 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
   }
 
   if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
-    error.SetErrorStringWithFormat(
+    return Status::FromErrorStringWithFormat(
         "plugin name '%s' is not a valid ObjectFile plugin name", name);
     return error;
   }
@@ -57,7 +57,7 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
   }
 
   if (!process_sp->IsValid()) {
-    error.SetErrorString("Cannot assign an invalid process.");
+    error = Status::FromErrorString("Cannot assign an invalid process.");
     return error;
   }
 
@@ -73,13 +73,14 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
 Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
   Status error;
   if (!thread_sp) {
-    error.SetErrorString("invalid thread");
+    error = Status::FromErrorString("invalid thread");
     return error;
   }
 
   if (m_process_sp) {
     if (m_process_sp != thread_sp->GetProcess()) {
-      error.SetErrorString("Cannot add a thread from a different process.");
+      error = Status::FromErrorString(
+          "Cannot add a thread from a different process.");
       return error;
     }
   } else {
@@ -101,19 +102,6 @@ bool SaveCoreOptions::ShouldThreadBeSaved(lldb::tid_t tid) const {
   return m_threads_to_save.count(tid) > 0;
 }
 
-bool SaveCoreOptions::HasSpecifiedThreads() const {
-  return !m_threads_to_save.empty();
-}
-
-void SaveCoreOptions::AddMemoryRegionToSave(
-    const lldb_private::MemoryRegionInfo &region) {
-  m_regions_to_save.Insert(region.GetRange(), /*combine=*/true);
-}
-
-const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
-  return m_regions_to_save;
-}
-
 Status SaveCoreOptions::EnsureValidConfiguration(
     lldb::ProcessSP process_sp) const {
   Status error;
@@ -126,7 +114,7 @@ Status SaveCoreOptions::EnsureValidConfiguration(
                  "Options were constructed targeting a different process. \n";
 
   if (!error_str.empty())
-    error.SetErrorString(error_str);
+    error = Status(error_str);
 
   return error;
 }
@@ -143,5 +131,4 @@ void SaveCoreOptions::Clear() {
   m_style = std::nullopt;
   m_threads_to_save.clear();
   m_process_sp.reset();
-  m_regions_to_save.Clear();
 }

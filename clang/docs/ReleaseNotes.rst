@@ -318,6 +318,7 @@ Bug Fixes to C++ Support
   of the current instantiation in all cases.
 - Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
 - Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
+- Clang now correctly handles direct-list-initialization of a structured bindings from an array. (#GH31813)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
