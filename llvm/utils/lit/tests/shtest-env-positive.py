@@ -51,6 +51,7 @@
 # CHECK: env -u FOO | {{.*}}
 # CHECK: # executed command: env -u FOO
 # CHECK-NOT: # error:
+# CHECK: --
 
 # CHECK: PASS: shtest-env :: env.txt ({{[^)]*}})
 # CHECK: env A_FOO=999 | {{.*}}
