@@ -54,6 +54,19 @@ HLSL 202x based on proposal
 and
 `0008 <https://github.com/microsoft/hlsl-specs/blob/main/proposals/0008-non-member-operator-overloading.md>`_.
 
+The largest difference between Clang and DXC's overload resolution is the
+algorithm used for identifying best-match overloads. There are more details
+about the algorithmic differences in the :ref:`multi_argument_overloads` section
+below. There are three high level differences that should be highlighted:
+
+* **There should be no cases** where DXC and Clang both successfully
+  resolve an overload where the resolved overload is different between the two.
+* There are cases where Clang will successfully resolve an overload that DXC
+  wouldn't because we've trimmed the overload set in Clang to remove ambiguity.
+* There are cases where DXC will successfully resolve an overload that Clang
+  will not for two reasons: (1) DXC only generates partial overload sets for
+  builtin functions and (2) DXC resolves cases that probably should be ambiguous.
+
 Clang's implementation extends standard overload resolution rules to HLSL
 library functionality. This causes subtle changes in overload resolution
 behavior between Clang and DXC. Some examples include:
@@ -131,6 +144,8 @@ behavior between Clang and DXC. Some examples include:
   diagnostic notifying the user of the conversion rather than silently altering
   precision relative to the other overloads (as FXC does) or generating code
   that will fail validation (as DXC does).
+
+.. _multi_argument_overloads:
 
 Multi-Argument Overloads
 ------------------------
