@@ -1644,8 +1644,7 @@ bool OmpAttributeVisitor::Pre(
           "Exactly one of `exclusive` or `inclusive` clause is expected"_err_en_US);
     }
     if (!parentContext ||
-        (llvm::omp::getDirectiveAssociation(parentContext->directive) !=
-            llvm::omp::Association::Loop)) {
+        (!llvm::omp::scanAllowedSet.test(parentContext->directive))) {
       context_.Say(standaloneDir.source,
           "Orphaned `omp scan` directives are prohibited; perhaps you forgot "
           "to enclose the directive in to a worksharing loop, a worksharing "

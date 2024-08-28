@@ -195,6 +195,7 @@ static const OmpDirectiveSet allDistributeParallelDoSimdSet{
 static const OmpDirectiveSet allDistributeSimdSet{
     allDistributeSet & allSimdSet};
 static const OmpDirectiveSet allDoSimdSet{allDoSet & allSimdSet};
+static const OmpDirectiveSet scanAllowedSet{allDoSet | allSimdSet};
 static const OmpDirectiveSet allTaskloopSimdSet{allTaskloopSet & allSimdSet};
 
 static const OmpDirectiveSet compositeConstructSet{

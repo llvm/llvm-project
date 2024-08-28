@@ -1,7 +1,7 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 
 subroutine test_scan()
- integer x, k
+ integer x, y, k
  
  !ERROR: Orphaned `omp scan` directives are prohibited; perhaps you forgot to enclose the directive in to a worksharing loop, a worksharing loop simd or a simd directive.
  !$omp scan inclusive(x)
@@ -15,5 +15,11 @@ subroutine test_scan()
  do k = 1, n
  !ERROR: Exactly one of `exclusive` or `inclusive` clause is expected
    !$omp scan
+ end do
+
+!$omp parallel do simd reduction(inscan,+: x)
+ do k = 1, n
+ !ERROR: Exactly one of `exclusive` or `inclusive` clause is expected
+   !$omp scan inclusive(x) exclusive(y)
  end do
 end subroutine
