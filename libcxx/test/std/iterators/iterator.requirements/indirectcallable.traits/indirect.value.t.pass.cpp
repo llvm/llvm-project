@@ -11,13 +11,17 @@
 // template<indirectly_readable T>
 // using indirect-value-t = see below; // exposition only
 
+#include <cassert>
+
 #include <algorithm>
 #include <memory>
 #include <ranges>
 #include <utility>
 #include <vector>
 
-void test() {
+#include "test_macros.h"
+
+TEST_CONSTEXPR_CXX23 void test() {
   auto ints             = std::views::iota(0, 5);
   auto unique_ptr_maker = []<std::movable T>(T v) { return std::make_unique<T>(std::move(v)); };
 
@@ -42,18 +46,18 @@ void test() {
     auto unary_pred = [](auto) { return false; };
     static_assert(std::indirect_unary_predicate<decltype(unary_pred), projected_iter>);
 
-    (void)std::ranges::find_if(ints, unary_pred, unique_ptr_maker);
-    (void)std::ranges::find_if(ints.begin(), ints.end(), unary_pred, unique_ptr_maker);
-    (void)std::ranges::count_if(ints, unary_pred, unique_ptr_maker);
-    (void)std::ranges::count_if(ints.begin(), ints.end(), unary_pred, unique_ptr_maker);
+    assert(std::ranges::find_if(ints, unary_pred, unique_ptr_maker) == ints.end());
+    assert(std::ranges::find_if(ints.begin(), ints.end(), unary_pred, unique_ptr_maker) == ints.end());
+    assert(std::ranges::count_if(ints, unary_pred, unique_ptr_maker) == 0);
+    assert(std::ranges::count_if(ints.begin(), ints.end(), unary_pred, unique_ptr_maker) == 0);
   }
 
   { // Check std::indirect_binary_predicate
     auto binary_pred = [](auto, auto) { return false; };
     static_assert(std::indirect_binary_predicate<decltype(binary_pred), projected_iter, projected_iter>);
 
-    (void)std::ranges::adjacent_find(ints, binary_pred, unique_ptr_maker);
-    (void)std::ranges::adjacent_find(ints.begin(), ints.end(), binary_pred, unique_ptr_maker);
+    assert(std::ranges::adjacent_find(ints, binary_pred, unique_ptr_maker) == ints.end());
+    assert(std::ranges::adjacent_find(ints.begin(), ints.end(), binary_pred, unique_ptr_maker) == ints.end());
   }
 
   { // Check std::indirect_equivalence_relation
@@ -66,10 +70,19 @@ void test() {
   }
 
   { // Check std::indirect_strict_weak_order
-    auto rel = [](auto x, auto y) { return x < y; };
+    auto rel = [](auto x, auto y) { return *x < *y; };
     static_assert(std::indirect_strict_weak_order<decltype(rel), projected_iter>);
 
-    (void)std::ranges::is_sorted_until(ints, rel, unique_ptr_maker);
-    (void)std::ranges::is_sorted_until(ints.begin(), ints.end(), rel, unique_ptr_maker);
+    assert(std::ranges::is_sorted_until(ints, rel, unique_ptr_maker) == ints.end());
+    assert(std::ranges::is_sorted_until(ints.begin(), ints.end(), rel, unique_ptr_maker) == ints.end());
   }
+}
+
+#if TEST_STD_VER >= 23
+static_assert((test(), true));
+#endif
+
+int main(int, char**) {
+  test();
+  return 0;
 }
