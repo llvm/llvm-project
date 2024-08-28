@@ -14,6 +14,7 @@
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "bolt/Utils/Utils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
@@ -133,10 +134,16 @@ void PseudoProbeRewriter::parsePseudoProbe() {
 
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
   MCPseudoProbeDecoder::Uint64Map FuncStartAddrs;
+  SmallVector<StringRef, 3> Suffixes({".llvm.", ".destroy", ".resume"});
   for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
     for (const MCSymbol *Sym : F->getSymbols()) {
-      FuncStartAddrs[Function::getGUID(NameResolver::restore(Sym->getName()))] =
-          F->getAddress();
+      StringRef SymName = NameResolver::restore(Sym->getName());
+      if (std::optional<StringRef> CommonName =
+              getCommonName(SymName, false, Suffixes)) {
+        SymName = *CommonName;
+      }
+      uint64_t GUID = Function::getGUID(SymName);
+      FuncStartAddrs[GUID] = F->getAddress();
     }
   }
   Contents = PseudoProbeSection->getContents();
