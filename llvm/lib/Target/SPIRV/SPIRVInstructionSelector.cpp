@@ -33,7 +33,8 @@
 #include "llvm/Support/Debug.h"
 
 namespace {
-
+// TODO: consider removing this altogether and merely inserting the scopes
+// directly in SetupMF.
 struct SyncScopeIDs {
   llvm::SyncScope::ID Work_ItemSSID;
   llvm::SyncScope::ID WorkGroupSSID;
@@ -43,11 +44,11 @@ struct SyncScopeIDs {
 
   SyncScopeIDs() {}
   SyncScopeIDs(llvm::LLVMContext &Context) {
-    Work_ItemSSID = Context.getOrInsertSyncScopeID("work_item");
+    Work_ItemSSID = Context.getOrInsertSyncScopeID("singlethread");
     WorkGroupSSID = Context.getOrInsertSyncScopeID("workgroup");
     DeviceSSID = Context.getOrInsertSyncScopeID("device");
     AllSVMDevicesSSID = Context.getOrInsertSyncScopeID("all_svm_devices");
-    SubGroupSSID = Context.getOrInsertSyncScopeID("sub_group");
+    SubGroupSSID = Context.getOrInsertSyncScopeID("subgroup");
   }
 };
 
@@ -781,28 +782,6 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
-static SPIRV::Scope::Scope getScope(SyncScope::ID Ord,
-                                    const SyncScopeIDs &SSIDs) {
-  if (Ord == SyncScope::SingleThread || Ord == SSIDs.Work_ItemSSID)
-    return SPIRV::Scope::Invocation;
-  else if (Ord == SyncScope::System || Ord == SSIDs.DeviceSSID)
-    return SPIRV::Scope::Device;
-  else if (Ord == SSIDs.WorkGroupSSID)
-    return SPIRV::Scope::Workgroup;
-  else if (Ord == SSIDs.AllSVMDevicesSSID)
-    return SPIRV::Scope::CrossDevice;
-  else if (Ord == SSIDs.SubGroupSSID)
-    return SPIRV::Scope::Subgroup;
-  else
-    // OpenCL approach is: "The functions that do not have memory_scope argument
-    // have the same semantics as the corresponding functions with the
-    // memory_scope argument set to memory_scope_device." See ref.: //
-    // https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#atomic-functions
-    // In our case if the scope is unknown, assuming that SPIR-V code is to be
-    // consumed in an OpenCL environment, we use the same approach and set the
-    // scope to memory_scope_device.
-    return SPIRV::Scope::Device;
-}
 
 static void addMemoryOperands(MachineMemOperand *MemOp,
                               MachineInstrBuilder &MIB) {
@@ -957,7 +936,8 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   assert(I.hasOneMemOperand());
   const MachineMemOperand *MemOp = *I.memoperands_begin();
   uint32_t Scope =
-      static_cast<uint32_t>(getScope(MemOp->getSyncScopeID(), SSIDs));
+      static_cast<uint32_t>(getMemScope(GR.CurMF->getFunction().getContext(),
+                                        MemOp->getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
@@ -1028,7 +1008,9 @@ bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   Register MemSemReg = buildI32Constant(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
-  uint32_t Scope = static_cast<uint32_t>(getScope(Ord, SSIDs));
+  uint32_t Scope =
+      static_cast<uint32_t>(getMemScope(GR.CurMF->getFunction().getContext(),
+                                        Ord));
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemoryBarrier))
@@ -1048,7 +1030,8 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
     assert(I.hasOneMemOperand());
     const MachineMemOperand *MemOp = *I.memoperands_begin();
     unsigned Scope =
-        static_cast<uint32_t>(getScope(MemOp->getSyncScopeID(), SSIDs));
+        static_cast<uint32_t>(getMemScope(GR.CurMF->getFunction().getContext(),
+                                       MemOp->getSyncScopeID()));
     ScopeReg = buildI32Constant(Scope, I);
 
     unsigned ScSem = static_cast<uint32_t>(

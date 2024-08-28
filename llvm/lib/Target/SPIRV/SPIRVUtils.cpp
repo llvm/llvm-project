@@ -251,6 +251,24 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+SPIRV::Scope::Scope getMemScope(const LLVMContext &Ctx, SyncScope::ID ID) {
+  SmallVector<StringRef> SSNs;
+  Ctx.getSyncScopeNames(SSNs);
+
+  StringRef MemScope = SSNs[ID];
+  if (MemScope.empty() || MemScope == "all_svm_devices")
+    return SPIRV::Scope::CrossDevice;
+  if (MemScope == "device")
+    return SPIRV::Scope::Device;
+  if (MemScope == "workgroup")
+    return SPIRV::Scope::Workgroup;
+  if (MemScope == "subgroup")
+    return SPIRV::Scope::Subgroup;
+  if (MemScope == "singlethread")
+    return SPIRV::Scope::Invocation;
+  return SPIRV::Scope::Device; // Follow OpenCL convention for now.
+}
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);

@@ -75,6 +75,8 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
+SPIRV::Scope::Scope getMemScope(const LLVMContext &Ctx, SyncScope::ID ID);
+
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
 // of OpConstant instruction.
