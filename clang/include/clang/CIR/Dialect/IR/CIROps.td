@@ -3496,10 +3496,12 @@ def TryOp : CIR_Op<"try",
 
   let arguments = (ins OptionalAttr<ArrayAttr>:$catch_types);
   let regions = (region AnyRegion:$try_region,
+                        AnyRegion:$cleanup_region,
                         VariadicRegion<AnyRegion>:$catch_regions);
 
   let assemblyFormat = [{
     $try_region
+    `cleanup` $cleanup_region
     custom<CatchRegions>($catch_regions, $catch_types)
     attr-dict
   }];
