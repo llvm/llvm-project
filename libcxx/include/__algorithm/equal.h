@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_EQUAL_H
 #define _LIBCPP___ALGORITHM_EQUAL_H
 
+#include <__iterator/segmented_iterator.h>
 #include <__algorithm/comp.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
@@ -17,7 +18,6 @@
 #include <__functional/invoke.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
