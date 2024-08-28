@@ -4,7 +4,8 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     MPFRUtils.h
     mpfr_inc.h
   )
-  target_compile_options(libcMPFRWrapper PRIVATE -O3)
+  _get_common_test_compile_options(compile_options "" "")
+  target_compile_options(libcMPFRWrapper PRIVATE -O3 ${compile_options})
   add_dependencies(
     libcMPFRWrapper
     libc.src.__support.CPP.array
