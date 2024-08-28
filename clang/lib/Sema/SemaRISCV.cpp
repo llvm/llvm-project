@@ -1497,7 +1497,8 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
   if (Ext.empty())
     return false;
 
-  Ext.consume_front("+");
+  if (!Ext.consume_front("+"))
+    return false;
 
   return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
