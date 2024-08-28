@@ -192,6 +192,9 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 

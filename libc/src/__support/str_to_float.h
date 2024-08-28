@@ -20,6 +20,8 @@
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
@@ -1207,6 +1209,15 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+
+#ifndef LIBC_HAS_SANITIZER
+  if (LIBC_UNLIKELY(arg == nullptr)) {
+    // Use volatile to prevent undefined behavior of dereferencing nullptr.
+    volatile const char *crashing = arg;
+    // Intentionally crashing with SIGSEGV.
+    return {static_cast<T>(crashing[0]), 0, 0};
+  }
+#endif
 
   FPBits result;
   int error = 0;
