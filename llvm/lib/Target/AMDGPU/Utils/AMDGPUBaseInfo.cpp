@@ -2290,6 +2290,19 @@ bool getWavegroupEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-enable");
 }
 
+std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F) {
+  MDNode *Node = F.getMetadata("reqd_work_group_size");
+  if (!Node)
+    return std::nullopt;
+
+  std::array<uint32_t, 3> Dims;
+  for (unsigned i = 0; i < 3; ++i) {
+    Dims[i] =
+        mdconst::extract<ConstantInt>(Node->getOperand(i))->getZExtValue();
+  }
+  return Dims;
+}
+
 bool isShader(CallingConv::ID cc) {
   switch(cc) {
     case CallingConv::AMDGPU_VS:

@@ -27,6 +27,7 @@ namespace AMDGPU {
 struct MCKernelDescriptor {
   const MCExpr *group_segment_fixed_size = nullptr;
   const MCExpr *private_segment_fixed_size = nullptr;
+  const MCExpr *laneshared_segment_fixed_size = nullptr;
   const MCExpr *kernarg_size = nullptr;
   const MCExpr *compute_pgm_rsrc3 = nullptr;
   const MCExpr *compute_pgm_rsrc1 = nullptr;

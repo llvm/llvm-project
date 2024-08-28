@@ -2534,6 +2534,12 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
              << FourByteBuffer << '\n';
     return true;
 
+  case amdhsa::LANESHARED_SEGMENT_FIXED_SIZE_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    KdStream << Indent << ".amdhsa_laneshared_segment_fixed_size "
+             << FourByteBuffer << '\n';
+    return true;
+
   case amdhsa::KERNARG_SIZE_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
     KdStream << Indent << ".amdhsa_kernarg_size "

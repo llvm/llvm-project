@@ -490,6 +490,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   KernelDescriptor.group_segment_fixed_size =
       MCConstantExpr::create(PI.LDSSize, Ctx);
   KernelDescriptor.private_segment_fixed_size = PI.ScratchSize;
+  KernelDescriptor.laneshared_segment_fixed_size = PI.LaneSharedSegmentSize;
 
   Align MaxKernArgAlign;
   KernelDescriptor.kernarg_size = MCConstantExpr::create(
@@ -773,9 +774,30 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     return false;
   };
 
-  ProgInfo.NumArchVGPR = CreateExpr(Info.NumVGPR);
-  ProgInfo.NumAccVGPR = CreateExpr(Info.NumAGPR);
-  ProgInfo.NumVGPR = CreateExpr(Info.getTotalNumVGPRs(STM));
+  uint32_t NumWavesPerVGPRAlloc = 1;
+  uint32_t NumArchVGPR = Info.NumVGPR;
+  uint32_t NumAccVGPR = Info.NumAGPR;
+  uint32_t NumVGPR = Info.getTotalNumVGPRs(STM);
+
+  if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    assert(!NumAccVGPR);
+    assert(NumArchVGPR == NumVGPR);
+
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    auto WorkGroupSize = getReqdWorkGroupSize(MF.getFunction()).value();
+    NumWavesPerVGPRAlloc =
+        divideCeil(WorkGroupSize[0] * WorkGroupSize[1] * WorkGroupSize[2], 128);
+    unsigned NumLaneSharedVGPRs = divideCeil(MFI->getLaneSharedVGPRSize(), 4);
+
+    NumArchVGPR = NumVGPR = NumLaneSharedVGPRs + NumWavesPerVGPRAlloc * NumVGPR;
+
+    ProgInfo.LaneSharedSegmentSize =
+        CreateExpr(MFI->getLaneSharedScratchSize());
+  }
+
+  ProgInfo.NumArchVGPR = CreateExpr(NumArchVGPR);
+  ProgInfo.NumAccVGPR = CreateExpr(NumAccVGPR);
+  ProgInfo.NumVGPR = CreateExpr(NumVGPR);
   ProgInfo.AccumOffset =
       CreateExpr(alignTo(std::max(1, Info.NumVGPR), 4) / 4 - 1);
   ProgInfo.TgSplit = STM.isTgSplitEnabled();
@@ -907,13 +929,19 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
   unsigned MaxWaves = MFI->getMaxWavesPerEU();
+  unsigned MaxVGPRAllocs;
+  if (MaxWaves >= STM.getMaxWavesPerEU())
+    MaxVGPRAllocs = MaxWaves; // treat as default / not limited
+  else
+    MaxVGPRAllocs = divideCeil(MaxWaves, NumWavesPerVGPRAlloc);
+
   ProgInfo.NumSGPRsForWavesPerEU =
       AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
                                CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
                               Ctx);
   ProgInfo.NumVGPRsForWavesPerEU =
       AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
-                               CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
+                               CreateExpr(STM.getMinNumVGPRs(MaxVGPRAllocs))},
                               Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
