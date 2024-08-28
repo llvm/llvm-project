@@ -13,6 +13,7 @@
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -173,6 +174,11 @@ public:
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
     }
+    ScalarEvolution &SE = *PSE.getSE();
+    if (!isa<Constant>(V) && SE.isSCEVable(V->getType()))
+      if (auto *C = dyn_cast<SCEVConstant>(PSE.getSE()->getSCEV(V)))
+        return Plan.getOrAddLiveIn(C->getValue());
+
     return Plan.getOrAddLiveIn(V);
   }
 };
