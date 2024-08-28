@@ -10205,16 +10205,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
             for (size_t I = 0, E = VL.size(); I != E; I += GroupSize) {
               ArrayRef<Value *> Group = VL.slice(I, GroupSize);
-              SmallVector<int> ExtractionIndex(SVNumElements);
-              for_each(Group, [&](Value *V) {
-                auto *SV = cast<ShuffleVectorInst>(V);
-                int Index;
-                SV->isExtractSubvectorMask(Index);
-                for (int I :
-                     seq<int>(Index, Index + SV->getShuffleMask().size()))
-                  ExtractionIndex.push_back(I);
-              });
-              if (!is_sorted(ExtractionIndex)) {
+              int NextIndex = 0;
+              if (!all_of(Group, [&](Value *V) {
+                    auto *SV = cast<ShuffleVectorInst>(V);
+                    int Index;
+                    SV->isExtractSubvectorMask(Index);
+                    if (NextIndex != Index)
+                      return false;
+                    NextIndex += SV->getShuffleMask().size();
+                    return true;
+                  })) {
                 IsIdentity = false;
                 break;
               }
