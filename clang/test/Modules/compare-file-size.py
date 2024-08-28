@@ -4,11 +4,15 @@
 import argparse
 import os
 
-parser = argparse.ArgumentParser()
+def main():
+    parser = argparse.ArgumentParser()
 
-parser.add_argument("file1", type=str)
-parser.add_argument("file2", type=str)
+    parser.add_argument("file1", type=str)
+    parser.add_argument("file2", type=str)
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-return os.path.getsize(args.file1) < os.path.getsize(args.file2)
+    return os.path.getsize(args.file1) < os.path.getsize(args.file2)
+
+if __name__ == '__main__':
+    main()
