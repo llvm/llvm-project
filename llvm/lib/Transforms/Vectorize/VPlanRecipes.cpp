@@ -646,7 +646,9 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), Part, /* IsScalar */ true);
     Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
-    return Builder.CreatePtrAdd(Ptr, Addend, Name);
+    return Builder.CreatePtrAdd(Ptr, Addend, Name,
+                                isInBounds() ? GEPNoWrapFlags::inBounds()
+                                             : GEPNoWrapFlags::none());
   }
   case VPInstruction::ResumePhi: {
     if (Part != 0)
@@ -2393,7 +2395,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
   // Prepare for the new pointers.
   SmallVector<Value *, 2> AddrParts;
-  unsigned Index = Group->getIndex(Instr);
 
   // TODO: extend the masked interleaved-group support to reversed access.
   VPValue *BlockInMask = getMask();
@@ -2413,10 +2414,11 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     Idx = State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
     Idx = State.Builder.CreateMul(Idx,
                                   State.Builder.getInt32(Group->getFactor()));
-    Idx = State.Builder.CreateAdd(Idx, State.Builder.getInt32(Index));
     Idx = State.Builder.CreateNeg(Idx);
-  } else
-    Idx = State.Builder.getInt32(-Index);
+  } else {
+    // TODO: Drop redundant 0-index GEP as follow-up.
+    Idx = State.Builder.getInt32(0);
+  }
 
   VPValue *Addr = getAddr();
   for (unsigned Part = 0; Part < State.UF; Part++) {

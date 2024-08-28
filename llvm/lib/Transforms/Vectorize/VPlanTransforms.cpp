@@ -596,8 +596,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
           SE, nullptr, StartV, StepV, InsertPt);
 
-      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
-                                       {PtrIV->getStartValue(), Steps},
+      auto *Recipe = new VPInstruction(PtrIV->getStartValue(), Steps, false,
                                        PtrIV->getDebugLoc(), "next.gep");
 
       Recipe->insertAfter(Steps);
@@ -1522,14 +1521,19 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
 }
 
 void VPlanTransforms::createInterleaveGroups(
-    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+    VPlan &Plan,
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+        &InterleaveGroups,
     VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+  if (InterleaveGroups.empty())
+    return;
+
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
   for (const auto *IG : InterleaveGroups) {
-    auto *Recipe =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
@@ -1539,9 +1543,39 @@ void VPlanTransforms::createInterleaveGroups(
 
     bool NeedsMaskForGaps =
         IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed;
-    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                                        Recipe->getMask(), NeedsMaskForGaps);
-    VPIG->insertBefore(Recipe);
+
+    Instruction *IRInsertPos = IG->getInsertPos();
+    auto *InsertPos =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
+    VPRecipeBase *IP = InsertPos;
+
+    // Get or create the start address for the interleave group.
+    auto *Start =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
+    VPValue *Addr = Start->getAddr();
+    if (!VPDT.properlyDominates(Addr->getDefiningRecipe(), InsertPos)) {
+      bool InBounds = false;
+      if (auto *gep = dyn_cast<GetElementPtrInst>(
+              getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
+        InBounds = gep->isInBounds();
+
+      // We cannot re-use the address of the first member because it does not
+      // dominate the insert position. Use the address of the insert position
+      // and create a PtrAdd to adjust the index to start at the first member.
+      APInt Offset(32,
+                   getLoadStoreType(IRInsertPos)->getScalarSizeInBits() / 8 *
+                       IG->getIndex(IRInsertPos),
+                   /*IsSigned=*/true);
+      VPValue *OffsetVPV = Plan.getOrAddLiveIn(
+          ConstantInt::get(IRInsertPos->getParent()->getContext(), -Offset));
+      Addr = new VPInstruction(InsertPos->getAddr(), OffsetVPV, InBounds);
+      Addr->getDefiningRecipe()->insertAfter(InsertPos);
+      IP = Addr->getDefiningRecipe();
+    }
+    auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
+                                        InsertPos->getMask(), NeedsMaskForGaps);
+    VPIG->insertAfter(IP);
+
     unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {
