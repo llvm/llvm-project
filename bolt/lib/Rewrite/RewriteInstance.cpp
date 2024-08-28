@@ -1533,7 +1533,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+    if (BC->isRISCV() || !Rel->Addend || !Rel->isIRelative())
       return;
 
     // IFUNC trampoline without symbol
