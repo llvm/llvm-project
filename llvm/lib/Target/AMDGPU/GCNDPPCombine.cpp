@@ -83,6 +83,7 @@ class GCNDPPCombine {
 public:
   bool run(MachineFunction &MF);
 };
+
 class GCNDPPCombineLegacy : public MachineFunctionPass {
 public:
   static char ID;
@@ -756,8 +757,7 @@ bool GCNDPPCombineLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction())) {
     return false;
   }
-  GCNDPPCombine Impl;
-  return Impl.run(MF);
+  return GCNDPPCombine().run(MF);
 }
 
 bool GCNDPPCombine::run(MachineFunction &MF) {
@@ -795,8 +795,7 @@ bool GCNDPPCombine::run(MachineFunction &MF) {
 
 PreservedAnalyses GCNDPPCombinePass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &) {
-  GCNDPPCombine Impl;
-  bool Changed = Impl.run(MF);
+  bool Changed = GCNDPPCombine().run(MF);
   if (!Changed) {
     return PreservedAnalyses::all();
   }
