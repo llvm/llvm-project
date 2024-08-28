@@ -664,26 +664,23 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   auto &UnsignedVec = Mapper.UnsignedVec;
 
   std::vector<MatchedEntry> MatchedEntries;
-  std::vector<stable_hash> Sequence;
   auto Size = UnsignedVec.size();
 
   // Get the global outlined hash tree built from the previous run.
   assert(cgdata::hasOutlinedHashTree());
   const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
   for (size_t I = 0; I < Size; ++I) {
-    // skip the invalid mapping that represents a large negative value.
-    if (UnsignedVec[I] >= Size)
+    // Skip the invalid mapping.
+    if (UnsignedVec[I] >= Mapper.LegalInstrNumber)
       continue;
     const MachineInstr &MI = *InstrList[I];
-    // skip debug instructions as we did for the outlined function.
+    // Skip debug instructions as we did for the outlined function.
     if (MI.isDebugInstr())
       continue;
-    // skip the empty hash value.
+    // Skip the empty hash value.
     stable_hash StableHashI = stableHashValue(MI);
     if (!StableHashI)
       continue;
-    Sequence.clear();
-    Sequence.push_back(StableHashI);
 
     const HashNode *LastNode = followHashNode(StableHashI, RootNode);
     if (!LastNode)
@@ -691,14 +688,14 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
 
     size_t J = I + 1;
     for (; J < Size; ++J) {
-      // break on the invalid mapping that represents a large negative value.
-      if (UnsignedVec[J] >= Size)
+      // Break on the invalid mapping.
+      if (UnsignedVec[J] >= Mapper.LegalInstrNumber)
         break;
-      // ignore debug instructions as we did for the outlined function.
+      // Skip debug instructions as we did for the outlined function.
       const MachineInstr &MJ = *InstrList[J];
       if (MJ.isDebugInstr())
         continue;
-      // break on the empty hash value.
+      // Break on the empty hash value.
       stable_hash StableHashJ = stableHashValue(MJ);
       if (!StableHashJ)
         break;
@@ -708,7 +705,6 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
 
       // Even with a match ending with a terminal, we continue finding
       // matches to populate all candidates.
-      Sequence.push_back(StableHashJ);
       auto Count = LastNode->Terminals;
       if (Count)
         MatchedEntries.push_back({I, J - I + 1, *Count});
