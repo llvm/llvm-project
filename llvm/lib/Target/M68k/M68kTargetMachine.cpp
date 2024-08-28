@@ -87,8 +87,6 @@ CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
                                        bool JIT) {
   if (!CM) {
     return CodeModel::Small;
-  } else if (CM == CodeModel::Large) {
-    llvm_unreachable("Large code model is not supported");
   } else if (CM == CodeModel::Kernel) {
     llvm_unreachable("Kernel code model is not implemented yet");
   }
