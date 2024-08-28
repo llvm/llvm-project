@@ -2803,8 +2803,8 @@ UserExpression *Target::GetUserExpressionForLanguage(
     return nullptr;
   }
 
-  auto *user_expr = ts->GetUserExpression(expr, prefix, language, desired_type,
-                                          options, ctx_obj);
+  auto user_expr = ts->GetUserExpression(expr, prefix, language, desired_type,
+                                         options, ctx_obj);
   if (!user_expr)
     error = Status::FromErrorStringWithFormat(
         "Could not create an expression for language %s",
