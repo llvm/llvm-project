@@ -29,6 +29,7 @@
 #include "bolt/Profile/YAMLProfileReader.h"
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/xxhash.h"
@@ -46,7 +47,6 @@ namespace opts {
 extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<unsigned> Verbosity;
-extern cl::opt<bool> ProfileUsePseudoProbes;
 
 cl::opt<bool>
     InferStaleProfile("infer-stale-profile",
@@ -198,8 +198,6 @@ public:
 /// release.
 class StaleMatcher {
 public:
-  StaleMatcher(const uint64_t YamlBFGUID) : YamlBFGUID(YamlBFGUID) {}
-
   /// Initialize stale matcher.
   void init(const std::vector<FlowBlock *> &Blocks,
             const std::vector<BlendedBlockHash> &Hashes,
@@ -217,39 +215,38 @@ public:
     }
   }
 
-  /// Creates a mapping from a inlined pseudo probe's guid and index to probe.
-  void mapGUIDAndIndexToProbe(uint64_t Guid, uint64_t Index,
-                              const MCDecodedPseudoProbe *Probe) {
-    IndexAndGUIDToInlinedProbes[Guid][Index].push_back(Probe);
-  }
-
-  /// Creates a mapping from a pseudo probe index to pseudo probe.
-  void mapIndexToProbe(uint64_t Index, const MCDecodedPseudoProbe *Probe) {
-    IndexToProbes[Index].push_back(Probe);
-  }
-
   /// Creates a mapping from a pseudo probe to a flow block.
   void mapProbeToBB(const MCDecodedPseudoProbe *Probe, FlowBlock *Block) {
     BBPseudoProbeToBlock[Probe] = Block;
   }
 
+  enum MatchMethod : char {
+    MATCH_EXACT = 0,
+    MATCH_PROBE_EXACT,
+    MATCH_PROBE_LOOSE,
+    MATCH_OPCODE,
+    MATCH_CALL,
+    NO_MATCH
+  };
+
   /// Find the most similar flow block for a profile block given its hashes and
   /// pseudo probe information.
-  const FlowBlock *
+  std::pair<const FlowBlock *, MatchMethod>
   matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
-             const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) {
-    const FlowBlock *BestBlock = matchWithOpcodes(BlendedHash);
-    if (BestBlock) {
-      ++MatchedWithOpcodes;
-      return BestBlock;
-    }
-    BestBlock = matchWithCalls(BlendedHash, CallHash);
-    if (BestBlock)
-      return BestBlock;
-    BestBlock = matchWithPseudoProbes(BlendedHash, PseudoProbes);
-    if (BestBlock)
-      MatchedWithPseudoProbes.insert(BlendedHash.combine());
-    return BestBlock;
+             const ArrayRef<yaml::bolt::PseudoProbeInfo> PseudoProbes,
+             const ArrayRef<yaml::bolt::InlineTreeInfo> InlineTree) {
+    const auto &[Block, Hash] = matchWithOpcodes(BlendedHash);
+    if (isHighConfidenceMatch(Hash, BlendedHash))
+      return {Block, MATCH_EXACT};
+    const auto &[ProbeBlock, Exact] =
+        matchWithPseudoProbes(PseudoProbes, InlineTree);
+    if (ProbeBlock)
+      return {ProbeBlock, Exact ? MATCH_PROBE_EXACT : MATCH_PROBE_LOOSE};
+    if (const FlowBlock *BestBlock = matchWithCalls(BlendedHash, CallHash))
+      return {BestBlock, MATCH_CALL};
+    if (Block)
+      return {Block, MATCH_OPCODE};
+    return {nullptr, NO_MATCH};
   }
 
   /// Returns true if the two basic blocks (in the binary and in the profile)
@@ -260,48 +257,49 @@ public:
     return Hash1.InstrHash == Hash2.InstrHash;
   }
 
-  /// Returns true if a profiled block was matched with its pseudo probe.
-  bool isPseudoProbeMatch(BlendedBlockHash YamlBBHash) {
-    return MatchedWithPseudoProbes.find(YamlBBHash.combine()) !=
-           MatchedWithPseudoProbes.end();
+  /// Returns matched InlineTree * for a given profile inline_tree_id.
+  const MCDecodedPseudoProbeInlineTree *
+  getInlineTreeNode(uint32_t ProfileInlineTreeNodeId) const {
+    auto It = InlineTreeNodeMap.find(ProfileInlineTreeNodeId);
+    if (It == InlineTreeNodeMap.end())
+      return nullptr;
+    return It->second;
   }
 
-  /// Returns the number of blocks matched with opcodes.
-  size_t getNumBlocksMatchedWithOpcodes() const { return MatchedWithOpcodes; }
-
-  /// Returns the number of blocks matched with pseudo probes.
-  size_t getNumBlocksMatchedWithPseudoProbes() const {
-    return MatchedWithPseudoProbes.size();
+  void mapInlineTreeNode(uint32_t ProfileNode,
+                         const MCDecodedPseudoProbeInlineTree *BinaryNode) {
+    auto Res = InlineTreeNodeMap.try_emplace(ProfileNode, BinaryNode);
+    assert(Res.second &&
+           "Duplicate mapping from profile node index to binary inline tree");
+    (void)Res;
   }
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
-  DenseMap<uint64_t, std::vector<const MCDecodedPseudoProbe *>> IndexToProbes;
-  DenseMap<uint64_t,
-           DenseMap<uint64_t, std::vector<const MCDecodedPseudoProbe *>>>
-      IndexAndGUIDToInlinedProbes;
+  DenseMap<uint32_t, const MCDecodedPseudoProbeInlineTree *> InlineTreeNodeMap;
   DenseMap<const MCDecodedPseudoProbe *, FlowBlock *> BBPseudoProbeToBlock;
-  DenseSet<uint64_t> MatchedWithPseudoProbes;
-  const uint64_t YamlBFGUID{0};
-  uint64_t MatchedWithOpcodes{0};
 
-  // Uses OpcodeHash to find the most similar block for a given hash.
-  const FlowBlock *matchWithOpcodes(BlendedBlockHash BlendedHash) const {
+  // Uses OpcodeHash to find the most similar block (with blended hash) for a
+  // given hash.
+  std::pair<const FlowBlock *, BlendedBlockHash>
+  matchWithOpcodes(BlendedBlockHash BlendedHash) const {
     auto BlockIt = OpHashToBlocks.find(BlendedHash.OpcodeHash);
     if (BlockIt == OpHashToBlocks.end())
-      return nullptr;
+      return {nullptr, BlendedBlockHash(0)};
     FlowBlock *BestBlock = nullptr;
     uint64_t BestDist = std::numeric_limits<uint64_t>::max();
+    BlendedBlockHash BestHash;
     for (const auto &[Hash, Block] : BlockIt->second) {
       uint64_t Dist = Hash.distance(BlendedHash);
       if (BestBlock == nullptr || Dist < BestDist) {
         BestDist = Dist;
         BestBlock = Block;
+        BestHash = Hash;
       }
     }
-    return BestBlock;
+    return {BestBlock, BestHash};
   }
 
   // Uses CallHash to find the most similar block for a given hash.
@@ -326,120 +324,71 @@ private:
     return BestBlock;
   }
 
-  /// A helper function for logging.
-  static bool LogErrIfExpr(bool Expr, StringRef Message) {
-    if (Expr)
-      errs() << Message;
-    return Expr;
-  }
-
-  /// Matches an inlined profile block with an inlined binary block based on
-  /// pseudo probes.
-  const FlowBlock *matchWithInlinedBlockPseudoProbes(
-      SmallVector<const yaml::bolt::PseudoProbeInfo *>
-          &InlinedBlockPseudoProbes) const {
-    if (opts::Verbosity >= 3)
-      outs() << "BOLT-INFO: attempting to match block with inlined block "
-                "pseudo probes\n";
-
-    size_t NInlinedBlockPseudoProbes = InlinedBlockPseudoProbes.size();
-    if (LogErrIfExpr(NInlinedBlockPseudoProbes == 0,
-                     "BOLT-WARNING: no pseudo probes in profile block\n"))
-      return nullptr;
-    if (LogErrIfExpr(
-            NInlinedBlockPseudoProbes > 1,
-            "BOLT-WARNING: more than 1 pseudo probes in profile block\n"))
-      return nullptr;
-
-    const auto *InlinedPseudoProbe = InlinedBlockPseudoProbes[0];
-    uint64_t Guid = InlinedPseudoProbe->GUID;
-    uint64_t Index = InlinedPseudoProbe->Index;
-
-    auto GuidIt = IndexAndGUIDToInlinedProbes.find(Guid);
-    if (LogErrIfExpr(
-            GuidIt == IndexAndGUIDToInlinedProbes.end(),
-            "BOLT-WARNING: no pseudo probes found within BB at index\n"))
-      return nullptr;
-    auto IndexIt = GuidIt->second.find(Index);
-    if (LogErrIfExpr(
-            IndexIt == GuidIt->second.end(),
-            "BOLT-WARNING: no pseudo probes found within BB at index\n"))
-      return nullptr;
-
-    if (LogErrIfExpr(
-            IndexIt->second.size() > 1,
-            "BOLT-WARNING: more than 1 block pseudo probes in BB at index\n"))
-      return nullptr;
-
-    const MCDecodedPseudoProbe *BinaryPseudoProbe = IndexIt->second[0];
-    auto BinaryPseudoProbeIt = BBPseudoProbeToBlock.find(BinaryPseudoProbe);
-    assert(BinaryPseudoProbeIt != BBPseudoProbeToBlock.end() &&
-           "All binary pseudo probes should belong a binary basic block");
-
-    return BinaryPseudoProbeIt->second;
-  }
-
   /// Matches a profile block with an binary block based on pseudo probes.
-  const FlowBlock *matchWithNonInlinedBlockPseudoProbes(
-      SmallVector<const yaml::bolt::PseudoProbeInfo *> &BlockPseudoProbes)
-      const {
-    if (opts::Verbosity >= 3)
-      outs() << "BOLT-INFO: attempting to match block with inlined block "
-                "pseudo probes\n";
+  /// Returns the best matching block (or nullptr) and whether the match is
+  /// unambiguous.
+  std::pair<const FlowBlock *, bool> matchWithPseudoProbes(
+      const ArrayRef<yaml::bolt::PseudoProbeInfo> BlockPseudoProbes,
+      const ArrayRef<yaml::bolt::InlineTreeInfo> InlineTree) const {
+    if (!opts::StaleMatchingWithBlockPseudoProbes)
+      return {nullptr, false};
 
-    size_t NBlockPseudoProbes = BlockPseudoProbes.size();
-    if (LogErrIfExpr(NBlockPseudoProbes == 0,
-                     "BOLT-WARNING: no pseudo probes in profile block\n"))
-      return nullptr;
-    if (LogErrIfExpr(
-            NBlockPseudoProbes > 1,
-            "BOLT-WARNING: more than 1 pseudo probes in profile block\n"))
-      return nullptr;
-    uint64_t Index = BlockPseudoProbes[0]->Index;
-    auto It = IndexToProbes.find(Index);
-    if (LogErrIfExpr(
-            It == IndexToProbes.end(),
-            "BOLT-WARNING: no block pseudo probes found within BB at index\n"))
-      return nullptr;
-    if (LogErrIfExpr(
-            It->second.size() > 1,
-            "BOLT-WARNING: more than 1 block pseudo probes in BB at index\n"))
-      return nullptr;
-    const MCDecodedPseudoProbe *BinaryPseudoProbe = It->second[0];
-    auto BinaryPseudoProbeIt = BBPseudoProbeToBlock.find(BinaryPseudoProbe);
-    assert(BinaryPseudoProbeIt != BBPseudoProbeToBlock.end() &&
-           "All binary pseudo probes should belong a binary basic block");
+    auto logIf = [](bool Expr, StringRef Message) {
+      LLVM_DEBUG(if (Expr) errs() << Message << '\n');
+      return Expr;
+    };
 
-    return BinaryPseudoProbeIt->second;
-  }
+    DenseMap<const FlowBlock *, uint32_t> FlowBlockMatchCount;
 
-  /// Uses pseudo probe information to attach the profile to the appropriate
-  /// block.
-  const FlowBlock *matchWithPseudoProbes(
-      BlendedBlockHash BlendedHash,
-      const std::vector<yaml::bolt::PseudoProbeInfo> &PseudoProbes) const {
-    if (!opts::StaleMatchingWithBlockPseudoProbes || !YamlBFGUID)
-      return nullptr;
-
-    // Searches for the pseudo probe attached to the matched function's block.
-    SmallVector<const yaml::bolt::PseudoProbeInfo *> BlockPseudoProbes;
-    SmallVector<const yaml::bolt::PseudoProbeInfo *> InlinedBlockPseudoProbes;
-    for (const auto &PseudoProbe : PseudoProbes) {
-      // Skips pseudo probes attached to function calls.
-      if (PseudoProbe.Type != static_cast<uint8_t>(PseudoProbeType::Block))
+    for (const yaml::bolt::PseudoProbeInfo &Probe : BlockPseudoProbes) {
+      const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
+          getInlineTreeNode(Probe.InlineTreeIndex);
+      if (logIf(!InlineTreeNode,
+                formatv("no matching inline tree node for {0} {1}",
+                        Probe.InlineTreeIndex, Probe.Index).str())) {
+        ++FlowBlockMatchCount[nullptr];
         continue;
-      if (PseudoProbe.GUID != YamlBFGUID)
-        InlinedBlockPseudoProbes.push_back(&PseudoProbe);
-      else
-        BlockPseudoProbes.push_back(&PseudoProbe);
+      }
+      const MCDecodedPseudoProbe *BinaryProbe = nullptr;
+      for (const MCDecodedPseudoProbe &FuncProbe :
+           InlineTreeNode->getProbes()) {
+        if (FuncProbe.getIndex() != Probe.Index)
+          continue;
+        BinaryProbe = &FuncProbe;
+        break;
+      }
+      if (logIf(!BinaryProbe, formatv("no matching binary probe for {0} {1}",
+                                      Probe.InlineTreeIndex, Probe.Index)
+                                  .str())) {
+        ++FlowBlockMatchCount[nullptr];
+        continue;
+      }
+      auto It = BBPseudoProbeToBlock.find(BinaryProbe);
+      if (logIf(It == BBPseudoProbeToBlock.end(),
+                formatv("no probe->block for {0} {1}", Probe.InlineTreeIndex,
+                        Probe.Index)
+                    .str())) {
+        ++FlowBlockMatchCount[nullptr];
+        continue;
+      }
+      const FlowBlock *Block = It->second;
+      ++FlowBlockMatchCount[Block];
     }
-    // Returns nullptr if there is not a 1:1 mapping of the profile block pseudo
-    // probe and a binary block pseudo probe.
-    const FlowBlock *MatchedInlinedBlock =
-        matchWithInlinedBlockPseudoProbes(InlinedBlockPseudoProbes);
-    return MatchedInlinedBlock
-               ? MatchedInlinedBlock
-               : matchWithNonInlinedBlockPseudoProbes(BlockPseudoProbes);
+    uint32_t BestMatchCount = 0;
+    uint32_t TotalMatchCount = 0;
+    const FlowBlock *BestMatchBlock = nullptr;
+    for (auto &[Block, Count] : FlowBlockMatchCount) {
+      logIf(true, formatv("block {0} count {1}",
+                          Block ? Block->Index : UINT64_MAX, Count)
+                      .str());
+      TotalMatchCount += Count;
+      if (Count > BestMatchCount ||
+          (Count == BestMatchCount && !BestMatchBlock)) {
+        BestMatchBlock = Block;
+        BestMatchCount = Count;
+      }
+    }
+    return {BestMatchBlock, BestMatchCount / TotalMatchCount};
   }
 };
 
@@ -630,26 +579,7 @@ size_t matchWeightsByHashes(
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
-  // Sets the YamlBFGUID in the StaleMatcher such that if either the profiled or
-  // binary function dne or they are not equal, to zero, as not to perform
-  // pseudo probe block matching. Otherwise, the YamlBF's GUID is used for
-  // pseudo probe block matching.
-  const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes && opts::StaleMatchingWithBlockPseudoProbes
-          ? BC.getPseudoProbeDecoder()
-          : nullptr;
-  uint64_t BFPseudoProbeDescHash = 0;
-  if (opts::ProfileUsePseudoProbes &&
-      opts::StaleMatchingWithBlockPseudoProbes && BF.getGUID() != 0) {
-    assert(PseudoProbeDecoder &&
-           "If BF has pseudo probe, BC should have a pseudo probe decoder");
-    auto &GUID2FuncDescMap = PseudoProbeDecoder->getGUID2FuncDescMap();
-    auto It = GUID2FuncDescMap.find(BF.getGUID());
-    if (It != GUID2FuncDescMap.end())
-      BFPseudoProbeDescHash = It->second.FuncHash;
-  }
-
-  StaleMatcher Matcher(YamlBF.GUID);
+  StaleMatcher Matcher;
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
@@ -672,37 +602,54 @@ size_t matchWeightsByHashes(
     Blocks.push_back(&Func.Blocks[I + 1]);
     BlendedBlockHash BlendedHash(BB->getHash());
     BlendedHashes.push_back(BlendedHash);
-    // Collects pseudo probes attached to the BB for use in the StaleMatcher.
-    if (opts::ProfileUsePseudoProbes &&
-        opts::StaleMatchingWithBlockPseudoProbes && BFPseudoProbeDescHash &&
-        YamlBF.PseudoProbeDescHash &&
-        BFPseudoProbeDescHash == YamlBF.PseudoProbeDescHash) {
-      assert(PseudoProbeDecoder &&
-             "If pseudo probes are in use, psuedo probe decoder should exist");
-      const AddressProbesMap &ProbeMap =
-          PseudoProbeDecoder->getAddress2ProbesMap();
-      const uint64_t FuncAddr = BF.getAddress();
-      const std::pair<uint64_t, uint64_t> &BlockRange =
-          BB->getInputAddressRange();
-      const auto &BlockProbes =
-          llvm::make_range(ProbeMap.lower_bound(FuncAddr + BlockRange.first),
-                           ProbeMap.lower_bound(FuncAddr + BlockRange.second));
-      for (const auto &[_, Probes] : BlockProbes) {
-        for (const MCDecodedPseudoProbe &Probe : Probes) {
-          if (Probe.getType() != static_cast<uint8_t>(PseudoProbeType::Block))
-            continue;
-          if (Probe.getInlineTreeNode()->hasInlineSite())
-            Matcher.mapGUIDAndIndexToProbe(Probe.getGuid(), Probe.getIndex(),
-                                           &Probe);
-          else
-            Matcher.mapIndexToProbe(Probe.getIndex(), &Probe);
-          Matcher.mapProbeToBB(&Probe, Blocks[I]);
-        }
-      }
-    }
 
     LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
                       << Twine::utohexstr(BB->getHash()) << "\n");
+  }
+  // Collects function pseudo probes for use in the StaleMatcher.
+  if (opts::StaleMatchingWithBlockPseudoProbes) {
+    const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
+    assert(PseudoProbeDecoder &&
+           "If pseudo probes are in use, pseudo probe decoder should exist");
+    const AddressProbesMap &ProbeMap =
+        PseudoProbeDecoder->getAddress2ProbesMap();
+    const uint64_t FuncAddr = BF.getAddress();
+    for (const MCDecodedPseudoProbe &Probe :
+         ProbeMap.find(FuncAddr, FuncAddr + BF.getSize()))
+      if (const BinaryBasicBlock *BB =
+              BF.getBasicBlockContainingOffset(Probe.getAddress() - FuncAddr))
+        Matcher.mapProbeToBB(&Probe, Blocks[BB->getIndex()]);
+    // Match inline tree nodes by GUID, checksum, parent, and call site.
+    unsigned MatchedNodes = 0;
+    const MCDecodedPseudoProbeInlineTree *DummyInlineRoot =
+        &PseudoProbeDecoder->getDummyInlineRoot();
+    for (const yaml::bolt::InlineTreeInfo &InlineTreeNode : YamlBF.InlineTree) {
+      uint64_t GUID = InlineTreeNode.GUID;
+      uint64_t Hash = InlineTreeNode.Hash;
+      uint32_t InlineTreeNodeId = InlineTreeNode.Index;
+      uint32_t ParentId = InlineTreeNode.ParentIndex;
+      uint32_t CallSiteProbe = InlineTreeNode.CallSiteProbe;
+      const MCDecodedPseudoProbeInlineTree *ParentNode =
+          InlineTreeNodeId ? Matcher.getInlineTreeNode(ParentId)
+                           : DummyInlineRoot;
+      if (!ParentNode)
+        continue;
+      for (const MCDecodedPseudoProbeInlineTree &Child :
+           ParentNode->getChildren()) {
+        if (Child.Guid != GUID ||
+            PseudoProbeDecoder->getFuncDescForGUID(GUID)->FuncHash != Hash)
+          continue;
+        // Check inline site for non-toplev inline tree nodes.
+        if (ParentNode != DummyInlineRoot &&
+            std::get<1>(Child.getInlineSite()) != CallSiteProbe)
+          continue;
+        Matcher.mapInlineTreeNode(InlineTreeNodeId, &Child);
+        ++MatchedNodes;
+        break;
+      }
+    }
+    LLVM_DEBUG(errs() << "matched " << MatchedNodes << "/"
+                      << YamlBF.InlineTree.size() << " inline tree nodes\n");
   }
   Matcher.init(Blocks, BlendedHashes, CallHashes);
 
@@ -724,7 +671,9 @@ size_t matchWeightsByHashes(
       else
         llvm_unreachable("Unhandled HashFunction");
     }
-    MatchedBlock = Matcher.matchBlock(YamlHash, CallHash, YamlBB.PseudoProbes);
+    StaleMatcher::MatchMethod Method;
+    std::tie(MatchedBlock, Method) = Matcher.matchBlock(
+        YamlHash, CallHash, YamlBB.PseudoProbes, YamlBF.InlineTree);
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
@@ -737,16 +686,34 @@ size_t matchWeightsByHashes(
                         << " with hash " << Twine::utohexstr(BinHash.combine())
                         << "\n");
       // Update matching stats accounting for the matched block.
-      if (Matcher.isHighConfidenceMatch(BinHash, YamlHash)) {
+      switch (Method) {
+      case StaleMatcher::MATCH_EXACT:
         ++BC.Stats.NumExactMatchedBlocks;
         BC.Stats.ExactMatchedSampleCount += YamlBB.ExecCount;
-        LLVM_DEBUG(dbgs() << "  exact match\n");
-      } else if (Matcher.isPseudoProbeMatch(YamlHash)) {
-        ++BC.Stats.NumPseudoProbeMatchedBlocks;
-        BC.Stats.PseudoProbeMatchedSampleCount += YamlBB.ExecCount;
-        LLVM_DEBUG(dbgs() << "  pseudo probe match\n");
-      } else {
-        LLVM_DEBUG(dbgs() << "  loose match\n");
+        LLVM_DEBUG(dbgs() << "  exact hash match\n");
+        break;
+      case StaleMatcher::MATCH_PROBE_EXACT:
+        ++BC.Stats.NumPseudoProbeExactMatchedBlocks;
+        BC.Stats.PseudoProbeExactMatchedSampleCount += YamlBB.ExecCount;
+        LLVM_DEBUG(dbgs() << "  exact pseudo probe match\n");
+        break;
+      case StaleMatcher::MATCH_PROBE_LOOSE:
+        ++BC.Stats.NumPseudoProbeLooseMatchedBlocks;
+        BC.Stats.PseudoProbeLooseMatchedSampleCount += YamlBB.ExecCount;
+        LLVM_DEBUG(dbgs() << "  loose pseudo probe match\n");
+        break;
+      case StaleMatcher::MATCH_CALL:
+        ++BC.Stats.NumCallMatchedBlocks;
+        BC.Stats.CallMatchedSampleCount += YamlBB.ExecCount;
+        LLVM_DEBUG(dbgs() << "  call match\n");
+        break;
+      case StaleMatcher::MATCH_OPCODE:
+        ++BC.Stats.NumLooseMatchedBlocks;
+        BC.Stats.LooseMatchedSampleCount += YamlBB.ExecCount;
+        LLVM_DEBUG(dbgs() << "  loose hash match\n");
+        break;
+      case StaleMatcher::NO_MATCH:
+        LLVM_DEBUG(dbgs() << "  no match\n");
       }
       if (YamlBB.NumInstructions == BB->size())
         ++BC.Stats.NumStaleBlocksWithEqualIcount;
@@ -759,13 +726,6 @@ size_t matchWeightsByHashes(
     // Update matching stats.
     ++BC.Stats.NumStaleBlocks;
     BC.Stats.StaleSampleCount += YamlBB.ExecCount;
-  }
-
-  if (opts::Verbosity >= 2) {
-    outs() << "BOLT-INFO: " << Matcher.getNumBlocksMatchedWithPseudoProbes()
-           << " blocks matched with pseudo probes\n"
-           << "BOLT-INFO: " << Matcher.getNumBlocksMatchedWithOpcodes()
-           << " blocks matched with opcodes\n";
   }
 
   // Match jumps from the profile to the jumps from CFG
