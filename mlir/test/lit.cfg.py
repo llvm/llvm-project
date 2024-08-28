@@ -23,7 +23,7 @@ config.name = "MLIR"
 use_lit_shell = True
 lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
 if lit_shell_env:
-  use_lit_shell = not lit.util.pythonize_bool(lit_shell_env)
+  use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
 config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
