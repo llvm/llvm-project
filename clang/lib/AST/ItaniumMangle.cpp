@@ -38,6 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
+#include <set>
 
 using namespace clang;
 
@@ -6951,6 +6952,27 @@ bool CXXNameMangler::mangleStandardSubstitution(const NamedDecl *ND) {
       return true;
     }
     return false;
+  }
+
+  if (getASTContext().getTargetInfo().getTriple().isOSSolaris()) {
+    if (const RecordDecl *RD = dyn_cast<RecordDecl>(ND)) {
+      if (!isStdNamespace(Context.getEffectiveDeclContext(RD)))
+        return false;
+
+      // Issue #33114: Need non-standard mangling of std::tm etc. for
+      // Solaris ABI compatibility.
+      static std::set<StringRef> types{"div_t", "ldiv_t", "lconv", "tm"};
+
+      // <substitution> ::= tm # ::std::tm, same for the others
+      if (const IdentifierInfo *II = RD->getIdentifier()) {
+        StringRef type = II->getName();
+        if (types.count(type)) {
+          Out << type.size() << type;
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
   return false;
