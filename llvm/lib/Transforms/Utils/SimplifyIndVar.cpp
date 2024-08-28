@@ -1928,18 +1928,24 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
     if (!WideAddRec.first)
       return nullptr;
 
-    // Reuse the IV increment that SCEVExpander created. Recompute flags, unless
-    // the flags for both increments agree and it is safe to use the ones from
-    // the original inc. In that case, the new use of the wide increment won't
-    // be more poisonous.
-    bool NeedToRecomputeFlags =
-        !SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
-                                                      DU.NarrowUse, WideInc) ||
-        DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
-        DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
+    auto CanUseWideInc = [&]() {
+      if (!WideInc)
+        return false;
+      // Reuse the IV increment that SCEVExpander created. Recompute flags,
+      // unless the flags for both increments agree and it is safe to use the
+      // ones from the original inc. In that case, the new use of the wide
+      // increment won't be more poisonous.
+      bool NeedToRecomputeFlags =
+          !SCEVExpander::canReuseFlagsFromOriginalIVInc(
+              OrigPhi, WidePhi, DU.NarrowUse, WideInc) ||
+          DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
+          DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
+      return WideAddRec.first == WideIncExpr &&
+             Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags);
+    };
+
     Instruction *WideUse = nullptr;
-    if (WideAddRec.first == WideIncExpr &&
-        Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags))
+    if (CanUseWideInc())
       WideUse = WideInc;
     else {
       WideUse = cloneIVUser(DU, WideAddRec.first);
