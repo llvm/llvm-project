@@ -17,42 +17,42 @@ body:             |
     %5:agpr_32 = IMPLICIT_DEF  
   
     ; copy from virtual VGPR to virtual SGPR  
-    ; CHECK: *** Bad machine code: illegal copy from VGPR to SGPR ***  
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***  
     ; CHECK: - instruction: %6:sgpr_32 = COPY %0:vgpr_32  
     %6:sgpr_32 = COPY %0:vgpr_32  
   
     ; copy from virtual VGPR to physical SGPR  
-    ; CHECK: *** Bad machine code: illegal copy from VGPR to SGPR ***  
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***  
     ; CHECK: - instruction: $sgpr0 = COPY %0:vgpr_32  
     $sgpr0 = COPY %0:vgpr_32  
       
     ; copy from physical VGPR to physical SGPR  
-    ; CHECK: *** Bad machine code: illegal copy from VGPR to SGPR ***  
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***  
     ; CHECK: - instruction: $sgpr1 = COPY $vgpr0  
     $sgpr1 = COPY $vgpr0  
   
     ; copy from virtual AGPR to virtual SGPR  
-    ; CHECK: *** Bad machine code: illegal copy from AGPR to SGPR ***  
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***  
     ; CHECK: - instruction: %7:sgpr_32 = COPY %4:agpr_32  
     %7:sgpr_32 = COPY %4:agpr_32  
   
     ; copy from virtual AGPR to physical SGPR  
-    ; CHECK: *** Bad machine code: illegal copy from AGPR to SGPR ***  
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***  
     ; CHECK: - instruction: $sgpr2 = COPY %4:agpr_32  
     $sgpr2 = COPY %4:agpr_32  
   
     ; copy from physical AGPR to physical SGPR  
-    ; CHECK: *** Bad machine code: illegal copy from AGPR to SGPR ***  
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***  
     ; CHECK: - instruction: $sgpr3 = COPY $agpr0  
     $sgpr3 = COPY $agpr0   
   
     ; copy from tuple of physical VGPRs to tuple of physical SGPRs  
-    ; CHECK: *** Bad machine code: illegal copy from VGPR to SGPR ***
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***
     ; CHECK: - instruction: $sgpr4_sgpr5 = COPY $vgpr0_vgpr1 
     $sgpr4_sgpr5 = COPY $vgpr0_vgpr1
   
     ; copy from tuple of physical AGPRs to tuple of physical SGPRs 
-    ; CHECK: *** Bad machine code: illegal copy from AGPR to SGPR ***
+    ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***
     ; CHECK: - instruction: $sgpr6_sgpr7 = COPY $agpr0_agpr1
     $sgpr6_sgpr7 = COPY $agpr0_agpr1  
   
