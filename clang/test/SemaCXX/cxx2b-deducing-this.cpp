@@ -1011,3 +1011,22 @@ struct X;
 static_assert(__is_same(X<B{0}>, X<B{0}>));
 static_assert(!__is_same(X<B{0}>, X<B{1}>));
 } // namespace defaulted_compare
+
+namespace GH102025 {
+struct Foo {
+  template <class T>
+  constexpr auto operator[](this T &&self, auto... i) // expected-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
+      -> decltype(_evaluate(self, i...)) {
+    return self._evaluate(i...);
+  }
+
+private:
+  template <class T>
+  constexpr auto _evaluate(this T &&self, auto... i) -> decltype((i + ...));
+};
+
+int main() {
+  Foo foo;
+  return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
+}
+}

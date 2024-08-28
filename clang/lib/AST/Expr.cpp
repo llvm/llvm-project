@@ -4806,6 +4806,26 @@ getOverflowPatternBinOp(const BinaryOperator *E) {
   return {};
 }
 
+/// Compute and set the OverflowPatternExclusion bit based on whether the
+/// BinaryOperator expression matches an overflow pattern being ignored by
+/// -fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test or
+/// -fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test
+static void computeOverflowPatternExclusion(const ASTContext &Ctx,
+                                            const BinaryOperator *E) {
+  std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(E);
+  if (!Result.has_value())
+    return;
+  QualType AdditionResultType = Result.value()->getType();
+
+  if ((AdditionResultType->isSignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddSignedOverflowTest)) ||
+      (AdditionResultType->isUnsignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddUnsignedOverflowTest)))
+    Result.value()->setExcludedOverflowPattern(true);
+}
+
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                Opcode opc, QualType ResTy, ExprValueKind VK,
                                ExprObjectKind OK, SourceLocation opLoc,
@@ -4815,15 +4835,10 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   assert(!isCompoundAssignmentOp() &&
          "Use CompoundAssignOperator for compound assignments");
   BinaryOperatorBits.OpLoc = opLoc;
-  BinaryOperatorBits.ExcludedOverflowPattern = 0;
+  BinaryOperatorBits.ExcludedOverflowPattern = false;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
-  if (Ctx.getLangOpts().isOverflowPatternExcluded(
-          LangOptions::OverflowPatternExclusionKind::AddOverflowTest)) {
-    std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(this);
-    if (Result.has_value())
-      Result.value()->BinaryOperatorBits.ExcludedOverflowPattern = 1;
-  }
+  computeOverflowPatternExclusion(Ctx, this);
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
@@ -4836,6 +4851,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                FPOptionsOverride FPFeatures, bool dead2)
     : Expr(CompoundAssignOperatorClass, ResTy, VK, OK) {
   BinaryOperatorBits.Opc = opc;
+  BinaryOperatorBits.ExcludedOverflowPattern = false;
   assert(isCompoundAssignmentOp() &&
          "Use CompoundAssignOperator for compound assignments");
   BinaryOperatorBits.OpLoc = opLoc;

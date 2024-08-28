@@ -1617,7 +1617,7 @@ the configuration (without a prefix: ``Auto``).
 **AllowAllParametersOfDeclarationOnNextLine** (``Boolean``) :versionbadge:`clang-format 3.3` :ref:`¶ <AllowAllParametersOfDeclarationOnNextLine>`
   If the function declaration doesn't fit on a line,
   allow putting all parameters of a function declaration onto
-  the next line even if ``BinPackParameters`` is ``false``.
+  the next line even if ``BinPackParameters`` is ``OnePerLine``.
 
   .. code-block:: c++
 
@@ -2067,20 +2067,41 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BinPackParameters:
 
-**BinPackParameters** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
-  If ``false``, a function declaration's or function definition's
-  parameters will either all be on the same line or will have one line each.
+**BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
+  The bin pack parameters style to use.
 
-  .. code-block:: c++
+  Possible values:
 
-    true:
-    void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
+  * ``BPPS_BinPack`` (in configuration: ``BinPack``)
+    Bin-pack parameters.
 
-    false:
-    void f(int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
+    .. code-block:: c++
+
+       void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+              int ccccccccccccccccccccccccccccccccccccccccccc);
+
+  * ``BPPS_OnePerLine`` (in configuration: ``OnePerLine``)
+    Put all parameters on the current line if they fit.
+    Otherwise, put each one on its own line.
+
+    .. code-block:: c++
+
+       void f(int a, int b, int c);
+
+       void f(int a,
+              int b,
+              int ccccccccccccccccccccccccccccccccccccc);
+
+  * ``BPPS_AlwaysOnePerLine`` (in configuration: ``AlwaysOnePerLine``)
+    Always put each parameter on its own line.
+
+    .. code-block:: c++
+
+       void f(int a,
+              int b,
+              int c);
+
+
 
 .. _BitFieldColonSpacing:
 
@@ -4187,7 +4208,8 @@ the configuration (without a prefix: ``Auto``).
 
 **IndentRequiresClause** (``Boolean``) :versionbadge:`clang-format 15` :ref:`¶ <IndentRequiresClause>`
   Indent the requires clause in a template. This only applies when
-  ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  or ``WithFollowing``.
 
   In clang-format 12, 13 and 14 it was named ``IndentRequires``.
 
@@ -4816,7 +4838,7 @@ the configuration (without a prefix: ``Auto``).
   items into as few lines as possible when they go over ``ColumnLimit``.
 
   If ``Auto`` (the default), delegates to the value in
-  ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  ``BinPackParameters``. If that is ``BinPack``, bin-packs Objective-C
   protocol conformance list items into as few lines as possible
   whenever they go over ``ColumnLimit``.
 
@@ -4830,13 +4852,13 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: objc
 
-     Always (or Auto, if BinPackParameters=true):
+     Always (or Auto, if BinPackParameters==BinPack):
      @interface ccccccccccccc () <
          ccccccccccccc, ccccccccccccc,
          ccccccccccccc, ccccccccccccc> {
      }
 
-     Never (or Auto, if BinPackParameters=false):
+     Never (or Auto, if BinPackParameters!=BinPack):
      @interface ddddddddddddd () <
          ddddddddddddd,
          ddddddddddddd,
@@ -5419,22 +5441,47 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``RCPS_OwnLine`` (in configuration: ``OwnLine``)
-    Always put the ``requires`` clause on its own line.
+    Always put the ``requires`` clause on its own line (possibly followed by
+    a semicolon).
 
     .. code-block:: c++
 
       template <typename T>
-      requires C<T>
+        requires C<T>
       struct Foo {...
 
       template <typename T>
-      requires C<T>
+      void bar(T t)
+        requires C<T>;
+
+      template <typename T>
+        requires C<T>
       void bar(T t) {...
 
       template <typename T>
       void baz(T t)
-      requires C<T>
+        requires C<T>
       {...
+
+  * ``RCPS_OwnLineWithBrace`` (in configuration: ``OwnLineWithBrace``)
+    As with ``OwnLine``, except, unless otherwise prohibited, place a
+    following open brace (of a function definition) to follow on the same
+    line.
+
+    .. code-block:: c++
+
+      void bar(T t)
+        requires C<T> {
+        return;
+      }
+
+      void bar(T t)
+        requires C<T> {}
+
+      template <typename T>
+        requires C<T>
+      void baz(T t) {
+        ...
 
   * ``RCPS_WithPreceding`` (in configuration: ``WithPreceding``)
     Try to put the clause together with the preceding part of a declaration.

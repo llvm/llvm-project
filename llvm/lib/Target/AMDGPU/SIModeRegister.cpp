@@ -163,17 +163,19 @@ FunctionPass *llvm::createSIModeRegisterPass() { return new SIModeRegister(); }
 // double precision setting.
 Status SIModeRegister::getInstructionMode(MachineInstr &MI,
                                           const SIInstrInfo *TII) {
+  unsigned Opcode = MI.getOpcode();
   if (TII->usesFPDPRounding(MI) ||
-      MI.getOpcode() == AMDGPU::FPTRUNC_UPWARD_PSEUDO ||
-      MI.getOpcode() == AMDGPU::FPTRUNC_DOWNWARD_PSEUDO) {
-    switch (MI.getOpcode()) {
+      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO) {
+    switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
     case AMDGPU::V_INTERP_P1LV_F16:
     case AMDGPU::V_INTERP_P2_F16:
       // f16 interpolation instructions need double precision round to zero
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_ZERO));
-    case AMDGPU::FPTRUNC_UPWARD_PSEUDO: {
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO: {
+      unsigned Mode = MI.getOperand(2).getImm();
+      MI.removeOperand(2);
       // Replacing the pseudo by a real instruction in place
       if (TII->getSubtarget().hasTrue16BitInsts()) {
         MachineBasicBlock &MBB = *MI.getParent();
@@ -188,24 +190,7 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       } else
         MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
       return Status(FP_ROUND_MODE_DP(3),
-                    FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_INF));
-    }
-    case AMDGPU::FPTRUNC_DOWNWARD_PSEUDO: {
-      // Replacing the pseudo by a real instruction in place
-      if (TII->getSubtarget().hasTrue16BitInsts()) {
-        MachineBasicBlock &MBB = *MI.getParent();
-        MachineInstrBuilder B(*MBB.getParent(), MI);
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
-        MachineOperand Src0 = MI.getOperand(1);
-        MI.removeOperand(1);
-        B.addImm(0); // src0_modifiers
-        B.add(Src0); // re-add src0 operand
-        B.addImm(0); // clamp
-        B.addImm(0); // omod
-      } else
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
-      return Status(FP_ROUND_MODE_DP(3),
-                    FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_NEGINF));
+                    FP_ROUND_MODE_DP(Mode));
     }
     default:
       return DefaultStatus;

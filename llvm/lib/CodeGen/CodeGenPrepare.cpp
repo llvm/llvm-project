@@ -27,6 +27,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -471,6 +472,7 @@ private:
   bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0, Value *Arg1,
                                    CmpInst *Cmp, Intrinsic::ID IID);
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   void verifyBFIUpdates(Function &F);
@@ -1972,6 +1974,135 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
   Cmp->replaceAllUsesWith(IsFPClass);
   RecursivelyDeleteTriviallyDeadInstructions(Cmp);
   return true;
+}
+
+static bool isRemOfLoopIncrementWithLoopInvariant(Instruction *Rem,
+                                                  const LoopInfo *LI,
+                                                  Value *&RemAmtOut,
+                                                  PHINode *&LoopIncrPNOut) {
+  Value *Incr, *RemAmt;
+  // NB: If RemAmt is a power of 2 it *should* have been transformed by now.
+  if (!match(Rem, m_URem(m_Value(Incr), m_Value(RemAmt))))
+    return false;
+
+  // Find out loop increment PHI.
+  auto *PN = dyn_cast<PHINode>(Incr);
+  if (!PN)
+    return false;
+
+  // This isn't strictly necessary, what we really need is one increment and any
+  // amount of initial values all being the same.
+  if (PN->getNumIncomingValues() != 2)
+    return false;
+
+  // Only trivially analyzable loops.
+  Loop *L = LI->getLoopFor(PN->getParent());
+  if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
+    return false;
+
+  // Req that the remainder is in the loop
+  if (!L->contains(Rem))
+    return false;
+
+  // Only works if the remainder amount is a loop invaraint
+  if (!L->isLoopInvariant(RemAmt))
+    return false;
+
+  // Is the PHI a loop increment?
+  auto LoopIncrInfo = getIVIncrement(PN, LI);
+  if (!LoopIncrInfo)
+    return false;
+
+  // We need remainder_amount % increment_amount to be zero. Increment of one
+  // satisfies that without any special logic and is overwhelmingly the common
+  // case.
+  if (!match(LoopIncrInfo->second, m_One()))
+    return false;
+
+  // Need the increment to not overflow.
+  if (!match(LoopIncrInfo->first, m_c_NUWAdd(m_Specific(PN), m_Value())))
+    return false;
+
+  // Set output variables.
+  RemAmtOut = RemAmt;
+  LoopIncrPNOut = PN;
+
+  return true;
+}
+
+// Try to transform:
+//
+// for(i = Start; i < End; ++i)
+//    Rem = (i nuw+ IncrLoopInvariant) u% RemAmtLoopInvariant;
+//
+// ->
+//
+// Rem = (Start nuw+ IncrLoopInvariant) % RemAmtLoopInvariant;
+// for(i = Start; i < End; ++i, ++rem)
+//    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
+//
+// Currently only implemented for `IncrLoopInvariant` being zero.
+static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
+                                    const LoopInfo *LI,
+                                    SmallSet<BasicBlock *, 32> &FreshBBs,
+                                    bool IsHuge) {
+  Value *RemAmt;
+  PHINode *LoopIncrPN;
+  if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, LoopIncrPN))
+    return false;
+
+  // Only non-constant remainder as the extra IV is probably not profitable
+  // in that case.
+  //
+  // Potential TODO(1): `urem` of a const ends up as `mul` + `shift` + `add`. If
+  // we can rule out register pressure and ensure this `urem` is executed each
+  // iteration, its probably profitable to handle the const case as well.
+  //
+  // Potential TODO(2): Should we have a check for how "nested" this remainder
+  // operation is? The new code runs every iteration so if the remainder is
+  // guarded behind unlikely conditions this might not be worth it.
+  if (match(RemAmt, m_ImmConstant()))
+    return false;
+
+  Loop *L = LI->getLoopFor(LoopIncrPN->getParent());
+  Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
+  // If we can't fully optimize out the `rem`, skip this transform.
+  Start = simplifyURemInst(Start, RemAmt, *DL);
+  if (!Start)
+    return false;
+
+  // Create new remainder with induction variable.
+  Type *Ty = Rem->getType();
+  IRBuilder<> Builder(Rem->getContext());
+
+  Builder.SetInsertPoint(LoopIncrPN);
+  PHINode *NewRem = Builder.CreatePHI(Ty, 2);
+
+  Builder.SetInsertPoint(cast<Instruction>(
+      LoopIncrPN->getIncomingValueForBlock(L->getLoopLatch())));
+  // `(add (urem x, y), 1)` is always nuw.
+  Value *RemAdd = Builder.CreateNUWAdd(NewRem, ConstantInt::get(Ty, 1));
+  Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
+  Value *RemSel =
+      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+
+  NewRem->addIncoming(Start, L->getLoopPreheader());
+  NewRem->addIncoming(RemSel, L->getLoopLatch());
+
+  // Insert all touched BBs.
+  FreshBBs.insert(LoopIncrPN->getParent());
+  FreshBBs.insert(L->getLoopLatch());
+  FreshBBs.insert(Rem->getParent());
+
+  replaceAllUsesWith(Rem, NewRem, FreshBBs, IsHuge);
+  Rem->eraseFromParent();
+  return true;
+}
+
+bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
+  if (foldURemOfLoopIncrement(Rem, DL, LI, FreshBBs, IsHugeFunc))
+    return true;
+  return false;
 }
 
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
@@ -7382,12 +7513,9 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
     if (IsHugeFunc) {
       // Now we clone an instruction, its operands' defs may sink to this BB
       // now. So we put the operands defs' BBs into FreshBBs to do optimization.
-      for (unsigned I = 0; I < NI->getNumOperands(); ++I) {
-        auto *OpDef = dyn_cast<Instruction>(NI->getOperand(I));
-        if (!OpDef)
-          continue;
-        FreshBBs.insert(OpDef->getParent());
-      }
+      for (Value *Op : NI->operands())
+        if (auto *OpDef = dyn_cast<Instruction>(Op))
+          FreshBBs.insert(OpDef->getParent());
     }
 
     NewInstructions[UI] = NI;
@@ -8358,6 +8486,10 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
 
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     if (optimizeCmp(Cmp, ModifiedDT))
+      return true;
+
+  if (match(I, m_URem(m_Value(), m_Value())))
+    if (optimizeURem(I))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {

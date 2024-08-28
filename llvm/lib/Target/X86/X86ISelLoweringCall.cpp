@@ -1903,7 +1903,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (shouldDisableArgRegFromCSR(CallConv) ||
       F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (std::pair<Register, Register> Pair : MRI.liveins())
+    for (std::pair<MCRegister, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
@@ -2426,7 +2426,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(DAG.getTargetConstant(FPDiff, dl, MVT::i32));
+    Ops.push_back(
+        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.

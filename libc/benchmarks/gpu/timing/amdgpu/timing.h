@@ -130,6 +130,31 @@ throughput(F f, const cpp::array<T, N> &inputs) {
   return stop - start;
 }
 
+// Provides throughput benchmarking for 2 arguments (e.g. atan2())
+template <typename F, typename T, size_t N>
+[[gnu::noinline]] static LIBC_INLINE uint64_t throughput(
+    F f, const cpp::array<T, N> &inputs1, const cpp::array<T, N> &inputs2) {
+  asm("" ::"v"(&inputs1), "v"(&inputs2));
+
+  gpu::memory_fence();
+  uint64_t start = gpu::processor_clock();
+
+  asm("" ::"s"(start));
+
+  for (size_t i = 0; i < inputs1.size(); i++) {
+    auto result = f(inputs1[i], inputs2[i]);
+
+    asm("" ::"v"(result));
+  }
+
+  uint64_t stop = gpu::processor_clock();
+  asm("" ::"s"(stop));
+  gpu::memory_fence();
+
+  // Return the time elapsed.
+  return stop - start;
+}
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_UTILS_GPU_TIMING_AMDGPU
