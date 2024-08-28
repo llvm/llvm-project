@@ -832,12 +832,13 @@ TEST(STLExtrasTest, AllEqual) {
   EXPECT_FALSE(all_equal(V));
 }
 
-// Test to verify that all_equal works with a container that does not 
+// Test to verify that all_equal works with a container that does not
 // model the random access iterator concept.
 TEST(STLExtrasTest, AllEqualNonRandomAccess) {
   std::list<int> V;
-  static_assert(!std::is_convertible_v<std::iterator_traits<decltype(V)::iterator>::iterator_category,
-                                     std::random_access_iterator_tag >);
+  static_assert(!std::is_convertible_v<
+                std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                std::random_access_iterator_tag>);
   
   EXPECT_TRUE(all_equal(V));
 
@@ -851,7 +852,7 @@ TEST(STLExtrasTest, AllEqualNonRandomAccess) {
   V.push_back(2);
   EXPECT_FALSE(all_equal(V));
 }
-                                
+
 TEST(STLExtrasTest, AllEqualInitializerList) {
   EXPECT_TRUE(all_equal({1}));
   EXPECT_TRUE(all_equal({1, 1}));
