@@ -193,8 +193,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
 }
 
 llvm::SyncScope::ID
-SPIRVTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &,
-                                           SyncScope Scope,
+SPIRVTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &, SyncScope Scope,
                                            llvm::AtomicOrdering,
                                            llvm::LLVMContext &Ctx) const {
   std::string Name;

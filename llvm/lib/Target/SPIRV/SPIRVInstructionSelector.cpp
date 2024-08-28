@@ -782,7 +782,6 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
-
 static void addMemoryOperands(MachineMemOperand *MemOp,
                               MachineInstrBuilder &MIB) {
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
@@ -935,9 +934,8 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
                                                unsigned NegateOpcode) const {
   assert(I.hasOneMemOperand());
   const MachineMemOperand *MemOp = *I.memoperands_begin();
-  uint32_t Scope =
-      static_cast<uint32_t>(getMemScope(GR.CurMF->getFunction().getContext(),
-                                        MemOp->getSyncScopeID()));
+  uint32_t Scope = static_cast<uint32_t>(getMemScope(
+      GR.CurMF->getFunction().getContext(), MemOp->getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
@@ -1008,9 +1006,8 @@ bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   Register MemSemReg = buildI32Constant(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
-  uint32_t Scope =
-      static_cast<uint32_t>(getMemScope(GR.CurMF->getFunction().getContext(),
-                                        Ord));
+  uint32_t Scope = static_cast<uint32_t>(
+      getMemScope(GR.CurMF->getFunction().getContext(), Ord));
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemoryBarrier))
@@ -1029,9 +1026,8 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
   if (!isa<GIntrinsic>(I)) {
     assert(I.hasOneMemOperand());
     const MachineMemOperand *MemOp = *I.memoperands_begin();
-    unsigned Scope =
-        static_cast<uint32_t>(getMemScope(GR.CurMF->getFunction().getContext(),
-                                       MemOp->getSyncScopeID()));
+    unsigned Scope = static_cast<uint32_t>(getMemScope(
+        GR.CurMF->getFunction().getContext(), MemOp->getSyncScopeID()));
     ScopeReg = buildI32Constant(Scope, I);
 
     unsigned ScSem = static_cast<uint32_t>(
