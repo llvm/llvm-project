@@ -18,6 +18,9 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+// FIXME: Bringing in "CASReference.h" because Swift/C++ interop complains about
+// `ObjectRef` being undefined.
+#include "llvm/CAS/CASReference.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
