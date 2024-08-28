@@ -25,7 +25,7 @@ using namespace ento;
 using namespace taint;
 
 namespace {
-class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
+class DivZeroChecker : public Checker<check::PreStmt<BinaryOperator>> {
   void reportBug(StringRef Msg, ProgramStateRef StateZero,
                  CheckerContext &C) const;
   void reportTaintBug(StringRef Msg, ProgramStateRef StateZero,
