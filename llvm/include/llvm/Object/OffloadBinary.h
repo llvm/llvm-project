@@ -21,6 +21,8 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -47,6 +49,31 @@ enum ImageKind : uint16_t {
   IMG_Fatbinary,
   IMG_PTX,
   IMG_LAST,
+};
+
+class CompressedOffloadBundle {
+private:
+  static inline const size_t MagicSize = 4;
+  static inline const size_t VersionFieldSize = sizeof(uint16_t);
+  static inline const size_t MethodFieldSize = sizeof(uint16_t);
+  static inline const size_t FileSizeFieldSize = sizeof(uint32_t);
+  static inline const size_t UncompressedSizeFieldSize = sizeof(uint32_t);
+  static inline const size_t HashFieldSize = sizeof(uint64_t);
+  static inline const size_t V1HeaderSize =
+      MagicSize + VersionFieldSize + MethodFieldSize +
+      UncompressedSizeFieldSize + HashFieldSize;
+  static inline const size_t V2HeaderSize =
+      MagicSize + VersionFieldSize + FileSizeFieldSize + MethodFieldSize +
+      UncompressedSizeFieldSize + HashFieldSize;
+  static inline const llvm::StringRef MagicNumber = "CCOB";
+  static inline const uint16_t Version = 2;
+
+public:
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,
+           bool Verbose = false);
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  decompress(llvm::MemoryBufferRef &Input, bool Verbose = false);
 };
 
 /// A simple binary serialization of an offloading file. We use this format to
@@ -183,10 +210,136 @@ public:
   }
 };
 
+class OffloadFatBinBundle {
+
+private:
+  uint64_t Size = 0u;
+  StringRef FileName;
+  int64_t NumberOfEntries;
+
+public:
+  struct BundleEntry {
+    uint64_t Offset = 0u;
+    uint64_t Size = 0u;
+    uint64_t IDLength = 0u;
+    StringRef ID;
+    BundleEntry(uint64_t O, uint64_t S, uint64_t I, StringRef T)
+        : Offset(O), Size(S), IDLength(I), ID(T) {}
+    void dump(raw_ostream &OS) {
+      OS << "Offset = " << Offset << ", Size = " << Size
+         << ", ID Length = " << IDLength << ", ID = " << ID;
+    }
+    void dumpURI(raw_ostream &OS, StringRef filePath) {
+      OS << ID.data() << "\tfile:\/\/" << filePath << "#offset=" << Offset
+         << "&size=" << Size << "\n";
+    }
+  };
+
+  uint64_t getSize() const { return Size; }
+  StringRef getFileName() const { return FileName; }
+  int64_t getNumEntries() const { return NumberOfEntries; }
+
+  std::unique_ptr<SmallVector<BundleEntry>> Entries;
+  static Expected<std::unique_ptr<OffloadFatBinBundle>>
+  create(MemoryBufferRef, uint64_t SectionOffset, StringRef fileName);
+  Error extractBundle(const ObjectFile &Source);
+
+  Error ReadEntries(StringRef Section, uint64_t SectionOffset);
+  void DumpEntries() {
+    SmallVectorImpl<BundleEntry>::iterator it = Entries->begin();
+    for (int64_t I = 0; I < Entries->size(); I++) {
+      it->dump(outs());
+      ++it;
+    }
+  }
+
+  void PrintEntriesAsURI() {
+    SmallVectorImpl<BundleEntry>::iterator it = Entries->begin();
+    for (int64_t I = 0; I < NumberOfEntries; I++) {
+      it->dumpURI(outs(), FileName);
+      ++it;
+    }
+  }
+
+  OffloadFatBinBundle(MemoryBufferRef Source, StringRef file) : FileName(file) {
+    NumberOfEntries = 0;
+    Entries = std::make_unique<SmallVector<BundleEntry>>();
+  }
+};
+
+enum uri_type_t { FILE_URI, MEMORY_URI };
+
+struct OffloadBundleURI {
+  int64_t Offset = 0;
+  int64_t Size = 0;
+  uint64_t ProcessID = 0;
+  StringRef FileName;
+  uri_type_t URIType;
+
+  // Constructors
+  // TODO: add a Copy ctor ?
+  OffloadBundleURI(StringRef file, int64_t off, int64_t size)
+      : Offset(off), Size(size), ProcessID(0), FileName(file),
+        URIType(FILE_URI) {}
+
+  OffloadBundleURI(StringRef str, uri_type_t type) {
+    URIType = type;
+    switch (URIType) {
+    case FILE_URI:
+      parseFileName(str);
+      break;
+    case MEMORY_URI:
+      parseMemoryURI(str);
+      break;
+    default:
+      report_fatal_error("Unrecognized URI type.");
+    }
+  }
+
+  void parseFileName(StringRef str) {
+    ProcessID = 0;
+    URIType = FILE_URI;
+    if (str.consume_front("file://")) {
+      StringRef FilePathname =
+          str.take_until([](char c) { return (c == '#') || (c == '?'); });
+      FileName = FilePathname;
+      str = str.drop_front(FilePathname.size());
+
+      if (str.consume_front("#offset=")) {
+        StringRef OffsetStr = str.take_until([](char c) { return c == '&'; });
+        OffsetStr.getAsInteger(10, Offset);
+        str = str.drop_front(OffsetStr.size());
+
+        if (str.consume_front("&size=")) {
+          Size;
+          str.getAsInteger(10, Size);
+        } else
+          report_fatal_error("Reading 'size' in URI.");
+      } else
+        report_fatal_error("Reading 'offset' in URI.");
+    } else
+      report_fatal_error("Reading type of URI.");
+  }
+
+  void parseMemoryURI(StringRef str) {
+    // TODO: add parseMemoryURI type
+  }
+
+  StringRef getFileName() const { return FileName; }
+};
+
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
 /// of \p Binaries.
 Error extractOffloadBinaries(MemoryBufferRef Buffer,
                              SmallVectorImpl<OffloadFile> &Binaries);
+
+Error extractFatBinaryFromObject(const ObjectFile &Obj,
+                                 SmallVectorImpl<OffloadFatBinBundle> &Bundles);
+
+Error extractCodeObject(const ObjectFile &Source, int64_t Offset, int64_t Size,
+                        StringRef OutputFileName);
+
+Error extractURI(StringRef URIstr);
 
 /// Convert a string \p Name to an image kind.
 ImageKind getImageKind(StringRef Name);
