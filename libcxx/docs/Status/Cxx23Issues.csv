@@ -74,7 +74,7 @@
 "`LWG3520 <https://wg21.link/LWG3520>`__","``iter_move`` and ``iter_swap`` are inconsistent for ``transform_view::iterator``","2021-06 (Virtual)","|Complete|","14.0","|ranges|"
 "`LWG3521 <https://wg21.link/LWG3521>`__","Overly strict requirements on ``qsort`` and ``bsearch``","2021-06 (Virtual)","|Nothing To Do|","",""
 "`LWG3522 <https://wg21.link/LWG3522>`__","Missing requirement on ``InputIterator`` template parameter for ``priority_queue`` constructors","2021-06 (Virtual)","|Complete|","14.0",""
-"`LWG3523 <https://wg21.link/LWG3523>`__","``iota_view::sentinel`` is not always ``iota_view``'s sentinel","2021-06 (Virtual)","","","|ranges|"
+"`LWG3523 <https://wg21.link/LWG3523>`__","``iota_view::sentinel`` is not always ``iota_view``'s sentinel","2021-06 (Virtual)","|Complete|","17.0","|ranges|"
 "`LWG3526 <https://wg21.link/LWG3526>`__","Return types of ``uses_allocator_construction_args`` unspecified","2021-06 (Virtual)","","",""
 "`LWG3527 <https://wg21.link/LWG3527>`__","``uses_allocator_construction_args`` handles rvalue pairs of rvalue references incorrectly","2021-06 (Virtual)","","",""
 "`LWG3528 <https://wg21.link/LWG3528>`__","``make_from_tuple`` can perform (the equivalent of) a C-style cast","2021-06 (Virtual)","|Complete|","19.0",""
