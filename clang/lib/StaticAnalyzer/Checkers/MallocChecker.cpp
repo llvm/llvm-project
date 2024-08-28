@@ -2300,6 +2300,14 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // that.
   assert(!RsBase || (RsBase && RsBase->getAllocationFamily() == Family));
 
+  // Assume that after memory is freed, it contains unknown values. This
+  // conforts languages standards, since reading from freed memory is considered
+  // UB and may result in arbitrary value.
+  State = State->invalidateRegions({location}, Call.getOriginExpr(),
+                                   C.blockCount(), C.getLocationContext(),
+                                   /*CausesPointerEscape=*/false,
+                                   /*InvalidatedSymbols=*/nullptr);
+
   // Normal free.
   if (Hold)
     return State->set<RegionState>(SymBase,

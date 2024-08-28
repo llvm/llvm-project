@@ -37,10 +37,6 @@ extern "C" void *malloc(size_t);
 extern "C" void free (void* ptr);
 int *global;
 
-//------------------
-// check for leaks
-//------------------
-
 //----- Standard non-placement operators
 void testGlobalOpNew() {
   void *p = operator new(0);
