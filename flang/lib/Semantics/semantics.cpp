@@ -221,10 +221,13 @@ static bool PerformStatementSemantics(
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);
   }
-  if (!context.AnyFatalError()) {
+  if (!context.messages().AnyFatalError()) {
+    // Do this if all messages are only warnings
     if (context.ShouldWarn(common::UsageWarning::UndefinedFunctionResult)) {
       WarnUndefinedFunctionResult(context, context.globalScope());
     }
+  }
+  if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
   }
   return !context.AnyFatalError();

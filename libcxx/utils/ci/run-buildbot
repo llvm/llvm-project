@@ -417,7 +417,7 @@ generic-hardening-mode-fast-with-abi-breaks)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast-with-abi-breaks.cmake"
     check-runtimes
-    check-abi-list
+    # Not checking ABI list since we purposefully enable ABI breaking changes
 ;;
 generic-hardening-mode-extensive)
     clean
@@ -467,6 +467,11 @@ generic-no-random_device)
 generic-no-localization)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
+    check-runtimes
+;;
+generic-no-terminal)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-terminal.cmake"
     check-runtimes
 ;;
 generic-no-unicode)

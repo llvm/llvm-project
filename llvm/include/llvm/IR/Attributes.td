@@ -212,6 +212,9 @@ def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
 /// No SanitizeCoverage instrumentation.
 def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
 
+/// No SanitizeRealtime instrumentation.
+def NoSanitizeRealtime : EnumAttr<"nosanitize_realtime", [FnAttr]>;
+
 /// Null pointer in address space zero is valid.
 def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", [FnAttr]>;
 
@@ -296,6 +299,9 @@ def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
 
 /// NumericalStabilitySanitizer is on.
 def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAttr]>;
+
+/// RealtimeSanitizer is on.
+def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -385,6 +391,7 @@ def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

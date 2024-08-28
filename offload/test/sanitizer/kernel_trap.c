@@ -35,8 +35,10 @@ int main(void) {
   {
   }
 }
-// CHECK: OFFLOAD ERROR: Kernel '__omp_offloading_{{.*}}_main_l30'
+// clang-format off
+// CHECK: OFFLOAD ERROR: Kernel 'omp target in main @ 30 (__omp_offloading_{{.*}}_main_l30)'
 // CHECK: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_trap.c:
+// clang-format on

@@ -62,10 +62,9 @@ class ScopeHandler;
 // When inheritFromParent is set, defaults come from the parent rules.
 class ImplicitRules {
 public:
-  ImplicitRules(SemanticsContext &context, ImplicitRules *parent)
-      : parent_{parent}, context_{context} {
-    inheritFromParent_ = parent != nullptr;
-  }
+  ImplicitRules(SemanticsContext &context, const ImplicitRules *parent)
+      : parent_{parent}, context_{context},
+        inheritFromParent_{parent != nullptr} {}
   bool isImplicitNoneType() const;
   bool isImplicitNoneExternal() const;
   void set_isImplicitNoneType(bool x) { isImplicitNoneType_ = x; }
@@ -82,7 +81,7 @@ public:
 private:
   static char Incr(char ch);
 
-  ImplicitRules *parent_;
+  const ImplicitRules *parent_;
   SemanticsContext &context_;
   bool inheritFromParent_{false}; // look in parent if not specified here
   bool isImplicitNoneType_{
@@ -1798,6 +1797,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     }
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
+  } else if (symbol.GetIsExplicitBindName()) {
+    // don't try to override explicit binding name with default
+    return;
   } else if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
     // BIND(C) does not give an implicit binding label to internal procedures.
     return;
@@ -3380,6 +3382,7 @@ bool ModuleVisitor::BeginSubmodule(
     parentScope = &currScope();
   }
   BeginModule(name, true);
+  set_inheritFromParent(false); // submodules don't inherit parents' implicits
   if (ancestor && !ancestor->AddSubmodule(name.source, currScope())) {
     Say(name, "Module '%s' already has a submodule named '%s'"_err_en_US,
         ancestorName.source, name.source);
@@ -4487,7 +4490,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
         CHECK(context().HasError(genericSymbol));
       }
     }
-    set_inheritFromParent(hasModulePrefix);
+    set_inheritFromParent(false); // interfaces don't inherit, even if MODULE
   }
   if (Symbol * found{FindSymbol(name)};
       found && found->has<HostAssocDetails>()) {
@@ -5507,11 +5510,8 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   std::optional<DerivedTypeSpec> extendsType{
       ResolveExtendsType(name, extendsName)};
   DerivedTypeDetails derivedTypeDetails;
-  if (Symbol * typeSymbol{FindInScope(currScope(), name)}; typeSymbol &&
-      typeSymbol->has<DerivedTypeDetails>() &&
-      typeSymbol->get<DerivedTypeDetails>().isForwardReferenced()) {
-    derivedTypeDetails.set_isForwardReferenced(true);
-  }
+  // Catch any premature structure constructors within the definition
+  derivedTypeDetails.set_isForwardReferenced(true);
   auto &symbol{MakeSymbol(name, GetAttrs(), std::move(derivedTypeDetails))};
   symbol.ReplaceName(name.source);
   derivedTypeInfo_.type = &symbol;
@@ -9235,7 +9235,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       node.GetKind() == ProgramTree::Kind::Submodule};
   for (auto &pair : *node.scope()) {
     Symbol &symbol{*pair.second};
-    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
+    if (inModule && symbol.attrs().test(Attr::EXTERNAL) && !IsPointer(symbol) &&
         !symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine)) {
       // in a module, external proc without return type is subroutine

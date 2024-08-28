@@ -124,7 +124,7 @@ define i1 @pow2_or_zero_is_negative_extra_use(i8 %x) {
 ; CHECK-LABEL: @pow2_or_zero_is_negative_extra_use(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[NEG]])
-; CHECK-NEXT:    [[POW2_OR_ZERO:%.*]] = and i8 [[NEG]], [[X]]
+; CHECK-NEXT:    [[POW2_OR_ZERO:%.*]] = and i8 [[X]], [[NEG]]
 ; CHECK-NEXT:    call void @use(i8 [[POW2_OR_ZERO]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], -128
 ; CHECK-NEXT:    ret i1 [[CMP]]

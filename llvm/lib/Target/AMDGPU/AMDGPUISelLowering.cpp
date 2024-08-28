@@ -2590,7 +2590,7 @@ SDValue AMDGPUTargetLowering::getIsLtSmallestNormal(SelectionDAG &DAG,
                                                     SDNodeFlags Flags) const {
   SDLoc SL(Src);
   EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Semantics = VT.getFltSemantics();
   SDValue SmallestNormal =
       DAG.getConstantFP(APFloat::getSmallestNormalized(Semantics), SL, VT);
 
@@ -2607,7 +2607,7 @@ SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
                                           SDNodeFlags Flags) const {
   SDLoc SL(Src);
   EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Semantics = VT.getFltSemantics();
   SDValue Inf = DAG.getConstantFP(APFloat::getInf(Semantics), SL, VT);
 
   SDValue Fabs = DAG.getNode(ISD::FABS, SL, VT, Src, Flags);
@@ -4346,6 +4346,7 @@ AMDGPUTargetLowering::performMulLoHiCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
 
+  bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -4360,20 +4361,25 @@ AMDGPUTargetLowering::performMulLoHiCombine(SDNode *N,
 
   // Try to use two fast 24-bit multiplies (one for each half of the result)
   // instead of one slow extending multiply.
-  unsigned LoOpcode, HiOpcode;
-  if (Subtarget->hasMulU24() && isU24(N0, DAG) && isU24(N1, DAG)) {
-    N0 = DAG.getZExtOrTrunc(N0, DL, MVT::i32);
-    N1 = DAG.getZExtOrTrunc(N1, DL, MVT::i32);
-    LoOpcode = AMDGPUISD::MUL_U24;
-    HiOpcode = AMDGPUISD::MULHI_U24;
-  } else if (Subtarget->hasMulI24() && isI24(N0, DAG) && isI24(N1, DAG)) {
-    N0 = DAG.getSExtOrTrunc(N0, DL, MVT::i32);
-    N1 = DAG.getSExtOrTrunc(N1, DL, MVT::i32);
-    LoOpcode = AMDGPUISD::MUL_I24;
-    HiOpcode = AMDGPUISD::MULHI_I24;
+  unsigned LoOpcode = 0;
+  unsigned HiOpcode = 0;
+  if (Signed) {
+    if (Subtarget->hasMulI24() && isI24(N0, DAG) && isI24(N1, DAG)) {
+      N0 = DAG.getSExtOrTrunc(N0, DL, MVT::i32);
+      N1 = DAG.getSExtOrTrunc(N1, DL, MVT::i32);
+      LoOpcode = AMDGPUISD::MUL_I24;
+      HiOpcode = AMDGPUISD::MULHI_I24;
+    }
   } else {
-    return SDValue();
+    if (Subtarget->hasMulU24() && isU24(N0, DAG) && isU24(N1, DAG)) {
+      N0 = DAG.getZExtOrTrunc(N0, DL, MVT::i32);
+      N1 = DAG.getZExtOrTrunc(N1, DL, MVT::i32);
+      LoOpcode = AMDGPUISD::MUL_U24;
+      HiOpcode = AMDGPUISD::MULHI_U24;
+    }
   }
+  if (!LoOpcode)
+    return SDValue();
 
   SDValue Lo = DAG.getNode(LoOpcode, DL, MVT::i32, N0, N1);
   SDValue Hi = DAG.getNode(HiOpcode, DL, MVT::i32, N0, N1);
@@ -4957,7 +4963,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       SDValue CastBack =
           DAG.getNode(ISD::BITCAST, SL, HighBits.getValueType(), NegHi);
 
-      SmallVector<SDValue, 8> Ops(BCSrc->op_begin(), BCSrc->op_end());
+      SmallVector<SDValue, 8> Ops(BCSrc->ops());
       Ops.back() = CastBack;
       DCI.AddToWorklist(NegHi.getNode());
       SDValue Build =
@@ -5500,8 +5506,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
-  NODE_NAME_CASE(FPTRUNC_ROUND_UPWARD)
-  NODE_NAME_CASE(FPTRUNC_ROUND_DOWNWARD)
+  NODE_NAME_CASE(FPTRUNC_ROUND)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)
@@ -5997,34 +6002,6 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
-}
-
-TargetLowering::AtomicExpansionKind
-AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
-  switch (RMW->getOperation()) {
-  case AtomicRMWInst::Nand:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::FMax:
-  case AtomicRMWInst::FMin:
-    return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getDataLayout();
-    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
-    if (ValSize == 32 || ValSize == 64)
-      return AtomicExpansionKind::None;
-    return AtomicExpansionKind::CmpXChg;
-  }
-  default: {
-    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
-      unsigned Size = IntTy->getBitWidth();
-      if (Size == 32 || Size == 64)
-        return AtomicExpansionKind::None;
-    }
-
-    return AtomicExpansionKind::CmpXChg;
-  }
-  }
 }
 
 /// Whether it is profitable to sink the operands of an

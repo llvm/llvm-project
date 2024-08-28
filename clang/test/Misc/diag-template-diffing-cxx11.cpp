@@ -257,25 +257,22 @@ int f9(S9<int, char, U9<const double>>);
 int k9 = f9(V9<double>());
 
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f9'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<[2 * ...], S9<[2 * ...], double>>' to 'S9<[2 * ...], S9<[2 * ...], const double>>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<[2 * ...], U9<double>>' to 'S9<[2 * ...], U9<const double>>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f9'
-// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<int, char, S9<int, char, double>>' to 'S9<int, char, S9<int, char, const double>>' for 1st argument
+// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<int, char, U9<double>>' to 'S9<int, char, U9<const double>>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'f9'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   S9<
-// CHECK-ELIDE-TREE:     [2 * ...], 
-// CHECK-ELIDE-TREE:     S9<
-// CHECK-ELIDE-TREE:       [2 * ...], 
-// CHECK-ELIDE-TREE:       [double != const double]>>
+// CHECK-ELIDE-TREE:     [2 * ...],
+// CHECK-ELIDE-TREE:     U9<
+// CHECK-ELIDE-TREE:       [(no qualifiers) != const] double>>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f9'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   S9<
-// CHECK-NOELIDE-TREE:     int, 
-// CHECK-NOELIDE-TREE:     char, 
-// CHECK-NOELIDE-TREE:     S9<
-// CHECK-NOELIDE-TREE:       int, 
-// CHECK-NOELIDE-TREE:       char, 
-// CHECK-NOELIDE-TREE:       [double != const double]>>
+// CHECK-NOELIDE-TREE:     int,
+// CHECK-NOELIDE-TREE:     char,
+// CHECK-NOELIDE-TREE:     U9<
+// CHECK-NOELIDE-TREE:       [(no qualifiers) != const] double>>
 
 template<typename ...A> class class_types {};
 void set10(class_types<int, int>) {}

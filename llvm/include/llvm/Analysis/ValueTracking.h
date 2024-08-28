@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_VALUETRACKING_H
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
@@ -30,12 +29,9 @@ namespace llvm {
 
 class Operator;
 class AddOperator;
-class AllocaInst;
-class APInt;
 class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
-class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -43,7 +39,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
-class Value;
+template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 

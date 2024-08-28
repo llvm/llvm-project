@@ -243,6 +243,16 @@ defm VOTE_SYNC_ANY : VOTE_SYNC<Int1Regs, "any.pred", int_nvvm_vote_any_sync>;
 defm VOTE_SYNC_UNI : VOTE_SYNC<Int1Regs, "uni.pred", int_nvvm_vote_uni_sync>;
 defm VOTE_SYNC_BALLOT : VOTE_SYNC<Int32Regs, "ballot.b32", int_nvvm_vote_ballot_sync>;
 
+// elect.sync
+def INT_ELECT_SYNC_I : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred), (ins i32imm:$mask),
+            "elect.sync \t$dest|$pred, $mask;",
+            [(set Int32Regs:$dest, Int1Regs:$pred, (int_nvvm_elect_sync imm:$mask))]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+def INT_ELECT_SYNC_R : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred), (ins Int32Regs:$mask),
+            "elect.sync \t$dest|$pred, $mask;",
+            [(set Int32Regs:$dest, Int1Regs:$pred, (int_nvvm_elect_sync Int32Regs:$mask))]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+
 multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntOp,
                           Operand ImmOp> {
   def ii : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, ImmOp:$value),
@@ -334,6 +344,48 @@ def INT_MEMBAR_SYS : MEMBAR<"membar.sys;", int_nvvm_membar_sys>;
 def INT_FENCE_SC_CLUSTER:
        MEMBAR<"fence.sc.cluster;", int_nvvm_fence_sc_cluster>,
        Requires<[hasPTX<78>, hasSM<90>]>;
+
+// Proxy fence (uni-directional)
+// fence.proxy.tensormap.release variants
+
+class FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins),
+                  "fence.proxy.tensormap::generic.release." # Scope # ";", [(Intr)]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_CTA:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"cta",
+        int_nvvm_fence_proxy_tensormap_generic_release_cta>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_CLUSTER:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"cluster",
+        int_nvvm_fence_proxy_tensormap_generic_release_cluster>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_GPU:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"gpu",
+        int_nvvm_fence_proxy_tensormap_generic_release_gpu>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_SYS:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"sys",
+        int_nvvm_fence_proxy_tensormap_generic_release_sys>;
+
+// fence.proxy.tensormap.acquire variants
+
+class FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins Int64Regs:$addr),
+                  "fence.proxy.tensormap::generic.acquire." # Scope # " [$addr], 128;",
+                  [(Intr Int64Regs:$addr, (i32 128))]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CTA :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"cta",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_cta>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CLUSTER :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"cluster",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_cluster>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_GPU :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"gpu",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_gpu>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_SYS :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"sys",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_sys>;
 
 //-----------------------------------
 // Async Copy Functions
@@ -1481,6 +1533,33 @@ def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
           (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
           (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
+
+def : Pat<(int_nvvm_ff_to_e4m3x2_rn Float32Regs:$a, Float32Regs:$b),
+          (CVT_e4m3x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
+def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu Float32Regs:$a, Float32Regs:$b),
+          (CVT_e4m3x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
+def : Pat<(int_nvvm_ff_to_e5m2x2_rn Float32Regs:$a, Float32Regs:$b),
+          (CVT_e5m2x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
+def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu Float32Regs:$a, Float32Regs:$b),
+          (CVT_e5m2x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
+
+def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn Int32Regs:$a),
+          (CVT_e4m3x2_f16x2 Int32Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu Int32Regs:$a),
+          (CVT_e4m3x2_f16x2 Int32Regs:$a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn Int32Regs:$a),
+          (CVT_e5m2x2_f16x2 Int32Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu Int32Regs:$a),
+          (CVT_e5m2x2_f16x2 Int32Regs:$a, CvtRN_RELU)>;
+
+def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn Int16Regs:$a),
+          (CVT_f16x2_e4m3x2 Int16Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu Int16Regs:$a),
+          (CVT_f16x2_e4m3x2 Int16Regs:$a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn Int16Regs:$a),
+          (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
+          (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN_RELU)>;
 
 //
 // Bitcast

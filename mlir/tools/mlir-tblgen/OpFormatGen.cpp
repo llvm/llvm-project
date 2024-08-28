@@ -1657,7 +1657,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       TypeSwitch<FormatElement *>(dir->getArg())
           .Case<OperandVariable, ResultVariable>([&](auto operand) {
             body << formatv(parserCode,
-                            operand->getVar()->constraint.getCPPClassName(),
+                            operand->getVar()->constraint.getCppType(),
                             listName);
           })
           .Default([&](auto operand) {
@@ -2603,7 +2603,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     }
     if (var && !var->isVariadicOfVariadic() && !var->isVariadic() &&
         !var->isOptional()) {
-      std::string cppClass = var->constraint.getCPPClassName();
+      StringRef cppType = var->constraint.getCppType();
       if (dir->shouldBeQualified()) {
         body << "   _odsPrinter << " << op.getGetterName(var->name)
              << "().getType();\n";
@@ -2612,7 +2612,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       body << "  {\n"
            << "    auto type = " << op.getGetterName(var->name)
            << "().getType();\n"
-           << "    if (auto validType = ::llvm::dyn_cast<" << cppClass
+           << "    if (auto validType = ::llvm::dyn_cast<" << cppType
            << ">(type))\n"
            << "      _odsPrinter.printStrippedAttrOrType(validType);\n"
            << "   else\n"

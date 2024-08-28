@@ -142,6 +142,42 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   ];
 }
 
+def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
+  let description = [{
+    OpenMP operations that can represent a single leaf of a composite OpenMP
+    construct.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Check whether the operation is representing a leaf of a composite OpenMP
+        construct.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isComposite",
+      (ins ), [{}], [{
+        return $_op->hasAttr("omp.composite");
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Mark the operation as part of an OpenMP composite construct.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setComposite",
+      (ins "bool":$val), [{}], [{
+        if (val)
+          $_op->setDiscardableAttr("omp.composite", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.composite");
+      }]
+    >
+  ];
+}
+
 def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
   let description = [{
     OpenMP operations that support declare target have this interface.
@@ -351,6 +387,34 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       (ins "::mlir::omp::ClauseRequires":$clauses), [{}], [{
         $_op->setAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
           mlir::omp::ClauseRequiresAttr::get($_op->getContext(), clauses));
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Get the omp.target_triples attribute on the operator if it's present and
+        return its value. If it doesn't exist, return an empty array by default.
+      }],
+      /*retTy=*/"::llvm::ArrayRef<::mlir::Attribute>",
+      /*methodName=*/"getTargetTriples",
+      (ins), [{}], [{
+        if (Attribute triplesAttr = $_op->getAttr("omp.target_triples"))
+          if (auto triples = ::llvm::dyn_cast<::mlir::ArrayAttr>(triplesAttr))
+            return triples.getValue();
+        return {};
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Set the omp.target_triples attribute on the operation.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setTargetTriples",
+      (ins "::llvm::ArrayRef<::std::string>":$targetTriples), [{}], [{
+        auto names = ::llvm::to_vector(::llvm::map_range(
+            targetTriples, [&](::std::string str) -> ::mlir::Attribute {
+              return mlir::StringAttr::get($_op->getContext(), str);
+            }));
+        $_op->setAttr(
+            ::mlir::StringAttr::get($_op->getContext(), "omp.target_triples"),
+            ::mlir::ArrayAttr::get($_op->getContext(), names));
       }]>
   ];
 }

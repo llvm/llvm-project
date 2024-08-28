@@ -1503,7 +1503,7 @@ defm VFNCVT_ROD_F_F_W : VNCVTF_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
 let Predicates = [HasVInstructions] in {
 
 // Vector Single-Width Integer Reduction Instructions
-let RVVConstraint = NoConstraint in {
+let RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1 in {
 defm VREDSUM  : VRED_MV_V<"vredsum", 0b000000>;
 defm VREDMAXU : VREDMINMAX_MV_V<"vredmaxu", 0b000110>;
 defm VREDMAX  : VREDMINMAX_MV_V<"vredmax", 0b000111>;
@@ -1512,23 +1512,23 @@ defm VREDMIN  : VREDMINMAX_MV_V<"vredmin", 0b000101>;
 defm VREDAND  : VRED_MV_V<"vredand", 0b000001>;
 defm VREDOR   : VRED_MV_V<"vredor", 0b000010>;
 defm VREDXOR  : VRED_MV_V<"vredxor", 0b000011>;
-} // RVVConstraint = NoConstraint
+} // RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1
 
 // Vector Widening Integer Reduction Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1 in {
 // Set earlyclobber for following instructions for second and mask operands.
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
 defm VWREDSUMU : VWRED_IV_V<"vwredsumu", 0b110000>;
 defm VWREDSUM : VWRED_IV_V<"vwredsum", 0b110001>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
+} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1
 
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
-let RVVConstraint = NoConstraint in {
+let RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1 in {
 let Uses = [FRM], mayRaiseFPException = true in {
 defm VFREDOSUM : VREDO_FV_V<"vfredosum", 0b000011>;
 defm VFREDUSUM : VRED_FV_V<"vfredusum", 0b000001>;
@@ -1537,13 +1537,13 @@ let mayRaiseFPException = true in {
 defm VFREDMAX : VREDMINMAX_FV_V<"vfredmax", 0b000111>;
 defm VFREDMIN : VREDMINMAX_FV_V<"vfredmin", 0b000101>;
 }
-} // RVVConstraint = NoConstraint
+} // RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1
 
 def : InstAlias<"vfredsum.vs $vd, $vs2, $vs1$vm",
                 (VFREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
 
 // Vector Widening Floating-Point Reduction Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1 in {
 // Set earlyclobber for following instructions for second and mask operands.
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
@@ -1552,7 +1552,7 @@ let Uses = [FRM], mayRaiseFPException = true in {
 defm VFWREDOSUM : VWREDO_FV_V<"vfwredosum", 0b110011>;
 defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 }
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
+} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1
 
 def : InstAlias<"vfwredsum.vs $vd, $vs2, $vs1$vm",
                 (VFWREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
@@ -1586,7 +1586,7 @@ def : InstAlias<"vmornot.mm $vd, $vs2, $vs1",
                 (VMORN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-    RVVConstraint = NoConstraint  in {
+    RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1 in {
 
 // Vector mask population count vcpop
 def VCPOP_M : RVInstV<0b010000, 0b10000, OPMVV, (outs GPR:$vd),
@@ -1600,12 +1600,12 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
                        "vfirst.m", "$vd, $vs2$vm">,
               SchedUnaryMC<"WriteVMFFSV", "ReadVMFFSV">;
 
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint, ActiveElementsAffectResult = 1
 
 def : InstAlias<"vpopc.m $vd, $vs2$vm",
                 (VCPOP_M GPR:$vd, VR:$vs2, VMaskOp:$vm), 0>;
 
-let Constraints = "@earlyclobber $vd", RVVConstraint = Iota in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ActiveElementsAffectResult = 1 in {
 
 // vmsbf.m set-before-first mask bit
 defm VMSBF_M : VMSFS_MV_V<"vmsbf.m", 0b010100, 0b00001>;
@@ -1616,7 +1616,7 @@ defm VMSOF_M : VMSFS_MV_V<"vmsof.m", 0b010100, 0b00010>;
 // Vector Iota Instruction
 defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
 
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ActiveElementsAffectResult = 1
 
 // Vector Element Index Instruction
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
@@ -1686,9 +1686,9 @@ def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
 
 // Vector Compress Instruction
-let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ActiveElementsAffectResult = 1 in {
 defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ActiveElementsAffectResult = 1
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1,
     RVVConstraint = NoConstraint in {

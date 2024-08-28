@@ -29,7 +29,7 @@ int main(void) {
     __builtin_trap();
   }
 }
-// TRACE: OFFLOAD ERROR: Kernel '__omp_offloading_{{.*}}_main_l27'
+// TRACE: OFFLOAD ERROR: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l27)
 // TRACE: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // NDEBG:     main

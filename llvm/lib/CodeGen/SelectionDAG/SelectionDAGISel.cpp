@@ -675,7 +675,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   DenseMap<unsigned, unsigned> LiveInMap;
   if (!FuncInfo->ArgDbgValues.empty())
-    for (std::pair<unsigned, unsigned> LI : RegInfo->liveins())
+    for (std::pair<MCRegister, Register> LI : RegInfo->liveins())
       if (LI.second)
         LiveInMap.insert(LI);
 
@@ -1591,7 +1591,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   ++NumEntryBlocks;
 
   // Set up FuncInfo for ISel. Entry blocks never have PHIs.
-  FuncInfo->MBB = FuncInfo->MBBMap[&Fn.getEntryBlock()];
+  FuncInfo->MBB = FuncInfo->getMBB(&Fn.getEntryBlock());
   FuncInfo->InsertPt = FuncInfo->MBB->begin();
 
   CurDAG->setFunctionLoweringInfo(FuncInfo.get());
@@ -1643,11 +1643,12 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   }
 
   // Iterate over all basic blocks in the function.
+  FuncInfo->VisitedBBs.assign(Fn.getMaxBlockNumber(), false);
   for (const BasicBlock *LLVMBB : RPOT) {
     if (OptLevel != CodeGenOptLevel::None) {
       bool AllPredsVisited = true;
       for (const BasicBlock *Pred : predecessors(LLVMBB)) {
-        if (!FuncInfo->VisitedBBs.count(Pred)) {
+        if (!FuncInfo->VisitedBBs[Pred->getNumber()]) {
           AllPredsVisited = false;
           break;
         }
@@ -1661,7 +1662,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
           FuncInfo->InvalidatePHILiveOutRegInfo(&PN);
       }
 
-      FuncInfo->VisitedBBs.insert(LLVMBB);
+      FuncInfo->VisitedBBs[LLVMBB->getNumber()] = true;
     }
 
     BasicBlock::const_iterator const Begin =
@@ -1669,7 +1670,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     BasicBlock::const_iterator const End = LLVMBB->end();
     BasicBlock::const_iterator BI = End;
 
-    FuncInfo->MBB = FuncInfo->MBBMap[LLVMBB];
+    FuncInfo->MBB = FuncInfo->getMBB(LLVMBB);
     if (!FuncInfo->MBB)
       continue; // Some blocks like catchpads have no code or MBB.
 
@@ -1821,7 +1822,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
           TLI->getSSPStackGuardCheck(*Fn.getParent());
-      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->MBBMap[LLVMBB],
+      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }
 
@@ -3783,7 +3784,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitInteger64)
         Val = decodeSignRotatedValue(Val);
       RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
-          CurDAG->getTargetConstant(Val, SDLoc(NodeToMatch), VT), nullptr));
+          CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
+                                    /*isTarget=*/true),
+          nullptr));
       continue;
     }
     case OPC_EmitRegister:

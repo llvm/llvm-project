@@ -132,6 +132,7 @@ private:
       : __out_it_(std::move(__out_it)), __args_(__args) {}
 #  endif
 
+public:
   basic_format_context(const basic_format_context&)            = delete;
   basic_format_context& operator=(const basic_format_context&) = delete;
 };

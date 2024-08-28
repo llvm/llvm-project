@@ -14,16 +14,16 @@
 
 extern "C" {
 
-namespace __rtsan {
-
-extern bool rtsan_initialized;
-extern bool rtsan_init_is_running;
-
-} // namespace __rtsan
-
 // Initialise rtsan interceptors.
 // A call to this method is added to the preinit array on Linux systems.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init();
+
+// Initializes rtsan if it has not been initialized yet.
+// Used by the RTSan runtime to ensure that rtsan is initialized before any
+// other rtsan functions are called.
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized();
+
+SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized();
 
 // Enter real-time context.
 // When in a real-time context, RTSan interceptors will error if realtime

@@ -9,7 +9,7 @@ enums: []
 objects: []
 functions:
   - name: wctob
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:

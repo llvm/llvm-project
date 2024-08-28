@@ -184,7 +184,8 @@ public:
   /// Output .dwo files.
   void writeDWOFiles(DWARFUnit &, const OverriddenSectionsMap &,
                      const std::string &, DebugLocWriter &,
-                     DebugStrOffsetsWriter &, DebugStrWriter &);
+                     DebugStrOffsetsWriter &, DebugStrWriter &,
+                     DebugRangesSectionWriter &);
   using KnownSectionsEntry = std::pair<MCSection *, DWARFSectionKind>;
 };
 

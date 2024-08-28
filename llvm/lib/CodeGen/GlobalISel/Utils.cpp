@@ -303,6 +303,13 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
   return ValAndVReg->Value;
 }
 
+APInt llvm::getIConstantFromReg(Register Reg, const MachineRegisterInfo &MRI) {
+  MachineInstr *Const = MRI.getVRegDef(Reg);
+  assert((Const && Const->getOpcode() == TargetOpcode::G_CONSTANT) &&
+         "expected a G_CONSTANT on Reg");
+  return Const->getOperand(1).getCImm()->getValue();
+}
+
 std::optional<int64_t>
 llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI) {
   std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI);

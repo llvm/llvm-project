@@ -1675,7 +1675,8 @@ Currently, only the following parameter attributes are defined:
     -  The pair ``a,b`` represents the range ``[a,b)``.
     -  Both ``a`` and ``b`` are constants.
     -  The range is allowed to wrap.
-    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    -  The empty range is represented using ``0,0``.
+    -  Otherwise, ``a`` and ``b`` are not allowed to be equal.
     
     This attribute may only be applied to parameters or return values with integer 
     or vector of integer types.
@@ -2045,7 +2046,8 @@ example:
     attributes.
 ``naked``
     This attribute disables prologue / epilogue emission for the
-    function. This can have very system-specific consequences.
+    function. This can have very system-specific consequences. The arguments of
+    a ``naked`` function can not be referenced through IR values.
 ``"no-inline-line-tables"``
     When this attribute is set to true, the inliner discards source locations
     when inlining code and instead uses the source location of the call site.
@@ -2187,6 +2189,10 @@ example:
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.
+``nosanitize_realtime``
+    This attribute indicates that the Realtime Sanitizer instrumentation is
+    disabled for this function.
+    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``null_pointer_is_valid``
    If ``null_pointer_is_valid`` is set, then the ``null`` address
    in address-space 0 is considered to be a valid address for memory loads and
@@ -2309,6 +2315,11 @@ example:
     This attribute indicates that MemTagSanitizer checks
     (dynamic address safety analysis based on Armv8 MTE) are enabled for
     this function.
+``sanitize_realtime``
+    This attribute indicates that RealtimeSanitizer checks
+    (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
+    for this function.
+    This attribute is incompatible with the ``nosanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -3669,6 +3680,10 @@ LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
+``fast``
+   This flag is a shorthand for specifying all fast-math flags at once, and
+   imparts no additional semantics from using all of them.
+
 ``nnan``
    No NaNs - Allow optimizations to assume the arguments and result are not
    NaN. If an argument is a nan, or the result would be a nan, it produces
@@ -3684,9 +3699,51 @@ floating-point transformations.
    argument or zero result as insignificant. This does not imply that -0.0
    is poison and/or guaranteed to not exist in the operation.
 
+Rewrite-based flags
+^^^^^^^^^^^^^^^^^^^
+
+The following flags have rewrite-based semantics. These flags allow expressions,
+potentially containing multiple non-consecutive instructions, to be rewritten
+into alternative instructions. When multiple instructions are involved in an
+expression, it is necessary that all of the instructions have the necessary
+rewrite-based flag present on them, and the rewritten instructions will
+generally have the intersection of the flags present on the input instruction.
+
+In the following example, the floating-point expression in the body of ``@orig``
+has ``contract`` and ``reassoc`` in common, and thus if it is rewritten into the
+expression in the body of ``@target``, all of the new instructions get those two
+flags and only those flags as a result. Since the ``arcp`` is present on only
+one of the instructions in the expression, it is not present in the transformed
+expression. Furthermore, this reassociation here is only legal because both the
+instructions had the ``reassoc`` flag; if only one had it, it would not be legal
+to make the transformation.
+
+.. code-block:: llvm
+
+      define double @orig(double %a, double %b, double %c) {
+        %t1 = fmul contract reassoc double %a, %b
+        %val = fmul contract reassoc arcp double %t1, %c
+        ret double %val
+      }
+
+      define double @target(double %a, double %b, double %c) {
+        %t1 = fmul contract reassoc double %b, %c
+        %val = fmul contract reassoc double %a, %t1
+        ret double %val
+      }
+
+These rules do not apply to the other fast-math flags. Whether or not a flag
+like ``nnan`` is present on any or all of the rewritten instructions is based
+on whether or not it is possible for said instruction to have a NaN input or
+output, given the original flags.
+
 ``arcp``
-   Allow Reciprocal - Allow optimizations to use the reciprocal of an
-   argument rather than perform division.
+   Allows division to be treated as a multiplication by a reciprocal.
+   Specifically, this permits ``a / b`` to be considered equivalent to
+   ``a * (1.0 / b)`` (which may subsequently be susceptible to code motion),
+   and it also permits ``a / (b / c)`` to be considered equivalent to
+   ``a * (c / b)``. Both of these rewrites can be applied in either direction:
+   ``a * (c / b)`` can be rewritten into ``a / (b / c)``.
 
 ``contract``
    Allow floating-point contraction (e.g. fusing a multiply followed by an
@@ -3704,9 +3761,6 @@ floating-point transformations.
 ``reassoc``
    Allow reassociation transformations for floating-point instructions.
    This may dramatically change results in floating-point.
-
-``fast``
-   This flag implies all of the others.
 
 .. _uselistorder:
 
@@ -16083,6 +16137,96 @@ The returned value is completely identical to the input except for the sign bit;
 in particular, if the input is a NaN, then the quiet/signaling bit and payload
 are perfectly preserved.
 
+.. _i_fminmax_family:
+
+'``llvm.min.*``' Intrinsics Comparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Standard:
+"""""""""
+
+IEEE754 and ISO C define some min/max operations, and they have some differences
+on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
+
+.. list-table::
+   :header-rows: 2
+
+   * - ``ISO C``
+     - fmin/fmax
+     - fmininum/fmaximum
+     - fminimum_num/fmaximum_num
+
+   * - ``IEEE754``
+     - minNum/maxNum (2008)
+     - minimum/maximum (2019)
+     - minimumNumber/maximumNumber (2019)
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0 > -0.0
+     - +0.0 > -0.0
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
+
+LLVM Implementation:
+""""""""""""""""""""
+
+LLVM implements all ISO C flavors as listed in this table, except in the
+default floating-point environment exceptions are ignored. The constrained
+versions of the intrinsics respect the exception behavior.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 28 28 28
+
+   * - Operation
+     - minnum/maxnum
+     - minimum/maximum
+     - minimumnum/maximumnum
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``sNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0(max)/-0.0(min)
+     - +0.0(max)/-0.0(min)
+
+   * - ``NUM vs NUM``
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+
 .. _i_minnum:
 
 '``llvm.minnum.*``' Intrinsic
@@ -16263,6 +16407,98 @@ If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
 IEEE 754-2019.
+
+.. _i_minimumnum:
+
+'``llvm.minimumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.minimumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.minimumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.minimumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.minimumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.minimumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.minimumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.minimumnum.*``' intrinsics return the minimum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs (including sNaN), returns qNaN. If one operand
+is NaN (including sNaN) and another operand is a number, return the number.
+Otherwise returns the lesser of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+
+It has some differences with '``llvm.minnum.*``':
+1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
+
+.. _i_maximumnum:
+
+'``llvm.maximumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.maximumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.maximumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.maximumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.maximumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.maximumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.maximumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.maximumnum.*``' intrinsics return the maximum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs (including sNaN), returns qNaN. If one operand
+is NaN (including sNaN) and another operand is a number, return the number.
+Otherwise returns the greater of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+
+It has some differences with '``llvm.maxnum.*``':
+1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
 
 .. _int_copysign:
 
@@ -16588,7 +16824,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.lround`` on any
-floating-point type. Not all targets support all types however.
+floating-point type or vector of floating-point type. Not all targets
+support all types however.
 
 ::
 
@@ -19344,27 +19581,27 @@ vector <N x eltty>, imm is a signed integer constant in the range
 -N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
 integer constant in the range -X <= imm < X where X=vscale_range_min * N.
 
-'``llvm.experimental.stepvector``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.stepvector``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is an overloaded intrinsic. You can use ``llvm.experimental.stepvector``
+This is an overloaded intrinsic. You can use ``llvm.stepvector``
 to generate a vector whose lane values comprise the linear sequence
 <0, 1, 2, ...>. It is primarily intended for scalable vectors.
 
 ::
 
-      declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
-      declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+      declare <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+      declare <vscale x 8 x i16> @llvm.stepvector.nxv8i16()
 
-The '``llvm.experimental.stepvector``' intrinsics are used to create vectors
+The '``llvm.stepvector``' intrinsics are used to create vectors
 of integers whose elements contain a linear sequence of values starting from 0
-with a step of 1.  This experimental intrinsic can only be used for vectors
-with integer elements that are at least 8 bits in size. If the sequence value
-exceeds the allowed limit for the element type then the result for that lane is
-undefined.
+with a step of 1. This intrinsic can only be used for vectors with integer
+elements that are at least 8 bits in size. If the sequence value exceeds
+the allowed limit for the element type then the result for that lane is
+a poison value.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
-is marked as experimental, the recommended way to express this operation for
+supports all vector types, the recommended way to express this operation for
 fixed-width vectors is still to generate a constant vector instead.
 
 
@@ -19404,7 +19641,7 @@ vectorization factor should be multiplied by vscale.
 Semantics:
 """"""""""
 
-Returns a positive i32 value (explicit vector length) that is unknown at compile
+Returns a non-negative i32 value (explicit vector length) that is unknown at compile
 time and depends on the hardware specification.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
@@ -19414,13 +19651,23 @@ in order to get the number of elements to process on each loop iteration. The
 result should be used to decrease the count for the next iteration until the
 count reaches zero.
 
-If the count is larger than the number of lanes in the type described by the
-last 2 arguments, this intrinsic may return a value less than the number of
-lanes implied by the type. The result will be at least as large as the result
-will be on any later loop iteration.
+Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
+``%scalable``, here are the constraints on the returned value:
 
-This intrinsic will only return 0 if the input count is also 0. A non-zero input
-count will produce a non-zero result.
+-  If ``%cnt`` equals to 0, returns 0.
+-  The returned value is always less than or equal to ``%max_lanes``.
+-  The returned value is always greater than or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``,
+   if ``%cnt`` is non-zero.
+-  The returned values are monotonically non-increasing in each loop iteration. That is,
+   the returned value of an iteration is at least as large as that of any later
+   iteration.
+
+Note that it has the following implications:
+
+-  For a loop that uses this intrinsic, the number of iterations is equal to
+   ``ceil(%C / %max_lanes)`` where ``%C`` is the initial ``%cnt`` value.
+-  If ``%cnt`` is non-zero, the return value is non-zero as well.
+-  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -19523,7 +19770,7 @@ This is an overloaded intrinsic. A number of scalar values of integer, floating 
 from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
 The remaining lanes are filled with values from ``passthru``.
 
-:: code-block:: llvm
+.. code-block:: llvm
 
       declare <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
       declare <16 x float> @llvm.experimental.vector.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)
@@ -25139,7 +25386,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.load``' intrinsic is designed for conditional reading of selected vector elements in a single IR operation. It is useful for targets that support vector masked loads and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar load operations.
-The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask. However, using this intrinsic prevents exceptions on memory access to masked-off lanes.
+The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 
 ::
@@ -25181,7 +25431,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.store``' intrinsics is designed for conditional writing of selected vector elements in a single IR operation. It is useful for targets that support vector masked store and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar store operations.
-The result of this operation is equivalent to a load-modify-store sequence. However, using this intrinsic prevents exceptions and data races on memory access to masked-off lanes.
+The result of this operation is equivalent to a load-modify-store sequence, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 ::
 

@@ -19,7 +19,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: $xzr = ANDSXri [[COPY]], 0, implicit-def $nzcv
-    ; CHECK-NEXT: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[COPY1]], [[COPY1]], 0, implicit $nzcv
+    ; CHECK-NEXT: [[ORRXrs:%[0-9]+]]:gpr64 = ORRXrs $xzr, [[COPY1]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %3:gpr64 = COPY $x1
     %4:gpr64 = COPY $x0
@@ -46,7 +46,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: $wzr = ANDSWri [[COPY]], 0, implicit-def $nzcv
-    ; CHECK-NEXT: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY1]], 0, implicit $nzcv
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[COPY1]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %3:gpr32 = COPY $w1
     %4:gpr32 = COPY $w0

@@ -1460,7 +1460,15 @@ bool SIFoldOperands::tryFoldFoldableCopy(
     return false;
   }
 
-  MachineOperand &OpToFold = MI.getOperand(1);
+  MachineOperand *OpToFoldPtr;
+  if (MI.getOpcode() == AMDGPU::V_MOV_B16_t16_e64) {
+    // Folding when any src_modifiers are non-zero is unsupported
+    if (TII->hasAnyModifiersSet(MI))
+      return false;
+    OpToFoldPtr = &MI.getOperand(2);
+  } else
+    OpToFoldPtr = &MI.getOperand(1);
+  MachineOperand &OpToFold = *OpToFoldPtr;
   bool FoldingImm = OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
 
   // FIXME: We could also be folding things like TargetIndexes.

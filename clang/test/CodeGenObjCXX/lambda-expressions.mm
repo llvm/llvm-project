@@ -62,12 +62,12 @@ void take_block(void (^block)()) { block(); }
 @end
 
 // ARC: define{{.*}} void @_ZN13LambdaCapture4foo1ERi(ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
-// ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds %[[LAMBDACLASS]], ptr %{{.*}}, i32 0, i32 0
+// ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds nuw %[[LAMBDACLASS]], ptr %{{.*}}, i32 0, i32 0
 // ARC:   store i32 %{{.*}}, ptr %[[CAPTURE0]]
 
 // ARC: define internal void @"_ZZN13LambdaCapture4foo1ERiENK3$_0clEv"(ptr {{[^,]*}} %{{.*}})
 // ARC:   %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, i32 }>
-// ARC:   %[[CAPTURE1:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %[[BLOCK]], i32 0, i32 5
+// ARC:   %[[CAPTURE1:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %[[BLOCK]], i32 0, i32 5
 // ARC:   store i32 %{{.*}}, ptr %[[CAPTURE1]]
 
 // ARC-LABEL: define internal void @"_ZZ10-[Foo foo]ENK3$_4clEv"(
@@ -75,11 +75,11 @@ void take_block(void (^block)()) { block(); }
 // ARC: ret void
 
 // ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_0clEv_block_invoke"
-// ARC:   %[[CAPTURE2:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %{{.*}}, i32 0, i32 5
+// ARC:   %[[CAPTURE2:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %{{.*}}, i32 0, i32 5
 // ARC:   store i32 %{{.*}}, ptr %[[CAPTURE2]]
 
 // ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_0clEv_block_invoke_2"(ptr noundef %{{.*}})
-// ARC:   %[[CAPTURE3:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %{{.*}}, i32 0, i32 5
+// ARC:   %[[CAPTURE3:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %{{.*}}, i32 0, i32 5
 // ARC:   %[[V1:.*]] = load i32, ptr %[[CAPTURE3]]
 // ARC:   store i32 %[[V1]], ptr @_ZN13LambdaCapture1iE
 
@@ -103,7 +103,7 @@ namespace LambdaCapture {
 
 // Check lines for BlockInLambda test below
 // ARC-LABEL: define internal noundef i32 @___ZZN13BlockInLambda1X1fEvENKUlvE_clEv_block_invoke
-// ARC: [[Y:%.*]] = getelementptr inbounds %"struct.BlockInLambda::X", ptr {{.*}}, i32 0, i32 1
+// ARC: [[Y:%.*]] = getelementptr inbounds nuw %"struct.BlockInLambda::X", ptr {{.*}}, i32 0, i32 1
 // ARC-NEXT: [[YVAL:%.*]] = load i32, ptr [[Y]], align 4
 // ARC-NEXT: ret i32 [[YVAL]]
 

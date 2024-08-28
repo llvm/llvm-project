@@ -84,7 +84,8 @@ public:
                          const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -205,9 +206,11 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   // Calculate target-specific information for a set of outlining candidates.
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
   virtual outliner::InstrType
@@ -385,7 +388,6 @@ struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
   uint8_t MaskOpIdx;
-  uint8_t ActiveElementsAffectResult : 1;
 };
 #define GET_RISCVMaskedPseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"

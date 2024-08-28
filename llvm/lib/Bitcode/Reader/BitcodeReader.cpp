@@ -2093,6 +2093,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoSanitizeBounds;
   case bitc::ATTR_KIND_NO_SANITIZE_COVERAGE:
     return Attribute::NoSanitizeCoverage;
+  case bitc::ATTR_KIND_NO_SANITIZE_REALTIME:
+    return Attribute::NoSanitizeRealtime;
   case bitc::ATTR_KIND_NULL_POINTER_IS_VALID:
     return Attribute::NullPointerIsValid;
   case bitc::ATTR_KIND_OPTIMIZE_FOR_DEBUGGING:
@@ -2141,6 +2143,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeMemory;
   case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
     return Attribute::SanitizeNumericalStability;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME:
+    return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -7602,9 +7606,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.setFlags(Record[0]);
       break;
     }
-    case bitc::FS_VALUE_GUID: { // [valueid, refguid]
+    case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
       uint64_t ValueID = Record[0];
-      GlobalValue::GUID RefGUID = Record[1];
+      GlobalValue::GUID RefGUID;
+      if (Version >= 11) {
+        RefGUID = Record[1] << 32 | Record[2];
+      } else {
+        RefGUID = Record[1];
+      }
       ValueIdToValueInfoMap[ValueID] = std::make_tuple(
           TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
       break;
