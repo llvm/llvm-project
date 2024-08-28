@@ -272,6 +272,12 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
     return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
   if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
     return IG->getInsertPos();
+  // Currently the legacy cost model only calculates the instruction cost with
+  // underlying instruction. Removing the WidenMem here will prevent
+  // force-target-instruction-cost overwriting the cost of recipe with
+  // underlying instruction which is inconsistent with the legacy model.
+  // TODO: Remove WidenMem from this function when we don't need to compare to
+  // the latecy model.
   if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
     return &WidenMem->getIngredient();
   return nullptr;
