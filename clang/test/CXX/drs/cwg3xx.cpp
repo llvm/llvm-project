@@ -1384,6 +1384,7 @@ namespace N2 {
 // it's replaced with N1::f declaration.
 using N1::f;
 
+// According to _N4988_.[dcl.meaning]/3.3:
 // `f<int>` is not a qualified-id, so its target scope is N2.
 // `f<int>` is a template-id, so 'f' undergoes (unqualified) lookup.
 // Search performed by unqualified lookup finds N1::f via using-declaration,
@@ -1395,6 +1396,7 @@ template<> void f<int>( int* );
 
 class Test {
   ~Test() { }
+  // According to _N4988_.[dcl.meaning]/2.2:
   // `f<>` is a template-id and not a template declaration,
   // so its terminal name 'f' undergoes (unqualified) lookup.
   // Search in N2 performed by unqualified lookup finds
@@ -1422,6 +1424,7 @@ namespace N2 {
 // it's replaced with N1::f declaration.
 using N1::f; // #cwg386-ex2-using
 class A {
+  // According to _N4988_.[dcl.meaning]/2.2:
   // `N2::f` is a qualified-id, so its terminal name 'f' undergoes (qualified) lookup.
   // Search in N2 performed by qualified lookup finds N1::f via using-declaration,
   // which is the (only) result of qualified lookup.

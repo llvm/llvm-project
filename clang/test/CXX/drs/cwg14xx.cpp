@@ -610,12 +610,15 @@ struct A {
   // so single searches of 'f' in N won't find it,
   // but the targets scope of this declaration is N,
   // making it nominable in N.
+  // (_N4988_.[dcl.meaning]/2.1, [basic.scope.scope]/7,
+  //  [basic.lookup.general]/3)
   friend int f();
 };
 }
 // Corresponds to the friend declaration,
 // because it's nominable in N,
 // and binds name 'f' in N.
+// (_N4988_.[dcl.meaning]/3.4, [basic.scope.scope]/2.5)
 int N::f() { return 0; }
 // Name 'f' is bound in N,
 // so the search performed by qualified lookup finds it.
