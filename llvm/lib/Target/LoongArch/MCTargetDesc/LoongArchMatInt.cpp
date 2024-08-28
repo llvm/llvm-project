@@ -63,7 +63,7 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
   // N of Insts = 3
   // 1. ORI + LU32I_D + LU52I_D     =>     ORI + BSTRINS_D, TmpVal = ORI
   // 2. ADDI_W + LU32I_D + LU32I_D  =>  ADDI_W + BSTRINS_D, TmpVal = ADDI_W
-  // 3. LU12I_W + ORI + LU32I_D     =>     ORI + BSTRINS_D, TmpVal = ORI
+  // 3. LU12I_W + ORI + LU52I_D     =>     ORI + BSTRINS_D, TmpVal = ORI
   // 4. LU12I_W + LU32I_D + LU52I_D => LU12I_W + BSTRINS_D, TmpVal = LU12I_W
   //
   // N of Insts = 4
