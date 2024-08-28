@@ -14,7 +14,6 @@
 #include "CodeGenTypeCache.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
@@ -335,10 +334,9 @@ public:
 
   Address CreateGEP(Address Addr, ArrayRef<llvm::Value *> IdxList,
                     llvm::Type *ElementType, CharUnits Align,
-                    const Twine &Name = "",
-                    llvm::GEPNoWrapFlags NW = llvm::GEPNoWrapFlags::none()) {
+                    const Twine &Name = "") {
     llvm::Value *Ptr = emitRawPointerFromAddress(Addr);
-    return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name, NW),
+    return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name),
                       ElementType, Align);
   }
 
