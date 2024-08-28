@@ -32,8 +32,12 @@ def ImmCheck1_64                : ImmCheckType<25>; // 1..64
 def ImmCheck0_63                : ImmCheckType<26>; // 0..63
 
 class ImmCheck<int immArgIdx, ImmCheckType kind, int typeArgIdx = -1> {
+  // Parameter index of immediate argument to be verified
   int ImmArgIdx = immArgIdx;
-  // The index of the argument whose type should be referred to when validating this immedaite.
+
+  // Parameter index of argument whose type determines the context of this immediate check -
+  // element type for SVE/SME, element type and vector size for NEON (ignoring element type for
+  // ClassB NEON intrinsics).
   int TypeContextArgIdx = typeArgIdx;
   ImmCheckType Kind = kind;
 }

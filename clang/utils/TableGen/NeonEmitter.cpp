@@ -462,7 +462,6 @@ public:
 
   // Return if the supplied argument is an immediate
   bool isArgImmediate(unsigned idx) const {
-    assert((idx + 1) < Types.size() && "Argument type index out of range!");
     return Types[idx + 1].isImmediate();
   }
 
@@ -2180,8 +2179,9 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
-bool NeonEmitter::areCompatableRangeChecks(const ArrayRef<ImmCheck> ChecksA,
-                                           const ArrayRef<ImmCheck> ChecksB) {
+inline bool
+NeonEmitter::areCompatableRangeChecks(const ArrayRef<ImmCheck> ChecksA,
+                                      const ArrayRef<ImmCheck> ChecksB) {
   // If multiple intrinsics map to the same builtin, we must ensure that the
   // intended range checks performed in SemaArm.cpp do not contradict eachother,
   // as these are emitted once per-buitlin.

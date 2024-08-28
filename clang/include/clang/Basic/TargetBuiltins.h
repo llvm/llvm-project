@@ -215,7 +215,7 @@ namespace clang {
       return ET == Poly8 || ET == Poly16 || ET == Poly64;
     }
     bool isUnsigned() const { return (Flags & UnsignedFlag) != 0; }
-    bool isQuad() const { return (Flags & QuadFlag) != 0; };
+    bool isQuad() const { return (Flags & QuadFlag) != 0; }
     unsigned getEltSizeInBits() const {
       switch (getEltType()) {
       case Int8:
