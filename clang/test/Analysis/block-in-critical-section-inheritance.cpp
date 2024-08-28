@@ -128,3 +128,26 @@ void two_custom_mutex_bases_casts_tn(MyMutex &m) {
   sleep(10);
 }
 
+struct MutexVirtBase1 : virtual std::mutex {
+  void lock1() { lock(); }
+  void unlock1() { unlock(); }
+};
+
+struct MutexVirtBase2 : virtual std::mutex {
+  void lock2() { lock(); }
+  void unlock2() { unlock(); }
+};
+
+struct CombinedVirtMutex : MutexVirtBase1, MutexVirtBase2 {};
+
+void virt_inherited_mutexes_same_base_tn1(CombinedVirtMutex &cvt) {
+  cvt.lock1();
+  cvt.unlock1();
+  sleep(10);
+}
+
+void virt_inherited_mutexes_different_bases_tn(CombinedVirtMutex &cvt) {
+  cvt.lock1();
+  cvt.unlock2(); // Despite a different name, unlock2 acts on the same mutex as lock1
+  sleep(10);
+}
