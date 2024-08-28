@@ -3330,8 +3330,8 @@ void request_stackTrace(const llvm::json::Object &request) {
 
     // If we loaded all the frames, set the total frame to the current total,
     // otherwise use the totalFrames to indicate more data is available.
-    body.try_emplace("totalFrames",
-                     startFrame + stackFrames.size() + (done ? 0 : StackPageSize));
+    body.try_emplace("totalFrames", startFrame + stackFrames.size() +
+                                        (done ? 0 : StackPageSize));
   }
   body.try_emplace("stackFrames", std::move(stackFrames));
   response.try_emplace("body", std::move(body));

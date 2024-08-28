@@ -87,15 +87,21 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
             frameCount, 40, "verify we get at least 40 frames for all frames"
         )
         self.assertEqual(
-            totalFrames, frameCount, "verify total frames returns a speculative page size"
+            totalFrames,
+            frameCount,
+            "verify total frames returns a speculative page size",
         )
         self.verify_stackFrames(startFrame, stackFrames)
 
         # Verify totalFrames contains a speculative page size of additional frames with startFrame = 0 and levels = 0
-        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(startFrame=0, levels=10)
+        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
+            startFrame=0, levels=10
+        )
         self.assertEqual(len(stackFrames), 10, "verify we get levels=10 frames")
         self.assertEqual(
-            totalFrames, len(stackFrames) + self.page_size, "verify total frames returns a speculative page size"
+            totalFrames,
+            len(stackFrames) + self.page_size,
+            "verify total frames returns a speculative page size",
         )
         self.verify_stackFrames(startFrame, stackFrames)
 
