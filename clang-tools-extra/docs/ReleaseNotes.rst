@@ -113,6 +113,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
 
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check to support replacing
+  member function calls too.
+
 - Improved :doc:`readablility-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
