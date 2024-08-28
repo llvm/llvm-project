@@ -4,6 +4,7 @@
 import argparse
 import os
 
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -14,5 +15,6 @@ def main():
 
     return os.path.getsize(args.file1) < os.path.getsize(args.file2)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
