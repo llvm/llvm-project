@@ -114,7 +114,6 @@ class Builder:
 
             cc = cc.strip()
             cc_path = pathlib.Path(cc)
-            cc = cc_path.as_posix()
 
             # We can get CC compiler string in the following formats:
             #  [<tool>] <compiler>    - such as 'xrun clang', 'xrun /usr/bin/clang' & etc
@@ -152,11 +151,11 @@ class Builder:
             cc_dir = cc_path.parent
 
             def getLlvmUtil(util_name):
-                llvm_tools_dir = os.getenv("LLVM_TOOLS_DIR", cc_dir.as_posix())
+                llvm_tools_dir = os.getenv("LLVM_TOOLS_DIR", cc_dir)
                 return os.path.join(llvm_tools_dir, util_name + exe_ext)
 
             def getToolchainUtil(util_name):
-                return (cc_dir / (cc_prefix + util_name + cc_ext)).as_posix()
+                return cc_dir / (cc_prefix + util_name + cc_ext)
 
             cxx = getToolchainUtil(cxx_type)
 
