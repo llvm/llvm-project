@@ -51,9 +51,7 @@ GenericConvergenceVerifier<MachineSSAContext>::findAndCheckConvergenceTokenUsed(
   const MachineRegisterInfo &MRI = Context.getFunction()->getRegInfo();
   const MachineInstr *TokenDef = nullptr;
 
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || !MO.isUse())
-      continue;
+  for (const MachineOperand &MO : MI.all_uses()) {
     Register OpReg = MO.getReg();
     if (!OpReg.isVirtual())
       continue;

@@ -1563,9 +1563,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   bool ReArrangedImplicitMOs = true;
   while (ReArrangedImplicitMOs) {
     ReArrangedImplicitMOs = false;
-    for (MachineOperand &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isUse())
-        continue;
+    for (MachineOperand &MO : MI.all_uses()) {
       Register Reg = MO.getReg();
       if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
         continue;
