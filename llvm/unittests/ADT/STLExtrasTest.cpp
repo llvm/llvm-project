@@ -836,8 +836,8 @@ TEST(STLExtrasTest, AllEqual) {
 // model the random access iterator concept.
 TEST(STLExtrasTest, AllEqualNonRandomAccess) {
   std::list<int> V;
-  static_assert(!std::is_convertible<std::iterator_traits<decltype(V)::iterator>::iterator_category,
-                                     std::random_access_iterator_tag >::value);
+  static_assert(!std::is_convertible_v<std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                                     std::random_access_iterator_tag >);
   
   EXPECT_TRUE(all_equal(V));
 
