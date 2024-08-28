@@ -2701,10 +2701,6 @@ PHINode *Context::createPHINode(llvm::PHINode *I) {
   auto NewPtr = std::unique_ptr<PHINode>(new PHINode(I, *this));
   return cast<PHINode>(registerValue(std::move(NewPtr)));
 }
-CmpInst *Context::createCmpInst(llvm::CmpInst *I) {
-  auto NewPtr = std::unique_ptr<CmpInst>(new CmpInst(I, *this));
-  return cast<CmpInst>(registerValue(std::move(NewPtr)));
-}
 ICmpInst *Context::createICmpInst(llvm::ICmpInst *I) {
   auto NewPtr = std::unique_ptr<ICmpInst>(new ICmpInst(I, *this));
   return cast<ICmpInst>(registerValue(std::move(NewPtr)));
@@ -2712,6 +2708,29 @@ ICmpInst *Context::createICmpInst(llvm::ICmpInst *I) {
 FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
   auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
   return cast<FCmpInst>(registerValue(std::move(NewPtr)));
+}
+
+CmpInst *CmpInst::create(OtherOps Op, Predicate P, Value *S1, Value *S2,
+                         Context &Ctx, const Twine &Name,
+                         Instruction *InsertBefore) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (InsertBefore)
+    Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  auto *LLVMI =
+      cast<llvm::CmpInst>(Builder.CreateCmp(P, S1->Val, S2->Val, Name));
+  if (llvm::ICmpInst *IC = dyn_cast<llvm::ICmpInst>(LLVMI))
+    return Ctx.createICmpInst(IC);
+  else
+    return Ctx.createFCmpInst(cast<llvm::FCmpInst>(IC));
+}
+
+CmpInst *CmpInst::createWithCopiedFlags(OtherOps Op, Predicate P, Value *S1,
+                                        Value *S2, const Instruction *F,
+                                        Context &Ctx, const Twine &Name,
+                                        Instruction *InsertBefore) {
+  CmpInst *Inst = create(Op, P, S1, S2, Ctx, Name, InsertBefore);
+  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
+  return Inst;
 }
 
 void CmpInst::setPredicate(Predicate P) {

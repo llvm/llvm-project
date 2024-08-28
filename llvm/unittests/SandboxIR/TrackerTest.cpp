@@ -1476,9 +1476,9 @@ define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
   auto &F = *Ctx.createFunction(&LLVMF);
   auto *BB = &*F.begin();
   auto It = BB->begin();
-  auto *FCmp = cast<sandboxir::FCmpInst>(&*It++);
+  auto *FCmp = cast<sandboxir::CmpInst>(&*It++);
   checkCmpInst(Ctx, FCmp);
-  auto *ICmp = cast<sandboxir::ICmpInst>(&*It++);
+  auto *ICmp = cast<sandboxir::CmpInst>(&*It++);
   checkCmpInst(Ctx, ICmp);
 }
 

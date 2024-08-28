@@ -312,8 +312,6 @@ protected:
   friend class UnreachableInst;       // For getting `Val`.
   friend class CatchSwitchAddHandler; // For `Val`.
   friend class CmpInst;               // For getting `Val`.
-  friend class ICmpInst;              // For getting `Val`.
-  friend class FCmpInst;              // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -3139,10 +3137,8 @@ public:
 class CmpInst : public Instruction {
 protected:
   using LLVMValType = llvm::CmpInst;
-  /// Use Context::createCmpInst(). Don't call the
-  /// constructor directly.
-  CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id = ClassID::Cmp,
-          Opcode Opc = Opcode::Cmp)
+  /// Use Context::createCmpInst(). Don't call the constructor directly.
+  CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
       : Instruction(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
@@ -3165,13 +3161,13 @@ public:
   }
   unsigned getNumOfIRInstrs() const final { return 1u; }
   static CmpInst *create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
-                         const Twine &Name = "",
-                         InsertPosition InsertBefore = nullptr);
-  static CmpInst *CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                         Context &Ctx, const Twine &Name = "",
+                         Instruction *InsertBefore = nullptr);
+  static CmpInst *createWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
                                         Value *S2,
                                         const Instruction *FlagsSource,
-                                        const Twine &Name = "",
-                                        InsertPosition InsertBefore = nullptr);
+                                        Context &Ctx, const Twine &Name = "",
+                                        Instruction *InsertBefore = nullptr);
   OtherOps getOpcode() const {
     return static_cast<OtherOps>(Instruction::getOpcode());
   }
@@ -3211,20 +3207,19 @@ public:
     return llvm::CmpInst::isImpliedFalseByMatchingCmp(Pred1, Pred2);
   }
 
-  /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *From) {
-    return isa<ICmpInst>(From) || isa<FCmpInst>(From);
-  }
+  /// Method for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *From) {
-    return isa<Instruction>(From) && classof(cast<Instruction>(From));
+    return From->getSubclassID() == ClassID::ICmp ||
+           From->getSubclassID() == ClassID::FCmp;
   }
+
   /// Create a result type for fcmp/icmp
-  static Type *makeCmpResultType(Type *opnd_type) {
-    if (VectorType *vt = dyn_cast<VectorType>(opnd_type)) {
-      return VectorType::get(Type::getInt1Ty(opnd_type->getContext()),
+  static Type *makeCmpResultType(Type *OpndType) {
+    if (VectorType *vt = dyn_cast<VectorType>(OpndType)) {
+      return VectorType::get(Type::getInt1Ty(OpndType->getContext()),
                              vt->getElementCount());
     }
-    return Type::getInt1Ty(opnd_type->getContext());
+    return Type::getInt1Ty(OpndType->getContext());
   }
 
 #ifndef NDEBUG
@@ -3237,8 +3232,7 @@ public:
 };
 
 class ICmpInst : public CmpInst {
-  /// Use Context::createICmpInst(). Don't call the
-  /// constructor directly.
+  /// Use Context::createICmpInst(). Don't call the constructor directly.
   ICmpInst(llvm::ICmpInst *CI, Context &Ctx)
       : CmpInst(CI, Ctx, ClassID::ICmp, Opcode::ICmp) {}
   friend class Context; // For constructor.
@@ -3263,17 +3257,13 @@ public:
     return llvm::ICmpInst::compare(LHS, RHS, Pred);
   }
 
-  static bool classof(const Instruction *From) {
-    return From->getSubclassID() == ClassID::ICmp;
-  }
   static bool classof(const Value *From) {
-    return isa<Instruction>(From) && classof(cast<Instruction>(From));
+    return From->getSubclassID() == ClassID::ICmp;
   }
 };
 
 class FCmpInst : public CmpInst {
-  /// Use Context::createFCmpInst(). Don't call the
-  /// constructor directly.
+  /// Use Context::createFCmpInst(). Don't call the constructor directly.
   FCmpInst(llvm::FCmpInst *CI, Context &Ctx)
       : CmpInst(CI, Ctx, ClassID::FCmp, Opcode::FCmp) {}
   friend class Context; // For constructor.
@@ -3292,9 +3282,6 @@ public:
     return llvm::FCmpInst::compare(LHS, RHS, Pred);
   }
 
-  static bool classof(const Instruction *From) {
-    return From->getSubclassID() == ClassID::FCmp;
-  }
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::FCmp;
   }
