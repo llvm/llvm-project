@@ -2521,7 +2521,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
   return nullptr;
 }
 
-UserExpression *Target::GetUserExpressionForLanguage(
+std::unique_ptr<UserExpression> Target::GetUserExpressionForLanguage(
     llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
@@ -2544,8 +2544,8 @@ UserExpression *Target::GetUserExpressionForLanguage(
     return nullptr;
   }
 
-  auto *user_expr = ts->GetUserExpression(expr, prefix, language, desired_type,
-                                          options, ctx_obj);
+  auto user_expr = ts->GetUserExpression(expr, prefix, language, desired_type,
+                                         options, ctx_obj);
   if (!user_expr)
     error = Status::FromErrorStringWithFormat(
         "Could not create an expression for language %s",
