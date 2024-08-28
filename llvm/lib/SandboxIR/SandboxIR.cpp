@@ -2145,6 +2145,21 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(
       llvm::ShuffleVectorInst::convertShuffleMaskForBitcode(Mask, ResultTy));
 }
 
+Value *InsertValueInst::create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
+                               BBIterator WhereIt, BasicBlock *WhereBB,
+                               Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::Value *NewV = Builder.CreateInsertValue(Agg->Val, Val->Val, Idxs, Name);
+  if (auto *NewInsertValueInst = dyn_cast<llvm::InsertValueInst>(NewV))
+    return Ctx.createInsertValueInst(NewInsertValueInst);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
 #ifndef NDEBUG
 void Constant::dumpOS(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -2303,6 +2318,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     auto *LLVMIns = cast<llvm::ShuffleVectorInst>(LLVMV);
     It->second = std::unique_ptr<ShuffleVectorInst>(
         new ShuffleVectorInst(LLVMIns, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::InsertValue: {
+    auto *LLVMIns = cast<llvm::InsertValueInst>(LLVMV);
+    It->second =
+        std::unique_ptr<InsertValueInst>(new InsertValueInst(LLVMIns, *this));
     return It->second.get();
   }
   case llvm::Instruction::Br: {
@@ -2525,6 +2546,12 @@ Context::createShuffleVectorInst(llvm::ShuffleVectorInst *SVI) {
   auto NewPtr =
       std::unique_ptr<ShuffleVectorInst>(new ShuffleVectorInst(SVI, *this));
   return cast<ShuffleVectorInst>(registerValue(std::move(NewPtr)));
+}
+
+InsertValueInst *Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
+  auto NewPtr =
+      std::unique_ptr<InsertValueInst>(new InsertValueInst(IVI, *this));
+  return cast<InsertValueInst>(registerValue(std::move(NewPtr)));
 }
 
 BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
