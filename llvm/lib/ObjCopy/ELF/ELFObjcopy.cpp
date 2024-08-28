@@ -209,6 +209,27 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                            SecName.str().c_str());
 }
 
+static Error dumpRawDataURIToFile(StringRef Filename, int64_t Offset,
+                                  int64_t Size, ObjectFile &Obj) {
+  SmallString<2048> NameBuf;
+  raw_svector_ostream OutputFileName(NameBuf);
+  OutputFileName << Obj.getFileName().str() << "-offset" << Offset << "-size"
+                 << Size << ".co";
+
+  Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+      FileOutputBuffer::create(OutputFileName.str(), Size);
+
+  if (!BufferOrErr)
+    return BufferOrErr.takeError();
+
+  MemoryBufferRef Input = Obj.getMemoryBufferRef();
+  std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
+  std::copy(Input.getBufferStart(), Input.getBufferStart() + Size,
+            Buf->getBufferStart());
+
+  return Buf->commit();
+}
+
 Error Object::compressOrDecompressSections(const CommonConfig &Config) {
   // Build a list of sections we are going to replace.
   // We can't call `addSection` while iterating over sections,

@@ -73,6 +73,12 @@ multiple file formats.
  For MachO objects, ``<section>`` must be formatted as
  ``<segment name>,<section name>``.
 
+.. option:: --dump-offload-bundle=<URI>
+
+ Dump the HIP Offload Bundle entry specified by the URI syntax given, into a 
+ code object file.
+
+
 .. option:: --enable-deterministic-archives, -D
 
  Enable deterministic mode when copying archives, i.e. use 0 for archive member
