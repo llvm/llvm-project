@@ -320,6 +320,23 @@ public:
     auto selector = inflightEh.getTypeId();
     auto exceptionPtr = inflightEh.getExceptionPtr();
 
+    // Time to emit cleanup's.
+    if (tryOp.isCleanupActive()) {
+      assert(tryOp.getCleanupRegion().getBlocks().size() == 1 &&
+             "NYI: if this isn't enough, move region instead");
+      // TODO(cir): this might need to be duplicated instead of consumed since
+      // for user-written try/catch we want these cleanups to also run when the
+      // regular try scope adjurns (in case no exception is triggered).
+      assert(tryOp.getSynthetic() &&
+             "not implemented for user written try/catch");
+      mlir::Block *cleanupBlock = &tryOp.getCleanupRegion().getBlocks().back();
+      auto cleanupYield =
+          cast<mlir::cir::YieldOp>(cleanupBlock->getTerminator());
+      cleanupYield->erase();
+      rewriter.mergeBlocks(cleanupBlock, catchBegin);
+      rewriter.setInsertionPointToEnd(catchBegin);
+    }
+
     // Handle dispatch. In could in theory use a switch, but let's just
     // mimic LLVM more closely since we have no specific thing to achieve
     // doing that (might not play as well with existing optimizers either).
