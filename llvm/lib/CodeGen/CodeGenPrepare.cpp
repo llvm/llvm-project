@@ -1183,7 +1183,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
     }
   }
 
-  // Reserve loop Metadata.
+  // Preserve loop Metadata.
   if (BI->hasMetadata(LLVMContext::MD_loop)) {
     for (auto *Pred : predecessors(BB))
       Pred->getTerminator()->copyMetadata(*BI, LLVMContext::MD_loop);
