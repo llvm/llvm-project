@@ -11749,6 +11749,7 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "};",
                AfterPlacementOperator);
   verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+  verifyFormat("delete (int *)p;", AfterPlacementOperator);
 
   AfterPlacementOperator.SpaceBeforeParensOptions.AfterPlacementOperator =
       false;
@@ -11764,6 +11765,7 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "};",
                AfterPlacementOperator);
   verifyFormat("void operator new(void *foo) ATTRIB;", AfterPlacementOperator);
+  verifyFormat("delete (int *)p;", AfterPlacementOperator);
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
