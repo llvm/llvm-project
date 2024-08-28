@@ -132,6 +132,7 @@ void two_custom_mutex_bases_casts_tn(MyMutex &m) {
 
 struct MutexVirtBase1 : virtual std::mutex {
   void lock1() { lock(); }
+  // expected-note@-1 {{Entering critical section here}}
   void unlock1() { unlock(); }
 };
 
@@ -153,6 +154,17 @@ void virt_inherited_mutexes_different_bases_tn(CombinedVirtMutex &cvt) {
   cvt.unlock2(); // Despite a different name, unlock2 acts on the same mutex as lock1
   sleep(10);
 }
+
+void virt_inherited_mutexes_different_bases_tp(CombinedVirtMutex &cvt) {
+  cvt.lock1();
+  // expected-note@-1 {{Calling 'MutexVirtBase1::lock1'}}
+  // expected-note@-2 {{Returning from 'MutexVirtBase1::lock1'}}
+  sleep(10);
+  // expected-warning@-1 {{Call to blocking function 'sleep' inside of critical section}}
+  // expected-note@-2 {{Call to blocking function 'sleep' inside of critical section}}
+  cvt.unlock1();
+}
+
 namespace std {
 template <class... MutexTypes> struct scoped_lock {
   explicit scoped_lock(MutexTypes&... m);
