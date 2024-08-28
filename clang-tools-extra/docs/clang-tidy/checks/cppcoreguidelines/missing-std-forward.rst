@@ -39,7 +39,6 @@ This check implements `F.19
 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_
 from the C++ Core Guidelines.
 
-
 Options
 -------
 
@@ -48,4 +47,3 @@ Options
    Boolean flag to allow users who want to use the forwarding reference as an
    lvalue reference to convey he intention by using ``static_cast<T&>(t)`` to
    disable warning. Default value is `false`.
-
