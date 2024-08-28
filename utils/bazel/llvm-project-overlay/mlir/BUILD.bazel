@@ -9988,6 +9988,7 @@ cc_binary(
     deps = [
         ":ArithDialect",
         ":BuiltinToLLVMIRTranslation",
+        ":ConvertToSPIRV",
         ":ExecutionEngineUtils",
         ":FuncDialect",
         ":FuncToLLVM",
@@ -9996,6 +9997,7 @@ cc_binary(
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
         ":GPUTransforms",
+        ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LLVMIRTransforms",
