@@ -217,7 +217,7 @@ bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
     return false;
   }
   for (const MachineOperand &MO : MI.all_uses())
-    if (!MO.getReg().isVirtual() &&
+    if (MO.getReg().isPhysical() &&
         R600::R600_LDS_SRC_REGRegClass.contains(MO.getReg()))
       return true;
   return false;
