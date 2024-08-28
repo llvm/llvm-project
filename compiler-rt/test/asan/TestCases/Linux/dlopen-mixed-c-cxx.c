@@ -3,8 +3,7 @@
 //
 // The program can potentially return a non-zero exit code, so use || : to
 // ensure command returns true
-// RUN: env ASAN_OPTIONS=verbosity=1 %t.out %t.so &> %t_env || :
-// RUN: FileCheck %s < %t_env
+// RUN: env ASAN_OPTIONS=verbosity=1 not %t.out %t.so 2>&1 | FileCheck %s
 //
 // CHECK: AddressSanitizer: failed to intercept '__cxa_throw'
 //
