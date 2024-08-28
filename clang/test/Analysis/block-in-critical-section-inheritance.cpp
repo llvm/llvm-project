@@ -39,3 +39,17 @@ void no_false_positive_gh_104241() {
   m.unlock();
   sleep(10); // no-warning
 }
+
+struct TwoMutexes {
+  std::mutex m1;
+  std::mutex m2;
+};
+
+void two_mutexes_false_negative(TwoMutexes &tm) {
+  tm.m1.lock();
+  tm.m2.unlock();
+  // Critical section is associated with tm now so tm.m1 and tm.m2 are
+  // undistinguishiable
+  sleep(10); // False-negative
+  tm.m1.unlock();
+}
