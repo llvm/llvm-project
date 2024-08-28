@@ -59,17 +59,33 @@ static size_t partition(const Array &array) {
   }
 }
 
-LIBC_INLINE void quick_sort(const Array &array) {
-  const size_t array_size = array.size();
-  if (array_size <= 1)
-    return;
-  size_t split_index = partition(array);
-  if (array_size <= 2) {
-    // The partition operation sorts the two element array.
-    return;
+LIBC_INLINE void quick_sort(Array array) {
+  while (true) {
+    const size_t array_size = array.size();
+    if (array_size <= 1)
+      return;
+    size_t split_index = partition(array);
+    if (array_size <= 2) {
+      // The partition operation sorts the two element array.
+      return;
+    }
+
+    // Make Arrays describing the two sublists that still need sorting.
+    Array left = array.make_array(0, split_index);
+    Array right = array.make_array(split_index, array.size() - split_index);
+
+    // Recurse to sort the smaller of the two, and then loop round within this
+    // function to sort the larger. This way, recursive call depth is bounded
+    // by log2 of the total array size, because every recursive call is sorting
+    // a list at most half the length of the one in its caller.
+    if (left.size() < right.size()) {
+      quick_sort(left, depth + 1);
+      array.reset_bounds(right.get(0), right.size());
+    } else {
+      quick_sort(right, depth + 1);
+      array.reset_bounds(left.get(0), left.size());
+    }
   }
-  quick_sort(array.make_array(0, split_index));
-  quick_sort(array.make_array(split_index, array.size() - split_index));
 }
 
 } // namespace internal
