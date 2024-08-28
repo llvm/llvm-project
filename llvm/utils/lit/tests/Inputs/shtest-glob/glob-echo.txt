@@ -1,2 +1,2 @@
 ## Tests glob pattern expansion by listing matching files.
-# RUN: echo %{inputs}/shtest-glob/example_file*.txt
+# RUN: echo %S/example_file*.input

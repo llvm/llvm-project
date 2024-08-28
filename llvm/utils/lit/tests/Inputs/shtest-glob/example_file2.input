@@ -1,2 +1,2 @@
 ## This is the second example file used for testing glob pattern matching.
-RUN: This is the second example file.
+This is the second example file.
