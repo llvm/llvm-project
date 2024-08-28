@@ -4317,3 +4317,10 @@ define void @foo() {
   EXPECT_EQ(NewUIEnd->getParent(), BB);
   EXPECT_EQ(NewUIEnd->getNextNode(), nullptr);
 }
+
+/// Makes sure that all Instruction sub-classes have a classof().
+TEST_F(SandboxIRTest, CheckClassof) {
+#define DEF_INSTR(ID, OPC, CLASS)                                              \
+  EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
+#include "llvm/SandboxIR/SandboxIRValues.def"
+}
