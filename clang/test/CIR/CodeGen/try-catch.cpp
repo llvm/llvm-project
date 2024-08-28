@@ -10,11 +10,11 @@ unsigned long long tc() {
 
   try {
     // CHECK: cir.scope {
+    // CHECK: %[[local_a:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
     // CHECK: %[[msg:.*]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"]
     // CHECK: %[[idx:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"]
 
     // CHECK: cir.try {
-    // CHECK: %[[local_a:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
     int a = 4;
     z = division(x, y);
     // CHECK: %[[div_res:.*]] = cir.call exception @_Z8divisionii({{.*}}) : (!s32i, !s32i) -> !cir.double

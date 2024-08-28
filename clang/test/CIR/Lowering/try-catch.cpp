@@ -10,12 +10,12 @@ unsigned long long tc() {
   int x = 50, y = 3;
   unsigned long long z;
 
+  // CIR_FLAT:     cir.alloca !s32i, !cir.ptr<!s32i>, ["a"
   // CIR_FLAT:     cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"]
   // CIR_FLAT:     cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"]
   // CIR_FLAT:     cir.br ^bb2
   try {
     // CIR_FLAT:   ^bb2:  // pred: ^bb1
-    // CIR_FLAT:     cir.alloca !s32i, !cir.ptr<!s32i>
     // CIR_FLAT:     cir.try_call @_Z8divisionii({{.*}}) ^[[CONT:.*]], ^[[LPAD:.*]] : (!s32i, !s32i)
     int a = 4;
     z = division(x, y);

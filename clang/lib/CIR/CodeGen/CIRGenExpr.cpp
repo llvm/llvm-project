@@ -2709,6 +2709,17 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
   mlir::Block *entryBlock = insertIntoFnEntryBlock
                                 ? getCurFunctionEntryBlock()
                                 : currLexScope->getEntryBlock();
+
+  // If this is an alloca in the entry basic block of a cir.try and there's
+  // a surrounding cir.scope, make sure the alloca ends up in the surrounding
+  // scope instead. This is necessary in order to guarantee all SSA values are
+  // reachable during cleanups.
+  if (auto tryOp = llvm::dyn_cast_if_present<mlir::cir::TryOp>(
+          entryBlock->getParentOp())) {
+    if (auto scopeOp = llvm::dyn_cast<mlir::cir::ScopeOp>(tryOp->getParentOp()))
+      entryBlock = &scopeOp.getRegion().front();
+  }
+
   return buildAlloca(name, ty, loc, alignment,
                      builder.getBestAllocaInsertPoint(entryBlock), arraySize);
 }
