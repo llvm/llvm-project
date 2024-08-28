@@ -239,8 +239,7 @@ ExprValue BinaryExpr::evaluateBinaryOperands() const {
   case Op::OrAssign:
     return LHS->getExprValue().getValue() | RHS->getExprValue().getValue();
   case Op::Invalid:
-  default:
-    llvm_unreachable("invalid operator");
+    error(loc_ + ": invalid operator");
   }
 }
 

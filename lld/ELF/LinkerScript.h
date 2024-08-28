@@ -151,7 +151,6 @@ public:
     SubAssign,
     MulAssign,
     DivAssign,
-    ModAssign,
     ShlAssign,
     ShrAssign,
     AndAssign,
