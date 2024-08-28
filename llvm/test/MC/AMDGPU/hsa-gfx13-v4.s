@@ -165,6 +165,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_id 1
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
 // ASM-NEXT: .amdhsa_wavefront_size32 1
+// ASM-NEXT: .amdhsa_enable_wavegroup 0
 // ASM-NEXT: .amdhsa_enable_private_segment 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 0
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y 1

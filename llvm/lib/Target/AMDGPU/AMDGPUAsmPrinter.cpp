@@ -459,6 +459,8 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
+  if (AMDGPU::getWavegroupEnable(MF.getFunction()))
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP;
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
   // un-evaluatable at this point so it cannot be conditionally checked here.
@@ -987,7 +989,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getFeatureBits().test(FeatureLocalMemorySize393216)) {
+  if (STM.getFeatureBits().test(FeatureLocalMemorySize327680)) {
     // LDS is allocated in 256 dword blocks.
     LDSAlignShift = 10;
   } else if (STM.getFeatureBits().test(FeatureLocalMemorySize163840)) {

@@ -67,19 +67,27 @@ bool AMDGPUMarkPromotableLaneShared::runOnFunction(Function &F) {
 
 static void collectUses(GlobalVariable &GV, SmallVectorImpl<Use *> &Uses) {
   SmallVector<Instruction *> WorkList;
+  SmallPtrSet<User *, 8> Visited;
+
+  auto extendWorkList = [&](Use &U) {
+    auto User = U.getUser();
+    if (Visited.count(User))
+      return;
+    Visited.insert(User);
+    if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
+      WorkList.push_back(cast<Instruction>(User));
+  };
+
   for (auto &U : GV.uses()) {
     Uses.push_back(&U);
-
-    if (Instruction *I = dyn_cast<GetElementPtrInst>(U.getUser()))
-      WorkList.push_back(I);
+    extendWorkList(U);
   }
+
   while (!WorkList.empty()) {
     auto *Cur = WorkList.pop_back_val();
     for (auto &U : Cur->uses()) {
       Uses.push_back(&U);
-
-      if (Instruction *I = dyn_cast<GetElementPtrInst>(U.getUser()))
-        WorkList.push_back(I);
+      extendWorkList(U);
     }
   }
 }
@@ -92,7 +100,7 @@ static bool allPtrInputsInSameClass(GlobalVariable *GV, Instruction *Inst) {
     if (isa<ConstantPointerNull>(Op))
       continue;
 
-    Value *Obj = getUnderlyingObject(Op);
+    const Value *Obj = getUnderlyingObjectAggressive(Op);
     if (!isa<GlobalVariable>(Obj))
       return false;
 

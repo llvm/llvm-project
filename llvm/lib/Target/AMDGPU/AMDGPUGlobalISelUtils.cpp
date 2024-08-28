@@ -73,7 +73,7 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 
 bool AMDGPU::IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
   if (auto *val = MemOpnd->getValue()) {
-    auto *Obj = getUnderlyingObject(val);
+    auto *Obj = getUnderlyingObjectAggressive(val);
     if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
       if (GV->hasAttribute("lane-shared-in-vgpr")) {
         return true;

@@ -81,7 +81,10 @@ class DAPTestCaseBase(TestBase):
                 body = stopped_event["body"]
                 if "reason" not in body:
                     continue
-                if body["reason"] != "breakpoint":
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
                     continue
                 if "description" not in body:
                     continue

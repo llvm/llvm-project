@@ -797,7 +797,8 @@ static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
 void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, MCRegister DestReg,
-                              MCRegister SrcReg, bool KillSrc) const {
+                              MCRegister SrcReg, bool KillSrc,
+                              bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterClass *RC = RI.getPhysRegBaseClass(DestReg);
   unsigned Size = RI.getRegSizeInBits(*RC);
   const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
@@ -9018,7 +9019,8 @@ SIInstrInfo::getSerializableTargetIndices() const {
       {AMDGPU::TI_SCRATCH_RSRC_DWORD0, "amdgpu-scratch-rsrc-dword0"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD1, "amdgpu-scratch-rsrc-dword1"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD2, "amdgpu-scratch-rsrc-dword2"},
-      {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"}};
+      {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"},
+      {AMDGPU::TI_NUM_VGPRS, "amdgpu-num-vgprs"}};
   return ArrayRef(TargetIndices);
 }
 
@@ -9762,7 +9764,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
     if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
           return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::LANE_SHARED;
         })) {
       // At least one MMO in a non-global address space.
       return InstructionUniformity::NeverUniform;
@@ -9831,6 +9834,9 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
     return InstructionUniformity::Default;
   }
+
+  if (MI.getOpcode() == AMDGPU::V_LOAD_IDX)
+    return InstructionUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();

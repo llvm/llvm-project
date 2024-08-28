@@ -2915,7 +2915,7 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   // Byval (as with any stack) slots are always at least 4 byte aligned.
   Alignment = std::max(Alignment, Align(4));
 
-  unsigned Reg = State->AllocateReg(GPRArgRegs);
+  MCRegister Reg = State->AllocateReg(GPRArgRegs);
   if (!Reg)
     return;
 

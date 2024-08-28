@@ -1982,7 +1982,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1210Insts,
-   FeatureLocalMemorySize393216,
+   FeatureLocalMemorySize327680,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
@@ -2054,7 +2054,7 @@ def FeatureISAVersion12_1_Generic: FeatureSet<
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1210Insts,
-   FeatureLocalMemorySize393216,
+   FeatureLocalMemorySize327680,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,

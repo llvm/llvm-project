@@ -1148,8 +1148,8 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 65536;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize163840))
     return 163840;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize393216))
-    return 393216;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize327680))
+    return 327680;
   return 0;
 }
 
@@ -2284,6 +2284,10 @@ bool getHasColorExport(const Function &F) {
 
 bool getHasDepthExport(const Function &F) {
   return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
+}
+
+bool getWavegroupEnable(const Function &F) {
+  return F.hasFnAttribute("amdgpu-wavegroup-enable");
 }
 
 bool isShader(CallingConv::ID cc) {
@@ -3525,7 +3529,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  return ST.hasFeature(AMDGPU::FeatureLocalMemorySize393216) ? 256 : 128;
+  return ST.hasFeature(AMDGPU::FeatureLocalMemorySize327680) ? 256 : 128;
 }
 
 } // namespace AMDGPU

@@ -1592,6 +1592,12 @@ succeeds but Clang emits a warning specifying that the function is deprecated.
 Finally, if Clang is instructed to compile code for macOS 10.7, the call
 fails because ``f()`` is no longer available.
 
+Clang is instructed to compile code for a minimum deployment version using
+the ``-target`` or ``-mtargetos`` command line arguments. For example,
+macOS 10.7 would be specified as ``-target x86_64-apple-macos10.7`` or
+``-mtargetos=macos10.7``. Variants like Mac Catalyst are specified as
+``-target arm64-apple-ios15.0-macabi`` or ``-mtargetos=ios15.0-macabi``
+
 The availability attribute is a comma-separated list starting with the
 platform name and then including clauses specifying important milestones in the
 declaration's lifetime (in any order) along with additional information. Those
@@ -1636,41 +1642,61 @@ the implicitly inferred availability attributes. If no availability attribute
 specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
-``ios``
-  Apple's iOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-ios*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=ios*version*``
-  command-line argument.
-
-``macos``
-  Apple's macOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-macos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=macos*version*``
-  command-line argument. ``macosx`` is supported for
-  backward-compatibility reasons, but it is deprecated.
-
-``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-tvos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=tvos*version*``
-  command-line argument.
-
-``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-watchos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=watchos*version*``
-  command-line argument.
-
-``visionos``
-  Apple's visionOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-visionos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=visionos*version*``
-  command-line argument.
-
+``iOS``
+``macOS``
+``tvOS``
+``watchOS``
+``iOSApplicationExtension``
+``macOSApplicationExtension``
+``tvOSApplicationExtension``
+``watchOSApplicationExtension``
+``macCatalyst``
+``macCatalystApplicationExtension``
+``visionOS``
+``visionOSApplicationExtension``
 ``driverkit``
-  Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the ``-target *arch*-apple-driverkit*version*``
-  command line argument.
+``swift``
+``android``
+``fuchsia``
+``ohos``
+``zos``
+``ShaderModel``
+
+Some platforms have alias names:
+
+``ios``
+``macos``
+``macosx (deprecated)``
+``tvos``
+``watchos``
+``ios_app_extension``
+``macos_app_extension``
+``macosx_app_extension (deprecated)``
+``tvos_app_extension``
+``watchos_app_extension``
+``maccatalyst``
+``maccatalyst_app_extension``
+``visionos``
+``visionos_app_extension``
+``shadermodel``
+
+Supported environment names for the ShaderModel platform:
+
+``pixel``
+``vertex``
+``geometry``
+``hull``
+``domain``
+``compute``
+``raygeneration``
+``intersection``
+``anyhit``
+``closesthit``
+``miss``
+``callable``
+``mesh``
+``amplification``
+``library``
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -2830,6 +2856,26 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes.
+  }];
+}
+
+def AMDGPUWavegroupKernelDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attributes marks a kernel as using wavegroup launch.
+
+Clang supports the
+``__attribute__((amdgpu_wavegroup_kernel(<num_wavegroups>, <wave_size>, <x>, <y>, <z>)))``
+attribute for the AMDGPU target when compiling for a GFX13 offload target. This
+attribute may be attached to HIP kernel function definitions to enable wavegroup
+kernel launches.
+
+The ``<x>``, ``<y>``, and ``<<z>>`` parameters specify the exact size of work
+groups.
+
+``<num_wavegroups>`` must be 4, ``<wave_size>`` must be 32. The number of
+threads per workgroup, i.e. the product of ``<x>``, ``<y>``, and ``<z>``, must
+be divisible by 128.
   }];
 }
 

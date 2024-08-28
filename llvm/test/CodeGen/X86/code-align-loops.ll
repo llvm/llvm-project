@@ -96,6 +96,56 @@ for.body5:                                        ; preds = %for.body, %for.body
   br i1 %exitcond16.not, label %for.cond.cleanup4, label %for.body5, !llvm.loop !2
 }
 
+; test3 is to check if .p2align can be correctly set on loops with multi latches.
+; The test IR is generated from below simple C file:
+; $ clang -O0 -S -emit-llvm loop.c
+; $ cat loop.c
+; int test3() {
+;     int i = 0;
+;     [[clang::code_align(32)]]
+;     while (i < 10) {
+;         if (i % 2) {
+;             continue;
+;         }
+;         i++;
+;     }
+; }
+; CHECK-LABEL: test3_multilatch:
+; ALIGN: .p2align 4, 0x90
+; ALIGN-NEXT: .LBB2_1: # %while.cond
+define dso_local i32 @test3_multilatch() #0 {
+entry:
+  %retval = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 0, ptr %retval, align 4
+  store i32 0, ptr %i, align 4
+  br label %while.cond
+
+while.cond:                                       ; preds = %if.end, %if.then, %entry
+  %0 = load i32, ptr %i, align 4
+  %cmp = icmp slt i32 %0, 10
+  br i1 %cmp, label %while.body, label %while.end
+
+while.body:                                       ; preds = %while.cond
+  %1 = load i32, ptr %i, align 4
+  %rem = srem i32 %1, 2
+  %tobool = icmp ne i32 %rem, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:                                          ; preds = %while.body
+  br label %while.cond, !llvm.loop !0
+
+if.end:                                           ; preds = %while.body
+  %2 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %2, 1
+  store i32 %inc, ptr %i, align 4
+  br label %while.cond, !llvm.loop !0
+
+while.end:                                        ; preds = %while.cond
+  %3 = load i32, ptr %retval, align 4
+  ret i32 %3
+}
+
 declare void @bar()
 declare void @var()
 

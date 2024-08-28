@@ -2737,10 +2737,19 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
   if (results.AlreadySearched(this))
     return;
 
+  auto type_basename = query.GetTypeBasename();
+
+  Log *log = GetLog(DWARFLog::Lookups);
+  if (log) {
+    GetObjectFile()->GetModule()->LogMessage(
+        log, "SymbolFileDWARF::FindTypes(type_basename=\"{0}\")",
+        type_basename);
+  }
+
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   bool have_index_match = false;
-  m_index->GetTypes(query.GetTypeBasename(), [&](DWARFDIE die) {
+  m_index->GetTypes(type_basename, [&](DWARFDIE die) {
     // Check the language, but only if we have a language filter.
     if (query.HasLanguage()) {
       if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
@@ -2779,8 +2788,14 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
     return !results.Done(query); // Keep iterating if we aren't done.
   });
 
-  if (results.Done(query))
+  if (results.Done(query)) {
+    if (log) {
+      GetObjectFile()->GetModule()->LogMessage(
+          log, "SymbolFileDWARF::FindTypes(type_basename=\"{0}\") => {1}",
+          type_basename, results.GetTypeMap().GetSize());
+    }
     return;
+  }
 
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
@@ -2795,10 +2810,10 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
     // it trims any context items down by removing template parameter names.
     TypeQuery query_simple(query);
     if (UpdateCompilerContextForSimpleTemplateNames(query_simple)) {
-
+      auto type_basename_simple = query_simple.GetTypeBasename();
       // Copy our match's context and update the basename we are looking for
       // so we can use this only to compare the context correctly.
-      m_index->GetTypes(query_simple.GetTypeBasename(), [&](DWARFDIE die) {
+      m_index->GetTypes(type_basename_simple, [&](DWARFDIE die) {
         // Check the language, but only if we have a language filter.
         if (query.HasLanguage()) {
           if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
@@ -2834,8 +2849,17 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         }
         return !results.Done(query); // Keep iterating if we aren't done.
       });
-      if (results.Done(query))
+      if (results.Done(query)) {
+        if (log) {
+          GetObjectFile()->GetModule()->LogMessage(
+              log,
+              "SymbolFileDWARF::FindTypes(type_basename=\"{0}\") => {1} "
+              "(simplified as \"{2}\")",
+              type_basename, results.GetTypeMap().GetSize(),
+              type_basename_simple);
+        }
         return;
+      }
     }
   }
 
@@ -2847,8 +2871,11 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
   for (const auto &pair : m_external_type_modules) {
     if (ModuleSP external_module_sp = pair.second) {
       external_module_sp->FindTypes(query, results);
-      if (results.Done(query))
+      if (results.Done(query)) {
+        // We don't log the results here as they are already logged in the
+        // nested FindTypes call
         return;
+      }
     }
   }
 }

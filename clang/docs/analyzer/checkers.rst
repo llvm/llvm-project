@@ -571,7 +571,7 @@ if ((y = make_int())) {
 nullability
 ^^^^^^^^^^^
 
-Objective C checkers that warn for null pointer passing and dereferencing errors.
+Checkers (mostly Objective C) that warn for null pointer passing and dereferencing errors.
 
 .. _nullability-NullPassedToNonnull:
 
@@ -588,8 +588,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
 
 .. _nullability-NullReturnedFromNonnull:
 
-nullability.NullReturnedFromNonnull (ObjC)
-""""""""""""""""""""""""""""""""""""""""""
+nullability.NullReturnedFromNonnull (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""""""""""""
 Warns when a null pointer is returned from a function that has _Nonnull return type.
 
 .. code-block:: objc
@@ -602,6 +602,22 @@ Warns when a null pointer is returned from a function that has _Nonnull return t
    // Warning: nil returned from a method that is expected
    // to return a non-null value
    return result;
+ }
+
+Warns when a null pointer is returned from a function annotated with ``__attribute__((returns_nonnull))``
+
+.. code-block:: cpp
+
+ int global;
+ __attribute__((returns_nonnull)) void* getPtr(void* p);
+
+ void* getPtr(void* p) {
+   if (p) { // forgot to negate the condition
+     return &global;
+   }
+   // Warning: nullptr returned from a function that is expected
+   // to return a non-null value
+   return p;
  }
 
 .. _nullability-NullableDereferenced:

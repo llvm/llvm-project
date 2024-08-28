@@ -4700,6 +4700,29 @@ Code object V6 metadata is the same as
                                    3 integers
      ============================= ============= ========== =======================================
 
+.. _amdgpu-amdhsa-code-object-metadata-v7:
+
+Code Object V7 Metadata
++++++++++++++++++++++++
+
+Code object V7 metadata is the same as :ref:`amdgpu-amdhsa-code-object-metadata-v6`
+with the changes defined in table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v7`.
+
+    .. table:: AMDHSA Code Object V7 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v7
+
+     ================================ ========== ========== =======================================
+     String Key                       Value Type Required?  Description
+     ================================ ========== ========== =======================================
+     ".laneshared_segment_fixed_size" integer               (GFX13+) The amount of fixed lane-shared
+                                                            address space memory for a lane in bytes.
+                                                            A non-zero value requires enable_wavegroup
+                                                            to be set to true.
+     ".enable_wavegroup"              boolean               (GFX13+) Whether wavegroup launch is enabled.
+                                                            Defaults to false.
+     ================================ ========== ========== =======================================
+
 Kernel Dispatch
 ~~~~~~~~~~~~~~~
 

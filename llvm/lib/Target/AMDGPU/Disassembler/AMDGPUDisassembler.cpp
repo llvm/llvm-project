@@ -424,7 +424,7 @@ static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
   if (!Op.isReg())
     return false;
 
-  unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+  MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
   auto Reg = Sub ? Sub : Op.getReg();
   return Reg >= AMDGPU::AGPR0 && Reg <= AMDGPU::AGPR255;
 }
@@ -2617,6 +2617,15 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
     if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
       PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
+
+    if (isGFX13Plus()) {
+      PRINT_DIRECTIVE(".amdhsa_enable_wavegroup",
+                      KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP);
+    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP) {
+      return createReservedKDBitsError(KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP,
+                                       amdhsa::KERNEL_CODE_PROPERTIES_OFFSET,
+                                       "must be zero prior to gfx13");
+    }
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1) {
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED1,

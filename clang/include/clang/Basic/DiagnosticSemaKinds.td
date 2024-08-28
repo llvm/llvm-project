@@ -12573,4 +12573,8 @@ def err_acc_loop_spec_conflict
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_num_wavegroups_value : Error<"number of wavegroups must be 4">;
+def err_amdgcn_wave_size_value : Error<"wave size must be 32">;
+def err_amdgcn_block_dim_invalid_value : Error<"invalid block dimensions">;
+def note_amdgcn_block_dim_valid_value : Note<"number of threads must be %select{non-zero|at most 1024|a multiple of 128}0">;
 } // end of sema component.

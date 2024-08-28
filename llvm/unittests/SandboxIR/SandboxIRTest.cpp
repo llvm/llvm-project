@@ -580,6 +580,81 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, FreezeInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  freeze i8 %arg
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Freeze = cast<sandboxir::FreezeInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Freeze));
+  EXPECT_EQ(Freeze->getOperand(0), Arg);
+
+  // Check create().
+  auto *NewFreeze = sandboxir::FreezeInst::create(
+      Arg, Ret->getIterator(), Ret->getParent(), Ctx, "NewFreeze");
+  EXPECT_EQ(NewFreeze->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewFreeze->getName(), "NewFreeze");
+#endif // NDEBUG
+}
+
+TEST_F(SandboxIRTest, FenceInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+  fence syncscope("singlethread") seq_cst
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB = &*LLVMF->begin();
+  auto *LLVMFence = cast<llvm::FenceInst>(&*LLVMBB->begin());
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Fence = cast<sandboxir::FenceInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getOrdering().
+  EXPECT_EQ(Fence->getOrdering(), LLVMFence->getOrdering());
+  // Check setOrdering().
+  auto OrigOrdering = Fence->getOrdering();
+  auto NewOrdering = AtomicOrdering::Release;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  Fence->setOrdering(NewOrdering);
+  EXPECT_EQ(Fence->getOrdering(), NewOrdering);
+  Fence->setOrdering(OrigOrdering);
+  EXPECT_EQ(Fence->getOrdering(), OrigOrdering);
+  // Check getSyncScopeID().
+  EXPECT_EQ(Fence->getSyncScopeID(), LLVMFence->getSyncScopeID());
+  // Check setSyncScopeID().
+  auto OrigSSID = Fence->getSyncScopeID();
+  auto NewSSID = SyncScope::System;
+  EXPECT_NE(NewSSID, OrigSSID);
+  Fence->setSyncScopeID(NewSSID);
+  EXPECT_EQ(Fence->getSyncScopeID(), NewSSID);
+  Fence->setSyncScopeID(OrigSSID);
+  EXPECT_EQ(Fence->getSyncScopeID(), OrigSSID);
+  // Check create().
+  auto *NewFence =
+      sandboxir::FenceInst::create(AtomicOrdering::Release, Ret->getIterator(),
+                                   BB, Ctx, SyncScope::SingleThread);
+  EXPECT_EQ(NewFence->getNextNode(), Ret);
+  EXPECT_EQ(NewFence->getOrdering(), AtomicOrdering::Release);
+  EXPECT_EQ(NewFence->getSyncScopeID(), SyncScope::SingleThread);
+}
+
 TEST_F(SandboxIRTest, SelectInst) {
   parseIR(C, R"IR(
 define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
@@ -1867,6 +1942,67 @@ define void @foo(i8 %arg) {
   }
 }
 
+TEST_F(SandboxIRTest, LandingPadInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+unwind:
+  %lpad = landingpad { ptr, i32 }
+            catch ptr null
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwind = getBasicBlockByName(LLVMF, "unwind");
+  auto *LLVMLPad = cast<llvm::LandingPadInst>(&*LLVMUnwind->begin());
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Unwind = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwind));
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb")));
+  auto It = Unwind->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check isCleanup().
+  EXPECT_EQ(LPad->isCleanup(), LLVMLPad->isCleanup());
+  // Check setCleanup().
+  auto OrigIsCleanup = LPad->isCleanup();
+  auto NewIsCleanup = true;
+  EXPECT_NE(NewIsCleanup, OrigIsCleanup);
+  LPad->setCleanup(NewIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), NewIsCleanup);
+  LPad->setCleanup(OrigIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), OrigIsCleanup);
+  // Check getNumClauses().
+  EXPECT_EQ(LPad->getNumClauses(), LLVMLPad->getNumClauses());
+  // Check getClause().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->getClause(Idx), Ctx.getValue(LLVMLPad->getClause(Idx)));
+  // Check isCatch().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->isCatch(Idx), LLVMLPad->isCatch(Idx));
+  // Check isFilter().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->isFilter(Idx), LLVMLPad->isFilter(Idx));
+  // Check create().
+  auto *BBRet = &*BB->begin();
+  auto *NewLPad =
+      cast<sandboxir::LandingPadInst>(sandboxir::LandingPadInst::create(
+          Type::getInt8Ty(C), 0, BBRet->getIterator(), BBRet->getParent(), Ctx,
+          "NewLPad"));
+  EXPECT_EQ(NewLPad->getNextNode(), BBRet);
+  EXPECT_FALSE(NewLPad->isCleanup());
+#ifndef NDEBUG
+  EXPECT_EQ(NewLPad->getName(), "NewLPad");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FuncletPadInst_CatchPadInst_CleanupPadInst) {
   parseIR(C, R"IR(
 define void @foo() {
@@ -2825,6 +2961,31 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
 }
 
+TEST_F(SandboxIRTest, PossiblyDisjointInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint(), isDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  PDI->setIsDisjoint(OrigIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
+}
+
 TEST_F(SandboxIRTest, AtomicRMWInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %arg) {
@@ -3518,6 +3679,48 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
                                     Arg, /*InsertBefore=*/Ret, Ctx, "Bad"),
         ".*Opcode.*");
 #endif // NDEBUG
+  }
+}
+
+TEST_F(SandboxIRTest, PossiblyNonNegInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
+  %zext = zext i32 %arg to i64
+  %uitofp = uitofp i32 %arg to float
+
+  %sext = sext i32 %arg to i64
+  %fptoui = fptoui float %farg to i32
+  %fptosi = fptosi float %farg to i32
+  %fpext = fpext float %farg to double
+  %ptrtoint = ptrtoint ptr %ptr to i32
+  %inttoptr = inttoptr i32 %arg to ptr
+  %sitofp = sitofp i32 %arg to float
+  %trunc = trunc i32 %arg to i16
+  %fptrunc = fptrunc double %darg to float
+  %bitcast = bitcast i32 %arg to float
+  %addrspacecast = addrspacecast ptr %ptr to ptr addrspace(1)
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *PNNI0 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  auto *PNNI1 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  for (auto ItE = BB->end(); It != ItE; ++It)
+    EXPECT_FALSE(isa<sandboxir::PossiblyNonNegInst>(&*It++));
+
+  for (auto *PNNI : {PNNI0, PNNI1}) {
+    // Check setNonNeg(), hasNonNeg().
+    auto OrigNonNeg = PNNI->hasNonNeg();
+    auto NewNonNeg = true;
+    EXPECT_NE(NewNonNeg, OrigNonNeg);
+    PNNI->setNonNeg(NewNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+    PNNI->setNonNeg(OrigNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
   }
 }
 

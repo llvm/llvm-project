@@ -1373,6 +1373,11 @@ bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
 
+bool getWavegroupEnable(const Function &F);
+
+std::optional<std::tuple<unsigned, unsigned, unsigned>>
+getWorkgroupSize(const Function &F);
+
 LLVM_READNONE
 bool isShader(CallingConv::ID CC);
 

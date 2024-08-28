@@ -795,6 +795,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_SANITIZE_BOUNDS;
   case Attribute::NoSanitizeCoverage:
     return bitc::ATTR_KIND_NO_SANITIZE_COVERAGE;
+  case llvm::Attribute::NoSanitizeRealtime:
+    return bitc::ATTR_KIND_NO_SANITIZE_REALTIME;
   case Attribute::NullPointerIsValid:
     return bitc::ATTR_KIND_NULL_POINTER_IS_VALID;
   case Attribute::OptimizeForDebugging:

@@ -259,6 +259,9 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
     return false;
   if (!verifyIntegerEntry(KernelMap, ".private_segment_fixed_size", true))
     return false;
+  if (!verifyScalarEntry(KernelMap, ".enable_wavegroup", false,
+                         msgpack::Type::Boolean))
+    return false;
   if (!verifyScalarEntry(KernelMap, ".uses_dynamic_stack", false,
                          msgpack::Type::Boolean))
     return false;

@@ -136,6 +136,29 @@ Defined *Undefined::getWeakAlias() {
   return nullptr;
 }
 
+bool Undefined::resolveWeakAlias() {
+  Defined *d = getWeakAlias();
+  if (!d)
+    return false;
+
+  // We want to replace Sym with D. However, we can't just blindly
+  // copy sizeof(SymbolUnion) bytes from D to Sym because D may be an
+  // internal symbol, and internal symbols are stored as "unparented"
+  // Symbols. For that reason we need to check which type of symbol we
+  // are dealing with and copy the correct number of bytes.
+  StringRef name = getName();
+  if (isa<DefinedRegular>(d))
+    memcpy(this, d, sizeof(DefinedRegular));
+  else if (isa<DefinedAbsolute>(d))
+    memcpy(this, d, sizeof(DefinedAbsolute));
+  else
+    memcpy(this, d, sizeof(SymbolUnion));
+
+  nameData = name.data();
+  nameSize = name.size();
+  return true;
+}
+
 MemoryBufferRef LazyArchive::getMemberBuffer() {
   Archive::Child c =
       CHECK(sym.getMember(), "could not get the member for symbol " +

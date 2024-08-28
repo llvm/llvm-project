@@ -444,6 +444,11 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
                amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK,
                ".amdhsa_uses_dynamic_stack");
+  if (IVersion.Major >= 13)
+    PrintField(KD.kernel_code_properties,
+               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP_SHIFT,
+               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP,
+               ".amdhsa_enable_wavegroup");
   PrintField(KD.compute_pgm_rsrc2,
              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT_SHIFT,
              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT,

@@ -931,15 +931,16 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const Argument *A = dyn_cast<Argument>(V))
     return !AMDGPU::isArgPassedInSGPR(A);
 
-  // Loads from the private and flat address spaces are divergent, because
-  // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // Loads from the private, laneshared, and flat address spaces are divergent,
+  // because threads can execute the load instruction with the same inputs and
+  // get different results.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::LANE_SHARED;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each

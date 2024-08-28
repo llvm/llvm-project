@@ -575,6 +575,45 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+FreezeInst *FreezeInst::create(Value *V, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::FreezeInst>(Builder.CreateFreeze(V->Val, Name));
+  return Ctx.createFreezeInst(LLVMI);
+}
+
+FenceInst *FenceInst::create(AtomicOrdering Ordering, BBIterator WhereIt,
+                             BasicBlock *WhereBB, Context &Ctx,
+                             SyncScope::ID SSID) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::FenceInst *LLVMI = Builder.CreateFence(Ordering, SSID);
+  return Ctx.createFenceInst(LLVMI);
+}
+
+void FenceInst::setOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&FenceInst::getOrdering, &FenceInst::setOrdering>>(
+          this);
+  cast<llvm::FenceInst>(Val)->setOrdering(Ordering);
+}
+
+void FenceInst::setSyncScopeID(SyncScope::ID SSID) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&FenceInst::getSyncScopeID,
+                                       &FenceInst::setSyncScopeID>>(this);
+  cast<llvm::FenceInst>(Val)->setSyncScopeID(SSID);
+}
+
 Value *SelectInst::createCommon(Value *Cond, Value *True, Value *False,
                                 const Twine &Name, IRBuilder<> &Builder,
                                 Context &Ctx) {
@@ -945,8 +984,8 @@ void InvokeInst::setUnwindDest(BasicBlock *BB) {
   setOperand(2, BB);
   assert(getUnwindDest() == BB && "LLVM IR uses a different operan index!");
 }
-Instruction *InvokeInst::getLandingPadInst() const {
-  return cast<Instruction>(
+LandingPadInst *InvokeInst::getLandingPadInst() const {
+  return cast<LandingPadInst>(
       Ctx.getValue(cast<llvm::InvokeInst>(Val)->getLandingPadInst()));
   ;
 }
@@ -1041,6 +1080,31 @@ void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
 BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
   return cast<BasicBlock>(
       Ctx.getValue(cast<llvm::CallBrInst>(Val)->getSuccessor(Idx)));
+}
+
+LandingPadInst *LandingPadInst::create(Type *RetTy, unsigned NumReservedClauses,
+                                       BBIterator WhereIt, BasicBlock *WhereBB,
+                                       Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::LandingPadInst *LLVMI =
+      Builder.CreateLandingPad(RetTy, NumReservedClauses, Name);
+  return Ctx.createLandingPadInst(LLVMI);
+}
+
+void LandingPadInst::setCleanup(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&LandingPadInst::isCleanup,
+                                       &LandingPadInst::setCleanup>>(this);
+  cast<llvm::LandingPadInst>(Val)->setCleanup(V);
+}
+
+Constant *LandingPadInst::getClause(unsigned Idx) const {
+  return cast<Constant>(
+      Ctx.getValue(cast<llvm::LandingPadInst>(Val)->getClause(Idx)));
 }
 
 Value *FuncletPadInst::getParentPad() const {
@@ -1666,6 +1730,14 @@ Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                InsertAtEnd, Ctx, Name);
 }
 
+void PossiblyDisjointInst::setIsDisjoint(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyDisjointInst::isDisjoint,
+                                       &PossiblyDisjointInst::setIsDisjoint>>(
+          this);
+  cast<llvm::PossiblyDisjointInst>(Val)->setIsDisjoint(B);
+}
+
 void AtomicRMWInst::setAlignment(Align Align) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&AtomicRMWInst::getAlign,
@@ -1919,6 +1991,13 @@ bool CastInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Cast;
 }
 
+void PossiblyNonNegInst::setNonNeg(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&PossiblyNonNegInst::hasNonNeg,
+                                       &PossiblyNonNegInst::setNonNeg>>(this);
+  cast<llvm::PossiblyNonNegInst>(Val)->setNonNeg(B);
+}
+
 Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
                                  Instruction *InsertBefore, Context &Ctx,
                                  const Twine &Name) {
@@ -2157,6 +2236,16 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
   switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
+  case llvm::Instruction::Freeze: {
+    auto *LLVMFreeze = cast<llvm::FreezeInst>(LLVMV);
+    It->second = std::unique_ptr<FreezeInst>(new FreezeInst(LLVMFreeze, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::Fence: {
+    auto *LLVMFence = cast<llvm::FenceInst>(LLVMV);
+    It->second = std::unique_ptr<FenceInst>(new FenceInst(LLVMFence, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Select: {
     auto *LLVMSel = cast<llvm::SelectInst>(LLVMV);
     It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
@@ -2213,6 +2302,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   case llvm::Instruction::CallBr: {
     auto *LLVMCallBr = cast<llvm::CallBrInst>(LLVMV);
     It->second = std::unique_ptr<CallBrInst>(new CallBrInst(LLVMCallBr, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::LandingPad: {
+    auto *LLVMLPad = cast<llvm::LandingPadInst>(LLVMV);
+    It->second =
+        std::unique_ptr<LandingPadInst>(new LandingPadInst(LLVMLPad, *this));
     return It->second.get();
   }
   case llvm::Instruction::CatchPad: {
@@ -2349,6 +2444,16 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   return BB;
 }
 
+FreezeInst *Context::createFreezeInst(llvm::FreezeInst *SI) {
+  auto NewPtr = std::unique_ptr<FreezeInst>(new FreezeInst(SI, *this));
+  return cast<FreezeInst>(registerValue(std::move(NewPtr)));
+}
+
+FenceInst *Context::createFenceInst(llvm::FenceInst *SI) {
+  auto NewPtr = std::unique_ptr<FenceInst>(new FenceInst(SI, *this));
+  return cast<FenceInst>(registerValue(std::move(NewPtr)));
+}
+
 SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {
   auto NewPtr = std::unique_ptr<SelectInst>(new SelectInst(SI, *this));
   return cast<SelectInst>(registerValue(std::move(NewPtr)));
@@ -2414,6 +2519,10 @@ UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
   auto NewPtr =
       std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
   return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
+}
+LandingPadInst *Context::createLandingPadInst(llvm::LandingPadInst *I) {
+  auto NewPtr = std::unique_ptr<LandingPadInst>(new LandingPadInst(I, *this));
+  return cast<LandingPadInst>(registerValue(std::move(NewPtr)));
 }
 CatchPadInst *Context::createCatchPadInst(llvm::CatchPadInst *I) {
   auto NewPtr = std::unique_ptr<CatchPadInst>(new CatchPadInst(I, *this));

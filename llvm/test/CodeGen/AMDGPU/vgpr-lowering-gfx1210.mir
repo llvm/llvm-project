@@ -446,6 +446,15 @@ body:             |
     ; GCN-NEXT: v_add_nc_u32_e32 v2, v1, v3 /*v259*/
     $vgpr2 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr259, implicit $exec
 
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_mov_b32_e32 v0, v0 /*v256*/
+    ; GCN-NEXT: v_add_nc_u32_e32 v1, v1 /*v257*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_add_nc_u32_e32 v2, v2 /*v258*/, v2 /*v258*/
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr256, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 undef $vgpr257, undef $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 undef $vgpr258, undef $vgpr258, implicit $exec
+
     ; ASM: NumVgprs: 263
 
 ...

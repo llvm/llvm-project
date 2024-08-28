@@ -47,108 +47,6 @@ using namespace llvm;
 
 // option descriptors for getopt_long_only()
 
-#ifdef _WIN32
-typedef pipe_t shared_fd_t;
-const shared_fd_t kInvalidSharedFD = LLDB_INVALID_PIPE;
-#else
-typedef NativeSocket shared_fd_t;
-const shared_fd_t kInvalidSharedFD = Socket::kInvalidSocketValue;
-#endif
-
-class SharedSocket {
-public:
-  SharedSocket(Connection *conn, Status &error) {
-    m_fd = kInvalidSharedFD;
-
-    const Socket *socket =
-        static_cast<const Socket *>(conn->GetReadObject().get());
-    if (socket == nullptr) {
-      error = Status("invalid conn socket");
-      return;
-    }
-
-#ifdef _WIN32
-    m_socket = socket->GetNativeSocket();
-
-    // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
-    error = m_socket_pipe.CreateNew(true);
-    if (error.Fail())
-      return;
-
-    m_fd = m_socket_pipe.GetReadPipe();
-#else
-    m_fd = socket->GetNativeSocket();
-    error = Status();
-#endif
-  }
-
-  shared_fd_t GetSendableFD() { return m_fd; }
-
-  Status CompleteSending(lldb::pid_t child_pid) {
-#ifdef _WIN32
-    // Transfer WSAPROTOCOL_INFO to the child process.
-    m_socket_pipe.CloseReadFileDescriptor();
-
-    WSAPROTOCOL_INFO protocol_info;
-    if (::WSADuplicateSocket(m_socket, child_pid, &protocol_info) ==
-        SOCKET_ERROR) {
-      int last_error = ::WSAGetLastError();
-      return Status("WSADuplicateSocket() failed, error: %d", last_error);
-    }
-
-    size_t num_bytes;
-    Status error =
-        m_socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
-                                       std::chrono::seconds(10), num_bytes);
-    if (error.Fail())
-      return error;
-    if (num_bytes != sizeof(protocol_info))
-      return Status("WriteWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
-                    num_bytes);
-#endif
-    return Status();
-  }
-
-  static Status GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
-#ifdef _WIN32
-    socket = Socket::kInvalidSocketValue;
-    // Read WSAPROTOCOL_INFO from the parent process and create NativeSocket.
-    WSAPROTOCOL_INFO protocol_info;
-    {
-      Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
-      size_t num_bytes;
-      Status error =
-          socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
-                                      std::chrono::seconds(10), num_bytes);
-      if (error.Fail())
-        return error;
-      if (num_bytes != sizeof(protocol_info)) {
-        return Status(
-            "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: % d bytes",
-            num_bytes);
-      }
-    }
-    socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
-                         FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
-    if (socket == INVALID_SOCKET) {
-      return Status("WSASocket(FROM_PROTOCOL_INFO) failed: error %d",
-                    ::WSAGetLastError());
-    }
-    return Status();
-#else
-    socket = fd;
-    return Status();
-#endif
-  }
-
-private:
-#ifdef _WIN32
-  Pipe m_socket_pipe;
-  NativeSocket m_socket;
-#endif
-  shared_fd_t m_fd;
-};
-
 static int g_debug = 0;
 static int g_verbose = 0;
 static int g_server = 0;
@@ -259,13 +157,13 @@ static void spawn_process_reaped(lldb::pid_t pid, int signal, int status) {
   gdbserver_portmap.FreePortForProcess(pid);
 }
 
-static Status spawn_process(const char *progname, Connection *conn,
+static Status spawn_process(const char *progname, const Socket *conn_socket,
                             uint16_t gdb_port, uint16_t port_offset,
                             const lldb_private::Args &args,
                             const std::string &log_file,
                             const StringRef log_channels) {
   Status error;
-  SharedSocket shared_socket(conn, error);
+  SharedSocket shared_socket(conn_socket, error);
   if (error.Fail())
     return error;
 
@@ -363,7 +261,7 @@ int main_platform(int argc, char *argv[]) {
   StringRef
       log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
 
-  shared_fd_t fd = kInvalidSharedFD;
+  shared_fd_t fd = SharedSocket::kInvalidFD;
 
   int min_gdbserver_port = 0;
   int max_gdbserver_port = 0;
@@ -480,7 +378,7 @@ int main_platform(int argc, char *argv[]) {
   }
 
   // Print usage and exit if no listening port is specified.
-  if (listen_host_port.empty() && fd == kInvalidSharedFD)
+  if (listen_host_port.empty() && fd == SharedSocket::kInvalidFD)
     show_usage = true;
 
   if (show_usage || option_error) {
@@ -494,7 +392,7 @@ int main_platform(int argc, char *argv[]) {
   lldb_private::Args inferior_arguments;
   inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
 
-  if (fd != kInvalidSharedFD) {
+  if (fd != SharedSocket::kInvalidFD) {
     // Child process will handle the connection and exit.
     Log *log = GetLog(LLDBLog::Platform);
     if (!listen_host_port.empty()) {
@@ -510,13 +408,14 @@ int main_platform(int argc, char *argv[]) {
       return socket_error;
     }
 
-    Connection *conn =
-        new ConnectionFileDescriptor(new TCPSocket(socket, true, false));
     GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp, "tcp");
     if (port_offset > 0)
       platform.SetPortOffset(port_offset);
     platform.SetPortMap(std::move(gdbserver_portmap));
-    platform.SetConnection(std::unique_ptr<Connection>(conn));
+    platform.SetConnection(
+        std::unique_ptr<Connection>(new ConnectionFileDescriptor(
+            new TCPSocket(socket, /*should_close=*/true,
+                          /*child_processes_inherit=*/false))));
     client_handle(platform, inferior_arguments);
     return 0;
   }
@@ -578,8 +477,11 @@ int main_platform(int argc, char *argv[]) {
         fprintf(stderr,
                 "no available gdbserver port for connection - dropping...\n");
       } else {
-        error = spawn_process(progname, conn, *available_port, port_offset,
-                              inferior_arguments, log_file, log_channels);
+        const Socket *conn_socket =
+            static_cast<const Socket *>(conn->GetReadObject().get());
+        error =
+            spawn_process(progname, conn_socket, *available_port, port_offset,
+                          inferior_arguments, log_file, log_channels);
         if (error.Fail()) {
           {
 

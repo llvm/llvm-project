@@ -356,7 +356,7 @@ def executeBuiltinPopd(cmd, shenv):
 def executeBuiltinExport(cmd, shenv):
     """executeBuiltinExport - Set an environment variable."""
     if len(cmd.args) != 2:
-        raise InternalShellError("'export' supports only one argument")
+        raise InternalShellError(cmd, "'export' supports only one argument")
     updateEnv(shenv, cmd.args)
     return ShellCommandResult(cmd, "", "", 0, False)
 
