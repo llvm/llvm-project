@@ -1,0 +1,37 @@
+error: Semantic errors in nested-simd.f90
+./nested-simd.f90:45:15: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+          !$omp teams 
+                ^
+./nested-simd.f90:45:15: error: TEAMS region can only be strictly nested within the implicit parallel region or TARGET region
+          !$omp teams 
+                ^
+./nested-simd.f90:62:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp task 
+              ^
+./nested-simd.f90:68:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp target 
+              ^
+./nested-simd.f90:95:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp task 
+              ^
+./nested-simd.f90:101:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp target 
+              ^
+./nested-simd.f90:108:13: error: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+        !$OMP DO
+              ^^
+./nested-simd.f90:129:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp task 
+              ^
+./nested-simd.f90:135:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp target 
+              ^
+./nested-simd.f90:142:13: error: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+        !$OMP DO
+              ^^
+./nested-simd.f90:163:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp task 
+              ^
+./nested-simd.f90:169:13: error: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+        !$omp target 
+              ^
