@@ -663,7 +663,8 @@ bool M68kInstrInfo::isPCRelRegisterOperandLegal(
 void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 const DebugLoc &DL, MCRegister DstReg,
-                                MCRegister SrcReg, bool KillSrc) const {
+                                MCRegister SrcReg, bool KillSrc,
+                                bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
 
   // First deal with the normal symmetric copies.

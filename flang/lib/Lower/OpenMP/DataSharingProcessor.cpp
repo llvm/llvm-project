@@ -402,6 +402,15 @@ void DataSharingProcessor::collectSymbols(
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
 
+  // Add implicitly referenced symbols from statement functions.
+  if (curScope) {
+    for (const auto &sym : curScope->GetSymbols()) {
+      if (sym->test(semantics::Symbol::Flag::OmpFromStmtFunction) &&
+          sym->test(flag))
+        allSymbols.insert(&*sym);
+    }
+  }
+
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
 
@@ -549,9 +558,20 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       symTable->addSymbol(*sym, localExV);
       symTable->pushScope();
       cloneSymbol(sym);
-      firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(),
-          symTable->shallowLookupSymbol(*sym).getAddr());
+      mlir::Value cloneAddr = symTable->shallowLookupSymbol(*sym).getAddr();
+      mlir::Type cloneType = cloneAddr.getType();
+
+      // A `convert` op is required for variables that are storage associated
+      // via `equivalence`. The problem is that these variables are declared as
+      // `fir.ptr`s while their privatized storage is declared as `fir.ref`,
+      // therefore we convert to proper symbol type.
+      mlir::Value yieldedValue =
+          (symType == cloneType) ? cloneAddr
+                                 : firOpBuilder.createConvert(
+                                       cloneAddr.getLoc(), symType, cloneAddr);
+
+      firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc(),
+                                              yieldedValue);
       symTable->popScope();
     }
 

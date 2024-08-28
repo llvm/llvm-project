@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
@@ -23,6 +24,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -64,7 +66,9 @@ static LogicalResult runMLIRPasses(Operation *op,
   passManager.addPass(createGpuKernelOutliningPass());
   passManager.addPass(memref::createFoldMemRefAliasOpsPass());
 
-  passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
+  ConvertToSPIRVPassOptions convertToSPIRVOptions{};
+  convertToSPIRVOptions.convertGPUModules = true;
+  passManager.addPass(createConvertToSPIRVPass(convertToSPIRVOptions));
   OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
   modulePM.addPass(spirv::createSPIRVUpdateVCEPass());
@@ -107,7 +111,8 @@ int main(int argc, char **argv) {
   registry.insert<mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
                   mlir::gpu::GPUDialect, mlir::spirv::SPIRVDialect,
                   mlir::scf::SCFDialect, mlir::func::FuncDialect,
-                  mlir::memref::MemRefDialect, mlir::vector::VectorDialect>();
+                  mlir::memref::MemRefDialect, mlir::vector::VectorDialect,
+                  mlir::index::IndexDialect>();
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
 

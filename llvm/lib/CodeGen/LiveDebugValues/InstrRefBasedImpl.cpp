@@ -252,8 +252,7 @@ public:
     DbgValueProperties Properties;
     UseBeforeDef(ArrayRef<DbgOp> Values, DebugVariableID VarID,
                  const DbgValueProperties &Properties)
-        : Values(Values.begin(), Values.end()), VarID(VarID),
-          Properties(Properties) {}
+        : Values(Values), VarID(VarID), Properties(Properties) {}
   };
 
   /// Map from instruction index (within the block) to the set of UseBeforeDefs

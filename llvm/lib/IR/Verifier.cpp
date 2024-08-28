@@ -1006,9 +1006,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   Check(isa<PointerType>(Resolver->getFunctionType()->getReturnType()),
         "IFunc resolver must return a pointer", &GI);
 
-  const Type *ResolverFuncTy =
-      GlobalIFunc::getResolverFunctionType(GI.getValueType());
-  Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
+  Check(ResolverTy == PointerType::get(Context, GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
 }
 
@@ -2225,6 +2223,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           "Attributes 'optdebug and optnone' are incompatible!", V);
   }
 
+  Check(!(Attrs.hasFnAttr(Attribute::SanitizeRealtime) &&
+          Attrs.hasFnAttr(Attribute::NoSanitizeRealtime)),
+        "Attributes "
+        "'sanitize_realtime and nosanitize_realtime' are incompatible!",
+        V);
+
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optdebug' are incompatible!", V);
@@ -2778,6 +2782,10 @@ void Verifier::visitFunction(const Function &F) {
 
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
+
+  if (Attrs.hasFnAttr(Attribute::Naked))
+    for (const Argument &Arg : F.args())
+      Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
 
   // Check that this function meets the restrictions on this calling convention.
   // Sometimes varargs is used for perfectly forwarding thunks, so some of these
@@ -4142,8 +4150,10 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
     ConstantInt *High =
         mdconst::dyn_extract<ConstantInt>(Range->getOperand(2 * i + 1));
     Check(High, "The upper limit must be an integer!", High);
-    Check(High->getType() == Low->getType() &&
-          High->getType() == Ty->getScalarType(),
+
+    Check(High->getType() == Low->getType(), "Range pair types must match!",
+          &I);
+    Check(High->getType() == Ty->getScalarType(),
           "Range types must match instruction type!", &I);
 
     APInt HighV = High->getValue();
@@ -5948,31 +5958,24 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::lrint:
-  case Intrinsic::llrint: {
-    Type *ValTy = Call.getArgOperand(0)->getType();
-    Type *ResultTy = Call.getType();
-    Check(
-        ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
-        "llvm.lrint, llvm.llrint: argument must be floating-point or vector "
-        "of floating-points, and result must be integer or vector of integers",
-        &Call);
-    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
-          "llvm.lrint, llvm.llrint: argument and result disagree on vector use",
-          &Call);
-    if (ValTy->isVectorTy()) {
-      Check(cast<VectorType>(ValTy)->getElementCount() ==
-                cast<VectorType>(ResultTy)->getElementCount(),
-            "llvm.lrint, llvm.llrint: argument must be same length as result",
-            &Call);
-    }
-    break;
-  }
+  case Intrinsic::llrint:
   case Intrinsic::lround:
   case Intrinsic::llround: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &Call);
+    auto *VTy = dyn_cast<VectorType>(ValTy);
+    auto *RTy = dyn_cast<VectorType>(ResultTy);
+    Check(ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
+          ExpectedName + ": argument must be floating-point or vector "
+                         "of floating-points, and result must be integer or "
+                         "vector of integers",
+          &Call);
+    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
+          ExpectedName + ": argument and result disagree on vector use", &Call);
+    if (VTy) {
+      Check(VTy->getElementCount() == RTy->getElementCount(),
+            ExpectedName + ": argument must be same length as result", &Call);
+    }
     break;
   }
   case Intrinsic::bswap: {
@@ -6094,11 +6097,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     VectorType *VecTy = dyn_cast<VectorType>(Call.getType());
     Check(VecTy && VecTy->getScalarType()->isIntegerTy() &&
               VecTy->getScalarSizeInBits() >= 8,
-          "experimental_stepvector only supported for vectors of integers "
+          "stepvector only supported for vectors of integers "
           "with a bitwidth of at least 8.",
           &Call);
     break;
@@ -6229,10 +6232,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
-    Check(llvm::any_of(CBR->getIndirectDests(),
-                       [LandingPadBB](const BasicBlock *IndDest) {
-                         return IndDest == LandingPadBB;
-                       }),
+    Check(llvm::is_contained(CBR->getIndirectDests(), LandingPadBB),
           "Intrinsic's corresponding callbr must have intrinsic's parent basic "
           "block in indirect destination list",
           &Call);
@@ -6330,6 +6330,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address first argument must be a GlobalValue");
     Check(cast<GlobalValue>(Arg0).isThreadLocal(),
           "llvm.threadlocal.address operand isThreadLocal() must be true");
+    break;
+  }
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cluster:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys: {
+    unsigned size = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(size == 128, " The only supported value for size operand is 128");
     break;
   }
   };

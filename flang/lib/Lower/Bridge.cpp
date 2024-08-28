@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
+#include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -4250,15 +4251,37 @@ private:
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
-    auto getRefIfLoaded = [](mlir::Value val) -> mlir::Value {
+    auto getRefFromValue = [](mlir::Value val) -> mlir::Value {
       if (auto loadOp =
               mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
         return loadOp.getMemref();
+      if (!mlir::isa<fir::BaseBoxType>(val.getType()))
+        return val;
+      if (auto declOp =
+              mlir::dyn_cast_or_null<hlfir::DeclareOp>(val.getDefiningOp())) {
+        if (!declOp.getShape())
+          return val;
+        if (mlir::isa<fir::ReferenceType>(declOp.getMemref().getType()))
+          return declOp.getResults()[1];
+      }
       return val;
     };
 
-    mlir::Value rhsVal = getRefIfLoaded(rhs.getBase());
-    mlir::Value lhsVal = getRefIfLoaded(lhs.getBase());
+    auto getShapeFromDecl = [](mlir::Value val) -> mlir::Value {
+      if (!mlir::isa<fir::BaseBoxType>(val.getType()))
+        return {};
+      if (auto declOp =
+              mlir::dyn_cast_or_null<hlfir::DeclareOp>(val.getDefiningOp()))
+        return declOp.getShape();
+      return {};
+    };
+
+    mlir::Value rhsVal = getRefFromValue(rhs.getBase());
+    mlir::Value lhsVal = getRefFromValue(lhs.getBase());
+    // Get shape from the rhs if available otherwise get it from lhs.
+    mlir::Value shape = getShapeFromDecl(rhs.getBase());
+    if (!shape)
+      shape = getShapeFromDecl(lhs.getBase());
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -4271,17 +4294,17 @@ private:
           base = convertOp.getValue();
         // Special case if the rhs is a constant.
         if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(loc, base, lhsVal,
+          builder.create<cuf::DataTransferOp>(loc, base, lhsVal, shape,
                                               transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(
               loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
           builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
-                                              transferKindAttr);
+                                              shape, transferKindAttr);
           builder.create<hlfir::EndAssociateOp>(loc, associate);
         }
       } else {
-        builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
+        builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                             transferKindAttr);
       }
       return;
@@ -4291,7 +4314,7 @@ private:
     if (!lhsIsDevice && rhsIsDevice) {
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
+      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                           transferKindAttr);
       return;
     }
@@ -4301,7 +4324,7 @@ private:
       assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
+      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                           transferKindAttr);
       return;
     }
@@ -4345,8 +4368,8 @@ private:
           addSymbol(sym,
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);
-          builder.create<cuf::DataTransferOp>(loc, addr, temp,
-                                              transferKindAttr);
+          builder.create<cuf::DataTransferOp>(
+              loc, addr, temp, /*shape=*/mlir::Value{}, transferKindAttr);
           ++nbDeviceResidentObject;
         }
       }
@@ -6125,6 +6148,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module.get(),
                                   targetMachine.createDataLayout());
+  fir::setIdent(*module.get(), Fortran::common::getFlangFullVersion());
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(

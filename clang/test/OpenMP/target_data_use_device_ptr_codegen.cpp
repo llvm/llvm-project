@@ -360,7 +360,7 @@ struct ST {
       a++;
     }
     // CK2:     call void @__tgt_target_data_end{{.+}}[[MTYPE00]]
-    // CK2:     [[DECL:%.+]] = getelementptr inbounds [[ST]], ptr %this1, i32 0, i32 0
+    // CK2:     [[DECL:%.+]] = getelementptr inbounds nuw [[ST]], ptr %this1, i32 0, i32 0
     // CK2:     [[TTT:%.+]] = load ptr, ptr [[DECL]],
     // CK2:     getelementptr inbounds double, ptr [[TTT]], i32 1
     a++;
@@ -379,7 +379,7 @@ struct ST {
       b++;
     }
     // CK2:     call void @__tgt_target_data_end{{.+}}[[MTYPE01]]
-    // CK2:     [[DECL:%.+]] = getelementptr inbounds [[ST]], ptr %{{.+}}, i32 0, i32 1
+    // CK2:     [[DECL:%.+]] = getelementptr inbounds nuw [[ST]], ptr %{{.+}}, i32 0, i32 1
     // CK2:     [[TTT:%.+]] = load ptr, ptr [[DECL]],
     // CK2:     [[TTTT:%.+]] = load ptr, ptr [[TTT]],
     // CK2:     getelementptr inbounds double, ptr [[TTTT]], i32 1
@@ -400,7 +400,7 @@ struct ST {
       la++;
     }
     // CK2:     call void @__tgt_target_data_end{{.+}}[[MTYPE02]]
-    // CK2:     [[DECL:%.+]] = getelementptr inbounds [[ST]], ptr %this1, i32 0, i32 0
+    // CK2:     [[DECL:%.+]] = getelementptr inbounds nuw [[ST]], ptr %this1, i32 0, i32 0
     // CK2:     [[TTT:%.+]] = load ptr, ptr [[DECL]],
     // CK2:     getelementptr inbounds double, ptr [[TTT]], i32 1
     a++;
@@ -429,10 +429,10 @@ struct ST {
       b++;
     }
     // CK2:     call void @__tgt_target_data_end{{.+}}[[MTYPE03]]
-    // CK2:     [[DECL:%.+]] = getelementptr inbounds [[ST]], ptr %this1, i32 0, i32 0
+    // CK2:     [[DECL:%.+]] = getelementptr inbounds nuw [[ST]], ptr %this1, i32 0, i32 0
     // CK2:     [[TTT:%.+]] = load ptr, ptr [[DECL]],
     // CK2:     getelementptr inbounds double, ptr [[TTT]], i32 1
-    // CK2:     [[_DECL:%.+]] = getelementptr inbounds [[ST]], ptr %this1, i32 0, i32 1
+    // CK2:     [[_DECL:%.+]] = getelementptr inbounds nuw [[ST]], ptr %this1, i32 0, i32 1
     // CK2:     [[_TTT:%.+]] = load ptr, ptr [[_DECL]],
     // CK2:     [[_TTTT:%.+]] = load ptr, ptr [[_TTT]],
     // CK2:     getelementptr inbounds double, ptr [[_TTTT]], i32 1

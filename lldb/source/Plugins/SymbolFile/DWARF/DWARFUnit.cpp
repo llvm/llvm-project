@@ -90,24 +90,26 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(*m_dwo_id);
 
   if (!dwo_cu) {
-    SetDwoError(Status::createWithFormat(
+    SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to load .dwo file from \"{0}\" due to ID ({1:x16}) mismatch "
         "for skeleton DIE at {2:x8}",
-        dwo_symbol_file->GetObjectFile()->GetFileSpec().GetPath().c_str(),
-        *m_dwo_id, m_first_die.GetOffset()));
+        dwo_symbol_file->GetObjectFile()->GetFileSpec().GetPath(), *m_dwo_id,
+        m_first_die.GetOffset()));
     return; // Can't fetch the compile unit from the dwo file.
   }
-  // If the skeleton compile unit gets its unit DIE parsed first, then this
-  // will fill in the DWO file's back pointer to this skeleton compile unit.
-  // If the DWO files get parsed on their own first the skeleton back link
-  // can be done manually in DWARFUnit::GetSkeletonCompileUnit() which will
-  // do a reverse lookup and cache the result.
-  dwo_cu->SetSkeletonUnit(this);
+
+  // Link the DWO unit to this object, if it hasn't been linked already (this
+  // can happen when we have an index, and the DWO unit is parsed first).
+  if (!dwo_cu->LinkToSkeletonUnit(*this)) {
+    SetDwoError(Status::FromErrorStringWithFormatv(
+        "multiple compile units with Dwo ID {0:x16}", *m_dwo_id));
+    return;
+  }
 
   DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
   if (!dwo_cu_die.IsValid()) {
     // Can't fetch the compile unit DIE from the dwo file.
-    SetDwoError(Status::createWithFormat(
+    SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to extract compile unit DIE from .dwo file for skeleton "
         "DIE at {0:x16}",
         m_first_die.GetOffset()));
@@ -708,23 +710,28 @@ uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
 uint8_t DWARFUnit::GetDefaultAddressSize() { return 4; }
 
 DWARFCompileUnit *DWARFUnit::GetSkeletonUnit() {
-  if (m_skeleton_unit == nullptr && IsDWOUnit()) {
+  if (m_skeleton_unit.load() == nullptr && IsDWOUnit()) {
     SymbolFileDWARFDwo *dwo =
         llvm::dyn_cast_or_null<SymbolFileDWARFDwo>(&GetSymbolFileDWARF());
     // Do a reverse lookup if the skeleton compile unit wasn't set.
-    if (dwo)
-      m_skeleton_unit = dwo->GetBaseSymbolFile().GetSkeletonUnit(this);
+    DWARFUnit *candidate_skeleton_unit =
+        dwo ? dwo->GetBaseSymbolFile().GetSkeletonUnit(this) : nullptr;
+    if (candidate_skeleton_unit)
+      (void)LinkToSkeletonUnit(*candidate_skeleton_unit);
+    // Linking may fail due to a race, so be sure to return the actual value.
   }
-  return llvm::dyn_cast_or_null<DWARFCompileUnit>(m_skeleton_unit);
+  return llvm::dyn_cast_or_null<DWARFCompileUnit>(m_skeleton_unit.load());
 }
 
-void DWARFUnit::SetSkeletonUnit(DWARFUnit *skeleton_unit) {
-  // If someone is re-setting the skeleton compile unit backlink, make sure
-  // it is setting it to a valid value when it wasn't valid, or if the
-  // value in m_skeleton_unit was valid, it should be the same value.
-  assert(skeleton_unit);
-  assert(m_skeleton_unit == nullptr || m_skeleton_unit == skeleton_unit);
-  m_skeleton_unit = skeleton_unit;
+bool DWARFUnit::LinkToSkeletonUnit(DWARFUnit &skeleton_unit) {
+  DWARFUnit *expected_unit = nullptr;
+  if (m_skeleton_unit.compare_exchange_strong(expected_unit, &skeleton_unit))
+    return true;
+  if (expected_unit == &skeleton_unit) {
+    // Exchange failed because it already contained the right  value.
+    return true;
+  }
+  return false; // Already linked to a different unit.
 }
 
 bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() {
@@ -1016,7 +1023,7 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  offset_t offset = GetStrOffsetsBase() + index * 4;
+  lldb::offset_t offset = GetStrOffsetsBase() + index * 4;
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
 }
 

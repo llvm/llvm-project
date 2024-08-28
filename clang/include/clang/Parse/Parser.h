@@ -221,7 +221,6 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
-  std::unique_ptr<PragmaHandler> MCFuncPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -3022,7 +3021,7 @@ private:
           SemaCodeCompletion::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
-  void MaybeParseHLSLAnnotations(Declarator &D,
+  bool MaybeParseHLSLAnnotations(Declarator &D,
                                  SourceLocation *EndLoc = nullptr,
                                  bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
@@ -3030,7 +3029,9 @@ private:
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
+      return true;
     }
+    return false;
   }
 
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
@@ -3531,6 +3532,17 @@ private:
   ParseOpenMPExecutableDirective(ParsedStmtContext StmtCtx,
                                  OpenMPDirectiveKind DKind, SourceLocation Loc,
                                  bool ReadDirectiveWithinMetadirective);
+
+  /// Parses informational directive.
+  ///
+  /// \param StmtCtx The context in which we're parsing the directive.
+  /// \param DKind The kind of the informational directive.
+  /// \param Loc Source location of the beginning of the directive.
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult ParseOpenMPInformationalDirective(
+      ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
+      bool ReadDirectiveWithinMetadirective);
 
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///

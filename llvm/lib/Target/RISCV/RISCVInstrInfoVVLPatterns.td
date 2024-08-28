@@ -2369,14 +2369,16 @@ foreach vti = AllVectors in {
 }
 
 foreach vti = AllIntegerVectors in {
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, GPR:$rs2, VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
-               vti.RegClass:$passthru, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
-    defvar ImmPat = !cast<ComplexPattern>("sew"#vti.SEW#"simm5");
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, (ImmPat simm5:$imm5),
-                                                VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
-               vti.RegClass:$passthru, simm5:$imm5, GPR:$vl, vti.Log2SEW, TU_MU)>;
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
+      def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, GPR:$rs2, VLOpFrag)),
+                (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
+                 vti.RegClass:$passthru, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
+      defvar ImmPat = !cast<ComplexPattern>("sew"#vti.SEW#"simm5");
+      def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, (ImmPat simm5:$imm5),
+                                                  VLOpFrag)),
+                (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
+                 vti.RegClass:$passthru, simm5:$imm5, GPR:$vl, vti.Log2SEW, TU_MU)>;
+    }
   }
 }
 

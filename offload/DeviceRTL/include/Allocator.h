@@ -39,6 +39,11 @@ void free(void *Ptr);
 
 } // namespace ompx
 
+extern "C" {
+[[gnu::weak]] void *malloc(size_t Size);
+[[gnu::weak]] void free(void *Ptr);
+}
+
 #pragma omp end declare target
 
 #endif

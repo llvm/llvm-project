@@ -269,7 +269,7 @@ define <2 x i1> @test13_fixed_scalable(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <2 x i64> [[DOTSPLAT]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <2 x i64> [[Y:%.*]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -288,7 +288,7 @@ define <vscale x 2 x i1> @test13_scalable_scalable(i64 %X, ptr %P, <vscale x 2 x
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <vscale x 2 x i64> [[DOTSPLAT2]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <vscale x 2 x i64> [[Y:%.*]], [[DOTSPLAT2]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <vscale x 2 x i64> [[A_IDX]], [[B_IDX]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[C]]
 ;

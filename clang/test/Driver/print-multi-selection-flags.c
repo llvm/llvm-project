@@ -58,3 +58,18 @@
 // RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -march=armv9-a            | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: --target=aarch64-unknown-none-elf
 // CHECK-SVE2: -march=armv{{.*}}-a{{.*}}+simd{{.*}}+sve{{.*}}+sve2{{.*}}
+
+// RUN: %clang -print-multi-flags-experimental --target=riscv32-none-elf -march=rv32g | FileCheck --check-prefix=CHECK-RV32 %s
+// CHECK-RV32: --target=riscv32-unknown-none-elf
+// CHECK-RV32: -mabi=ilp32d
+// CHECK-RV32: -march=rv32i{{[0-9]+p[0-9]+}}_m{{[0-9]+p[0-9]+}}_a{{[0-9]+p[0-9]+}}_f{{[0-9]+p[0-9]+}}_d{{[0-9]+p[0-9]+}}_zicsr{{[0-9]+p[0-9]+}}_zifencei{{[0-9]+p[0-9]+}}_zmmul{{[0-9]+p[0-9]+}}
+
+// RUN: %clang -print-multi-flags-experimental --target=riscv64-none-elf -march=rv64g | FileCheck --check-prefix=CHECK-RV64 %s
+// CHECK-RV64: --target=riscv64-unknown-none-elf
+// CHECK-RV64: -mabi=lp64d
+// CHECK-RV64: -march=rv64i{{[0-9]+p[0-9]+}}_m{{[0-9]+p[0-9]+}}_a{{[0-9]+p[0-9]+}}_f{{[0-9]+p[0-9]+}}_d{{[0-9]+p[0-9]+}}_zicsr{{[0-9]+p[0-9]+}}_zifencei{{[0-9]+p[0-9]+}}_zmmul{{[0-9]+p[0-9]+}}
+
+// RUN: %clang -print-multi-flags-experimental --target=riscv32-none-elf -march=rv32e_zicsr_c | FileCheck --check-prefix=CHECK-RV32E-ORDER %s
+// CHECK-RV32E-ORDER: --target=riscv32-unknown-none-elf
+// CHECK-RV32E-ORDER: -mabi=ilp32e
+// CHECK-RV32E-ORDER: -march=rv32e{{[0-9]+p[0-9]+}}_c{{[0-9]+p[0-9]+}}_zicsr{{[0-9]+p[0-9]+}}

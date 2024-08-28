@@ -113,7 +113,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
 
   add_executable(${target_name} ${objects})
   target_link_options(${target_name} PRIVATE
-                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm" "-march= ")
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.

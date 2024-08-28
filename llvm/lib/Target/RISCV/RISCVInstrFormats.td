@@ -223,6 +223,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
   let TSFlags{22-21} = TargetOverlapConstraintType;
+
+  bit ActiveElementsAffectResult = 0;
+  let TSFlags{23} = ActiveElementsAffectResult;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

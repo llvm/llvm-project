@@ -1021,9 +1021,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
-  std::optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
-                                             /// objects created for this
-                                             /// Module's functions
+  UnwindTable m_unwind_table;      ///< Table of FuncUnwinders
+                                   /// objects created for this
+                                   /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>

@@ -82,5 +82,17 @@
       "value": "LIBC_QSORT_QUICK_SORT",
       "doc": "Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT."
     }
+  },
+  "setjmp": {
+    "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
+      "value": true,
+      "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
+    }
+  },
+  "time": {
+    "LIBC_CONF_TIME_64BIT": {
+      "value": false,
+      "doc": "Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit."
+    }
   }
 }

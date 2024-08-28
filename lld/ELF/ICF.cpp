@@ -324,6 +324,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
+  if (ra.areRelocsCrel())
+    return constantEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? constantEq(a, ra.rels, b, rb.rels)
              : constantEq(a, ra.relas, b, rb.relas);
@@ -374,6 +376,8 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
+  if (ra.areRelocsCrel())
+    return variableEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? variableEq(a, ra.rels, b, rb.rels)
              : variableEq(a, ra.relas, b, rb.relas);
@@ -505,7 +509,9 @@ template <class ELFT> void ICF<ELFT>::run() {
   for (unsigned cnt = 0; cnt != 2; ++cnt) {
     parallelForEach(sections, [&](InputSection *s) {
       const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-      if (rels.areRelocsRel())
+      if (rels.areRelocsCrel())
+        combineRelocHashes(cnt, s, rels.crels);
+      else if (rels.areRelocsRel())
         combineRelocHashes(cnt, s, rels.rels);
       else
         combineRelocHashes(cnt, s, rels.relas);
@@ -571,7 +577,7 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // InputSectionDescription::sections is populated by processSectionCommands().
   // ICF may fold some input sections assigned to output sections. Remove them.
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       for (SectionCommand *subCmd : osd->osec.commands)
         if (auto *isd = dyn_cast<InputSectionDescription>(subCmd))

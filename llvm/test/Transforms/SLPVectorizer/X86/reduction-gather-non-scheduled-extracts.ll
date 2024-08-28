@@ -10,7 +10,8 @@ define void @tes() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP0]], <4 x i32> <i32 0, i32 0, i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 false, i1 [[TMP4]], i1 false
-; CHECK-NEXT:    br i1 [[OP_RDX]], label [[TMP6:%.*]], label [[TMP5:%.*]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 false, i1 [[OP_RDX]], i1 false
+; CHECK-NEXT:    br i1 [[OP_RDX1]], label [[TMP6:%.*]], label [[TMP5:%.*]]
 ; CHECK:       4:
 ; CHECK-NEXT:    ret void
 ; CHECK:       5:

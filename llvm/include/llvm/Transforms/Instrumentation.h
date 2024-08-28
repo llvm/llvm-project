@@ -30,6 +30,10 @@ class Triple;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
+class Module;
+
+/// Check if module has flag attached, if not add the flag.
+bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -42,7 +46,7 @@ BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
 // Create a constant for Str so that we can pass it to the run-time lib.
 GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
                                              bool AllowMerging,
-                                             const char *NamePrefix = "");
+                                             Twine NamePrefix = "");
 
 // Returns F.getComdat() if it exists.
 // Otherwise creates a new comdat, sets F's comdat, and returns it.

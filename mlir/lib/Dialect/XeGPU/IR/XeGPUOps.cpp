@@ -122,7 +122,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 
 LogicalResult CreateNdDescOp::verify() {
   auto rank = (int64_t)getMixedOffsets().size();
-  bool invalidRank = (rank != 2);
+  bool invalidRank = false;
   bool invalidElemTy = false;
 
   // check source type matches the rank if it is a memref.
@@ -133,17 +133,21 @@ LogicalResult CreateNdDescOp::verify() {
     invalidElemTy |= memrefTy.getElementType() != getElementType();
   }
 
-  // check result type matches the rank
-  invalidRank = (getType().getRank() != rank);
-
   // mismatches among shape, strides, and offsets are
   // already handeled by OffsetSizeAndStrideOpInterface.
   // So they are not check here.
   if (invalidRank)
     return emitOpError(
-        "Expecting the rank of shape, strides, offsets, "
-        "source memref type (if source is a memref) and TensorDesc "
-        "should match with each other. They currenlty are 2D.");
+        "Expecting the rank of shape, strides, offsets, and source (if source "
+        "is a memref) should match with each other.");
+
+  // check result TensorDesc rank
+  invalidRank = (getType().getRank() > 2 || getType().getRank() > rank);
+
+  if (invalidRank)
+    return emitOpError(
+        "Expecting the TensorDesc rank is up to 2 and not greater than the "
+        "ranks of shape, strides, offsets or the memref source.");
 
   if (invalidElemTy)
     return emitOpError("TensorDesc should have the same element "
@@ -182,8 +186,8 @@ LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
 
-  if (tdescTy.getRank() != 2)
-    return emitOpError("Expecting a 2D TensorDesc.\n");
+  if (tdescTy.getRank() > 2)
+    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
   if (tdescTy.getScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
@@ -206,17 +210,28 @@ LogicalResult LoadNdOp::verify() {
 
   if (getTranspose()) {
     auto trans = getTranspose().value();
-    if (tdescShape.size() >= trans.size())
+
+    // Make sure the transpose value is valid.
+    bool valid = std::all_of(trans.begin(), trans.end(), [&](int t) {
+      return t >= 0 && t < tdescTy.getRank();
+    });
+
+    if (valid)
       transpose(trans, tdescShape);
     else
       emitWarning("Invalid transpose attr. It is ignored.");
   }
 
-  if (getVnniAxis()) {
-    auto axis = getVnniAxis().value();
-    auto vnni_factor = valueShape.back();
-    tdescShape[axis] /= vnni_factor;
-    tdescShape.push_back(vnni_factor);
+  if (getPacked()) {
+    if (tdescTy.getRank() == 2) {
+      const int axis = 0;
+      auto vnni_factor = valueShape.back();
+      tdescShape[axis] /= vnni_factor;
+      tdescShape.push_back(vnni_factor);
+    } else {
+      return emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
+                         "TensorDesc only).");
+    }
   }
 
   if (array_len > 1) {
@@ -239,8 +254,8 @@ LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
 
-  if (dstTy.getRank() != 2)
-    return emitOpError("Expecting a 2D TensorDesc.\n");
+  if (dstTy.getRank() > 2)
+    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
   if (dstTy.getScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
@@ -413,18 +428,15 @@ LogicalResult DpasOp::verify() {
   int64_t lhsRank = getLhsType().getRank();
   int64_t rhsRank = getRhsType().getRank();
 
-  if (lhsRank != rhsRank || lhsRank != 3)
-    return emitOpError(
-        "lhs and rhs rank does not match for dpas op, or their rank is not 3.");
-
-  if (getAcc() && getAccType() != getResultType())
-    return emitOpError("Accumulator and Result for dpas op should have the "
-                       "same type (both shape and element type).");
+  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3))
+    return emitOpError("expecting lhs to be a 2D vector, and rhs to be either "
+                       "2D or 3D (packed) vector.");
 
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
-  if (lhsShape[1] != rhsShape[0] || lhsShape[2] != rhsShape[2])
-    return emitOpError("K-dimension or vnni-factor mismatch.");
+  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+  if (bK != lhsShape[1])
+    return emitOpError("K-dimension mismatch.");
 
   return success();
 }

@@ -4897,7 +4897,7 @@ inline Value *getPointerOperand(Value *V) {
 }
 
 /// A helper function that returns the alignment of load or store instruction.
-inline Align getLoadStoreAlignment(Value *I) {
+inline Align getLoadStoreAlignment(const Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
@@ -4907,7 +4907,7 @@ inline Align getLoadStoreAlignment(Value *I) {
 
 /// A helper function that returns the address space of the pointer operand of
 /// load or store instruction.
-inline unsigned getLoadStoreAddressSpace(Value *I) {
+inline unsigned getLoadStoreAddressSpace(const Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
@@ -4916,7 +4916,7 @@ inline unsigned getLoadStoreAddressSpace(Value *I) {
 }
 
 /// A helper function that returns the type of a load or store instruction.
-inline Type *getLoadStoreType(Value *I) {
+inline Type *getLoadStoreType(const Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
@@ -4940,6 +4940,23 @@ inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
   if (auto *AI = dyn_cast<AtomicRMWInst>(I))
     return AI->getSyncScopeID();
   llvm_unreachable("unhandled atomic operation");
+}
+
+/// A helper function that sets an atomic operation's sync scope.
+inline void setAtomicSyncScopeID(Instruction *I, SyncScope::ID SSID) {
+  assert(I->isAtomic());
+  if (auto *AI = dyn_cast<LoadInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<StoreInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<FenceInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<AtomicRMWInst>(I))
+    AI->setSyncScopeID(SSID);
+  else
+    llvm_unreachable("unhandled atomic operation");
 }
 
 //===----------------------------------------------------------------------===//

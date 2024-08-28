@@ -571,7 +571,7 @@ if ((y = make_int())) {
 nullability
 ^^^^^^^^^^^
 
-Objective C checkers that warn for null pointer passing and dereferencing errors.
+Checkers (mostly Objective C) that warn for null pointer passing and dereferencing errors.
 
 .. _nullability-NullPassedToNonnull:
 
@@ -588,8 +588,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
 
 .. _nullability-NullReturnedFromNonnull:
 
-nullability.NullReturnedFromNonnull (ObjC)
-""""""""""""""""""""""""""""""""""""""""""
+nullability.NullReturnedFromNonnull (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""""""""""""
 Warns when a null pointer is returned from a function that has _Nonnull return type.
 
 .. code-block:: objc
@@ -602,6 +602,22 @@ Warns when a null pointer is returned from a function that has _Nonnull return t
    // Warning: nil returned from a method that is expected
    // to return a non-null value
    return result;
+ }
+
+Warns when a null pointer is returned from a function annotated with ``__attribute__((returns_nonnull))``
+
+.. code-block:: cpp
+
+ int global;
+ __attribute__((returns_nonnull)) void* getPtr(void* p);
+
+ void* getPtr(void* p) {
+   if (p) { // forgot to negate the condition
+     return &global;
+   }
+   // Warning: nullptr returned from a function that is expected
+   // to return a non-null value
+   return p;
  }
 
 .. _nullability-NullableDereferenced:
@@ -2498,14 +2514,44 @@ Check for pointer arithmetic on locations other than array elements.
 
 alpha.core.PointerSub (C)
 """""""""""""""""""""""""
-Check for pointer subtractions on two pointers pointing to different memory chunks.
+Check for pointer subtractions on two pointers pointing to different memory
+chunks. According to the C standard §6.5.6 only subtraction of pointers that
+point into (or one past the end) the same array object is valid (for this
+purpose non-array variables are like arrays of size 1). This checker only
+searches for different memory objects at subtraction, but does not check if the
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
 
 .. code-block:: c
 
  void test() {
-   int x, y;
-   int d = &y - &x; // warn
+   int a, b, c[10], d[10];
+   int x = &c[3] - &c[1];
+   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
+   x = (&a + 1) - &a;
+   x = &b - &a; // warn: 'a' and 'b' are different variables
  }
+
+ struct S {
+   int x[10];
+   int y[10];
+ };
+
+ void test1() {
+   struct S a[10];
+   struct S b;
+   int d = &a[4] - &a[6];
+   d = &a[0].x[3] - &a[0].x[1];
+   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
+   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
+   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
+ }
+
+There may be existing applications that use code like above for calculating
+offsets of members in a structure, using pointer subtractions. This is still
+undefined behavior according to the standard and code like this can be replaced
+with the `offsetof` macro.
 
 .. _alpha-core-StackAddressAsyncEscape:
 
@@ -2920,49 +2966,6 @@ Warn about buffer overflows (newer checker).
    int x = getchar();
    char c = s[x]; // warn: index is tainted
  }
-
-.. _alpha-security-MallocOverflow:
-
-alpha.security.MallocOverflow (C)
-"""""""""""""""""""""""""""""""""
-Check for overflows in the arguments to ``malloc()``.
-It tries to catch ``malloc(n * c)`` patterns, where:
-
- - ``n``: a variable or member access of an object
- - ``c``: a constant foldable integral
-
-This checker was designed for code audits, so expect false-positive reports.
-One is supposed to silence this checker by ensuring proper bounds checking on
-the variable in question using e.g. an ``assert()`` or a branch.
-
-.. code-block:: c
-
- void test(int n) {
-   void *p = malloc(n * sizeof(int)); // warn
- }
-
- void test2(int n) {
-   if (n > 100) // gives an upper-bound
-     return;
-   void *p = malloc(n * sizeof(int)); // no warning
- }
-
- void test3(int n) {
-   assert(n <= 100 && "Contract violated.");
-   void *p = malloc(n * sizeof(int)); // no warning
- }
-
-Limitations:
-
- - The checker won't warn for variables involved in explicit casts,
-   since that might limit the variable's domain.
-   E.g.: ``(unsigned char)int x`` would limit the domain to ``[0,255]``.
-   The checker will miss the true-positive cases when the explicit cast would
-   not tighten the domain to prevent the overflow in the subsequent
-   multiplication operation.
-
- - It is an AST-based checker, thus it does not make use of the
-   path-sensitive taint-analysis.
 
 .. _alpha-security-MmapWriteExec:
 

@@ -32,6 +32,9 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "flang-lower-openacc"
 
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
@@ -85,11 +88,17 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Type retTy, llvm::ArrayRef<mlir::Value> async,
                   llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
                   llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
-                  mlir::Value isPresent = {}) {
+                  bool unwrapBoxAddr = false, mlir::Value isPresent = {}) {
   mlir::Value varPtrPtr;
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
+  // The data clause may apply to either the box reference itself or the
+  // pointer to the data it holds. So use `unwrapBoxAddr` to decide.
+  // When we have a box value - assume it refers to the data inside box.
+  if ((fir::isBoxAddress(baseAddr.getType()) && unwrapBoxAddr) ||
+      fir::isa_box_type(baseAddr.getType())) {
     if (isPresent) {
-      mlir::Type ifRetTy = boxTy.getEleTy();
+      mlir::Type ifRetTy =
+          mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(baseAddr.getType()))
+              .getEleTy();
       if (!fir::isa_ref_type(ifRetTy))
         ifRetTy = fir::ReferenceType::get(ifRetTy);
       baseAddr =
@@ -97,6 +106,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
               .genIfOp(loc, {ifRetTy}, isPresent,
                        /*withElseRegion=*/true)
               .genThen([&]() {
+                if (fir::isBoxAddress(baseAddr.getType()))
+                  baseAddr = builder.create<fir::LoadOp>(loc, baseAddr);
                 mlir::Value boxAddr =
                     builder.create<fir::BoxAddrOp>(loc, baseAddr);
                 builder.create<fir::ResultOp>(loc, mlir::ValueRange{boxAddr});
@@ -108,6 +119,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
               })
               .getResults()[0];
     } else {
+      if (fir::isBoxAddress(baseAddr.getType()))
+        baseAddr = builder.create<fir::LoadOp>(loc, baseAddr);
       baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     }
     retTy = baseAddr.getType();
@@ -342,18 +355,19 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true);
+    LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     // If the input value is optional and is not a descriptor, we use the
     // rawInput directly.
-    mlir::Value baseAddr =
-        ((info.addr.getType() != fir::unwrapRefType(info.rawInput.getType())) &&
-         info.isPresent)
-            ? info.rawInput
-            : info.addr;
-    Op op = createDataEntryOp<Op>(builder, operandLocation, baseAddr, asFortran,
-                                  bounds, structured, implicit, dataClause,
-                                  baseAddr.getType(), async, asyncDeviceTypes,
-                                  asyncOnlyDeviceTypes, info.isPresent);
+    mlir::Value baseAddr = ((fir::unwrapRefType(info.addr.getType()) !=
+                             fir::unwrapRefType(info.rawInput.getType())) &&
+                            info.isPresent)
+                               ? info.rawInput
+                               : info.addr;
+    Op op = createDataEntryOp<Op>(
+        builder, operandLocation, baseAddr, asFortran, bounds, structured,
+        implicit, dataClause, baseAddr.getType(), async, asyncDeviceTypes,
+        asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true, info.isPresent);
     dataOperands.push_back(op.getAccPtr());
   }
 }
@@ -380,6 +394,7 @@ static void genDeclareDataOperandOperations(
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds);
+    LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
     EntryOp op = createDataEntryOp<EntryOp>(
         builder, operandLocation, info.addr, asFortran, bounds, structured,
         implicit, dataClause, info.addr.getType(),
@@ -842,6 +857,8 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds);
+    LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
+
     RecipeOp recipe;
     mlir::Type retTy = getTypeFromBounds(bounds, info.addr.getType());
     if constexpr (std::is_same_v<RecipeOp, mlir::acc::PrivateRecipeOp>) {
@@ -853,7 +870,7 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
       auto op = createDataEntryOp<mlir::acc::PrivateOp>(
           builder, operandLocation, info.addr, asFortran, bounds, true,
           /*implicit=*/false, mlir::acc::DataClause::acc_private, retTy, async,
-          asyncDeviceTypes, asyncOnlyDeviceTypes);
+          asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
       dataOperands.push_back(op.getAccPtr());
     } else {
       std::string suffix =
@@ -865,7 +882,8 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
       auto op = createDataEntryOp<mlir::acc::FirstprivateOp>(
           builder, operandLocation, info.addr, asFortran, bounds, true,
           /*implicit=*/false, mlir::acc::DataClause::acc_firstprivate, retTy,
-          async, asyncDeviceTypes, asyncOnlyDeviceTypes);
+          async, asyncDeviceTypes, asyncOnlyDeviceTypes,
+          /*unwrapBoxAddr=*/true);
       dataOperands.push_back(op.getAccPtr());
     }
     privatizations.push_back(mlir::SymbolRefAttr::get(
@@ -1421,6 +1439,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds);
+    LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     mlir::Type reductionTy = fir::unwrapRefType(info.addr.getType());
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
@@ -1433,7 +1452,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         builder, operandLocation, info.addr, asFortran, bounds,
         /*structured=*/true, /*implicit=*/false,
         mlir::acc::DataClause::acc_reduction, info.addr.getType(), async,
-        asyncDeviceTypes, asyncOnlyDeviceTypes);
+        asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
     mlir::Type ty = op.getAccPtr().getType();
     if (!areAllBoundConstant(bounds) ||
         fir::isAssumedShape(info.addr.getType()) ||
