@@ -37,7 +37,7 @@ ExpressionError::ExpressionError(lldb::ExpressionResults result,
     : ErrorInfo(std::error_code(result, expression_category())), m_message(msg),
       m_details(details) {}
 
-static const char *StringForSeverity(lldb::Severity severity) {
+static llvm::StringRef StringForSeverity(lldb::Severity severity) {
   switch (severity) {
   // this should be exhaustive
   case lldb::eSeverityError:
