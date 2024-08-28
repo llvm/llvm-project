@@ -1362,7 +1362,6 @@ ScriptExpr *ScriptParser::readPrimary() {
 
   if (consume("~")) {
     ScriptExpr *e = readPrimary();
-    // return [=] { return ~e().getValue(); };
     return make<DynamicExpr>([=] { return ~e->getExprValue().getValue(); });
   }
   if (consume("!")) {
@@ -1472,10 +1471,8 @@ ScriptExpr *ScriptParser::readPrimary() {
     StringRef name = readParenName();
     if (script->memoryRegions.count(name) == 0) {
       setError("memory region not defined: " + name);
-      // return [] { return 0; };
       return make<ConstantExpr>(0);
     }
-    // TODO
     return script->memoryRegions[name]->length;
   }
   if (tok == "LOADADDR") {
@@ -1519,7 +1516,6 @@ ScriptExpr *ScriptParser::readPrimary() {
       setError("memory region not defined: " + name);
       return make<ConstantExpr>(0);
     }
-    // TODO
     return script->memoryRegions[name]->origin;
   }
   if (tok == "SEGMENT_START") {
@@ -1528,7 +1524,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     expect(",");
     ScriptExpr *e = readExpr();
     expect(")");
-    return make<DynamicExpr>([=] { return e->getExprValue(); });
+    return e;
   }
   if (tok == "SIZEOF") {
     StringRef name = readParenName();

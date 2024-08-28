@@ -97,13 +97,11 @@ public:
   ExprValue getExprValue() const { return ExprValue(val_); }
 
 private:
-  // ExprValue val_;
   uint64_t val_;
 };
 
 class DynamicExpr : public ScriptExpr {
 public:
-  // std::function<ExprValue()> getImpl() const { return impl_; }
   DynamicExpr(std::function<ExprValue()> impl)
       : ScriptExpr(ExprKind::Dynamic), impl_(impl) {}
   ExprValue getExprValue() const { return impl_(); }

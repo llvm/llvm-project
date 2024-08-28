@@ -24,6 +24,7 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
@@ -145,22 +146,35 @@ ExprValue ScriptExpr::getExprValue() const {
 }
 
 BinaryExpr::Op BinaryExpr::stringToOp(const StringRef op) {
-  static const std::unordered_map<llvm::StringRef, Op> opMap = {
-      {"+", Op::Add},        {"-", Op::Sub},         {"*", Op::Mul},
-      {"/", Op::Div},        {"%", Op::Mod},         {"<<", Op::Shl},
-      {">>", Op::Shr},       {"&", Op::And},         {"|", Op::Or},
-      {"^", Op::Xor},        {"&&", Op::LAnd},       {"||", Op::LOr},
-      {"==", Op::Eq},        {"!=", Op::Neq},        {"<", Op::Lt},
-      {">", Op::Gt},         {"<=", Op::Leq},        {">=", Op::Geq},
-      {"+=", Op::AddAssign}, {"-=", Op::SubAssign},  {"*=", Op::MulAssign},
-      {"/=", Op::DivAssign}, {"<<=", Op::ShlAssign}, {">>=", Op::ShrAssign},
-      {"&=", Op::AndAssign}, {"|=", Op::OrAssign},   {"^=", Op::XorAssign}};
-
-  auto it = opMap.find(op);
-  if (it != opMap.end()) {
-    return it->second;
-  }
-  return Op::Invalid;
+  return llvm::StringSwitch<Op>(op)
+      .Case("+", Op::Add)
+      .Case("-", Op::Sub)
+      .Case("*", Op::Mul)
+      .Case("/", Op::Div)
+      .Case("%", Op::Mod)
+      .Case("<<", Op::Shl)
+      .Case(">>", Op::Shr)
+      .Case("&", Op::And)
+      .Case("|", Op::Or)
+      .Case("^", Op::Xor)
+      .Case("&&", Op::LAnd)
+      .Case("||", Op::LOr)
+      .Case("==", Op::Eq)
+      .Case("!=", Op::Neq)
+      .Case("<", Op::Lt)
+      .Case(">", Op::Gt)
+      .Case("<=", Op::Leq)
+      .Case(">=", Op::Geq)
+      .Case("+=", Op::AddAssign)
+      .Case("-=", Op::SubAssign)
+      .Case("*=", Op::MulAssign)
+      .Case("/=", Op::DivAssign)
+      .Case("<<=", Op::ShlAssign)
+      .Case(">>=", Op::ShrAssign)
+      .Case("&=", Op::AndAssign)
+      .Case("|=", Op::OrAssign)
+      .Case("^=", Op::XorAssign)
+      .Default(Op::Invalid);
 }
 
 ExprValue BinaryExpr::getExprValue() const {
