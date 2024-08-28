@@ -1019,10 +1019,10 @@ func.func @parallel_reduction_byref() {
 func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
-    // CHECK: omp.wsloop {
-    omp.wsloop {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.wsloop reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+    omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
       // CHECK: omp.loop_nest (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         %1 = arith.constant 2.0 : f32
@@ -1216,10 +1216,10 @@ func.func @parallel_reduction2() {
 func.func @parallel_wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
-    // CHECK: omp.wsloop {
-    omp.wsloop {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.wsloop reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+    omp.wsloop reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
       // CHECK: omp.loop_nest (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         %1 = arith.constant 2.0 : f32
@@ -2539,6 +2539,36 @@ atomic {
   %2 = llvm.load %arg3 : !llvm.ptr -> f32
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
+}
+
+// CHECK-LABEL: @alloc_reduction
+// CHECK-SAME:  alloc {
+// CHECK-NEXT:  ^bb0(%[[ARG0:.*]]: !llvm.ptr):
+// ...
+// CHECK:         omp.yield
+// CHECK-NEXT:  } init {
+// CHECK:       } combiner {
+// CHECK:       }
+omp.declare_reduction @alloc_reduction : !llvm.ptr
+alloc {
+^bb0(%arg: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
+  omp.yield (%0 : !llvm.ptr)
+}
+init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  %cst = arith.constant 1.0 : f32
+  llvm.store %cst, %alloc : f32, !llvm.ptr
+  omp.yield (%alloc : !llvm.ptr)
+}
+combiner {
+^bb1(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  %1 = llvm.load %arg1 : !llvm.ptr -> f32
+  %2 = arith.addf %0, %1 : f32
+  llvm.store %2, %arg0 : f32, !llvm.ptr
+  omp.yield (%arg0 : !llvm.ptr)
 }
 
 // CHECK-LABEL: omp_targets_with_map_bounds

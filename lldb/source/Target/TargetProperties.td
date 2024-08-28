@@ -92,7 +92,7 @@ let Definition = "target" in {
   def MaxZeroPaddingInFloatFormat: Property<"max-zero-padding-in-float-format", "UInt64">,
     DefaultUnsignedValue<6>,
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
-  def MaxChildrenCount: Property<"max-children-count", "SInt64">,
+  def MaxChildrenCount: Property<"max-children-count", "UInt64">,
     DefaultUnsignedValue<256>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
@@ -101,7 +101,7 @@ let Definition = "target" in {
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
-  def MaxMemReadSize: Property<"max-memory-read-size", "SInt64">,
+  def MaxMemReadSize: Property<"max-memory-read-size", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of bytes that 'memory read' will fetch before --force must be specified.">;
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,

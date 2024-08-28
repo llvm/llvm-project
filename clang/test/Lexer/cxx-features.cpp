@@ -317,7 +317,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202306)
+#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 

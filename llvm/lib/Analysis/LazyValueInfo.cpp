@@ -512,8 +512,8 @@ public:
 } // namespace llvm
 
 void LazyValueInfoImpl::solve() {
-  SmallVector<std::pair<BasicBlock *, Value *>, 8> StartingStack(
-      BlockValueStack.begin(), BlockValueStack.end());
+  SmallVector<std::pair<BasicBlock *, Value *>, 8> StartingStack =
+      BlockValueStack;
 
   unsigned processedCount = 0;
   while (!BlockValueStack.empty()) {

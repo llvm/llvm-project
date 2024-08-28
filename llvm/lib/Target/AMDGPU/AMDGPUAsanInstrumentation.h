@@ -43,10 +43,10 @@ uint64_t getRedzoneSizeForGlobal(int Scale, uint64_t SizeInBytes);
 /// Instrument the memory operand Addr.
 /// Generates report blocks that catch the addressing errors.
 void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
-                       Instruction *InsertBefore, Value *Addr,
-                       MaybeAlign Alignment, uint32_t TypeStoreSize,
-                       bool IsWrite, Value *SizeArgument, bool UseCalls,
-                       bool Recover, int Scale, int Offset);
+                       Instruction *InsertBefore, Value *Addr, Align Alignment,
+                       TypeSize TypeStoreSize, bool IsWrite,
+                       Value *SizeArgument, bool UseCalls, bool Recover,
+                       int Scale, int Offset);
 
 /// Get all the memory operands from the instruction
 /// that needs to be instrumented

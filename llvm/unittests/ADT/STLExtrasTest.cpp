@@ -1349,6 +1349,33 @@ TEST(STLExtrasTest, LessSecond) {
   }
 }
 
+TEST(STLExtrasTest, Mismatch) {
+  {
+    const int MMIndex = 5;
+    StringRef First = "FooBar";
+    StringRef Second = "FooBaz";
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.begin() + MMIndex);
+    EXPECT_EQ(MMSecond, Second.begin() + MMIndex);
+  }
+
+  {
+    SmallVector<int> First = {0, 1, 2};
+    SmallVector<int> Second = {0, 1, 2, 3};
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.end());
+    EXPECT_EQ(MMSecond, Second.begin() + 3);
+  }
+
+  {
+    SmallVector<int> First = {0, 1};
+    SmallVector<int> Empty;
+    auto [MMFirst, MMEmpty] = mismatch(First, Empty);
+    EXPECT_EQ(MMFirst, First.begin());
+    EXPECT_EQ(MMEmpty, Empty.begin());
+  }
+}
+
 struct Foo;
 struct Bar {};
 

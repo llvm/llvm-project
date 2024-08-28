@@ -1695,6 +1695,10 @@ VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
+  if (VPlans.empty()) {
+    O << "LV: No VPlans built.\n";
+    return;
+  }
   for (const auto &Plan : VPlans)
     if (PrintVPlansInDotFormat)
       Plan->printDOT(O);

@@ -314,26 +314,49 @@ Currently, this option supports three overflow-dependent code idioms:
     unsigned long foo = -1UL; // No longer causes a negation overflow warning
     unsigned long bar = -2UL; // and so on...
 
-``post-decr-while``
+``unsigned-post-decr-while``
 
 .. code-block:: c++
 
-    /// -fsanitize-undefined-ignore-overflow-pattern=post-decr-while
+    /// -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
     unsigned char count = 16;
     while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
 
-``add-overflow-test``
+``add-signed-overflow-test,add-unsigned-overflow-test``
 
 .. code-block:: c++
 
-    /// -fsanitize-undefined-ignore-overflow-pattern=add-overflow-test
+    /// -fsanitize-undefined-ignore-overflow-pattern=add-(signed|unsigned)-overflow-test
     if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
-                                            // won't be instrumented (same for signed types)
+                                            // won't be instrumented (signed or unsigned types)
+
+.. list-table:: Overflow Pattern Types
+   :widths: 30 50
+   :header-rows: 1
+
+   * - Pattern
+     - Sanitizer
+   * - negated-unsigned-const
+     - unsigned-integer-overflow
+   * - unsigned-post-decr-while
+     - unsigned-integer-overflow
+   * - add-unsigned-overflow-test
+     - unsigned-integer-overflow
+   * - add-signed-overflow-test
+     - signed-integer-overflow
+
+
+
+Note: ``add-signed-overflow-test`` suppresses only the check for Undefined
+Behavior. Eager Undefined Behavior optimizations are still possible. One may
+remedy this with ``-fwrapv`` or ``-fno-strict-overflow``.
 
 You can enable all exclusions with
 ``-fsanitize-undefined-ignore-overflow-pattern=all`` or disable all exclusions
-with ``-fsanitize-undefined-ignore-overflow-pattern=none``. Specifying ``none``
-has precedence over other values.
+with ``-fsanitize-undefined-ignore-overflow-pattern=none``. If
+``-fsanitize-undefined-ignore-overflow-pattern`` is not specified ``none`` is
+implied. Specifying ``none`` alongside other values also implies ``none`` as
+``none`` has precedence over other values -- including ``all``.
 
 Issue Suppression
 =================

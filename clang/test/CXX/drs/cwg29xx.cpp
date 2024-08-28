@@ -23,3 +23,29 @@ struct S {
   friend class C<Ts>::Nested...; // expected-error {{friend declaration expands pack 'Ts' that is declared it its own template parameter list}}
 };
 } // namespace cwg2917
+
+#if __cplusplus >= 202400L
+
+namespace std {
+  using size_t = decltype(sizeof(0));
+};
+void *operator new(std::size_t, void *p) { return p; }
+void* operator new[] (std::size_t, void* p) {return p;}
+
+
+namespace cwg2922 { // cwg2922: 20 open 2024-07-10
+union U { int a, b; };
+constexpr U nondeterministic(bool i) {
+  if(i) {
+    U u;
+    new (&u) int();
+    // expected-note@-1 {{placement new would change type of storage from 'U' to 'int'}}
+    return u;
+  }
+  return {};
+}
+constexpr U _ = nondeterministic(true);
+// expected-error@-1 {{constexpr variable '_' must be initialized by a constant expression}} \
+// expected-note@-1 {{in call to 'nondeterministic(true)'}}
+}
+#endif

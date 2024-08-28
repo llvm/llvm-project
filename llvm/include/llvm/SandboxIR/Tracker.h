@@ -62,6 +62,7 @@ class AllocaInst;
 class CatchSwitchInst;
 class SwitchInst;
 class ConstantInt;
+class ShuffleVectorInst;
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -351,6 +352,20 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "CreateAndInsertInst"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class ShuffleVectorSetMask final : public IRChangeBase {
+  ShuffleVectorInst *SVI;
+  SmallVector<int, 8> PrevMask;
+
+public:
+  ShuffleVectorSetMask(ShuffleVectorInst *SVI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "ShuffleVectorSetMask"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };

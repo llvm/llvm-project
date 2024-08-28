@@ -111,6 +111,7 @@ static_library("Support") {
     "MemAlloc.cpp",
     "MemoryBuffer.cpp",
     "MemoryBufferRef.cpp",
+    "ModRef.cpp",
     "NativeFormatting.cpp",
     "OptimizedStructLayout.cpp",
     "Optional.cpp",

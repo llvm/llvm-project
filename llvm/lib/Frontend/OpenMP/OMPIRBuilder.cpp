@@ -1548,7 +1548,16 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   BasicBlock *CommonExit = nullptr;
   SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
   Extractor.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
-  Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands);
+
+  Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands,
+                              /*CollectGlobalInputs=*/true);
+
+  Inputs.remove_if([&](Value *I) {
+    if (auto *GV = dyn_cast_if_present<GlobalVariable>(I))
+      return GV->getValueType() == OpenMPIRBuilder::Ident;
+
+    return false;
+  });
 
   LLVM_DEBUG(dbgs() << "Before privatization: " << *OuterFn << "\n");
 

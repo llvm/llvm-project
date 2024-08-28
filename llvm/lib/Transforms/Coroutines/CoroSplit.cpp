@@ -735,9 +735,11 @@ void CoroCloner::salvageDebugInfo() {
   bool UseEntryValue =
       llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, Shape.OptimizeFrame,
+                           UseEntryValue);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, UseEntryValue);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, Shape.OptimizeFrame,
+                           UseEntryValue);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -1219,11 +1221,10 @@ static void postSplitCleanup(Function &F) {
 // frame if possible.
 static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   auto *CoroBegin = Shape.CoroBegin;
-  auto *CoroId = CoroBegin->getId();
-  auto *AllocInst = CoroId->getCoroAlloc();
   switch (Shape.ABI) {
   case coro::ABI::Switch: {
-    auto SwitchId = cast<CoroIdInst>(CoroId);
+    auto SwitchId = Shape.getSwitchCoroId();
+    auto *AllocInst = SwitchId->getCoroAlloc();
     coro::replaceCoroFree(SwitchId, /*Elide=*/AllocInst != nullptr);
     if (AllocInst) {
       IRBuilder<> Builder(AllocInst);
@@ -1687,7 +1688,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   auto &Context = F.getContext();
   auto *Int8PtrTy = PointerType::getUnqual(Context);
 
-  auto *Id = cast<CoroIdAsyncInst>(Shape.CoroBegin->getId());
+  auto *Id = Shape.getAsyncCoroId();
   IRBuilder<> Builder(Id);
 
   auto *FramePtr = Id->getStorage();
@@ -1781,7 +1782,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   F.removeRetAttr(Attribute::NonNull);
 
   // Allocate the frame.
-  auto *Id = cast<AnyCoroIdRetconInst>(Shape.CoroBegin->getId());
+  auto *Id = Shape.getRetconCoroId();
   Value *RawFramePtr;
   if (Shape.RetconLowering.IsFrameInlineInStorage) {
     RawFramePtr = Id->getStorage();
@@ -1960,9 +1961,11 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   auto [DbgInsts, DbgVariableRecords] = collectDbgVariableIntrinsics(F);
   for (auto *DDI : DbgInsts)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, Shape.OptimizeFrame,
+                           false /*UseEntryValue*/);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, Shape.OptimizeFrame,
+                           false /*UseEntryValue*/);
   return Shape;
 }
 

@@ -5,7 +5,7 @@ define i8 @avg_lsb(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @avg_lsb(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[REM:%.*]] = and i8 [[A]], 1
-; CHECK-NEXT:    [[DIV2:%.*]] = and i8 [[REM]], [[B]]
+; CHECK-NEXT:    [[DIV2:%.*]] = and i8 [[B]], [[REM]]
 ; CHECK-NEXT:    ret i8 [[DIV2]]
 ;
   %rem = and i8 %a, 1
@@ -35,7 +35,7 @@ define <2 x i8> @avg_lsb_vector(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: define <2 x i8> @avg_lsb_vector(
 ; CHECK-SAME: <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
 ; CHECK-NEXT:    [[REM:%.*]] = and <2 x i8> [[A]], <i8 1, i8 1>
-; CHECK-NEXT:    [[DIV2:%.*]] = and <2 x i8> [[REM]], [[B]]
+; CHECK-NEXT:    [[DIV2:%.*]] = and <2 x i8> [[B]], [[REM]]
 ; CHECK-NEXT:    ret <2 x i8> [[DIV2]]
 ;
   %rem = and <2 x i8> %a, <i8 1, i8 1>
