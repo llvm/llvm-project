@@ -98,6 +98,10 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   BC->SegmentMapInfo[0x31d0000] =
       SegmentInfo{0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000};
 
+  // Dont show DataAggregators out/err output.
+  testing::internal::CaptureStdout();
+  testing::internal::CaptureStderr();
+
   DataAggregator DA("");
   BC->setFilename(Filename);
   Error Err = DA.preprocessProfile(*BC);
