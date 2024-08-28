@@ -367,6 +367,21 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+// Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
+// type, e.g. std::vector<string_view>, std::optional<string_view>.
+static bool isContainerOfPointer(const RecordDecl *Container) {
+  if (const auto *CTSD =
+          dyn_cast_if_present<ClassTemplateSpecializationDecl>(Container)) {
+    if (!CTSD->hasAttr<OwnerAttr>()) // Container must be a GSL owner type.
+      return false;
+    const auto &TAs = CTSD->getTemplateArgs();
+    return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
+           (isRecordWithAttr<PointerAttr>(TAs[0].getAsType()) ||
+            TAs[0].getAsType()->isPointerType());
+  }
+  return false;
+}
+
 // Visit lifetimebound or gsl-pointer arguments.
 static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
                                        LocalVisitor Visit) {
@@ -470,10 +485,14 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     else if (EnableGSLAnalysis && I == 0) {
       if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0]);
-      } else if (auto *CCE = dyn_cast<CXXConstructExpr>(Call);
-                 CCE &&
-                 CCE->getConstructor()->getParent()->hasAttr<PointerAttr>()) {
-        VisitGSLPointerArg(CCE->getConstructor(), Args[0]);
+      } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call)) {
+        const auto *ClassD = Ctor->getConstructor()->getParent();
+        // Two cases:
+        //  a GSL pointer, e.g. std::string_view
+        //  a container of GSL pointer, e.g. std::vector<string_view>
+        if (ClassD->hasAttr<PointerAttr>() ||
+            (isContainerOfPointer(ClassD) && Callee->getNumParams() == 1))
+          VisitGSLPointerArg(Ctor->getConstructor(), Args[0]);
       }
     }
   }
@@ -990,13 +1009,16 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         //   int &p = *localUniquePtr;
         //   someContainer.add(std::move(localUniquePtr));
         //   return p;
-        IsLocalGslOwner = isRecordWithAttr<OwnerAttr>(L->getType());
+        IsLocalGslOwner =
+            isRecordWithAttr<OwnerAttr>(L->getType()) &&
+            !isContainerOfPointer(L->getType()->getAsRecordDecl());
         if (pathContainsInit(Path) || !IsLocalGslOwner)
           return false;
       } else {
         IsGslPtrValueFromGslTempOwner =
             MTE && !MTE->getExtendingDecl() &&
-            isRecordWithAttr<OwnerAttr>(MTE->getType());
+            isRecordWithAttr<OwnerAttr>(MTE->getType()) &&
+            !isContainerOfPointer(MTE->getType()->getAsRecordDecl());
         // Skipping a chain of initializing gsl::Pointer annotated objects.
         // We are looking only for the final source to find out if it was
         // a local or temporary owner or the address of a local variable/param.
