@@ -27,7 +27,7 @@
 !CHECK-NEXT:    %[[DST_BOX:.*]] = fir.load %[[DST]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK:         fir.if %{{.*}} {
 !CHECK-NEXT:      %[[SRC_BOX:.*]] = fir.load %[[SRC]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK-NEXT:      hlfir.assign %[[SRC_BOX]] to %[[DST_BOX]] temporary_lhs : !fir.box<!fir.heap<!fir.array<?xi32>>>,
+!CHECK-NEXT:      hlfir.assign %[[SRC_BOX]] to %[[DST]]#0 realloc temporary_lhs : !fir.box<!fir.heap<!fir.array<?xi32>>>,
 !CHECK-SAME:        !fir.box<!fir.heap<!fir.array<?xi32>>>
 !CHECK-NEXT:    }
 !CHECK-NEXT:    return

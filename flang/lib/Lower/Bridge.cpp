@@ -1253,19 +1253,16 @@ private:
       r = hlfir::loadTrivialScalar(loc, *builder, r);
       builder->create<hlfir::AssignOp>(
           loc, r, l,
-          /*isWholeAllocatableAssignment=*/false,
+          /*isWholeAllocatableAssignment=*/isAllocatable,
           /*keepLhsLengthInAllocatableAssignment=*/false,
           /*temporary_lhs=*/true);
     };
 
     if (isAllocatable) {
       // Deep copy allocatable if it is allocated.
-      // Note that when allocated, the RHS is already allocated with the LHS
-      // shape for copy on entry in createHostAssociateVarClone.
-      // For lastprivate, this assumes that the RHS was not reallocated in
-      // the OpenMP region.
-      lhs = hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
-      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, lhs);
+      hlfir::Entity temp =
+          hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
       mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
       builder->genIfThen(loc, isAllocated)
           .genThen([&]() {
