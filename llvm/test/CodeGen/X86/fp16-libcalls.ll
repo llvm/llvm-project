@@ -926,6 +926,97 @@ define void @test_half_pow(half %a0, half %a1, ptr %p0) nounwind {
   ret void
 }
 
+define void @test_half_powi(half %a0, i32 %a1, ptr %p0) nounwind {
+; F16C-LABEL: test_half_powi:
+; F16C:       # %bb.0:
+; F16C-NEXT:    pushq %rbx
+; F16C-NEXT:    movq %rsi, %rbx
+; F16C-NEXT:    vpextrw $0, %xmm0, %eax
+; F16C-NEXT:    vcvtsi2ss %edi, %xmm1, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm1
+; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    callq powf@PLT
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    vmovd %xmm0, %eax
+; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    popq %rbx
+; F16C-NEXT:    retq
+;
+; FP16-LABEL: test_half_powi:
+; FP16:       # %bb.0:
+; FP16-NEXT:    pushq %rbx
+; FP16-NEXT:    movq %rsi, %rbx
+; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    vcvtsi2sh %edi, %xmm1, %xmm1
+; FP16-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; FP16-NEXT:    callq powf@PLT
+; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    vmovsh %xmm0, (%rbx)
+; FP16-NEXT:    popq %rbx
+; FP16-NEXT:    retq
+;
+; X64-LABEL: test_half_powi:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movq %rsi, %rbx
+; X64-NEXT:    movl %edi, %ebp
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    cvtsi2ss %ebp, %xmm0
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    movaps %xmm0, %xmm1
+; X64-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    callq powf@PLT
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    movw %ax, (%rbx)
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_half_powi:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    calll powf
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esi)
+; X86-NEXT:    addl $56, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+  %res = call half @llvm.powi.half(half %a0, i32 %a1)
+  store half %res, ptr %p0, align 2
+  ret void
+}
+
 define void @test_half_rint(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_rint:
 ; F16C:       # %bb.0:
