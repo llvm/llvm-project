@@ -21,10 +21,9 @@ runs:
     - name: Package Build and Source Directories
       shell: bash
       run: |
-        # Remove git directory so we avoid leaking secrets stored in .git/config.
+        # Remove .git/config to avoid leaking GITHUB_TOKEN stored there.
         # See https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
-        # This also helps reduce the size of the archive.
-        rm -Rf .git/
+        rm -Rf .git/config
         # Windows does not support symlinks, so we need to dereference them.
         tar --exclude build/ ${{ (runner.os == 'Windows' && '-h') || '' }} -c . | zstd -T0 -c > ../llvm-project.tar.zst
         mv ../llvm-project.tar.zst .
