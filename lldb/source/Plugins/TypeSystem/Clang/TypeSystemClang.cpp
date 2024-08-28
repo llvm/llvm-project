@@ -9741,7 +9741,7 @@ void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output) {
   }
 }
 
-std::unique_ptr<UserExpression> ScratchTypeSystemClang::GetUserExpression(
+UserExpression *ScratchTypeSystemClang::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
@@ -9749,8 +9749,8 @@ std::unique_ptr<UserExpression> ScratchTypeSystemClang::GetUserExpression(
   if (!target_sp)
     return nullptr;
 
-  return std::make_unique<ClangUserExpression>(
-      *target_sp.get(), expr, prefix, language, desired_type, options, ctx_obj);
+  return new ClangUserExpression(*target_sp.get(), expr, prefix, language,
+                                 desired_type, options, ctx_obj);
 }
 
 FunctionCaller *ScratchTypeSystemClang::GetFunctionCaller(

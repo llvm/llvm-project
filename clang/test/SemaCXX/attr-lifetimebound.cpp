@@ -238,6 +238,16 @@ template <class T> T *addressof(T &arg) {
         &const_cast<char &>(reinterpret_cast<const volatile char &>(arg)));
 }
 
+template<typename T>
+struct basic_string_view {
+  basic_string_view(const T *);
+};
+
+template <class T> struct span {
+  template<size_t _ArrayExtent>
+	span(const T (&__arr)[_ArrayExtent]) noexcept;
+};
+
 } // namespace foo
 } // namespace std
 
@@ -266,3 +276,14 @@ namespace move_forward_et_al_examples {
   S *AddressOfOk = std::addressof(X);
 } // namespace move_forward_et_al_examples
 
+namespace ctor_cases {
+std::basic_string_view<char> test1() {
+  char abc[10];
+  return abc;  // expected-warning {{address of stack memory associated with local variable}}
+}
+
+std::span<int> test2() {
+  int abc[10];
+  return abc; // expected-warning {{address of stack memory associated with local variable}}
+}
+} // namespace ctor_cases
