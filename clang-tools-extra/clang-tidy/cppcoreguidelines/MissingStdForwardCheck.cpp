@@ -93,6 +93,10 @@ MissingStdForwardCheck::MissingStdForwardCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       IgnoreStaticCasts(Options.get("IgnoreStaticCasts", false)) {}
 
+void MissingStdForwardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreStaticCasts", IgnoreStaticCasts);
+}
+
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
   auto RefToParmImplicit = allOf(
       equalsBoundNode("var"), hasInitializer(ignoringParenImpCasts(
