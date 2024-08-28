@@ -29,14 +29,14 @@ void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 /// Attempts to rewrite the location operand of debug intrinsics in terms of
 /// the coroutine frame pointer, folding pointer offsets into the DIExpression
 /// of the intrinsic.
-/// If the frame pointer is an Argument, store it into an alloca if
-/// OptimizeFrame is false.
+/// If the frame pointer is an Argument, store it into an alloca to enhance the
+/// debugability.
 void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool IsEntryPoint);
+    DbgVariableIntrinsic &DVI, bool IsEntryPoint);
 void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableRecord &DVR, bool OptimizeFrame, bool UseEntryValue);
+    DbgVariableRecord &DVR, bool UseEntryValue);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
