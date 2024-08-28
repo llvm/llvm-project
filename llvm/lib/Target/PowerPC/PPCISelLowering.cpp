@@ -6904,7 +6904,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     while (NextReg != GPRs.size() &&
            !isGPRShadowAligned(GPRs[NextReg], ObjAlign)) {
       // Shadow allocate next registers since its aligment is not strict enough.
-      unsigned Reg = State.AllocateReg(GPRs);
+      MCRegister Reg = State.AllocateReg(GPRs);
       // Allocate the stack space shadowed by said register.
       State.AllocateStack(PtrSize, PtrAlign);
       assert(Reg && "Alocating register unexpectedly failed.");
@@ -6915,7 +6915,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     const unsigned StackSize = alignTo(ByValSize, ObjAlign);
     unsigned Offset = State.AllocateStack(StackSize, ObjAlign);
     for (const unsigned E = Offset + StackSize; Offset < E; Offset += PtrSize) {
-      if (unsigned Reg = State.AllocateReg(GPRs))
+      if (MCRegister Reg = State.AllocateReg(GPRs))
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
       else {
         State.addLoc(CCValAssign::getMem(ValNo, MVT::INVALID_SIMPLE_VALUE_TYPE,
@@ -6942,7 +6942,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (ValVT.getFixedSizeInBits() < RegVT.getFixedSizeInBits())
       LocInfo = ArgFlags.isSExt() ? CCValAssign::LocInfo::SExt
                                   : CCValAssign::LocInfo::ZExt;
-    if (unsigned Reg = State.AllocateReg(GPRs))
+    if (MCRegister Reg = State.AllocateReg(GPRs))
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
     else
       State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, RegVT, LocInfo));
@@ -6957,13 +6957,13 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     // This includes f64 in 64-bit mode for ABI compatibility.
     const unsigned Offset =
         State.AllocateStack(IsPPC64 ? 8 : StoreSize, Align(4));
-    unsigned FReg = State.AllocateReg(FPR);
+    MCRegister FReg = State.AllocateReg(FPR);
     if (FReg)
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, FReg, LocVT, LocInfo));
 
     // Reserve and initialize GPRs or initialize the PSA as required.
     for (unsigned I = 0; I < StoreSize; I += PtrSize) {
-      if (unsigned Reg = State.AllocateReg(GPRs)) {
+      if (MCRegister Reg = State.AllocateReg(GPRs)) {
         assert(FReg && "An FPR should be available when a GPR is reserved.");
         if (State.isVarArg()) {
           // Successfully reserved GPRs are only initialized for vararg calls.
@@ -7003,7 +7003,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (!State.isVarArg()) {
       // If there are vector registers remaining we don't consume any stack
       // space.
-      if (unsigned VReg = State.AllocateReg(VR)) {
+      if (MCRegister VReg = State.AllocateReg(VR)) {
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
         return false;
       }
@@ -7021,7 +7021,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     while (NextRegIndex != GPRs.size() &&
            !isGPRShadowAligned(GPRs[NextRegIndex], VecAlign)) {
       // Shadow allocate register and its stack shadow.
-      unsigned Reg = State.AllocateReg(GPRs);
+      MCRegister Reg = State.AllocateReg(GPRs);
       State.AllocateStack(PtrSize, PtrAlign);
       assert(Reg && "Allocating register unexpectedly failed.");
       (void)Reg;
@@ -7033,7 +7033,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     // through ellipses) and shadow GPRs (unlike arguments to non-vaarg
     // functions)
     if (State.isFixed(ValNo)) {
-      if (unsigned VReg = State.AllocateReg(VR)) {
+      if (MCRegister VReg = State.AllocateReg(VR)) {
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
         // Shadow allocate GPRs and stack space even though we pass in a VR.
         for (unsigned I = 0; I != VecSize; I += PtrSize)
@@ -7062,8 +7062,8 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(
           CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
 
-      const unsigned FirstReg = State.AllocateReg(PPC::R9);
-      const unsigned SecondReg = State.AllocateReg(PPC::R10);
+      const MCRegister FirstReg = State.AllocateReg(PPC::R9);
+      const MCRegister SecondReg = State.AllocateReg(PPC::R10);
       assert(FirstReg && SecondReg &&
              "Allocating R9 or R10 unexpectedly failed.");
       State.addLoc(
@@ -7080,7 +7080,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     State.addLoc(
         CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     for (unsigned I = 0; I != VecSize; I += PtrSize) {
-      const unsigned Reg = State.AllocateReg(GPRs);
+      const MCRegister Reg = State.AllocateReg(GPRs);
       assert(Reg && "Failed to allocated register for vararg vector argument");
       State.addLoc(
           CCValAssign::getCustomReg(ValNo, ValVT, Reg, RegVT, LocInfo));

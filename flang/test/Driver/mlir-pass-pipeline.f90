@@ -10,6 +10,9 @@
 end program
 
 ! ALL: Pass statistics report
+! ALL: Fortran::lower::VerifierPass
+
+! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
 ! O2-NEXT: Canonicalizer

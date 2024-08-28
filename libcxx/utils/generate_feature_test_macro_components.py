@@ -784,7 +784,8 @@ feature_test_macros = [
                 "c++26": 202406  # P2985R0 A type trait for detecting virtual base classes
             },
             "headers": ["type_traits"],
-            "unimplemented": True,
+            "test_suite_guard": "__has_builtin(__builtin_is_virtual_base_of)",
+            "libcxx_guard": "__has_builtin(__builtin_is_virtual_base_of)",
         },
         {
             "name": "__cpp_lib_is_within_lifetime",

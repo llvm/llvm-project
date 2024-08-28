@@ -17,7 +17,7 @@ void fn(int Idx) {
 // CHECK-NEXT: %h = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %this1, i32 0, i32 0
 // CHECK-NEXT: %0 = load ptr, ptr %h, align 4
 // CHECK-NEXT: %1 = load i32, ptr %Idx.addr, align 4
-// CHECK-NEXT: %arrayidx = getelementptr inbounds float, ptr %0, i32 %1
+// CHECK-NEXT: %arrayidx = getelementptr inbounds nuw float, ptr %0, i32 %1
 // CHECK-NEXT: ret ptr %arrayidx
 
 // Const comes next, and returns the pointer instead of the value.
@@ -26,5 +26,5 @@ void fn(int Idx) {
 // CHECK-NEXT: %h = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %this1, i32 0, i32 0
 // CHECK-NEXT: %0 = load ptr, ptr %h, align 4
 // CHECK-NEXT: %1 = load i32, ptr %Idx.addr, align 4
-// CHECK-NEXT: %arrayidx = getelementptr inbounds float, ptr %0, i32 %1
+// CHECK-NEXT: %arrayidx = getelementptr inbounds nuw float, ptr %0, i32 %1
 // CHECK-NEXT: ret ptr %arrayidx

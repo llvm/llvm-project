@@ -2099,7 +2099,7 @@ ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
   }
   auto &Segment = SegmentOrErr.get();
   return arrayRefFromStringRef(
-      Obj.getData().slice(Segment.fileoff, Segment.fileoff + Segment.filesize));
+      Obj.getData().substr(Segment.fileoff, Segment.filesize));
 }
 } // namespace
 
@@ -2454,9 +2454,8 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     Idx = 0;
   else
     Idx = b+1;
-  F = Name.slice(Idx, Idx + Foo.size());
-  DotFramework = Name.slice(Idx + Foo.size(),
-                            Idx + Foo.size() + sizeof(".framework/")-1);
+  F = Name.substr(Idx, Foo.size());
+  DotFramework = Name.substr(Idx + Foo.size(), sizeof(".framework/") - 1);
   if (F == Foo && DotFramework == ".framework/") {
     isFramework = true;
     return Foo;
@@ -2476,9 +2475,8 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     Idx = 0;
   else
     Idx = d+1;
-  F = Name.slice(Idx, Idx + Foo.size());
-  DotFramework = Name.slice(Idx + Foo.size(),
-                            Idx + Foo.size() + sizeof(".framework/")-1);
+  F = Name.substr(Idx, Foo.size());
+  DotFramework = Name.substr(Idx + Foo.size(), sizeof(".framework/") - 1);
   if (F == Foo && DotFramework == ".framework/") {
     isFramework = true;
     return Foo;
@@ -2495,7 +2493,7 @@ guess_library:
 
   // First pull off the version letter for the form Foo.A.dylib if any.
   if (a >= 3) {
-    Dot = Name.slice(a-2, a-1);
+    Dot = Name.substr(a - 2, 1);
     if (Dot == ".")
       a = a - 2;
   }
@@ -2520,7 +2518,7 @@ guess_library:
   // There are incorrect library names of the form:
   // libATS.A_profile.dylib so check for these.
   if (Lib.size() >= 3) {
-    Dot = Lib.slice(Lib.size()-2, Lib.size()-1);
+    Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
       Lib = Lib.slice(0, Lib.size()-2);
   }
@@ -2537,7 +2535,7 @@ guess_qtx:
     Lib = Name.slice(b+1, a);
   // There are library names of the form: QT.A.qtx so check for these.
   if (Lib.size() >= 3) {
-    Dot = Lib.slice(Lib.size()-2, Lib.size()-1);
+    Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
       Lib = Lib.slice(0, Lib.size()-2);
   }
