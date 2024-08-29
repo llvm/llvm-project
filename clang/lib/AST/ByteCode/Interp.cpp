@@ -305,14 +305,18 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (!Ptr.isLive()) {
     const auto &Src = S.Current->getSource(OpPC);
-    bool IsTemp = Ptr.isTemporary();
 
-    S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
+    if (Ptr.isDynamic()) {
+      S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
+    } else {
+      bool IsTemp = Ptr.isTemporary();
+      S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
 
-    if (IsTemp)
-      S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-    else
-      S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+      if (IsTemp)
+        S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
+      else
+        S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+    }
 
     return false;
   }
@@ -323,36 +327,52 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
-  auto IsConstType = [&S](const VarDecl *VD) -> bool {
-    QualType T = VD->getType();
+  const auto *D = Desc->asVarDecl();
+  if (!D || !D->hasGlobalStorage())
+    return true;
 
-    if (T.isConstant(S.getCtx()))
-      return true;
+  if (D == S.EvaluatingDecl)
+    return true;
 
-    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
-      return (T->isSignedIntegerOrEnumerationType() ||
-              T->isUnsignedIntegerOrEnumerationType()) &&
-             T.isConstQualified();
+  if (D->isConstexpr())
+    return true;
 
-    if (T.isConstQualified())
-      return true;
-
-    if (const auto *RT = T->getAs<ReferenceType>())
-      return RT->getPointeeType().isConstQualified();
-
-    if (const auto *PT = T->getAs<PointerType>())
-      return PT->getPointeeType().isConstQualified();
-
-    return false;
-  };
-
-  if (const auto *D = Desc->asVarDecl();
-      D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
-    diagnoseNonConstVariable(S, OpPC, D);
-    return false;
+  QualType T = D->getType();
+  bool IsConstant = T.isConstant(S.getASTContext());
+  if (T->isIntegralOrEnumerationType()) {
+    if (!IsConstant) {
+      diagnoseNonConstVariable(S, OpPC, D);
+      return false;
+    }
+    return true;
   }
 
-  return true;
+  if (IsConstant) {
+    if (S.getLangOpts().CPlusPlus) {
+      S.CCEDiag(S.Current->getLocation(OpPC),
+                S.getLangOpts().CPlusPlus11
+                    ? diag::note_constexpr_ltor_non_constexpr
+                    : diag::note_constexpr_ltor_non_integral,
+                1)
+          << D << T;
+      S.Note(D->getLocation(), diag::note_declared_at);
+    } else {
+      S.CCEDiag(S.Current->getLocation(OpPC));
+    }
+    return true;
+  }
+
+  if (T->isPointerOrReferenceType()) {
+    if (!T->getPointeeType().isConstant(S.getASTContext()) ||
+        !S.getLangOpts().CPlusPlus11) {
+      diagnoseNonConstVariable(S, OpPC, D);
+      return false;
+    }
+    return true;
+  }
+
+  diagnoseNonConstVariable(S, OpPC, D);
+  return false;
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -523,9 +543,9 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(S.getLangOpts().CPlusPlus);
   const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
   if ((!VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(S.getCtx())) ||
+       VD->mightBeUsableInConstantExpressions(S.getASTContext())) ||
       (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
-       !VD->hasICEInitializer(S.getCtx()))) {
+       !VD->hasICEInitializer(S.getASTContext()))) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
     S.Note(VD->getLocation(), diag::note_declared_at);
@@ -797,7 +817,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
   // but we want to get the array size right.
   if (D->isArray()) {
     QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getCtx().getConstantArrayType(
+    TypeToDiagnose = S.getASTContext().getConstantArrayType(
         ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
         nullptr, ArraySizeModifier::Normal, 0);
   } else
@@ -819,7 +839,7 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
   // Whatever this is, we didn't heap allocate it.
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
-      << Ptr.toDiagnosticString(S.getCtx());
+      << Ptr.toDiagnosticString(S.getASTContext());
 
   if (Ptr.isTemporary())
     S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);

@@ -255,7 +255,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void materializeImmediate(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, const DebugLoc &DL,
@@ -1306,14 +1307,6 @@ public:
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
-
-  bool isNonUniformBranchInstr(MachineInstr &Instr) const;
-
-  void convertNonUniformIfRegion(MachineBasicBlock *IfEntry,
-                                 MachineBasicBlock *IfEnd) const;
-
-  void convertNonUniformLoopRegion(MachineBasicBlock *LoopEntry,
-                                   MachineBasicBlock *LoopEnd) const;
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;

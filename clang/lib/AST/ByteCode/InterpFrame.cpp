@@ -179,7 +179,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
       Object->printPretty(OS, /*Helper=*/nullptr,
-                          S.getCtx().getPrintingPolicy(),
+                          S.getASTContext().getPrintingPolicy(),
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
         OS << "->";
@@ -188,18 +188,18 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
       OCE->getArg(0)->printPretty(OS, /*Helper=*/nullptr,
-                                  S.getCtx().getPrintingPolicy(),
+                                  S.getASTContext().getPrintingPolicy(),
                                   /*Indentation=*/0);
       OS << ".";
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
-      print(OS, This, S.getCtx(),
-            S.getCtx().getLValueReferenceType(
-                S.getCtx().getRecordType(M->getParent())));
+      print(OS, This, S.getASTContext(),
+            S.getASTContext().getLValueReferenceType(
+                S.getASTContext().getRecordType(M->getParent())));
       OS << ".";
     }
   }
 
-  F->getNameForDiagnostic(OS, S.getCtx().getPrintingPolicy(),
+  F->getNameForDiagnostic(OS, S.getASTContext().getPrintingPolicy(),
                           /*Qualified=*/false);
   OS << '(';
   unsigned Off = 0;
@@ -212,7 +212,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
-    TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getCtx(), Ty));
+    TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
     Off += align(primSize(PrimTy));
     if (I + 1 != N)
       OS << ", ";

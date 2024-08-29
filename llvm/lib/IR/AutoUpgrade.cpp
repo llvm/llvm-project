@@ -1035,8 +1035,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
       if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
           Name.starts_with("ds.fmax") ||
-          Name.starts_with("global.atomic.fadd.v2bf16") ||
-          Name.starts_with("flat.atomic.fadd.v2bf16")) {
+          Name.starts_with("global.atomic.fadd") ||
+          Name.starts_with("flat.atomic.fadd")) {
         // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
         // declaration.
         NewFn = nullptr;
@@ -1167,6 +1167,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'expermental.vector.reduce.*'.
       }
       break; // No other 'experimental.vector.*'.
+    }
+    if (Name.consume_front("experimental.stepvector.")) {
+      Intrinsic::ID ID = Intrinsic::stepvector;
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                        F->getFunctionType()->getReturnType());
+      return true;
     }
     break; // No other 'e*'.
   case 'f':

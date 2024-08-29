@@ -4210,9 +4210,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
     { ISD::BSWAP,      MVT::i64,     {  1,  2,  1,  2 } },
-    { ISD::CTLZ,       MVT::i64,     {  3,  2,  6,  6 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i64,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTTZ,       MVT::i64,     {  2,  2,  5,  5 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i64,     {  2,  2,  3,  4 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2,  3,  1,  3 } },
@@ -4241,9 +4241,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::i8,      {  7,  9, 13, 14 } },
     { ISD::BSWAP,      MVT::i32,     {  1,  1,  1,  1 } },
     { ISD::BSWAP,      MVT::i16,     {  1,  2,  1,  2 } }, // ROL
-    { ISD::CTLZ,       MVT::i32,     {  3,  2,  6,  6 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ,       MVT::i16,     {  3,  2,  6,  6 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ,       MVT::i8,      {  3,  2,  7,  7 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i32,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i16,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i8,      {  2,  2,  5,  6 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  2,  2,  2 } }, // BSR+XOR
     { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  2,  2 } }, // BSR+XOR
     { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR

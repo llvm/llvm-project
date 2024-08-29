@@ -579,6 +579,14 @@ TEST_F(FormatTestJS, GoogScopes) {
                "});");
 }
 
+TEST_F(FormatTestJS, GoogAnonymousClass) {
+  verifyFormat("a = class extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
+}
+
 TEST_F(FormatTestJS, IIFEs) {
   // Internal calling parens; no semi.
   verifyFormat("(function() {\n"

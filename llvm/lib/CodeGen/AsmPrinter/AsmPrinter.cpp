@@ -1131,6 +1131,21 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   AP.OutStreamer->addBlankLine();
 }
 
+static void emitFakeUse(const MachineInstr *MI, AsmPrinter &AP) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "fake_use:";
+  for (const MachineOperand &Op : MI->operands()) {
+    // In some circumstances we can end up with fake uses of constants; skip
+    // these.
+    if (!Op.isReg())
+      continue;
+    OS << ' ' << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
+  }
+  AP.OutStreamer->AddComment(OS.str());
+  AP.OutStreamer->addBlankLine();
+}
+
 /// emitDebugValueComment - This method handles the target-independent form
 /// of DBG_VALUE, returning true if it was able to do so.  A false return
 /// means the target will need to handle MI in EmitInstruction.
@@ -1798,6 +1813,10 @@ void AsmPrinter::emitFunctionBody() {
         break;
       case TargetOpcode::KILL:
         if (isVerbose()) emitKill(&MI, *this);
+        break;
+      case TargetOpcode::FAKE_USE:
+        if (isVerbose())
+          emitFakeUse(&MI, *this);
         break;
       case TargetOpcode::PSEUDO_PROBE:
         emitPseudoProbe(MI);

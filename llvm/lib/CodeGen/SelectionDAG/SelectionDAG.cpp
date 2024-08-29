@@ -503,13 +503,26 @@ bool ISD::isVPBinaryOp(unsigned Opcode) {
 bool ISD::isVPReduction(unsigned Opcode) {
   switch (Opcode) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_SDNODE(VPSD, ...) case ISD::VPSD:
-#define VP_PROPERTY_REDUCTION(STARTPOS, ...) return true;
-#define END_REGISTER_VP_SDNODE(VPSD) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return false;
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_SEQ_FADD:
+  case ISD::VP_REDUCE_SEQ_FMUL:
+    return true;
   }
-  return false;
 }
 
 /// The operand position of the vector mask.
@@ -7896,8 +7909,8 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -8091,8 +8104,8 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
@@ -8209,8 +8222,8 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     // optimization.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.

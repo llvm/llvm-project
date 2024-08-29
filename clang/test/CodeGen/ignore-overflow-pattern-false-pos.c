@@ -3,7 +3,6 @@
 
 // Check for potential false positives from patterns that _almost_ match classic overflow-dependent or overflow-prone code patterns
 extern unsigned a, b, c;
-extern int u, v, w;
 
 extern unsigned some(void);
 
