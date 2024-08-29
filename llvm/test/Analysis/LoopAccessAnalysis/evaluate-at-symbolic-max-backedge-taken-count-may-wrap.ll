@@ -3,7 +3,6 @@
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
-; FIXME: Start == End for access group with AddRec.
 define void @runtime_checks_with_symbolic_max_btc_neg_1(ptr %P, ptr %S, i32 %x, i32 %y) {
 ; CHECK-LABEL: 'runtime_checks_with_symbolic_max_btc_neg_1'
 ; CHECK-NEXT:    loop:
@@ -17,7 +16,7 @@ define void @runtime_checks_with_symbolic_max_btc_neg_1(ptr %P, ptr %S, i32 %x, 
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: ((4 * %y) + %P))
+; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: -1)
 ; CHECK-NEXT:            Member: {((4 * %y) + %P),+,4}<%loop>
 ; CHECK-NEXT:        Group [[GRP2]]:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
@@ -44,7 +43,6 @@ exit:
   ret void
 }
 
-; FIXME: Start > End for access group with AddRec.
 define void @runtime_check_with_symbolic_max_btc_neg_2(ptr %P, ptr %S, i32 %x, i32 %y) {
 ; CHECK-LABEL: 'runtime_check_with_symbolic_max_btc_neg_2'
 ; CHECK-NEXT:    loop:
@@ -58,7 +56,7 @@ define void @runtime_check_with_symbolic_max_btc_neg_2(ptr %P, ptr %S, i32 %x, i
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP3]]:
-; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: (-4 + (4 * %y) + %P))
+; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: -1)
 ; CHECK-NEXT:            Member: {((4 * %y) + %P),+,4}<%loop>
 ; CHECK-NEXT:        Group [[GRP4]]:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
