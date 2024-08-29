@@ -9584,13 +9584,14 @@ static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
 
   const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
   const auto &TLI = DAG.getTargetLoweringInfo();
+  std::string ErrMsg;
 
   std::pair<unsigned, const TargetRegisterClass *> MatchRC =
       TLI.getRegForInlineAsmConstraint(TRI, OpInfo.ConstraintCode,
-                                       OpInfo.ConstraintVT);
+                                       OpInfo.ConstraintVT, ErrMsg);
   std::pair<unsigned, const TargetRegisterClass *> InputRC =
       TLI.getRegForInlineAsmConstraint(TRI, MatchingOpInfo.ConstraintCode,
-                                       MatchingOpInfo.ConstraintVT);
+                                       MatchingOpInfo.ConstraintVT, ErrMsg);
   if ((OpInfo.ConstraintVT.isInteger() !=
        MatchingOpInfo.ConstraintVT.isInteger()) ||
       (MatchRC.second != InputRC.second)) {
@@ -9656,7 +9657,7 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
 ///
 ///   OpInfo describes the operand
 ///   RefOpInfo describes the matching operand if any, the operand otherwise
-static std::optional<unsigned>
+static std::optional<std::string>
 getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
                      SDISelAsmOperandInfo &OpInfo,
                      SDISelAsmOperandInfo &RefOpInfo) {
@@ -9676,11 +9677,12 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   // register class, find it.
   unsigned AssignedReg;
   const TargetRegisterClass *RC;
+  std::string ErrMsg;
   std::tie(AssignedReg, RC) = TLI.getRegForInlineAsmConstraint(
-      &TRI, RefOpInfo.ConstraintCode, RefOpInfo.ConstraintVT);
+      &TRI, RefOpInfo.ConstraintCode, RefOpInfo.ConstraintVT, ErrMsg);
   // RC is unset only on failure. Return immediately.
   if (!RC)
-    return std::nullopt;
+    return ErrMsg;
 
   // Get the actual register value type.  This is important, because the user
   // may have asked for (e.g.) the AX register in i32 type.  We need to
@@ -9752,7 +9754,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
     if (I == RC->end()) {
       // RC does not contain the selected register, which indicates a
       // mismatch between the register and the required type/bitwidth.
-      return {AssignedReg};
+      return "register '" + std::string(TRI.getName(AssignedReg)) +
+             "' allocated for constraint '" + OpInfo.ConstraintCode +
+             "' does not match required type " + ValueVT.getEVTString();
     }
   }
 
@@ -10001,18 +10005,6 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         OpInfo.isMatchingInputConstraint()
             ? ConstraintOperands[OpInfo.getMatchedOperand()]
             : OpInfo;
-    const auto RegError =
-        getRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
-    if (RegError) {
-      const MachineFunction &MF = DAG.getMachineFunction();
-      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      const char *RegName = TRI.getName(*RegError);
-      emitInlineAsmError(Call, "register '" + Twine(RegName) +
-                                   "' allocated for constraint '" +
-                                   Twine(OpInfo.ConstraintCode) +
-                                   "' does not match required type");
-      return;
-    }
 
     auto DetectWriteToReservedRegister = [&]() {
       const MachineFunction &MF = DAG.getMachineFunction();
@@ -10051,12 +10043,17 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         // Otherwise, this outputs to a register (directly for C_Register /
         // C_RegisterClass, and a target-defined fashion for
         // C_Immediate/C_Other). Find a register that we can use.
-        if (OpInfo.AssignedRegs.Regs.empty()) {
+        const auto RegError =
+            getRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
+        if (RegError) {
           emitInlineAsmError(
               Call, "couldn't allocate output register for constraint '" +
-                        Twine(OpInfo.ConstraintCode) + "'");
+                        Twine(OpInfo.ConstraintCode) +
+                        (RegError->empty() ? "'" : ("': " + Twine(*RegError))));
           return;
         }
+        assert(!OpInfo.AssignedRegs.Regs.empty() &&
+               "register must be allocated or an error emitted");
 
         if (DetectWriteToReservedRegister())
           return;
@@ -10225,13 +10222,17 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         return;
       }
 
-      // Copy the input into the appropriate registers.
-      if (OpInfo.AssignedRegs.Regs.empty()) {
-        emitInlineAsmError(Call,
-                           "couldn't allocate input reg for constraint '" +
-                               Twine(OpInfo.ConstraintCode) + "'");
+      const auto RegError =
+          getRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
+      if (RegError) {
+        emitInlineAsmError(
+            Call, "couldn't allocate input reg for constraint '" +
+                      Twine(OpInfo.ConstraintCode) +
+                      (RegError->empty() ? "'" : ("': " + Twine(*RegError))));
         return;
       }
+      assert(!OpInfo.AssignedRegs.Regs.empty() &&
+             "register must be allocated or an error emitted");
 
       if (DetectWriteToReservedRegister())
         return;
@@ -10245,14 +10246,17 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
                                                0, dl, DAG, AsmNodeOperands);
       break;
     }
-    case InlineAsm::isClobber:
+    case InlineAsm::isClobber: {
       // Add the clobbered value to the operand list, so that the register
       // allocator is aware that the physreg got clobbered.
+      const auto RegError =
+          getRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
       if (!OpInfo.AssignedRegs.Regs.empty())
         OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::Clobber,
                                                  false, 0, getCurSDLoc(), DAG,
                                                  AsmNodeOperands);
       break;
+    }
     }
   }
 

@@ -99,7 +99,8 @@ public:
                              const MachineFunction &MF) const override;
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                               StringRef Constraint, MVT VT) const override;
+                               StringRef Constraint, MVT VT,
+                               std::string &ErrMsg) const override;
   ConstraintWeight
   getSingleConstraintMatchWeight(AsmOperandInfo &Info,
                                  const char *Constraint) const override;

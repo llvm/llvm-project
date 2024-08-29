@@ -976,7 +976,8 @@ namespace llvm {
 
     std::pair<unsigned, const TargetRegisterClass *>
     getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                                 StringRef Constraint, MVT VT) const override;
+                                 StringRef Constraint, MVT VT,
+                                 std::string &ErrMsg) const override;
 
     /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
     /// function arguments in the caller parameter area.  This is the actual

@@ -299,7 +299,8 @@ public:
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                               StringRef Constraint, MVT VT) const override;
+                               StringRef Constraint, MVT VT,
+                               std::string &ErrMsg) const override;
 
   // Intrinsics
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
