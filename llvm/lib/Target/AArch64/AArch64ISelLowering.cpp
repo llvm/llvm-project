@@ -21795,35 +21795,6 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   if (A.getValueType() != B.getValueType())
     return SDValue();
 
-  // The fully-reduced type. Should be a vector of i32 or i64
-  EVT FullType = N->getValueType(0);
-  // The type that is extended to the wide type. Should be an i8 or i16
-  EVT ExtendedType = A.getValueType();
-  // The wide type with four times as many elements as the reduced type. Should
-  // be a vector of i32 or i64, the same as the fully-reduced type
-  EVT WideType = MulOp.getValueType();
-  if (WideType.getScalarSizeInBits() != FullType.getScalarSizeInBits())
-    return SDValue();
-  // Dot products operate on chunks of four elements so there must be four times
-  // as many elements in the wide type
-  if (WideType.getVectorMinNumElements() / FullType.getVectorMinNumElements() !=
-      4)
-    return SDValue();
-  switch (FullType.getScalarSizeInBits()) {
-  case 32:
-    if (ExtendedType.getScalarSizeInBits() != 8)
-      return SDValue();
-    break;
-  case 64:
-    // i8 to i64 can be done with an extended i32 dot product
-    if (ExtendedType.getScalarSizeInBits() != 8 &&
-        ExtendedType.getScalarSizeInBits() != 16)
-      return SDValue();
-    break;
-  default:
-    return SDValue();
-  }
-
   unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
 
   if (IsSExt)
@@ -21834,33 +21805,31 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   assert(DotIntrinsicId != Intrinsic::not_intrinsic &&
          "Unexpected dot product case encountered.");
 
-  EVT Type = NarrowOp.getValueType();
-
-  // 8 bit input to 64 bit output can be done by doing a 32 bit dot product
-  // and extending the output
-  bool Extend = A->getValueType(0).getScalarSizeInBits() == 8 &&
-                Type.getScalarSizeInBits() == 64;
-  SDValue Accumulator = NarrowOp;
-  if (Extend) {
-    Type =
-        Type.changeVectorElementType(EVT::getIntegerVT(*DAG.getContext(), 32));
-    // The accumulator is of the wider type so we insert a 0 accumulator and
-    // add the proper one after extending
-    Accumulator = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv4i32,
-                              DAG.getConstant(0, DL, MVT::i32));
-  }
-
   auto IntrinsicId = DAG.getConstant(DotIntrinsicId, DL, MVT::i64);
-  auto DotProduct = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Type,
-                                {IntrinsicId, Accumulator, A, B});
-  if (Extend) {
-    auto Extended = DAG.getNode(IsZExt ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND,
-                                DL, NarrowOp.getValueType(), {DotProduct});
-    auto AccAdd = DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
-                              {NarrowOp, Extended});
-    DotProduct = AccAdd;
-  }
-  return DotProduct;
+
+  // The fully-reduced type. Should be a vector of i32 or i64
+  EVT ReducedType = N->getValueType(0);
+  // The type that is extended to the wide type. Should be an i8 or i16
+  EVT ExtendedType = A.getValueType();
+  // The wide type with four times as many elements as the reduced type. Should
+  // be a vector of i32 or i64, the same as the fully-reduced type
+  EVT WideType = MulOp.getValueType();
+  if (WideType.getScalarSizeInBits() != ReducedType.getScalarSizeInBits())
+    return SDValue();
+
+  // Dot products operate on chunks of four elements so there must be four times
+  // as many elements in the wide type
+  if (WideType == MVT::nxv16i32 && ReducedType == MVT::nxv4i32 &&
+      ExtendedType == MVT::nxv16i8)
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4i32,
+                       {IntrinsicId, NarrowOp, A, B});
+
+  if (WideType == MVT::nxv8i64 && ReducedType == MVT::nxv2i64 &&
+      ExtendedType == MVT::nxv8i16)
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv2i64,
+                       {IntrinsicId, NarrowOp, A, B});
+
+  return SDValue();
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
