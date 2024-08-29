@@ -1669,12 +1669,18 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
 }
 
 SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
-  if (TLI.isOperationLegalOrCustom(ISD::FSUB, Node->getValueType(0))) {
+  EVT VT = Node->getValueType(0);
+  EVT IntVT = VT.changeVectorElementTypeToInteger();
+
+  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
+  if (TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) &&
+      TLI.isOperationLegalOrCustom(ISD::FSUB, VT)) {
     SDLoc DL(Node);
-    SDValue Zero = DAG.getConstantFP(-0.0, DL, Node->getValueType(0));
-    // TODO: If FNEG had fast-math-flags, they'd get propagated to this FSUB.
-    return DAG.getNode(ISD::FSUB, DL, Node->getValueType(0), Zero,
-                       Node->getOperand(0));
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
+    SDValue SignMask = DAG.getConstant(
+        APInt::getSignMask(IntVT.getScalarSizeInBits()), DL, IntVT);
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, IntVT, Cast, SignMask);
+    return DAG.getNode(ISD::BITCAST, DL, VT, Xor);
   }
   return DAG.UnrollVectorOp(Node);
 }
