@@ -8648,6 +8648,11 @@ addUsersInExitBlock(VPlan &Plan,
 
   // Introduce VPUsers modeling the exit values.
   for (const auto &[ExitPhi, V] : ExitingValuesToFix) {
+    // Pass live-in values used by exit phis directly through to the live-out.
+    if (V->isLiveIn()) {
+      Plan.addLiveOut(ExitPhi, V);
+      continue;
+    }
     VPValue *Ext = B.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {V, Plan.getOrAddLiveIn(ConstantInt::get(
