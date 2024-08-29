@@ -139,7 +139,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = add i32 [[OFFSET_IDX3]], 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[EVL_BASED_IV]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP11]]
 ; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1023, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)

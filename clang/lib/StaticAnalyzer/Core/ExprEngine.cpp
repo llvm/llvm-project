@@ -1072,8 +1072,6 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
       CleanedState, SFC, SymReaper);
 
   // Process any special transfer function for dead symbols.
-  // A tag to track convenience transitions, which can be removed at cleanup.
-  static SimpleProgramPointTag cleanupTag(TagProviderName, "Clean Node");
   // Call checkers with the non-cleaned state so that they could query the
   // values of the soon to be dead symbols.
   ExplodedNodeSet CheckedSet;
@@ -1102,8 +1100,13 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
     // generate a transition to that state.
     ProgramStateRef CleanedCheckerSt =
         StateMgr.getPersistentStateWithGDM(CleanedState, CheckerState);
-    Bldr.generateNode(DiagnosticStmt, I, CleanedCheckerSt, &cleanupTag, K);
+    Bldr.generateNode(DiagnosticStmt, I, CleanedCheckerSt, cleanupNodeTag(), K);
   }
+}
+
+const ProgramPointTag *ExprEngine::cleanupNodeTag() {
+  static SimpleProgramPointTag cleanupTag(TagProviderName, "Clean Node");
+  return &cleanupTag;
 }
 
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
