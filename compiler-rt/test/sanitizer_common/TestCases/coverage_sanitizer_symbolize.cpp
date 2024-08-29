@@ -26,4 +26,4 @@ int main() {
 }
 
 // CHECK: main
-// CHECK: SanitizerCoverage: ./sanitizer_coverage_symbolize.{{.*}}.sancov: 2 PCs written
+// CHECK: CoverageSanitizer: ./coverage_sanitizer_symbolize.{{.*}}.sancov: 2 PCs written

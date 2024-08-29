@@ -15,7 +15,7 @@ library via a specific fuzzing entrypoint (aka "target function"); the fuzzer
 then tracks which areas of the code are reached, and generates mutations on the
 corpus of input data in order to maximize the code coverage.
 The code coverage
-information for libFuzzer is provided by LLVM's SanitizerCoverage_
+information for libFuzzer is provided by LLVM's CoverageSanitizer_
 instrumentation.
 
 Contact: libfuzzer(#)googlegroups.com
@@ -507,7 +507,7 @@ Tracing CMP instructions
 ------------------------
 
 With an additional compiler flag ``-fsanitize-coverage=trace-cmp``
-(on by default as part of ``-fsanitize=fuzzer``, see SanitizerCoverageTraceDataFlow_)
+(on by default as part of ``-fsanitize=fuzzer``, see CoverageSanitizerTraceDataFlow_)
 libFuzzer will intercept CMP instructions and guide mutations based
 on the arguments of intercepted CMP instructions. This may slow down
 the fuzzing but is very likely to improve the results.
@@ -837,8 +837,8 @@ Trophies
 .. _pcre2: http://www.pcre.org/
 .. _AFL: http://lcamtuf.coredump.cx/afl/
 .. _Radamsa: https://github.com/aoh/radamsa
-.. _SanitizerCoverage: https://clang.llvm.org/docs/SanitizerCoverage.html
-.. _SanitizerCoverageTraceDataFlow: https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
+.. _CoverageSanitizer: https://clang.llvm.org/docs/CoverageSanitizer.html
+.. _CoverageSanitizerTraceDataFlow: https://clang.llvm.org/docs/CoverageSanitizer.html#tracing-data-flow
 .. _AddressSanitizer: https://clang.llvm.org/docs/AddressSanitizer.html
 .. _LeakSanitizer: https://clang.llvm.org/docs/LeakSanitizer.html
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed
@@ -847,9 +847,9 @@ Trophies
 .. _building Clang from trunk: https://clang.llvm.org/get_started.html
 .. _MemorySanitizer: https://clang.llvm.org/docs/MemorySanitizer.html
 .. _UndefinedBehaviorSanitizer: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
-.. _`coverage counters`: https://clang.llvm.org/docs/SanitizerCoverage.html#coverage-counters
+.. _`coverage counters`: https://clang.llvm.org/docs/CoverageSanitizer.html#coverage-counters
 .. _`value profile`: #value-profile
-.. _`caller-callee pairs`: https://clang.llvm.org/docs/SanitizerCoverage.html#caller-callee-coverage
+.. _`caller-callee pairs`: https://clang.llvm.org/docs/CoverageSanitizer.html#caller-callee-coverage
 .. _BoringSSL: https://boringssl.googlesource.com/boringssl/
 .. _Centipede: https://github.com/google/centipede
 

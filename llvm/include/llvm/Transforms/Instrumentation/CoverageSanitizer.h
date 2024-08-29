@@ -1,4 +1,4 @@
-//===--------- Definition of the SanitizerCoverage class --------*- C++ -*-===//
+//===--------- Definition of the CoverageSanitizer class --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SanitizerCoverage is a simple code coverage implementation.
+// CoverageSanitizer is a simple code coverage implementation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,14 +23,14 @@
 namespace llvm {
 class Module;
 
-/// This is the ModuleSanitizerCoverage pass used in the new pass manager. The
+/// This is the ModuleCoverageSanitizer pass used in the new pass manager. The
 /// pass instruments functions for coverage, adds initialization calls to the
 /// module for trace PC guards and 8bit counters if they are requested, and
 /// appends globals to llvm.compiler.used.
-class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
+class CoverageSanitizerPass : public PassInfoMixin<CoverageSanitizerPass> {
 public:
-  explicit SanitizerCoveragePass(
-      SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
+  explicit CoverageSanitizerPass(
+      CoverageSanitizerOptions Options = CoverageSanitizerOptions(),
       const std::vector<std::string> &AllowlistFiles =
           std::vector<std::string>(),
       const std::vector<std::string> &BlocklistFiles =
@@ -47,7 +47,7 @@ public:
   static bool isRequired() { return true; }
 
 private:
-  SanitizerCoverageOptions Options;
+  CoverageSanitizerOptions Options;
 
   std::unique_ptr<SpecialCaseList> Allowlist;
   std::unique_ptr<SpecialCaseList> Blocklist;

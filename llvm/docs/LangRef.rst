@@ -2187,7 +2187,7 @@ example:
     This attribute indicates that bounds checking sanitizer instrumentation
     is disabled for this function.
 ``nosanitize_coverage``
-    This attribute indicates that SanitizerCoverage instrumentation is disabled
+    This attribute indicates that CoverageSanitizer instrumentation is disabled
     for this function.
 ``nosanitize_realtime``
     This attribute indicates that the Realtime Sanitizer instrumentation is

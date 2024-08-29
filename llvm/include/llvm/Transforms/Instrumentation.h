@@ -137,8 +137,8 @@ struct InstrProfOptions {
 // Create the variable for profile sampling.
 void createProfileSamplingVar(Module &M);
 
-// Options for sanitizer coverage instrumentation.
-struct SanitizerCoverageOptions {
+// Options for coverage sanitizer instrumentation.
+struct CoverageSanitizerOptions {
   enum Type {
     SCK_None = 0,
     SCK_Function,
@@ -162,7 +162,7 @@ struct SanitizerCoverageOptions {
   bool TraceStores = false;
   bool CollectControlFlow = false;
 
-  SanitizerCoverageOptions() = default;
+  CoverageSanitizerOptions() = default;
 };
 
 /// Calculate what to divide by to scale counts.

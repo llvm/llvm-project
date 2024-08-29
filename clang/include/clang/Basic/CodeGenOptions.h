@@ -419,7 +419,7 @@ public:
 
   /// Path to allowlist file specifying which objects
   /// (files, functions) should exclusively be instrumented
-  /// by sanitizer coverage pass.
+  /// by coverage sanitizer pass.
   std::vector<std::string> SanitizeCoverageAllowlistFiles;
 
   /// The guard style used for stack protector to get a initial value, this

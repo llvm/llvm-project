@@ -14,7 +14,7 @@ information directly. This allows it to generate very precise coverage data.
 
 Clang ships two other code coverage implementations:
 
-* :doc:`SanitizerCoverage` - A low-overhead tool meant for use alongside the
+* :doc:`CoverageSanitizer` - A low-overhead tool meant for use alongside the
   various sanitizers. It can provide up to edge-level coverage.
 
 * gcov - A GCC-compatible coverage implementation which operates on DebugInfo.

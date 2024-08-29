@@ -33,7 +33,7 @@ Using Clang as a Compiler
    DataFlowSanitizer
    LeakSanitizer
    RealtimeSanitizer
-   SanitizerCoverage
+   CoverageSanitizer
    SanitizerStats
    SanitizerSpecialCaseList
    BoundsSafety

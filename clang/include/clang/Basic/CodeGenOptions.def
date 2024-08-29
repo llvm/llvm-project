@@ -271,24 +271,24 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types
                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
-CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
+CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of coverage sanitizer
                                        ///< instrumentation.
-CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
+CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable coverage sanitizer
                                                 ///< for indirect calls.
 CODEGENOPT(SanitizeCoverageTraceBB, 1, 0) ///< Enable basic block tracing in
-                                          ///< in sanitizer coverage.
+                                          ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverageTraceCmp, 1, 0) ///< Enable cmp instruction tracing
-                                           ///< in sanitizer coverage.
+                                           ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverageTraceDiv, 1, 0) ///< Enable div instruction tracing
-                                           ///< in sanitizer coverage.
+                                           ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverageTraceGep, 1, 0) ///< Enable GEP instruction tracing
-                                           ///< in sanitizer coverage.
+                                           ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0) ///< Use 8-bit frequency counters
-                                               ///< in sanitizer coverage.
+                                               ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverageTracePC, 1, 0) ///< Enable PC tracing
-                                          ///< in sanitizer coverage.
+                                          ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0) ///< Enable PC tracing with guard
-                                               ///< in sanitizer coverage.
+                                               ///< in coverage sanitizer.
 CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0) ///< Use inline 8bit counters.
 CODEGENOPT(SanitizeCoverageInlineBoolFlag, 1, 0) ///< Use inline bool flag.
 CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.

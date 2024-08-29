@@ -1,4 +1,4 @@
-//===-- sanitizer_coverage_fuchsia.cpp ------------------------------------===//
+//===-- coverage_sanitizer_fuchsia.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Sanitizer Coverage Controller for Trace PC Guard, Fuchsia-specific version.
+// Coverage Sanitizer Controller for Trace PC Guard, Fuchsia-specific version.
 //
 // This Fuchsia-specific implementation uses the same basic scheme and the
 // same simple '.sancov' file format as the generic implementation.  The
@@ -105,7 +105,7 @@ class TracePcGuardController final {
       // uses the `dumpfile` symbolizer markup element to highlight the
       // dump.  See the explanation for this in:
       // https://fuchsia.googlesource.com/zircon/+/master/docs/symbolizer_markup.md
-      Printf("SanitizerCoverage: " FORMAT_DUMPFILE " with up to %u PCs\n",
+      Printf("CoverageSanitizer: " FORMAT_DUMPFILE " with up to %u PCs\n",
              kSancovSinkName, vmo_name_, next_index_ - 1);
     }
   }

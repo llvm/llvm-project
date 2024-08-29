@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
   bar2();
   __sanitizer_cov_dump();
 // CHECK: RESET
-// CHECK-DAG: SanitizerCoverage: ./coverage-reset.cpp{{.*}}.sancov: 2 PCs written
-// CHECK-DAG: SanitizerCoverage: ./libcoverage-reset.cpp{{.*}}.sancov: 2 PCs written
+// CHECK-DAG: CoverageSanitizer: ./coverage-reset.cpp{{.*}}.sancov: 2 PCs written
+// CHECK-DAG: CoverageSanitizer: ./libcoverage-reset.cpp{{.*}}.sancov: 2 PCs written
 
   fprintf(stderr, "RESET\n");
   __sanitizer_cov_reset();
@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
   bar1();
   __sanitizer_cov_dump();
 // CHECK: RESET
-// CHECK-DAG: SanitizerCoverage: ./coverage-reset.cpp{{.*}}.sancov: 1 PCs written
-// CHECK-DAG: SanitizerCoverage: ./libcoverage-reset.cpp{{.*}}.sancov: 1 PCs written
+// CHECK-DAG: CoverageSanitizer: ./coverage-reset.cpp{{.*}}.sancov: 1 PCs written
+// CHECK-DAG: CoverageSanitizer: ./libcoverage-reset.cpp{{.*}}.sancov: 1 PCs written
 
   fprintf(stderr, "RESET\n");
   __sanitizer_cov_reset();
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
   foo2();
   __sanitizer_cov_dump();
 // CHECK: RESET
-// CHECK: SanitizerCoverage: ./coverage-reset.cpp{{.*}}.sancov: 2 PCs written
+// CHECK: CoverageSanitizer: ./coverage-reset.cpp{{.*}}.sancov: 2 PCs written
 
   fprintf(stderr, "RESET\n");
   __sanitizer_cov_reset();
@@ -53,13 +53,13 @@ int main(int argc, char **argv) {
   bar2();
   __sanitizer_cov_dump();
 // CHECK: RESET
-// CHECK: SanitizerCoverage: ./libcoverage-reset.cpp{{.*}}.sancov: 2 PCs written
+// CHECK: CoverageSanitizer: ./libcoverage-reset.cpp{{.*}}.sancov: 2 PCs written
 
   fprintf(stderr, "RESET\n");
   __sanitizer_cov_reset();
 // CHECK: RESET
 
   bar2();
-// CHECK: SanitizerCoverage: ./libcoverage-reset.cpp{{.*}}.sancov: 1 PCs written
+// CHECK: CoverageSanitizer: ./libcoverage-reset.cpp{{.*}}.sancov: 1 PCs written
 }
 #endif

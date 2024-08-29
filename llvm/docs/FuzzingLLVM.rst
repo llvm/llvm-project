@@ -234,7 +234,7 @@ Configuring LLVM to Build Fuzzers
 ---------------------------------
 
 Fuzzers will be built and linked to libFuzzer by default as long as you build
-LLVM with sanitizer coverage enabled. You would typically also enable at least
+LLVM with coverage sanitizer enabled. You would typically also enable at least
 one sanitizer to find bugs faster. The most common way to build the fuzzers is
 by adding the following two flags to your CMake invocation:
 ``-DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=On``.

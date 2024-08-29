@@ -19,4 +19,4 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: LeakSanitizer: detected memory leaks
-// CHECK: SanitizerCoverage: {{.*}}PCs written
+// CHECK: CoverageSanitizer: {{.*}}PCs written

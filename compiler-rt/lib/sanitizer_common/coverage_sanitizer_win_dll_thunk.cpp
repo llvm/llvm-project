@@ -1,4 +1,4 @@
-//===-- sanitizer_coverage_win_dll_thunk.cpp ------------------------------===//
+//===-- coverage_sanitizer_win_dll_thunk.cpp ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 #ifdef SANITIZER_DLL_THUNK
 #include "sanitizer_win_dll_thunk.h"
-// Sanitizer Coverage interface functions.
+// Coverage Sanitizer interface functions.
 #define INTERFACE_FUNCTION(Name) INTERCEPT_SANITIZER_FUNCTION(Name)
 #define INTERFACE_WEAK_FUNCTION(Name) INTERCEPT_SANITIZER_WEAK_FUNCTION(Name)
-#include "sanitizer_coverage_interface.inc"
+#include "coverage_sanitizer_interface.inc"
 #endif // SANITIZER_DLL_THUNK

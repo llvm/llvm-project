@@ -3142,12 +3142,12 @@ instrumentations should not be applied.
 The attribute takes a list of string literals with the following accepted
 values:
 * all values accepted by ``-fno-sanitize=``;
-* ``coverage``, to disable SanitizerCoverage instrumentation.
+* ``coverage``, to disable CoverageSanitizer instrumentation.
 
 For example, ``__attribute__((no_sanitize("address", "thread")))`` specifies
 that AddressSanitizer and ThreadSanitizer should not be applied to the function
 or variable. Using ``__attribute__((no_sanitize("coverage")))`` specifies that
-SanitizerCoverage should not be applied to the function.
+CoverageSanitizer should not be applied to the function.
 
 See :ref:`Controlling Code Generation <controlling-code-generation>` for a
 full list of supported sanitizer flags.

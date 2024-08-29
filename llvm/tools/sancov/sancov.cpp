@@ -766,7 +766,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
         continue;
       }
       uint64_t Addr = Index + SectionAddr;
-      // Sanitizer coverage uses the address of the next instruction - 1.
+      // Coverage sanitizer uses the address of the next instruction - 1.
       uint64_t CovPoint = getPreviousInstructionPc(Addr + Size, TheTriple);
       uint64_t Target;
       if (MIA->isCall(Inst) &&
@@ -1147,7 +1147,7 @@ static void parseArgs(int Argc, char **Argv) {
         llvm::outs(),
         "sancov [options] <action> <binary files...> <.sancov files...> "
         "<.symcov files...>",
-        "Sanitizer Coverage Processing Tool (sancov)\n\n"
+        "Coverage Sanitizer Processing Tool (sancov)\n\n"
         "  This tool can extract various coverage-related information from: \n"
         "  coverage-instrumented binary files, raw .sancov files and their "
         "symbolized .symcov version.\n"

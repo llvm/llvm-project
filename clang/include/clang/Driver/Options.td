@@ -2366,11 +2366,11 @@ def fno_sanitize_coverage : CommaJoined<["-"], "fno-sanitize-coverage=">,
          "inline-bool-flag">;
 def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
     Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
-    HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">,
+    HelpText<"Restrict coverage sanitizer instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageAllowlistFiles">>;
 def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist=">,
     Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
-    HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
+    HelpText<"Disable coverage sanitizer instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
 def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanitize-metadata=">,
@@ -7311,39 +7311,39 @@ def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
 def fsanitize_coverage_type : Joined<["-"], "fsanitize-coverage-type=">,
-                              HelpText<"Sanitizer coverage type">,
+                              HelpText<"Coverage sanitizer type">,
                               MarshallingInfoInt<CodeGenOpts<"SanitizeCoverageType">>;
 def fsanitize_coverage_indirect_calls
     : Flag<["-"], "fsanitize-coverage-indirect-calls">,
-      HelpText<"Enable sanitizer coverage for indirect calls">,
+      HelpText<"Enable coverage sanitizer for indirect calls">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageIndirectCalls">>;
 def fsanitize_coverage_trace_bb
     : Flag<["-"], "fsanitize-coverage-trace-bb">,
-      HelpText<"Enable basic block tracing in sanitizer coverage">,
+      HelpText<"Enable basic block tracing in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceBB">>;
 def fsanitize_coverage_trace_cmp
     : Flag<["-"], "fsanitize-coverage-trace-cmp">,
-      HelpText<"Enable cmp instruction tracing in sanitizer coverage">,
+      HelpText<"Enable cmp instruction tracing in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceCmp">>;
 def fsanitize_coverage_trace_div
     : Flag<["-"], "fsanitize-coverage-trace-div">,
-      HelpText<"Enable div instruction tracing in sanitizer coverage">,
+      HelpText<"Enable div instruction tracing in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceDiv">>;
 def fsanitize_coverage_trace_gep
     : Flag<["-"], "fsanitize-coverage-trace-gep">,
-      HelpText<"Enable gep instruction tracing in sanitizer coverage">,
+      HelpText<"Enable gep instruction tracing in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceGep">>;
 def fsanitize_coverage_8bit_counters
     : Flag<["-"], "fsanitize-coverage-8bit-counters">,
-      HelpText<"Enable frequency counters in sanitizer coverage">,
+      HelpText<"Enable frequency counters in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverage8bitCounters">>;
 def fsanitize_coverage_inline_8bit_counters
     : Flag<["-"], "fsanitize-coverage-inline-8bit-counters">,
-      HelpText<"Enable inline 8-bit counters in sanitizer coverage">,
+      HelpText<"Enable inline 8-bit counters in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageInline8bitCounters">>;
 def fsanitize_coverage_inline_bool_flag
     : Flag<["-"], "fsanitize-coverage-inline-bool-flag">,
-      HelpText<"Enable inline bool flag in sanitizer coverage">,
+      HelpText<"Enable inline bool flag in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageInlineBoolFlag">>;
 def fsanitize_coverage_pc_table
     : Flag<["-"], "fsanitize-coverage-pc-table">,
@@ -7355,11 +7355,11 @@ def fsanitize_coverage_control_flow
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageControlFlow">>;
 def fsanitize_coverage_trace_pc
     : Flag<["-"], "fsanitize-coverage-trace-pc">,
-      HelpText<"Enable PC tracing in sanitizer coverage">,
+      HelpText<"Enable PC tracing in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePC">>;
 def fsanitize_coverage_trace_pc_guard
     : Flag<["-"], "fsanitize-coverage-trace-pc-guard">,
-      HelpText<"Enable PC tracing with guard in sanitizer coverage">,
+      HelpText<"Enable PC tracing with guard in coverage sanitizer">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePCGuard">>;
 def fsanitize_coverage_no_prune
     : Flag<["-"], "fsanitize-coverage-no-prune">,

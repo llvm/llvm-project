@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Public interface for sanitizer coverage.
+// Public interface for coverage sanitizer.
 //===----------------------------------------------------------------------===//
 
 #ifndef SANITIZER_COVERAG_INTERFACE_H

@@ -1,4 +1,4 @@
-//===-- SanitizerCoverage.cpp - coverage instrumentation for sanitizers ---===//
+//===-- CoverageSanitizer.cpp - coverage instrumentation for sanitizers ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
+#include "llvm/Transforms/Instrumentation/CoverageSanitizer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -154,32 +154,32 @@ static cl::opt<bool>
 
 namespace {
 
-SanitizerCoverageOptions getOptions(int LegacyCoverageLevel) {
-  SanitizerCoverageOptions Res;
+CoverageSanitizerOptions getOptions(int LegacyCoverageLevel) {
+  CoverageSanitizerOptions Res;
   switch (LegacyCoverageLevel) {
   case 0:
-    Res.CoverageType = SanitizerCoverageOptions::SCK_None;
+    Res.CoverageType = CoverageSanitizerOptions::SCK_None;
     break;
   case 1:
-    Res.CoverageType = SanitizerCoverageOptions::SCK_Function;
+    Res.CoverageType = CoverageSanitizerOptions::SCK_Function;
     break;
   case 2:
-    Res.CoverageType = SanitizerCoverageOptions::SCK_BB;
+    Res.CoverageType = CoverageSanitizerOptions::SCK_BB;
     break;
   case 3:
-    Res.CoverageType = SanitizerCoverageOptions::SCK_Edge;
+    Res.CoverageType = CoverageSanitizerOptions::SCK_Edge;
     break;
   case 4:
-    Res.CoverageType = SanitizerCoverageOptions::SCK_Edge;
+    Res.CoverageType = CoverageSanitizerOptions::SCK_Edge;
     Res.IndirectCalls = true;
     break;
   }
   return Res;
 }
 
-SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
+CoverageSanitizerOptions OverrideFromCL(CoverageSanitizerOptions Options) {
   // Sets CoverageType and IndirectCalls.
-  SanitizerCoverageOptions CLOpts = getOptions(ClCoverageLevel);
+  CoverageSanitizerOptions CLOpts = getOptions(ClCoverageLevel);
   Options.CoverageType = std::max(Options.CoverageType, CLOpts.CoverageType);
   Options.IndirectCalls |= CLOpts.IndirectCalls;
   Options.TraceCmp |= ClCMPTracing;
@@ -202,15 +202,15 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   return Options;
 }
 
-class ModuleSanitizerCoverage {
+class ModuleCoverageSanitizer {
 public:
   using DomTreeCallback = function_ref<const DominatorTree &(Function &F)>;
   using PostDomTreeCallback =
       function_ref<const PostDominatorTree &(Function &F)>;
 
-  ModuleSanitizerCoverage(Module &M, DomTreeCallback DTCallback,
+  ModuleCoverageSanitizer(Module &M, DomTreeCallback DTCallback,
                           PostDomTreeCallback PDTCallback,
-                          const SanitizerCoverageOptions &Options,
+                          const CoverageSanitizerOptions &Options,
                           const SpecialCaseList *Allowlist,
                           const SpecialCaseList *Blocklist)
       : M(M), DTCallback(DTCallback), PDTCallback(PDTCallback),
@@ -280,14 +280,14 @@ private:
   SmallVector<GlobalValue *, 20> GlobalsToAppendToUsed;
   SmallVector<GlobalValue *, 20> GlobalsToAppendToCompilerUsed;
 
-  SanitizerCoverageOptions Options;
+  CoverageSanitizerOptions Options;
 
   const SpecialCaseList *Allowlist;
   const SpecialCaseList *Blocklist;
 };
 } // namespace
 
-PreservedAnalyses SanitizerCoveragePass::run(Module &M,
+PreservedAnalyses CoverageSanitizerPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto DTCallback = [&FAM](Function &F) -> const DominatorTree & {
@@ -296,7 +296,7 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
   auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree & {
     return FAM.getResult<PostDominatorTreeAnalysis>(F);
   };
-  ModuleSanitizerCoverage ModuleSancov(M, DTCallback, PDTCallback,
+  ModuleCoverageSanitizer ModuleSancov(M, DTCallback, PDTCallback,
                                        OverrideFromCL(Options), Allowlist.get(),
                                        Blocklist.get());
   if (!ModuleSancov.instrumentModule())
@@ -311,7 +311,7 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
 }
 
 std::pair<Value *, Value *>
-ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
+ModuleCoverageSanitizer::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
   // Use ExternalWeak so that if all sections are discarded due to section
   // garbage collection, the linker will not report undefined symbol errors.
@@ -339,7 +339,7 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
   return std::make_pair(GEP, SecEnd);
 }
 
-Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
+Function *ModuleCoverageSanitizer::CreateInitCallsForSections(
     Module &M, const char *CtorName, const char *InitFunctionName, Type *Ty,
     const char *Section) {
   auto SecStartEnd = CreateSecStartEnd(M, Section, Ty);
@@ -370,8 +370,8 @@ Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
   return CtorFunc;
 }
 
-bool ModuleSanitizerCoverage::instrumentModule() {
-  if (Options.CoverageType == SanitizerCoverageOptions::SCK_None)
+bool ModuleCoverageSanitizer::instrumentModule() {
+  if (Options.CoverageType == CoverageSanitizerOptions::SCK_None)
     return false;
   if (Allowlist &&
       !Allowlist->inSection("coverage", "src", M.getSourceFileName()))
@@ -545,7 +545,7 @@ static bool isFullPostDominator(const BasicBlock *BB,
 static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
                                   const DominatorTree &DT,
                                   const PostDominatorTree &PDT,
-                                  const SanitizerCoverageOptions &Options) {
+                                  const CoverageSanitizerOptions &Options) {
   // Don't insert coverage for blocks containing nothing but unreachable: we
   // will never call __sanitizer_cov() for them, so counting them in
   // NumberOfInstrumentedBlocks() might complicate calculation of code coverage
@@ -562,7 +562,7 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
   if (Options.NoPrune || &F.getEntryBlock() == BB)
     return true;
 
-  if (Options.CoverageType == SanitizerCoverageOptions::SCK_Function &&
+  if (Options.CoverageType == CoverageSanitizerOptions::SCK_Function &&
       &F.getEntryBlock() != BB)
     return false;
 
@@ -592,7 +592,7 @@ static bool IsBackEdge(BasicBlock *From, BasicBlock *To,
 // Note that Cmp pruning is controlled by the same flag as the
 // BB pruning.
 static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
-                             const SanitizerCoverageOptions &Options) {
+                             const CoverageSanitizerOptions &Options) {
   if (!Options.NoPrune)
     if (CMP->hasOneUse())
       if (auto BR = dyn_cast<BranchInst>(CMP->user_back()))
@@ -602,7 +602,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
   return true;
 }
 
-void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
+void ModuleCoverageSanitizer::instrumentFunction(Function &F) {
   if (F.empty())
     return;
   if (F.getName().contains(".module_ctor"))
@@ -633,7 +633,7 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return;
-  if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge) {
+  if (Options.CoverageType >= CoverageSanitizerOptions::SCK_Edge) {
     SplitAllCriticalEdges(
         F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
   }
@@ -699,7 +699,7 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   InjectTraceForLoadsAndStores(F, Loads, Stores);
 }
 
-GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
+GlobalVariable *ModuleCoverageSanitizer::CreateFunctionLocalArrayInSection(
     size_t NumElements, Function &F, Type *Ty, const char *Section) {
   ArrayType *ArrayTy = ArrayType::get(Ty, NumElements);
   auto Array = new GlobalVariable(
@@ -731,7 +731,7 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
 }
 
 GlobalVariable *
-ModuleSanitizerCoverage::CreatePCArray(Function &F,
+ModuleCoverageSanitizer::CreatePCArray(Function &F,
                                        ArrayRef<BasicBlock *> AllBlocks) {
   size_t N = AllBlocks.size();
   assert(N);
@@ -757,7 +757,7 @@ ModuleSanitizerCoverage::CreatePCArray(Function &F,
   return PCArray;
 }
 
-void ModuleSanitizerCoverage::CreateFunctionLocalArrays(
+void ModuleCoverageSanitizer::CreateFunctionLocalArrays(
     Function &F, ArrayRef<BasicBlock *> AllBlocks) {
   if (Options.TracePCGuard)
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
@@ -774,7 +774,7 @@ void ModuleSanitizerCoverage::CreateFunctionLocalArrays(
     FunctionPCsArray = CreatePCArray(F, AllBlocks);
 }
 
-bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
+bool ModuleCoverageSanitizer::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks,
                                              bool IsLeafFunc) {
   if (AllBlocks.empty()) return false;
@@ -791,7 +791,7 @@ bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
 //     The cache is used to speed up recording the caller-callee pairs.
 // The address of the caller is passed implicitly via caller PC.
 // CacheSize is encoded in the name of the run-time function.
-void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
+void ModuleCoverageSanitizer::InjectCoverageForIndirectCalls(
     Function &F, ArrayRef<Instruction *> IndirCalls) {
   if (IndirCalls.empty())
     return;
@@ -811,7 +811,7 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
 // __sanitizer_cov_trace_switch(CondValue,
 //      {NumCases, ValueSizeInBits, Case0Value, Case1Value, Case2Value, ... })
 
-void ModuleSanitizerCoverage::InjectTraceForSwitch(
+void ModuleCoverageSanitizer::InjectTraceForSwitch(
     Function &, ArrayRef<Instruction *> SwitchTraceTargets) {
   for (auto *I : SwitchTraceTargets) {
     if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
@@ -848,7 +848,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
   }
 }
 
-void ModuleSanitizerCoverage::InjectTraceForDiv(
+void ModuleCoverageSanitizer::InjectTraceForDiv(
     Function &, ArrayRef<BinaryOperator *> DivTraceTargets) {
   for (auto *BO : DivTraceTargets) {
     InstrumentationIRBuilder IRB(BO);
@@ -866,7 +866,7 @@ void ModuleSanitizerCoverage::InjectTraceForDiv(
   }
 }
 
-void ModuleSanitizerCoverage::InjectTraceForGep(
+void ModuleCoverageSanitizer::InjectTraceForGep(
     Function &, ArrayRef<GetElementPtrInst *> GepTraceTargets) {
   for (auto *GEP : GepTraceTargets) {
     InstrumentationIRBuilder IRB(GEP);
@@ -877,7 +877,7 @@ void ModuleSanitizerCoverage::InjectTraceForGep(
   }
 }
 
-void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
+void ModuleCoverageSanitizer::InjectTraceForLoadsAndStores(
     Function &, ArrayRef<LoadInst *> Loads, ArrayRef<StoreInst *> Stores) {
   auto CallbackIdx = [&](Type *ElementTy) -> int {
     uint64_t TypeSize = DL->getTypeStoreSizeInBits(ElementTy);
@@ -906,7 +906,7 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
   }
 }
 
-void ModuleSanitizerCoverage::InjectTraceForCmp(
+void ModuleCoverageSanitizer::InjectTraceForCmp(
     Function &, ArrayRef<Instruction *> CmpTraceTargets) {
   for (auto *I : CmpTraceTargets) {
     if (ICmpInst *ICMP = dyn_cast<ICmpInst>(I)) {
@@ -941,7 +941,7 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
   }
 }
 
-void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
+void ModuleCoverageSanitizer::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
                                                     size_t Idx,
                                                     bool IsLeafFunc) {
   BasicBlock::iterator IP = BB.getFirstInsertionPt();
@@ -1015,7 +1015,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
 }
 
 std::string
-ModuleSanitizerCoverage::getSectionName(const std::string &Section) const {
+ModuleCoverageSanitizer::getSectionName(const std::string &Section) const {
   if (TargetTriple.isOSBinFormatCOFF()) {
     if (Section == SanCovCountersSectionName)
       return ".SCOV$CM";
@@ -1031,20 +1031,20 @@ ModuleSanitizerCoverage::getSectionName(const std::string &Section) const {
 }
 
 std::string
-ModuleSanitizerCoverage::getSectionStart(const std::string &Section) const {
+ModuleCoverageSanitizer::getSectionStart(const std::string &Section) const {
   if (TargetTriple.isOSBinFormatMachO())
     return "\1section$start$__DATA$__" + Section;
   return "__start___" + Section;
 }
 
 std::string
-ModuleSanitizerCoverage::getSectionEnd(const std::string &Section) const {
+ModuleCoverageSanitizer::getSectionEnd(const std::string &Section) const {
   if (TargetTriple.isOSBinFormatMachO())
     return "\1section$end$__DATA$__" + Section;
   return "__stop___" + Section;
 }
 
-void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
+void ModuleCoverageSanitizer::createFunctionControlFlow(Function &F) {
   SmallVector<Constant *, 32> CFs;
   IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
 

@@ -80,7 +80,7 @@
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
-#include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
+#include "llvm/Transforms/Instrumentation/CoverageSanitizer.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
@@ -231,11 +231,11 @@ public:
 };
 } // namespace
 
-static SanitizerCoverageOptions
+static CoverageSanitizerOptions
 getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
-  SanitizerCoverageOptions Opts;
+  CoverageSanitizerOptions Opts;
   Opts.CoverageType =
-      static_cast<SanitizerCoverageOptions::Type>(CGOpts.SanitizeCoverageType);
+      static_cast<CoverageSanitizerOptions::Type>(CGOpts.SanitizeCoverageType);
   Opts.IndirectCalls = CGOpts.SanitizeCoverageIndirectCalls;
   Opts.TraceBB = CGOpts.SanitizeCoverageTraceBB;
   Opts.TraceCmp = CGOpts.SanitizeCoverageTraceCmp;
@@ -662,7 +662,7 @@ static void addSanitizers(const Triple &TargetTriple,
                                 OptimizationLevel Level) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-      MPM.addPass(SanitizerCoveragePass(
+      MPM.addPass(CoverageSanitizerPass(
           SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
           CodeGenOpts.SanitizeCoverageIgnorelistFiles));
     }

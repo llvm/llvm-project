@@ -28,7 +28,7 @@ extern "C" {
 #endif
 // Arguments for __sanitizer_sandbox_on_notify() below.
 typedef struct {
-  // Enable sandbox support in sanitizer coverage.
+  // Enable sandbox support in coverage sanitizer.
   int coverage_sandboxed;
   // File descriptor to write coverage data to. If -1 is passed, a file will
   // be pre-opened by __sanitizer_sandbox_on_notify(). This field has no

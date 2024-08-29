@@ -41,9 +41,9 @@ source_set("sources") {
     "sanitizer_common.cpp",
     "sanitizer_common.h",
     "sanitizer_common_libcdep.cpp",
-    "sanitizer_coverage_fuchsia.cpp",
-    "sanitizer_coverage_libcdep_new.cpp",
-    "sanitizer_coverage_win_sections.cpp",
+    "coverage_sanitizer_fuchsia.cpp",
+    "coverage_sanitizer_libcdep_new.cpp",
+    "coverage_sanitizer_win_sections.cpp",
     "sanitizer_dbghelp.h",
     "sanitizer_deadlock_detector.h",
     "sanitizer_deadlock_detector1.cpp",
@@ -177,7 +177,7 @@ source_set("weak_interception") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [
-    "sanitizer_coverage_win_weak_interception.cpp",
+    "coverage_sanitizer_win_weak_interception.cpp",
     "sanitizer_win_weak_interception.cpp",
   ]
   defines = [ "SANITIZER_DYNAMIC" ]
@@ -187,8 +187,8 @@ source_set("dll_thunk") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [
-    "sanitizer_coverage_win_dll_thunk.cpp",
-    "sanitizer_coverage_win_sections.cpp",
+    "coverage_sanitizer_win_dll_thunk.cpp",
+    "coverage_sanitizer_win_sections.cpp",
     "sanitizer_win_dll_thunk.cpp",
   ]
   defines = [ "SANITIZER_DLL_THUNK" ]
@@ -198,8 +198,8 @@ source_set("dynamic_runtime_thunk") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [
-    "sanitizer_coverage_win_dynamic_runtime_thunk.cpp",
-    "sanitizer_coverage_win_sections.cpp",
+    "coverage_sanitizer_win_dynamic_runtime_thunk.cpp",
+    "coverage_sanitizer_win_sections.cpp",
     "sanitizer_win_dynamic_runtime_thunk.cpp",
   ]
   defines = [ "SANITIZER_DYNAMIC_RUNTIME_THUNK" ]

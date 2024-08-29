@@ -2140,7 +2140,7 @@ are listed below.
 .. option:: -f[no-]sanitize-coverage=[type,features,...]
 
    Enable simple code coverage in addition to certain sanitizers.
-   See :doc:`SanitizerCoverage` for more details.
+   See :doc:`CoverageSanitizer` for more details.
 
 .. option:: -f[no-]sanitize-address-outline-instrumentation
 

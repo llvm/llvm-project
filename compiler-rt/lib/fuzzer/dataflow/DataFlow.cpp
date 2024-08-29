@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 // An experimental data-flow tracer for fuzz targets.
-// It is based on DFSan and SanitizerCoverage.
+// It is based on DFSan and CoverageSanitizer.
 // https://clang.llvm.org/docs/DataFlowSanitizer.html
-// https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
+// https://clang.llvm.org/docs/CoverageSanitizer.html#tracing-data-flow
 //
 // It executes the fuzz target on the given input while monitoring the
 // data flow for every instrumented comparison instruction.

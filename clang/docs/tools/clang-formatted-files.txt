@@ -5560,7 +5560,7 @@ llvm/include/llvm/Transforms/Instrumentation/HWAddressSanitizer.h
 llvm/include/llvm/Transforms/Instrumentation/InstrOrderFile.h
 llvm/include/llvm/Transforms/Instrumentation/InstrProfiling.h
 llvm/include/llvm/Transforms/Instrumentation/MemProfiler.h
-llvm/include/llvm/Transforms/Instrumentation/SanitizerCoverage.h
+llvm/include/llvm/Transforms/Instrumentation/CoverageSanitizer.h
 llvm/include/llvm/Transforms/IPO/Annotation2Metadata.h
 llvm/include/llvm/Transforms/IPO/ArgumentPromotion.h
 llvm/include/llvm/Transforms/IPO/Attributor.h

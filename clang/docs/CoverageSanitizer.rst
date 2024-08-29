@@ -1,5 +1,5 @@
 =================
-SanitizerCoverage
+CoverageSanitizer
 =================
 
 .. contents::
@@ -8,7 +8,7 @@ SanitizerCoverage
 Introduction
 ============
 
-LLVM has a simple code coverage instrumentation built in (SanitizerCoverage).
+LLVM has a simple code coverage instrumentation built in (CoverageSanitizer).
 It inserts calls to user-defined functions on function-, basic-block-, and edge- levels.
 Default implementations of those callbacks are provided and implement
 simple coverage reporting and visualization,
@@ -208,7 +208,7 @@ This mechanism is used for fuzzing the Linux kernel
 
 Instrumentation points
 ======================
-Sanitizer Coverage offers different levels of instrumentation.
+Coverage Sanitizer offers different levels of instrumentation.
 
 * ``edge`` (default): edges are instrumented (see below).
 * ``bb``: basic blocks are instrumented.
@@ -397,13 +397,13 @@ together with ``__has_feature(coverage_sanitizer)``.
 Disabling instrumentation without source modification
 =====================================================
 
-It is sometimes useful to tell SanitizerCoverage to instrument only a subset of the
+It is sometimes useful to tell CoverageSanitizer to instrument only a subset of the
 functions in your target without modifying source files.
 With ``-fsanitize-coverage-allowlist=allowlist.txt``
 and ``-fsanitize-coverage-ignorelist=blocklist.txt``,
 you can specify such a subset through the combination of an allowlist and a blocklist.
 
-SanitizerCoverage will only instrument functions that satisfy two conditions.
+CoverageSanitizer will only instrument functions that satisfy two conditions.
 First, the function should belong to a source file with a path that is both allowlisted
 and not blocklisted.
 Second, the function should have a mangled name that is both allowlisted and not blocklisted.
@@ -471,16 +471,16 @@ Example:
     % clang++ -g cov.cc -fsanitize=address -fsanitize-coverage=trace-pc-guard
     % ASAN_OPTIONS=coverage=1 ./a.out; wc -c *.sancov
     main
-    SanitizerCoverage: ./a.out.7312.sancov 2 PCs written
+    CoverageSanitizer: ./a.out.7312.sancov 2 PCs written
     24 a.out.7312.sancov
     % ASAN_OPTIONS=coverage=1 ./a.out foo ; wc -c *.sancov
     foo
     main
-    SanitizerCoverage: ./a.out.7316.sancov 3 PCs written
+    CoverageSanitizer: ./a.out.7316.sancov 3 PCs written
     24 a.out.7312.sancov
     32 a.out.7316.sancov
 
-Every time you run an executable instrumented with SanitizerCoverage
+Every time you run an executable instrumented with CoverageSanitizer
 one ``*.sancov`` file is created during the process shutdown.
 If the executable is dynamically linked against instrumented DSOs,
 one ``*.sancov`` file will be also created for every DSO.

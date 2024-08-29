@@ -32,7 +32,7 @@
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                             \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc       \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface_posix.inc \
-// RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc     \
+// RUN:  %p/../../../../lib/sanitizer_common/coverage_sanitizer_interface.inc     \
 // RUN:  | grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                                \
 // RUN:  | grep -v "__sanitizer_weak_hook"                                        \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports

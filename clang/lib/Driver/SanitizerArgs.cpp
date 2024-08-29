@@ -894,12 +894,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     parseSpecialCaseListArg(
         D, Args, CoverageAllowlistFiles,
         options::OPT_fsanitize_coverage_allowlist, OptSpecifier(),
-        clang::diag::err_drv_malformed_sanitizer_coverage_allowlist,
+        clang::diag::err_drv_malformed_coverage_sanitizer_allowlist,
         DiagnoseErrors);
     parseSpecialCaseListArg(
         D, Args, CoverageIgnorelistFiles,
         options::OPT_fsanitize_coverage_ignorelist, OptSpecifier(),
-        clang::diag::err_drv_malformed_sanitizer_coverage_ignorelist,
+        clang::diag::err_drv_malformed_coverage_sanitizer_ignorelist,
         DiagnoseErrors);
   }
 

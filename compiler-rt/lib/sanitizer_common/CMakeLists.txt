@@ -69,9 +69,9 @@ set(SANITIZER_LIBCDEP_SOURCES
 
 set(SANITIZER_COVERAGE_SOURCES
   sancov_flags.cpp
-  sanitizer_coverage_fuchsia.cpp
-  sanitizer_coverage_libcdep_new.cpp
-  sanitizer_coverage_win_sections.cpp
+  coverage_sanitizer_fuchsia.cpp
+  coverage_sanitizer_libcdep_new.cpp
+  coverage_sanitizer_win_sections.cpp
   )
 
 set(SANITIZER_SYMBOLIZER_SOURCES
@@ -134,7 +134,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_common_interface.inc
   sanitizer_common_interface_posix.inc
   sanitizer_common_syscalls.inc
-  sanitizer_coverage_interface.inc
+  coverage_sanitizer_interface.inc
   sanitizer_dbghelp.h
   sanitizer_deadlock_detector.h
   sanitizer_deadlock_detector_interface.h
@@ -312,7 +312,7 @@ if(WIN32)
     ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
     SOURCES
-      sanitizer_coverage_win_weak_interception.cpp
+      coverage_sanitizer_win_weak_interception.cpp
     CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DYNAMIC
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
 
@@ -327,8 +327,8 @@ if(WIN32)
     ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
     SOURCES
-      sanitizer_coverage_win_dll_thunk.cpp
-      sanitizer_coverage_win_sections.cpp
+      coverage_sanitizer_win_dll_thunk.cpp
+      coverage_sanitizer_win_sections.cpp
     CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DLL_THUNK
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
 
@@ -349,8 +349,8 @@ if(WIN32)
     ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
     SOURCES
-      sanitizer_coverage_win_dynamic_runtime_thunk.cpp
-      sanitizer_coverage_win_sections.cpp
+      coverage_sanitizer_win_dynamic_runtime_thunk.cpp
+      coverage_sanitizer_win_sections.cpp
     CFLAGS ${SANITIZER_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
 endif()

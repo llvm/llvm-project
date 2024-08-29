@@ -1,11 +1,11 @@
-//===-- sanitizer_coverage_libcdep_new.cpp --------------------------------===//
+//===-- coverage_sanitizer_libcdep_new.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Sanitizer Coverage Controller for Trace PC Guard.
+// Coverage Sanitizer Controller for Trace PC Guard.
 
 #include "sanitizer_platform.h"
 
@@ -33,7 +33,7 @@ static fd_t OpenFile(const char* path) {
   error_t err;
   fd_t fd = OpenFile(path, WrOnly, &err);
   if (fd == kInvalidFd)
-    Report("SanitizerCoverage: failed to open %s for writing (reason: %d)\n",
+    Report("CoverageSanitizer: failed to open %s for writing (reason: %d)\n",
            path, err);
   return fd;
 }
@@ -53,7 +53,7 @@ static void WriteModuleCoverage(char* file_path, const char* module_name,
   WriteToFile(fd, &Magic, sizeof(Magic));
   WriteToFile(fd, pcs, len * sizeof(*pcs));
   CloseFile(fd);
-  Printf("SanitizerCoverage: %s: %zd PCs written\n", file_path, len);
+  Printf("CoverageSanitizer: %s: %zd PCs written\n", file_path, len);
 }
 
 static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {

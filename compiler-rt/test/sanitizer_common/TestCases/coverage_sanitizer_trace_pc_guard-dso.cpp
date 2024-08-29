@@ -62,11 +62,11 @@ int baz() {
 // CHECK-NEXT: foo
 // CHECK-NEXT: bar
 // CHECK-NEXT: baz
-// CHECK-DAG: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}.sancov: 2 PCs written
-// CHECK-DAG: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}_2.so.{{.*}}.sancov: 1 PCs written
-// CHECK-DAG: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}_1.so.{{.*}}.sancov: 1 PCs written
+// CHECK-DAG: CoverageSanitizer: ./coverage_sanitizer_trace_pc_guard-dso.{{.*}}.sancov: 2 PCs written
+// CHECK-DAG: CoverageSanitizer: ./coverage_sanitizer_trace_pc_guard-dso.{{.*}}_2.so.{{.*}}.sancov: 1 PCs written
+// CHECK-DAG: CoverageSanitizer: ./coverage_sanitizer_trace_pc_guard-dso.{{.*}}_1.so.{{.*}}.sancov: 1 PCs written
 //
 // CHECK-SANCOV: Ignoring {{.*}}_1.so and its coverage because __sanitizer_cov* functions were not found.
 // CHECK-SANCOV: Ignoring {{.*}}_2.so and its coverage because __sanitizer_cov* functions were not found.
-// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard-dso.cpp:[[@LINE-42]] foo
-// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard-dso.cpp:[[@LINE-38]] main
+// CHECK-SANCOV-NEXT: coverage_sanitizer_trace_pc_guard-dso.cpp:[[@LINE-42]] foo
+// CHECK-SANCOV-NEXT: coverage_sanitizer_trace_pc_guard-dso.cpp:[[@LINE-38]] main

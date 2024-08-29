@@ -9,7 +9,7 @@ LLDB has fuzzers that provide automated `fuzz testing <https://en.wikipedia.org/
 Building the fuzzers
 --------------------
 
-Building the LLDB fuzzers requires a build configuration that has the address sanitizer and sanitizer coverage enabled. In addition to your regular CMake arguments, you will need these arguments to build the fuzzers:
+Building the LLDB fuzzers requires a build configuration that has the address sanitizer and coverage sanitizer enabled. In addition to your regular CMake arguments, you will need these arguments to build the fuzzers:
 
 ::
 
@@ -17,7 +17,7 @@ Building the LLDB fuzzers requires a build configuration that has the address sa
    -DLLVM_USE_SANITIZE_COVERAGE=On \
    -DCLANG_ENABLE_PROTO_FUZZER=ON
 
-More information on libFuzzer's sanitizer coverage is available here: `<https://llvm.org/docs/LibFuzzer.html#fuzzer-usage>`_
+More information on libFuzzer's coverage sanitizer is available here: `<https://llvm.org/docs/LibFuzzer.html#fuzzer-usage>`_
 
 If you want to debug LLDB itself when you find a bug using the fuzzers, use the CMake option ``-DCMAKE_BUILD_TYPE='RelWithDebInfo'``
 

@@ -1,4 +1,4 @@
-// Test that SanitizerCoverage works under the new pass manager.
+// Test that CoverageSanitizer works under the new pass manager.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=fuzzer %s -S -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-O0
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=fuzzer %s -O2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-O2
 

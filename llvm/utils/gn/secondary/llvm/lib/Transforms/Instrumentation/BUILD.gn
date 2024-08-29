@@ -34,7 +34,7 @@ static_library("Instrumentation") {
     "PoisonChecking.cpp",
     "RealtimeSanitizer.cpp",
     "SanitizerBinaryMetadata.cpp",
-    "SanitizerCoverage.cpp",
+    "CoverageSanitizer.cpp",
     "ThreadSanitizer.cpp",
     "ValueProfileCollector.cpp",
   ]

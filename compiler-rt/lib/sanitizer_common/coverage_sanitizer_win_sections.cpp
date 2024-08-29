@@ -1,4 +1,4 @@
-//===-- sanitizer_coverage_win_sections.cpp -------------------------------===//
+//===-- coverage_sanitizer_win_sections.cpp -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines delimiters for Sanitizer Coverage's section. It contains
+// This file defines delimiters for Coverage Sanitizer's section. It contains
 // Windows specific tricks to coax the linker into giving us the start and stop
 // addresses of a section, as ELF linkers can do, to get the size of certain
 // arrays. According to https://msdn.microsoft.com/en-us/library/7977wcck.aspx

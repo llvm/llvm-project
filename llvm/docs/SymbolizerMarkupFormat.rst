@@ -339,7 +339,7 @@ the external action can then be presented to the user.
   processes.
 
   An example of a type identifier is ``sancov``, for dumps from LLVM
-  `SanitizerCoverage <https://clang.llvm.org/docs/SanitizerCoverage.html>`_.
+  `CoverageSanitizer <https://clang.llvm.org/docs/CoverageSanitizer.html>`_.
 
   Example::
 
