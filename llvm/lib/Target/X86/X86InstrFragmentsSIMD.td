@@ -212,11 +212,6 @@ def X86CmpMaskCC :
                        SDTCisVec<1>, SDTCisSameAs<2, 1>,
                        SDTCisSameNumEltsAs<0, 1>, SDTCisVT<3, i8>]>;
 
-def X86CmpMaskCC_Int :
-      SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCVecEltisVT<0, i1>,
-                       SDTCisVec<1>, SDTCisSameAs<2, 1>,
-                       SDTCisSameNumEltsAs<0, 1>, SDTCisVT<3, i32>]>;
-
 def X86MaskCmpMaskCC :
       SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCVecEltisVT<0, i1>,
                        SDTCisVec<1>, SDTCisSameAs<2, 1>,

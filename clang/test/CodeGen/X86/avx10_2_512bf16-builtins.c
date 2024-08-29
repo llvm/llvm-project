@@ -580,18 +580,21 @@ __mmask32 test_mm512_cmp_pbh_mask_true_us(__m512bh a, __m512bh b) {
 __mmask32 test_mm512_mask_cmp_pbh_mask_eq_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_pbh_mask_eq_oq
   // CHECK: fcmp oeq <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_EQ_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_lt_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_lt_os
   // CHECK: fcmp olt <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_LT_OS);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_le_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_le_os
   // CHECK: fcmp ole <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_LE_OS);
 }
 
@@ -604,168 +607,196 @@ __mmask32 test_mm512_mask_cmp_pbh_mask_unord_q(__mmask32 m, __m512bh a, __m512bh
 __mmask32 test_mm512_mask_cmp_pbh_mask_neq_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_neq_uq
   // CHECK: fcmp une <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NEQ_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_nlt_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_nlt_us
   // CHECK: fcmp uge <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NLT_US);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_nle_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_nle_us
   // CHECK: fcmp ugt <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NLE_US);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_ord_q(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_ord_q
   // CHECK: fcmp ord <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_ORD_Q);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_eq_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_eq_uq
   // CHECK: fcmp ueq <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_EQ_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_nge_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_nge_us
   // CHECK: fcmp ult <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NGE_US);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_ngt_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_ngt_us
   // CHECK: fcmp ule <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NGT_US);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_false_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_false_oq
   // CHECK: fcmp false <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_FALSE_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_neq_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_neq_oq
   // CHECK: fcmp one <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NEQ_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_ge_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_ge_os
   // CHECK: fcmp oge <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_GE_OS);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_gt_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_gt_os
   // CHECK: fcmp ogt <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_GT_OS);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_true_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_true_uq
   // CHECK: fcmp true <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_TRUE_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_eq_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_eq_os
   // CHECK: fcmp oeq <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_EQ_OS);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_lt_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_lt_oq
   // CHECK: fcmp olt <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_LT_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_le_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_le_oq
   // CHECK: fcmp ole <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_LE_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_unord_s(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_unord_s
   // CHECK: fcmp uno <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_UNORD_S);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_neq_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_neq_us
   // CHECK: fcmp une <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NEQ_US);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_nlt_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_nlt_uq
   // CHECK: fcmp uge <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NLT_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_nle_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_nle_uq
   // CHECK: fcmp ugt <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NLE_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_ord_s(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_ord_s
   // CHECK: fcmp ord <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_ORD_S);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_eq_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_eq_us
   // CHECK: fcmp ueq <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_EQ_US);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_nge_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_nge_uq
   // CHECK: fcmp ult <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NGE_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_ngt_uq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_ngt_uq
   // CHECK: fcmp ule <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NGT_UQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_false_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_false_os
   // CHECK: fcmp false <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_FALSE_OS);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_neq_os(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_neq_os
   // CHECK: fcmp one <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_NEQ_OS);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_ge_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_ge_oq
   // CHECK: fcmp oge <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_GE_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_gt_oq(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_gt_oq
   // CHECK: fcmp ogt <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_GT_OQ);
 }
 
 __mmask32 test_mm512_mask_cmp_pbh_mask_true_us(__mmask32 m, __m512bh a, __m512bh b) {
   // CHECK-LABEL: test_mm512_mask_cmp_pbh_mask_true_us
   // CHECK: fcmp true <32 x bfloat> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_cmp_pbh_mask(m, a, b, _CMP_TRUE_US);
 }
 
