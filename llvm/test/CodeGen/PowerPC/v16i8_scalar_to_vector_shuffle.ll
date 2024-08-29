@@ -2046,10 +2046,10 @@ define <16 x i8> @test_v4i32_v2i64(ptr nocapture noundef readonly %a, ptr nocapt
 ; CHECK-AIX-32-P8-LABEL: test_v4i32_v2i64:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    li r5, 4
-; CHECK-AIX-32-P8-NEXT:    lfiwax f1, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f1, 0, r4
 ; CHECK-AIX-32-P8-NEXT:    lxsiwzx v3, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    lwz r3, L..C9(r2) # %const.0
-; CHECK-AIX-32-P8-NEXT:    lfiwax f0, r4, r5
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, r4, r5
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs1, vs1, 1
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
@@ -2061,11 +2061,9 @@ define <16 x i8> @test_v4i32_v2i64(ptr nocapture noundef readonly %a, ptr nocapt
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    li r3, 4
-; CHECK-AIX-32-P9-NEXT:    lfiwax f2, 0, r4
-; CHECK-AIX-32-P9-NEXT:    xxspltw vs2, vs2, 1
-; CHECK-AIX-32-P9-NEXT:    lfiwax f1, r4, r3
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs2, 0, r4
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, r4, r3
 ; CHECK-AIX-32-P9-NEXT:    lwz r3, L..C5(r2) # %const.0
-; CHECK-AIX-32-P9-NEXT:    xxspltw vs1, vs1, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw v2, vs2, vs1
 ; CHECK-AIX-32-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    xxperm v2, vs0, vs1

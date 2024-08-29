@@ -1686,10 +1686,10 @@ define <2 x i64> @test_v2i64_v2i64(ptr nocapture noundef readonly %a, ptr nocapt
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_v2i64:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    li r5, 4
-; CHECK-AIX-32-P8-NEXT:    lfiwax f1, 0, r3
-; CHECK-AIX-32-P8-NEXT:    lfiwax f3, 0, r4
-; CHECK-AIX-32-P8-NEXT:    lfiwax f0, r3, r5
-; CHECK-AIX-32-P8-NEXT:    lfiwax f2, r4, r5
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f3, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, r3, r5
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f2, r4, r5
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs1, vs1, 1
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs3, vs3, 1
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
@@ -1703,15 +1703,11 @@ define <2 x i64> @test_v2i64_v2i64(ptr nocapture noundef readonly %a, ptr nocapt
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v2i64:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    li r5, 4
-; CHECK-AIX-32-P9-NEXT:    lfiwax f1, 0, r3
-; CHECK-AIX-32-P9-NEXT:    xxspltw vs1, vs1, 1
-; CHECK-AIX-32-P9-NEXT:    lfiwax f0, r3, r5
-; CHECK-AIX-32-P9-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs0, r3, r5
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw v2, vs1, vs0
-; CHECK-AIX-32-P9-NEXT:    lfiwax f0, r4, r5
-; CHECK-AIX-32-P9-NEXT:    lfiwax f1, 0, r4
-; CHECK-AIX-32-P9-NEXT:    xxspltw vs0, vs0, 1
-; CHECK-AIX-32-P9-NEXT:    xxspltw vs1, vs1, 1
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs0, r4, r5
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r4
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v3, v2, vs0
 ; CHECK-AIX-32-P9-NEXT:    vaddudm v2, v3, v2

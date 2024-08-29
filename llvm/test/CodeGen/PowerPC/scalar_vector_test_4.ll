@@ -73,7 +73,7 @@ define <4 x i32> @s2v_test1(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ;
 ; P8-AIX-32-LABEL: s2v_test1:
 ; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lfiwax f0, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX-32-NEXT:    lwz r3, L..C0(r2) # %const.0
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v3, vs0, 1
@@ -141,7 +141,7 @@ define <4 x i32> @s2v_test2(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-32-LABEL: s2v_test2:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    addi r3, r3, 4
-; P8-AIX-32-NEXT:    lfiwax f0, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX-32-NEXT:    lwz r3, L..C1(r2) # %const.0
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v3, vs0, 1
@@ -221,7 +221,7 @@ define <4 x i32> @s2v_test3(ptr nocapture readonly %int32, <4 x i32> %vec, i32 s
 ; P8-AIX-32-LABEL: s2v_test3:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    slwi r4, r4, 2
-; P8-AIX-32-NEXT:    lfiwax f0, r3, r4
+; P8-AIX-32-NEXT:    lfiwzx f0, r3, r4
 ; P8-AIX-32-NEXT:    lwz r3, L..C2(r2) # %const.0
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v3, vs0, 1
@@ -291,7 +291,7 @@ define <4 x i32> @s2v_test4(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-32-LABEL: s2v_test4:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    addi r3, r3, 4
-; P8-AIX-32-NEXT:    lfiwax f0, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX-32-NEXT:    lwz r3, L..C3(r2) # %const.0
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v3, vs0, 1
@@ -356,7 +356,7 @@ define <4 x i32> @s2v_test5(<4 x i32> %vec, ptr nocapture readonly %ptr1)  {
 ;
 ; P8-AIX-32-LABEL: s2v_test5:
 ; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lfiwax f0, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX-32-NEXT:    lwz r3, L..C4(r2) # %const.0
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v3, vs0, 1

@@ -537,9 +537,9 @@ define dso_local <8 x i16> @testmrglb3(ptr nocapture readonly %a) local_unnamed_
 ; P8-AIX-32-LABEL: testmrglb3:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    li r4, 4
-; P8-AIX-32-NEXT:    lfiwax f1, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f1, 0, r3
 ; P8-AIX-32-NEXT:    xxlxor v3, v3, v3
-; P8-AIX-32-NEXT:    lfiwax f0, r3, r4
+; P8-AIX-32-NEXT:    lfiwzx f0, r3, r4
 ; P8-AIX-32-NEXT:    xxspltw vs1, vs1, 1
 ; P8-AIX-32-NEXT:    xxspltw vs0, vs0, 1
 ; P8-AIX-32-NEXT:    xxmrghw v2, vs1, vs0
@@ -853,7 +853,7 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(ptr nocapture rea
 ; P8-AIX-32-NEXT:    slwi r4, r4, 2
 ; P8-AIX-32-NEXT:    xxlxor v3, v3, v3
 ; P8-AIX-32-NEXT:    stw r5, -16(r1)
-; P8-AIX-32-NEXT:    lfiwax f0, r3, r4
+; P8-AIX-32-NEXT:    lfiwzx f0, r3, r4
 ; P8-AIX-32-NEXT:    addi r3, r1, -16
 ; P8-AIX-32-NEXT:    lxvw4x vs1, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw vs0, vs0, 1
@@ -1022,8 +1022,8 @@ define dso_local <2 x i64> @testSplat8(ptr nocapture readonly %ptr) local_unname
 ; P8-AIX-32-LABEL: testSplat8:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    li r4, 4
-; P8-AIX-32-NEXT:    lfiwax f1, 0, r3
-; P8-AIX-32-NEXT:    lfiwax f0, r3, r4
+; P8-AIX-32-NEXT:    lfiwzx f1, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, r3, r4
 ; P8-AIX-32-NEXT:    xxspltw vs1, vs1, 1
 ; P8-AIX-32-NEXT:    xxspltw vs0, vs0, 1
 ; P8-AIX-32-NEXT:    xxmrghw vs0, vs1, vs0
@@ -1074,9 +1074,9 @@ define <2 x i64> @testSplati64_0(ptr nocapture readonly %ptr) #0 {
 ; P8-AIX-32-LABEL: testSplati64_0:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    li r4, 4
-; P8-AIX-32-NEXT:    lfiwax f0, r3, r4
+; P8-AIX-32-NEXT:    lfiwzx f0, r3, r4
 ; P8-AIX-32-NEXT:    xxspltw v2, vs0, 1
-; P8-AIX-32-NEXT:    lfiwax f0, 0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX-32-NEXT:    lwz r3, L..C3(r2) # %const.0
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v3, vs0, 1
