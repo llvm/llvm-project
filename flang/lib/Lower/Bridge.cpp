@@ -4262,7 +4262,7 @@ private:
         if (!declOp.getShape())
           return val;
         if (mlir::isa<fir::ReferenceType>(declOp.getMemref().getType()))
-          return declOp.getMemref();
+          return declOp.getResults()[1];
       }
       return val;
     };

@@ -1846,8 +1846,8 @@ def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatch
                                                     [NonNull<RetIndex>, NonNull<ArgIndex<0>>,
                                                      IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-def int_experimental_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                        [], [IntrNoMem]>;
+def int_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                            [], [IntrNoMem]>;
 
 //===---------------- Vector Predication Intrinsics --------------===//
 // Memory Intrinsics

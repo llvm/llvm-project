@@ -491,12 +491,14 @@ GetThreadContext_x86_64(RegisterContext *reg_ctx) {
   thread_context.r14 = read_register_u64(reg_ctx, "r14");
   thread_context.r15 = read_register_u64(reg_ctx, "r15");
   thread_context.rip = read_register_u64(reg_ctx, "rip");
-  thread_context.eflags = read_register_u32(reg_ctx, "rflags");
-  thread_context.cs = read_register_u16(reg_ctx, "cs");
-  thread_context.fs = read_register_u16(reg_ctx, "fs");
-  thread_context.gs = read_register_u16(reg_ctx, "gs");
-  thread_context.ss = read_register_u16(reg_ctx, "ss");
-  thread_context.ds = read_register_u16(reg_ctx, "ds");
+  // To make our code agnostic to whatever type the register value identifies
+  // itself as, we read as a u64 and truncate to u32/u16 ourselves.
+  thread_context.eflags = read_register_u64(reg_ctx, "rflags");
+  thread_context.cs = read_register_u64(reg_ctx, "cs");
+  thread_context.fs = read_register_u64(reg_ctx, "fs");
+  thread_context.gs = read_register_u64(reg_ctx, "gs");
+  thread_context.ss = read_register_u64(reg_ctx, "ss");
+  thread_context.ds = read_register_u64(reg_ctx, "ds");
   return thread_context;
 }
 

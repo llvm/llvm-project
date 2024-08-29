@@ -143,10 +143,34 @@ public:
     // order.
     SmallVector<StringRef, 0> getSourceModules() const;
 
+    std::optional<GlobalValueSummary::ImportKind>
+    getImportType(const FunctionsToImportTy &GUIDToImportType,
+                  GlobalValue::GUID GUID) const;
+
     const ImportMapTyImpl &getImportMap() const { return ImportMap; }
 
   private:
     ImportMapTyImpl ImportMap;
+  };
+
+  // A map from destination modules to lists of imports.
+  class ImportListsTy {
+  public:
+    ImportListsTy() = default;
+    ImportListsTy(size_t Size) : ListsImpl(Size) {}
+
+    ImportMapTy &operator[](StringRef DestMod) {
+      return ListsImpl.try_emplace(DestMod).first->second;
+    }
+
+    size_t size() const { return ListsImpl.size(); }
+
+    using const_iterator = DenseMap<StringRef, ImportMapTy>::const_iterator;
+    const_iterator begin() const { return ListsImpl.begin(); }
+    const_iterator end() const { return ListsImpl.end(); }
+
+  private:
+    DenseMap<StringRef, ImportMapTy> ListsImpl;
   };
 
   /// The set contains an entry for every global value that the module exports.
@@ -211,7 +235,7 @@ void ComputeCrossModuleImport(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists);
 
 /// PrevailingType enum used as a return type of callback passed

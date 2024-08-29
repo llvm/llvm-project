@@ -579,6 +579,13 @@ namespace CastedDelete {
                                  // expected-note {{in call to}}
 }
 
+constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
+  struct X { constexpr void f() {} };
+  X *p = new X;
+  delete p;
+  p->f(); // both-note {{member call on heap allocated object that has been deleted}}
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

@@ -919,7 +919,7 @@ mlir::linalg::detail::getMatchConvolutionMessage(MatchConvolutionResult res) {
   case MatchConvolutionResult::NonOutputDimNotReduction:
     return "expected all iterators not used to access outputs to be reduction";
   case MatchConvolutionResult::EmptyConvolvedDims:
-    return "FIXME";
+    return "expected convolved dim to be non-empty";
   case MatchConvolutionResult::Success:
     return "";
   }

@@ -6957,8 +6957,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Result;
     Result = DAG.getNode(
         ISD::FPTRUNC_ROUND, sdl, VT, getValue(I.getArgOperand(0)),
-        DAG.getTargetConstant((int)*RoundMode, sdl,
-                              TLI.getPointerTy(DAG.getDataLayout())));
+        DAG.getTargetConstant((int)*RoundMode, sdl, MVT::i32));
     setValue(&I, Result);
 
     return;
@@ -7032,7 +7031,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // If ISD::IS_FPCLASS should be expanded, do it right now, because the
     // expansion can use illegal types. Making expansion early allows
     // legalizing these types prior to selection.
-    if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT)) {
+    if (!TLI.isOperationLegal(ISD::IS_FPCLASS, ArgVT) &&
+        !TLI.isOperationCustom(ISD::IS_FPCLASS, ArgVT)) {
       SDValue Result = TLI.expandIS_FPCLASS(DestVT, Op, Test, Flags, sdl, DAG);
       setValue(&I, Result);
       return;
@@ -7781,7 +7781,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_deoptimize:
     LowerDeoptimizeCall(&I);
     return;
-  case Intrinsic::experimental_stepvector:
+  case Intrinsic::stepvector:
     visitStepVector(I);
     return;
   case Intrinsic::vector_reduce_fadd:

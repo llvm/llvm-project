@@ -59,6 +59,10 @@
 // CHECK-SVE2: --target=aarch64-unknown-none-elf
 // CHECK-SVE2: -march=armv{{.*}}-a{{.*}}+simd{{.*}}+sve{{.*}}+sve2{{.*}}
 
+// RUN: %clang -print-multi-flags-experimental --target=arm-none-eabi -mbranch-protection=standard    | FileCheck --check-prefix=CHECK-BRANCH-PROTECTION %s
+// RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -mbranch-protection=standard | FileCheck --check-prefix=CHECK-BRANCH-PROTECTION %s
+// CHECK-BRANCH-PROTECTION: -mbranch-protection=standard
+
 // RUN: %clang -print-multi-flags-experimental --target=riscv32-none-elf -march=rv32g | FileCheck --check-prefix=CHECK-RV32 %s
 // CHECK-RV32: --target=riscv32-unknown-none-elf
 // CHECK-RV32: -mabi=ilp32d

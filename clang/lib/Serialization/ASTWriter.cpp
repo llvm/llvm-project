@@ -3963,6 +3963,9 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
 }
 
 void ASTWriter::handleVTable(CXXRecordDecl *RD) {
+  if (!RD->isInNamedModule())
+    return;
+
   PendingEmittingVTables.push_back(RD);
 }
 

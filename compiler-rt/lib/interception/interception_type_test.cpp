@@ -33,14 +33,14 @@ COMPILER_CHECK((__sanitizer::is_same<::SSIZE_T, ::ssize_t>::value));
 COMPILER_CHECK(sizeof(::INTMAX_T) == sizeof(intmax_t));
 COMPILER_CHECK(sizeof(::UINTMAX_T) == sizeof(uintmax_t));
 
-#  if SANITIZER_GLIBC || SANITIZER_ANDROID
+#if SANITIZER_GLIBC || SANITIZER_ANDROID
 COMPILER_CHECK(sizeof(::OFF64_T) == sizeof(off64_t));
-#  endif
+#endif
 
 // The following are the cases when pread (and friends) is used instead of
 // pread64. In those cases we need OFF_T to match off_t. We don't care about the
 // rest (they depend on _FILE_OFFSET_BITS setting when building an application).
-# if SANITIZER_ANDROID || !defined _FILE_OFFSET_BITS || \
-  _FILE_OFFSET_BITS != 64
+#if !SANITIZER_WINDOWS && (SANITIZER_ANDROID || !defined _FILE_OFFSET_BITS || \
+                           _FILE_OFFSET_BITS != 64)
 COMPILER_CHECK(sizeof(::OFF_T) == sizeof(off_t));
-# endif
+#endif
