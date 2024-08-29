@@ -7,19 +7,19 @@
 ; Function Attrs: noinline nounwind optnone
 define noundef float @sin_float(float noundef %a) #0 {
 entry:
-  %a.addr = alloca float, align 4
-  store float %a, ptr %a.addr, align 4
-  %0 = load float, ptr %a.addr, align 4
-  %1 = call float @llvm.sin.f32(float %0)
+  %1 = call float @llvm.sin.f32(float %a)
   ret float %1
 }
 
 ; Function Attrs: noinline nounwind optnone
 define noundef half @sin_half(half noundef %a) #0 {
 entry:
-  %a.addr = alloca half, align 2
-  store half %a, ptr %a.addr, align 2
-  %0 = load half, ptr %a.addr, align 2
-  %1 = call half @llvm.sin.f16(half %0)
+  %1 = call half @llvm.sin.f16(half %a)
   ret half %1
+}
+
+define noundef <4 x float> @sin_float4(<4 x float> noundef %a) #0 {
+entry:
+  %2 = call <4 x float> @llvm.sin.v4f32(<4 x float> %a) 
+  ret <4 x float> %2
 }

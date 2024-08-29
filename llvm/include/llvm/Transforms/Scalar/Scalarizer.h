@@ -19,6 +19,7 @@
 #define LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 #include <optional>
 
 namespace llvm {
@@ -50,6 +51,19 @@ public:
   void setScalarizeLoadStore(bool Value) { Options.ScalarizeLoadStore = Value; }
   void setScalarizeMinBits(unsigned Value) { Options.ScalarizeMinBits = Value; }
 };
+
+/// Create a legacy pass manager instance of the Scalarizer pass
+FunctionPass *createScalarizerPass();
+
+class ScalarizerLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  ScalarizerPassOptions Options;
+  ScalarizerLegacyPass();
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage& AU) const override;
+};
+
 }
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */
