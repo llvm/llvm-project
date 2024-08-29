@@ -22,10 +22,20 @@ struct hash<S> {
 };
 
 template <>
-struct hash<S const> : hash<S> {};
+struct hash<S const> {
+  using argument_type = S;
+  using result_type   = size_t;
+
+  size_t operator()(S) const;
+};
 
 template <>
-struct hash<S volatile> : hash<S> {};
+struct hash<S volatile> {
+  using argument_type = S;
+  using result_type   = size_t;
+
+  size_t operator()(S const volatile&) const;
+};
 } // namespace std
 
 std::unordered_map<S const, int> K1;
@@ -63,4 +73,3 @@ std::unordered_map<int, int[]> M9; // TODO(cjdb): turn this into a compile-time 
 std::unordered_map<int[2], int> K10;
 std::unordered_map<int, int[2]> M10; // TODO(cjdb): turn this into a compile-time error
 // expected-error@*:*{{'std::unordered_map' cannot hold C arrays}}
-// expected-error@*:*{{the specified hash does not meet the Hash requirements}}
