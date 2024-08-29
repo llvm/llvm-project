@@ -1126,16 +1126,18 @@ multiclass avx10_fp_fpclass_bf16<string OpcodeStr, bits<8> opcVec,
                                   X86SchedWriteWidths sched> {
   let Predicates = [HasAVX10_2_512] in
     defm Z : avx512_vector_fpclass<opcVec, OpcodeStr, sched.ZMM,
-                                      avx512vl_bf16_info.info512, "z">, EVEX_V512;
+                                   avx512vl_bf16_info.info512, "z",
+                                   []<Register>>, EVEX_V512;
   let Predicates = [HasAVX10_2] in {
     defm Z128 : avx512_vector_fpclass<opcVec, OpcodeStr, sched.XMM,
-                                      avx512vl_bf16_info.info128, "x">, EVEX_V128;
+                                      avx512vl_bf16_info.info128, "x",
+                                      []<Register>>, EVEX_V128;
     defm Z256 : avx512_vector_fpclass<opcVec, OpcodeStr, sched.YMM,
-                                      avx512vl_bf16_info.info256, "y">, EVEX_V256;
+                                      avx512vl_bf16_info.info256, "y",
+                                      []<Register>>, EVEX_V256;
   }
 }
 
-// FIXME: need to set Uses = []<Register> but avx512_vector_fpclass has InstAlias.
 defm VFPCLASSPBF16 : avx10_fp_fpclass_bf16<"vfpclass", 0x66, SchedWriteFCmp>,
                                       AVX512XDIi8Base, TA, EVEX, EVEX_CD8<16, CD8VF>;
 
