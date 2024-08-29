@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -73,7 +72,6 @@ namespace {
   class MachineCSE : public MachineFunctionPass {
     const TargetInstrInfo *TII = nullptr;
     const TargetRegisterInfo *TRI = nullptr;
-    AliasAnalysis *AA = nullptr;
     MachineDominatorTree *DT = nullptr;
     MachineRegisterInfo *MRI = nullptr;
     MachineBlockFrequencyInfo *MBFI = nullptr;
@@ -90,7 +88,6 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
       MachineFunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<AAResultsWrapperPass>();
       AU.addPreservedID(MachineLoopInfoID);
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -167,7 +164,6 @@ char &llvm::MachineCSEID = MachineCSE::ID;
 INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
                     "Machine Common Subexpression Elimination", false, false)
 
@@ -943,7 +939,6 @@ bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
