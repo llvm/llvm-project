@@ -1016,6 +1016,11 @@ define void @zext() {
 
 define void @trunc() {
 ; RV32-LABEL: 'trunc'
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i2 = trunc <2 x i16> undef to <2 x i2>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i4 = trunc <2 x i16> undef to <2 x i4>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i6 = trunc <2 x i16> undef to <2 x i6>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_v2i8 = trunc <2 x i64> undef to <2 x i8>
@@ -1169,6 +1174,11 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64-LABEL: 'trunc'
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i2 = trunc <2 x i16> undef to <2 x i2>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i4 = trunc <2 x i16> undef to <2 x i4>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i6 = trunc <2 x i16> undef to <2 x i6>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_v2i8 = trunc <2 x i64> undef to <2 x i8>
@@ -1321,6 +1331,13 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv64i64_nxv64i1 = trunc <vscale x 64 x i64> undef to <vscale x 64 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
+
+  %v2i16_v2i2 = trunc <2 x i16> undef to <2 x i2>
+  %v2i16_v2i4 = trunc <2 x i16> undef to <2 x i4>
+  %v2i16_v2i6 = trunc <2 x i16> undef to <2 x i6>
+  %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
+  %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
+
   %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
   %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
   %v2i64_v2i8 = trunc <2 x i64> undef to <2 x i8>
@@ -4311,6 +4328,69 @@ define void @uitofp() {
   %nxv64i1_nxv64f16 = uitofp <vscale x 64 x i1> undef to <vscale x 64 x half>
   %nxv64i1_nxv64f32 = uitofp <vscale x 64 x i1> undef to <vscale x 64 x float>
   %nxv64i1_nxv64f64 = uitofp <vscale x 64 x i1> undef to <vscale x 64 x double>
+
+  ret void
+}
+
+define void @oddvec_sizes() {
+; CHECK-LABEL: 'oddvec_sizes'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = sext <3 x i8> undef to <3 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = sext <7 x i8> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = sext <15 x i8> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = zext <3 x i8> undef to <3 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = zext <7 x i8> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = zext <15 x i8> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = trunc <3 x i32> undef to <3 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = trunc <7 x i32> undef to <7 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %9 = trunc <15 x i32> undef to <15 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %10 = bitcast <3 x i32> undef to <3 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %11 = bitcast <7 x i32> undef to <7 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %12 = bitcast <15 x i32> undef to <15 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = sitofp <3 x i32> undef to <3 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = sitofp <7 x i32> undef to <7 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = sitofp <15 x i32> undef to <15 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = uitofp <3 x i32> undef to <3 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = uitofp <7 x i32> undef to <7 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = uitofp <15 x i32> undef to <15 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = fptosi <3 x float> undef to <3 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = fptosi <7 x float> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = fptosi <15 x float> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = fptoui <3 x float> undef to <3 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = fptoui <7 x float> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = fptoui <15 x float> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  sext <3 x i8> undef to <3 x i16>
+  sext <7 x i8> undef to <7 x i32>
+  sext <15 x i8> undef to <15 x i32>
+
+  zext <3 x i8> undef to <3 x i16>
+  zext <7 x i8> undef to <7 x i32>
+  zext <15 x i8> undef to <15 x i32>
+
+  trunc <3 x i32> undef to <3 x i8>
+  trunc <7 x i32> undef to <7 x i8>
+  trunc <15 x i32> undef to <15 x i8>
+
+  bitcast <3 x i32> undef to <3 x float>
+  bitcast <7 x i32> undef to <7 x float>
+  bitcast <15 x i32> undef to <15 x float>
+
+  sitofp <3 x i32> undef to <3 x float>
+  sitofp <7 x i32> undef to <7 x float>
+  sitofp <15 x i32> undef to <15 x float>
+
+  uitofp <3 x i32> undef to <3 x float>
+  uitofp <7 x i32> undef to <7 x float>
+  uitofp <15 x i32> undef to <15 x float>
+
+  fptosi <3 x float> undef to <3 x i32>
+  fptosi <7 x float> undef to <7 x i32>
+  fptosi <15 x float> undef to <15 x i32>
+
+  fptoui <3 x float> undef to <3 x i32>
+  fptoui <7 x float> undef to <7 x i32>
+  fptoui <15 x float> undef to <15 x i32>
 
   ret void
 }

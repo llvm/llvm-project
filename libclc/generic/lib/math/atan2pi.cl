@@ -219,3 +219,5 @@ _CLC_OVERLOAD _CLC_DEF double atan2pi(double y, double x) {
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, atan2pi, double, double)
 
 #endif
+
+_CLC_DEFINE_BINARY_BUILTIN_FP16(atan2pi)

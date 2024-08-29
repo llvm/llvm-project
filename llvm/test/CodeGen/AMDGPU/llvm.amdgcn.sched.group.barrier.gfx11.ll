@@ -5,10 +5,11 @@
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_WMMA_cluster:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v40, 5, v0
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_and_b32_e32 v40, 0x7fe0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_add_nc_u32_e32 v32, s0, v40
 ; GCN-NEXT:    v_dual_mov_b32 v81, s1 :: v_dual_add_nc_u32 v80, s1, v40
 ; GCN-NEXT:    ds_load_b128 v[4:7], v32 offset:16
@@ -72,10 +73,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_cluster(ptr ad
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_WMMA_cluster:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
-; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v40, 5, v0
+; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v40, 0x7fe0, v0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v32, s0, v40
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v81, s1 :: v_dual_add_nc_u32 v80, s1, v40
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[4:7], v32 offset:16
@@ -175,10 +177,11 @@ entry:
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_WMMA_interleave:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v16, 5, v0
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_and_b32_e32 v16, 0x7fe0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_add_nc_u32_e32 v17, s0, v16
 ; GCN-NEXT:    v_add_nc_u32_e32 v16, s1, v16
 ; GCN-NEXT:    ds_load_b128 v[4:7], v17 offset:16
@@ -256,10 +259,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_WMMA_interleave(ptr
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_WMMA_interleave:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
-; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v16, 5, v0
+; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v16, 0x7fe0, v0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v17, s0, v16
 ; EXACTCUTOFF-NEXT:    v_add_nc_u32_e32 v16, s1, v16
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[4:7], v17 offset:16

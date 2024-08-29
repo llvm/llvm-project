@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zacas < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv64 -mattr=+a,+experimental-zacas < %s 2>&1 | FileCheck %s
 
 # Non-zero offsets not supported for the third operand (rs1).
 amocas.w a1, a3, 1(a5) # CHECK: :[[@LINE]]:18: error: optional integer offset must be 0

@@ -275,6 +275,27 @@ llvm::LogicalResult fir::AllocaOp::verify() {
   return mlir::success();
 }
 
+bool fir::AllocaOp::ownsNestedAlloca(mlir::Operation *op) {
+  return op->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>() ||
+         op->hasTrait<mlir::OpTrait::AutomaticAllocationScope>() ||
+         mlir::isa<mlir::LoopLikeOpInterface>(*op);
+}
+
+mlir::Region *fir::AllocaOp::getOwnerRegion() {
+  mlir::Operation *currentOp = getOperation();
+  while (mlir::Operation *parentOp = currentOp->getParentOp()) {
+    // If the operation was not registered, inquiries about its traits will be
+    // incorrect and it is not possible to reason about the operation. This
+    // should not happen in a normal Fortran compilation flow, but be foolproof.
+    if (!parentOp->isRegistered())
+      return nullptr;
+    if (fir::AllocaOp::ownsNestedAlloca(parentOp))
+      return currentOp->getParentRegion();
+    currentOp = parentOp;
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // AllocMemOp
 //===----------------------------------------------------------------------===//
@@ -1082,6 +1103,14 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
     p << getOperand(0);
   p << '(' << (*this)->getOperands().drop_front(isDirect ? 0 : 1) << ')';
 
+  // Print `proc_attrs<...>`, if present.
+  fir::FortranProcedureFlagsEnumAttr procAttrs = getProcedureAttrsAttr();
+  if (procAttrs &&
+      procAttrs.getValue() != fir::FortranProcedureFlagsEnum::none) {
+    p << ' ' << fir::FortranProcedureFlagsEnumAttr::getMnemonic();
+    p.printStrippedAttrOrType(procAttrs);
+  }
+
   // Print 'fastmath<...>' (if it has non-default value) before
   // any other attributes.
   mlir::arith::FastMathFlagsAttr fmfAttr = getFastmathAttr();
@@ -1090,9 +1119,9 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
     p.printStrippedAttrOrType(fmfAttr);
   }
 
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      {fir::CallOp::getCalleeAttrNameStr(), getFastmathAttrName()});
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {fir::CallOp::getCalleeAttrNameStr(),
+                           getFastmathAttrName(), getProcedureAttrsAttrName()});
   auto resultTypes{getResultTypes()};
   llvm::SmallVector<mlir::Type> argTypes(
       llvm::drop_begin(getOperandTypes(), isDirect ? 0 : 1));
@@ -1116,6 +1145,15 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
   mlir::Type type;
   if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::Paren))
     return mlir::failure();
+
+  // Parse `proc_attrs<...>`, if present.
+  fir::FortranProcedureFlagsEnumAttr procAttr;
+  if (mlir::succeeded(parser.parseOptionalKeyword(
+          fir::FortranProcedureFlagsEnumAttr::getMnemonic())))
+    if (parser.parseCustomAttributeWithFallback(
+            procAttr, mlir::Type{}, getProcedureAttrsAttrName(result.name),
+            attrs))
+      return mlir::failure();
 
   // Parse 'fastmath<...>', if present.
   mlir::arith::FastMathFlagsAttr fmfAttr;

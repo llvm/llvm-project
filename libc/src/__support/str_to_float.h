@@ -13,20 +13,21 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace LIBC_NAMESPACE {
+#include <stdint.h>
+
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <class T> struct ExpandedFloat {
@@ -524,10 +525,9 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   FPBits result;
   T float_mantissa;
   if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
-    float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
-        Sign::POS, 0,
-        fputil::DyadicFloat<128>::MantissaType(
-            {uint64_t(mantissa), uint64_t(mantissa >> 64)})));
+    float_mantissa =
+        (static_cast<T>(uint64_t(mantissa >> 64)) * static_cast<T>(0x1.0p64)) +
+        static_cast<T>(uint64_t(mantissa));
   } else {
     float_mantissa = static_cast<T>(mantissa);
   }
@@ -591,7 +591,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   }
 
   ExpandedFloat<T> output;
-  output.mantissa = result.get_mantissa();
+  output.mantissa = result.get_explicit_mantissa();
   output.exponent = result.get_biased_exponent();
   return output;
 }
@@ -1159,13 +1159,11 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       index += 3;
       StorageType nan_mantissa = 0;
       // this handles the case of `NaN(n-character-sequence)`, where the
-      // n-character-sequence is made of 0 or more letters and numbers in any
-      // order.
+      // n-character-sequence is made of 0 or more letters, numbers, or
+      // underscore characters in any order.
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        // Apparently it's common for underscores to also be accepted. No idea
-        // why, but it's causing fuzz failures.
         while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {
@@ -1226,6 +1224,6 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

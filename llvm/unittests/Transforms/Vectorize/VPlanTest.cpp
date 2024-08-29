@@ -1134,6 +1134,20 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
+    VPValue ChainOp;
+    VPValue VecOp;
+    VPValue CondOp;
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+                             &VecOp, false);
+    VPValue EVL;
+    VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
+    EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
+    EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
+    EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
+    EXPECT_FALSE(EVLRecipe.mayReadOrWriteMemory());
+  }
+
+  {
     auto *Load =
         new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
     VPValue Addr;
@@ -1469,6 +1483,21 @@ TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
                            &VecOp, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+}
+
+TEST(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
+  LLVMContext C;
+
+  VPValue ChainOp;
+  VPValue VecOp;
+  VPValue CondOp;
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+                           &VecOp, false);
+  VPValue EVL;
+  VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
+  EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
+  VPRecipeBase *BaseR = &EVLRecipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
 }
 

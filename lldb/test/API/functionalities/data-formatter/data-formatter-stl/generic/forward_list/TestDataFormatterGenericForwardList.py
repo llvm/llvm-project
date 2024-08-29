@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -51,7 +50,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.expect(
             "settings show target.max-children-count",
             matching=True,
-            substrs=["target.max-children-count (int) = 256"],
+            substrs=["target.max-children-count (unsigned) = 256"],
         )
 
         self.expect(
@@ -132,7 +131,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.expect(
             "settings show target.max-children-count",
             matching=True,
-            substrs=["target.max-children-count (int) = 256"],
+            substrs=["target.max-children-count (unsigned) = 256"],
         )
 
         self.expect(

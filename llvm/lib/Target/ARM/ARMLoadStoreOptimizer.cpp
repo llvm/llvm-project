@@ -2517,9 +2517,7 @@ static void updateRegisterMapForDbgValueListAfterMove(
     if (RegIt == RegisterMap.end())
       return;
     auto &InstrVec = RegIt->getSecond();
-    for (unsigned I = 0; I < InstrVec.size(); I++)
-      if (InstrVec[I] == InstrToReplace)
-        InstrVec[I] = DbgValueListInstr;
+    llvm::replace(InstrVec, InstrToReplace, DbgValueListInstr);
   });
 }
 
@@ -2579,8 +2577,8 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
           Bases.push_back(Base);
           return;
         }
-        for (unsigned i = 0, e = BI->second.size(); i != e; ++i) {
-          if (Offset == getMemoryOpOffset(*BI->second[i])) {
+        for (const MachineInstr *MI : BI->second) {
+          if (Offset == getMemoryOpOffset(*MI)) {
             StopHere = true;
             break;
           }

@@ -34,7 +34,6 @@
 
 namespace llvm {
 class DataLayout;
-class Use;
 
 namespace detail {
 
@@ -278,6 +277,12 @@ protected:
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);
+
+    // We escape pointers used by a fake_use to prevent SROA from transforming
+    // them.
+    case Intrinsic::fake_use:
+      PI.setEscaped(&II);
+      return;
 
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:

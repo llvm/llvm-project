@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC_STDIO_FEOF_UNLOCKED_H
 
 #include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int feof_unlocked(::FILE *stream);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FEOF_UNLOCKED_H

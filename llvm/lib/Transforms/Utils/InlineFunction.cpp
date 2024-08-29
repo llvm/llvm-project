@@ -1815,10 +1815,9 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
 
   // Iterate over all instructions, updating metadata and debug-info records.
   for (; FI != Fn->end(); ++FI) {
-    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
-         ++BI) {
-      UpdateInst(*BI);
-      for (DbgRecord &DVR : BI->getDbgRecordRange()) {
+    for (Instruction &I : *FI) {
+      UpdateInst(I);
+      for (DbgRecord &DVR : I.getDbgRecordRange()) {
         UpdateDVR(&DVR);
       }
     }
@@ -1897,8 +1896,8 @@ static void trackInlinedStores(Function::iterator Start, Function::iterator End,
   LLVM_DEBUG(errs() << "trackInlinedStores into "
                     << Start->getParent()->getName() << " from "
                     << CB.getCalledFunction()->getName() << "\n");
-  std::unique_ptr<DataLayout> DL = std::make_unique<DataLayout>(CB.getModule());
-  at::trackAssignments(Start, End, collectEscapedLocals(*DL, CB), *DL);
+  const DataLayout &DL = CB.getDataLayout();
+  at::trackAssignments(Start, End, collectEscapedLocals(DL, CB), DL);
 }
 
 /// Update inlined instructions' DIAssignID metadata. We need to do this

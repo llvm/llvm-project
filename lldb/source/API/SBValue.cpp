@@ -107,7 +107,7 @@ public:
                             std::unique_lock<std::recursive_mutex> &lock,
                             Status &error) {
     if (!m_valobj_sp) {
-      error.SetErrorString("invalid value object");
+      error = Status::FromErrorString("invalid value object");
       return m_valobj_sp;
     }
 
@@ -128,7 +128,7 @@ public:
       // We don't allow people to play around with ValueObject if the process
       // is running. If you want to look at values, pause the process, then
       // look.
-      error.SetErrorString("process must be stopped.");
+      error = Status::FromErrorString("process must be stopped.");
       return ValueObjectSP();
     }
 
@@ -145,7 +145,7 @@ public:
     }
 
     if (!value_sp)
-      error.SetErrorString("invalid value object");
+      error = Status::FromErrorString("invalid value object");
     if (!m_name.IsEmpty())
       value_sp->SetName(m_name);
 
@@ -272,8 +272,8 @@ SBError SBValue::GetError() {
   if (value_sp)
     sb_error.SetError(value_sp->GetError());
   else
-    sb_error.SetErrorStringWithFormat("error: %s",
-                                      locker.GetError().AsCString());
+    sb_error = Status::FromErrorStringWithFormat("error: %s",
+                                                 locker.GetError().AsCString());
 
   return sb_error;
 }
@@ -467,8 +467,8 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
   if (value_sp) {
     success = value_sp->SetValueFromCString(value_str, error.ref());
   } else
-    error.SetErrorStringWithFormat("Could not get value: %s",
-                                   locker.GetError().AsCString());
+    error = Status::FromErrorStringWithFormat("Could not get value: %s",
+                                              locker.GetError().AsCString());
 
   return success;
 }
@@ -764,6 +764,21 @@ lldb::SBValue SBValue::GetNonSyntheticValue() {
   return value_sb;
 }
 
+lldb::SBValue SBValue::GetSyntheticValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBValue value_sb;
+  if (IsValid()) {
+    ValueImplSP proxy_sp(new ValueImpl(m_opaque_sp->GetRootSP(),
+                                       m_opaque_sp->GetUseDynamic(), true));
+    value_sb.SetSP(proxy_sp);
+    if (!value_sb.IsSynthetic()) {
+      return {};
+    }
+  }
+  return value_sb;
+}
+
 lldb::DynamicValueType SBValue::GetPreferDynamicValue() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -861,11 +876,11 @@ int64_t SBValue::GetValueAsSigned(SBError &error, int64_t fail_value) {
     uint64_t ret_val = fail_value;
     ret_val = value_sp->GetValueAsSigned(fail_value, &success);
     if (!success)
-      error.SetErrorString("could not resolve value");
+      error = Status::FromErrorString("could not resolve value");
     return ret_val;
   } else
-    error.SetErrorStringWithFormat("could not get SBValue: %s",
-                                   locker.GetError().AsCString());
+    error = Status::FromErrorStringWithFormat("could not get SBValue: %s",
+                                              locker.GetError().AsCString());
 
   return fail_value;
 }
@@ -881,11 +896,11 @@ uint64_t SBValue::GetValueAsUnsigned(SBError &error, uint64_t fail_value) {
     uint64_t ret_val = fail_value;
     ret_val = value_sp->GetValueAsUnsigned(fail_value, &success);
     if (!success)
-      error.SetErrorString("could not resolve value");
+      error = Status::FromErrorString("could not resolve value");
     return ret_val;
   } else
-    error.SetErrorStringWithFormat("could not get SBValue: %s",
-                                   locker.GetError().AsCString());
+    error = Status::FromErrorStringWithFormat("could not get SBValue: %s",
+                                              locker.GetError().AsCString());
 
   return fail_value;
 }
@@ -1064,7 +1079,7 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   if (!m_opaque_sp || (!m_opaque_sp->IsValid()
       && (m_opaque_sp->GetRootSP()
           && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
-    locker.GetError().SetErrorString("No value");
+    locker.GetError() = Status::FromErrorString("No value");
     return ValueObjectSP();
   }
   return locker.GetLockedSP(*m_opaque_sp.get());
@@ -1369,7 +1384,7 @@ bool SBValue::SetData(lldb::SBData &data, SBError &error) {
     DataExtractor *data_extractor = data.get();
 
     if (!data_extractor) {
-      error.SetErrorString("No data to set");
+      error = Status::FromErrorString("No data to set");
       ret = false;
     } else {
       Status set_error;
@@ -1377,13 +1392,13 @@ bool SBValue::SetData(lldb::SBData &data, SBError &error) {
       value_sp->SetData(*data_extractor, set_error);
 
       if (!set_error.Success()) {
-        error.SetErrorStringWithFormat("Couldn't set data: %s",
-                                       set_error.AsCString());
+        error = Status::FromErrorStringWithFormat("Couldn't set data: %s",
+                                                  set_error.AsCString());
         ret = false;
       }
     }
   } else {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't set data: could not get SBValue: %s",
         locker.GetError().AsCString());
     ret = false;
@@ -1476,10 +1491,11 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
       }
     }
   } else if (target_sp) {
-    error.SetErrorStringWithFormat("could not get SBValue: %s",
-                                   locker.GetError().AsCString());
+    error = Status::FromErrorStringWithFormat("could not get SBValue: %s",
+                                              locker.GetError().AsCString());
   } else {
-    error.SetErrorString("could not set watchpoint, a target is required");
+    error = Status::FromErrorString(
+        "could not set watchpoint, a target is required");
   }
 
   return sb_watchpoint;

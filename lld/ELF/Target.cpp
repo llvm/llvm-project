@@ -38,8 +38,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-const TargetInfo *elf::target;
-
 std::string lld::toString(RelType type) {
   StringRef s = getELFRelocationTypeName(elf::config->emachine, type);
   if (s == "Unknown")
@@ -104,8 +102,8 @@ ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
       continue;
 
     const uint8_t *isecLoc =
-        Out::bufferStart
-            ? (Out::bufferStart + isec->getParent()->offset + isec->outSecOff)
+        ctx.bufferStart
+            ? (ctx.bufferStart + isec->getParent()->offset + isec->outSecOff)
             : isec->contentMaybeDecompress().data();
     if (isecLoc == nullptr) {
       assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");

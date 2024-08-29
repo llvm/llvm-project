@@ -83,11 +83,11 @@ class BitInt_Long_LongLongTemplate :
 // - _Constant: Argument has to constant-fold to an integer constant expression
 
 // __fp16 and __float128 builtin variants of libc/libm functions.
-def AcosF128 : Builtin {
-  let Spellings = ["__builtin_acosf128"];
+def AcosF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_acos"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def AcoshF128 : Builtin {
@@ -97,11 +97,11 @@ def AcoshF128 : Builtin {
   let Prototype = "__float128(__float128)";
 }
 
-def AsinF128 : Builtin {
-  let Spellings = ["__builtin_asinf128"];
+def AsinF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_asin"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def AsinhF128 : Builtin {
@@ -111,11 +111,11 @@ def AsinhF128 : Builtin {
   let Prototype = "__float128(__float128)";
 }
 
-def AtanF128 : Builtin {
-  let Spellings = ["__builtin_atanf128"];
+def AtanF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_atan"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def AtanhF128 : Builtin {
@@ -143,10 +143,10 @@ def CosF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def CoshF128 : Builtin {
-  let Spellings = ["__builtin_coshf128"];
+def CoshF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_cosh"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def ErfF128 : Builtin {
@@ -468,11 +468,11 @@ def SinF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def SinhF128 : Builtin {
-  let Spellings = ["__builtin_sinhf128"];
+def SinhF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_sinh"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def SqrtF16F128 : Builtin, F16F128MathTemplate {
@@ -489,11 +489,11 @@ def TanF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def TanhF128 : Builtin {
-  let Spellings = ["__builtin_tanhf128"];
+def TanhF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_tanh"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def TgammaF128 : Builtin {
@@ -533,42 +533,42 @@ def BuiltinComplex : Builtin {
 def IsGreater : Builtin {
   let Spellings = ["__builtin_isgreater"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsGreaterEqual : Builtin {
   let Spellings = ["__builtin_isgreaterequal"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsLess : Builtin {
   let Spellings = ["__builtin_isless"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsLessEqual : Builtin {
   let Spellings = ["__builtin_islessequal"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsLessGreater : Builtin {
   let Spellings = ["__builtin_islessgreater"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsUnordered : Builtin {
   let Spellings = ["__builtin_isunordered"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
@@ -646,19 +646,21 @@ def IsFPClass : Builtin {
 def Signbit : Builtin {
   let Spellings = ["__builtin_signbit"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def SignbitF : Builtin {
   let Spellings = ["__builtin_signbitf"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    Constexpr];
   let Prototype = "int(float)";
 }
 
 def SignbitL : Builtin {
   let Spellings = ["__builtin_signbitl"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    Constexpr];
   let Prototype = "int(long double)";
 }
 
@@ -4654,13 +4656,13 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 
 // HLSL
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_elementwise_all"];
+  let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
 }
 
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_elementwise_any"];
+  let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
 }
@@ -4707,6 +4709,12 @@ def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLLength : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_length"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
   let Attributes = [NoThrow, Const];
@@ -4719,6 +4727,12 @@ def HLSLMad : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLNormalize : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_normalize"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rcp"];
   let Attributes = [NoThrow, Const];
@@ -4727,6 +4741,12 @@ def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_saturate"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

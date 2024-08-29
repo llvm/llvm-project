@@ -166,7 +166,9 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
   if (match(Y, m_OneUse(m_Add(m_BinOp(Shift), m_One()))) &&
       match(Shift, m_OneUse(m_Shl(m_One(), m_Value(Z))))) {
     bool PropagateNSW = HasNSW && Shift->hasNoSignedWrap();
-    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *FrX = X;
+    if (!isGuaranteedNotToBeUndef(X))
+      FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
     Value *Shl = Builder.CreateShl(FrX, Z, "mulshl", HasNUW, PropagateNSW);
     return Builder.CreateAdd(Shl, FrX, Mul.getName(), HasNUW, PropagateNSW);
   }
@@ -177,7 +179,9 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
   // This increases uses of X, so it may require a freeze, but that is still
   // expected to be an improvement because it removes the multiply.
   if (match(Y, m_OneUse(m_Not(m_OneUse(m_Shl(m_AllOnes(), m_Value(Z))))))) {
-    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *FrX = X;
+    if (!isGuaranteedNotToBeUndef(X))
+      FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
     Value *Shl = Builder.CreateShl(FrX, Z, "mulshl");
     return Builder.CreateSub(Shl, FrX, Mul.getName());
   }
@@ -414,7 +418,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       auto RemOpc = Div->getOpcode() == Instruction::UDiv ? Instruction::URem
                                                           : Instruction::SRem;
       // X must be frozen because we are increasing its number of uses.
-      Value *XFreeze = Builder.CreateFreeze(X, X->getName() + ".fr");
+      Value *XFreeze = X;
+      if (!isGuaranteedNotToBeUndef(X))
+        XFreeze = Builder.CreateFreeze(X, X->getName() + ".fr");
       Value *Rem = Builder.CreateBinOp(RemOpc, XFreeze, DivOp1);
       if (DivOp1 == Y)
         return BinaryOperator::CreateSub(XFreeze, Rem);
@@ -1274,7 +1280,9 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       // 1 / 0 --> undef ; 1 / 1 --> 1 ; 1 / -1 --> -1 ; 1 / anything else --> 0
       // (Op1 + 1) u< 3 ? Op1 : 0
       // Op1 must be frozen because we are increasing its number of uses.
-      Value *F1 = Builder.CreateFreeze(Op1, Op1->getName() + ".fr");
+      Value *F1 = Op1;
+      if (!isGuaranteedNotToBeUndef(Op1))
+        F1 = Builder.CreateFreeze(Op1, Op1->getName() + ".fr");
       Value *Inc = Builder.CreateAdd(F1, Op0);
       Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(Ty, 3));
       return SelectInst::Create(Cmp, F1, ConstantInt::get(Ty, 0));
@@ -2187,7 +2195,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   // Op0 urem C -> Op0 < C ? Op0 : Op0 - C, where C >= signbit.
   // Op0 must be frozen because we are increasing its number of uses.
   if (match(Op1, m_Negative())) {
-    Value *F0 = Builder.CreateFreeze(Op0, Op0->getName() + ".fr");
+    Value *F0 = Op0;
+    if (!isGuaranteedNotToBeUndef(Op0))
+      F0 = Builder.CreateFreeze(Op0, Op0->getName() + ".fr");
     Value *Cmp = Builder.CreateICmpULT(F0, Op1);
     Value *Sub = Builder.CreateSub(F0, Op1);
     return SelectInst::Create(Cmp, F0, Sub);
@@ -2199,7 +2209,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   // urem Op0, (sext i1 X) --> (Op0 == -1) ? 0 : Op0
   Value *X;
   if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
-    Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+    Value *FrozenOp0 = Op0;
+    if (!isGuaranteedNotToBeUndef(Op0))
+      FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
     Value *Cmp =
         Builder.CreateICmpEQ(FrozenOp0, ConstantInt::getAllOnesValue(Ty));
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
@@ -2210,7 +2222,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     Value *Val =
         simplifyICmpInst(ICmpInst::ICMP_ULT, X, Op1, SQ.getWithInstruction(&I));
     if (Val && match(Val, m_One())) {
-      Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+      Value *FrozenOp0 = Op0;
+      if (!isGuaranteedNotToBeUndef(Op0))
+        FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
       Value *Cmp = Builder.CreateICmpEQ(FrozenOp0, Op1);
       return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
     }

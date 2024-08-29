@@ -55,6 +55,21 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 };
 
+//===----------------------------------------------------------------------===//
+// R600 CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+class R600CodeGenPassBuilder
+    : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
+public:
+  R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
+                         PassInstrumentationCallbacks *PIC);
+
+  void addPreISel(AddIRPass &addPass) const;
+  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
+  Error addInstSelector(AddMachinePass &) const;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_R600TARGETMACHINE_H

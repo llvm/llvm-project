@@ -9,10 +9,11 @@
 #include "src/search/hsearch.h"
 #include "src/__support/HashTable/randomness.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/search/hsearch/global.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ENTRY *, hsearch, (ENTRY item, ACTION action)) {
   ENTRY *result = nullptr;
   if (internal::global_hash_table == nullptr) {
@@ -46,4 +47,4 @@ LLVM_LIBC_FUNCTION(ENTRY *, hsearch, (ENTRY item, ACTION action)) {
   return result;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

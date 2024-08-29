@@ -153,7 +153,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
           }
       }
 
-      if (!MI.isSafeToMove(nullptr, SawStore)) {
+      if (!MI.isSafeToMove(SawStore)) {
         // If MI has side effects, it should become a barrier for code motion.
         // IOM is rebuild from the next instruction to prevent later
         // instructions from being moved before this MI.

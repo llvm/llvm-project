@@ -227,10 +227,6 @@ static cl::opt<bool> DisableLoopUnrolling(
     "disable-loop-unrolling",
     cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 template <typename PassManagerT>
 bool tryParsePipelineText(PassBuilder &PB,
                           const cl::opt<std::string> &PipelineOpt) {

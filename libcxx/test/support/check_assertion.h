@@ -392,7 +392,7 @@ bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func) {
 #define EXPECT_STD_TERMINATE(...)                 \
     assert(  ExpectDeath(DeathCause::StdTerminate, #__VA_ARGS__, __VA_ARGS__)  )
 
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #define TEST_LIBCPP_ASSERT_FAILURE(expr, message) \
     assert(( ExpectDeath(DeathCause::VerboseAbort, #expr, [&]() { (void)(expr); }, MakeAssertionMessageMatcher(message)) ))
 #else

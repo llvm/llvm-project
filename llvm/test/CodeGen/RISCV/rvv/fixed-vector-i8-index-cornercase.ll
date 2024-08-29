@@ -140,7 +140,7 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    lui a2, 1047552
-; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 23
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 18

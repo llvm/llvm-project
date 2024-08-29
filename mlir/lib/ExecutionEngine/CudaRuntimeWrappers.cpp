@@ -237,11 +237,18 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
-mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/, bool /*isHostShared*/) {
+mgpuMemAlloc(uint64_t sizeBytes, CUstream stream, bool isHostShared) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
-  if (sizeBytes != 0)
-    CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
+  if (sizeBytes == 0)
+    return reinterpret_cast<void *>(ptr);
+
+  if (isHostShared) {
+    CUDA_REPORT_IF_ERROR(
+        cuMemAllocManaged(&ptr, sizeBytes, CU_MEM_ATTACH_GLOBAL));
+    return reinterpret_cast<void *>(ptr);
+  }
+  CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
   return reinterpret_cast<void *>(ptr);
 }
 

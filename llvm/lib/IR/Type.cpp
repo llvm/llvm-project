@@ -45,7 +45,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case PPC_FP128TyID : return getPPC_FP128Ty(C);
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
-  case X86_MMXTyID   : return getX86_MMXTy(C);
   case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
@@ -125,14 +124,6 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   if (isa<VectorType>(this) && isa<VectorType>(Ty))
     return getPrimitiveSizeInBits() == Ty->getPrimitiveSizeInBits();
 
-  //  64-bit fixed width vector types can be losslessly converted to x86mmx.
-  if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
-      getPrimitiveSizeInBits().getFixedValue() == 64)
-    return true;
-  if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedValue() == 64)
-    return true;
-
   //  8192-bit fixed width vector types can be losslessly converted to x86amx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
       getPrimitiveSizeInBits().getFixedValue() == 8192)
@@ -179,8 +170,6 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     return TypeSize::getFixed(128);
   case Type::PPC_FP128TyID:
     return TypeSize::getFixed(128);
-  case Type::X86_MMXTyID:
-    return TypeSize::getFixed(64);
   case Type::X86_AMXTyID:
     return TypeSize::getFixed(8192);
   case Type::IntegerTyID:
@@ -245,7 +234,6 @@ Type *Type::getTokenTy(LLVMContext &C) { return &C.pImpl->TokenTy; }
 Type *Type::getX86_FP80Ty(LLVMContext &C) { return &C.pImpl->X86_FP80Ty; }
 Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
-Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
 Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
 
 IntegerType *Type::getInt1Ty(LLVMContext &C) { return &C.pImpl->Int1Ty; }

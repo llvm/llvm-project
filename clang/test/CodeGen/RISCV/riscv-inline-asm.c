@@ -50,7 +50,7 @@ struct Pair { int a, b; } pair;
 
 // CHECK-LABEL: test_s(
 // CHECK:         call void asm sideeffect "// $0 $1 $2", "s,s,s"(ptr nonnull @var, ptr nonnull getelementptr inbounds (i8, ptr @arr, {{.*}}), ptr nonnull @test_s)
-// CHECK:         call void asm sideeffect "// $0", "s"(ptr nonnull getelementptr inbounds (i8, ptr @pair, {{.*}}))
+// CHECK:         call void asm sideeffect "// $0", "s"(ptr nonnull getelementptr inbounds nuw (i8, ptr @pair, {{.*}}))
 // CHECK:         call void asm sideeffect "// $0 $1 $2", "S,S,S"(ptr nonnull @var, ptr nonnull getelementptr inbounds (i8, ptr @arr, {{.*}}), ptr nonnull @test_s)
 void test_s(void) {
   asm("// %0 %1 %2" :: "s"(&var), "s"(&arr[1][1]), "s"(test_s));

@@ -26,6 +26,7 @@
 namespace llvm {
 
   class Type;
+  struct fltSemantics;
   class raw_ostream;
 
   /// Machine Value Type. Every type that is supported natively by some
@@ -33,7 +34,7 @@ namespace llvm {
   /// type can be represented by an MVT.
   class MVT {
   public:
-    enum SimpleValueType : uint8_t {
+    enum SimpleValueType : uint16_t {
       // Simple value types that aren't explicitly part of this enumeration
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
@@ -475,6 +476,10 @@ namespace llvm {
     /// NB: This includes pointer types, which require a DataLayout to convert
     /// to a concrete value type.
     static MVT getVT(Type *Ty, bool HandleUnknown = false);
+
+    /// Returns an APFloat semantics tag appropriate for the value type. If this
+    /// is a vector type, the element semantics are returned.
+    const fltSemantics &getFltSemantics() const;
 
   public:
     /// SimpleValueType Iteration

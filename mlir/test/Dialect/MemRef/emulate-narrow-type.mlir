@@ -6,11 +6,13 @@ func.func @memref_i8() -> i8 {
     %c3 = arith.constant 3 : index
     %m = memref.alloc() : memref<4xi8, 1>
     %v = memref.load %m[%c3] : memref<4xi8, 1>
+    memref.dealloc %m : memref<4xi8, 1>
     return %v : i8
 }
 // CHECK-LABEL: func @memref_i8()
 //       CHECK:   %[[M:.+]] = memref.alloc() : memref<4xi8, 1>
 //  CHECK-NEXT:   %[[V:.+]] = memref.load %[[M]][%{{.+}}] : memref<4xi8, 1>
+//  CHECK-NEXT:   memref.dealloc %[[M]]
 //  CHECK-NEXT:   return %[[V]]
 
 // CHECK32-LABEL: func @memref_i8()
@@ -21,6 +23,7 @@ func.func @memref_i8() -> i8 {
 //       CHECK32:   %[[CAST:.+]] = arith.index_cast %[[C24]] : index to i32
 //       CHECK32:   %[[SHIFTRT:.+]] = arith.shrsi %[[V]], %[[CAST]]
 //       CHECK32:   %[[TRUNC:.+]] = arith.trunci %[[SHIFTRT]] : i32 to i8
+//  CHECK32-NEXT:   memref.dealloc %[[M]]
 //  CHECK32-NEXT:   return %[[TRUNC]]
 
 // -----
@@ -485,3 +488,68 @@ func.func @memref_collapse_shape_i4(%idx0 : index, %idx1 : index) -> i4 {
 //   CHECK32-NOT:     memref.collapse_shape
 //       CHECK32:     memref.load %[[ALLOC]][%{{.*}}] : memref<4096xi32>
 
+// -----
+
+func.func @memref_expand_shape_i4(%idx0 : index, %idx1 : index, %idx2 : index) -> i4 {
+  %arr = memref.alloc() : memref<256x128xi4>
+  %expand = memref.expand_shape %arr[[0, 1], [2]] output_shape [32, 8, 128] : memref<256x128xi4> into memref<32x8x128xi4>
+  %1 = memref.load %expand[%idx0, %idx1, %idx2] : memref<32x8x128xi4>
+  return %1 : i4
+}
+
+// CHECK-LABEL:   func.func @memref_expand_shape_i4(
+//       CHECK:     %[[ALLOC:.*]] = memref.alloc() : memref<16384xi8>
+//   CHECK-NOT:     memref.expand_shape
+//       CHECK:     memref.load %[[ALLOC]][%{{.*}}] : memref<16384xi8>
+
+// CHECK32-LABEL:   func.func @memref_expand_shape_i4(
+//       CHECK32:     %[[ALLOC:.*]] = memref.alloc() : memref<4096xi32>
+//   CHECK32-NOT:     memref.expand_shape
+//       CHECK32:     memref.load %[[ALLOC]][%{{.*}}] : memref<4096xi32>
+
+// -----
+
+func.func @memref_memory_space_cast_i4(%arg0: memref<32x128xi4, 1>) -> memref<32x128xi4> {
+  %cast = memref.memory_space_cast %arg0 : memref<32x128xi4, 1> to memref<32x128xi4>
+  return %cast : memref<32x128xi4>
+}
+
+// CHECK-LABEL:   func.func @memref_memory_space_cast_i4(
+//  CHECK-SAME:   %[[ARG0:.*]]: memref<2048xi8, 1>
+//       CHECK:     %[[CAST:.*]] = memref.memory_space_cast %[[ARG0]] : memref<2048xi8, 1> to memref<2048xi8>
+//       CHECK:     return %[[CAST]]
+
+// CHECK32-LABEL:   func.func @memref_memory_space_cast_i4(
+//  CHECK32-SAME:   %[[ARG0:.*]]: memref<512xi32, 1>
+//       CHECK32:     %[[CAST:.*]] = memref.memory_space_cast %[[ARG0]] : memref<512xi32, 1> to memref<512xi32>
+//       CHECK32:     return %[[CAST]]
+
+// -----
+
+func.func @memref_copy_i4(%arg0: memref<32x128xi4, 1>, %arg1: memref<32x128xi4>) {
+  memref.copy %arg0, %arg1 : memref<32x128xi4, 1> to memref<32x128xi4>
+  return
+}
+
+// CHECK-LABEL:   func.func @memref_copy_i4(
+//  CHECK-SAME:   %[[ARG0:.*]]: memref<2048xi8, 1>, %[[ARG1:.*]]: memref<2048xi8>
+//       CHECK:     memref.copy %[[ARG0]], %[[ARG1]]
+//       CHECK:     return
+
+// CHECK32-LABEL:   func.func @memref_copy_i4(
+//  CHECK32-SAME:   %[[ARG0:.*]]: memref<512xi32, 1>, %[[ARG1:.*]]: memref<512xi32>
+//       CHECK32:     memref.copy %[[ARG0]], %[[ARG1]]
+//       CHECK32:     return
+
+// -----
+
+!colMajor = memref<8x8xi4, strided<[1, 8]>>
+func.func @copy_distinct_layouts(%idx : index) -> i4 {
+  %c0 = arith.constant 0 : index
+  %arr = memref.alloc() : memref<8x8xi4>
+  %arr2 = memref.alloc() : !colMajor
+  // expected-error @+1 {{failed to legalize operation 'memref.copy' that was explicitly marked illegal}}
+  memref.copy %arr, %arr2 : memref<8x8xi4> to !colMajor
+  %ld = memref.load %arr2[%c0, %c0] : !colMajor
+  return %ld : i4
+}

@@ -285,6 +285,11 @@ ConstantInt *InstrProfCntrInstBase::getIndex() const {
   return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
 }
 
+void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
+  assert(isa<InstrProfCntrInstBase>(this));
+  setArgOperand(3, ConstantInt::get(Type::getInt32Ty(getContext()), Idx));
+}
+
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
     return const_cast<Value *>(getArgOperand(4));
@@ -298,6 +303,11 @@ Value *InstrProfCallsite::getCallee() const {
   if (isa<InstrProfCallsite>(this))
     return getArgOperand(4);
   return nullptr;
+}
+
+void InstrProfCallsite::setCallee(Value *Callee) {
+  assert(isa<InstrProfCallsite>(this));
+  setArgOperand(4, Callee);
 }
 
 std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
@@ -599,6 +609,25 @@ Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
   return Intrinsic::not_intrinsic;
 }
 
+constexpr static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id) {
+  if (::isVPIntrinsic(Id))
+    return Id;
+
+  switch (Id) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
+#define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN) case Intrinsic::INTRIN:
+#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
+  return ::getForIntrinsic(Id);
+}
+
 bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   using namespace PatternMatch;
 
@@ -699,6 +728,9 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     VPFunc = Intrinsic::getDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
+  case Intrinsic::experimental_vp_splat:
+    VPFunc = Intrinsic::getDeclaration(M, VPID, ReturnType);
+    break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");
   return VPFunc;
@@ -706,14 +738,25 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
 
 bool VPReductionIntrinsic::isVPReduction(Intrinsic::ID ID) {
   switch (ID) {
+  case Intrinsic::vp_reduce_add:
+  case Intrinsic::vp_reduce_mul:
+  case Intrinsic::vp_reduce_and:
+  case Intrinsic::vp_reduce_or:
+  case Intrinsic::vp_reduce_xor:
+  case Intrinsic::vp_reduce_smax:
+  case Intrinsic::vp_reduce_smin:
+  case Intrinsic::vp_reduce_umax:
+  case Intrinsic::vp_reduce_umin:
+  case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fmaximum:
+  case Intrinsic::vp_reduce_fminimum:
+  case Intrinsic::vp_reduce_fadd:
+  case Intrinsic::vp_reduce_fmul:
+    return true;
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_REDUCTION(STARTPOS, ...) return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return false;
   }
-  return false;
 }
 
 bool VPCastIntrinsic::isVPCast(Intrinsic::ID ID) {
@@ -731,13 +774,11 @@ bool VPCastIntrinsic::isVPCast(Intrinsic::ID ID) {
 bool VPCmpIntrinsic::isVPCmp(Intrinsic::ID ID) {
   switch (ID) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CMP(CCPOS, ...) return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return false;
+  case Intrinsic::vp_fcmp:
+  case Intrinsic::vp_icmp:
+    return true;
   }
-  return false;
 }
 
 bool VPBinOpIntrinsic::isVPBinOp(Intrinsic::ID ID) {
@@ -771,22 +812,10 @@ static ICmpInst::Predicate getIntPredicateFromMD(const Value *Op) {
 }
 
 CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
-  bool IsFP = true;
-  std::optional<unsigned> CCArgIdx;
-  switch (getIntrinsicID()) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CMP(CCPOS, ISFP)                                           \
-  CCArgIdx = CCPOS;                                                            \
-  IsFP = ISFP;                                                                 \
-  break;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  assert(CCArgIdx && "Unexpected vector-predicated comparison");
-  return IsFP ? getFPPredicateFromMD(getArgOperand(*CCArgIdx))
-              : getIntPredicateFromMD(getArgOperand(*CCArgIdx));
+  assert(isVPCmp(getIntrinsicID()));
+  return getIntrinsicID() == Intrinsic::vp_fcmp
+             ? getFPPredicateFromMD(getArgOperand(2))
+             : getIntPredicateFromMD(getArgOperand(2));
 }
 
 unsigned VPReductionIntrinsic::getVectorParamPos() const {
@@ -799,27 +828,15 @@ unsigned VPReductionIntrinsic::getStartParamPos() const {
 
 std::optional<unsigned>
 VPReductionIntrinsic::getVectorParamPos(Intrinsic::ID ID) {
-  switch (ID) {
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_REDUCTION(STARTPOS, VECTORPOS) return VECTORPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  default:
-    break;
-  }
+  if (isVPReduction(ID))
+    return 1;
   return std::nullopt;
 }
 
 std::optional<unsigned>
 VPReductionIntrinsic::getStartParamPos(Intrinsic::ID ID) {
-  switch (ID) {
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_REDUCTION(STARTPOS, VECTORPOS) return STARTPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  default:
-    break;
-  }
+  if (isVPReduction(ID))
+    return 0;
   return std::nullopt;
 }
 

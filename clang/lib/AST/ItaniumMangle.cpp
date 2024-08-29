@@ -594,10 +594,11 @@ private:
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
                         NestedNameSpecifier *qualifier,
-                        ArrayRef<DeclAccessPair> UnqualifiedLookups,
+                        NamedDecl *firstQualifierLookup,
                         DeclarationName name,
                         const TemplateArgumentLoc *TemplateArgs,
-                        unsigned NumTemplateArgs, unsigned knownArity);
+                        unsigned NumTemplateArgs,
+                        unsigned knownArity);
   void mangleCastExpression(const Expr *E, StringRef CastEncoding);
   void mangleInitListElements(const InitListExpr *InitList);
   void mangleRequirement(SourceLocation RequiresExprLoc,
@@ -960,7 +961,7 @@ bool CXXNameMangler::isStd(const NamespaceDecl *NS) {
   if (!Context.getEffectiveParentContext(NS)->isTranslationUnit())
     return false;
 
-  const IdentifierInfo *II = NS->getOriginalNamespace()->getIdentifier();
+  const IdentifierInfo *II = NS->getFirstDecl()->getIdentifier();
   return II && II->isStr("std");
 }
 
@@ -2794,7 +2795,11 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         ASString = "ptr32_sptr";
         break;
       case LangAS::ptr32_uptr:
-        ASString = "ptr32_uptr";
+        // For z/OS, there are no special mangling rules applied to the ptr32
+        // qualifier. Ex: void foo(int * __ptr32 p) -> _Z3f2Pi. The mangling for
+        // "p" is treated the same as a regular integer pointer.
+        if (!getASTContext().getTargetInfo().getTriple().isOSzOS())
+          ASString = "ptr32_uptr";
         break;
       case LangAS::ptr64:
         ASString = "ptr64";
@@ -3427,6 +3432,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'u' << type_name.size() << type_name;                               \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    type_name = #Name;                                                         \
+    Out << 'u' << type_name.size() << type_name;                               \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   }
 }
 
@@ -4004,7 +4015,10 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask) &&
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4055,7 +4069,21 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
   }
 
-  unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+  unsigned VecSizeInBits;
+  switch (T->getVectorKind()) {
+  case VectorKind::RVVFixedLengthMask_1:
+    VecSizeInBits = 1;
+    break;
+  case VectorKind::RVVFixedLengthMask_2:
+    VecSizeInBits = 2;
+    break;
+  case VectorKind::RVVFixedLengthMask_4:
+    VecSizeInBits = 4;
+    break;
+  default:
+    VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+    break;
+  }
 
   // Apend the LMUL suffix.
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
@@ -4111,7 +4139,10 @@ void CXXNameMangler::mangleType(const VectorType *T) {
     mangleAArch64FixedSveVectorType(T);
     return;
   } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -4495,11 +4526,14 @@ void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
 }
 
 /// Mangles a member expression.
-void CXXNameMangler::mangleMemberExpr(
-    const Expr *base, bool isArrow, NestedNameSpecifier *qualifier,
-    ArrayRef<DeclAccessPair> UnqualifiedLookups, DeclarationName member,
-    const TemplateArgumentLoc *TemplateArgs, unsigned NumTemplateArgs,
-    unsigned arity) {
+void CXXNameMangler::mangleMemberExpr(const Expr *base,
+                                      bool isArrow,
+                                      NestedNameSpecifier *qualifier,
+                                      NamedDecl *firstQualifierLookup,
+                                      DeclarationName member,
+                                      const TemplateArgumentLoc *TemplateArgs,
+                                      unsigned NumTemplateArgs,
+                                      unsigned arity) {
   // <expression> ::= dt <expression> <unresolved-name>
   //              ::= pt <expression> <unresolved-name>
   if (base)
@@ -4981,9 +5015,11 @@ recurse:
   case Expr::MemberExprClass: {
     NotPrimaryExpr();
     const MemberExpr *ME = cast<MemberExpr>(E);
-    mangleMemberExpr(ME->getBase(), ME->isArrow(), ME->getQualifier(),
-                     std::nullopt, ME->getMemberDecl()->getDeclName(),
-                     ME->getTemplateArgs(), ME->getNumTemplateArgs(), Arity);
+    mangleMemberExpr(ME->getBase(), ME->isArrow(),
+                     ME->getQualifier(), nullptr,
+                     ME->getMemberDecl()->getDeclName(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
+                     Arity);
     break;
   }
 
@@ -4991,9 +5027,10 @@ recurse:
     NotPrimaryExpr();
     const UnresolvedMemberExpr *ME = cast<UnresolvedMemberExpr>(E);
     mangleMemberExpr(ME->isImplicitAccess() ? nullptr : ME->getBase(),
-                     ME->isArrow(), ME->getQualifier(), std::nullopt,
-                     ME->getMemberName(), ME->getTemplateArgs(),
-                     ME->getNumTemplateArgs(), Arity);
+                     ME->isArrow(), ME->getQualifier(), nullptr,
+                     ME->getMemberName(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
+                     Arity);
     break;
   }
 
@@ -5003,8 +5040,10 @@ recurse:
       = cast<CXXDependentScopeMemberExpr>(E);
     mangleMemberExpr(ME->isImplicitAccess() ? nullptr : ME->getBase(),
                      ME->isArrow(), ME->getQualifier(),
-                     ME->unqualified_lookups(), ME->getMember(),
-                     ME->getTemplateArgs(), ME->getNumTemplateArgs(), Arity);
+                     ME->getFirstQualifierFoundInScope(),
+                     ME->getMember(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
+                     Arity);
     break;
   }
 
@@ -5168,6 +5207,14 @@ recurse:
           Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                 "cannot yet mangle __datasizeof expression");
       Diags.Report(DiagID);
+      return;
+    }
+    case UETT_PtrAuthTypeDiscriminator: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet mangle __builtin_ptrauth_type_discriminator expression");
+      Diags.Report(E->getExprLoc(), DiagID);
       return;
     }
     case UETT_VecStep: {
@@ -6467,7 +6514,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
 
   case APValue::LValue: {
     // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
-    assert((T->isPointerType() || T->isReferenceType()) &&
+    assert((T->isPointerOrReferenceType()) &&
            "unexpected type for LValue template arg");
 
     if (V.isNullPointer()) {

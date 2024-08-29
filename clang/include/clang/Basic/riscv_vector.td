@@ -1378,6 +1378,9 @@ let HasMasked = false,
     let RequiredFeatures = ["Zvfhmin"] in
       defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "x",
                                     [["v", "v", "vv"]]>;
+    let RequiredFeatures = ["Zvfbfmin"] in
+      defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "y",
+                                    [["v", "v", "vv"]]>;
   let SupportOverloading = false in
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_x", "csil",
                                    [["x", "v", "ve"],
@@ -1890,6 +1893,9 @@ let HasMasked = false,
   let RequiredFeatures = ["Zvfhmin"] in
     defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "x",
                                       [["vvm", "v", "vvvm"]]>;
+  let RequiredFeatures = ["Zvfbfmin"] in
+    defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "y",
+                                      [["vvm", "v", "vvvm"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
                                      [["vfm", "v", "vvem"]]>;
 }
@@ -1912,8 +1918,18 @@ def vfcvt_rtz_x_f_v : RVVConvToSignedBuiltin<"vfcvt_rtz_x">;
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfwcvt_rtz_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_rtz_xu">;
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
-  def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
-  def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "csi", "vfwcvt_f">;
+  def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "si", "vfwcvt_f">;
+  def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "si", "vfwcvt_f">;
+  let RequiredFeatures = ["Zvfh"] in {
+    let Name = "vfwcvt_f_xu_v",
+        IRName = "vfwcvt_f_xu_v",
+        MaskedIRName = "vfwcvt_f_xu_v_mask" in
+      def : RVVConvBuiltin<"Fw", "FwUv", "c", "vfwcvt_f">;
+    let Name = "vfwcvt_f_x_v",
+        IRName = "vfwcvt_f_x_v",
+        MaskedIRName = "vfwcvt_f_x_v_mask" in
+      def : RVVConvBuiltin<"Fw", "Fwv", "c", "vfwcvt_f">;
+  }
   def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "f", "vfwcvt_f">;
   let RequiredFeatures = ["Zvfhmin"] in
     def vfwcvt_f_f_v_fp16 : RVVConvBuiltin<"w", "wv", "x", "vfwcvt_f"> {
@@ -1927,6 +1943,16 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_rtz_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_rtz_xu">;
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
+  let RequiredFeatures = ["Zvfh"] in {
+    let Name = "vfncvt_rtz_xu_f_w",
+        IRName = "vfncvt_rtz_xu_f_w",
+        MaskedIRName = "vfncvt_rtz_xu_f_w_mask" in
+      def : RVVConvBuiltin<"Uv", "UvFw", "c", "vfncvt_rtz_xu">;
+    let Name = "vfncvt_rtz_x_f_w",
+        IRName = "vfncvt_rtz_x_f_w",
+        MaskedIRName = "vfncvt_rtz_x_f_w_mask" in
+      def : RVVConvBuiltin<"Iv", "IvFw", "c", "vfncvt_rtz_x">;
+  }
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
 }
 
@@ -1987,9 +2013,9 @@ let ManualCodegen = [{
         RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvvu"]]>;
     let OverloadedName = "vfcvt_f" in {
       defm :
-        RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvvu"]]>;
+        RVVConvBuiltinSet<"vfcvt_f_x_v", "xfd", [["v", "vIvu"]]>;
       defm :
-        RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUvu"]]>;
+        RVVConvBuiltinSet<"vfcvt_f_xu_v", "xfd", [["v", "vUvu"]]>;
     }
 
     // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -2005,15 +2031,23 @@ let ManualCodegen = [{
     let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
       let OverloadedName = "vfncvt_x" in
         defm :
-          RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_x_f_w", "si", [["Iv", "IvFwu"]]>;
       let OverloadedName = "vfncvt_xu" in
         defm :
-          RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_xu_f_w", "si", [["Uv", "UvFwu"]]>;
+      let RequiredFeatures = ["Zvfh"] in {
+        let OverloadedName = "vfncvt_x" in
+          defm :
+            RVVConvBuiltinSet<"vfncvt_x_f_w", "c", [["Iv", "IvFwu"]]>;
+        let OverloadedName = "vfncvt_xu" in
+          defm :
+            RVVConvBuiltinSet<"vfncvt_xu_f_w", "c", [["Uv", "UvFwu"]]>;
+      }
       let OverloadedName = "vfncvt_f" in {
         defm :
-          RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_f_x_w", "xf", [["v", "vIwu"]]>;
         defm :
-          RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_f_xu_w", "xf", [["v", "vUwu"]]>;
       }
       let OverloadedName = "vfncvt_f" in {
         defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vwu"]]>;
@@ -2037,9 +2071,9 @@ let ManualCodegen = [{
       RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvv"]]>;
   let OverloadedName = "vfcvt_f" in {
     defm :
-      RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvv"]]>;
+      RVVConvBuiltinSet<"vfcvt_f_x_v", "xfd", [["v", "vIv"]]>;
     defm :
-      RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUv"]]>;
+      RVVConvBuiltinSet<"vfcvt_f_xu_v", "xfd", [["v", "vUv"]]>;
   }
 
   // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -2055,15 +2089,23 @@ let ManualCodegen = [{
   let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
     let OverloadedName = "vfncvt_x" in
       defm :
-        RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFw"]]>;
+        RVVConvBuiltinSet<"vfncvt_x_f_w", "si", [["Iv", "IvFw"]]>;
     let OverloadedName = "vfncvt_xu" in
       defm :
-        RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFw"]]>;
+        RVVConvBuiltinSet<"vfncvt_xu_f_w", "si", [["Uv", "UvFw"]]>;
+    let RequiredFeatures = ["Zvfh"] in {
+      let OverloadedName = "vfncvt_x" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_x_f_w", "c", [["Iv", "IvFw"]]>;
+      let OverloadedName = "vfncvt_xu" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_xu_f_w", "c", [["Uv", "UvFw"]]>;
+    }
     let OverloadedName = "vfncvt_f" in {
       defm :
-        RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvw"]]>;
+        RVVConvBuiltinSet<"vfncvt_f_x_w", "xf", [["v", "vIw"]]>;
       defm :
-        RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUw"]]>;
+        RVVConvBuiltinSet<"vfncvt_f_xu_w", "xf", [["v", "vUw"]]>;
     }
     let OverloadedName = "vfncvt_f" in {
       defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vw"]]>;
@@ -2256,10 +2298,22 @@ defm vfslide1down : RVVFloatingBinVFBuiltinSet;
 
 // 16.4. Vector Register Gather Instructions
 // signed and floating type
-defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilxfd",
+defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilfd",
                                  [["vv", "v", "vvUv"]]>;
-defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csilxfd",
+defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csilfd",
                                  [["vx", "v", "vvz"]]>;
+let RequiredFeatures = ["Zvfhmin"] in {
+  defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "x",
+                                   [["vv", "v", "vvUv"]]>;
+  defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "x",
+                                   [["vx", "v", "vvz"]]>;
+}
+let RequiredFeatures = ["Zvfbfmin"] in {
+  defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "y",
+                                   [["vv", "v", "vvUv"]]>;
+  defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "y",
+                                   [["vx", "v", "vvz"]]>;
+}
 defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilxfd",
                                      [["vv", "v", "vv(Log2EEW:4)Uv"]]>;
 // unsigned type
@@ -2282,8 +2336,14 @@ let HasMasked = false,
       IntrinsicTypes = {ResultType, Ops.back()->getType()};
     }] in {
   // signed and floating type
-  defm vcompress : RVVOutBuiltinSet<"vcompress", "csilxfd",
+  defm vcompress : RVVOutBuiltinSet<"vcompress", "csilfd",
                                     [["vm", "v", "vvm"]]>;
+  let RequiredFeatures = ["Zvfhmin"] in
+    defm vcompress : RVVOutBuiltinSet<"vcompress", "x",
+                                      [["vm", "v", "vvm"]]>;
+  let RequiredFeatures = ["Zvfbfmin"] in
+    defm vcompress : RVVOutBuiltinSet<"vcompress", "y",
+                                      [["vm", "v", "vvm"]]>;
   // unsigned type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
                                     [["vm", "Uv", "UvUvm"]]>;
@@ -2487,12 +2547,16 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
-      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfdy", dst_lmul # "v">;
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfd", dst_lmul # "v">;
+      let RequiredFeatures = ["Zvfbfmin"] in
+        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "y", dst_lmul # "v">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";
-      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilxfdy", "v">;
+      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilxfd", "v">;
+      let RequiredFeatures = ["Zvfbfmin"] in
+        def : RVVBuiltin<T # "vv", "v" # T # "vKz", "y", "v">;
       def : RVVBuiltin<T # "UvUv", "Uv" # T # "UvKz", "csil", "Uv">;
     }
   }
@@ -2573,7 +2637,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         defvar T = "(Tuple:" # nf # ")";
         defvar V = VString<nf, /*signed=*/true>.S;
         defvar UV = VString<nf, /*signed=*/false>.S;
-        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfdy">;
+        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfd">;
         let RequiredFeatures = ["Zvfbfmin"] in
           def : RVVBuiltin<T # "v", T # "v" # V, "y">;
         def : RVVBuiltin<T # "Uv", T # "Uv" # UV, "csil">;
@@ -2624,7 +2688,7 @@ multiclass RVVSignedWidenBinBuiltinSetVwsll
 
 let UnMaskedPolicyScheme = HasPassthruOperand in {
   // zvkb
-  let RequiredFeatures = ["Zvkb", "Experimental"] in {
+  let RequiredFeatures = ["Zvkb"] in {
     defm vandn   : RVVUnsignedBinBuiltinSet;
     defm vbrev8  : RVVOutBuiltinSetZvbb;
     defm vrev8   : RVVOutBuiltinSetZvbb;
@@ -2633,7 +2697,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   }
 
   // zvbb
-  let RequiredFeatures = ["Zvbb", "Experimental"] in {
+  let RequiredFeatures = ["Zvbb"] in {
     defm vbrev   : RVVOutBuiltinSetZvbb;
     defm vclz    : RVVOutBuiltinSetZvbb;
     defm vctz    : RVVOutBuiltinSetZvbb;
@@ -2644,7 +2708,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   }
 
   // zvbc
-  let RequiredFeatures = ["Zvbc", "Experimental"] in {
+  let RequiredFeatures = ["Zvbc"] in {
     defm vclmul  : RVVInt64BinBuiltinSet;
     defm vclmulh : RVVInt64BinBuiltinSet;
   }
@@ -2652,13 +2716,13 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
 
 let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   // zvkg
-  let RequiredFeatures = ["Zvkg", "Experimental"] in {
+  let RequiredFeatures = ["Zvkg"] in {
     defm vghsh   : RVVOutOp2BuiltinSetVVZvk;
     defm vgmul   : RVVOutBuiltinSetZvk<HasVV=1, HasVS=0>;
   }
 
   // zvkned
-  let RequiredFeatures = ["Zvkned", "Experimental"] in {
+  let RequiredFeatures = ["Zvkned"] in {
     defm vaesdf  : RVVOutBuiltinSetZvk;
     defm vaesdm  : RVVOutBuiltinSetZvk;
     defm vaesef  : RVVOutBuiltinSetZvk;
@@ -2670,28 +2734,28 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   }
 
   // zvknha
-  let RequiredFeatures = ["Zvknha", "Experimental"] in {
+  let RequiredFeatures = ["Zvknha"] in {
     defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
     defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
     defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
   }
 
   // zvknhb
-  let RequiredFeatures = ["Zvknhb", "Experimental"] in {
+  let RequiredFeatures = ["Zvknhb"] in {
     defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
     defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
     defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
   }
 
   // zvksed
-  let RequiredFeatures = ["Zvksed", "Experimental"] in {
+  let RequiredFeatures = ["Zvksed"] in {
     let UnMaskedPolicyScheme = HasPassthruOperand in
     defm vsm4k   : RVVOutOp1BuiltinSet<"vsm4k", "i", [["vi", "Uv", "UvUvKz"]]>;
     defm vsm4r   : RVVOutBuiltinSetZvk;
   }
 
   // zvksh
-  let RequiredFeatures = ["Zvksh", "Experimental"] in {
+  let RequiredFeatures = ["Zvksh"] in {
     defm vsm3c   : RVVOutOp2BuiltinSetVIZvk;
     let UnMaskedPolicyScheme = HasPassthruOperand in
     defm vsm3me  : RVVOutOp1BuiltinSet<"vsm3me", "i", [["vv", "Uv", "UvUvUv"]]>;

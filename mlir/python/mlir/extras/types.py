@@ -12,8 +12,10 @@ from ..ir import (
     F16Type,
     F32Type,
     F64Type,
+    Float8E3M4Type,
     Float8E4M3B11FNUZType,
     Float8E4M3FNType,
+    Float8E4M3Type,
     Float8E5M2Type,
     FunctionType,
     IndexType,
@@ -68,8 +70,10 @@ f64 = lambda: F64Type.get()
 bf16 = lambda: BF16Type.get()
 
 f8E5M2 = lambda: Float8E5M2Type.get()
+f8E4M3 = lambda: Float8E4M3Type.get()
 f8E4M3FN = lambda: Float8E4M3FNType.get()
 f8E4M3B11FNUZ = lambda: Float8E4M3B11FNUZType.get()
+f8E3M4 = lambda: Float8E3M4Type.get()
 
 none = lambda: NoneType.get()
 

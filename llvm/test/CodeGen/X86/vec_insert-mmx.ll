@@ -3,22 +3,22 @@
 ; RUN: llc < %s -mtriple=x86_64-darwin -mattr=+mmx,+sse4.1 | FileCheck %s --check-prefix=X64
 
 ; This is not an MMX operation; promoted to xmm.
-define x86_mmx @t0(i32 %A) nounwind {
+define <1 x i64> @t0(i32 %A) nounwind {
 ; X86-LABEL: t0:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
-; X86-NEXT:    pxor %mm0, %mm0
-; X86-NEXT:    punpckldq %mm1, %mm0 ## mm0 = mm0[0],mm1[0]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t0:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; X64-NEXT:    psllq $32, %xmm0
+; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    retq
   %tmp3 = insertelement <2 x i32> < i32 0, i32 undef >, i32 %A, i32 1
-  %tmp4 = bitcast <2 x i32> %tmp3 to x86_mmx
-  ret x86_mmx %tmp4
+  %tmp4 = bitcast <2 x i32> %tmp3 to <1 x i64>
+  ret <1 x i64> %tmp4
 }
 
 define <8 x i8> @t1(i8 zeroext %x) nounwind {

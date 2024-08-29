@@ -164,7 +164,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
              write.
 
              Counter-example: bufferization.alloc_tensor
-             The op just allocates and does not specifiy the data of the tensor,
+             The op just allocates and does not specify the data of the tensor,
              so resultBufferizesToMemoryWrite is overridden to return false.
 
           2. At least one aliasing OpOperand bufferizes to a memory write.

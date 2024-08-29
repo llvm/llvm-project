@@ -129,11 +129,6 @@
 #define VP_PROPERTY_MEMOP(POINTERPOS, DATAPOS)
 #endif
 
-// Map this VP reduction intrinsic to its reduction operand positions.
-#ifndef VP_PROPERTY_REDUCTION
-#define VP_PROPERTY_REDUCTION(STARTPOS, VECTORPOS)
-#endif
-
 // A property to infer VP binary-op SDNode opcodes automatically.
 #ifndef VP_PROPERTY_BINARYOP
 #define VP_PROPERTY_BINARYOP
@@ -142,13 +137,6 @@
 // A property to infer VP type casts automatically.
 #ifndef VP_PROPERTY_CASTOP
 #define VP_PROPERTY_CASTOP
-#endif
-
-// This VP Intrinsic is a comparison operation
-// The condition code arg is at CCPOS and accepts floating-point condition
-// codes if ISFP is set, else it accepts integer condition codes.
-#ifndef VP_PROPERTY_CMP
-#define VP_PROPERTY_CMP(CCPOS, ISFP)
 #endif
 
 /// } Property Macros
@@ -567,7 +555,6 @@ END_REGISTER_VP_SDNODE(VP_SETCC)
 BEGIN_REGISTER_VP_INTRINSIC(vp_fcmp, 3, 4)
 HELPER_MAP_VPID_TO_VPSD(vp_fcmp, VP_SETCC)
 VP_PROPERTY_FUNCTIONAL_OPC(FCmp)
-VP_PROPERTY_CMP(2, true)
 VP_PROPERTY_CONSTRAINEDFP(0, 1, experimental_constrained_fcmp)
 END_REGISTER_VP_INTRINSIC(vp_fcmp)
 
@@ -575,7 +562,6 @@ END_REGISTER_VP_INTRINSIC(vp_fcmp)
 BEGIN_REGISTER_VP_INTRINSIC(vp_icmp, 3, 4)
 HELPER_MAP_VPID_TO_VPSD(vp_icmp, VP_SETCC)
 VP_PROPERTY_FUNCTIONAL_OPC(ICmp)
-VP_PROPERTY_CMP(2, false)
 END_REGISTER_VP_INTRINSIC(vp_icmp)
 
 ///// } Comparisons
@@ -651,63 +637,63 @@ END_REGISTER_VP(vp_gather, VP_GATHER)
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_REDUCTION_VP is already defined!"
 #endif
-#define HELPER_REGISTER_REDUCTION_VP(VPID, VPSD, INTRIN)                       \
+#define HELPER_REGISTER_REDUCTION_VP(VPID, VPSD, INTRIN, SDOPC)                \
   BEGIN_REGISTER_VP(VPID, 2, 3, VPSD, 1)                                       \
   VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN)                                     \
-  VP_PROPERTY_REDUCTION(0, 1)                                                  \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   END_REGISTER_VP(VPID, VPSD)
 
 // llvm.vp.reduce.add(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_add, VP_REDUCE_ADD,
-                             vector_reduce_add)
+                             vector_reduce_add, VECREDUCE_ADD)
 
 // llvm.vp.reduce.mul(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_mul, VP_REDUCE_MUL,
-                             vector_reduce_mul)
+                             vector_reduce_mul, VECREDUCE_MUL)
 
 // llvm.vp.reduce.and(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_and, VP_REDUCE_AND,
-                             vector_reduce_and)
+                             vector_reduce_and, VECREDUCE_AND)
 
 // llvm.vp.reduce.or(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_or, VP_REDUCE_OR,
-                             vector_reduce_or)
+                             vector_reduce_or, VECREDUCE_OR)
 
 // llvm.vp.reduce.xor(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_xor, VP_REDUCE_XOR,
-                             vector_reduce_xor)
+                             vector_reduce_xor, VECREDUCE_XOR)
 
 // llvm.vp.reduce.smax(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_smax, VP_REDUCE_SMAX,
-                             vector_reduce_smax)
+                             vector_reduce_smax, VECREDUCE_SMAX)
 
 // llvm.vp.reduce.smin(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_smin, VP_REDUCE_SMIN,
-                             vector_reduce_smin)
+                             vector_reduce_smin, VECREDUCE_SMIN)
 
 // llvm.vp.reduce.umax(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_umax, VP_REDUCE_UMAX,
-                             vector_reduce_umax)
+                             vector_reduce_umax, VECREDUCE_UMAX)
 
 // llvm.vp.reduce.umin(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_umin, VP_REDUCE_UMIN,
-                             vector_reduce_umin)
+                             vector_reduce_umin, VECREDUCE_UMIN)
 
 // llvm.vp.reduce.fmax(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmax, VP_REDUCE_FMAX,
-                             vector_reduce_fmax)
+                             vector_reduce_fmax, VECREDUCE_FMAX)
 
 // llvm.vp.reduce.fmin(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
-                             vector_reduce_fmin)
+                             vector_reduce_fmin, VECREDUCE_FMIN)
 
 // llvm.vp.reduce.fmaximum(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmaximum, VP_REDUCE_FMAXIMUM,
-                             vector_reduce_fmaximum)
+                             vector_reduce_fmaximum, VECREDUCE_FMAXIMUM)
 
 // llvm.vp.reduce.fminimum(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
-                             vector_reduce_fminimum)
+                             vector_reduce_fminimum, VECREDUCE_FMINIMUM)
 
 #undef HELPER_REGISTER_REDUCTION_VP
 
@@ -721,27 +707,27 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_REDUCTION_SEQ_VP is already defined!"
 #endif
-#define HELPER_REGISTER_REDUCTION_SEQ_VP(VPID, VPSD, SEQ_VPSD, INTRIN)         \
+#define HELPER_REGISTER_REDUCTION_SEQ_VP(VPID, VPSD, SEQ_VPSD, SDOPC, SEQ_SDOPC, INTRIN) \
   BEGIN_REGISTER_VP_INTRINSIC(VPID, 2, 3)                                      \
   BEGIN_REGISTER_VP_SDNODE(VPSD, 1, VPID, 2, 3)                                \
-  VP_PROPERTY_REDUCTION(0, 1)                                                  \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   END_REGISTER_VP_SDNODE(VPSD)                                                 \
   BEGIN_REGISTER_VP_SDNODE(SEQ_VPSD, 1, VPID, 2, 3)                            \
   HELPER_MAP_VPID_TO_VPSD(VPID, SEQ_VPSD)                                      \
-  VP_PROPERTY_REDUCTION(0, 1)                                                  \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SEQ_SDOPC)                                      \
   END_REGISTER_VP_SDNODE(SEQ_VPSD)                                             \
   VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN)                                     \
   END_REGISTER_VP_INTRINSIC(VPID)
 
 // llvm.vp.reduce.fadd(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fadd, VP_REDUCE_FADD,
-                                 VP_REDUCE_SEQ_FADD,
-                                 vector_reduce_fadd)
+                                 VP_REDUCE_SEQ_FADD, VECREDUCE_FADD,
+                                 VECREDUCE_SEQ_FADD, vector_reduce_fadd)
 
 // llvm.vp.reduce.fmul(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
-                                 VP_REDUCE_SEQ_FMUL,
-                                 vector_reduce_fmul)
+                                 VP_REDUCE_SEQ_FMUL, VECREDUCE_FMUL,
+                                 VECREDUCE_SEQ_FMUL, vector_reduce_fmul)
 
 #undef HELPER_REGISTER_REDUCTION_SEQ_VP
 
@@ -777,6 +763,13 @@ END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
 
+// llvm.vp.splat(val,mask,vlen)
+BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_splat, 1, 2)
+BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_SPLAT, -1, experimental_vp_splat, 1, 2)
+VP_PROPERTY_NO_FUNCTIONAL
+HELPER_MAP_VPID_TO_VPSD(experimental_vp_splat, EXPERIMENTAL_VP_SPLAT)
+END_REGISTER_VP(experimental_vp_splat, EXPERIMENTAL_VP_SPLAT)
+
 #undef BEGIN_REGISTER_VP
 #undef BEGIN_REGISTER_VP_INTRINSIC
 #undef BEGIN_REGISTER_VP_SDNODE
@@ -786,11 +779,9 @@ END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 #undef HELPER_MAP_VPID_TO_VPSD
 #undef VP_PROPERTY_BINARYOP
 #undef VP_PROPERTY_CASTOP
-#undef VP_PROPERTY_CMP
 #undef VP_PROPERTY_CONSTRAINEDFP
 #undef VP_PROPERTY_FUNCTIONAL_INTRINSIC
 #undef VP_PROPERTY_FUNCTIONAL_OPC
 #undef VP_PROPERTY_FUNCTIONAL_SDOPC
 #undef VP_PROPERTY_NO_FUNCTIONAL
 #undef VP_PROPERTY_MEMOP
-#undef VP_PROPERTY_REDUCTION

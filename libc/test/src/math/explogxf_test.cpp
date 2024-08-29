@@ -17,6 +17,7 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LlvmLibcExplogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -24,7 +25,8 @@ constexpr int def_count = 100003;
 constexpr float def_prec = 0.500001f;
 
 auto f_normal = [](float x) -> bool {
-  return !(isnan(x) || isinf(x) || LIBC_NAMESPACE::fabs(x) < 2E-38);
+  return !(FPBits(x).is_nan() || FPBits(x).is_inf() ||
+           LIBC_NAMESPACE::fabs(x) < 2E-38);
 };
 
 TEST_F(LlvmLibcExplogfTest, ExpInFloatRange) {
@@ -34,7 +36,7 @@ TEST_F(LlvmLibcExplogfTest, ExpInFloatRange) {
     return static_cast<float>(result.mh * r);
   };
   auto f_check = [](float x) -> bool {
-    return !((isnan(x) || isinf(x) || x < -70 || x > 70 ||
+    return !((FPBits(x).is_nan() || FPBits(x).is_inf() || x < -70 || x > 70 ||
               LIBC_NAMESPACE::fabsf(x) < 0x1.0p-10));
   };
   CHECK_DATA(0.0f, neg_inf, mpfr::Operation::Exp, fx, f_check, def_count,

@@ -436,7 +436,7 @@ namespace dependent_nested_partial_specialization {
 
   template<template<typename> class X> struct A {
     template<typename T, X<T> N> struct B; // expected-note 2{{here}}
-    template<typename T> struct B<T, 0> {}; // expected-error {{non-type template argument specializes a template parameter with dependent type 'Y<T>' (aka 'type-parameter-0-0 *')}}
+    template <typename T> struct B<T, 0> {}; // expected-error {{non-type template argument specializes a template parameter with dependent type 'Y<T>' (aka 'T *')}}
   };
   A<X>::B<int, 0> ax;
   A<Y>::B<int, &n> ay; // expected-error {{undefined}} expected-note {{instantiation of}}
@@ -458,17 +458,13 @@ namespace dependent_nested_partial_specialization {
 namespace nondependent_default_arg_ordering {
   int n, m;
   template<typename A, A B = &n> struct X {};
-  template<typename A> void f(X<A>); // expected-note {{candidate}}
-  template<typename A> void f(X<A, &m>); // expected-note {{candidate}}
-  template<typename A, A B> void f(X<A, B>); // expected-note 2{{candidate}}
+  template<typename A> void f(X<A>);
+  template<typename A> void f(X<A, &m>);
+  template<typename A, A B> void f(X<A, B>);
   template<template<typename U, U> class T, typename A, int *B> void f(T<A, B>);
   void g() {
-    // FIXME: The first and second function templates above should be
-    // considered more specialized than the third, but during partial
-    // ordering we fail to check that we actually deduced template arguments
-    // that make the deduced A identical to A.
-    X<int *, &n> x; f(x); // expected-error {{ambiguous}}
-    X<int *, &m> y; f(y); // expected-error {{ambiguous}}
+    X<int *, &n> x; f(x);
+    X<int *, &m> y; f(y);
   }
 }
 

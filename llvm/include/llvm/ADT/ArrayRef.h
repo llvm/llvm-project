@@ -460,11 +460,8 @@ namespace llvm {
 
     OwningArrayRef &operator=(OwningArrayRef &&Other) {
       delete[] this->data();
-      using Base = MutableArrayRef<T>;
-      // GCC versions prior to 11.1 incorrectly reject if the 'template' keyword
-      // is used prior to the nested-name-specifier here.
-      this->Base::operator=(Other);
-      Other.Base::operator=(Base());
+      this->MutableArrayRef<T>::operator=(Other);
+      Other.MutableArrayRef<T>::operator=(MutableArrayRef<T>());
       return *this;
     }
 

@@ -430,3 +430,181 @@ func.func @cond_branch_with_backedge(%slice: vector<[4]xf32>) {
   // Live here: %finalTileA, %finalTileB, %finalTileC, %finalTileD
   return
 }
+
+// -----
+
+//  CHECK-LIVE-RANGE-LABEL: @fill_holes_in_tile_liveness
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E  cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT:  S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT:  | test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  E test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: E  test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    cf.br
+
+// Here there's a 'hole' in the liveness of %tileA (in bb1) where another value
+// can reuse the tile ID assigned to %tileA. The liveness for %tileB is
+// entirely within the 'hole' in %tileA's live range, so %tileB should get the
+// same tile ID as %tileA.
+
+// CHECK-LABEL: @fill_holes_in_tile_liveness
+func.func @fill_holes_in_tile_liveness(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = [[TILE_ID_A:.*]] : i32}
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = [[TILE_ID_A]] : i32}
+  %tileB = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3
+^bb3:
+  return
+}
+
+// -----
+
+//  CHECK-LIVE-RANGE-LABEL: @holes_in_tile_liveness_inactive_overlaps
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E  cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT:  S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT:  | test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  | test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  | arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:  E cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  | arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:  E cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb3:
+//   CHECK-LIVE-RANGE-NEXT:  E test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    func.return
+
+// This tests an edge case in inactive live ranges. The first live range is
+// inactive at the start of ^bb1. If the tile allocator did not check if the
+// second live range overlapped the first it would wrongly re-use tile ID 0
+// (as the first live range is inactive so tile ID 0 is free). This would mean
+// in ^bb2 two overlapping live ranges would have the same tile ID (bad!).
+
+// CHECK-LABEL: @holes_in_tile_liveness_inactive_overlaps
+func.func @holes_in_tile_liveness_inactive_overlaps(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = 1 : i32}
+  %tileB = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3(%tileB: vector<[4]x[4]xf32>)
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  // CHECK: arm_sme.get_tile {tile_id = 1 : i32}
+  %tileC = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3(%tileC: vector<[4]x[4]xf32>)
+^bb3(%tile: vector<[4]x[4]xf32>):
+  "test.some_use"(%tile) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+// -----
+
+// This is the same as the previous example, but changes the tile types to
+// vector<[16]x[16]xi8>. This means in bb1 the allocator will need to spill the
+// first live range (which is inactive).
+
+// Note: The live ranges are the same as the previous example (so are not checked).
+
+// CHECK-LABEL: @spill_inactive_live_range
+func.func @spill_inactive_live_range(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 16 : i32}
+  %tileA = arm_sme.get_tile : vector<[16]x[16]xi8>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileB = arm_sme.get_tile : vector<[16]x[16]xi8>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[16]x[16]xi8>) -> ()
+  cf.br ^bb3(%tileB: vector<[16]x[16]xi8>)
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileC = arm_sme.get_tile : vector<[16]x[16]xi8>
+  "test.some_use"(%tileA) : (vector<[16]x[16]xi8>) -> ()
+  cf.br ^bb3(%tileC: vector<[16]x[16]xi8>)
+^bb3(%tile: vector<[16]x[16]xi8>):
+  "test.some_use"(%tile) : (vector<[16]x[16]xi8>) -> ()
+  return
+}
+
+// -----
+
+//  CHECK-LIVE-RANGE-LABEL: @reactivate_inactive_live_range
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S   arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E   cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT:  S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT:  |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  E  test.some_use
+//   CHECK-LIVE-RANGE-NEXT:     cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: | S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: | | test.dummy
+//   CHECK-LIVE-RANGE-NEXT: | | test.dummy
+//   CHECK-LIVE-RANGE-NEXT: | E test.some_use
+//   CHECK-LIVE-RANGE-NEXT: E   test.some_use
+//   CHECK-LIVE-RANGE-NEXT:     cf.br
+
+// Here the live range for %tileA becomes inactive in bb1 (so %tileB gets tile
+// ID 0 too). Then in bb2 the live range for tileA is reactivated as it overlaps
+// with the start of %tileC's live range (which means %tileC gets tile ID 1).
+
+func.func @reactivate_inactive_live_range(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileB = arm_sme.get_tile : vector<[16]x[16]xi8>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[16]x[16]xi8>) -> ()
+  cf.br ^bb3
+^bb2:
+  // CHECK: arm_sme.get_tile {tile_id = 1 : i32}
+  %tileC = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileC) : (vector<[4]x[4]xf32>) -> ()
+  "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3
+^bb3:
+  return
+}

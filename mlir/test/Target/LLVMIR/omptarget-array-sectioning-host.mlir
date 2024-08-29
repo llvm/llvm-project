@@ -7,7 +7,7 @@
 // array bounds to lower to the full size of the array and the sectioned
 // array to be the size of 3*3*1*element-byte-size (36 bytes in this case).
 
-module attributes {omp.is_target_device = false} {
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_3d_target_array_section() {
     %0 = llvm.mlir.addressof @_QFEinarray : !llvm.ptr
     %1 = llvm.mlir.addressof @_QFEoutarray : !llvm.ptr

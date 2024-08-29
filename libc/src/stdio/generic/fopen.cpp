@@ -10,9 +10,10 @@
 #include "src/__support/File/file.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict name, const char *__restrict mode)) {
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(::FILE *, fopen,
   return reinterpret_cast<::FILE *>(result.value());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

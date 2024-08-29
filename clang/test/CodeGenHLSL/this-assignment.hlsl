@@ -24,7 +24,7 @@ void main() {
 }
 
 // This tests reference like implicit this in HLSL
-// CHECK:     define linkonce_odr noundef i32 @"?getFirst@Pair@@QAAHXZ"(ptr noundef nonnull align 4 dereferenceable(8) %this) #3 align 2 {
+// CHECK:     define linkonce_odr noundef i32 @"?getFirst@Pair@@QAAHXZ"(ptr noundef nonnull align 4 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT:entry:
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%Another = alloca %struct.Pair, align 4
@@ -32,9 +32,9 @@ void main() {
 // CHECK-NEXT:%this1 = load ptr, ptr %this.addr, align 4
 // CHECK-NEXT:call void @llvm.memcpy.p0.p0.i32(ptr align 4 %Another, ptr align 4 @"__const.?getFirst@Pair@@QAAHXZ.Another", i32 8, i1 false)
 // CHECK-NEXT:call void @llvm.memcpy.p0.p0.i32(ptr align 4 %this1, ptr align 4 %Another, i32 8, i1 false)
-// CHECK-NEXT:%First = getelementptr inbounds %struct.Pair, ptr %this1, i32 0, i32 0
+// CHECK-NEXT:%First = getelementptr inbounds nuw %struct.Pair, ptr %this1, i32 0, i32 0
 
-// CHECK:     define linkonce_odr noundef i32 @"?getSecond@Pair@@QAAHXZ"(ptr noundef nonnull align 4 dereferenceable(8) %this) #3 align 2 {
+// CHECK:     define linkonce_odr noundef i32 @"?getSecond@Pair@@QAAHXZ"(ptr noundef nonnull align 4 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT:entry:
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%ref.tmp = alloca %struct.Pair, align 4
@@ -42,4 +42,4 @@ void main() {
 // CHECK-NEXT:%this1 = load ptr, ptr %this.addr, align 4
 // CHECK-NEXT:call void @llvm.memset.p0.i32(ptr align 4 %ref.tmp, i8 0, i32 8, i1 false)
 // CHECK-NEXT:call void @llvm.memcpy.p0.p0.i32(ptr align 4 %this1, ptr align 4 %ref.tmp, i32 8, i1 false)
-// CHECK-NEXT:%Second = getelementptr inbounds %struct.Pair, ptr %this1, i32 0, i32 1
+// CHECK-NEXT:%Second = getelementptr inbounds nuw %struct.Pair, ptr %this1, i32 0, i32 1
