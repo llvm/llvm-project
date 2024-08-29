@@ -3,9 +3,6 @@
 #include <arm_neon.h>
 // REQUIRES: aarch64-registered-target
 
-// clang/test/CodeGen/arm-neon-range-checks.c includes tests for:
-// vmls_lane_s32, vmlsq_lane_s3, vmls_laneq_s32, vmlsq_laneq_s32
-// vmlsl_lane_s32, vmlsl_high_lane_s32, vmlsl_laneq_s32, vmlsl_high_laneq_s32
 
 void test_vector_multiply_subtract_by_scalar_s16(int16x8_t arg_i16x8, int16x4_t arg_i16x4, int32x4_t arg_i32x4) {
 	vmls_lane_s16(arg_i16x4, arg_i16x4, arg_i16x4, 0);
@@ -47,6 +44,49 @@ void test_vector_multiply_subtract_by_scalar_s16(int16x8_t arg_i16x8, int16x4_t 
 	vmlsl_high_laneq_s16(arg_i32x4, arg_i16x8, arg_i16x8, 7);
 	vmlsl_high_laneq_s16(arg_i32x4, arg_i16x8, arg_i16x8, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 	vmlsl_high_laneq_s16(arg_i32x4, arg_i16x8, arg_i16x8, 8); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+}
+
+void test_vector_multiply_subtract_by_scalar_s32(int64x2_t arg_i64x2, int32x4_t arg_i32x4, int32x2_t arg_i32x2) {
+	vmls_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 0);
+	vmls_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 1);
+	vmls_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmls_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmlsq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 0);
+	vmlsq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 1);
+	vmlsq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmlsq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmls_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 0);
+	vmls_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 3);
+	vmls_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmls_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmlsq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 0);
+	vmlsq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 3);
+	vmlsq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmlsq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmlsl_lane_s32(arg_i64x2, arg_i32x2, arg_i32x2, 0);
+	vmlsl_lane_s32(arg_i64x2, arg_i32x2, arg_i32x2, 1);
+	vmlsl_lane_s32(arg_i64x2, arg_i32x2, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmlsl_lane_s32(arg_i64x2, arg_i32x2, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmlsl_high_lane_s32(arg_i64x2, arg_i32x4, arg_i32x2, 0);
+	vmlsl_high_lane_s32(arg_i64x2, arg_i32x4, arg_i32x2, 1);
+	vmlsl_high_lane_s32(arg_i64x2, arg_i32x4, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmlsl_high_lane_s32(arg_i64x2, arg_i32x4, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmlsl_laneq_s32(arg_i64x2, arg_i32x2, arg_i32x4, 0);
+	vmlsl_laneq_s32(arg_i64x2, arg_i32x2, arg_i32x4, 3);
+	vmlsl_laneq_s32(arg_i64x2, arg_i32x2, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmlsl_laneq_s32(arg_i64x2, arg_i32x2, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vmlsl_high_laneq_s32(arg_i64x2, arg_i32x4, arg_i32x4, 0);
+	vmlsl_high_laneq_s32(arg_i64x2, arg_i32x4, arg_i32x4, 3);
+	vmlsl_high_laneq_s32(arg_i64x2, arg_i32x4, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmlsl_high_laneq_s32(arg_i64x2, arg_i32x4, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
 }
 

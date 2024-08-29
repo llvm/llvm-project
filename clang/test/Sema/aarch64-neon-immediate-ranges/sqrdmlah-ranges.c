@@ -3,9 +3,6 @@
 #include <arm_neon.h>
 // REQUIRES: aarch64-registered-target
 
-// vqrdmlah_lane_s32, vqrdmlahq_lane_s32, vqrdmlah_laneq_s32, vqrdmlahq_laneq_s32, 
-// vqrdmlsh_lane_s32 are tested under clang/test/CodeGen/arm-neon-range-checks.c
-
 void test_saturating_multiply_accumulate_by_element_s16(int16x8_t arg_i16x8, int16_t arg_i16, int16x4_t arg_i16x4) {
 	vqrdmlah_lane_s16(arg_i16x4, arg_i16x4, arg_i16x4, 0);
 	vqrdmlah_lane_s16(arg_i16x4, arg_i16x4, arg_i16x4, 3);
@@ -69,7 +66,47 @@ void test_saturating_multiply_accumulate_by_element_s16(int16x8_t arg_i16x8, int
 
 }
 
-void test_saturating_multiply_accumulate_by_element_s32(int32x4_t arg_i32x4, int32_t arg_i32, int32x2_t arg_i32x2) {
+void test_saturating_multiply_accumulate_by_element_s32(int32x2_t arg_i32x2, int32x4_t arg_i32x4, int32_t arg_i32) {
+	vqrdmlah_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 0);
+	vqrdmlah_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 1);
+	vqrdmlah_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlah_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlahq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 0);
+	vqrdmlahq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 1);
+	vqrdmlahq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlahq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlah_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 0);
+	vqrdmlah_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 3);
+	vqrdmlah_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlah_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlahq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 0);
+	vqrdmlahq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 3);
+	vqrdmlahq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlahq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlsh_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 0);
+	vqrdmlsh_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 1);
+	vqrdmlsh_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlsh_lane_s32(arg_i32x2, arg_i32x2, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlshq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 0);
+	vqrdmlshq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 1);
+	vqrdmlshq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlshq_lane_s32(arg_i32x4, arg_i32x4, arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlsh_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 0);
+	vqrdmlsh_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 3);
+	vqrdmlsh_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlsh_laneq_s32(arg_i32x2, arg_i32x2, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vqrdmlshq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 0);
+	vqrdmlshq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 3);
+	vqrdmlshq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vqrdmlshq_laneq_s32(arg_i32x4, arg_i32x4, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
 	vqrdmlahs_lane_s32(arg_i32, arg_i32, arg_i32x2, 0);
 	vqrdmlahs_lane_s32(arg_i32, arg_i32, arg_i32x2, 1);
 	vqrdmlahs_lane_s32(arg_i32, arg_i32, arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
@@ -91,4 +128,3 @@ void test_saturating_multiply_accumulate_by_element_s32(int32x4_t arg_i32x4, int
 	vqrdmlshs_laneq_s32(arg_i32, arg_i32, arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
 }
-

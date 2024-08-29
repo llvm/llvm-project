@@ -4,8 +4,6 @@
 #include <arm_bf16.h>
 // REQUIRES: aarch64-registered-target
 
-// clang/test/Sema/aarch64-neon-bf16-ranges.c includes tests for:
-// vcopy_lane_bf16, vcopyq_lane_bf16, vcopy_laneq_bf16, vcopyq_laneq_bf16
 
 void test_set_all_lanes_to_the_same_value_bf16(bfloat16x8_t arg_b16x8, bfloat16x4_t arg_b16x4) {
 	vdup_lane_bf16(arg_b16x4, 0);
@@ -63,6 +61,41 @@ void test_set_vector_lane_bf16(bfloat16x8_t arg_b16x8, bfloat16x4_t arg_b16x4, b
 	vsetq_lane_bf16(arg_b16, arg_b16x8, 7);
 	vsetq_lane_bf16(arg_b16, arg_b16x8, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 	vsetq_lane_bf16(arg_b16, arg_b16x8, 8); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+}
+
+void test_copy_vector_lane_bf16(bfloat16x8_t arg_b16x8, bfloat16x4_t arg_b16x4) {
+	vcopy_lane_bf16(arg_b16x4, 0, arg_b16x4, 0);
+	vcopy_lane_bf16(arg_b16x4, 3, arg_b16x4, 0);
+	vcopy_lane_bf16(arg_b16x4, -1, arg_b16x4, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopy_lane_bf16(arg_b16x4, 4, arg_b16x4, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopy_lane_bf16(arg_b16x4, 0, arg_b16x4, 3);
+	vcopy_lane_bf16(arg_b16x4, 0, arg_b16x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopy_lane_bf16(arg_b16x4, 0, arg_b16x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vcopyq_lane_bf16(arg_b16x8, 0, arg_b16x4, 0);
+	vcopyq_lane_bf16(arg_b16x8, 7, arg_b16x4, 0);
+	vcopyq_lane_bf16(arg_b16x8, -1, arg_b16x4, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopyq_lane_bf16(arg_b16x8, 8, arg_b16x4, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopyq_lane_bf16(arg_b16x8, 0, arg_b16x4, 3);
+	vcopyq_lane_bf16(arg_b16x8, 0, arg_b16x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopyq_lane_bf16(arg_b16x8, 0, arg_b16x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vcopy_laneq_bf16(arg_b16x4, 0, arg_b16x8, 0);
+	vcopy_laneq_bf16(arg_b16x4, 3, arg_b16x8, 0);
+	vcopy_laneq_bf16(arg_b16x4, -1, arg_b16x8, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopy_laneq_bf16(arg_b16x4, 4, arg_b16x8, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopy_laneq_bf16(arg_b16x4, 0, arg_b16x8, 7);
+	vcopy_laneq_bf16(arg_b16x4, 0, arg_b16x8, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopy_laneq_bf16(arg_b16x4, 0, arg_b16x8, 8); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vcopyq_laneq_bf16(arg_b16x8, 0, arg_b16x8, 0);
+	vcopyq_laneq_bf16(arg_b16x8, 7, arg_b16x8, 0);
+	vcopyq_laneq_bf16(arg_b16x8, -1, arg_b16x8, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopyq_laneq_bf16(arg_b16x8, 8, arg_b16x8, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopyq_laneq_bf16(arg_b16x8, 0, arg_b16x8, 7);
+	vcopyq_laneq_bf16(arg_b16x8, 0, arg_b16x8, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vcopyq_laneq_bf16(arg_b16x8, 0, arg_b16x8, 8); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
 }
 

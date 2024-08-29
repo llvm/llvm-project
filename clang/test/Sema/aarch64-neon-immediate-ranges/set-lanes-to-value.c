@@ -3,8 +3,6 @@
 #include <arm_neon.h>
 // REQUIRES: aarch64-registered-target
 
-// vdup_lane_s32, vdupq_lane_s32, vdup_laneq_s32, vdupq_laneq_s3 are tested 
-// under clang/test/CodeGen/arm-neon-range-checks.c
 
 void test_set_all_lanes_to_the_same_value_s8(int8x8_t arg_i8x8, int8x16_t arg_i8x16) {
 	vdup_lane_s8(arg_i8x8, 0);
@@ -52,6 +50,28 @@ void test_set_all_lanes_to_the_same_value_s16(int16x4_t arg_i16x4, int16x8_t arg
 
 }
 
+void test_set_all_lanes_to_the_same_value_s32(int32x4_t arg_i32x4, int32x2_t arg_i32x2) {
+	vdup_lane_s32(arg_i32x2, 0);
+	vdup_lane_s32(arg_i32x2, 1);
+	vdup_lane_s32(arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vdup_lane_s32(arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vdupq_lane_s32(arg_i32x2, 0);
+	vdupq_lane_s32(arg_i32x2, 1);
+	vdupq_lane_s32(arg_i32x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vdupq_lane_s32(arg_i32x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vdup_laneq_s32(arg_i32x4, 0);
+	vdup_laneq_s32(arg_i32x4, 3);
+	vdup_laneq_s32(arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vdup_laneq_s32(arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vdupq_laneq_s32(arg_i32x4, 0);
+	vdupq_laneq_s32(arg_i32x4, 3);
+	vdupq_laneq_s32(arg_i32x4, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vdupq_laneq_s32(arg_i32x4, 4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+}
 
 void test_set_all_lanes_to_the_same_value_s64(int64x1_t arg_i64x1, int64x2_t arg_i64x2) {
 	vdup_lane_s64(arg_i64x1, 0);

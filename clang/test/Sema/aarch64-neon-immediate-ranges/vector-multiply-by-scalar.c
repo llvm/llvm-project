@@ -3,8 +3,6 @@
 #include <arm_neon.h>
 // REQUIRES: aarch64-registered-target
 
-// vmul_lane_f64, vmul_laneq_f64
-// are tested under clang/test/aarch64-neon-ranges.c
 
 void test_vector_multiply_by_scalar_s16(int16x4_t arg_i16x4, int16x8_t arg_i16x8) {
 	vmul_lane_s16(arg_i16x4, arg_i16x4, 0);
@@ -131,7 +129,7 @@ void test_vector_multiply_by_scalar_f32(float32_t arg_f32, float32x2_t arg_f32x2
 
 }
 
-void test_vector_multiply_by_scalar_f64(float64x2_t arg_f64x2, float64_t arg_f64, float64x1_t arg_f64x1) {
+void test_vector_multiply_by_scalar_f64(float64x1_t arg_f64x1, float64_t arg_f64, float64x2_t arg_f64x2) {
 	vmul_lane_f64(arg_f64x1, arg_f64x1, 0);
 	vmul_lane_f64(arg_f64x1, arg_f64x1, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 	vmul_lane_f64(arg_f64x1, arg_f64x1, 1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
@@ -144,6 +142,11 @@ void test_vector_multiply_by_scalar_f64(float64x2_t arg_f64x2, float64_t arg_f64
 	vmuld_lane_f64(arg_f64, arg_f64x1, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 	vmuld_lane_f64(arg_f64, arg_f64x1, 1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
+	vmul_laneq_f64(arg_f64x1, arg_f64x2, 0);
+	vmul_laneq_f64(arg_f64x1, arg_f64x2, 1);
+	vmul_laneq_f64(arg_f64x1, arg_f64x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vmul_laneq_f64(arg_f64x1, arg_f64x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
 	vmulq_laneq_f64(arg_f64x2, arg_f64x2, 0);
 	vmulq_laneq_f64(arg_f64x2, arg_f64x2, 1);
 	vmulq_laneq_f64(arg_f64x2, arg_f64x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
@@ -155,4 +158,3 @@ void test_vector_multiply_by_scalar_f64(float64x2_t arg_f64x2, float64_t arg_f64
 	vmuld_laneq_f64(arg_f64, arg_f64x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
 }
-

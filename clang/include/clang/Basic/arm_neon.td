@@ -291,9 +291,9 @@ def SPLATQ : WInst<"splat_laneq", ".(!Q)I",
                    [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 
 let TargetGuard = "bf16,neon" in {
-  def SPLAT_BF  : WInst<"splat_lane", ".(!q)I", "bQb", 
+  def SPLAT_BF  : WInst<"splat_lane", ".(!q)I", "bQb",
                       [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
-  def SPLATQ_BF : WInst<"splat_laneq", ".(!Q)I", "bQb", 
+  def SPLATQ_BF : WInst<"splat_laneq", ".(!Q)I", "bQb",
                       [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 }
 

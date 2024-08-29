@@ -3,8 +3,6 @@
 #include <arm_neon.h>
 // REQUIRES: aarch64-registered-target
 
-// vfma_laneq_f64, vfma_lane_f64, vfmaq_lane_f64, vfmaq_laneq_f64,
-// are tested under aarch64-neon-ranges.c
 
 void test_fused_multiply_accumulate_f32(float32x2_t arg_f32x2, float32_t arg_f32, float32x4_t arg_f32x4) {
 	vfma_lane_f32(arg_f32x2, arg_f32x2, arg_f32x2, 0);
@@ -69,7 +67,15 @@ void test_fused_multiply_accumulate_f32(float32x2_t arg_f32x2, float32_t arg_f32
 
 }
 
-void test_fused_multiply_accumulate_f64(float64_t arg_f64, float64x2_t arg_f64x2, float64x1_t arg_f64x1) {
+void test_fused_multiply_accumulate_f64(float64x2_t arg_f64x2, float64_t arg_f64, float64x1_t arg_f64x1) {
+	vfma_lane_f64(arg_f64x1, arg_f64x1, arg_f64x1, 0);
+	vfma_lane_f64(arg_f64x1, arg_f64x1, arg_f64x1, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vfma_lane_f64(arg_f64x1, arg_f64x1, arg_f64x1, 1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vfmaq_lane_f64(arg_f64x2, arg_f64x2, arg_f64x1, 0);
+	vfmaq_lane_f64(arg_f64x2, arg_f64x2, arg_f64x1, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vfmaq_lane_f64(arg_f64x2, arg_f64x2, arg_f64x1, 1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
 	vfmad_lane_f64(arg_f64, arg_f64, arg_f64x1, 0);
 	vfmad_lane_f64(arg_f64, arg_f64, arg_f64x1, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 	vfmad_lane_f64(arg_f64, arg_f64, arg_f64x1, 1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
@@ -78,6 +84,11 @@ void test_fused_multiply_accumulate_f64(float64_t arg_f64, float64x2_t arg_f64x2
 	vfma_laneq_f64(arg_f64x1, arg_f64x1, arg_f64x2, 1);
 	vfma_laneq_f64(arg_f64x1, arg_f64x1, arg_f64x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 	vfma_laneq_f64(arg_f64x1, arg_f64x1, arg_f64x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+	vfmaq_laneq_f64(arg_f64x2, arg_f64x2, arg_f64x2, 0);
+	vfmaq_laneq_f64(arg_f64x2, arg_f64x2, arg_f64x2, 1);
+	vfmaq_laneq_f64(arg_f64x2, arg_f64x2, arg_f64x2, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+	vfmaq_laneq_f64(arg_f64x2, arg_f64x2, arg_f64x2, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
 	vfmad_laneq_f64(arg_f64, arg_f64, arg_f64x2, 0);
 	vfmad_laneq_f64(arg_f64, arg_f64, arg_f64x2, 1);

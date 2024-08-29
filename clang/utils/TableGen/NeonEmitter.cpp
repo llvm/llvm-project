@@ -588,7 +588,7 @@ class NeonEmitter {
                                      SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
-  bool areCompatableRangeChecks(const ArrayRef<ImmCheck> ChecksA,
+  bool areRangeChecksCompatable(const ArrayRef<ImmCheck> ChecksA,
                                 const ArrayRef<ImmCheck> ChecksB);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
                                   SmallVectorImpl<Intrinsic *> &Defs);
@@ -2180,11 +2180,11 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
 }
 
 inline bool
-NeonEmitter::areCompatableRangeChecks(const ArrayRef<ImmCheck> ChecksA,
+NeonEmitter::areRangeChecksCompatable(const ArrayRef<ImmCheck> ChecksA,
                                       const ArrayRef<ImmCheck> ChecksB) {
   // If multiple intrinsics map to the same builtin, we must ensure that the
-  // intended range checks performed in SemaArm.cpp do not contradict eachother,
-  // as these are emitted once per-buitlin.
+  // intended range checks performed in SemaArm.cpp do not contradict each
+  // other, as these are emitted once per-buitlin.
   //
   // The arguments to be checked and type of each check to be performed must be
   // the same. The element types may differ as they will be resolved
@@ -2216,7 +2216,7 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
 
     const auto it = Emitted.find(Def->getMangledName());
     if (it != Emitted.end()) {
-      assert(areCompatableRangeChecks(Checks, it->second) &&
+      assert(areRangeChecksCompatable(Checks, it->second) &&
              "Neon intrinsics with incompatable immediate range checks cannot "
              "share a builtin.");
       continue; // Ensure this is emitted only once
