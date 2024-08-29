@@ -1219,6 +1219,7 @@ template <> struct DOTGraphTraits<SplitGraph> : public DefaultDOTGraphTraits {
     case SplitGraph::EdgeKind::IndirectCall:
       return "style=\"dashed\"";
     }
+    llvm_unreachable("Unknown SplitGraph::EdgeKind enum");
   }
 };
 
