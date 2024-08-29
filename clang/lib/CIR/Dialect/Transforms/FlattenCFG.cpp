@@ -316,7 +316,10 @@ public:
     auto typeIdType = mlir::cir::IntType::get(getContext(), 32, false);
     mlir::ArrayAttr symlist = collectTypeSymbols(tryOp);
     auto inflightEh = rewriter.create<mlir::cir::EhInflightOp>(
-        loc, exceptionPtrType, typeIdType, symlist);
+        loc, exceptionPtrType, typeIdType,
+        tryOp.isCleanupActive() ? mlir::UnitAttr::get(tryOp.getContext())
+                                : nullptr,
+        symlist);
     auto selector = inflightEh.getTypeId();
     auto exceptionPtr = inflightEh.getExceptionPtr();
 
