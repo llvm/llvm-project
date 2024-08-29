@@ -1,0 +1,9 @@
+{
+  'version': 0,
+  'roots': [
+    { 'name': 'FROM_DIR',
+      'type': 'directory-remap',
+      'external-contents': 'TO_DIR'
+    }
+  ]
+}
