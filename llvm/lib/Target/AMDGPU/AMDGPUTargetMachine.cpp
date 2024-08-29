@@ -34,6 +34,7 @@
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
+#include "SIFoldOperands.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
@@ -415,7 +416,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
-  initializeSIFoldOperandsPass(*PR);
+  initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIInsertWaterfallPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
@@ -1289,7 +1290,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
   // instructions leftover after the operands are folded as well.
   //
   // XXX - Can we get away without running DeadMachineInstructionElim again?
-  addPass(&SIFoldOperandsID);
+  addPass(&SIFoldOperandsLegacyID);
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineID);
   addPass(&SILoadStoreOptimizerID);
@@ -1297,7 +1298,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
     addPass(&SIPeepholeSDWAID);
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSEID);
-    addPass(&SIFoldOperandsID);
+    addPass(&SIFoldOperandsLegacyID);
   }
   addPass(&DeadMachineInstructionElimID);
   addPass(createSIShrinkInstructionsPass());
