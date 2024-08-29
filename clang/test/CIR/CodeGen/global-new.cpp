@@ -7,6 +7,8 @@
 // RUN: FileCheck %s -check-prefix=CIR_EH --input-file=%t.eh.cir
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir-flat -fexceptions -fcxx-exceptions %s -o %t.eh.flat.cir 2>&1
 // RUN: FileCheck %s -check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -fexceptions -fcxx-exceptions %s -o %t.eh.ll 2>&1
+// RUN: FileCheck %s -check-prefix=LLVM_EH --input-file=%t.eh.ll
 
 struct e { e(int); };
 e *g = new e(0);
@@ -41,6 +43,31 @@ e *g = new e(0);
 // CIR_FLAT_EH:   %exception_ptr, %type_id = cir.eh.inflight_exception
 // CIR_FLAT_EH:   cir.call @_ZdlPvm({{.*}}) : (!cir.ptr<!void>, !u64i) -> ()
 // CIR_FLAT_EH:   cir.br ^bb4(%exception_ptr, %type_id : !cir.ptr<!void>, !u32i)
+
+// LLVM_EH: define internal void @__cxx_global_var_init() personality ptr @__gxx_personality_v0
+// LLVM_EH:   call ptr @_Znwm(i64 1)
+// LLVM_EH:   br label %[[L2:.*]],
+
+// LLVM_EH: [[L2]]:
+// LLVM_EH:   invoke void @_ZN1eC1Ei
+// LLVM_EH:           to label %[[CONT:.*]] unwind label %[[PAD:.*]],
+
+// LLVM_EH: [[CONT]]:
+// LLVM_EH:   br label %[[END:.*]],
+
+// LLVM_EH: [[PAD]]:
+// LLVM_EH:   landingpad { ptr, i32 }
+// LLVM_EH:      cleanup
+// LLVM_EH:   call void @_ZdlPvm
+// LLVM_EH:   br label %[[RESUME:.*]],
+
+// LLVM_EH: [[RESUME]]:
+// LLVM_EH:   resume { ptr, i32 }
+
+// LLVM_EH: [[END]]:
+// LLVM_EH:   store ptr {{.*}}, ptr @g, align 8
+// LLVM_EH:   ret void
+// LLVM_EH: }
 
 // LLVM-DAG: @llvm.global_ctors = appending constant [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init, ptr null }, { i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init.1, ptr null }]
 // LLVM: define internal void @__cxx_global_var_init()

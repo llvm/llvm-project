@@ -3572,11 +3572,18 @@ def EhInflightOp : CIR_Op<"eh.inflight_exception"> {
       - `type_id`: pointer to the exception object
     This operation is expected to be the first one basic blocks on the
     exception path out of `cir.try_call` operations.
+
+    The `cleanup` attribute indicates that clean up code might run before the
+    values produced by this operation are used to gather exception information.
+    This helps CIR to pass down more accurate information for LLVM lowering
+    to landingpads.
   }];
 
-  let arguments = (ins OptionalAttr<FlatSymbolRefArrayAttr>:$sym_type_list);
+  let arguments = (ins UnitAttr:$cleanup,
+                       OptionalAttr<FlatSymbolRefArrayAttr>:$sym_type_list);
   let results = (outs VoidPtr:$exception_ptr, UInt32:$type_id);
   let assemblyFormat = [{
+    (`cleanup` $cleanup^)?
     ($sym_type_list^)?
     attr-dict
   }];

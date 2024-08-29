@@ -978,10 +978,12 @@ public:
         symAddrs.push_back(addrOp);
       }
     } else {
-      //   catch ptr null
-      mlir::Value nullOp = rewriter.create<mlir::LLVM::ZeroOp>(
-          loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()));
-      symAddrs.push_back(nullOp);
+      if (!op.getCleanup()) {
+        //   catch ptr null
+        mlir::Value nullOp = rewriter.create<mlir::LLVM::ZeroOp>(
+            loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()));
+        symAddrs.push_back(nullOp);
+      }
     }
 
     // %slot = extractvalue { ptr, i32 } %x, 0
@@ -990,6 +992,9 @@ public:
         loc, llvmLandingPadStructTy, symAddrs);
     SmallVector<int64_t> slotIdx = {0};
     SmallVector<int64_t> selectorIdx = {1};
+
+    if (op.getCleanup())
+      padOp.setCleanup(true);
 
     mlir::Value slot =
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, padOp, slotIdx);
