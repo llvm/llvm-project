@@ -138,7 +138,7 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
-  list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS} -static)
+  list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding unit test ${fq_target_name}")
