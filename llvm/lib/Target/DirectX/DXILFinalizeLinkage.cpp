@@ -49,8 +49,7 @@ bool DXILFinalizeLinkageLegacy::runOnModule(Module &M) {
   return finalizeLinkage(M);
 }
 
-void DXILFinalizeLinkageLegacy::getAnalysisUsage(
-    AnalysisUsage &AU) const {
+void DXILFinalizeLinkageLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DXILResourceWrapperPass>();
 }
 
