@@ -162,7 +162,3 @@ add_llvm_component_library(LLVMAnalysis
   Support
   TargetParser
   )
-
-if(LLVM_HAS_LOGF128)
-  target_compile_definitions(LLVMAnalysis PRIVATE HAS_LOGF128)
-endif()
