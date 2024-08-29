@@ -23,12 +23,14 @@ function(add_unittest_framework_library name)
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
-    _get_common_test_compile_options(compile_options "" "")
-    target_compile_options(${lib} PRIVATE ${compile_options})
   endforeach()
-  _get_hermetic_test_compile_options(compile_options -nostdinc++)
+
+  _get_common_test_compile_options(compile_options "" "")
+  target_compile_options(${name}.unit PRIVATE ${compile_options})
+
+  _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
-  target_compile_options(${name}.hermetic PRIVATE ${compile_options})
+  target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
   if(TEST_LIB_DEPENDS)
     foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
