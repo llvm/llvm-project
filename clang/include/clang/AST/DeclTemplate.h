@@ -809,7 +809,8 @@ protected:
   };
 
   /// Pointer to the common data shared by all declarations of this
-  /// template, and a flag indicating if the template is a member specialization.
+  /// template, and a flag indicating if the template is a member
+  /// specialization.
   mutable llvm::PointerIntPair<CommonBase *, 1, bool> Common;
 
   /// Retrieves the "common" pointer shared by all (re-)declarations of
@@ -857,9 +858,7 @@ public:
   /// template<> template<typename T>
   /// struct X<int>::Inner { /* ... */ };
   /// \endcode
-  bool isMemberSpecialization() const {
-    return Common.getInt();
-  }
+  bool isMemberSpecialization() const { return Common.getInt(); }
 
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
@@ -2190,9 +2189,7 @@ public:
   }
 
   /// Note that this member template is a specialization.
-  void setMemberSpecialization() {
-    return InstantiatedFromMember.setInt(true);
-  }
+  void setMemberSpecialization() { return InstantiatedFromMember.setInt(true); }
 
   /// Retrieves the injected specialization type for this partial
   /// specialization.  This is not the same as the type-decl-type for
@@ -2947,9 +2944,7 @@ public:
   }
 
   /// Note that this member template is a specialization.
-  void setMemberSpecialization() {
-    return InstantiatedFromMember.setInt(true);
-  }
+  void setMemberSpecialization() { return InstantiatedFromMember.setInt(true); }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 

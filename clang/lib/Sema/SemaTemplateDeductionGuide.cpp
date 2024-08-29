@@ -317,7 +317,8 @@ struct ConvertConstructorToDeductionGuideTransform {
     }
 
     if (NestedPattern)
-      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(/*D=*/nullptr, Template->getDeclContext());
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(
+          /*D=*/nullptr, Template->getDeclContext());
   }
 
   Sema &SemaRef;
@@ -786,8 +787,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
                                      getDepthAndIndex(TP).first + AdjustDepth);
       FirstUndeducedParamIdx += 1;
       assert(InnerArgsForBuildingRC[Index].isNull());
-      InnerArgsForBuildingRC[Index] =
-          Context.getInjectedTemplateArg(NewParam);
+      InnerArgsForBuildingRC[Index] = Context.getInjectedTemplateArg(NewParam);
       continue;
     }
     TemplateArgumentLoc Input =
@@ -828,11 +828,12 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   // NOTE: The underlying deduction guide F is instantiated -- either from an
   // explicitly-written deduction guide member, or from a constructor.
   MultiLevelTemplateArgumentList ArgsForBuildingRC =
-      SemaRef.getTemplateInstantiationArgs(
-        F, F->getLexicalDeclContext(),
-        /*Final=*/false, /*Innermost=*/InnerArgsForBuildingRC,
-        /*RelativeToPrimary=*/true,
-        /*ForConstraintInstantiation=*/true);;
+      SemaRef.getTemplateInstantiationArgs(F, F->getLexicalDeclContext(),
+                                           /*Final=*/false,
+                                           /*Innermost=*/InnerArgsForBuildingRC,
+                                           /*RelativeToPrimary=*/true,
+                                           /*ForConstraintInstantiation=*/true);
+  ;
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
 
   ExprResult E = SemaRef.SubstExpr(RC, ArgsForBuildingRC);

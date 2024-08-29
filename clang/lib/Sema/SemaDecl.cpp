@@ -4505,10 +4505,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   adjustDeclContextForDeclaratorDecl(New, Old);
 
   // Ensure the template parameters are compatible.
-  if (NewTemplate &&
-      !TemplateParameterListsAreEqual(NewTemplate, NewTemplate->getTemplateParameters(),
-                                      OldTemplate, OldTemplate->getTemplateParameters(),
-                                      /*Complain=*/true, TPL_TemplateMatch))
+  if (NewTemplate && !TemplateParameterListsAreEqual(
+                         NewTemplate, NewTemplate->getTemplateParameters(),
+                         OldTemplate, OldTemplate->getTemplateParameters(),
+                         /*Complain=*/true, TPL_TemplateMatch))
     return New->setInvalidDecl();
 
   // C++ [class.mem]p1:

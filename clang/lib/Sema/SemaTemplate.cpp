@@ -1793,7 +1793,8 @@ DeclResult Sema::CheckClassTemplate(
     CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
     const ParsedAttributesView &Attr, TemplateParameterList *TemplateParams,
     AccessSpecifier AS, SourceLocation ModulePrivateLoc,
-    SourceLocation FriendLoc, ArrayRef<TemplateParameterList *> OuterTemplateParamLists,
+    SourceLocation FriendLoc,
+    ArrayRef<TemplateParameterList *> OuterTemplateParamLists,
     bool IsMemberSpecialization, SkipBodyInfo *SkipBody) {
   assert(TemplateParams && TemplateParams->size() > 0 &&
          "No template parameters");
@@ -2058,8 +2059,7 @@ DeclResult Sema::CheckClassTemplate(
                           /*DelayTypeCreation=*/true);
   SetNestedNameSpecifier(*this, NewClass, SS);
   if (!OuterTemplateParamLists.empty())
-    NewClass->setTemplateParameterListsInfo(
-        Context, OuterTemplateParamLists);
+    NewClass->setTemplateParameterListsInfo(Context, OuterTemplateParamLists);
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
@@ -2102,26 +2102,28 @@ DeclResult Sema::CheckClassTemplate(
   // Ensure that the template parameter lists are compatible. Skip this check
   // for a friend in a dependent context: the template parameter list itself
   // could be dependent.
-  if (ShouldAddRedecl && PrevClassTemplate && !TemplateParameterListsAreEqual(
-      NewTemplate, TemplateParams,
-      PrevClassTemplate, PrevClassTemplate->getTemplateParameters(),
-      /*Complain=*/true, TPL_TemplateMatch))
+  if (ShouldAddRedecl && PrevClassTemplate &&
+      !TemplateParameterListsAreEqual(
+          NewTemplate, TemplateParams, PrevClassTemplate,
+          PrevClassTemplate->getTemplateParameters(),
+          /*Complain=*/true, TPL_TemplateMatch))
     return true;
 
   // Check the template parameter list of this declaration, possibly
   // merging in the template parameter list from the previous class
   // template declaration. Skip this check for a friend in a dependent
   // context, because the template parameter list might be dependent.
-  if (ShouldAddRedecl && CheckTemplateParameterList(
-      TemplateParams,
-      PrevClassTemplate ? PrevClassTemplate->getTemplateParameters()
-                        : nullptr,
-      (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
-       SemanticContext->isDependentContext())
-          ? TPC_ClassTemplateMember
-      : TUK == TagUseKind::Friend ? TPC_FriendClassTemplate
-                                  : TPC_ClassTemplate,
-      SkipBody))
+  if (ShouldAddRedecl &&
+      CheckTemplateParameterList(
+          TemplateParams,
+          PrevClassTemplate ? PrevClassTemplate->getTemplateParameters()
+                            : nullptr,
+          (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
+           SemanticContext->isDependentContext())
+              ? TPC_ClassTemplateMember
+          : TUK == TagUseKind::Friend ? TPC_FriendClassTemplate
+                                      : TPC_ClassTemplate,
+          SkipBody))
     Invalid = true;
 
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
@@ -3965,7 +3967,8 @@ void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
 DeclResult Sema::ActOnVarTemplateSpecialization(
     Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
     SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
-    StorageClass SC, bool IsPartialSpecialization, bool IsMemberSpecialization) {
+    StorageClass SC, bool IsPartialSpecialization,
+    bool IsMemberSpecialization) {
   // D must be variable template id.
   assert(D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId &&
          "Variable template specialization is declared with a template id.");
@@ -8296,15 +8299,12 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       Diag(TemplateNameLoc, diag::err_partial_spec_args_match_primary_template)
           << /*class template*/ 0 << (TUK == TagUseKind::Definition)
           << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
-      return CheckClassTemplate(S, TagSpec, TUK, KWLoc, SS,
-                                ClassTemplate->getIdentifier(),
-                                TemplateNameLoc,
-                                Attr,
-                                TemplateParams,
-                                AS_none, /*ModulePrivateLoc=*/SourceLocation(),
-                                /*FriendLoc*/SourceLocation(),
-                                TemplateParameterLists.drop_back(),
-                                isMemberSpecialization);
+      return CheckClassTemplate(
+          S, TagSpec, TUK, KWLoc, SS, ClassTemplate->getIdentifier(),
+          TemplateNameLoc, Attr, TemplateParams, AS_none,
+          /*ModulePrivateLoc=*/SourceLocation(),
+          /*FriendLoc*/ SourceLocation(), TemplateParameterLists.drop_back(),
+          isMemberSpecialization);
     }
 
     // Create a new class template partial specialization declaration node.

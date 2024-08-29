@@ -2567,7 +2567,7 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
-      readDeclAs<ClassTemplatePartialSpecializationDecl>());
+        readDeclAs<ClassTemplatePartialSpecializationDecl>());
   }
 }
 
@@ -2660,7 +2660,7 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
   D->TemplateParams = Params;
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
-    D->InstantiatedFromMember.setInt(Record.readInt());
+  D->InstantiatedFromMember.setInt(Record.readInt());
 
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {

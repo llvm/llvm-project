@@ -9973,7 +9973,8 @@ void ASTReader::finishPendingActions() {
 
     auto RTD = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
     for (auto *R = getMostRecentExistingDecl(RTD); R; R = R->getPreviousDecl())
-      cast<RedeclarableTemplateDecl>(R)->Common.setPointer(RTD->Common.getPointer());
+      cast<RedeclarableTemplateDecl>(R)->Common.setPointer(
+          RTD->Common.getPointer());
   }
   PendingDefinitions.clear();
 

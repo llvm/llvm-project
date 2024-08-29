@@ -4690,7 +4690,8 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   NamedDecl *Pattern = FD;
   std::optional<ArrayRef<TemplateArgument>> Innermost;
 
-  if (FD->isCXXClassMember() && !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD)) {
+  if (FD->isCXXClassMember() &&
+      !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD)) {
     if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate()) {
       Pattern = FTD->getFirstDecl();
       Innermost = FD->getTemplateSpecializationArgs()->asArray();

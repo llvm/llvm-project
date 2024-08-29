@@ -586,7 +586,7 @@ static bool CheckConstraintSatisfaction(
   ArrayRef<TemplateArgument> TemplateArgs =
       TemplateArgsLists.getNumSubstitutedLevels() > 0
           ? TemplateArgsLists.getInnermost()
-          : ArrayRef<TemplateArgument> {};
+          : ArrayRef<TemplateArgument>{};
   Sema::InstantiatingTemplate Inst(S, TemplateIDRange.getBegin(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
       const_cast<NamedDecl *>(Template), TemplateArgs, TemplateIDRange);
@@ -908,8 +908,8 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
 // Figure out the to-translation-unit depth for this function declaration for
 // the purpose of seeing if they differ by constraints. This isn't the same as
 // getTemplateDepth, because it includes already instantiated parents.
-static unsigned
-CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND) {
+static unsigned CalculateTemplateDepthForConstraints(Sema &S,
+                                                     const NamedDecl *ND) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       ND, ND->getLexicalDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
@@ -1068,11 +1068,11 @@ bool Sema::FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD) {
   SmallVector<const Expr *, 3> ACs;
   FTD->getAssociatedConstraints(ACs);
 
-  #if 0
+#if 0
   unsigned OldTemplateDepth = CalculateTemplateDepthForConstraints(*this, FD);
-  #else
+#else
   unsigned OldTemplateDepth = FTD->getTemplateParameters()->getDepth();
-  #endif
+#endif
   for (const Expr *Constraint : ACs)
     if (ConstraintExpressionDependsOnEnclosingTemplate(FD, OldTemplateDepth,
                                                        Constraint))
