@@ -1378,7 +1378,7 @@ void OpEmitter::genPropertiesSupport() {
                ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
         {0}
       };
-      {2};
+      {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
       if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
@@ -1419,7 +1419,7 @@ void OpEmitter::genPropertiesSupport() {
                                      &fctx.addSubst("_attr", propertyAttr)
                                           .addSubst("_storage", propertyStorage)
                                           .addSubst("_diag", propertyDiag)),
-                               name, getAttr);
+                               getAttr);
       if (prop.hasStorageTypeValueOverride()) {
         setPropMethod << formatv(attrGetDefaultFmt, name,
                                  prop.getStorageTypeValueOverride());
@@ -2768,11 +2768,10 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
          << "u && \"mismatched number of return types\");";
   body << "\n    " << builderOpState << ".addTypes(inferredReturnTypes);";
 
-  body << formatv(R"(
-  } else {{
+  body << R"(
+  } else {
     ::llvm::report_fatal_error("Failed to infer result type(s).");
-  })",
-                  opClass.getClassName(), builderOpState);
+  })";
 }
 
 void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
@@ -3882,7 +3881,7 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
 
     auto getSuccessor =
         formatv(successor.isVariadic() ? "{0}()" : getSingleSuccessor,
-                successor.name, it.index())
+                successor.name)
             .str();
     auto constraintFn =
         staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
