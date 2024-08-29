@@ -4,3 +4,12 @@
 int __attribute__((target("arch=rv64g"))) foo(void) { return 0; }
 //expected-error@+1 {{redefinition of 'foo'}}
 int __attribute__((target("arch=rv64gc"))) foo(void) { return 0; }
+
+//expected-warning@+1 {{unsupported 'notafeature' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("arch=+notafeature"))) UnsupportFeature(void) { return 0; }
+
+//expected-warning@+1 {{unsupported 'arch=+zba,zbb' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("arch=+zba,zbb"))) WithoutAddSigned(void) { return 0; }
+
+//expected-warning@+1 {{unsupported 'arch=zba' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("arch=zba"))) WithoutAddSigned2(void) { return 0; }
