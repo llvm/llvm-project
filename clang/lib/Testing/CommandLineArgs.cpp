@@ -48,9 +48,9 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
   case Lang_OBJCXX:
     return {"-x", "objective-c++", "-frtti"};
   case Lang_OpenCL:
-    llvm_unreachable("Not implemented yet!");
+    llvm_unreachable("Unhandled TestLanguage enum");
   }
-  llvm_unreachable("Not implemented yet!");
+  llvm_unreachable("Unhandled TestLanguage enum");
 }
 
 std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
@@ -70,9 +70,9 @@ std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
     return {"-xobjective-c++"};
     break;
   case Lang_OpenCL:
-    llvm_unreachable("Not implemented yet!");
+    llvm_unreachable("Unhandled TestLanguage enum");
   }
-  llvm_unreachable("Not implemented yet!");
+  llvm_unreachable("Unhandled TestLanguage enum");
 }
 
 StringRef getFilenameForTesting(TestLanguage Lang) {
