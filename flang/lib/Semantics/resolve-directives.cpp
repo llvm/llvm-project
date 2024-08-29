@@ -1639,12 +1639,12 @@ bool OmpAttributeVisitor::Pre(
     break;
   }
   if (standaloneDir.v == llvm::omp::Directive::OMPD_scan) {
-    if ((std::get<parser::OmpClauseList>(x.t).v.size() != 1)) {
+    if (std::get<parser::OmpClauseList>(x.t).v.size() != 1) {
       context_.Say(standaloneDir.source,
           "Exactly one of `exclusive` or `inclusive` clause is expected"_err_en_US);
     }
     if (!parentContext ||
-        (!llvm::omp::scanAllowedSet.test(parentContext->directive))) {
+        !llvm::omp::scanAllowedSet.test(parentContext->directive)) {
       context_.Say(standaloneDir.source,
           "Orphaned `omp scan` directives are prohibited; perhaps you forgot "
           "to enclose the directive in to a worksharing loop, a worksharing "

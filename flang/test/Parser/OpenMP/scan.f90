@@ -32,7 +32,7 @@ subroutine test_scan(n, a, b)
     x = x + a(k)
   end do
 
-  !$omp parallel do simd reduction(inscan,+: x)
+  !$omp parallel do simd reduction(inscan,+: x, y)
   do k = 1, n
     x = x + a(k)
     !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
@@ -44,7 +44,7 @@ subroutine test_scan(n, a, b)
       b(k) = x
   end do
 
-  !$omp parallel do simd reduction(inscan,+: x)
+  !$omp parallel do simd reduction(inscan,+: x, y)
   do k = 1, n
     x = x + a(k)
     !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct

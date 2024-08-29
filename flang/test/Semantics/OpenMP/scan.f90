@@ -17,7 +17,7 @@ subroutine test_scan()
    !$omp scan
  end do
 
-!$omp parallel do simd reduction(inscan,+: x)
+!$omp parallel do simd reduction(inscan,+: x, y)
  do k = 1, n
  !ERROR: Exactly one of `exclusive` or `inclusive` clause is expected
    !$omp scan inclusive(x) exclusive(y)
