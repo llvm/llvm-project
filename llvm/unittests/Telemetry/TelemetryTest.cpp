@@ -24,14 +24,17 @@
 #include <ctime>
 #include <vector>
 
-
-// Testing parameters.ve
+// Testing parameters.
+// These are set by each test to force certain outcomes.
+// Since the tests may be run in parellel, these should probably
+// be thread_local.
 static thread_local bool HasExitError = false;
 static thread_local std::string ExitMsg = "";
 static thread_local bool HasVendorConfig = false;
 static thread_local bool SanitizeData = false;
 static thread_local std::string Buffer = "";
 static thread_local std::vector<llvm::json::Object> EmittedJsons;
+static thread_local std::string ExpectedUuid = "";
 
 namespace llvm {
 namespace telemetry {
@@ -39,8 +42,8 @@ namespace vendor_code {
 
 // Generate unique (but deterministic "uuid" for testing purposes).
 static std::string nextUuid() {
-  static size_t seed = 1111;
-  return std::to_string(seed++);
+  static std::atomic<int> seed = 1111;
+  return std::to_string(seed.fetch_add(1, std::memory_order_acquire));
 }
 
 struct VendorEntryKind {
@@ -54,7 +57,6 @@ struct VendorEntryKind {
 // by downstream code to store additional data as needed.
 // It can also define additional data serialization method.
 struct VendorCommonTelemetryInfo : public TelemetryInfo {
-
   static bool classof(const TelemetryInfo *T) {
     // Subclasses of this is also acceptable.
     return (T->getEntryKind() & VendorEntryKind::VendorCommon) ==
@@ -155,6 +157,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
   }
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
+    OS << "UUID:" << SessionUuid << "\n";
     int I = 0;
     for (const std::string &M : Msgs) {
       OS << "MSG_" << I << ":" << M << "\n";
@@ -164,11 +167,13 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 
   json::Object serializeToJson() const override {
     json::Object Inner;
+    Inner.try_emplace ("UUID", SessionUuid);
     int I = 0;
     for (const std::string &M : Msgs) {
       Inner.try_emplace(("MSG_" + llvm::Twine(I)).str(), M);
       ++I;
     }
+
     return json::Object{{"Midpoint", std::move(Inner)}};
   }
 };
@@ -295,10 +300,12 @@ public:
 
   static std::unique_ptr<TestTelemeter>
   createInstance(TelemetryConfig *config) {
+    llvm::errs() << "============================== createInstance is called" << "\n";
     if (!config->EnableTelemetry)
-      return std::unique_ptr<TestTelemeter>(nullptr);
+      return nullptr;
+    ExpectedUuid = nextUuid();
     std::unique_ptr<TestTelemeter> Telemeter =
-        std::make_unique<TestTelemeter>(nextUuid());
+        std::make_unique<TestTelemeter>(ExpectedUuid);
     // Set up Destination based on the given config.
     for (const std::string &Dest : config->AdditionalDestinations) {
       // The destination(s) are ALSO defined by vendor, so it should understand
@@ -359,6 +366,8 @@ public:
     emitToDestinations(Entry);
   }
 
+  const std::string& getUuid() const {return Uuid;}
+
   ~TestTelemeter() {
     for (auto *Dest : Destinations)
       delete Dest;
@@ -412,12 +421,13 @@ std::shared_ptr<llvm::telemetry::TelemetryConfig> GetTelemetryConfig() {
   ApplyCommonConfig(Config.get());
 
   // Apply vendor specific config, if present.
-  // In practice, this would be a build-time param.
+  // In principle, this would be a build-time param, configured by the vendor.
   // Eg:
   //
   // #ifdef HAS_VENDOR_TELEMETRY_CONFIG
   //     llvm::telemetry::vendor_code::ApplyVendorSpecificConfigs(config.get());
   // #endif
+  //
   // But for unit testing, we use the testing params defined at the top.
   if (HasVendorConfig) {
     llvm::telemetry::vendor_code::ApplyVendorSpecificConfigs(Config.get());
@@ -488,12 +498,12 @@ TEST(TelemetryTest, TelemetryDefault) {
 }
 
 TEST(TelemetryTest, TelemetryEnabled) {
-  const std::string ToolName = "TestToolOne";
+  const std::string ToolName = "TelemetryTest";
 
   // Preset some test params.
   HasVendorConfig = true;
   SanitizeData = false;
-  Buffer = "";
+  Buffer.clear();
   EmittedJsons.clear();
 
   std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
@@ -509,17 +519,21 @@ TEST(TelemetryTest, TelemetryEnabled) {
   AtToolMidPoint(Tool.get());
   AtToolExit(ToolName, Tool.get());
 
+  // Check that the Tool uses the expected UUID.
+  EXPECT_STREQ(Tool->getUuid().c_str(), ExpectedUuid.c_str());
+
   // Check that the StringDestination emitted properly
   {
-    std::string ExpectedBuff = "UUID:1111\n"
-                               "MagicStartupMsg:One_TestToolOne\n"
-                               "MSG_0:Two\n"
-                               "MSG_1:Deux\n"
-                               "MSG_2:Zwei\n"
-                               "UUID:1111\n"
-                               "MagicExitMsg:Three_TestToolOne\n";
+    std::string ExpectedBuffer = ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+                                  "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
+                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+                                  "MSG_0:Two\n" +
+                                  "MSG_1:Deux\n" +
+                                  "MSG_2:Zwei\n" +
+                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+                                  "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n").str();
 
-    EXPECT_STREQ(ExpectedBuff.c_str(), Buffer.c_str());
+    EXPECT_STREQ(ExpectedBuffer.c_str(), Buffer.c_str());
   }
 
   // Check that the JsonDestination emitted properly
@@ -531,18 +545,21 @@ TEST(TelemetryTest, TelemetryEnabled) {
     const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
     EXPECT_STREQ(
-        "[[\"UUID\",\"1111\"],[\"MagicStartupMsg\",\"One_TestToolOne\"]]",
+        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
         ValueToString(StartupEntry).c_str());
 
     const json::Value *MidpointEntry = EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
-    EXPECT_STREQ("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\"}",
+    // TODO: This is a bit flaky in that the json string printer sort the entries (for now),
+    // so the "UUID" field is put at the end of the array even though it was emitted first.
+    EXPECT_STREQ(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\",\"UUID\":\""
+                  + llvm::Twine(ExpectedUuid) + "\"}").str().c_str(),
                  ValueToString(MidpointEntry).c_str());
 
     const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
     EXPECT_STREQ(
-        "[[\"UUID\",\"1111\"],[\"MagicExitMsg\",\"Three_TestToolOne\"]]",
+        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
         ValueToString(ExitEntry).c_str());
   }
 }
@@ -550,12 +567,12 @@ TEST(TelemetryTest, TelemetryEnabled) {
 // Similar to previous tests, but toggling the data-sanitization option ON.
 // The recorded data should have some fields removed.
 TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
-  const std::string ToolName = "TestToolOne";
+  const std::string ToolName = "TelemetryTest_SanitizedData";
 
   // Preset some test params.
   HasVendorConfig = true;
   SanitizeData = true;
-  Buffer = "";
+  Buffer.clear();
   EmittedJsons.clear();
 
   std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
@@ -574,15 +591,16 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   // Check that the StringDestination emitted properly
   {
     // The StringDestination should have removed the odd-positioned msgs.
-    std::string ExpectedBuff = "UUID:1111\n"
-                               "MagicStartupMsg:One_TestToolOne\n"
-                               "MSG_0:Two\n"
-                               "MSG_1:\n" // was sannitized away.
-                               "MSG_2:Zwei\n"
-                               "UUID:1111\n"
-                               "MagicExitMsg:Three_TestToolOne\n";
 
-    EXPECT_STREQ(ExpectedBuff.c_str(), Buffer.c_str());
+    std::string ExpectedBuffer = ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+                                  "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
+                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+                                  "MSG_0:Two\n" +
+                                  "MSG_1:\n" + // <<< was sanitized away.
+                                  "MSG_2:Zwei\n" +
+                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+                                  "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n").str();
+    EXPECT_STREQ(ExpectedBuffer.c_str(), Buffer.c_str());
   }
 
   // Check that the JsonDestination emitted properly
@@ -594,19 +612,21 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
     EXPECT_STREQ(
-        "[[\"UUID\",\"1111\"],[\"MagicStartupMsg\",\"One_TestToolOne\"]]",
+        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
         ValueToString(StartupEntry).c_str());
 
     const json::Value *MidpointEntry = EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
     // The JsonDestination should have removed the even-positioned msgs.
-    EXPECT_STREQ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\"}",
+    EXPECT_STREQ(("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"UUID\":\""
+                  + llvm::Twine(ExpectedUuid) + "\"}").str().c_str(),
                  ValueToString(MidpointEntry).c_str());
+
 
     const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
     EXPECT_STREQ(
-        "[[\"UUID\",\"1111\"],[\"MagicExitMsg\",\"Three_TestToolOne\"]]",
+        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
         ValueToString(ExitEntry).c_str());
   }
 }
