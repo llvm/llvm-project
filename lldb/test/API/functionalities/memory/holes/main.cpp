@@ -27,7 +27,8 @@ int getpagesize() {
 
 char *allocate_memory_with_holes() {
   int pagesize = getpagesize();
-  void *mem = VirtualAlloc(nullptr, num_pages * pagesize, MEM_RESERVE, PAGE_NOACCESS);
+  void *mem =
+      VirtualAlloc(nullptr, num_pages * pagesize, MEM_RESERVE, PAGE_NOACCESS);
   if (!mem) {
     std::cerr << std::system_category().message(GetLastError()) << std::endl;
     exit(1);
