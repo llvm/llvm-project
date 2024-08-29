@@ -44,6 +44,22 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
   // TODO(CIR): SetFastMathFlags(CurFPFeatures);
 }
 
+CIRGenFunction::~CIRGenFunction() {
+  assert(LifetimeExtendedCleanupStack.empty() && "failed to emit a cleanup");
+  assert(DeferredDeactivationCleanupStack.empty() &&
+         "missed to deactivate a cleanup");
+
+  // TODO(cir): set function is finished.
+  assert(!MissingFeatures::openMPRuntime());
+
+  // If we have an OpenMPIRBuilder we want to finalize functions (incl.
+  // outlining etc) at some point. Doing it once the function codegen is done
+  // seems to be a reasonable spot. We do it here, as opposed to the deletion
+  // time of the CodeGenModule, because we have to ensure the IR has not yet
+  // been "emitted" to the outside, thus, modifications are still sensible.
+  assert(!MissingFeatures::openMPRuntime());
+}
+
 clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
 }

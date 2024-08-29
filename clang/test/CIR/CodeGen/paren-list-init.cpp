@@ -26,10 +26,7 @@ void make1() {
 // CIR:     %[[FIELD:.*]] = cir.get_member %[[AGG_TMP]][0] {name = "v"} : !cir.ptr<![[S1]]> -> !cir.ptr<![[VecType]]>
 // CIR:     cir.call @_ZN3VecC1EOS_(%[[FIELD]], %[[VEC]]) : (!cir.ptr<![[VecType]]>, !cir.ptr<![[VecType]]>) -> ()
 // CIR:     cir.call @_ZN2S1D1Ev(%[[AGG_TMP]]) : (!cir.ptr<![[S1]]>) -> ()
-// CIR:     cir.call @_ZN3VecD1Ev(%[[FIELD]]) : (!cir.ptr<![[VecType]]>) -> ()
 // CIR:   }
-
-// FIXME: implement MissingFeatures::flagLoad(), do not emit this a second time.
 // CIR:   cir.call @_ZN3VecD1Ev(%[[VEC]]) : (!cir.ptr<![[VecType]]>) -> ()
 // CIR:   cir.return
 }

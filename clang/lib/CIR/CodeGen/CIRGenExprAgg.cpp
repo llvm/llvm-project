@@ -504,10 +504,13 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
   // Exception safety requires us to destroy all the
   // already-constructed members if an initializer throws.
   // For that, we'll need an EH cleanup.
-  [[maybe_unused]] QualType::DestructionKind dtorKind =
-      elementType.isDestructedType();
+  QualType::DestructionKind dtorKind = elementType.isDestructedType();
   [[maybe_unused]] Address endOfInit = Address::invalid();
-  assert(!CGF.needsEHCleanup(dtorKind) && "destructed types NIY");
+  CIRGenFunction::CleanupDeactivationScope deactivation(CGF);
+
+  if (dtorKind) {
+    llvm_unreachable("dtorKind NYI");
+  }
 
   // The 'current element to initialize'.  The invariants on this
   // variable are complicated.  Essentially, after each iteration of
@@ -619,9 +622,6 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
           builder.createYield(loc);
         });
   }
-
-  // Leave the partial-array cleanup if we entered one.
-  assert(!dtorKind && "destructed types NIY");
 }
 
 /// True if the given aggregate type requires special GC API calls.
@@ -910,11 +910,9 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   LLVM_ATTRIBUTE_UNUSED LValue SlotLV =
       CGF.makeAddrLValue(Slot.getAddress(), E->getType());
 
-  // We'll need to enter cleanup scopes in case any of the element initializers
-  // throws an exception.
-  if (MissingFeatures::cleanups())
-    llvm_unreachable("NYI");
-  mlir::Operation *CleanupDominator = nullptr;
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception or contains branch out of the expressions.
+  CIRGenFunction::CleanupDeactivationScope scope(CGF);
 
   auto CurField = E->getLambdaClass()->field_begin();
   auto captureInfo = E->capture_begin();
@@ -949,15 +947,6 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
     CurField++;
     captureInfo++;
   }
-
-  // Deactivate all the partial cleanups in reverse order, which generally means
-  // popping them.
-  if (MissingFeatures::cleanups())
-    llvm_unreachable("NYI");
-
-  // Destroy the placeholder if we made one.
-  if (CleanupDominator)
-    CleanupDominator->erase();
 }
 
 void AggExprEmitter::VisitCastExpr(CastExpr *E) {
@@ -1266,12 +1255,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
   SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
-  // FIXME(cir): placeholder
-  mlir::Operation *cleanupDominator = nullptr;
-  [[maybe_unused]] auto addCleanup =
-      [&](const EHScopeStack::stable_iterator &cleanup) {
-        llvm_unreachable("NYI");
-      };
+  CIRGenFunction::CleanupDeactivationScope DeactivateCleanups(CGF);
 
   unsigned curInitIndex = 0;
 
@@ -1371,17 +1355,6 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     // If the GEP didn't get used because of a dead zero init or something
     // else, clean it up for -O0 builds and general tidiness.
   }
-
-  // Deactivate all the partial cleanups in reverse order, which
-  // generally means popping them.
-  assert((cleanupDominator || cleanups.empty()) &&
-         "Missing cleanupDominator before deactivating cleanup blocks");
-  for (unsigned i = cleanups.size(); i != 0; --i)
-    llvm_unreachable("NYI");
-
-  // Destroy the placeholder if we made one.
-  if (cleanupDominator)
-    llvm_unreachable("NYI");
 }
 
 void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
