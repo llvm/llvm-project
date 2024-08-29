@@ -1,5 +1,4 @@
 ! REQUIRES: aarch64-registered-target
-! REQUIRES: flang-supports-f128-math
 ! RUN: %python %S/test_modfile.py %s %flang_fc1 -triple aarch64-unknown-linux-gnu
 
 module m1
