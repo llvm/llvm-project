@@ -375,6 +375,20 @@ public:
   EHScopeStack EHStack;
   llvm::SmallVector<char, 256> LifetimeExtendedCleanupStack;
 
+  // A stack of cleanups which were added to EHStack but have to be deactivated
+  // later before being popped or emitted. These are usually deactivated on
+  // exiting a `CleanupDeactivationScope` scope. For instance, after a
+  // full-expr.
+  //
+  // These are specially useful for correctly emitting cleanups while
+  // encountering branches out of expression (through stmt-expr or coroutine
+  // suspensions).
+  struct DeferredDeactivateCleanup {
+    EHScopeStack::stable_iterator Cleanup;
+    mlir::Operation *DominatingIP;
+  };
+  llvm::SmallVector<DeferredDeactivateCleanup> DeferredDeactivationCleanupStack;
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> NRVOFlags;
@@ -1811,6 +1825,11 @@ public:
                                       QualType elementType,
                                       CharUnits elementAlign,
                                       Destroyer *destroyer);
+  void pushDestroyAndDeferDeactivation(QualType::DestructionKind dtorKind,
+                                       Address addr, QualType type);
+  void pushDestroyAndDeferDeactivation(CleanupKind cleanupKind, Address addr,
+                                       QualType type, Destroyer *destroyer,
+                                       bool useEHCleanupForArray);
   void buildArrayDestroy(mlir::Value begin, mlir::Value end,
                          QualType elementType, CharUnits elementAlign,
                          Destroyer *destroyer, bool checkZeroLength,

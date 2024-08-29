@@ -274,6 +274,7 @@ public:
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   void VisitChooseExpr(const ChooseExpr *E) { llvm_unreachable("NYI"); }
   void VisitInitListExpr(InitListExpr *E);
+  void VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
   void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
                                        FieldDecl *InitializedFieldInUnion,
                                        Expr *ArrayFiller);
@@ -1194,6 +1195,12 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
   // All done! The result is in the Dest slot.
 }
 
+void AggExprEmitter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
+                                  E->getInitializedFieldInUnion(),
+                                  E->getArrayFiller());
+}
+
 void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // TODO(cir): use something like CGF.ErrorUnsupported
   if (E->hadArrayRangeDesignator())
@@ -1350,10 +1357,14 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    [[maybe_unused]] bool pushedCleanup = false;
     if (QualType::DestructionKind dtorKind =
             field->getType().isDestructedType()) {
-      llvm_unreachable("NYI");
+      assert(LV.isSimple());
+      if (dtorKind) {
+        CGF.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, LV.getAddress(),
+                                            field->getType(),
+                                            CGF.getDestroyer(dtorKind), false);
+      }
     }
 
     // From LLVM codegen, maybe not useful for CIR:

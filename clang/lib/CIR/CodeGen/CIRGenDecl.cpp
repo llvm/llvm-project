@@ -1247,3 +1247,22 @@ void CIRGenFunction::pushEHDestroy(QualType::DestructionKind dtorKind,
 
   pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind), true);
 }
+
+// Pushes a destroy and defers its deactivation until its
+// CleanupDeactivationScope is exited.
+void CIRGenFunction::pushDestroyAndDeferDeactivation(
+    QualType::DestructionKind dtorKind, Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroyAndDeferDeactivation(
+      cleanupKind, addr, type, getDestroyer(dtorKind), cleanupKind & EHCleanup);
+}
+
+void CIRGenFunction::pushDestroyAndDeferDeactivation(
+    CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
+    bool useEHCleanupForArray) {
+  assert(!MissingFeatures::flagLoad());
+  pushDestroy(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  DeferredDeactivationCleanupStack.push_back({EHStack.stable_begin(), nullptr});
+}
