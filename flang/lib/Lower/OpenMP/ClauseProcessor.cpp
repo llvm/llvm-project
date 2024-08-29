@@ -960,25 +960,21 @@ bool ClauseProcessor::processMap(
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
 
-          auto origSymbol = converter.getSymbolAddress(*object.sym());
-          mlir::Value symAddr = info.addr;
-          if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
-            symAddr = origSymbol;
-
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
+          mlir::Value baseOp = info.rawInput;
           auto location = mlir::NameLoc::get(
               mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
-              symAddr.getLoc());
+              baseOp.getLoc());
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, location, symAddr,
+              firOpBuilder, location, baseOp,
               /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
               /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
+              mlir::omp::VariableCaptureKind::ByRef, baseOp.getType());
 
           if (object.sym()->owner().IsDerivedType()) {
             addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
@@ -987,9 +983,9 @@ bool ClauseProcessor::processMap(
             result.mapVars.push_back(mapOp);
             ptrMapSyms->push_back(object.sym());
             if (mapSymTypes)
-              mapSymTypes->push_back(symAddr.getType());
+              mapSymTypes->push_back(baseOp.getType());
             if (mapSymLocs)
-              mapSymLocs->push_back(symAddr.getLoc());
+              mapSymLocs->push_back(baseOp.getLoc());
           }
         }
       });

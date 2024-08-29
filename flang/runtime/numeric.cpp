@@ -95,20 +95,22 @@ template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
 }
 
 // SELECTED_INT_KIND (16.9.169)
-template <typename T>
-inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
-  if (x <= 2) {
-    return 1;
-  } else if (x <= 4) {
-    return 2;
-  } else if (x <= 9) {
-    return 4;
-  } else if (x <= 18) {
-    return 8;
-#ifdef __SIZEOF_INT128__
-  } else if (x <= 38) {
-    return 16;
+template <typename X, typename M>
+inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(
+    X x, M mask) {
+#if !defined __SIZEOF_INT128__ || defined FLANG_RUNTIME_NO_INTEGER_16
+  mask &= ~(1 << 16);
 #endif
+  if (x <= 2 && (mask & (1 << 1))) {
+    return 1;
+  } else if (x <= 4 && (mask & (1 << 2))) {
+    return 2;
+  } else if (x <= 9 && (mask & (1 << 4))) {
+    return 4;
+  } else if (x <= 18 && (mask & (1 << 8))) {
+    return 8;
+  } else if (x <= 38 && (mask & (1 << 16))) {
+    return 16;
   }
   return -1;
 }
@@ -130,47 +132,53 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedLogicalKind(
 }
 
 // SELECTED_REAL_KIND (16.9.170)
-template <typename P, typename R, typename D>
+template <typename P, typename R, typename D, typename M>
 inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
-    P p, R r, D d) {
+    P p, R r, D d, M mask) {
   if (d != 2) {
     return -5;
   }
+#ifdef FLANG_RUNTIME_NO_REAL_2
+  mask &= ~(1 << 2);
+#endif
+#ifdef FLANG_RUNTIME_NO_REAL_3
+  mask &= ~(1 << 3);
+#endif
+#if LDBL_MANT_DIG < 64 || defined FLANG_RUNTIME_NO_REAL_10
+  mask &= ~(1 << 10);
+#endif
+#if LDBL_MANT_DIG < 64 || defined FLANG_RUNTIME_NO_REAL_16
+  mask &= ~(1 << 16);
+#endif
 
   int error{0};
   int kind{0};
-  if (p <= 3) {
+  if (p <= 3 && (mask & (1 << 2))) {
     kind = 2;
-  } else if (p <= 6) {
+  } else if (p <= 6 && (mask & (1 << 4))) {
     kind = 4;
-  } else if (p <= 15) {
+  } else if (p <= 15 && (mask & (1 << 8))) {
     kind = 8;
-#if LDBL_MANT_DIG == 64
-  } else if (p <= 18) {
+  } else if (p <= 18 && (mask & (1 << 10))) {
     kind = 10;
-  } else if (p <= 33) {
+  } else if (p <= 33 && (mask & (1 << 16))) {
     kind = 16;
-#elif LDBL_MANT_DIG == 113
-  } else if (p <= 33) {
-    kind = 16;
-#endif
   } else {
     error -= 1;
   }
 
-  if (r <= 4) {
+  if (r <= 4 && (mask & (1 << 2))) {
     kind = kind < 2 ? 2 : kind;
-  } else if (r <= 37) {
-    kind = kind < 3 ? (p == 3 ? 4 : 3) : kind;
-  } else if (r <= 307) {
+  } else if (r <= 37 && p != 3 && (mask & (1 << 3))) {
+    kind = kind < 3 ? 3 : kind;
+  } else if (r <= 37 && (mask & (1 << 4))) {
+    kind = kind < 4 ? 4 : kind;
+  } else if (r <= 307 && (mask & (1 << 8))) {
     kind = kind < 8 ? 8 : kind;
-#if LDBL_MANT_DIG == 64
-  } else if (r <= 4931) {
+  } else if (r <= 4931 && (mask & (1 << 10))) {
     kind = kind < 10 ? 10 : kind;
-#elif LDBL_MANT_DIG == 113
-  } else if (r <= 4931) {
+  } else if (r <= 4931 && (mask & (1 << 16))) {
     kind = kind < 16 ? 16 : kind;
-#endif
   } else {
     error -= 2;
   }
@@ -776,6 +784,12 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedCharKind)(
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKind)(
     const char *source, int line, void *x, int xKind) {
+  return RTNAME(SelectedIntKindMasked)(source, line, x, xKind,
+      (1 << 1) | (1 << 2) | (1 << 4) | (1 << 8) | (1 << 16));
+}
+
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKindMasked)(
+    const char *source, int line, void *x, int xKind, int mask) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> r =
       GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
@@ -784,7 +798,7 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKind)(
   std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
 #endif
-  return SelectedIntKind(r);
+  return SelectedIntKind(r, mask);
 }
 
 // SELECTED_LOGICAL_KIND
@@ -805,6 +819,14 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedLogicalKind)(
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKind)(const char *source,
     int line, void *precision, int pKind, void *range, int rKind, void *radix,
     int dKind) {
+  return RTNAME(SelectedRealKindMasked)(source, line, precision, pKind, range,
+      rKind, radix, dKind,
+      (1 << 2) | (1 << 3) | (1 << 4) | (1 << 8) | (1 << 10) | (1 << 16));
+}
+
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKindMasked)(
+    const char *source, int line, void *precision, int pKind, void *range,
+    int rKind, void *radix, int dKind, int mask) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> p =
       GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
@@ -823,7 +845,7 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKind)(const char *source,
   std::int64_t d = GetIntArgValue<std::int64_t>(
       source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 8);
 #endif
-  return SelectedRealKind(p, r, d);
+  return SelectedRealKind(p, r, d, mask);
 }
 
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Spacing4)(

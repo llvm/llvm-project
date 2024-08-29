@@ -275,7 +275,7 @@ define i1 @ne_commuted_equal_minus_1(i8 %x, i8 %py) {
 ; CHECK-LABEL: define i1 @ne_commuted_equal_minus_1(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[PY:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[PY]]
-; CHECK-NEXT:    [[AND:%.*]] = icmp ugt i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %y = sdiv i8 42, %py ; thwart complexity-based canonicalization

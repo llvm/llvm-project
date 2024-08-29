@@ -1256,16 +1256,8 @@ static const ValueDecl *getCanonicalDecl(const ValueDecl *D) {
   if (const auto *CED = dyn_cast<OMPCapturedExprDecl>(D))
     if (const auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
       D = ME->getMemberDecl();
-  const auto *VD = dyn_cast<VarDecl>(D);
-  const auto *FD = dyn_cast<FieldDecl>(D);
-  if (VD != nullptr) {
-    VD = VD->getCanonicalDecl();
-    D = VD;
-  } else {
-    assert(FD);
-    FD = FD->getCanonicalDecl();
-    D = FD;
-  }
+
+  D = cast<ValueDecl>(D->getCanonicalDecl());
   return D;
 }
 

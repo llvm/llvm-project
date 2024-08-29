@@ -509,7 +509,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     constexpr auto CanRepresentAll = [](bool FromSigned, unsigned FromWidth,
                                         bool ToSigned, unsigned ToWidth) {
       return (FromWidth < ToWidth + (FromSigned == ToSigned)) &&
-             (FromSigned <= ToSigned);
+             !(FromSigned && !ToSigned);
     };
 
     if (CanRepresentAll(FromSigned, FromWidth, ToSigned, ToWidth))
@@ -542,7 +542,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       // If the bit-field width was dependent, it might end up being small
       // enough to fit in the target type (unless the target type is unsigned
       // and the source type is signed, in which case it will never fit)
-      if (DependentBitField && (FromSigned <= ToSigned))
+      if (DependentBitField && !(FromSigned && !ToSigned))
         return NK_Dependent_Narrowing;
 
       // Otherwise, such a conversion is always narrowing
