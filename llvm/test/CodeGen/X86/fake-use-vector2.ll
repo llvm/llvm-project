@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=finalize-isel -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -stop-after=finalize-isel -mtriple=x86_64-unknown-linux -filetype=asm -o - %s | FileCheck %s
 ;
 ; Make sure we can split vectors that are used as operands of FAKE_USE.
 
