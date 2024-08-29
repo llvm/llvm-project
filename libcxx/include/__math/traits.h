@@ -30,54 +30,12 @@ namespace __math {
 template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD inline
 // TODO(LLVM 22): Remove conditional once support for Clang 19 is dropped.
-#if !defined(__clang__) || __has_constexpr_builtin(__builtin_signbit)
+#if defined(_LIBCPP_COMPILER_GCC) || __has_constexpr_builtin(__builtin_signbit)
     _LIBCPP_CONSTEXPR_SINCE_CXX23
 #endif
     _LIBCPP_HIDE_FROM_ABI bool
     signbit(_A1 __x) _NOEXCEPT {
   return __builtin_signbit(__x);
-}
-
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    signbit(float __x) _NOEXCEPT {
-// TODO(LLVM 22): Remove `__builtin_copysign`-workaround once support for Clang 19 is dropped.
-#if !__has_constexpr_builtin(__builtin_signbit) && _LIBCPP_STD_VER >= 23
-  return __builtin_copysign(1.0, __x) == -1.0;
-#else
-  return __builtin_signbit(__x);
-#endif
-}
-
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    signbit(double __x) _NOEXCEPT {
-// TODO(LLVM 22): Remove `__builtin_copysign`-workaround once support for Clang 19 is dropped.
-#if !__has_constexpr_builtin(__builtin_signbit) && _LIBCPP_STD_VER >= 23
-  return __builtin_copysign(1.0, __x) == -1.0;
-#else
-  return __builtin_signbit(__x);
-#endif
-}
-
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    signbit(long double __x) _NOEXCEPT {
-// TODO(LLVM 22): Remove `__builtin_copysign`-workaround once support for Clang 19 is dropped.
-#if !__has_constexpr_builtin(__builtin_signbit) && _LIBCPP_STD_VER >= 23
-  return __builtin_copysign(1.0, __x) == -1.0;
-#else
-  return __builtin_signbit(__x);
-#endif
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value && is_signed<_A1>::value, int> = 0>
