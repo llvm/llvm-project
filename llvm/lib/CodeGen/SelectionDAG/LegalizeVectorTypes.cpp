@@ -2436,16 +2436,17 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   }
 
   SDValue Passthru = N->getOperand(2);
-  if (!HasCustomLowering || !Passthru.isUndef()) {
+  if (!HasCustomLowering) {
     SDValue Compressed = TLI.expandVECTOR_COMPRESS(N, DAG);
     std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL, LoVT, HiVT);
     return;
   }
 
   // Try to VECTOR_COMPRESS smaller vectors and combine via a stack store+load.
+  SDValue Mask = N->getOperand(1);
   SDValue LoMask, HiMask;
   std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
-  std::tie(LoMask, HiMask) = SplitMask(N->getOperand(1));
+  std::tie(LoMask, HiMask) = SplitMask(Mask);
 
   SDValue UndefPassthru = DAG.getUNDEF(LoVT);
   Lo = DAG.getNode(ISD::VECTOR_COMPRESS, DL, LoVT, Lo, LoMask, UndefPassthru);
@@ -2469,6 +2470,10 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
                        MachinePointerInfo::getUnknownStack(MF));
 
   SDValue Compressed = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+  if (!Passthru.isUndef()) {
+    Compressed =
+        DAG.getNode(ISD::VSELECT, DL, VecVT, Mask, Compressed, Passthru);
+  }
   std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL);
 }
 
