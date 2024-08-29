@@ -1,6 +1,6 @@
 # System modules
 from functools import wraps
-from pkg_resources import packaging
+from packaging import version
 import ctypes
 import locale
 import os
@@ -66,9 +66,7 @@ def _check_expected_version(comparison, expected, actual):
         "<=": fn_leq,
     }
 
-    return op_lookup[comparison](
-        packaging.version.parse(actual), packaging.version.parse(expected)
-    )
+    return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
 def _match_decorator_property(expected, actual):
@@ -1053,6 +1051,10 @@ def _get_bool_config(key, fail_value=True):
 def _get_bool_config_skip_if_decorator(key):
     have = _get_bool_config(key)
     return unittest.skipIf(not have, "requires " + key)
+
+
+def skipIfCurlSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("curl")(func)
 
 
 def skipIfCursesSupportMissing(func):

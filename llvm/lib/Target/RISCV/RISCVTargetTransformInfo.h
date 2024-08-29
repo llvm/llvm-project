@@ -57,7 +57,7 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
                                           TTI::TargetCostKind CostKind);
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -394,9 +394,10 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
 
-  bool shouldFoldTerminatingConditionAfterLSR() const {
-    return true;
-  }
+  bool
+  shouldConsiderAddressTypePromotion(const Instruction &I,
+                                     bool &AllowPromotionWithoutCommonHeader);
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 
 } // end namespace llvm

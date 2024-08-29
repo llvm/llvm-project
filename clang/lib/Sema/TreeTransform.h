@@ -42,6 +42,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -801,6 +802,8 @@ public:
                                            bool IsAddressOfOperand);
 
   StmtResult TransformOMPExecutableDirective(OMPExecutableDirective *S);
+
+  StmtResult TransformOMPInformationalDirective(OMPExecutableDirective *S);
 
 // FIXME: We use LLVM_ATTRIBUTE_NOINLINE because inlining causes a ridiculous
 // amount of stack usage with clang.
@@ -1666,15 +1669,27 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  StmtResult RebuildOMPExecutableDirective(
-      OpenMPDirectiveKind Kind, DeclarationNameInfo DirName,
-      OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
-      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
-      OpenMPDirectiveKind PrevMappedDirective = OMPD_unknown) {
+  StmtResult RebuildOMPExecutableDirective(OpenMPDirectiveKind Kind,
+                                           DeclarationNameInfo DirName,
+                                           OpenMPDirectiveKind CancelRegion,
+                                           ArrayRef<OMPClause *> Clauses,
+                                           Stmt *AStmt, SourceLocation StartLoc,
+                                           SourceLocation EndLoc) {
 
     return getSema().OpenMP().ActOnOpenMPExecutableDirective(
-        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc,
-        PrevMappedDirective);
+        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP informational directive.
+  StmtResult RebuildOMPInformationalDirective(OpenMPDirectiveKind Kind,
+                                              DeclarationNameInfo DirName,
+                                              ArrayRef<OMPClause *> Clauses,
+                                              Stmt *AStmt,
+                                              SourceLocation StartLoc,
+                                              SourceLocation EndLoc) {
+
+    return getSema().OpenMP().ActOnOpenMPInformationalDirective(
+        Kind, DirName, Clauses, AStmt, StartLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'if' clause.
@@ -2064,10 +2079,11 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
+  OMPClause *RebuildOMPNumTeamsClause(ArrayRef<Expr *> VarList,
+                                      SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(NumTeams, StartLoc,
+    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(VarList, StartLoc,
                                                         LParenLoc, EndLoc);
   }
 
@@ -2075,12 +2091,12 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPThreadLimitClause(Expr *ThreadLimit,
+  OMPClause *RebuildOMPThreadLimitClause(ArrayRef<Expr *> VarList,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(
-        ThreadLimit, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(VarList, StartLoc,
+                                                           LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'priority' clause.
@@ -2483,6 +2499,14 @@ public:
                            SourceLocation LParenLoc, SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPDoacrossClause(
         DepType, DepLoc, ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP 'holds' clause.
+  OMPClause *RebuildOMPHoldsClause(Expr *A, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPHoldsClause(A, StartLoc, LParenLoc,
+                                                     EndLoc);
   }
 
   /// Rebuild the operand to an Objective-C \@synchronized statement.
@@ -2895,6 +2919,9 @@ public:
     SS.Adopt(QualifierLoc);
 
     Base = BaseResult.get();
+    if (Base->containsErrors())
+      return ExprError();
+
     QualType BaseType = Base->getType();
 
     if (isArrow && !BaseType->isPointerType())
@@ -4002,6 +4029,20 @@ public:
                                       NumExpansions);
   }
 
+  ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
+                               LambdaScopeInfo *LSI) {
+    for (ParmVarDecl *PVD : LSI->CallOperator->parameters()) {
+      if (Expr *Init = PVD->getInit())
+        LSI->ContainsUnexpandedParameterPack |=
+            Init->containsUnexpandedParameterPack();
+      else if (PVD->hasUninstantiatedDefaultArg())
+        LSI->ContainsUnexpandedParameterPack |=
+            PVD->getUninstantiatedDefaultArg()
+                ->containsUnexpandedParameterPack();
+    }
+    return getSema().BuildLambdaExpr(StartLoc, EndLoc, LSI);
+  }
+
   /// Build an empty C++1z fold-expression with the given operator.
   ///
   /// By default, produces the fallback value for the fold-expression, or
@@ -4032,11 +4073,21 @@ public:
 
   StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
                                             SourceLocation BeginLoc,
+                                            SourceLocation DirLoc,
                                             SourceLocation EndLoc,
                                             ArrayRef<OpenACCClause *> Clauses,
                                             StmtResult StrBlock) {
-    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
-                                                     Clauses, StrBlock);
+    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, DirLoc,
+                                                     EndLoc, Clauses, StrBlock);
+  }
+
+  StmtResult RebuildOpenACCLoopConstruct(SourceLocation BeginLoc,
+                                         SourceLocation DirLoc,
+                                         SourceLocation EndLoc,
+                                         ArrayRef<OpenACCClause *> Clauses,
+                                         StmtResult Loop) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Loop, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
   }
 
 private:
@@ -4603,6 +4654,7 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
                                             ObjectType, AllowInjectedClassName);
   }
 
+  // FIXME: Try to preserve more of the TemplateName.
   if (TemplateDecl *Template = Name.getAsTemplateDecl()) {
     TemplateDecl *TransTemplate
       = cast_or_null<TemplateDecl>(getDerived().TransformDecl(NameLoc,
@@ -4610,11 +4662,8 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
     if (!TransTemplate)
       return TemplateName();
 
-    if (!getDerived().AlwaysRebuild() &&
-        TransTemplate == Template)
-      return Name;
-
-    return TemplateName(TransTemplate);
+    return getDerived().RebuildTemplateName(SS, /*TemplateKeyword=*/false,
+                                            TransTemplate);
   }
 
   if (SubstTemplateTemplateParmPackStorage *SubstPack
@@ -5791,7 +5840,8 @@ QualType TreeTransform<Derived>::TransformDependentAddressSpaceType(
     TypeLocBuilder &TLB, DependentAddressSpaceTypeLoc TL) {
   const DependentAddressSpaceType *T = TL.getTypePtr();
 
-  QualType pointeeType = getDerived().TransformType(T->getPointeeType());
+  QualType pointeeType =
+      getDerived().TransformType(TLB, TL.getPointeeTypeLoc());
 
   if (pointeeType.isNull())
     return QualType();
@@ -5824,9 +5874,7 @@ QualType TreeTransform<Derived>::TransformDependentAddressSpaceType(
     NewTL.setAttrNameLoc(TL.getAttrNameLoc());
 
   } else {
-    TypeSourceInfo *DI = getSema().Context.getTrivialTypeSourceInfo(
-        Result, getDerived().getBaseLocation());
-    TransformType(TLB, DI->getTypeLoc());
+    TLB.TypeWasModifiedSafely(Result);
   }
 
   return Result;
@@ -6258,6 +6306,55 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
     EPI.ExtParameterInfos = nullptr;
   }
 
+  // Transform any function effects with unevaluated conditions.
+  // Hold this set in a local for the rest of this function, since EPI
+  // may need to hold a FunctionEffectsRef pointing into it.
+  std::optional<FunctionEffectSet> NewFX;
+  if (ArrayRef FXConds = EPI.FunctionEffects.conditions(); !FXConds.empty()) {
+    NewFX.emplace();
+    EnterExpressionEvaluationContext Unevaluated(
+        getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+    for (const FunctionEffectWithCondition &PrevEC : EPI.FunctionEffects) {
+      FunctionEffectWithCondition NewEC = PrevEC;
+      if (Expr *CondExpr = PrevEC.Cond.getCondition()) {
+        ExprResult NewExpr = getDerived().TransformExpr(CondExpr);
+        if (NewExpr.isInvalid())
+          return QualType();
+        std::optional<FunctionEffectMode> Mode =
+            SemaRef.ActOnEffectExpression(NewExpr.get(), PrevEC.Effect.name());
+        if (!Mode)
+          return QualType();
+
+        // The condition expression has been transformed, and re-evaluated.
+        // It may or may not have become constant.
+        switch (*Mode) {
+        case FunctionEffectMode::True:
+          NewEC.Cond = {};
+          break;
+        case FunctionEffectMode::False:
+          NewEC.Effect = FunctionEffect(PrevEC.Effect.oppositeKind());
+          NewEC.Cond = {};
+          break;
+        case FunctionEffectMode::Dependent:
+          NewEC.Cond = EffectConditionExpr(NewExpr.get());
+          break;
+        case FunctionEffectMode::None:
+          llvm_unreachable(
+              "FunctionEffectMode::None shouldn't be possible here");
+        }
+      }
+      if (!SemaRef.diagnoseConflictingFunctionEffect(*NewFX, NewEC,
+                                                     TL.getBeginLoc())) {
+        FunctionEffectSet::Conflicts Errs;
+        NewFX->insert(NewEC, Errs);
+        assert(Errs.empty());
+      }
+    }
+    EPI.FunctionEffects = *NewFX;
+    EPIChanged = true;
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ResultType != T->getReturnType() ||
       T->getParamTypes() != llvm::ArrayRef(ParamTypes) || EPIChanged) {
@@ -6493,7 +6590,7 @@ QualType TreeTransform<Derived>::TransformTypeOfExprType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  TypeOfKind Kind = Result->getAs<TypeOfExprType>()->getKind();
+  TypeOfKind Kind = Result->castAs<TypeOfExprType>()->getKind();
   if (getDerived().AlwaysRebuild() || E.get() != TL.getUnderlyingExpr()) {
     Result =
         getDerived().RebuildTypeOfExprType(E.get(), TL.getTypeofLoc(), Kind);
@@ -6518,7 +6615,7 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  TypeOfKind Kind = Result->getAs<TypeOfType>()->getKind();
+  TypeOfKind Kind = Result->castAs<TypeOfType>()->getKind();
   if (getDerived().AlwaysRebuild() || New_Under_TI != Old_Under_TI) {
     Result = getDerived().RebuildTypeOfType(New_Under_TI->getType(), Kind);
     if (Result.isNull())
@@ -6572,9 +6669,15 @@ QualType
 TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
                                                   PackIndexingTypeLoc TL) {
   // Transform the index
-  ExprResult IndexExpr = getDerived().TransformExpr(TL.getIndexExpr());
-  if (IndexExpr.isInvalid())
-    return QualType();
+  ExprResult IndexExpr;
+  {
+    EnterExpressionEvaluationContext ConstantContext(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+    IndexExpr = getDerived().TransformExpr(TL.getIndexExpr());
+    if (IndexExpr.isInvalid())
+      return QualType();
+  }
   QualType Pattern = TL.getPattern();
 
   const PackIndexingType *PIT = TL.getTypePtr();
@@ -6676,8 +6779,13 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   QualType Result = TL.getType();
   if (Result->isDependentType()) {
     const UnaryTransformType *T = TL.getTypePtr();
-    QualType NewBase =
-      getDerived().TransformType(TL.getUnderlyingTInfo())->getType();
+
+    TypeSourceInfo *NewBaseTSI =
+        getDerived().TransformType(TL.getUnderlyingTInfo());
+    if (!NewBaseTSI)
+      return QualType();
+    QualType NewBase = NewBaseTSI->getType();
+
     Result = getDerived().RebuildUnaryTransformType(NewBase,
                                                     T->getUTTKind(),
                                                     TL.getKWLoc());
@@ -7336,7 +7444,8 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
     // Currently, CountAttributedType can only wrap incomplete array types.
-    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
+    Result = SemaRef.BuildCountAttributedArrayOrPointerType(
+        InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
   }
 
   TLB.push<CountAttributedTypeLoc>(Result);
@@ -8195,6 +8304,7 @@ StmtResult
 TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
   bool DeclChanged = false;
   SmallVector<Decl *, 4> Decls;
+  LambdaScopeInfo *LSI = getSema().getCurLambda();
   for (auto *D : S->decls()) {
     Decl *Transformed = getDerived().TransformDefinition(D->getLocation(), D);
     if (!Transformed)
@@ -8202,6 +8312,15 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
 
     if (Transformed != D)
       DeclChanged = true;
+
+    if (LSI && isa<TypeDecl>(Transformed))
+      LSI->ContainsUnexpandedParameterPack |=
+          getSema()
+              .getASTContext()
+              .getTypeDeclType(cast<TypeDecl>(Transformed))
+              .getCanonicalType()
+              .getTypePtr()
+              ->containsUnexpandedParameterPack();
 
     Decls.push_back(Transformed);
   }
@@ -9115,8 +9234,59 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
 
   return getDerived().RebuildOMPExecutableDirective(
       D->getDirectiveKind(), DirName, CancelRegion, TClauses,
-      AssociatedStmt.get(), D->getBeginLoc(), D->getEndLoc(),
-      D->getMappedDirective());
+      AssociatedStmt.get(), D->getBeginLoc(), D->getEndLoc());
+}
+
+/// This is mostly the same as above, but allows 'informational' class
+/// directives when rebuilding the stmt.  It still takes an
+/// OMPExecutableDirective-type argument because we're reusing that as the
+/// superclass for the 'assume' directive at present, instead of defining a
+/// mostly-identical OMPInformationalDirective parent class.
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
+    OMPExecutableDirective *D) {
+
+  // Transform the clauses
+  llvm::SmallVector<OMPClause *, 16> TClauses;
+  ArrayRef<OMPClause *> Clauses = D->clauses();
+  TClauses.reserve(Clauses.size());
+  for (OMPClause *C : Clauses) {
+    if (C) {
+      getDerived().getSema().OpenMP().StartOpenMPClause(C->getClauseKind());
+      OMPClause *Clause = getDerived().TransformOMPClause(C);
+      getDerived().getSema().OpenMP().EndOpenMPClause();
+      if (Clause)
+        TClauses.push_back(Clause);
+    } else {
+      TClauses.push_back(nullptr);
+    }
+  }
+  StmtResult AssociatedStmt;
+  if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
+    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
+        D->getDirectiveKind(),
+        /*CurScope=*/nullptr);
+    StmtResult Body;
+    {
+      Sema::CompoundScopeRAII CompoundScope(getSema());
+      assert(D->getDirectiveKind() == OMPD_assume &&
+             "Unexpected informational directive");
+      Stmt *CS = D->getAssociatedStmt();
+      Body = getDerived().TransformStmt(CS);
+    }
+    AssociatedStmt =
+        getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(Body, TClauses);
+    if (AssociatedStmt.isInvalid())
+      return StmtError();
+  }
+  if (TClauses.size() != Clauses.size())
+    return StmtError();
+
+  DeclarationNameInfo DirName;
+
+  return getDerived().RebuildOMPInformationalDirective(
+      D->getDirectiveKind(), DirName, TClauses, AssociatedStmt.get(),
+      D->getBeginLoc(), D->getEndLoc());
 }
 
 template <typename Derived>
@@ -9164,6 +9334,28 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPReverseDirective(OMPReverseDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
+    OMPInterchangeDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
@@ -9354,6 +9546,17 @@ TreeTransform<Derived>::TransformOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       OMPD_taskwait, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPAssumeDirective(OMPAssumeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_assume, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPInformationalDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
 }
@@ -10154,6 +10357,43 @@ OMPClause *TreeTransform<Derived>::TransformOMPFailClause(OMPFailClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPAbsentClause(OMPAbsentClause *C) {
+  return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPHoldsClause(OMPHoldsClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getExpr());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPHoldsClause(E.get(), C->getBeginLoc(),
+                                            C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPContainsClause(OMPContainsClause *C) {
+  return C;
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPNoOpenMPClause(OMPNoOpenMPClause *C) {
+  return C;
+}
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *C) {
+  return C;
+}
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPNoParallelismClause(
+    OMPNoParallelismClause *C) {
+  return C;
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPSeqCstClause(OMPSeqCstClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
@@ -10221,7 +10461,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
 
   OMPInteropInfo InteropInfo(C->getIsTarget(), C->getIsTargetSync());
   InteropInfo.PreferTypes.reserve(C->varlist_size() - 1);
-  for (Expr *E : llvm::drop_begin(C->varlists())) {
+  for (Expr *E : llvm::drop_begin(C->varlist())) {
     ExprResult ER = getDerived().TransformExpr(cast<Expr>(E));
     if (ER.isInvalid())
       return nullptr;
@@ -10359,7 +10599,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPPrivateClause(OMPPrivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10374,7 +10614,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPFirstprivateClause(
     OMPFirstprivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10389,7 +10629,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPLastprivateClause(OMPLastprivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10405,7 +10645,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPSharedClause(OMPSharedClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10420,7 +10660,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10452,7 +10692,7 @@ TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
           /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
   }
@@ -10467,7 +10707,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPTaskReductionClause(
     OMPTaskReductionClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10499,7 +10739,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPTaskReductionClause(
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
           /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
   }
@@ -10513,7 +10753,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPInReductionClause(OMPInReductionClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10545,7 +10785,7 @@ TreeTransform<Derived>::TransformOMPInReductionClause(OMPInReductionClause *C) {
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
           /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
   }
@@ -10559,7 +10799,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPLinearClause(OMPLinearClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10579,7 +10819,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPAlignedClause(OMPAlignedClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10598,7 +10838,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPCopyinClause(OMPCopyinClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10613,7 +10853,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPCopyprivateClause(OMPCopyprivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10627,7 +10867,7 @@ template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFlushClause(OMPFlushClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10659,7 +10899,7 @@ TreeTransform<Derived>::TransformOMPDependClause(OMPDependClause *C) {
     DepModifier = DepModRes.get();
   }
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10690,7 +10930,7 @@ bool transformOMPMappableExprListClause(
     llvm::SmallVectorImpl<Expr *> &UnresolvedMappers) {
   // Transform expressions in the list.
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = TT.getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return true;
@@ -10727,7 +10967,7 @@ bool transformOMPMappableExprListClause(
           TT.getSema().Context, /*NamingClass=*/nullptr,
           MapperIdScopeSpec.getWithLocInContext(TT.getSema().Context),
           MapperIdInfo, /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else {
       UnresolvedMappers.push_back(nullptr);
     }
@@ -10770,7 +11010,7 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
   }
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10784,21 +11024,31 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPNumTeamsClause(OMPNumTeamsClause *C) {
-  ExprResult E = getDerived().TransformExpr(C->getNumTeams());
-  if (E.isInvalid())
-    return nullptr;
+  llvm::SmallVector<Expr *, 3> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlist()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
   return getDerived().RebuildOMPNumTeamsClause(
-      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPThreadLimitClause(OMPThreadLimitClause *C) {
-  ExprResult E = getDerived().TransformExpr(C->getThreadLimit());
-  if (E.isInvalid())
-    return nullptr;
+  llvm::SmallVector<Expr *, 3> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlist()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
   return getDerived().RebuildOMPThreadLimitClause(
-      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -10902,7 +11152,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPUseDevicePtrClause(
     OMPUseDevicePtrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10917,7 +11167,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPUseDeviceAddrClause(
     OMPUseDeviceAddrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10932,7 +11182,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10947,7 +11197,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPHasDeviceAddrClause(
     OMPHasDeviceAddrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10962,7 +11212,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPNontemporalClause(OMPNontemporalClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10977,7 +11227,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPInclusiveClause(OMPInclusiveClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10992,7 +11242,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPExclusiveClause(OMPExclusiveClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11039,7 +11289,7 @@ TreeTransform<Derived>::TransformOMPAffinityClause(OMPAffinityClause *C) {
     if (ModifierRes.isInvalid())
       return nullptr;
   }
-  for (Expr *E : C->varlists()) {
+  for (Expr *E : C->varlist()) {
     ExprResult Locator = getDerived().TransformExpr(E);
     if (Locator.isInvalid())
       continue;
@@ -11079,7 +11329,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPDoacrossClause(OMPDoacrossClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11125,7 +11375,8 @@ class OpenACCClauseTransform final
       if (!Res.isUsable())
         continue;
 
-      Res = Self.getSema().OpenACC().ActOnVar(Res.get());
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+                                              Res.get());
 
       if (Res.isUsable())
         InstantiatedVarList.push_back(Res.get());
@@ -11485,6 +11736,49 @@ void OpenACCClauseTransform<Derived>::VisitDeviceTypeClause(
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
       C.getArchitectures(), ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitAutoClause(
+    const OpenACCAutoClause &C) {
+  // Nothing to do, so just create a new node.
+  NewClause = OpenACCAutoClause::Create(Self.getSema().getASTContext(),
+                                        ParsedClause.getBeginLoc(),
+                                        ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitIndependentClause(
+    const OpenACCIndependentClause &C) {
+  NewClause = OpenACCIndependentClause::Create(Self.getSema().getASTContext(),
+                                               ParsedClause.getBeginLoc(),
+                                               ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitSeqClause(
+    const OpenACCSeqClause &C) {
+  NewClause = OpenACCSeqClause::Create(Self.getSema().getASTContext(),
+                                       ParsedClause.getBeginLoc(),
+                                       ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());
+  SmallVector<Expr *> ValidVars;
+
+  for (Expr *Var : TransformedVars) {
+    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(Var);
+    if (Res.isUsable())
+      ValidVars.push_back(Res.get());
+  }
+
+  NewClause = OpenACCReductionClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), C.getReductionOp(), ValidVars,
+      ParsedClause.getEndLoc());
+}
 } // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
@@ -11522,8 +11816,31 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
-  // FIXME: When implementing this for constructs that can take arguments, we
-  // should do Sema for them here.
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  // Transform Structured Block.
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
+                                                C->getDirectiveKind());
+  StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+  StrBlock = getSema().OpenACC().ActOnAssociatedStmt(
+      C->getBeginLoc(), C->getDirectiveKind(), StrBlock);
+
+  return getDerived().RebuildOpenACCComputeConstruct(
+      C->getDirectiveKind(), C->getBeginLoc(), C->getDirectiveLoc(),
+      C->getEndLoc(), TransformedClauses, StrBlock);
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
+
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
   if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
                                                   C->getBeginLoc()))
@@ -11533,14 +11850,16 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
 
-  // Transform Structured Block.
-  StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
-  StrBlock =
-      getSema().OpenACC().ActOnAssociatedStmt(C->getDirectiveKind(), StrBlock);
+  // Transform Loop.
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
+                                                C->getDirectiveKind());
+  StmtResult Loop = getDerived().TransformStmt(C->getLoop());
+  Loop = getSema().OpenACC().ActOnAssociatedStmt(C->getBeginLoc(),
+                                                 C->getDirectiveKind(), Loop);
 
-  return getDerived().RebuildOpenACCComputeConstruct(
-      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(),
-      TransformedClauses, StrBlock);
+  return getDerived().RebuildOpenACCLoopConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses, Loop);
 }
 
 //===----------------------------------------------------------------------===//
@@ -11882,7 +12201,7 @@ TreeTransform<Derived>::TransformPseudoObjectExpr(PseudoObjectExpr *E) {
   // better solution (rebuilding the semantic expressions and
   // rebinding OVEs as necessary) doesn't work; we'd need
   // TreeTransform to not strip away implicit conversions.
-  Expr *newSyntacticForm = SemaRef.recreateSyntacticForm(E);
+  Expr *newSyntacticForm = SemaRef.PseudoObject().recreateSyntacticForm(E);
   ExprResult result = getDerived().TransformExpr(newSyntacticForm);
   if (result.isInvalid()) return ExprError();
 
@@ -11890,7 +12209,7 @@ TreeTransform<Derived>::TransformPseudoObjectExpr(PseudoObjectExpr *E) {
   // expression must have been an lvalue-to-rvalue conversion which we
   // should reapply.
   if (result.get()->hasPlaceholderType(BuiltinType::PseudoObject))
-    result = SemaRef.checkPseudoObjectRValue(result.get());
+    result = SemaRef.PseudoObject().checkRValue(result.get());
 
   return result;
 }
@@ -12792,7 +13111,7 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   }
 
   ExprResult First;
-  if (E->getOperator() == OO_Amp)
+  if (E->getNumArgs() == 1 && E->getOperator() == OO_Amp)
     First = getDerived().TransformAddressOfOperand(E->getArg(0));
   else
     First = getDerived().TransformExpr(E->getArg(0));
@@ -12859,6 +13178,11 @@ ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
   return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
                                            E->getBeginLoc(), E->getEndLoc(),
                                            getSema().CurContext);
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformEmbedExpr(EmbedExpr *E) {
+  return E;
 }
 
 template<typename Derived>
@@ -14178,14 +14502,14 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
               OldVD->getInit()->getSourceRange(), Unexpanded, Expand,
               RetainExpansion, NumExpansions))
         return ExprError();
+      assert(!RetainExpansion && "Should not need to retain expansion after a "
+                                 "capture since it cannot be extended");
       if (Expand) {
         for (unsigned I = 0; I != *NumExpansions; ++I) {
           Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
           SubstInitCapture(SourceLocation(), std::nullopt);
         }
-      }
-      if (!Expand || RetainExpansion) {
-        ForgetPartiallySubstitutedPackRAII Forget(getDerived());
+      } else {
         SubstInitCapture(ExpansionTL.getEllipsisLoc(), NumExpansions);
         Result.EllipsisLoc = ExpansionTL.getEllipsisLoc();
       }
@@ -14224,7 +14548,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // will be deemed as dependent even if there are no dependent template
   // arguments.
   // (A ClassTemplateSpecializationDecl is always a dependent context.)
-  while (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
+  while (DC->isRequiresExprBody())
     DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&
@@ -14239,7 +14563,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   CXXMethodDecl *NewCallOperator =
       getSema().CreateLambdaCallOperator(E->getIntroducerRange(), Class);
-  NewCallOperator->setLexicalDeclContext(getSema().CurContext);
 
   // Enter the scope of the lambda.
   getSema().buildLambdaScope(LSI, NewCallOperator, E->getIntroducerRange(),
@@ -14307,6 +14630,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         }
         NewVDs.push_back(NewVD);
         getSema().addInitCapture(LSI, NewVD, C->getCaptureKind() == LCK_ByRef);
+        // Cases we want to tackle:
+        //   ([C(Pack)] {}, ...)
+        // But rule out cases e.g.
+        //    [...C = Pack()] {}
+        if (NewC.EllipsisLoc.isInvalid())
+          LSI->ContainsUnexpandedParameterPack |=
+              Init.get()->containsUnexpandedParameterPack();
       }
 
       if (Invalid)
@@ -14374,6 +14704,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
+    // This is not an init-capture; however it contains an unexpanded pack e.g.
+    //  ([Pack] {}(), ...)
+    if (auto *VD = dyn_cast<VarDecl>(CapturedVar); VD && !C->isPackExpansion())
+      LSI->ContainsUnexpandedParameterPack |= VD->isParameterPack();
+
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
                                  EllipsisLoc);
@@ -14385,9 +14720,12 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   auto TPL = getDerived().TransformTemplateParameterList(
       E->getTemplateParameterList());
   LSI->GLTemplateParameterList = TPL;
-  if (TPL)
+  if (TPL) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
+    LSI->ContainsUnexpandedParameterPack |=
+        TPL->containsUnexpandedParameterPack();
+  }
 
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since
@@ -14426,6 +14764,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     if (NewCallOpType.isNull())
       return ExprError();
+    LSI->ContainsUnexpandedParameterPack |=
+        NewCallOpType->containsUnexpandedParameterPack();
     NewCallOpTSI =
         NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
   }
@@ -14467,6 +14807,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCallOperator()->isConsteval() ?
       Sema::ExpressionEvaluationContext::ImmediateFunctionContext :
       Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+  getSema().currentEvaluationContext().InImmediateEscalatingFunctionContext =
+      getSema().getLangOpts().CPlusPlus20 &&
+      E->getCallOperator()->isImmediateEscalating();
 
   Sema::CodeSynthesisContext C;
   C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;
@@ -14537,8 +14880,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   Class->setTypeForDecl(nullptr);
   getSema().Context.getTypeDeclType(Class);
 
-  return getSema().BuildLambdaExpr(E->getBeginLoc(), Body.get()->getEndLoc(),
-                                   &LSICopy);
+  return getDerived().RebuildLambdaExpr(E->getBeginLoc(),
+                                        Body.get()->getEndLoc(), &LSICopy);
 }
 
 template<typename Derived>
@@ -14962,9 +15305,14 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
     return E;
 
   // Transform the index
-  ExprResult IndexExpr = getDerived().TransformExpr(E->getIndexExpr());
-  if (IndexExpr.isInvalid())
-    return ExprError();
+  ExprResult IndexExpr;
+  {
+    EnterExpressionEvaluationContext ConstantContext(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    IndexExpr = getDerived().TransformExpr(E->getIndexExpr());
+    if (IndexExpr.isInvalid())
+      return ExprError();
+  }
 
   SmallVector<Expr *, 5> ExpandedExprs;
   if (!E->expandsToEmptyPack() && E->getExpressions().empty()) {
@@ -16186,8 +16534,8 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   if (First->getObjectKind() == OK_ObjCProperty) {
     BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
     if (BinaryOperator::isAssignmentOp(Opc))
-      return SemaRef.checkPseudoObjectAssignment(/*Scope=*/nullptr, OpLoc, Opc,
-                                                 First, Second);
+      return SemaRef.PseudoObject().checkAssignment(/*Scope=*/nullptr, OpLoc,
+                                                    Opc, First, Second);
     ExprResult Result = SemaRef.CheckPlaceholderExpr(First);
     if (Result.isInvalid())
       return ExprError();

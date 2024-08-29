@@ -16,10 +16,9 @@ Quickstart
    environment:
 
    ```bash
-   % mkdir venv
-   % virtualenv venv
-   % . venv/bin/activate
-   % pip install svn+https://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
+   % python3 -m venv .venv
+   % . .venv/bin/activate
+   % pip install git+https://github.com/llvm/llvm-project.git#subdirectory=llvm/utils/lit
    % lit --version
    lit 0.8.0dev
    ```
@@ -71,6 +70,9 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
    ...
    ```
+**NOTE!** even in the case you only want to get the compile-time results(code size, llvm stats etc),
+you need to run the test with the above `llvm-lit` command. In that case, the *results.json* file will
+contain compile-time metrics.
 
 6. Show and compare result files (optional):
 

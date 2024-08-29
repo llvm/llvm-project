@@ -109,23 +109,19 @@ bool ValueObjectRegisterSet::UpdateValue() {
     SetValueIsValid(true);
   } else {
     SetValueIsValid(false);
-    m_error.SetErrorToGenericError();
+    m_error = Status::FromErrorString("no register context");
     m_children.Clear();
   }
   return m_error.Success();
 }
 
-ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  ValueObject *valobj = nullptr;
+ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
   if (m_reg_ctx_sp && m_reg_set) {
-    uint32_t num_children = GetNumChildrenIgnoringErrors();
-    if (idx < num_children)
-      valobj = new ValueObjectRegister(
-          *this, m_reg_ctx_sp,
-          m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[idx]));
+    return new ValueObjectRegister(
+        *this, m_reg_ctx_sp,
+        m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[idx]));
   }
-  return valobj;
+  return nullptr;
 }
 
 lldb::ValueObjectSP
@@ -262,7 +258,7 @@ bool ValueObjectRegister::UpdateValue() {
   }
 
   SetValueIsValid(false);
-  m_error.SetErrorToGenericError();
+  m_error = Status::FromErrorString("no register context");
   return false;
 }
 
@@ -275,7 +271,7 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
     return false;
 
   if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-    error.SetErrorString("unable to write back to register");
+    error = Status::FromErrorString("unable to write back to register");
     return false;
   }
 
@@ -289,7 +285,7 @@ bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
     return false;
 
   if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-    error.SetErrorString("unable to write back to register");
+    error = Status::FromErrorString("unable to write back to register");
     return false;
   }
 

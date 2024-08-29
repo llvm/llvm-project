@@ -18,15 +18,13 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (66):
+CHECK: Warnings without flags (63):
 
 CHECK-NEXT:   ext_expected_semi_decl_list
-CHECK-NEXT:   ext_explicit_specialization_storage_class
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
 CHECK-NEXT:   ext_new_paren_array_nonconst
 CHECK-NEXT:   ext_plain_complex
 CHECK-NEXT:   ext_template_arg_extra_parens
-CHECK-NEXT:   ext_template_spec_extra_headers
 CHECK-NEXT:   ext_typecheck_cond_incompatible_operands
 CHECK-NEXT:   ext_typecheck_ordered_comparison_of_pointer_integer
 CHECK-NEXT:   ext_using_undefined_std
@@ -57,7 +55,6 @@ CHECK-NEXT:   warn_fe_macro_contains_embedded_newline
 CHECK-NEXT:   warn_ignoring_ftabstop_value
 CHECK-NEXT:   warn_implements_nscopying
 CHECK-NEXT:   warn_incompatible_qualified_id
-CHECK-NEXT:   warn_invalid_asm_cast_lvalue
 CHECK-NEXT:   warn_invalid_cpu_supports
 CHECK-NEXT:   warn_maynot_respond
 CHECK-NEXT:   warn_method_param_redefinition
@@ -89,4 +86,4 @@ CHECK-NEXT:   warn_weak_import
 
 The list of warnings in -Wpedantic should NEVER grow.
 
-CHECK: Number in -Wpedantic (not covered by other -W flags): 26
+CHECK: Number in -Wpedantic (not covered by other -W flags): 25

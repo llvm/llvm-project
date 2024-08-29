@@ -934,3 +934,26 @@ define <vscale x 8 x i32> @vsra_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale 
   %vc = ashr <vscale x 8 x i32> %va, %vs
   ret <vscale x 8 x i32> %vc
 }
+
+; Negative test. We shouldn't look through the vp.trunc as it isn't vlmax like
+; the rest of the code.
+define <vscale x 1 x i8> @vsra_vv_nxv1i8_sext_zext_mixed_trunc(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsra_vv_nxv1i8_sext_zext_mixed_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf4 v9, v8
+; CHECK-NEXT:    vzext.vf4 v10, v8
+; CHECK-NEXT:    vsra.vv v8, v9, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    ret
+  %sexted_va = sext <vscale x 1 x i8> %va to <vscale x 1 x i32>
+  %zexted_vb = zext <vscale x 1 x i8> %va to <vscale x 1 x i32>
+  %expand = ashr <vscale x 1 x i32> %sexted_va, %zexted_vb
+  %vc = trunc <vscale x 1 x i32> %expand to <vscale x 1 x i16>
+  %vd = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxvi16(<vscale x 1 x i16> %vc, <vscale x 1 x i1> %m, i32 %evl)
+  ret <vscale x 1 x i8> %vd
+}
+declare <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxvi16(<vscale x 1 x i16>, <vscale x 1 x i1>, i32)

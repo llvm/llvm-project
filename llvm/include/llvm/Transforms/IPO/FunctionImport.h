@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -32,12 +33,16 @@ class Module;
 class FunctionImporter {
 public:
   /// The functions to import from a source module and their import type.
+  /// Note we choose unordered_map over (Small)DenseMap. The number of imports
+  /// from a source module could be small but DenseMap size grows to 64 quickly
+  /// and not memory efficient (see
+  /// https://llvm.org/docs/ProgrammersManual.html#llvm-adt-densemap-h)
   using FunctionsToImportTy =
-      DenseMap<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
+      std::unordered_map<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
-  enum ImportFailureReason {
+  enum class ImportFailureReason {
     None,
     // We can encounter a global variable instead of a function in rare
     // situations with SamplePGO. See comments where this failure type is
@@ -91,21 +96,87 @@ public:
                std::tuple<unsigned, const GlobalValueSummary *,
                           std::unique_ptr<ImportFailureInfo>>>;
 
-  /// The map contains an entry for every module to import from, the key being
-  /// the module identifier to pass to the ModuleLoader. The value is the set of
-  /// functions to import. The module identifier strings must be owned
-  /// elsewhere, typically by the in-memory ModuleSummaryIndex the importing
-  /// decisions are made from (the module path for each summary is owned by the
-  /// index's module path string table).
-  using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
+  /// The map maintains the list of imports.  Conceptually, it is a collection
+  /// of tuples of the form:
+  ///
+  ///   (The name of the source module, GUID, Definition/Declaration)
+  ///
+  /// The name of the source module is the module identifier to pass to the
+  /// ModuleLoader.  The module identifier strings must be owned elsewhere,
+  /// typically by the in-memory ModuleSummaryIndex the importing decisions are
+  /// made from (the module path for each summary is owned by the index's module
+  /// path string table).
+  class ImportMapTy {
+  public:
+    using ImportMapTyImpl = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The map contains an entry for every global value the module exports.
-  /// The key is ValueInfo, and the value indicates whether the definition
-  /// or declaration is visible to another module. If a function's definition is
-  /// visible to other modules, the global values this function referenced are
-  /// visible and shouldn't be internalized.
-  /// TODO: Rename to `ExportMapTy`.
-  using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
+    enum class AddDefinitionStatus {
+      // No change was made to the list of imports or whether each import should
+      // be imported as a declaration or definition.
+      NoChange,
+      // Successfully added the given GUID to be imported as a definition. There
+      // was no existing entry with the same GUID as a declaration.
+      Inserted,
+      // An existing with the given GUID was changed to a definition.
+      ChangedToDefinition,
+    };
+
+    // Add the given GUID to ImportList as a definition.  If the same GUID has
+    // been added as a declaration previously, that entry is overridden.
+    AddDefinitionStatus addDefinition(StringRef FromModule,
+                                      GlobalValue::GUID GUID);
+
+    // Add the given GUID to ImportList as a declaration.  If the same GUID has
+    // been added as a definition previously, that entry takes precedence, and
+    // no change is made.
+    void maybeAddDeclaration(StringRef FromModule, GlobalValue::GUID GUID);
+
+    void addGUID(StringRef FromModule, GlobalValue::GUID GUID,
+                 GlobalValueSummary::ImportKind ImportKind) {
+      if (ImportKind == GlobalValueSummary::Definition)
+        addDefinition(FromModule, GUID);
+      else
+        maybeAddDeclaration(FromModule, GUID);
+    }
+
+    // Return the list of source modules sorted in the ascending alphabetical
+    // order.
+    SmallVector<StringRef, 0> getSourceModules() const;
+
+    std::optional<GlobalValueSummary::ImportKind>
+    getImportType(const FunctionsToImportTy &GUIDToImportType,
+                  GlobalValue::GUID GUID) const;
+
+    const ImportMapTyImpl &getImportMap() const { return ImportMap; }
+
+  private:
+    ImportMapTyImpl ImportMap;
+  };
+
+  // A map from destination modules to lists of imports.
+  class ImportListsTy {
+  public:
+    ImportListsTy() = default;
+    ImportListsTy(size_t Size) : ListsImpl(Size) {}
+
+    ImportMapTy &operator[](StringRef DestMod) {
+      return ListsImpl.try_emplace(DestMod).first->second;
+    }
+
+    size_t size() const { return ListsImpl.size(); }
+
+    using const_iterator = DenseMap<StringRef, ImportMapTy>::const_iterator;
+    const_iterator begin() const { return ListsImpl.begin(); }
+    const_iterator end() const { return ListsImpl.end(); }
+
+  private:
+    DenseMap<StringRef, ImportMapTy> ListsImpl;
+  };
+
+  /// The set contains an entry for every global value that the module exports.
+  /// Depending on the user context, this container is allowed to contain
+  /// definitions, declarations or a mix of both.
+  using ExportSetTy = DenseSet<ValueInfo>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
@@ -164,7 +235,7 @@ void ComputeCrossModuleImport(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists);
 
 /// PrevailingType enum used as a return type of callback passed
@@ -212,16 +283,20 @@ bool convertToDeclaration(GlobalValue &GV);
 /// \p ModuleToSummariesForIndex will be populated with the needed summaries
 /// from each required module path. Use a std::map instead of StringMap to get
 /// stable order for bitcode emission.
+///
+/// \p DecSummaries will be popluated with the subset of of summary pointers
+/// that have 'declaration' import type among all summaries the module need.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
+    GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code EmitImportsFiles(
-    StringRef ModulePath, StringRef OutputFilename,
-    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+std::error_code
+EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
+                 const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
 
 /// Based on the information recorded in the summaries during global
 /// summary-based analysis:

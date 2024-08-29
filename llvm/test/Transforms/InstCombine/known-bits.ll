@@ -1018,7 +1018,7 @@ define i1 @extract_value_sadd_fail(i8 %xx, i8 %yy) {
 define i1 @extract_value_usub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_usub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
@@ -1062,7 +1062,7 @@ define i1 @extract_value_usub_fail(i8 %x, i8 %z) {
 define i1 @extract_value_ssub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_ssub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[SUB_SOV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[Y]], i8 [[X]])
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 0
 ; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 1
@@ -1586,7 +1586,7 @@ define i32 @test_qnan_quiet_bit2(float nofpclass(sub norm inf snan) %x) {
 define i16 @test_simplify_mask(i32 %ui, float %x) {
 ; CHECK-LABEL: @test_simplify_mask(
 ; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[UI:%.*]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[CONV]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[CONV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i16 31744
@@ -2008,5 +2008,51 @@ if.else:
   ret i8 %other
 }
 
+define i8 @simplifydemanded_context(i8 %x, i8 %y) {
+; CHECK-LABEL: @simplifydemanded_context(
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[X_LOBITS:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp eq i8 [[X_LOBITS]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    ret i8 0
+;
+  %and1 = and i8 %x, 1
+  call void @dummy() ; may unwind
+  %x.lobits = and i8 %x, 3
+  %precond = icmp eq i8 %x.lobits, 0
+  call void @llvm.assume(i1 %precond)
+  %and2 = and i8 %and1, %y
+  ret i8 %and2
+}
+
+define i16 @pr97330(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @pr97330(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[V]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+entry:
+  %v = load i64, ptr %p1, align 8
+  %conv = trunc i64 %v to i16
+  br i1 %c, label %exit, label %if
+
+if:
+  %cmp = icmp ne i16 %conv, 1
+  %conv2 = zext i1 %cmp to i32
+  store i32 %conv2, ptr %p2, align 4
+  %cmp2 = icmp eq i64 %v, 1
+  call void @llvm.assume(i1 %cmp2)
+  unreachable
+
+exit:
+  ret i16 %conv
+}
+
+declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)

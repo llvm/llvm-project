@@ -11,7 +11,7 @@ struct B {
   template <int i>
   static void foo() {
     int array[i];
-    A::template bar(array[0]); // expected-error {{no matching function for call to 'bar'}}
+    A::template bar(array[0]); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}} expected-error {{no matching function for call to 'bar'}}
   }
 };
 

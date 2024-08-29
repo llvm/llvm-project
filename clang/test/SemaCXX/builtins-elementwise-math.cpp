@@ -83,11 +83,25 @@ void test_builtin_elementwise_ceil() {
   static_assert(!is_const<decltype(__builtin_elementwise_ceil(b))>::value);
 }
 
+void test_builtin_elementwise_acos() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_acos(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_acos(b))>::value);
+}
+
 void test_builtin_elementwise_cos() {
   const float a = 42.0;
   float b = 42.3;
   static_assert(!is_const<decltype(__builtin_elementwise_cos(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_cos(b))>::value);
+}
+
+void test_builtin_elementwise_cosh() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_cosh(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_cosh(b))>::value);
 }
 
 void test_builtin_elementwise_exp() {
@@ -104,6 +118,13 @@ void test_builtin_elementwise_exp2() {
   static_assert(!is_const<decltype(__builtin_elementwise_exp2(b))>::value);
 }
 
+void test_builtin_elementwise_asin() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_asin(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_asin(b))>::value);
+}
+
 void test_builtin_elementwise_sin() {
   const float a = 42.0;
   float b = 42.3;
@@ -111,11 +132,32 @@ void test_builtin_elementwise_sin() {
   static_assert(!is_const<decltype(__builtin_elementwise_sin(b))>::value);
 }
 
+void test_builtin_elementwise_sinh() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_sinh(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_sinh(b))>::value);
+}
+
+void test_builtin_elementwise_atan() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_atan(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_atan(b))>::value);
+}
+
 void test_builtin_elementwise_tan() {
   const float a = 42.0;
   float b = 42.3;
   static_assert(!is_const<decltype(__builtin_elementwise_tan(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_tan(b))>::value);
+}
+
+void test_builtin_elementwise_tanh() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_tanh(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_tanh(b))>::value);
 }
 
 void test_builtin_elementwise_sqrt() {

@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMipo
   DeadArgumentElimination.cpp
   ElimAvailExtern.cpp
   EmbedBitcodePass.cpp
+  ExpandVariadics.cpp
   ExtractGV.cpp
   ForceFunctionAttrs.cpp
   FunctionAttrs.cpp

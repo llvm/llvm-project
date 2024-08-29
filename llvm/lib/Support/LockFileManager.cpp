@@ -228,7 +228,7 @@ LockFileManager::LockFileManager(StringRef FileName)
       std::string S("failed to create link ");
       raw_string_ostream OSS(S);
       OSS << LockFileName.str() << " to " << UniqueLockFileName.str();
-      setError(EC, OSS.str());
+      setError(EC, S);
       return;
     }
 
@@ -274,7 +274,7 @@ std::string LockFileManager::getErrorMessage() const {
     raw_string_ostream OSS(Str);
     if (!ErrCodeMsg.empty())
       OSS << ": " << ErrCodeMsg;
-    return OSS.str();
+    return Str;
   }
   return "";
 }

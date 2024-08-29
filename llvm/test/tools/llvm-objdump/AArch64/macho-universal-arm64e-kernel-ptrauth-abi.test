@@ -1,0 +1,13 @@
+RUN: llvm-objdump %p/Inputs/fat.macho-arm64e-kernel-ptrauth-abi -m -p --universal-headers | FileCheck %s
+
+CHECK: Fat headers
+CHECK: fat_magic FAT_MAGIC
+CHECK: nfat_arch 1
+CHECK: architecture arm64e
+CHECK:     cputype CPU_TYPE_ARM64
+CHECK:     cpusubtype CPU_SUBTYPE_ARM64E
+CHECK:     capabilities CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_VERSION 5
+
+CHECK: Mach header
+CHECK:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+CHECK: MH_MAGIC_64   ARM64          E PAK05      OBJECT     0          0 0x00000000

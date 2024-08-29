@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -42,7 +43,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
                                  std::unique_ptr<MIRParser> &MIR,
                                  const TargetMachine &TM, StringRef MIRCode,
-                                 const char *FuncName, MachineModuleInfo &MMI) {
+                                 MachineModuleInfo &MMI) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
@@ -156,8 +157,7 @@ body: |
   LLVMContext Context;
   std::unique_ptr<MIRParser> MIR;
   MachineModuleInfo MMI(TM.get());
-  std::unique_ptr<Module> M =
-      parseMIR(Context, MIR, *TM, MIRString, "test0", MMI);
+  std::unique_ptr<Module> M = parseMIR(Context, MIR, *TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   Function *F = M->getFunction("test0");
@@ -167,7 +167,7 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.runOnMachineFunction(*MF);
+  MDT.calculate(*MF);
   MDF.getBase().analyze(MDT.getBase());
   WEI.recalculate(*MF, MDT, MDF);
 
@@ -331,8 +331,7 @@ body: |
   LLVMContext Context;
   std::unique_ptr<MIRParser> MIR;
   MachineModuleInfo MMI(TM.get());
-  std::unique_ptr<Module> M =
-      parseMIR(Context, MIR, *TM, MIRString, "test1", MMI);
+  std::unique_ptr<Module> M = parseMIR(Context, MIR, *TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   Function *F = M->getFunction("test1");
@@ -342,7 +341,7 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.runOnMachineFunction(*MF);
+  MDT.calculate(*MF);
   MDF.getBase().analyze(MDT.getBase());
   WEI.recalculate(*MF, MDT, MDF);
 

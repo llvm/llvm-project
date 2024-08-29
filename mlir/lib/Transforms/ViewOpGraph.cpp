@@ -8,12 +8,12 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <map>
@@ -93,6 +93,7 @@ public:
       processOperation(getOperation());
       emitAllEdgeStmts();
     });
+    markAllAnalysesPreserved();
   }
 
   /// Create a CFG graph for a region. Used in `Region::viewGraph`.

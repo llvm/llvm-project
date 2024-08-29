@@ -32,7 +32,7 @@ entry:
 ; RELOC-NEXT: Relocations [
 ; RELOC-NEXT:   Section (index: 1) .text {
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x16
+; RELOC-NEXT:     Virtual Address: 0x12
 ; RELOC-NEXT:     Symbol: TIInit ([[#NFA+19]])
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -40,7 +40,7 @@ entry:
 ; RELOC-NEXT:     Type: R_TOCU (0x30)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x1A
+; RELOC-NEXT:     Virtual Address: 0x16
 ; RELOC-NEXT:     Symbol: _$TLSML ([[#NFA+21]])
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -558,11 +558,11 @@ entry:
 ; DIS-NEXT:                                       stwu 1, -32(1)
 ; DIS-NEXT:                                       stw 0, 40(1)
 ; DIS-NEXT:                                       mr 7, 3
-; DIS-NEXT:                                       mr 6, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 8, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU (idx: [[#NFA+19]]) TIInit[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU (idx: [[#NFA+21]]) _$TLSML[TC]
+; DIS-NEXT:                                       mr 6, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 3, 4(3)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL (idx: [[#NFA+21]]) _$TLSML[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                bla 0x0

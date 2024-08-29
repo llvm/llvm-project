@@ -805,8 +805,7 @@ CompilerType::GetNumChildren(bool omit_empty_base_classes,
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetNumChildren(m_type, omit_empty_base_classes,
                                        exe_ctx);
-  return llvm::make_error<llvm::StringError>("invalid type",
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError("invalid type");
 }
 
 lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {
@@ -902,7 +901,7 @@ uint32_t CompilerType::GetIndexOfFieldWithName(
   return UINT32_MAX;
 }
 
-CompilerType CompilerType::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
     std::string &child_name, uint32_t &child_byte_size,

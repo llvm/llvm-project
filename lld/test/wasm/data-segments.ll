@@ -161,7 +161,7 @@
 ; DIS-EMPTY:
 ; DIS-NEXT:        end
 
-; In PIC mode __wasm_apply_data_relocs is export seperatly to __wasm_call_ctors
+; In PIC mode __wasm_apply_data_relocs is export separatly to __wasm_call_ctors
 ; PIC-DIS:     <__wasm_apply_data_relocs>:
 ; PIC-DIS-EMPTY:
 

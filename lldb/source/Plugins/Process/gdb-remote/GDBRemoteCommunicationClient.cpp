@@ -104,11 +104,12 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
               .count();
       if (error_ptr) {
         if (!IsConnected())
-          error_ptr->SetErrorString("Connection shut down by remote side "
-                                    "while waiting for reply to initial "
-                                    "handshake packet");
+          *error_ptr =
+              Status::FromErrorString("Connection shut down by remote side "
+                                      "while waiting for reply to initial "
+                                      "handshake packet");
         else
-          error_ptr->SetErrorStringWithFormat(
+          *error_ptr = Status::FromErrorStringWithFormat(
               "failed to get reply to handshake packet within timeout of "
               "%.1f seconds",
               handshake_timeout);
@@ -116,7 +117,7 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
     }
   } else {
     if (error_ptr)
-      error_ptr->SetErrorString("failed to send the handshake ack");
+      *error_ptr = Status::FromErrorString("failed to send the handshake ack");
   }
   return false;
 }
@@ -352,8 +353,11 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
 
   // build the qSupported packet
   std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc",
-                                       "multiprocess+", "fork-events+",
-                                       "vfork-events+"};
+                                       "multiprocess+",
+                                       "fork-events+",
+                                       "vfork-events+",
+                                       "swbreak+",
+                                       "hwbreak+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -705,7 +709,7 @@ Status GDBRemoteCommunicationClient::WriteMemoryTags(
   if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
           PacketResult::Success ||
       !response.IsOKResponse()) {
-    status.SetErrorString("QMemTags packet failed");
+    status = Status::FromErrorString("QMemTags packet failed");
   }
   return status;
 }
@@ -1519,7 +1523,8 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
     }
 
     if (m_supports_detach_stay_stopped == eLazyBoolNo) {
-      error.SetErrorString("Stays stopped not supported by this target.");
+      error = Status::FromErrorString(
+          "Stays stopped not supported by this target.");
       return error;
     } else {
       packet.PutChar('1');
@@ -1534,7 +1539,8 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
     packet.PutChar(';');
     packet.PutHex64(pid);
   } else if (pid != LLDB_INVALID_PROCESS_ID) {
-    error.SetErrorString("Multiprocess extension not supported by the server.");
+    error = Status::FromErrorString(
+        "Multiprocess extension not supported by the server.");
     return error;
   }
 
@@ -1542,7 +1548,7 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
   PacketResult packet_result =
       SendPacketAndWaitForResponse(packet.GetString(), response);
   if (packet_result != PacketResult::Success)
-    error.SetErrorString("Sending isconnect packet failed.");
+    error = Status::FromErrorString("Sending isconnect packet failed.");
   return error;
 }
 
@@ -1629,24 +1635,16 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
             }
           }
         } else if (name == "type") {
-          std::string comma_sep_str = value.str();
-          size_t comma_pos;
-          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
-            comma_sep_str[comma_pos] = '\0';
-            if (comma_sep_str == "stack") {
+          for (llvm::StringRef entry : llvm::split(value, ',')) {
+            if (entry == "stack")
               region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
-            }
-          }
-          // handle final (or only) type of "stack"
-          if (comma_sep_str == "stack") {
-            region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
           }
         } else if (name == "error") {
           StringExtractorGDBRemote error_extractor(value);
           std::string error_string;
           // Now convert the HEX bytes into a string value
           error_extractor.GetHexByteString(error_string);
-          error.SetErrorString(error_string.c_str());
+          error = Status::FromErrorString(error_string.c_str());
         } else if (name == "dirty-pages") {
           std::vector<addr_t> dirty_page_list;
           for (llvm::StringRef x : llvm::split(value, ',')) {
@@ -1673,7 +1671,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
         }
       } else {
         // We got an invalid address range back
-        error.SetErrorString("Server returned invalid range");
+        error = Status::FromErrorString("Server returned invalid range");
       }
     } else {
       m_supports_memory_region_info = eLazyBoolNo;
@@ -1681,7 +1679,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
   }
 
   if (m_supports_memory_region_info == eLazyBoolNo) {
-    error.SetErrorString("qMemoryRegionInfo is not supported");
+    error = Status::FromErrorString("qMemoryRegionInfo is not supported");
   }
 
   // Try qXfer:memory-map:read to get region information not included in
@@ -1721,7 +1719,7 @@ Status GDBRemoteCommunicationClient::GetQXferMemoryMapRegionInfo(
       return error;
     }
   }
-  error.SetErrorString("Region not found");
+  error = Status::FromErrorString("Region not found");
   return error;
 }
 
@@ -1734,12 +1732,12 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
     return error;
 
   if (!XMLDocument::XMLEnabled()) {
-    error.SetErrorString("XML is not supported");
+    error = Status::FromErrorString("XML is not supported");
     return error;
   }
 
   if (!GetQXferMemoryMapReadSupported()) {
-    error.SetErrorString("Memory map is not supported");
+    error = Status::FromErrorString("Memory map is not supported");
     return error;
   }
 
@@ -1750,13 +1748,13 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
   XMLDocument xml_document;
 
   if (!xml_document.ParseMemory(xml->c_str(), xml->size())) {
-    error.SetErrorString("Failed to parse memory map xml");
+    error = Status::FromErrorString("Failed to parse memory map xml");
     return error;
   }
 
   XMLNode map_node = xml_document.GetRootElement("memory-map");
   if (!map_node) {
-    error.SetErrorString("Invalid root node in memory map xml");
+    error = Status::FromErrorString("Invalid root node in memory map xml");
     return error;
   }
 
@@ -2984,28 +2982,28 @@ lldb_private::Status GDBRemoteCommunicationClient::RunShellCommand(
   if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
       PacketResult::Success) {
     if (response.GetChar() != 'F')
-      return Status("malformed reply");
+      return Status::FromErrorString("malformed reply");
     if (response.GetChar() != ',')
-      return Status("malformed reply");
+      return Status::FromErrorString("malformed reply");
     uint32_t exitcode = response.GetHexMaxU32(false, UINT32_MAX);
     if (exitcode == UINT32_MAX)
-      return Status("unable to run remote process");
+      return Status::FromErrorString("unable to run remote process");
     else if (status_ptr)
       *status_ptr = exitcode;
     if (response.GetChar() != ',')
-      return Status("malformed reply");
+      return Status::FromErrorString("malformed reply");
     uint32_t signo = response.GetHexMaxU32(false, UINT32_MAX);
     if (signo_ptr)
       *signo_ptr = signo;
     if (response.GetChar() != ',')
-      return Status("malformed reply");
+      return Status::FromErrorString("malformed reply");
     std::string output;
     response.GetEscapedBinaryData(output);
     if (command_output)
       command_output->assign(output);
     return Status();
   }
-  return Status("unable to send packet");
+  return Status::FromErrorString("unable to send packet");
 }
 
 Status GDBRemoteCommunicationClient::MakeDirectory(const FileSpec &file_spec,
@@ -3020,10 +3018,12 @@ Status GDBRemoteCommunicationClient::MakeDirectory(const FileSpec &file_spec,
   StringExtractorGDBRemote response;
 
   if (SendPacketAndWaitForResponse(packet, response) != PacketResult::Success)
-    return Status("failed to send '%s' packet", packet.str().c_str());
+    return Status::FromErrorStringWithFormat("failed to send '%s' packet",
+                                             packet.str().c_str());
 
   if (response.GetChar() != 'F')
-    return Status("invalid response to '%s' packet", packet.str().c_str());
+    return Status::FromErrorStringWithFormat("invalid response to '%s' packet",
+                                             packet.str().c_str());
 
   return Status(response.GetHexMaxU32(false, UINT32_MAX), eErrorTypePOSIX);
 }
@@ -3041,10 +3041,12 @@ GDBRemoteCommunicationClient::SetFilePermissions(const FileSpec &file_spec,
   StringExtractorGDBRemote response;
 
   if (SendPacketAndWaitForResponse(packet, response) != PacketResult::Success)
-    return Status("failed to send '%s' packet", stream.GetData());
+    return Status::FromErrorStringWithFormat("failed to send '%s' packet",
+                                             stream.GetData());
 
   if (response.GetChar() != 'F')
-    return Status("invalid response to '%s' packet", stream.GetData());
+    return Status::FromErrorStringWithFormat("invalid response to '%s' packet",
+                                             stream.GetData());
 
   return Status(response.GetHexMaxU32(false, UINT32_MAX), eErrorTypePOSIX);
 }
@@ -3071,9 +3073,9 @@ static uint64_t ParseHostIOPacketResponse(StringExtractorGDBRemote &response,
   if (response.GetChar() == ',') {
     int result_errno = gdb_errno_to_system(response.GetS32(-1, 16));
     if (result_errno != -1)
-      error.SetError(result_errno, eErrorTypePOSIX);
+      error = Status(result_errno, eErrorTypePOSIX);
     else
-      error.SetError(-1, eErrorTypeGeneric);
+      error = Status(-1, eErrorTypeGeneric);
   } else
     error.Clear();
   return result;
@@ -3211,25 +3213,25 @@ GDBRemoteCommunicationClient::GetFilePermissions(const FileSpec &file_spec,
     StringExtractorGDBRemote response;
     if (SendPacketAndWaitForResponse(stream.GetString(), response) !=
         PacketResult::Success) {
-      error.SetErrorStringWithFormat("failed to send '%s' packet",
-                                     stream.GetData());
+      error = Status::FromErrorStringWithFormat("failed to send '%s' packet",
+                                                stream.GetData());
       return error;
     }
     if (!response.IsUnsupportedResponse()) {
       if (response.GetChar() != 'F') {
-        error.SetErrorStringWithFormat("invalid response to '%s' packet",
-                                       stream.GetData());
+        error = Status::FromErrorStringWithFormat(
+            "invalid response to '%s' packet", stream.GetData());
       } else {
         const uint32_t mode = response.GetS32(-1, 16);
         if (static_cast<int32_t>(mode) == -1) {
           if (response.GetChar() == ',') {
             int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
             if (response_errno > 0)
-              error.SetError(response_errno, lldb::eErrorTypePOSIX);
+              error = Status(response_errno, lldb::eErrorTypePOSIX);
             else
-              error.SetErrorToGenericError();
+              error = Status::FromErrorString("unknown error");
           } else
-            error.SetErrorToGenericError();
+            error = Status::FromErrorString("unknown error");
         } else {
           file_permissions = mode & (S_IRWXU | S_IRWXG | S_IRWXO);
         }
@@ -3245,7 +3247,7 @@ GDBRemoteCommunicationClient::GetFilePermissions(const FileSpec &file_spec,
     file_permissions = st->gdb_st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
     return Status();
   }
-  return Status("fstat failed");
+  return Status::FromErrorString("fstat failed");
 }
 
 uint64_t GDBRemoteCommunicationClient::ReadFile(lldb::user_id_t fd,
@@ -3262,11 +3264,11 @@ uint64_t GDBRemoteCommunicationClient::ReadFile(lldb::user_id_t fd,
       return 0;
     int64_t retcode = response.GetS64(-1, 16);
     if (retcode == -1) {
-      error.SetErrorToGenericError();
+      error = Status::FromErrorString("unknown error");
       if (response.GetChar() == ',') {
         int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
         if (response_errno > 0)
-          error.SetError(response_errno, lldb::eErrorTypePOSIX);
+          error = Status(response_errno, lldb::eErrorTypePOSIX);
       }
       return -1;
     }
@@ -3300,22 +3302,22 @@ uint64_t GDBRemoteCommunicationClient::WriteFile(lldb::user_id_t fd,
   if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
       PacketResult::Success) {
     if (response.GetChar() != 'F') {
-      error.SetErrorStringWithFormat("write file failed");
+      error = Status::FromErrorStringWithFormat("write file failed");
       return 0;
     }
     int64_t bytes_written = response.GetS64(-1, 16);
     if (bytes_written == -1) {
-      error.SetErrorToGenericError();
+      error = Status::FromErrorString("unknown error");
       if (response.GetChar() == ',') {
         int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
         if (response_errno > 0)
-          error.SetError(response_errno, lldb::eErrorTypePOSIX);
+          error = Status(response_errno, lldb::eErrorTypePOSIX);
       }
       return -1;
     }
     return bytes_written;
   } else {
-    error.SetErrorString("failed to send vFile:pwrite packet");
+    error = Status::FromErrorString("failed to send vFile:pwrite packet");
   }
   return 0;
 }
@@ -3337,19 +3339,19 @@ Status GDBRemoteCommunicationClient::CreateSymlink(const FileSpec &src,
     if (response.GetChar() == 'F') {
       uint32_t result = response.GetHexMaxU32(false, UINT32_MAX);
       if (result != 0) {
-        error.SetErrorToGenericError();
+        error = Status::FromErrorString("unknown error");
         if (response.GetChar() == ',') {
           int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
           if (response_errno > 0)
-            error.SetError(response_errno, lldb::eErrorTypePOSIX);
+            error = Status(response_errno, lldb::eErrorTypePOSIX);
         }
       }
     } else {
       // Should have returned with 'F<result>[,<errno>]'
-      error.SetErrorStringWithFormat("symlink failed");
+      error = Status::FromErrorStringWithFormat("symlink failed");
     }
   } else {
-    error.SetErrorString("failed to send vFile:symlink packet");
+    error = Status::FromErrorString("failed to send vFile:symlink packet");
   }
   return error;
 }
@@ -3368,19 +3370,19 @@ Status GDBRemoteCommunicationClient::Unlink(const FileSpec &file_spec) {
     if (response.GetChar() == 'F') {
       uint32_t result = response.GetHexMaxU32(false, UINT32_MAX);
       if (result != 0) {
-        error.SetErrorToGenericError();
+        error = Status::FromErrorString("unknown error");
         if (response.GetChar() == ',') {
           int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
           if (response_errno > 0)
-            error.SetError(response_errno, lldb::eErrorTypePOSIX);
+            error = Status(response_errno, lldb::eErrorTypePOSIX);
         }
       }
     } else {
       // Should have returned with 'F<result>[,<errno>]'
-      error.SetErrorStringWithFormat("unlink failed");
+      error = Status::FromErrorStringWithFormat("unlink failed");
     }
   } else {
-    error.SetErrorString("failed to send vFile:unlink packet");
+    error = Status::FromErrorString("failed to send vFile:unlink packet");
   }
   return error;
 }
@@ -4260,12 +4262,13 @@ Status GDBRemoteCommunicationClient::SendSignalsToIgnore(
   auto send_status = SendPacketAndWaitForResponse(packet, response);
 
   if (send_status != GDBRemoteCommunication::PacketResult::Success)
-    return Status("Sending QPassSignals packet failed");
+    return Status::FromErrorString("Sending QPassSignals packet failed");
 
   if (response.IsOKResponse()) {
     return Status();
   } else {
-    return Status("Unknown error happened during sending QPassSignals packet.");
+    return Status::FromErrorString(
+        "Unknown error happened during sending QPassSignals packet.");
   }
 }
 
@@ -4274,7 +4277,7 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
   Status error;
 
   if (type_name.empty()) {
-    error.SetErrorString("invalid type_name argument");
+    error = Status::FromErrorString("invalid type_name argument");
     return error;
   }
 
@@ -4304,13 +4307,13 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
       // Okay!
       error.Clear();
     } else {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "configuring StructuredData feature {0} failed with error {1}",
           type_name, response.GetStringRef());
     }
   } else {
     // Can we get more data here on the failure?
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "configuring StructuredData feature {0} failed when sending packet: "
         "PacketResult={1}",
         type_name, (int)result);

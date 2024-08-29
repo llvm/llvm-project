@@ -4,10 +4,10 @@
 ;; Check the dbg.assign DIAssignID operand gets remapped after cloning.
 
 ; CHECK: %tmp = alloca [4096 x i32], i32 0, align 16, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK-NEXT: dbg.assign(metadata i1 undef, metadata !{{.*}}, metadata !DIExpression(), metadata ![[ID1]], metadata ptr %tmp, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i1 undef, !{{.*}}, !DIExpression(), ![[ID1]], ptr %tmp, !DIExpression(),
 ;
 ; CHECK: %tmp = alloca [4096 x i32], i32 0, align 16, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK-NEXT: dbg.assign(metadata i1 undef, metadata !{{.*}}, metadata !DIExpression(), metadata ![[ID2]], metadata ptr %tmp, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i1 undef, !{{.*}}, !DIExpression(), ![[ID2]], ptr %tmp, !DIExpression(),
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)

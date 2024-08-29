@@ -154,7 +154,7 @@ static void constifyIndexValues(
 /// expected for `getAttributes` in `constifyIndexValues`.
 static SmallVector<int64_t> getConstantSizes(MemRefType memRefTy) {
   ArrayRef<int64_t> sizes = memRefTy.getShape();
-  return SmallVector<int64_t>(sizes.begin(), sizes.end());
+  return SmallVector<int64_t>(sizes);
 }
 
 /// Wrapper around `getStridesAndOffset` that returns only the offset and
@@ -838,8 +838,7 @@ struct FoldEmptyCopy final : public OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 
   static bool isEmptyMemRef(BaseMemRefType type) {
-    return type.hasRank() &&
-           llvm::any_of(type.getShape(), [](int64_t x) { return x == 0; });
+    return type.hasRank() && llvm::is_contained(type.getShape(), 0);
   }
 
   LogicalResult matchAndRewrite(CopyOp copyOp,
@@ -2449,6 +2448,11 @@ computeCollapsedLayoutMap(MemRefType srcType,
       if (strict && (stride.saturated || srcStride.saturated))
         return failure();
 
+      // Dimensions of size 1 should be skipped, because their strides are
+      // meaningless and could have any arbitrary value.
+      if (srcShape[idx - 1] == 1)
+        continue;
+
       if (!stride.saturated && !srcStride.saturated && stride != srcStride)
         return failure();
     }
@@ -2691,10 +2695,10 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   //   `sourceOffset + sum_i(staticOffset_i * sourceStrides_i)`.
   int64_t targetOffset = sourceOffset;
   for (auto it : llvm::zip(staticOffsets, sourceStrides)) {
-    auto staticOffset = std::get<0>(it), targetStride = std::get<1>(it);
+    auto staticOffset = std::get<0>(it), sourceStride = std::get<1>(it);
     targetOffset = (SaturatedInteger::wrap(targetOffset) +
                     SaturatedInteger::wrap(staticOffset) *
-                        SaturatedInteger::wrap(targetStride))
+                        SaturatedInteger::wrap(sourceStride))
                        .asInteger();
   }
 
@@ -3275,11 +3279,14 @@ void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
-  auto resultShapedType = llvm::cast<ShapedType>(getResult().getType());
-  auto sourceShapedType = llvm::cast<ShapedType>(getSource().getType());
+  MemRefType sourceMemrefType = getSource().getType();
+  MemRefType resultMemrefType = getResult().getType();
+  auto resultLayout =
+      dyn_cast_if_present<StridedLayoutAttr>(resultMemrefType.getLayout());
 
-  if (resultShapedType.hasStaticShape() &&
-      resultShapedType == sourceShapedType) {
+  if (resultMemrefType == sourceMemrefType &&
+      resultMemrefType.hasStaticShape() &&
+      (!resultLayout || resultLayout.hasStaticLayout())) {
     return getViewSource();
   }
 
@@ -3297,7 +3304,7 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
         strides, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
-        resultShapedType == sourceShapedType)
+        resultMemrefType == sourceMemrefType)
       return getViewSource();
   }
 

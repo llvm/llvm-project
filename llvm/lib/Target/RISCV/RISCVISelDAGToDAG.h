@@ -25,13 +25,11 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
-  static char ID;
-
   RISCVDAGToDAGISel() = delete;
 
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
+      : SelectionDAGISel(TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();
@@ -50,8 +48,8 @@ public:
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
-                        bool IsINX = false);
-  bool SelectAddrRegImmINX(SDValue Addr, SDValue &Base, SDValue &Offset) {
+                        bool IsRV32Zdinx = false);
+  bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
     return SelectAddrRegImm(Addr, Base, Offset, true);
   }
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -79,6 +77,8 @@ public:
     }
     return false;
   }
+
+  bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
@@ -194,6 +194,13 @@ private:
   bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
+};
+
+class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TargetMachine,
+                                   CodeGenOptLevel OptLevel);
 };
 
 namespace RISCV {

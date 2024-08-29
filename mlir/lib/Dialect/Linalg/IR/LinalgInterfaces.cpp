@@ -105,9 +105,9 @@ std::optional<Value> linalg::isaFillOpInterface(GenericOp genericOp) {
 static bool
 isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp genericOp,
                                           unsigned arity) {
-  // Check all loops are parallel, and have only tensor semantics.
+  // Check all loops are parallel.
   if (genericOp.getNumParallelLoops() != genericOp.getNumLoops() ||
-      genericOp.getNumLoops() < 1 || !genericOp.hasPureTensorSemantics())
+      genericOp.getNumLoops() < 1)
     return false;
 
   // Check there are arity-inputs, 1-output and all are identity-maps.
@@ -762,13 +762,15 @@ enum class MatchConvolutionResult {
   NotProjectedPermutations,
   NonConvolutionLoop,
   OutputDimsNotParallel,
-  NonOutputDimNotReduction
+  NonOutputDimNotReduction,
+  EmptyConvolvedDims
 };
 } // namespace mlir::linalg::detail
 
 mlir::linalg::detail::MatchConvolutionResult
 mlir::linalg::detail::isConvolutionInterfaceImpl(
-    Operation *op, ConvolutionDimensions *dimensions) {
+    Operation *op, ConvolutionDimensions *dimensions,
+    bool allowEmptyConvolvedDims) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
   if (!linalgOp)
     return MatchConvolutionResult::NotLinalgOp;
@@ -886,10 +888,12 @@ mlir::linalg::detail::isConvolutionInterfaceImpl(
   if (allLoopDims.size() != linalgOp.getNumLoops())
     return MatchConvolutionResult::NonConvolutionLoop;
 
+  if (!allowEmptyConvolvedDims && inputExprWalker.convolvedDims.empty())
+    return MatchConvolutionResult::EmptyConvolvedDims;
+
   if (dimensions) {
-    FailureOr<ConvolutionDimensions> res =
-        inferConvolutionDimsImpl(linalgOp, inputExprWalker,
-                                 /*allowEmptyConvolvedDims=*/true);
+    FailureOr<ConvolutionDimensions> res = inferConvolutionDimsImpl(
+        linalgOp, inputExprWalker, allowEmptyConvolvedDims);
     assert(succeeded(res) && "unexpected failure to infer convolution dims");
     *dimensions = *res;
   }
@@ -914,14 +918,18 @@ mlir::linalg::detail::getMatchConvolutionMessage(MatchConvolutionResult res) {
     return "expected all iterators used to access outputs to be parallel";
   case MatchConvolutionResult::NonOutputDimNotReduction:
     return "expected all iterators not used to access outputs to be reduction";
+  case MatchConvolutionResult::EmptyConvolvedDims:
+    return "expected convolved dim to be non-empty";
   case MatchConvolutionResult::Success:
     return "";
   }
   llvm_unreachable("unhandled MatchConvolutionResult case");
 }
 
-bool mlir::linalg::isaConvolutionOpInterface(LinalgOp linalgOp) {
-  return linalg::detail::isConvolutionInterfaceImpl(linalgOp.getOperation()) ==
+bool mlir::linalg::isaConvolutionOpInterface(LinalgOp linalgOp,
+                                             bool allowEmptyConvolvedDims) {
+  return linalg::detail::isConvolutionInterfaceImpl(
+             linalgOp.getOperation(), nullptr, allowEmptyConvolvedDims) ==
          linalg::detail::MatchConvolutionResult::Success;
 }
 

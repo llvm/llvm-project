@@ -44,6 +44,12 @@ using namespace clang;
 // TemplateParameterList Implementation
 //===----------------------------------------------------------------------===//
 
+template <class TemplateParam>
+static bool
+DefaultTemplateArgumentContainsUnexpandedPack(const TemplateParam &P) {
+  return P.hasDefaultArgument() &&
+         P.getDefaultArgument().getArgument().containsUnexpandedParameterPack();
+}
 
 TemplateParameterList::TemplateParameterList(const ASTContext& C,
                                              SourceLocation TemplateLoc,
@@ -61,27 +67,30 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
 
     bool IsPack = P->isTemplateParameterPack();
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
-      if (!IsPack && NTTP->getType()->containsUnexpandedParameterPack())
+      if (!IsPack && (NTTP->getType()->containsUnexpandedParameterPack() ||
+                      DefaultTemplateArgumentContainsUnexpandedPack(*NTTP)))
         ContainsUnexpandedParameterPack = true;
       if (NTTP->hasPlaceholderTypeConstraint())
         HasConstrainedParameters = true;
     } else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(P)) {
       if (!IsPack &&
-          TTP->getTemplateParameters()->containsUnexpandedParameterPack())
+          (TTP->getTemplateParameters()->containsUnexpandedParameterPack() ||
+           DefaultTemplateArgumentContainsUnexpandedPack(*TTP))) {
         ContainsUnexpandedParameterPack = true;
+      }
     } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
-      if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
-        if (TC->getImmediatelyDeclaredConstraint()
-            ->containsUnexpandedParameterPack())
-          ContainsUnexpandedParameterPack = true;
+      if (!IsPack && DefaultTemplateArgumentContainsUnexpandedPack(*TTP)) {
+        ContainsUnexpandedParameterPack = true;
+      } else if (const TypeConstraint *TC = TTP->getTypeConstraint();
+                 TC && TC->getImmediatelyDeclaredConstraint()
+                           ->containsUnexpandedParameterPack()) {
+        ContainsUnexpandedParameterPack = true;
       }
       if (TTP->hasTypeConstraint())
         HasConstrainedParameters = true;
     } else {
       llvm_unreachable("unexpected template parameter type");
     }
-    // FIXME: If a default argument contains an unexpanded parameter pack, the
-    // template parameter list does too.
   }
 
   if (HasRequiresClause) {
@@ -339,7 +348,7 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
     ASTContext &Context = getASTContext();
     GlobalDeclID *Specs = CommonBasePtr->LazySpecializations;
     CommonBasePtr->LazySpecializations = nullptr;
-    unsigned SpecSize = (*Specs++).get();
+    unsigned SpecSize = (*Specs++).getRawValue();
     for (unsigned I = 0; I != SpecSize; ++I)
       (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);
   }
@@ -627,9 +636,10 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   TemplateParameterList *Params = getTemplateParameters();
   SmallVector<TemplateArgument, 16> TemplateArgs;
   Context.getInjectedTemplateArgs(Params, TemplateArgs);
-  CommonPtr->InjectedClassNameType
-    = Context.getTemplateSpecializationType(TemplateName(this),
-                                            TemplateArgs);
+  TemplateName Name = Context.getQualifiedTemplateName(
+      /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
+  CommonPtr->InjectedClassNameType =
+      Context.getTemplateSpecializationType(Name, TemplateArgs);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -669,21 +679,28 @@ TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, GlobalDeclID ID,
 }
 
 SourceLocation TemplateTypeParmDecl::getDefaultArgumentLoc() const {
-  return hasDefaultArgument()
-             ? getDefaultArgumentInfo()->getTypeLoc().getBeginLoc()
-             : SourceLocation();
+  return hasDefaultArgument() ? getDefaultArgument().getLocation()
+                              : SourceLocation();
 }
 
 SourceRange TemplateTypeParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
     return SourceRange(getBeginLoc(),
-                       getDefaultArgumentInfo()->getTypeLoc().getEndLoc());
+                       getDefaultArgument().getSourceRange().getEnd());
   // TypeDecl::getSourceRange returns a range containing name location, which is
   // wrong for unnamed template parameters. e.g:
   // it will return <[[typename>]] instead of <[[typename]]>
-  else if (getDeclName().isEmpty())
+  if (getDeclName().isEmpty())
     return SourceRange(getBeginLoc());
   return TypeDecl::getSourceRange();
+}
+
+void TemplateTypeParmDecl::setDefaultArgument(
+    const ASTContext &C, const TemplateArgumentLoc &DefArg) {
+  if (DefArg.getArgument().isNull())
+    DefaultArgument.set(nullptr);
+  else
+    DefaultArgument.set(new (C) TemplateArgumentLoc(DefArg));
 }
 
 unsigned TemplateTypeParmDecl::getDepth() const {
@@ -788,14 +805,21 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 SourceRange NonTypeTemplateParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
     return SourceRange(getOuterLocStart(),
-                       getDefaultArgument()->getSourceRange().getEnd());
+                       getDefaultArgument().getSourceRange().getEnd());
   return DeclaratorDecl::getSourceRange();
 }
 
 SourceLocation NonTypeTemplateParmDecl::getDefaultArgumentLoc() const {
-  return hasDefaultArgument()
-    ? getDefaultArgument()->getSourceRange().getBegin()
-    : SourceLocation();
+  return hasDefaultArgument() ? getDefaultArgument().getSourceRange().getBegin()
+                              : SourceLocation();
+}
+
+void NonTypeTemplateParmDecl::setDefaultArgument(
+    const ASTContext &C, const TemplateArgumentLoc &DefArg) {
+  if (DefArg.getArgument().isNull())
+    DefaultArgument.set(nullptr);
+  else
+    DefaultArgument.set(new (C) TemplateArgumentLoc(DefArg));
 }
 
 //===----------------------------------------------------------------------===//

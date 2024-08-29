@@ -17,6 +17,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -54,6 +55,7 @@ public:
   DIBasicType *LongInt;
   DIExpression *EmptyExpr;
   LiveDebugValues::OverlapMap Overlaps;
+  LiveDebugValues::DebugVariableMap DVMap;
 
   DebugLoc OutermostLoc, InBlockLoc, NotNestedBlockLoc, InlinedLoc;
 
@@ -92,7 +94,7 @@ public:
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
     MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, FunctionNum, *MMI);
+                                           STI, MMI->getContext(), FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.
@@ -175,7 +177,7 @@ public:
 
   void addVTracker() {
     ASSERT_TRUE(LDV);
-    VTracker = std::make_unique<VLocTracker>(Overlaps, EmptyExpr);
+    VTracker = std::make_unique<VLocTracker>(DVMap, Overlaps, EmptyExpr);
     LDV->VTracker = &*VTracker;
   }
 
@@ -214,7 +216,7 @@ public:
   }
 
   void buildVLocValueMap(const DILocation *DILoc,
-                    const SmallSet<DebugVariable, 4> &VarsWeCareAbout,
+                    const SmallSet<DebugVariableID, 4> &VarsWeCareAbout,
                     SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks,
                     InstrRefBasedLDV::LiveInsT &Output, FuncValueTable &MOutLocs,
                     FuncValueTable &MInLocs,
@@ -2631,10 +2633,11 @@ TEST_F(InstrRefLDVTest, VLocSingleBlock) {
   MInLocs[0][0] = MOutLocs[0][0] = LiveInRsp;
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
+  DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
   DbgValueProperties EmptyProps(EmptyExpr, false, false);
 
-  SmallSet<DebugVariable, 4> AllVars;
-  AllVars.insert(Var);
+  SmallSet<DebugVariableID, 4> AllVars;
+  AllVars.insert(VarID);
 
   // Mild hack: rather than constructing machine instructions in each block
   // and creating lexical scopes across them, instead just tell
@@ -2644,7 +2647,7 @@ TEST_F(InstrRefLDVTest, VLocSingleBlock) {
   AssignBlocks.insert(MBB0);
 
   SmallVector<VLocTracker, 1> VLocs;
-  VLocs.resize(1, VLocTracker(Overlaps, EmptyExpr));
+  VLocs.resize(1, VLocTracker(LDV->getDVMap(), Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -2656,7 +2659,7 @@ TEST_F(InstrRefLDVTest, VLocSingleBlock) {
 
   // If we put an assignment in the transfer function, that should... well,
   // do nothing, because we don't store the live-outs.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output.size(), 0ul);
@@ -2693,10 +2696,11 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   initValueArray(MOutLocs, 4, 2);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
+  DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
   DbgValueProperties EmptyProps(EmptyExpr, false, false);
 
-  SmallSet<DebugVariable, 4> AllVars;
-  AllVars.insert(Var);
+  SmallSet<DebugVariableID, 4> AllVars;
+  AllVars.insert(VarID);
 
   // Mild hack: rather than constructing machine instructions in each block
   // and creating lexical scopes across them, instead just tell
@@ -2709,7 +2713,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   AssignBlocks.insert(MBB3);
 
   SmallVector<VLocTracker, 1> VLocs;
-  VLocs.resize(4, VLocTracker(Overlaps, EmptyExpr));
+  VLocs.resize(4, VLocTracker(LDV->getDVMap(), Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -2735,7 +2739,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
 
   // An assignment in the end block should also not affect other blocks; or
   // produce any live-ins.
-  VLocs[3].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[3].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2747,7 +2751,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   // Assignments in either of the side-of-diamond blocks should also not be
   // propagated anywhere.
   VLocs[3].Vars.clear();
-  VLocs[2].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2757,7 +2761,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   VLocs[2].Vars.clear();
   ClearOutputs();
 
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2769,7 +2773,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
 
   // However: putting an assignment in the first block should propagate variable
   // values through to all other blocks, as it dominates.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2789,7 +2793,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   // should still be propagated, as buildVLocValueMap shouldn't care about
   // what's in the registers (except for PHIs).
   // values through to all other blocks, as it dominates.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2807,8 +2811,8 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
 
   // We should get a live-in to the merging block, if there are two assigns of
   // the same value in either side of the diamond.
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[2].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2823,8 +2827,8 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
 
   // If we assign a value in the entry block, then 'undef' on a branch, we
   // shouldn't have a live-in in the merge block.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(EmptyProps, DbgValue::Undef)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(EmptyProps, DbgValue::Undef)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2842,8 +2846,8 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   // Having different values joining into the merge block should mean we have
   // no live-in in that block. Block ones LiveInRax value doesn't appear as a
   // live-in anywhere, it's block internal.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2861,8 +2865,8 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   // But on the other hand, if there's a location in the register file where
   // those two values can be joined, do so.
   MOutLocs[1][0] = LiveInRax;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2914,14 +2918,15 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   initValueArray(MOutLocs, 3, 2);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
+  DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
   DbgValueProperties EmptyProps(EmptyExpr, false, false);
   DIExpression *TwoOpExpr =
       DIExpression::get(Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg,
                               1, dwarf::DW_OP_plus});
   DbgValueProperties VariadicProps(TwoOpExpr, false, true);
 
-  SmallSet<DebugVariable, 4> AllVars;
-  AllVars.insert(Var);
+  SmallSet<DebugVariableID, 4> AllVars;
+  AllVars.insert(VarID);
 
   SmallPtrSet<MachineBasicBlock *, 4> AssignBlocks;
   AssignBlocks.insert(MBB0);
@@ -2929,7 +2934,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   AssignBlocks.insert(MBB2);
 
   SmallVector<VLocTracker, 3> VLocs;
-  VLocs.resize(3, VLocTracker(Overlaps, EmptyExpr));
+  VLocs.resize(3, VLocTracker(LDV->getDVMap(), Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -2946,7 +2951,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   Output.resize(3);
 
   // Easy starter: a dominating assign should propagate to all blocks.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2962,7 +2967,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
 
   // A variadic assignment should behave the same.
   DbgOpID Locs0[] = {LiveInRspID, LiveInRaxID};
-  VLocs[0].Vars.insert({Var, DbgValue(Locs0, VariadicProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(Locs0, VariadicProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output, MOutLocs,
                     MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2978,8 +2983,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   VLocs[1].Vars.clear();
 
   // Put an undef assignment in the loop. Should get no live-in value.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(EmptyProps, DbgValue::Undef)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(EmptyProps, DbgValue::Undef)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -2990,8 +2995,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   VLocs[1].Vars.clear();
 
   // Assignment of the same value should naturally join.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3007,8 +3012,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
 
   // Assignment of different values shouldn't join with no machine PHI vals.
   // Will be live-in to exit block as it's dominated.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3024,8 +3029,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   // with unrelated assign in loop block again.
   MInLocs[1][0] = RspPHIInBlk1;
   MOutLocs[1][0] = RspDefInBlk1;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3041,8 +3046,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   // find the appropriate PHI.
   MInLocs[1][0] = RspPHIInBlk1;
   MOutLocs[1][0] = RspDefInBlk1;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(RspDefInBlk1ID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(RspDefInBlk1ID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3062,8 +3067,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   MOutLocs[1][0] = LiveInRsp;
   MInLocs[1][1] = RaxPHIInBlk1;
   MOutLocs[1][1] = RspDefInBlk1;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(RspDefInBlk1ID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(RspDefInBlk1ID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3084,8 +3089,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   MOutLocs[1][0] = RspDefInBlk1;
   MInLocs[1][1] = RaxPHIInBlk1;
   MOutLocs[1][1] = RspDefInBlk1;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(RspDefInBlk1ID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(RspDefInBlk1ID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3118,8 +3123,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   MOutLocs[1][0] = RspPHIInBlk1;
   MInLocs[1][1] = LiveInRax;
   MOutLocs[1][1] = LiveInRax;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(RspPHIInBlk1ID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(RspPHIInBlk1ID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3137,8 +3142,8 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   // because there's a def in it.
   MInLocs[1][0] = LiveInRsp;
   MOutLocs[1][0] = LiveInRsp;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3192,10 +3197,11 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   initValueArray(MOutLocs, 5, 2);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
+  DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
   DbgValueProperties EmptyProps(EmptyExpr, false, false);
 
-  SmallSet<DebugVariable, 4> AllVars;
-  AllVars.insert(Var);
+  SmallSet<DebugVariableID, 4> AllVars;
+  AllVars.insert(VarID);
 
   SmallPtrSet<MachineBasicBlock *, 5> AssignBlocks;
   AssignBlocks.insert(MBB0);
@@ -3205,7 +3211,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   AssignBlocks.insert(MBB4);
 
   SmallVector<VLocTracker, 5> VLocs;
-  VLocs.resize(5, VLocTracker(Overlaps, EmptyExpr));
+  VLocs.resize(5, VLocTracker(LDV->getDVMap(), Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -3222,7 +3228,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   Output.resize(5);
 
   // A dominating assign should propagate to all blocks.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3243,8 +3249,8 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
 
   // Test that an assign in the inner loop causes unresolved PHIs at the heads
   // of both loops, and no output location. Dominated blocks do get values.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[2].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3262,7 +3268,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
 
   // Same test, but with no assignment in block 0. We should still get values
   // in dominated blocks.
-  VLocs[2].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3279,8 +3285,8 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
 
   // Similarly, assignments in the outer loop gives location to dominated
   // blocks, but no PHI locations are found at the outer loop head.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[3].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[3].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3294,8 +3300,8 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   VLocs[0].Vars.clear();
   VLocs[3].Vars.clear();
 
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[1].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[1].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3316,8 +3322,8 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   // With an assignment of the same value in the inner loop, we should work out
   // that all PHIs can be eliminated and the same value is live-through the
   // whole function.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[2].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3347,8 +3353,8 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   // one. Even though RspPHIInBlk2 isn't available later in the function, we
   // should still produce a live-in value. The fact it's unavailable is a
   // different concern.
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[2].Vars.insert({Var, DbgValue(LiveInRaxID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(LiveInRaxID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);
@@ -3373,8 +3379,8 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   MOutLocs[2][0] = RspDefInBlk2;
   MInLocs[3][0] = RspDefInBlk2;
   MOutLocs[3][0] = RspDefInBlk2;
-  VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});
-  VLocs[2].Vars.insert({Var, DbgValue(RspDefInBlk2ID, EmptyProps)});
+  VLocs[0].Vars.insert({VarID, DbgValue(LiveInRspID, EmptyProps)});
+  VLocs[2].Vars.insert({VarID, DbgValue(RspDefInBlk2ID, EmptyProps)});
   buildVLocValueMap(OutermostLoc, AllVars, AssignBlocks, Output,
                     MOutLocs, MInLocs, VLocs);
   EXPECT_EQ(Output[0].size(), 0ul);

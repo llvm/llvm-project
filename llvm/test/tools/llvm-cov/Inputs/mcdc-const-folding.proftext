@@ -40,7 +40,7 @@ _Z5case2b
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0xa
+0x6
 
 
 _Z5case3b
@@ -55,7 +55,7 @@ _Z5case3b
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x9
+0x5
 
 
 _Z5case4b
@@ -70,7 +70,7 @@ _Z5case4b
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x2
+0x1
 
 
 _Z5case5b
@@ -85,7 +85,7 @@ _Z5case5b
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x6
+0x5
 
 
 _Z5case6b
@@ -100,7 +100,7 @@ _Z5case6b
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x5
+0x6
 
 
 _Z5case7b
@@ -166,7 +166,7 @@ _Z5caseabb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0xa2
+0xe
 
 
 _Z5casebbb
@@ -183,7 +183,7 @@ _Z5casebbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0xa1
+0xd
 
 
 _Z5casecbb
@@ -200,7 +200,7 @@ _Z5casecbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x2
+0x1
 
 
 _Z5casedbb
@@ -217,7 +217,7 @@ _Z5casedbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x12
+0x3
 
 
 _Z5caseebb
@@ -234,7 +234,7 @@ _Z5caseebb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x14
+0xa
 
 
 _Z5casefbb
@@ -251,7 +251,7 @@ _Z5casefbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x6
+0x9
 
 
 _Z5casegbb
@@ -268,7 +268,7 @@ _Z5casegbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x23
+0x7
 
 
 _Z5casehbb
@@ -302,7 +302,7 @@ _Z5caseibb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x83
+0xb
 
 
 _Z5casejbb
@@ -319,7 +319,7 @@ _Z5casejbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0xa1
+0xd
 
 
 _Z5casekbb
@@ -336,7 +336,7 @@ _Z5casekbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x12
+0x3
 
 
 _Z5caselbb
@@ -353,7 +353,7 @@ _Z5caselbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x12
+0x3
 
 
 _Z5casembb
@@ -370,7 +370,7 @@ _Z5casembb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x12
+0x3
 
 
 _Z5casenbb
@@ -387,7 +387,7 @@ _Z5casenbb
 # Num Bitmap Bytes:
 $1
 # Bitmap Byte Values:
-0x6
+0x9
 
 
 main

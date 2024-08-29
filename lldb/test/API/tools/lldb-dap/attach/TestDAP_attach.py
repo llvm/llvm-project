@@ -39,9 +39,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         if continueToExit:
             self.continue_to_exit()
 
-    @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIfRemote
     def test_by_pid(self):
         """
         Tests attaching to a process by process ID.
@@ -57,9 +55,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(pid=self.process.pid)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIfRemote
     def test_by_name(self):
         """
         Tests attaching to a process by process name.
@@ -118,7 +114,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program, waitFor=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(
@@ -202,11 +197,13 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
-        output = self.collect_console(duration=1.0)
+        output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=terminateCommands[0],
+        )
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(
@@ -237,5 +234,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Once it's disconnected the console should contain the
         # "terminateCommands"
         self.dap_server.request_disconnect(terminateDebuggee=True)
-        output = self.collect_console(duration=1.0)
+        output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=terminateCommands[0],
+        )
         self.verify_commands("terminateCommands", output, terminateCommands)

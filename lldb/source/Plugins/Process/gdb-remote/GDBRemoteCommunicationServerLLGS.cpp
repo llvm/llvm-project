@@ -261,8 +261,8 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   Log *log = GetLog(LLDBLog::Process);
 
   if (!m_process_launch_info.GetArguments().GetArgumentCount())
-    return Status("%s: no process command line specified to launch",
-                  __FUNCTION__);
+    return Status::FromErrorStringWithFormat(
+        "%s: no process command line specified to launch", __FUNCTION__);
 
   const bool should_forward_stdio =
       m_process_launch_info.GetFileActionForFD(STDIN_FILENO) == nullptr ||
@@ -348,10 +348,10 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // Before we try to attach, make sure we aren't already monitoring something
   // else.
   if (!m_debugged_processes.empty())
-    return Status("cannot attach to process %" PRIu64
-                  " when another process with pid %" PRIu64
-                  " is being debugged.",
-                  pid, m_current_process->GetID());
+    return Status::FromErrorStringWithFormat(
+        "cannot attach to process %" PRIu64
+        " when another process with pid %" PRIu64 " is being debugged.",
+        pid, m_current_process->GetID());
 
   // Try to attach.
   auto process_or = m_process_manager.Attach(pid, *this);
@@ -447,7 +447,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachWaitProcess(
         error_stream.Format("{0}.", loop_process_list.back().GetProcessID());
 
         Status error;
-        error.SetErrorString(error_stream.GetString());
+        error = Status(error_stream.GetString().str());
         return error;
       }
     }
@@ -714,6 +714,8 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vfork";
   case eStopReasonVForkDone:
     return "vforkdone";
+  case eStopReasonInterrupt:
+    return "async interrupt";
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
   case eStopReasonPlanComplete:
@@ -1210,14 +1212,15 @@ Status GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor(fd, true));
   if (!conn_up) {
-    error.SetErrorString("failed to create ConnectionFileDescriptor");
+    error =
+        Status::FromErrorString("failed to create ConnectionFileDescriptor");
     return error;
   }
 
   m_stdio_communication.SetCloseOnEOF(false);
   m_stdio_communication.SetConnection(std::move(conn_up));
   if (!m_stdio_communication.IsConnected()) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "failed to set connection for inferior I/O communication");
     return error;
   }
@@ -1286,7 +1289,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceSupported(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   return SendJSONResponse(m_current_process->TraceSupported());
 }
@@ -1297,7 +1300,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceStop(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceStop:");
   Expected<TraceStopRequest> stop_request =
@@ -1318,7 +1321,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceStart(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceStart:");
   Expected<TraceStartRequest> request =
@@ -1339,7 +1342,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetState(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceGetState:");
   Expected<TraceGetStateRequest> request =
@@ -1357,7 +1360,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceGetBinaryData:");
   llvm::Expected<TraceGetBinaryDataRequest> request =
@@ -3083,6 +3086,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   if (registers_count)
     response.IndentMore();
 
+  llvm::StringSet<> field_enums_seen;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3096,6 +3100,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
 
     if (reg_info->flags_type) {
       response.IndentMore();
+      reg_info->flags_type->EnumsToXML(response, field_enums_seen);
       reg_info->flags_type->ToXML(response);
       response.IndentLess();
     }
@@ -3535,7 +3540,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
   }
 
   if (argv.empty())
-    return SendErrorResponse(Status("No arguments"));
+    return SendErrorResponse(Status::FromErrorString("No arguments"));
   m_process_launch_info.GetExecutableFile().SetFile(
       m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
   m_process_launch_error = LaunchProcess();
@@ -3595,7 +3600,8 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
   if (detach_error)
     return SendErrorResponse(std::move(detach_error));
   if (!detached)
-    return SendErrorResponse(Status("PID %" PRIu64 " not traced", pid));
+    return SendErrorResponse(
+        Status::FromErrorStringWithFormat("PID %" PRIu64 " not traced", pid));
   return SendOKResponse();
 }
 
@@ -3916,7 +3922,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   std::string path_hint;
 
@@ -3927,7 +3933,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
       if (x.consume_front("path-hint:"))
         StringExtractor(x).GetHexByteString(path_hint);
       else
-        return SendErrorResponse(Status("Unsupported qSaveCore option"));
+        return SendErrorResponse(
+            Status::FromErrorString("Unsupported qSaveCore option"));
     }
   }
 
@@ -3978,7 +3985,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
       StartSTDIOForwarding();
     m_non_stop = true;
   } else
-    return SendErrorResponse(Status("Invalid QNonStop packet"));
+    return SendErrorResponse(
+        Status::FromErrorString("Invalid QNonStop packet"));
   return SendOKResponse();
 }
 
@@ -3991,7 +3999,8 @@ GDBRemoteCommunicationServerLLGS::HandleNotificationAck(
   // the last message in the queue is ACK-ed, in which case the packet sends
   // an OK response.
   if (queue.empty())
-    return SendErrorResponse(Status("No pending notification to ack"));
+    return SendErrorResponse(
+        Status::FromErrorString("No pending notification to ack"));
   queue.pop_front();
   if (!queue.empty())
     return SendPacketNoLock(queue.front());
@@ -4021,7 +4030,8 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vCtrlC(
     StringExtractorGDBRemote &packet) {
   if (!m_non_stop)
-    return SendErrorResponse(Status("vCtrl is only valid in non-stop mode"));
+    return SendErrorResponse(
+        Status::FromErrorString("vCtrl is only valid in non-stop mode"));
 
   PacketResult interrupt_res = Handle_interrupt(packet);
   // If interrupting the process failed, pass the result through.
@@ -4240,6 +4250,10 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
             .Default({});
+
+  // We consume lldb's swbreak/hwbreak feature, but it doesn't change the
+  // behaviour of lldb-server. We always adjust the program counter for targets
+  // like x86
 
   m_extensions_supported &= plugin_features;
 

@@ -180,8 +180,10 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
+        "llvm-ctxprof-util",
         "llvm-cxxdump",
         "llvm-cvtres",
         "llvm-debuginfod-find",
@@ -617,3 +619,6 @@ if "MemoryWithOrigins" in config.llvm_use_sanitizer:
 # "OBJECT_MODE" to 'any' by default on AIX OS.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "any"
+
+if config.has_logf128:
+    config.available_features.add("has_logf128")

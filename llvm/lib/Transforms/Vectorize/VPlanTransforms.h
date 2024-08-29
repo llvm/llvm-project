@@ -25,6 +25,7 @@ class ScalarEvolution;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
+class VPRecipeBuilder;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
@@ -104,7 +105,15 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
-  static void addExplicitVectorLength(VPlan &Plan);
+  /// \returns true if the transformation succeeds, or false if it doesn't.
+  static bool tryAddExplicitVectorLength(VPlan &Plan);
+
+  // For each Interleave Group in \p InterleaveGroups replace the Recipes
+  // widening its memory instructions with a single VPInterleaveRecipe at its
+  // insertion point.
+  static void createInterleaveGroups(
+      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+      VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
 };
 
 } // namespace llvm

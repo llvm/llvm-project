@@ -18,8 +18,7 @@ body: |
     ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SEXT_INREG]](s32), [[SEXT_INREG1]]
     ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SEXT_INREG2]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SEXT_INREG2]](s32), [[C]]
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR [[ICMP1]], [[ICMP]]
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C1]]

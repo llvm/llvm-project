@@ -42,7 +42,7 @@ define i32 @alsl_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; LA64-LABEL: alsl_i32:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    alsl.d $a0, $a0, $a1, 3
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 3
 ; LA64-NEXT:    ret
 entry:
   %mul = mul nsw i32 %a, 8
@@ -178,7 +178,7 @@ define i32 @mul_add_i32(i32 signext %a, i32 signext %b) nounwind {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    slli.d $a2, $a0, 3
 ; LA64-NEXT:    alsl.d $a0, $a0, $a2, 2
-; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    add.w $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %mul = mul nsw i32 %a, 12
@@ -325,7 +325,7 @@ define i32 @alsl_neg_i32(i32 signext %a, i32 signext %b) nounwind {
 ; LA64-LABEL: alsl_neg_i32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
-; LA64-NEXT:    sub.d $a0, $a1, $a0
+; LA64-NEXT:    sub.w $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %mul = mul nsw i32 %a, -9

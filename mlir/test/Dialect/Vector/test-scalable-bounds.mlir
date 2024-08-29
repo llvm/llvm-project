@@ -159,3 +159,87 @@ func.func @non_scalable_code() {
   }
   return
 }
+
+// -----
+
+#remainder_start_index = affine_map<()[s0] -> (-(1000 mod s0) + 1000)>
+#remaining_iterations = affine_map<(d0) -> (-d0 + 1000)>
+
+// CHECK: #[[$REMAINDER_START_MAP:.*]] = affine_map<()[s0] -> (-(1000 mod s0) + 1000)>
+// CHECK: #[[$SCALABLE_BOUND_MAP_4:.*]] = affine_map<()[s0] -> (s0 * 8 - 1)>
+
+// CHECK-LABEL: @test_scalable_remainder_loop
+//       CHECK:   %[[VSCALE:.*]] = vector.vscale
+//       CHECK:   %[[SCALABLE_BOUND:.*]] = affine.apply #[[$SCALABLE_BOUND_MAP_4]]()[%[[VSCALE]]]
+//       CHECK:   "test.some_use"(%[[SCALABLE_BOUND]]) : (index) -> ()
+func.func @test_scalable_remainder_loop() {
+  %c8 = arith.constant 8 : index
+  %c1000 = arith.constant 1000 : index
+  %vscale = vector.vscale
+  %c8_vscale = arith.muli %vscale, %c8 : index
+  %0 = affine.apply #remainder_start_index()[%c8_vscale]
+  scf.for %arg1 = %0 to %c1000 step %c8_vscale {
+    %remaining_iterations = affine.apply #remaining_iterations(%arg1)
+    // The upper bound for the remainder loop iterations should be: %c8_vscale - 1
+    // (expressed as an affine map, affine_map<()[s0] -> (s0 * 8 - 1)>, where s0 is vscale)
+    %bound = "test.reify_bound"(%remaining_iterations) <{scalable, type = "UB", vscale_min = 1 : i64, vscale_max = 16 : i64}> : (index) -> index
+    "test.some_use"(%bound) : (index) -> ()
+  }
+  return
+}
+
+// -----
+
+#unsupported_semi_affine = affine_map<()[s0] -> (s0 * s0)>
+
+func.func @unsupported_semi_affine() {
+  %vscale = vector.vscale
+  %0 = affine.apply #unsupported_semi_affine()[%vscale]
+  // expected-error @below{{could not reify bound}}
+  %bound = "test.reify_bound"(%0) <{scalable, type = "UB", vscale_min = 1 : i64, vscale_max = 16 : i64}> : (index) -> index
+  "test.some_use"(%bound) : (index) -> ()
+  return
+}
+
+// -----
+
+#map_mod = affine_map<()[s0] -> (1000 mod s0)>
+
+func.func @unsupported_negative_mod() {
+  %c_minus_1 = arith.constant -1 : index
+  %vscale = vector.vscale
+  %negative_vscale = arith.muli %vscale, %c_minus_1 : index
+  %0 = affine.apply #map_mod()[%negative_vscale]
+  // expected-error @below{{could not reify bound}}
+  %bound = "test.reify_bound"(%0) <{scalable, type = "UB", vscale_min = 1 : i64, vscale_max = 16 : i64}> : (index) -> index
+  "test.some_use"(%bound) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK: #[[$SCALABLE_BOUND_MAP_5:.*]] = affine_map<()[s0] -> (s0 * 4)>
+
+// CHECK-LABEL: @extract_slice_loop
+//       CHECK:   %[[VSCALE:.*]] = vector.vscale
+//       CHECK:   %[[SCALABLE_BOUND:.*]] = affine.apply #[[$SCALABLE_BOUND_MAP_5]]()[%[[VSCALE]]]
+//       CHECK:   "test.some_use"(%[[SCALABLE_BOUND]]) : (index) -> ()
+
+func.func @extract_slice_loop(%tensor: tensor<1x1x3x?xf32>) {
+  %vscale = vector.vscale
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.0 : f32
+  %c4_vscale = arith.muli %c4, %vscale : index
+  %slice = tensor.extract_slice %tensor[0, 0, 0, 0] [1, 1, 3, %c4_vscale] [1, 1, 1, 1] : tensor<1x1x3x?xf32> to tensor<1x3x?xf32>
+  %15 = scf.for %arg6 = %c0 to %c3 step %c1 iter_args(%arg = %slice) -> (tensor<1x3x?xf32>) {
+    %dim = tensor.dim %arg, %c2 : tensor<1x3x?xf32>
+    %bound = "test.reify_bound"(%dim) {type = "LB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
+    "test.some_use"(%bound) : (index) -> ()
+    scf.yield %arg : tensor<1x3x?xf32>
+  }
+  return
+}

@@ -198,18 +198,21 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
         if (init_func(debugger_sb))
           return dynlib;
         else
-          error.SetErrorString("plug-in refused to load "
-                               "(lldb::PluginInitialize(lldb::SBDebugger) "
-                               "returned false)");
+          error = Status::FromErrorString(
+              "plug-in refused to load "
+              "(lldb::PluginInitialize(lldb::SBDebugger) "
+              "returned false)");
       } else {
-        error.SetErrorString("plug-in is missing the required initialization: "
-                             "lldb::PluginInitialize(lldb::SBDebugger)");
+        error = Status::FromErrorString(
+            "plug-in is missing the required initialization: "
+            "lldb::PluginInitialize(lldb::SBDebugger)");
       }
     } else {
       if (FileSystem::Instance().Exists(spec))
-        error.SetErrorString("this file does not represent a loadable dylib");
+        error = Status::FromErrorString(
+            "this file does not represent a loadable dylib");
       else
-        error.SetErrorString("no such file");
+        error = Status::FromErrorString("no such file");
     }
     return llvm::sys::DynamicLibrary();
   };
@@ -370,18 +373,18 @@ SBError SBDebugger::SetInputString(const char *data) {
   LLDB_INSTRUMENT_VA(this, data);
   SBError sb_error;
   if (data == nullptr) {
-    sb_error.SetErrorString("String data is null");
+    sb_error = Status::FromErrorString("String data is null");
     return sb_error;
   }
 
   size_t size = strlen(data);
   if (size == 0) {
-    sb_error.SetErrorString("String data is empty");
+    sb_error = Status::FromErrorString("String data is empty");
     return sb_error;
   }
 
   if (!m_opaque_sp) {
-    sb_error.SetErrorString("invalid debugger");
+    sb_error = Status::FromErrorString("invalid debugger");
     return sb_error;
   }
 
@@ -397,11 +400,11 @@ SBError SBDebugger::SetInputFile(SBFile file) {
 
   SBError error;
   if (!m_opaque_sp) {
-    error.ref().SetErrorString("invalid debugger");
+    error.ref() = Status::FromErrorString("invalid debugger");
     return error;
   }
   if (!file) {
-    error.ref().SetErrorString("invalid file");
+    error.ref() = Status::FromErrorString("invalid file");
     return error;
   }
   m_opaque_sp->SetInputFile(file.m_opaque_sp);
@@ -427,11 +430,11 @@ SBError SBDebugger::SetOutputFile(SBFile file) {
   LLDB_INSTRUMENT_VA(this, file);
   SBError error;
   if (!m_opaque_sp) {
-    error.ref().SetErrorString("invalid debugger");
+    error.ref() = Status::FromErrorString("invalid debugger");
     return error;
   }
   if (!file) {
-    error.ref().SetErrorString("invalid file");
+    error.ref() = Status::FromErrorString("invalid file");
     return error;
   }
   m_opaque_sp->SetOutputFile(file.m_opaque_sp);
@@ -452,11 +455,11 @@ SBError SBDebugger::SetErrorFile(SBFile file) {
   LLDB_INSTRUMENT_VA(this, file);
   SBError error;
   if (!m_opaque_sp) {
-    error.ref().SetErrorString("invalid debugger");
+    error.ref() = Status::FromErrorString("invalid debugger");
     return error;
   }
   if (!file) {
-    error.ref().SetErrorString("invalid file");
+    error.ref() = Status::FromErrorString("invalid file");
     return error;
   }
   m_opaque_sp->SetErrorFile(file.m_opaque_sp);
@@ -776,6 +779,9 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
       *config_up, "xml", XMLDocument::XMLEnabled(),
       "A boolean value that indicates if XML support is enabled in LLDB");
   AddBoolConfigEntry(
+      *config_up, "curl", LLVM_ENABLE_CURL,
+      "A boolean value that indicates if CURL support is enabled in LLDB");
+  AddBoolConfigEntry(
       *config_up, "curses", LLDB_ENABLE_CURSES,
       "A boolean value that indicates if curses support is enabled in LLDB");
   AddBoolConfigEntry(
@@ -842,7 +848,7 @@ lldb::SBTarget SBDebugger::CreateTarget(const char *filename,
     if (sb_error.Success())
       sb_target.SetSP(target_sp);
   } else {
-    sb_error.SetErrorString("invalid debugger");
+    sb_error = Status::FromErrorString("invalid debugger");
   }
 
   Log *log = GetLog(LLDBLog::API);
@@ -910,7 +916,8 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
             *m_opaque_sp, filename, arch, eLoadDependentsYes, platform_sp,
             target_sp);
       else
-        error.SetErrorStringWithFormat("invalid arch_cstr: %s", arch_cstr);
+        error = Status::FromErrorStringWithFormat("invalid arch_cstr: %s",
+                                                  arch_cstr);
     }
     if (error.Success())
       sb_target.SetSP(target_sp);
@@ -1298,7 +1305,7 @@ SBError SBDebugger::RunREPL(lldb::LanguageType language,
   if (m_opaque_sp)
     error.ref() = m_opaque_sp->RunREPL(language, repl_options);
   else
-    error.SetErrorString("invalid debugger");
+    error = Status::FromErrorString("invalid debugger");
   return error;
 }
 
@@ -1349,8 +1356,8 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
     error = debugger_sp->SetPropertyValue(&exe_ctx, eVarSetOperationAssign,
                                           var_name, value);
   } else {
-    error.SetErrorStringWithFormat("invalid debugger instance name '%s'",
-                                   debugger_instance_name);
+    error = Status::FromErrorStringWithFormat(
+        "invalid debugger instance name '%s'", debugger_instance_name);
   }
   if (error.Fail())
     sb_error.SetError(error);
@@ -1518,12 +1525,12 @@ SBError SBDebugger::SetCurrentPlatform(const char *platform_name_cstr) {
       if (PlatformSP platform_sp = platforms.GetOrCreate(platform_name_cstr))
         platforms.SetSelectedPlatform(platform_sp);
       else
-        sb_error.ref().SetErrorString("platform not found");
+        sb_error.ref() = Status::FromErrorString("platform not found");
     } else {
-      sb_error.ref().SetErrorString("invalid platform name");
+      sb_error.ref() = Status::FromErrorString("invalid platform name");
     }
   } else {
-    sb_error.ref().SetErrorString("invalid debugger");
+    sb_error.ref() = Status::FromErrorString("invalid debugger");
   }
   return sb_error;
 }
@@ -1724,21 +1731,25 @@ SBDebugger::LoadTraceFromFile(SBError &error,
 
 void SBDebugger::RequestInterrupt() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
-    m_opaque_sp->RequestInterrupt();  
+    m_opaque_sp->RequestInterrupt();
 }
 void SBDebugger::CancelInterruptRequest()  {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
-    m_opaque_sp->CancelInterruptRequest();  
+    m_opaque_sp->CancelInterruptRequest();
 }
 
 bool SBDebugger::InterruptRequested()   {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
     return m_opaque_sp->InterruptRequested();
   return false;
+}
+
+bool SBDebugger::SupportsLanguage(lldb::LanguageType language) {
+  return TypeSystem::SupportsLanguageStatic(language);
 }

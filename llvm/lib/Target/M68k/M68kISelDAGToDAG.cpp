@@ -174,12 +174,10 @@ namespace {
 
 class M68kDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   M68kDAGToDAGISel() = delete;
 
   explicit M68kDAGToDAGISel(M68kTargetMachine &TM)
-      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const override;
@@ -316,11 +314,18 @@ private:
   SDNode *getGlobalBaseReg();
 };
 
-char M68kDAGToDAGISel::ID;
+class M68kDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit M68kDAGToDAGISelLegacy(M68kTargetMachine &TM)
+      : SelectionDAGISelLegacy(ID, std::make_unique<M68kDAGToDAGISel>(TM)) {}
+};
+
+char M68kDAGToDAGISelLegacy::ID;
 
 } // namespace
 
-INITIALIZE_PASS(M68kDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(M68kDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool M68kDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {
@@ -357,7 +362,7 @@ bool M68kDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 /// This pass converts a legalized DAG into a M68k-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createM68kISelDag(M68kTargetMachine &TM) {
-  return new M68kDAGToDAGISel(TM);
+  return new M68kDAGToDAGISelLegacy(TM);
 }
 
 static bool doesDispFitFI(M68kISelAddressMode &AM) {

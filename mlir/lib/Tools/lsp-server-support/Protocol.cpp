@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/Protocol.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"

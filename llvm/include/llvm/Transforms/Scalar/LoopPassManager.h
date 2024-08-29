@@ -41,6 +41,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -127,37 +128,6 @@ public:
     // instantiations, causing terrible compile times.
     LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
         new LoopNestPassModelT(std::forward<PassT>(Pass))));
-  }
-
-  // Specializations of `addPass` for `RepeatedPass`. These are necessary since
-  // `RepeatedPass` has a templated `run` method that will result in incorrect
-  // detection of `HasRunOnLoopT`.
-  template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<is_detected<HasRunOnLoopT, PassT>::value>
-      addPass(RepeatedPass<PassT> &&Pass) {
-    using RepeatedLoopPassModelT =
-        detail::PassModel<Loop, RepeatedPass<PassT>, LoopAnalysisManager,
-                          LoopStandardAnalysisResults &, LPMUpdater &>;
-    IsLoopNestPass.push_back(false);
-    // Do not use make_unique or emplace_back, they cause too many template
-    // instantiations, causing terrible compile times.
-    LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
-        new RepeatedLoopPassModelT(std::move(Pass))));
-  }
-
-  template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<!is_detected<HasRunOnLoopT, PassT>::value>
-      addPass(RepeatedPass<PassT> &&Pass) {
-    using RepeatedLoopNestPassModelT =
-        detail::PassModel<LoopNest, RepeatedPass<PassT>, LoopAnalysisManager,
-                          LoopStandardAnalysisResults &, LPMUpdater &>;
-    IsLoopNestPass.push_back(true);
-    // Do not use make_unique or emplace_back, they cause too many template
-    // instantiations, causing terrible compile times.
-    LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
-        new RepeatedLoopNestPassModelT(std::move(Pass))));
   }
 
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }

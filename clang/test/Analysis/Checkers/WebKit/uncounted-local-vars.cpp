@@ -216,3 +216,76 @@ void foo() {
 }
 
 } // namespace conditional_op
+
+namespace local_assignment_basic {
+
+RefCountable *provide_ref_cntbl();
+
+void foo(RefCountable* a) {
+  RefCountable* b = a;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  if (b->trivial())
+    b = provide_ref_cntbl();
+}
+
+void bar(RefCountable* a) {
+  RefCountable* b;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  b = provide_ref_cntbl();
+}
+
+void baz() {
+  RefPtr a = provide_ref_cntbl();
+  {
+    RefCountable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_ref_cntbl();
+  }
+}
+
+} // namespace local_assignment_basic
+
+namespace local_assignment_to_parameter {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+void foo(RefCountable* a) {
+  a = provide_ref_cntbl();
+  // expected-warning@-1{{Assignment to an uncounted parameter 'a' is unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_parameter
+
+namespace local_assignment_to_static_local {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+void foo() {
+  static RefCountable* a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_ref_cntbl();
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_static_local
+
+namespace local_assignment_to_global {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+RefCountable* g_a = nullptr;
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+
+void foo() {
+  g_a = provide_ref_cntbl();
+  someFunction();
+  g_a->method();
+}
+
+} // namespace local_assignment_to_global

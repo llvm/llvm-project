@@ -688,8 +688,7 @@ TEST_F(OpenMPDecompositionTest, Order1) {
   std::string Dir5 = stringify(Dec.output[5]);
   ASSERT_EQ(Dir0, "target"); // (31)
   ASSERT_EQ(Dir1, "teams");  // (31)
-  // XXX OMP.td doesn't list "order" as allowed for "distribute"
-  ASSERT_EQ(Dir2, "distribute");       // (31)
+  ASSERT_EQ(Dir2, "distribute order(1, 0)"); // (31)
   ASSERT_EQ(Dir3, "parallel");         // (31)
   ASSERT_EQ(Dir4, "for order(1, 0)");  // (31)
   ASSERT_EQ(Dir5, "simd order(1, 0)"); // (31)
@@ -992,11 +991,9 @@ TEST_F(OpenMPDecompositionTest, Reduction7) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  // XXX Currently OMP.td allows "reduction" on "target".
-  ASSERT_EQ(Dir0,
-            "target reduction(, (3), (x)) map(2, , , , (x))"); // (36), (10)
-  ASSERT_EQ(Dir1, "parallel shared(x)");                       // (36), (1), (4)
-  ASSERT_EQ(Dir2, "do reduction(, (3), (x))");                 // (36)
+  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (36), (10)
+  ASSERT_EQ(Dir1, "parallel shared(x)");       // (36), (1), (4)
+  ASSERT_EQ(Dir2, "do reduction(, (3), (x))"); // (36)
 }
 
 // IF
@@ -1102,5 +1099,22 @@ TEST_F(OpenMPDecompositionTest, Nowait1) {
   ASSERT_EQ(Dir0, "target nowait"); // (23)
   ASSERT_EQ(Dir1, "parallel");      // (23)
   ASSERT_EQ(Dir2, "for");           // (23)
+}
+
+// ---
+
+// Check that "simd linear(x)" does not fail despite the implied "firstprivate"
+// (which "simd" does not allow).
+TEST_F(OpenMPDecompositionTest, Misc1) {
+  omp::Object x{"x"};
+  omp::List<omp::Clause> Clauses{
+      {OMPC_linear,
+       omp::clause::Linear{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_simd, Clauses);
+  ASSERT_EQ(Dec.output.size(), 1u);
+  std::string Dir0 = stringify(Dec.output[0]);
+  ASSERT_EQ(Dir0, "simd linear(, , , (x)) lastprivate(, (x))");
 }
 } // namespace

@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp
 
 ! Test clauses that accept list.
@@ -50,7 +48,7 @@ program mm
  !DEF: /mm/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,10
   !DEF: /mm/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(4)
-  !REF: /mm/b
+  !DEF: /mm/OtherConstruct1/b HostAssoc INTEGER(4)
   !REF: /mm/OtherConstruct1/i
   a = a+b(i)
   !DEF: /mm/OtherConstruct1/t (OmpPrivate) HostAssoc TYPE(myty)
@@ -64,7 +62,7 @@ program mm
   !REF: /mm/OtherConstruct1/i
   !REF: /mm/OtherConstruct1/y
   x = a+i+y
-  !REF: /mm/c
+  !DEF: /mm/OtherConstruct1/c HostAssoc REAL(4)
   c = 3.0
  end do
 end program

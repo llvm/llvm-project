@@ -14,8 +14,6 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAG_H
 #define LLVM_CODEGEN_SELECTIONDAG_H
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -29,9 +27,11 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
@@ -74,6 +74,7 @@ struct KnownBits;
 class LLVMContext;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
+class MachineModuleInfo;
 class MCSymbol;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
@@ -229,6 +230,7 @@ class SelectionDAG {
   const TargetLibraryInfo *LibInfo = nullptr;
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
   Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
@@ -242,6 +244,7 @@ class SelectionDAG {
 
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
+  MachineModuleInfo *MMI = nullptr;
 
   /// List of non-single value types.
   FoldingSet<SDVTListNode> VTListMap;
@@ -456,7 +459,17 @@ public:
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
             UniformityInfo *UA, ProfileSummaryInfo *PSIin,
-            BlockFrequencyInfo *BFIin, FunctionVarLocs const *FnVarLocs);
+            BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
+            FunctionVarLocs const *FnVarLocs);
+
+  void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
+            MachineFunctionAnalysisManager &AM,
+            const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
+            ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
+            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
+    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
+    MFAM = &AM;
+  }
 
   void setFunctionLoweringInfo(FunctionLoweringInfo * FuncInfo) {
     FLI = FuncInfo;
@@ -468,6 +481,7 @@ public:
 
   MachineFunction &getMachineFunction() const { return *MF; }
   const Pass *getPass() const { return SDAGISelPass; }
+  MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
 
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
@@ -487,6 +501,7 @@ public:
   OptimizationRemarkEmitter &getORE() const { return *ORE; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
+  MachineModuleInfo *getMMI() const { return MMI; }
 
   FlagInserter *getFlagInserter() { return Inserter; }
   void setFlagInserter(FlagInserter *FI) { Inserter = FI; }
@@ -657,20 +672,18 @@ public:
   SDValue getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
 
+  SDValue getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                            bool isTarget = false, bool isOpaque = false);
+
   SDValue getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget = false,
-                             bool IsOpaque = false) {
-    return getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT,
-                       IsTarget, IsOpaque);
-  }
+                             bool IsOpaque = false);
 
   SDValue getConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
   SDValue getIntPtrConstant(uint64_t Val, const SDLoc &DL,
                             bool isTarget = false);
-  SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL,
-                                 bool LegalTypes = true);
-  SDValue getShiftAmountConstant(const APInt &Val, EVT VT, const SDLoc &DL,
-                                 bool LegalTypes = true);
+  SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL);
+  SDValue getShiftAmountConstant(const APInt &Val, EVT VT, const SDLoc &DL);
   SDValue getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
                                bool isTarget = false);
 
@@ -1151,7 +1164,12 @@ public:
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, const SDNodeFlags Flags);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4, SDValue N5);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, SDValue N5,
+                  const SDNodeFlags Flags);
 
   // Specialize again based on number of operands for nodes with a VTList
   // rather than a single VT.
@@ -1171,16 +1189,22 @@ public:
   /// stack arguments from being clobbered.
   SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, Align Alignment, bool isVol,
-                    bool AlwaysInline, bool isTailCall,
-                    MachinePointerInfo DstPtrInfo,
-                    MachinePointerInfo SrcPtrInfo,
-                    const AAMDNodes &AAInfo = AAMDNodes(),
-                    AAResults *AA = nullptr);
+  /* \p CI if not null is the memset call being lowered.
+   * \p OverrideTailCall is an optional parameter that can be used to override
+   * the tail call optimization decision. */
+  SDValue
+  getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+            SDValue Size, Align Alignment, bool isVol, bool AlwaysInline,
+            const CallInst *CI, std::optional<bool> OverrideTailCall,
+            MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
+            const AAMDNodes &AAInfo = AAMDNodes(), AAResults *AA = nullptr);
 
+  /* \p CI if not null is the memset call being lowered.
+   * \p OverrideTailCall is an optional parameter that can be used to override
+   * the tail call optimization decision. */
   SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                     SDValue Size, Align Alignment, bool isVol, bool isTailCall,
+                     SDValue Size, Align Alignment, bool isVol,
+                     const CallInst *CI, std::optional<bool> OverrideTailCall,
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo,
                      const AAMDNodes &AAInfo = AAMDNodes(),
@@ -1188,7 +1212,7 @@ public:
 
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                     SDValue Size, Align Alignment, bool isVol,
-                    bool AlwaysInline, bool isTailCall,
+                    bool AlwaysInline, const CallInst *CI,
                     MachinePointerInfo DstPtrInfo,
                     const AAMDNodes &AAInfo = AAMDNodes());
 
@@ -1241,11 +1265,11 @@ public:
   /// Helper function to make it easier to build Select's if you just have
   /// operands and don't want to check for vector.
   SDValue getSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
-                    SDValue RHS) {
+                    SDValue RHS, SDNodeFlags Flags = SDNodeFlags()) {
     assert(LHS.getValueType() == VT && RHS.getValueType() == VT &&
            "Cannot use select on differing types");
     auto Opcode = Cond.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT;
-    return getNode(Opcode, DL, VT, Cond, LHS, RHS);
+    return getNode(Opcode, DL, VT, Cond, LHS, RHS, Flags);
   }
 
   /// Helper function to make it easier to build SelectCC's if you just have an
@@ -1803,21 +1827,6 @@ public:
     AllNodes.insert(Position, AllNodes.remove(N));
   }
 
-  /// Returns an APFloat semantics tag appropriate for the given type. If VT is
-  /// a vector type, the element semantics are returned.
-  static const fltSemantics &EVTToAPFloatSemantics(EVT VT) {
-    switch (VT.getScalarType().getSimpleVT().SimpleTy) {
-    default: llvm_unreachable("Unknown FP format");
-    case MVT::f16:     return APFloat::IEEEhalf();
-    case MVT::bf16:    return APFloat::BFloat();
-    case MVT::f32:     return APFloat::IEEEsingle();
-    case MVT::f64:     return APFloat::IEEEdouble();
-    case MVT::f80:     return APFloat::x87DoubleExtended();
-    case MVT::f128:    return APFloat::IEEEquad();
-    case MVT::ppcf128: return APFloat::PPCDoubleDouble();
-    }
-  }
-
   /// Add a dbg_value SDNode. If SD is non-null that means the
   /// value is produced by SD.
   void AddDbgValue(SDDbgValue *DB, bool isParameter);
@@ -1880,7 +1889,8 @@ public:
                            const SDNode *N2);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                 ArrayRef<SDValue> Ops);
+                                 ArrayRef<SDValue> Ops,
+                                 SDNodeFlags Flags = SDNodeFlags());
 
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
@@ -2159,36 +2169,44 @@ public:
   /// splatted value it will return SDValue().
   SDValue getSplatValue(SDValue V, bool LegalTypes = false);
 
-  /// If a SHL/SRA/SRL node \p V has a constant or splat constant shift amount
+  /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
+  /// element bit-width of the shift node, return the valid constant range.
+  std::optional<ConstantRange>
+  getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
+                           unsigned Depth) const;
+
+  /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  const APInt *getValidShiftAmountConstant(SDValue V,
-                                           const APInt &DemandedElts) const;
+  std::optional<uint64_t> getValidShiftAmount(SDValue V,
+                                              const APInt &DemandedElts,
+                                              unsigned Depth = 0) const;
 
-  /// If a SHL/SRA/SRL node \p V has a constant or splat constant shift amount
+  /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  const APInt *getValidShiftAmountConstant(SDValue V) const;
+  std::optional<uint64_t> getValidShiftAmount(SDValue V,
+                                              unsigned Depth = 0) const;
 
-  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
-  /// than the element bit-width of the shift node, return the minimum value.
-  const APInt *
-  getValidMinimumShiftAmountConstant(SDValue V,
-                                     const APInt &DemandedElts) const;
+  /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
+  /// element bit-width of the shift node, return the minimum possible value.
+  std::optional<uint64_t> getValidMinimumShiftAmount(SDValue V,
+                                                     const APInt &DemandedElts,
+                                                     unsigned Depth = 0) const;
 
-  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
-  /// than the element bit-width of the shift node, return the minimum value.
-  const APInt *
-  getValidMinimumShiftAmountConstant(SDValue V) const;
+  /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
+  /// element bit-width of the shift node, return the minimum possible value.
+  std::optional<uint64_t> getValidMinimumShiftAmount(SDValue V,
+                                                     unsigned Depth = 0) const;
 
-  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
-  /// than the element bit-width of the shift node, return the maximum value.
-  const APInt *
-  getValidMaximumShiftAmountConstant(SDValue V,
-                                     const APInt &DemandedElts) const;
+  /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
+  /// element bit-width of the shift node, return the maximum possible value.
+  std::optional<uint64_t> getValidMaximumShiftAmount(SDValue V,
+                                                     const APInt &DemandedElts,
+                                                     unsigned Depth = 0) const;
 
-  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
-  /// than the element bit-width of the shift node, return the maximum value.
-  const APInt *
-  getValidMaximumShiftAmountConstant(SDValue V) const;
+  /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
+  /// element bit-width of the shift node, return the maximum possible value.
+  std::optional<uint64_t> getValidMaximumShiftAmount(SDValue V,
+                                                     unsigned Depth = 0) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction
   /// over the elements of a vector starting from the EXTRACT_VECTOR_ELT node /p
@@ -2290,6 +2308,11 @@ public:
            isConstantFPBuildVectorOrConstantFP(N);
   }
 
+  /// Check if a value \op N is a constant using the target's BooleanContent for
+  /// its type.
+  std::optional<bool> isBoolConstant(SDValue N,
+                                     bool AllowTruncation = false) const;
+
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {
     SDEI[Node].CSInfo = std::move(CallInfo);
@@ -2344,7 +2367,7 @@ public:
   /// Return the current function's default denormal handling kind for the given
   /// floating point type.
   DenormalMode getDenormalMode(EVT VT) const {
-    return MF->getDenormalMode(EVTToAPFloatSemantics(VT));
+    return MF->getDenormalMode(VT.getFltSemantics());
   }
 
   bool shouldOptForSize() const;

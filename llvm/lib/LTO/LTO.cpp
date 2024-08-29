@@ -30,6 +30,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
@@ -65,6 +66,8 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
@@ -85,15 +88,15 @@ extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
-// The hash is produced in \p Key.
-void llvm::computeLTOCacheKey(
-    SmallString<40> &Key, const Config &Conf, const ModuleSummaryIndex &Index,
-    StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
+// Returns the hash in its hexadecimal representation.
+std::string llvm::computeLTOCacheKey(
+    const Config &Conf, const ModuleSummaryIndex &Index, StringRef ModuleID,
+    const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const std::set<GlobalValue::GUID> &CfiFunctionDefs,
-    const std::set<GlobalValue::GUID> &CfiFunctionDecls) {
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -159,24 +162,23 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-  std::vector<std::pair<uint64_t, uint8_t>> ExportsGUID;
+  // TODO: `ExportList` is determined by `ImportList`. Since `ImportList` is
+  // used to compute cache key, we could omit hashing `ExportList` here.
+  std::vector<uint64_t> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &[VI, ExportType] : ExportList)
-    ExportsGUID.push_back(
-        std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
+  for (const auto &VI : ExportList)
+    ExportsGUID.push_back(VI.getGUID());
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (auto [GUID, ExportType] : ExportsGUID) {
-    // The export list can impact the internalization, be conservative here
+  for (auto GUID : ExportsGUID)
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
-    AddUint8(ExportType);
-  }
 
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is
   // sensitive to link order, so include that as well.
-  using ImportMapIteratorTy = FunctionImporter::ImportMapTy::const_iterator;
+  using ImportMapIteratorTy =
+      FunctionImporter::ImportMapTy::ImportMapTyImpl::const_iterator;
   struct ImportModule {
     ImportMapIteratorTy ModIt;
     const ModuleSummaryIndex::ModuleInfo *ModInfo;
@@ -190,10 +192,10 @@ void llvm::computeLTOCacheKey(
   };
 
   std::vector<ImportModule> ImportModulesVector;
-  ImportModulesVector.reserve(ImportList.size());
+  ImportModulesVector.reserve(ImportList.getImportMap().size());
 
-  for (ImportMapIteratorTy It = ImportList.begin(); It != ImportList.end();
-       ++It) {
+  for (ImportMapIteratorTy It = ImportList.getImportMap().begin();
+       It != ImportList.getImportMap().end(); ++It) {
     ImportModulesVector.push_back({It, Index.getModule(It->getFirst())});
   }
   // Order using module hash, to be both independent of module name and
@@ -236,9 +238,9 @@ void llvm::computeLTOCacheKey(
   std::set<GlobalValue::GUID> UsedTypeIds;
 
   auto AddUsedCfiGlobal = [&](GlobalValue::GUID ValueGUID) {
-    if (CfiFunctionDefs.count(ValueGUID))
+    if (CfiFunctionDefs.contains(ValueGUID))
       UsedCfiDefs.insert(ValueGUID);
-    if (CfiFunctionDecls.count(ValueGUID))
+    if (CfiFunctionDecls.contains(ValueGUID))
       UsedCfiDecls.insert(ValueGUID);
   };
 
@@ -329,8 +331,8 @@ void llvm::computeLTOCacheKey(
   // Include the hash for all type identifiers used by this module.
   for (GlobalValue::GUID TId : UsedTypeIds) {
     auto TidIter = Index.typeIds().equal_range(TId);
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      AddTypeIdSummary(It->second.first, It->second.second);
+    for (const auto &I : make_range(TidIter))
+      AddTypeIdSummary(I.second.first, I.second.second);
   }
 
   AddUnsigned(UsedCfiDefs.size());
@@ -354,7 +356,7 @@ void llvm::computeLTOCacheKey(
     }
   }
 
-  Key = toHex(Hasher.result());
+  return toHex(Hasher.result());
 }
 
 static void thinLTOResolvePrevailingGUID(
@@ -1357,14 +1359,12 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-
-ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
-  return ArrayRef(libcallRoutineNames);
+SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  SmallVector<const char *> LibcallSymbols;
+  copy_if(Libcalls.getLibcallNames(), std::back_inserter(LibcallSymbols),
+          [](const char *Name) { return Name; });
+  return LibcallSymbols;
 }
 
 /// This class defines the interface to the ThinLTO backend.
@@ -1399,19 +1399,21 @@ public:
   Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
-    std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+    GVSummaryPtrSet DeclarationSummaries;
 
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex,
+                                     DeclarationSummaries);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
 
-    // TODO: Serialize declaration bits to bitcode.
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                     &DeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
@@ -1428,8 +1430,8 @@ class InProcessThinBackend : public ThinBackendProc {
   DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
-  std::set<GlobalValue::GUID> CfiFunctionDefs;
-  std::set<GlobalValue::GUID> CfiFunctionDecls;
+  DenseSet<GlobalValue::GUID> CfiFunctionDefs;
+  DenseSet<GlobalValue::GUID> CfiFunctionDecls;
 
   std::optional<Error> Err;
   std::mutex ErrMu;
@@ -1487,11 +1489,10 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
-    SmallString<40> Key;
     // The module may be cached, this helps handling it.
-    computeLTOCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList,
-                       ExportList, ResolvedODR, DefinedGlobals, CfiFunctionDefs,
-                       CfiFunctionDecls);
+    std::string Key = computeLTOCacheKey(
+        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
@@ -1715,8 +1716,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Synthesize entry counts for functions in the CombinedIndex.
   computeSyntheticCounts(ThinLTO.CombinedIndex);
 
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(
-      ThinLTO.ModuleMap.size());
+  FunctionImporter::ImportListsTy ImportLists(ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(
       ThinLTO.ModuleMap.size());
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;

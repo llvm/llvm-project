@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMVectorize
   LoadStoreVectorizer.cpp
+  LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
   SLPVectorizer.cpp
@@ -12,6 +13,7 @@ add_llvm_component_library(LLVMVectorize
   VPlanSLP.cpp
   VPlanTransforms.cpp
   VPlanVerifier.cpp
+  VPlanUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

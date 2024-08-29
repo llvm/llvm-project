@@ -127,7 +127,7 @@ void function();
 // expected-error@-1 {{attribute 'objc_bridge_related' can't be applied to 'function'}}
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((objc_bridge_related(1))), apply_to=function) // expected-error {{expected a related ObjectiveC class name, e.g., 'NSColor'}}
+#pragma clang attribute push (__attribute__((objc_bridge_related(1))), apply_to=function) // expected-error {{expected a related Objective-C class name, e.g., 'NSColor'}}
 
 #pragma clang attribute push (__attribute__((used)), apply_to=function) // expected-error {{attribute 'used' is not supported by '#pragma clang attribute'}}
 

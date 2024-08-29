@@ -20,9 +20,7 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 4
-; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 4
-; IF-EVL-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1
+; IF-EVL-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP5]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], [[TMP8]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]

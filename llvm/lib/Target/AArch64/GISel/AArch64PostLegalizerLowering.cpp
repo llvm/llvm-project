@@ -19,6 +19,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64Subtarget.h"
@@ -287,10 +288,16 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
                              MachineRegisterInfo &MRI,
                              ShuffleVectorPseudo &MatchInfo) {
   assert(Lane >= 0 && "Expected positive lane?");
+  int NumElements = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
   // Test if the LHS is a BUILD_VECTOR. If it is, then we can just reference the
   // lane's definition directly.
-  auto *BuildVecMI = getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
-                                  MI.getOperand(1).getReg(), MRI);
+  auto *BuildVecMI =
+      getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
+                   MI.getOperand(Lane < NumElements ? 1 : 2).getReg(), MRI);
+  // If Lane >= NumElements then it is point to RHS, just check from RHS
+  if (NumElements <= Lane)
+    Lane -= NumElements;
+
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
@@ -563,7 +570,8 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
     return std::nullopt;
-  uint64_t C = ValAndVReg->Value.getZExtValue();
+  uint64_t OriginalC = ValAndVReg->Value.getZExtValue();
+  uint64_t C = OriginalC;
   if (isLegalArithImmed(C))
     return std::nullopt;
 
@@ -633,9 +641,20 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   // predicate if it is.
   if (Size == 32)
     C = static_cast<uint32_t>(C);
-  if (!isLegalArithImmed(C))
-    return std::nullopt;
-  return {{C, P}};
+  if (isLegalArithImmed(C))
+    return {{C, P}};
+
+  auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
+    SmallVector<AArch64_IMM::ImmInsnModel> Insn;
+    AArch64_IMM::expandMOVImm(Imm, 32, Insn);
+    return Insn.size() == 1;
+  };
+
+  if (!IsMaterializableInSingleInstruction(OriginalC) &&
+      IsMaterializableInSingleInstruction(C))
+    return {{C, P}};
+
+  return std::nullopt;
 }
 
 /// Determine whether or not it is possible to update the RHS and predicate of
@@ -1277,6 +1296,11 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
                      F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
   AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
                                         RuleConfig, ST);
   return Impl.combineMachineInstrs();

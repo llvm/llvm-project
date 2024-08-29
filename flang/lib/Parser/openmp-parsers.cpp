@@ -31,10 +31,11 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     "SHARED" >> pure(OmpDefaultClause::Type::Shared) ||
     "NONE" >> pure(OmpDefaultClause::Type::None)))
 
-// 2.5 PROC_BIND (MASTER | CLOSE | SPREAD)
+// 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD )
 TYPE_PARSER(construct<OmpProcBindClause>(
     "CLOSE" >> pure(OmpProcBindClause::Type::Close) ||
     "MASTER" >> pure(OmpProcBindClause::Type::Master) ||
+    "PRIMARY" >> pure(OmpProcBindClause::Type::Primary) ||
     "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
 
 // 2.15.5.1 MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
@@ -378,6 +379,7 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_distribute),
     "DO SIMD" >> pure(llvm::omp::Directive::OMPD_do_simd),
     "DO" >> pure(llvm::omp::Directive::OMPD_do),
+    "LOOP" >> pure(llvm::omp::Directive::OMPD_loop),
     "MASKED TASKLOOP SIMD" >>
         pure(llvm::omp::Directive::OMPD_masked_taskloop_simd),
     "MASKED TASKLOOP" >> pure(llvm::omp::Directive::OMPD_masked_taskloop),
@@ -388,9 +390,12 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "PARALLEL MASKED TASKLOOP" >>
         pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop),
     "SIMD" >> pure(llvm::omp::Directive::OMPD_simd),
+    "TARGET LOOP" >> pure(llvm::omp::Directive::OMPD_target_loop),
     "TARGET PARALLEL DO SIMD" >>
         pure(llvm::omp::Directive::OMPD_target_parallel_do_simd),
     "TARGET PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_target_parallel_do),
+    "TARGET PARALLEL LOOP" >>
+        pure(llvm::omp::Directive::OMPD_target_parallel_loop),
     "TARGET SIMD" >> pure(llvm::omp::Directive::OMPD_target_simd),
     "TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
         pure(llvm::omp::Directive::
@@ -401,6 +406,7 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
         pure(llvm::omp::Directive::OMPD_target_teams_distribute_simd),
     "TARGET TEAMS DISTRIBUTE" >>
         pure(llvm::omp::Directive::OMPD_target_teams_distribute),
+    "TARGET TEAMS LOOP" >> pure(llvm::omp::Directive::OMPD_target_teams_loop),
     "TASKLOOP SIMD" >> pure(llvm::omp::Directive::OMPD_taskloop_simd),
     "TASKLOOP" >> pure(llvm::omp::Directive::OMPD_taskloop),
     "TEAMS DISTRIBUTE PARALLEL DO SIMD" >>

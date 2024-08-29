@@ -49,7 +49,6 @@ typedef struct ValueProfNode {
 #include "profile/InstrProfData.inc"
 } ValueProfNode;
 
-typedef void *IntPtrT;
 typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"

@@ -26,8 +26,8 @@ end
 
 subroutine subr5(p) bind(c)
   interface
+    !WARNING: A dummy procedure of an interoperable procedure should be BIND(C)
     subroutine p(c)
-      !ERROR: An assumed-length dummy argument must not appear in a non-BIND(C) entry in a subprogram with an entry that must be interoperable
       character(*), intent(in) :: c
     end
   end interface
@@ -52,8 +52,8 @@ end
 
 subroutine subr8(p) bind(c)
   interface
+    !WARNING: A dummy procedure of an interoperable procedure should be BIND(C)
     subroutine p(n)
-      !ERROR: A VALUE dummy argument must not appear in a non-BIND(C) entry of a subprogram with an entry that must be interoperable
       integer, intent(in), value :: n
     end
   end interface

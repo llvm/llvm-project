@@ -17,11 +17,6 @@
 # goal being to reduce the load on testers when a commit is known to fail.
 #
 
-# The Linux CI runners use the nightly ToT build provided by the Docker image.
-# (Note the image isn't updated daily.) The LLVM_HEAD_VERSION contains that
-# version number. The Linux CI runners for GCC use the latest stable version.
-# Theses numbers are available in all runners, making it easier to update the
-# version number.
 env:
     # LLVM POST-BRANCH bump version
     # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
@@ -41,62 +36,9 @@ definitions:
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
 
-environment_definitions:
-  _common_env: &common_env
-      LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
-      CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-      CC: clang-${LLVM_HEAD_VERSION}
-      CXX: clang++-${LLVM_HEAD_VERSION}
-
-  _absolute_path_clang: &absolute_path_clang
-    # Note modules require and absolute path for clang-scan-deps
-    # https://github.com/llvm/llvm-project/issues/61006
-    CC: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang
-    CXX: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++
-
-
 steps:
 - group: ':mac: Apple'
   steps:
-  - label: MacOS x86_64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64
-    <<: *common
-
-  - label: MacOS arm64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: arm64
-    <<: *common
-
-  - label: MacOS with Modules
-    command: libcxx/utils/ci/run-buildbot generic-modules
-    agents:
-      queue: libcxx-builders
-      os: macos
-    <<: *common
-
-  - label: MacOS with C++03
-    command: libcxx/utils/ci/run-buildbot generic-cxx03
-    agents:
-      queue: libcxx-builders
-      os: macos
-    <<: *common
-
-    # Build with the configuration we use to generate libc++.dylib on Apple platforms
-  - label: Apple system
-    command: libcxx/utils/ci/run-buildbot apple-system
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: arm64 # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
-    <<: *common
-
   - label: Apple back-deployment macosx10.13
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13
     agents:
@@ -120,6 +62,22 @@ steps:
       os: macos
       arch: x86_64 # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
     <<: *common
+
+    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
+    # - label: "Apple back-deployment macosx11.0 arm64"
+    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
+    #   artifact_paths:
+    #     - "**/test-results.xml"
+    #     - "**/*.abilist"
+    #   agents:
+    #     queue: "libcxx-builders"
+    #     os: "macos"
+    #     arch: "arm64"
+    #   retry:
+    #     automatic:
+    #       - exit_status: -1  # Agent was lost
+    #         limit: 2
+    #   timeout_in_minutes: 120
 
 - group: ARM
   steps:
@@ -230,20 +188,3 @@ steps:
       queue: libcxx-builders
       os: android
     <<: *common
-
-
-    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
-    # - label: "Apple back-deployment macosx11.0 arm64"
-    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
-    #   artifact_paths:
-    #     - "**/test-results.xml"
-    #     - "**/*.abilist"
-    #   agents:
-    #     queue: "libcxx-builders"
-    #     os: "macos"
-    #     arch: "arm64"
-    #   retry:
-    #     automatic:
-    #       - exit_status: -1  # Agent was lost
-    #         limit: 2
-    #   timeout_in_minutes: 120

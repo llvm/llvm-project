@@ -27,6 +27,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 
 #include <limits>
@@ -391,9 +392,10 @@ public:
   bool generateReportIfTainted(const Expr *E, StringRef Msg,
                                CheckerContext &C) const;
 
-private:
-  const BugType BT{this, "Use of Untrusted Data", categories::TaintedData};
+  bool isTaintReporterCheckerEnabled = false;
+  std::optional<BugType> BT;
 
+private:
   bool checkUncontrolledFormatString(const CallEvent &Call,
                                      CheckerContext &C) const;
 
@@ -1033,6 +1035,8 @@ bool GenericTaintRule::UntrustedEnv(CheckerContext &C) {
 bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
                                                   CheckerContext &C) const {
   assert(E);
+  if (!isTaintReporterCheckerEnabled)
+    return false;
   std::optional<SVal> TaintedSVal =
       getTaintedPointeeOrPointer(C.getState(), C.getSVal(E));
 
@@ -1040,13 +1044,14 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
     return false;
 
   // Generate diagnostic.
-  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    auto report = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+  assert(BT);
+  static CheckerProgramPointTag Tag(BT->getCheckerName(), Msg);
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag)) {
+    auto report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
     for (auto TaintedSym : getTaintedSymbols(C.getState(), *TaintedSVal)) {
       report->markInteresting(TaintedSym);
     }
-
     C.emitReport(std::move(report));
     return true;
   }
@@ -1122,8 +1127,19 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
 }
 
 /// Checker registration
-void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
+void ento::registerTaintPropagationChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<GenericTaintChecker>();
+}
+
+bool ento::shouldRegisterTaintPropagationChecker(const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
+  GenericTaintChecker *checker = Mgr.getChecker<GenericTaintChecker>();
+  checker->isTaintReporterCheckerEnabled = true;
+  checker->BT.emplace(Mgr.getCurrentCheckerName(), "Use of Untrusted Data",
+                      categories::TaintedData);
 }
 
 bool ento::shouldRegisterGenericTaintChecker(const CheckerManager &mgr) {

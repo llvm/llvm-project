@@ -259,7 +259,7 @@ struct __shared_ptr_emplace : __shared_weak_count {
             class _Allocator                                                                          = _Alloc,
             __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __storage_(std::move(__a)) {
-    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
+    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __remove_cv_t<_Tp> >::type;
     _TpAlloc __tmp(*__get_alloc());
     allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), std::forward<_Args>(__args)...);
   }
@@ -278,7 +278,7 @@ private:
   template <class _Allocator                                                                          = _Alloc,
             __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
-    using _TpAlloc = typename __allocator_traits_rebind<_Allocator, _Tp>::type;
+    using _TpAlloc = typename __allocator_traits_rebind<_Allocator, __remove_cv_t<_Tp> >::type;
     _TpAlloc __tmp(*__get_alloc());
     allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
   }
@@ -403,6 +403,9 @@ struct __shared_ptr_deleter_ctor_reqs {
                             __well_formed_deleter<_Dp, _Yp*>::value;
 };
 
+template <class _Dp>
+using __shared_ptr_nullptr_deleter_ctor_reqs = _And<is_move_constructible<_Dp>, __well_formed_deleter<_Dp, nullptr_t> >;
+
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
@@ -411,6 +414,8 @@ struct __shared_ptr_deleter_ctor_reqs {
 
 template <class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS shared_ptr {
+  struct __nullptr_sfinae_tag {};
+
 public:
 #if _LIBCPP_STD_VER >= 17
   typedef weak_ptr<_Tp> weak_type;
@@ -418,6 +423,10 @@ public:
 #else
   typedef _Tp element_type;
 #endif
+
+  // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
+  // any bookkeeping, so it's always trivially relocatable.
+  using __trivially_relocatable = shared_ptr;
 
 private:
   element_type* __ptr_;
@@ -499,7 +508,11 @@ public:
   }
 
   template <class _Dp>
-  _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t __p, _Dp __d) : __ptr_(nullptr) {
+  _LIBCPP_HIDE_FROM_ABI shared_ptr(
+      nullptr_t __p,
+      _Dp __d,
+      __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp>::value, __nullptr_sfinae_tag> = __nullptr_sfinae_tag())
+      : __ptr_(nullptr) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
@@ -519,7 +532,12 @@ public:
   }
 
   template <class _Dp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a) : __ptr_(nullptr) {
+  _LIBCPP_HIDE_FROM_ABI shared_ptr(
+      nullptr_t __p,
+      _Dp __d,
+      _Alloc __a,
+      __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp>::value, __nullptr_sfinae_tag> = __nullptr_sfinae_tag())
+      : __ptr_(nullptr) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
@@ -594,8 +612,8 @@ public:
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
   template <class _Yp, __enable_if_t<is_convertible<_Yp*, element_type*>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(auto_ptr<_Yp>&& __r) : __ptr_(__r.get()) {
-    typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, allocator<_Yp> > _CntrlBlk;
-    __cntrl_ = new _CntrlBlk(__r.get(), default_delete<_Yp>(), allocator<_Yp>());
+    typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, allocator<__remove_cv_t<_Yp> > > _CntrlBlk;
+    __cntrl_ = new _CntrlBlk(__r.get(), default_delete<_Yp>(), allocator<__remove_cv_t<_Yp> >());
     __enable_weak_this(__r.get(), __r.get());
     __r.release();
   }
@@ -772,7 +790,7 @@ public:
 private:
   template <class _Yp, bool = is_function<_Yp>::value>
   struct __shared_ptr_default_allocator {
-    typedef allocator<_Yp> type;
+    typedef allocator<__remove_cv_t<_Yp> > type;
   };
 
   template <class _Yp>
@@ -830,7 +848,7 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&&
 
 template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(_Args&&... __args) {
-  return std::allocate_shared<_Tp>(allocator<_Tp>(), std::forward<_Args>(__args)...);
+  return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
 }
 
 #if _LIBCPP_STD_VER >= 20
@@ -844,7 +862,7 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc
 
 template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
-  return std::allocate_shared_for_overwrite<_Tp>(allocator<_Tp>());
+  return std::allocate_shared_for_overwrite<_Tp>(allocator<__remove_cv_t<_Tp>>());
 }
 
 #endif // _LIBCPP_STD_VER >= 20
@@ -1301,6 +1319,10 @@ public:
   typedef _Tp element_type;
 #endif
 
+  // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
+  // any bookkeeping, so it's always trivially relocatable.
+  using __trivially_relocatable = weak_ptr;
+
 private:
   element_type* __ptr_;
   __shared_weak_count* __cntrl_;
@@ -1580,15 +1602,13 @@ private:
 
 _LIBCPP_EXPORTED_FROM_ABI __sp_mut& __get_sp_mut(const void*);
 
-#  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
-
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const shared_ptr<_Tp>*) {
+inline _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const shared_ptr<_Tp>*) {
   return false;
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load(const shared_ptr<_Tp>* __p) {
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load(const shared_ptr<_Tp>* __p) {
   __sp_mut& __m = std::__get_sp_mut(__p);
   __m.lock();
   shared_ptr<_Tp> __q = *__p;
@@ -1597,13 +1617,12 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load(co
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
-atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order) {
+inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order) {
   return std::atomic_load(__p);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
+_LIBCPP_HIDE_FROM_ABI void atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
   __sp_mut& __m = std::__get_sp_mut(__p);
   __m.lock();
   __p->swap(__r);
@@ -1611,14 +1630,12 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void atomic_store(shared_ptr<_
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order) {
+inline _LIBCPP_HIDE_FROM_ABI void atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order) {
   std::atomic_store(__p, __r);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
-atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
   __sp_mut& __m = std::__get_sp_mut(__p);
   __m.lock();
   __p->swap(__r);
@@ -1627,13 +1644,13 @@ atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
+inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_exchange_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order) {
   return std::atomic_exchange(__p, __r);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+_LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w) {
   shared_ptr<_Tp> __temp;
   __sp_mut& __m = std::__get_sp_mut(__p);
@@ -1651,24 +1668,22 @@ atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, share
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_weak(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w) {
   return std::atomic_compare_exchange_strong(__p, __v, __w);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_strong_explicit(
+inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_strong_explicit(
     shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w, memory_order, memory_order) {
   return std::atomic_compare_exchange_strong(__p, __v, __w);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
+inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
     shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w, memory_order, memory_order) {
   return std::atomic_compare_exchange_weak(__p, __v, __w);
 }
-
-#  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
 
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 

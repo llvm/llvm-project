@@ -336,3 +336,66 @@ Streams:
                                0xab, 0xad, 0xca, 0xfe}),
             *ExpectedContext);
 }
+
+TEST(MinidumpYAML, MemoryRegion_64bit) {
+  SmallString<0> Storage;
+  auto ExpectedFile = toBinary(Storage, R"(
+--- !minidump
+Streams:
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x7FFFFFCF0818283
+        Content:               '68656c6c6f'
+      - Start of Memory Range: 0x7FFFFFFF0818283
+        Content:               '776f726c64'
+        )");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  object::MinidumpFile &File = **ExpectedFile;
+
+  ASSERT_THAT(File.streams().size(), 1u);
+
+  Error Err = Error::success();
+  iterator_range<object::MinidumpFile::FallibleMemory64Iterator> MemoryList =
+      File.getMemory64List(Err);
+
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+  auto Iterator = MemoryList.begin();
+
+  auto DescOnePair = *Iterator;
+  const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
+  ASSERT_THAT(DescOne.StartOfMemoryRange, 0x7FFFFFCF0818283u);
+  ASSERT_THAT(DescOne.DataSize, 5u);
+  ++Iterator;
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+
+  auto DescTwoPair = *Iterator;
+  const minidump::MemoryDescriptor_64 &DescTwo = DescTwoPair.first;
+  ASSERT_THAT(DescTwo.StartOfMemoryRange, 0x7FFFFFFF0818283u);
+  ASSERT_THAT(DescTwo.DataSize, 5u);
+  ++Iterator;
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+
+  const std::optional<ArrayRef<uint8_t>> ExpectedContent =
+      File.getRawStream(StreamType::Memory64List);
+  ASSERT_TRUE(ExpectedContent);
+  const size_t ExpectedStreamSize =
+      sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
+  ASSERT_THAT(ExpectedContent->size(), ExpectedStreamSize);
+
+  Expected<minidump::Memory64ListHeader> ExpectedHeader =
+      File.getMemoryList64Header();
+  ASSERT_THAT_EXPECTED(ExpectedHeader, Succeeded());
+  ASSERT_THAT(ExpectedHeader->BaseRVA, 92u);
+
+  Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = DescOnePair.second;
+  ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
+  ASSERT_THAT(DescOneExpectedContentSlice->size(), 5u);
+  ASSERT_THAT(*DescOneExpectedContentSlice, arrayRefFromStringRef("hello"));
+
+  Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = DescTwoPair.second;
+  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
+  ASSERT_THAT(*DescTwoExpectedContentSlice, arrayRefFromStringRef("world"));
+
+  ASSERT_EQ(Iterator, MemoryList.end());
+}

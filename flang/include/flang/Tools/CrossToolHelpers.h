@@ -130,7 +130,9 @@ struct OffloadModuleOpts {
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
       bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
-      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {},
+      bool OpenMPIsGPU, bool OpenMPForceUSM, uint32_t OpenMPVersion,
+      std::string OMPHostIRFile = {},
+      const std::vector<llvm::Triple> &OMPTargetTriples = {},
       bool NoGPULib = false)
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
@@ -138,7 +140,9 @@ struct OffloadModuleOpts {
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
-        OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile),
+        OpenMPForceUSM(OpenMPForceUSM), OpenMPVersion(OpenMPVersion),
+        OMPHostIRFile(OMPHostIRFile),
+        OMPTargetTriples(OMPTargetTriples.begin(), OMPTargetTriples.end()),
         NoGPULib(NoGPULib) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
@@ -148,8 +152,9 @@ struct OffloadModuleOpts {
         OpenMPNoThreadState(Opts.OpenMPNoThreadState),
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
-        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
-        OMPHostIRFile(Opts.OMPHostIRFile), NoGPULib(Opts.NoGPULib) {}
+        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPForceUSM(Opts.OpenMPForceUSM),
+        OpenMPVersion(Opts.OpenMPVersion), OMPHostIRFile(Opts.OMPHostIRFile),
+        OMPTargetTriples(Opts.OMPTargetTriples), NoGPULib(Opts.NoGPULib) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -158,8 +163,10 @@ struct OffloadModuleOpts {
   bool OpenMPNoNestedParallelism = false;
   bool OpenMPIsTargetDevice = false;
   bool OpenMPIsGPU = false;
+  bool OpenMPForceUSM = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
+  std::vector<llvm::Triple> OMPTargetTriples = {};
   bool NoGPULib = false;
 };
 
@@ -172,6 +179,9 @@ struct OffloadModuleOpts {
           module.getOperation())) {
     offloadMod.setIsTargetDevice(Opts.OpenMPIsTargetDevice);
     offloadMod.setIsGPU(Opts.OpenMPIsGPU);
+    if (Opts.OpenMPForceUSM) {
+      offloadMod.setRequires(mlir::omp::ClauseRequires::unified_shared_memory);
+    }
     if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
@@ -180,6 +190,9 @@ struct OffloadModuleOpts {
       if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
     }
+    auto strTriples = llvm::to_vector(llvm::map_range(Opts.OMPTargetTriples,
+        [](llvm::Triple triple) { return triple.normalize(); }));
+    offloadMod.setTargetTriples(strTriples);
   }
 }
 

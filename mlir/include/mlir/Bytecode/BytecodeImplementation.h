@@ -19,7 +19,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 

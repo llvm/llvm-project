@@ -899,6 +899,19 @@ func.func @extract_aligned_pointer_as_index(%arg0: memref<f32>) -> index {
 
 // -----
 
+// CHECK-LABEL: extract_aligned_pointer_as_index_of_unranked_source
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<*xf32>
+func.func @extract_aligned_pointer_as_index_of_unranked_source(%arg0: memref<*xf32>) -> index {
+  // CHECK: %[[I:.+]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<*xf32> -> index
+  // CHECK: return %[[I]]
+
+  %r = memref.reinterpret_cast %arg0 to offset: [0], sizes: [], strides: [] : memref<*xf32> to memref<f32>
+  %i = memref.extract_aligned_pointer_as_index %r : memref<f32> -> index
+  return %i : index
+}
+
+// -----
+
 // Check that we simplify collapse_shape into
 // reinterpret_cast(extract_strided_metadata) + <some math>
 //
@@ -1540,3 +1553,41 @@ func.func @extract_strided_metadata_of_collapse_shape(%base: memref<5x4xf32>)
 //   CHECK-DAG:    %[[STEP:.*]] = arith.constant 1 : index
 //       CHECK:    %[[BASE:.*]], %{{.*}}, %{{.*}}, %{{.*}} = memref.extract_strided_metadata
 //       CHECK:    return %[[BASE]], %[[OFFSET]], %[[SIZE]], %[[STEP]] : memref<f32>, index, index, index
+
+// -----
+
+func.func @extract_strided_metadata_of_memory_space_cast(%base: memref<20xf32>)
+    -> (memref<f32, 1>, index, index, index) {
+
+  %memory_space_cast = memref.memory_space_cast %base : memref<20xf32> to memref<20xf32, 1>
+
+  %base_buffer, %offset, %size, %stride = memref.extract_strided_metadata %memory_space_cast :
+    memref<20xf32, 1> -> memref<f32, 1>, index, index, index
+
+  return %base_buffer, %offset, %size, %stride :
+    memref<f32, 1>, index, index, index
+}
+
+// CHECK-LABEL:  func @extract_strided_metadata_of_memory_space_cast
+//   CHECK-DAG:    %[[OFFSET:.*]] = arith.constant 0 : index
+//   CHECK-DAG:    %[[SIZE:.*]] = arith.constant 20 : index
+//   CHECK-DAG:    %[[STEP:.*]] = arith.constant 1 : index
+//       CHECK:    %[[BASE:.*]], %{{.*}}, %{{.*}}, %{{.*}} = memref.extract_strided_metadata
+//       CHECK:    %[[CAST:.*]] = memref.memory_space_cast %[[BASE]]
+//       CHECK:    return %[[CAST]], %[[OFFSET]], %[[SIZE]], %[[STEP]] : memref<f32, 1>, index, index, index
+
+// -----
+
+func.func @extract_strided_metadata_of_memory_space_cast_no_base(%base: memref<20xf32>)
+    -> (index, index, index) {
+
+  %memory_space_cast = memref.memory_space_cast %base : memref<20xf32> to memref<20xf32, 1>
+
+  %base_buffer, %offset, %size, %stride = memref.extract_strided_metadata %memory_space_cast :
+    memref<20xf32, 1> -> memref<f32, 1>, index, index, index
+
+  return %offset, %size, %stride : index, index, index
+}
+
+// CHECK-LABEL:  func @extract_strided_metadata_of_memory_space_cast_no_base
+//   CHECK-NOT:  memref.memory_space_cast

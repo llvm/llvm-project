@@ -8,13 +8,16 @@
 //
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include <utility>
 
@@ -29,7 +32,7 @@ static cl::list<std::string> ContextRoots(
         "root of an interesting graph, which will be profiled independently "
         "from other similar graphs."));
 
-bool PGOCtxProfLoweringPass::isContextualIRPGOEnabled() {
+bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() {
   return !ContextRoots.empty();
 }
 
@@ -222,8 +225,9 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
-      // FIXME(mtrofin): use InstrProfSymtab::getCanonicalName
-      Guid = Builder.getInt64(F.getGUID());
+
+      Guid = Builder.getInt64(
+          AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
       // The type of the context of this function is now knowable since we have
       // NrCallsites and NrCounters. We delcare it here because it's more
       // convenient - we have the Builder.

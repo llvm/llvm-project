@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; Check for the correct written value of a scalar phi write whose value is
 ; defined within the loop, but its effective value is its last definition when

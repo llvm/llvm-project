@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
@@ -344,9 +345,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i64, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
-  setLibcallName(RTLIB::SRL_I128, nullptr);
-  setLibcallName(RTLIB::SHL_I128, nullptr);
-  setLibcallName(RTLIB::SRA_I128, nullptr);
 
   // Also expand 256 bit shifts if i128 is a legal type.
   if (isTypeLegal(MVT::i128)) {
@@ -711,6 +709,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction(ISD::VACOPY,  MVT::Other, Custom);
   setOperationAction(ISD::VAEND,   MVT::Other, Expand);
+
+  if (Subtarget.isTargetzOS()) {
+    // Handle address space casts between mixed sized pointers.
+    setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+    setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
+  }
 
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
 
@@ -2100,9 +2104,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   RetCCInfo.AnalyzeCallResult(Ins, RetCC_SystemZ);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned I = 0, E = RetLocs.size(); I != E; ++I) {
-    CCValAssign &VA = RetLocs[I];
-
+  for (CCValAssign &VA : RetLocs) {
     // Copy the value out, gluing the copy to the end of the call sequence.
     SDValue RetValue = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(),
                                           VA.getLocVT(), Glue);
@@ -3955,7 +3957,7 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
       Subtarget.isTargetXPLINK64() ? getTargetMachine().getPointerSize(0) : 32;
   return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(Sz, DL),
                        Align(8), /*isVolatile*/ false, /*AlwaysInline*/ false,
-                       /*isTailCall*/ false, MachinePointerInfo(DstSV),
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));
 }
 
@@ -6063,6 +6065,34 @@ SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue lowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT DstVT = Op.getSimpleValueType();
+
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+  unsigned SrcAS = N->getSrcAddressSpace();
+
+  assert(SrcAS != N->getDestAddressSpace() &&
+         "addrspacecast must be between different address spaces");
+
+  // addrspacecast [0 <- 1] : Assinging a ptr32 value to a 64-bit pointer.
+  // addrspacecast [1 <- 0] : Assigining a 64-bit pointer to a ptr32 value.
+  if (SrcAS == SYSTEMZAS::PTR32 && DstVT == MVT::i64) {
+    Op = DAG.getNode(ISD::AND, dl, MVT::i32, Src,
+                     DAG.getConstant(0x7fffffff, dl, MVT::i32));
+    Op = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op);
+  } else if (DstVT == MVT::i32) {
+    Op = DAG.getNode(ISD::TRUNCATE, dl, DstVT, Src);
+    Op = DAG.getNode(ISD::AND, dl, MVT::i32, Op,
+                     DAG.getConstant(0x7fffffff, dl, MVT::i32));
+    Op = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op);
+  } else {
+    report_fatal_error("Bad address space in addrspacecast");
+  }
+  return Op;
+}
+
 SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -6236,6 +6266,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRL_BY_SCALAR);
   case ISD::SRA:
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
+  case ISD::ADDRSPACECAST:
+    return lowerAddrSpaceCast(Op, DAG);
   case ISD::ROTL:
     return lowerShift(Op, DAG, SystemZISD::VROTL_BY_SCALAR);
   case ISD::IS_FPCLASS:
@@ -6657,7 +6689,8 @@ SDValue SystemZTargetLowering::combineTruncateExtract(
 
           // Defer the creation of the bitcast from X to combineExtract,
           // which might be able to optimize the extraction.
-          VecVT = MVT::getVectorVT(MVT::getIntegerVT(TruncBytes * 8),
+          VecVT = EVT::getVectorVT(*DCI.DAG.getContext(),
+                                   MVT::getIntegerVT(TruncBytes * 8),
                                    VecVT.getStoreSize() / TruncBytes);
           EVT ResVT = (TruncBytes < 4 ? MVT::i32 : TruncVT);
           return combineExtract(DL, ResVT, VecVT, Vec, NewIndex, DCI, true);
@@ -6731,8 +6764,8 @@ SDValue SystemZTargetLowering::combineSIGN_EXTEND_INREG(
   if (EVT == MVT::i1 && N0.hasOneUse() && N0.getOpcode() == ISD::SETCC) {
     SDLoc DL(N0);
     SDValue Ops[] = { N0.getOperand(0), N0.getOperand(1),
-                      DAG.getConstant(-1, DL, VT), DAG.getConstant(0, DL, VT),
-                      N0.getOperand(2) };
+                      DAG.getAllOnesConstant(DL, VT),
+                      DAG.getConstant(0, DL, VT), N0.getOperand(2) };
     return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
   }
   return SDValue();
@@ -6878,6 +6911,20 @@ SDValue SystemZTargetLowering::combineLOAD(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   EVT LdVT = N->getValueType(0);
+  if (auto *LN = dyn_cast<LoadSDNode>(N)) {
+    if (LN->getAddressSpace() == SYSTEMZAS::PTR32) {
+      MVT PtrVT = getPointerTy(DAG.getDataLayout());
+      MVT LoadNodeVT = LN->getBasePtr().getSimpleValueType();
+      if (PtrVT != LoadNodeVT) {
+        SDLoc DL(LN);
+        SDValue AddrSpaceCast = DAG.getAddrSpaceCast(
+            DL, PtrVT, LN->getBasePtr(), SYSTEMZAS::PTR32, 0);
+        return DAG.getExtLoad(LN->getExtensionType(), DL, LN->getValueType(0),
+                              LN->getChain(), AddrSpaceCast, LN->getMemoryVT(),
+                              LN->getMemOperand());
+      }
+    }
+  }
   SDLoc DL(N);
 
   // Replace a 128-bit load that is used solely to move its value into GPRs
@@ -7045,6 +7092,20 @@ SDValue SystemZTargetLowering::combineSTORE(
   auto *SN = cast<StoreSDNode>(N);
   auto &Op1 = N->getOperand(1);
   EVT MemVT = SN->getMemoryVT();
+
+  if (SN->getAddressSpace() == SYSTEMZAS::PTR32) {
+    MVT PtrVT = getPointerTy(DAG.getDataLayout());
+    MVT StoreNodeVT = SN->getBasePtr().getSimpleValueType();
+    if (PtrVT != StoreNodeVT) {
+      SDLoc DL(SN);
+      SDValue AddrSpaceCast = DAG.getAddrSpaceCast(DL, PtrVT, SN->getBasePtr(),
+                                                   SYSTEMZAS::PTR32, 0);
+      return DAG.getStore(SN->getChain(), DL, SN->getValue(), AddrSpaceCast,
+                          SN->getPointerInfo(), SN->getOriginalAlign(),
+                          SN->getMemOperand()->getFlags(), SN->getAAInfo());
+    }
+  }
+
   // If we have (truncstoreiN (extract_vector_elt X, Y), Z) then it is better
   // for the extraction to be done on a vMiN value, so that we can use VSTE.
   // If X has wider elements then convert it to:

@@ -289,12 +289,10 @@ static bool runIPSCCP(
       if (ReturnValue.isConstantRangeIncludingUndef())
         continue;
 
-      // Do not touch existing attribute for now.
-      // TODO: We should be able to take the intersection of the existing
-      // attribute and the inferred range.
+      // Take the intersection of the existing attribute and the inferred range.
+      ConstantRange CR = ReturnValue.getConstantRange();
       if (F->hasRetAttribute(Attribute::Range))
-        continue;
-      auto &CR = ReturnValue.getConstantRange();
+        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
       F->addRangeRetAttr(CR);
       continue;
     }
@@ -316,7 +314,7 @@ static bool runIPSCCP(
   SmallSetVector<Function *, 8> FuncZappedReturn;
   for (ReturnInst *RI : ReturnsToZap) {
     Function *F = RI->getParent()->getParent();
-    RI->setOperand(0, UndefValue::get(F->getReturnType()));
+    RI->setOperand(0, PoisonValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }

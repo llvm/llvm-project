@@ -55,7 +55,7 @@ private:
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
 
-  typedef llvm::AMDGPULibFunc FuncInfo;
+  using FuncInfo = llvm::AMDGPULibFunc;
 
   bool UnsafeFPMath = false;
 
@@ -136,7 +136,7 @@ protected:
   }
 
 public:
-  AMDGPULibCalls() {}
+  AMDGPULibCalls() = default;
 
   bool fold(CallInst *CI);
 
@@ -147,7 +147,7 @@ public:
   bool useNative(CallInst *CI);
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 template <typename IRB>
 static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
@@ -861,9 +861,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i = 0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         nval = ConstantDataVector::get(context, tmp);
       } else { // F64
@@ -899,7 +898,7 @@ static double log2(double V) {
   return log(V) / numbers::ln2;
 #endif
 }
-}
+} // namespace llvm
 
 bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
@@ -1082,9 +1081,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
       }
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i=0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         cnval = ConstantDataVector::get(M->getContext(), tmp);
       } else {
@@ -1129,15 +1127,11 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = CreateCallEx(B,ExpExpr, nval, "__exp2");
 
   if (needcopysign) {
-    Value *opr_n;
-    Type* rTy = opr0->getType();
     Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
-    Type *nTy = nTyS;
-    if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
-      nTy = FixedVectorType::get(nTyS, vTy);
+    Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     unsigned size = nTy->getScalarSizeInBits();
-    opr_n = FPOp->getOperand(1);
-    if (opr_n->getType()->isIntegerTy())
+    Value *opr_n = FPOp->getOperand(1);
+    if (opr_n->getType()->getScalarType()->isIntegerTy())
       opr_n = B.CreateZExtOrTrunc(opr_n, nTy, "__ytou");
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");
@@ -1215,16 +1209,36 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                "__rootn2div");
     replaceCall(FPOp, nval);
     return true;
-  } else if (ci_opr1 == -2) { // rootn(x, -2) = rsqrt(x)
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
-                        << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2rsqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
   }
+
+  if (ci_opr1 == -2 &&
+      shouldReplaceLibcallWithIntrinsic(CI,
+                                        /*AllowMinSizeF32=*/true,
+                                        /*AllowF64=*/true)) {
+    // rootn(x, -2) = rsqrt(x)
+
+    // The original rootn had looser ulp requirements than the resultant sqrt
+    // and fdiv.
+    MDBuilder MDHelper(M->getContext());
+    MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
+
+    // TODO: Could handle strictfp but need to fix strict sqrt emission
+    FastMathFlags FMF = FPOp->getFastMathFlags();
+    FMF.setAllowContract(true);
+
+    CallInst *Sqrt = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    Instruction *RSqrt = cast<Instruction>(
+        B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0), Sqrt));
+    Sqrt->setFastMathFlags(FMF);
+    RSqrt->setFastMathFlags(FMF);
+    RSqrt->setMetadata(LLVMContext::MD_fpmath, FPMD);
+
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
+                      << ")\n");
+    replaceCall(CI, RSqrt);
+    return true;
+  }
+
   return false;
 }
 

@@ -206,9 +206,12 @@ private:
 };
 
 static StringRef ObjCRuntimeObjectSectionsData[] = {
-    MachOObjCCatListSectionName,   MachOObjCClassListSectionName,
-    MachOObjCClassRefsSectionName, MachOObjCConstSectionName,
-    MachOObjCDataSectionName,      MachOObjCSelRefsSectionName};
+    MachOObjCCatListSectionName,   MachOObjCCatList2SectionName,
+    MachOObjCClassListSectionName, MachOObjCClassRefsSectionName,
+    MachOObjCConstSectionName,     MachOObjCDataSectionName,
+    MachOObjCProtoListSectionName, MachOObjCProtoRefsSectionName,
+    MachOObjCNLCatListSectionName, MachOObjCNLClassListSectionName,
+    MachOObjCSelRefsSectionName};
 
 static StringRef ObjCRuntimeObjectSectionsText[] = {
     MachOObjCClassNameSectionName, MachOObjCMethNameSectionName,
@@ -1694,22 +1697,24 @@ Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
     HeaderAddr = I->second;
   }
 
-  SymbolTableVector LocalSymTab;
-  auto &SymTab = LLVM_LIKELY(!InBootstrapPhase) ? LocalSymTab
-                                                : MP.Bootstrap.load()->SymTab;
+  if (LLVM_UNLIKELY(InBootstrapPhase)) {
+    // If we're in the bootstrap phase then just record these symbols in the
+    // bootstrap object and then bail out -- registration will be attached to
+    // the bootstrap graph.
+    std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
+    auto &SymTab = MP.Bootstrap.load()->SymTab;
+    for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
+      SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
+                        flagsForSymbol(*OriginalSymbol)});
+    return Error::success();
+  }
+
+  SymbolTableVector SymTab;
   for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
     SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
                       flagsForSymbol(*OriginalSymbol)});
 
-  // Bail out if we're in the bootstrap phase -- registration of thees symbols
-  // will be attached to the bootstrap graph.
-  if (LLVM_UNLIKELY(InBootstrapPhase))
-    return Error::success();
-
-  shared::AllocActions &allocActions = LLVM_LIKELY(!InBootstrapPhase)
-                                           ? G.allocActions()
-                                           : MP.Bootstrap.load()->DeferredAAs;
-  allocActions.push_back(
+  G.allocActions().push_back(
       {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
            MP.RegisterObjectSymbolTable.Addr, HeaderAddr, SymTab)),
        cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(

@@ -912,3 +912,20 @@ auto g() {
 }
 
 }
+
+namespace GH92680 {
+
+struct IntConstuctible {
+  IntConstuctible(std::source_location = std::source_location::current());
+};
+
+template <typename>
+auto construct_at(IntConstuctible) -> decltype(IntConstuctible()) {
+  return {};
+}
+
+void test() {
+  construct_at<IntConstuctible>({});
+}
+
+}

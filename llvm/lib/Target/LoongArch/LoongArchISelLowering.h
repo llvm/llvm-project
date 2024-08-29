@@ -120,6 +120,16 @@ enum NodeType : unsigned {
 
   // Vector Shuffle
   VREPLVE,
+  VSHUF,
+  VPICKEV,
+  VPICKOD,
+  VPACKEV,
+  VPACKOD,
+  VILVL,
+  VILVH,
+  VSHUF4I,
+  VREPLVEI,
+  XVPERMI,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -229,6 +239,7 @@ public:
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+  bool signExtendConstant(const ConstantInt *CI) const override;
 
   bool hasAndNotCompare(SDValue Y) const override;
 
@@ -245,6 +256,11 @@ public:
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
   bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
+
+  bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
+                              Align &PrefAlign) const override;
+
+  bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -266,7 +282,7 @@ private:
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, CodeModel::Model M,
                   bool IsLocal = true) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                           unsigned Opc, bool Large = false) const;
+                           unsigned Opc, bool UseGOT, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                             unsigned Opc, bool Large = false) const;
   SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,

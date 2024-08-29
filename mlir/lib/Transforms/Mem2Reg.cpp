@@ -9,14 +9,15 @@
 #include "mlir/Transforms/Mem2Reg.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
@@ -254,6 +255,18 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // operations (typically, removing operations that use an operation that must
   // delete itself). We thus need to start from the use of the slot pointer and
   // propagate further requests through the forward slice.
+
+  // Because this pass currently only supports analysing the parent region of
+  // the slot pointer, if a promotable memory op that needs promotion is within
+  // a graph region, the slot may only be used in a graph region and should
+  // therefore be ignored.
+  Region *slotPtrRegion = slot.ptr.getParentRegion();
+  auto slotPtrRegionOp =
+      dyn_cast<RegionKindInterface>(slotPtrRegion->getParentOp());
+  if (slotPtrRegionOp &&
+      slotPtrRegionOp.getRegionKind(slotPtrRegion->getRegionNumber()) ==
+          RegionKind::Graph)
+    return failure();
 
   // First insert that all immediate users of the slot pointer must no longer
   // use it.
@@ -639,8 +652,7 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   // lazily and cached to avoid expensive recomputation.
   BlockIndexCache blockIndexCache;
 
-  SmallVector<PromotableAllocationOpInterface> workList(allocators.begin(),
-                                                        allocators.end());
+  SmallVector<PromotableAllocationOpInterface> workList(allocators);
 
   SmallVector<PromotableAllocationOpInterface> newWorkList;
   newWorkList.reserve(workList.size());

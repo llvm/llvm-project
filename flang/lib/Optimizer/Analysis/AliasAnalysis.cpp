@@ -28,16 +28,6 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
-  if (!blockArg)
-    return false;
-
-  auto *owner{blockArg.getOwner()};
-  return owner->isEntryBlock() &&
-         mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp());
-}
-
 /// Temporary function to skip through all the no op operations
 /// TODO: Generalize support of fir.load
 static mlir::Value getOriginalDef(mlir::Value v) {
@@ -70,7 +60,15 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   attributes.Dump(os, EnumToString);
 }
 
-bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
+bool AliasAnalysis::isRecordWithPointerComponent(mlir::Type ty) {
+  auto eleTy = fir::dyn_cast_ptrEleTy(ty);
+  if (!eleTy)
+    return false;
+  // TO DO: Look for pointer components
+  return mlir::isa<fir::RecordType>(eleTy);
+}
+
+bool AliasAnalysis::isPointerReference(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
     return false;
@@ -85,7 +83,7 @@ bool AliasAnalysis::Source::isTargetOrPointer() const {
 
 bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
-    return ::isDummyArgument(v);
+    return fir::isDummyArgument(v);
   }
   return false;
 }
@@ -96,15 +94,10 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
-  auto eleTy = fir::dyn_cast_ptrEleTy(valueType);
-  if (!eleTy)
-    return false;
-  // TO DO: Look for pointer components
-  return mlir::isa<fir::RecordType>(eleTy);
-}
-
-AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
+AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
+  // TODO: alias() has to be aware of the function scopes.
+  // After MLIR inlining, the current implementation may
+  // not recognize non-aliasing entities.
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
@@ -118,6 +111,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // it aliases with everything
   if (lhsSrc.kind >= SourceKind::Indirect ||
       rhsSrc.kind >= SourceKind::Indirect) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
     return AliasResult::MayAlias;
   }
 
@@ -176,10 +170,12 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Box for POINTER component inside an object of a derived type
   // may alias box of a POINTER object, as well as boxes for POINTER
   // components inside two objects of derived types may alias.
-  if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
-      (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
-      (src1->isRecordWithPointerComponent() &&
-       src2->isRecordWithPointerComponent())) {
+  if ((isRecordWithPointerComponent(src1->valueType) &&
+       src2->isTargetOrPointer()) ||
+      (isRecordWithPointerComponent(src2->valueType) &&
+       src1->isTargetOrPointer()) ||
+      (isRecordWithPointerComponent(src1->valueType) &&
+       isRecordWithPointerComponent(src2->valueType))) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of pointer components\n");
     return AliasResult::MayAlias;
   }
@@ -242,7 +238,8 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
-AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
+AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
+                                               bool getInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
   SourceKind type{SourceKind::Unknown};
   mlir::Type ty;
@@ -254,6 +251,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   bool followingData = !isBoxRef;
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
+  mlir::Value instantiationPoint;
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
@@ -315,7 +313,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
 
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
-          if (Source::isPointerReference(ty))
+          if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
@@ -343,6 +341,21 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
             type = SourceKind::HostAssoc;
             breakFromLoop = true;
             return;
+          }
+          if (getInstantiationPoint) {
+            // Fetch only the innermost instantiation point.
+            if (!instantiationPoint)
+              instantiationPoint = op->getResult(0);
+
+            if (op.getDummyScope()) {
+              // Do not track past DeclareOp that has the dummy_scope
+              // operand. This DeclareOp is known to represent
+              // a dummy argument for some runtime instantiation
+              // of a procedure.
+              type = SourceKind::Argument;
+              breakFromLoop = true;
+              return;
+            }
           }
           // TODO: Look for the fortran attributes present on the operation
           // Track further through the operand
@@ -377,14 +390,22 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
       if (fir::valueHasFirAttribute(v, fir::getTargetAttrName()))
         attributes.set(Attribute::Target);
 
-      if (Source::isPointerReference(ty))
+      if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
     }
 
   if (type == SourceKind::Global) {
-    return {{global, followingData}, type, ty, attributes, approximateSource};
+    return {{global, instantiationPoint, followingData},
+            type,
+            ty,
+            attributes,
+            approximateSource};
   }
-  return {{v, followingData}, type, ty, attributes, approximateSource};
+  return {{v, instantiationPoint, followingData},
+          type,
+          ty,
+          attributes,
+          approximateSource};
 }
 
 } // namespace fir

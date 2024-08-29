@@ -29,7 +29,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -374,7 +373,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
 
   auto coopElementType =
       llvm::TypeSwitch<Type, Type>(getType())
-          .Case<spirv::CooperativeMatrixType, spirv::JointMatrixINTELType>(
+          .Case<spirv::CooperativeMatrixType>(
               [](auto coopType) { return coopType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
@@ -1834,8 +1833,6 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
            << getType();
 
   if (llvm::isa<spirv::CooperativeMatrixType>(cType))
-    return emitError("unsupported composite type  ") << cType;
-  if (llvm::isa<spirv::JointMatrixINTELType>(cType))
     return emitError("unsupported composite type  ") << cType;
   if (constituents.size() != cType.getNumElements())
     return emitError("has incorrect number of operands: expected ")

@@ -868,7 +868,7 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
     for (unsigned i = 0; i < NumTPLists; ++i)
       printTemplateParameters(D->getFriendTypeTemplateParameterList(i));
     Out << "friend ";
-    Out << " " << TSI->getType().getAsString(Policy);
+    Out << TSI->getType().getAsString(Policy);
   }
   else if (FunctionDecl *FD =
       dyn_cast<FunctionDecl>(D->getFriendDecl())) {
@@ -885,6 +885,9 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
+
+  if (D->isPackExpansion())
+    Out << "...";
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
@@ -1187,6 +1190,13 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
   }
 
   Out << '>';
+
+  if (const Expr *RequiresClause = Params->getRequiresClause()) {
+    Out << " requires ";
+    RequiresClause->printPretty(Out, nullptr, Policy, Indentation, "\n",
+                                &Context);
+  }
+
   if (!OmitTemplateKW)
     Out << ' ';
 }
@@ -1883,7 +1893,8 @@ void DeclPrinter::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *TTP) {
 
   if (TTP->hasDefaultArgument()) {
     Out << " = ";
-    Out << TTP->getDefaultArgument().getAsString(Policy);
+    TTP->getDefaultArgument().getArgument().print(Policy, Out,
+                                                  /*IncludeType=*/false);
   }
 }
 
@@ -1897,7 +1908,7 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
 
   if (NTTP->hasDefaultArgument()) {
     Out << " = ";
-    NTTP->getDefaultArgument()->printPretty(Out, nullptr, Policy, Indentation,
-                                            "\n", &Context);
+    NTTP->getDefaultArgument().getArgument().print(Policy, Out,
+                                                   /*IncludeType=*/false);
   }
 }

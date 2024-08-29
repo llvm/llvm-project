@@ -14,7 +14,8 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -ffinite-math-only -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
+// RUN:   -menable-no-nans -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,FINITEONLY %s
 
 // Check that we end up with -fapprox-func set on intrinsic calls
@@ -231,7 +232,7 @@ extern "C" __device__ uint64_t test___make_mantissa(const char *p) {
 
 // CHECK-LABEL: @test_abs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef range(i32 0, -2147483648) i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 extern "C" __device__ int test_abs(int x) {
@@ -240,7 +241,7 @@ extern "C" __device__ int test_abs(int x) {
 
 // CHECK-LABEL: @test_labs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef range(i64 0, -9223372036854775808) i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 extern "C" __device__ long test_labs(long x) {
@@ -249,7 +250,7 @@ extern "C" __device__ long test_labs(long x) {
 
 // CHECK-LABEL: @test_llabs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef range(i64 0, -9223372036854775808) i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 extern "C" __device__ long long test_llabs(long x) {

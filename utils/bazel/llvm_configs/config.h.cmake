@@ -125,9 +125,6 @@
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
 
-/* Define to 1 if you have the <link.h> header file. */
-#cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 
@@ -208,9 +205,6 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #cmakedefine HAVE_SYS_TYPES_H ${HAVE_SYS_TYPES_H}
-
-/* Define if the setupterm() function is supported this platform. */
-#cmakedefine LLVM_ENABLE_TERMINFO ${LLVM_ENABLE_TERMINFO}
 
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}

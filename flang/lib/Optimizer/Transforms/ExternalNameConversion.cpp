@@ -45,17 +45,11 @@ namespace {
 class ExternalNameConversionPass
     : public fir::impl::ExternalNameConversionBase<ExternalNameConversionPass> {
 public:
-  ExternalNameConversionPass(bool appendUnderscoring)
-      : appendUnderscores(appendUnderscoring) {}
-
-  ExternalNameConversionPass() { usePassOpt = true; }
+  using ExternalNameConversionBase<
+      ExternalNameConversionPass>::ExternalNameConversionBase;
 
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
-
-private:
-  bool appendUnderscores;
-  bool usePassOpt = false;
 };
 } // namespace
 
@@ -63,7 +57,6 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
-  appendUnderscores = (usePassOpt) ? appendUnderscoreOpt : appendUnderscores;
   llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> remappings;
   // Update names of external Fortran functions and names of Common Block
   // globals.
@@ -74,7 +67,8 @@ void ExternalNameConversionPass::runOnOperation() {
           mlir::SymbolTable::getSymbolAttrName());
       auto deconstructedName = fir::NameUniquer::deconstruct(symName);
       if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
-        auto newName = mangleExternalName(deconstructedName, appendUnderscores);
+        auto newName =
+            mangleExternalName(deconstructedName, appendUnderscoreOpt);
         auto newAttr = mlir::StringAttr::get(context, newName);
         mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
         auto newSymRef = mlir::FlatSymbolRefAttr::get(newAttr);
@@ -100,13 +94,4 @@ void ExternalNameConversionPass::runOnOperation() {
     for (auto update : updates)
       nestedOp->setAttr(update.first, update.second);
   });
-}
-
-std::unique_ptr<mlir::Pass> fir::createExternalNameConversionPass() {
-  return std::make_unique<ExternalNameConversionPass>();
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createExternalNameConversionPass(bool appendUnderscoring) {
-  return std::make_unique<ExternalNameConversionPass>(appendUnderscoring);
 }

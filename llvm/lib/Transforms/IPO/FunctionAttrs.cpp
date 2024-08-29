@@ -82,6 +82,7 @@ STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
 STATISTIC(NumWillReturn, "Number of functions marked as willreturn");
 STATISTIC(NumNoSync, "Number of functions marked as nosync");
+STATISTIC(NumCold, "Number of functions marked as cold");
 
 STATISTIC(NumThinLinkNoRecurse,
           "Number of functions marked as norecurse during thinlink");
@@ -118,9 +119,9 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
   if (isNoModRef(MR))
     return;
 
-  const Value *UO = getUnderlyingObject(Loc.Ptr);
-  assert(!isa<AllocaInst>(UO) &&
-         "Should have been handled by getModRefInfoMask()");
+  const Value *UO = getUnderlyingObjectAggressive(Loc.Ptr);
+  if (isa<AllocaInst>(UO))
+    return;
   if (isa<Argument>(UO)) {
     ME |= MemoryEffects::argMemOnly(MR);
     return;
@@ -1169,7 +1170,7 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
       FlowsToReturn.insert(Ret->getReturnValue());
 
-  auto &DL = F->getParent()->getDataLayout();
+  auto &DL = F->getDataLayout();
 
   for (unsigned i = 0; i != FlowsToReturn.size(); ++i) {
     Value *RetVal = FlowsToReturn[i];
@@ -1311,7 +1312,7 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
     if (F->getReturnType()->isVoidTy())
       continue;
 
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     if (all_of(*F, [&](BasicBlock &BB) {
           if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
             // TODO: perform context-sensitive analysis?
@@ -1745,6 +1746,7 @@ static bool canReturn(Function &F) {
   return false;
 }
 
+
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
                              SmallSet<Function *, 8> &Changed) {
@@ -1756,6 +1758,72 @@ static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
     if (!canReturn(*F)) {
       F->setDoesNotReturn();
       Changed.insert(F);
+    }
+  }
+}
+
+static bool
+allBBPathsGoThroughCold(BasicBlock *BB,
+                        SmallDenseMap<BasicBlock *, bool, 16> &Visited) {
+  // If BB contains a cold callsite this path through the CG is cold.
+  // Ignore whether the instructions actually are guranteed to transfer
+  // execution. Divergent behavior is considered unlikely.
+  if (any_of(*BB, [](Instruction &I) {
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          return CB->hasFnAttr(Attribute::Cold);
+        return false;
+      })) {
+    Visited[BB] = true;
+    return true;
+  }
+
+  auto Succs = successors(BB);
+  // We found a path that doesn't go through any cold callsite.
+  if (Succs.empty())
+    return false;
+
+  // We didn't find a cold callsite in this BB, so check that all successors
+  // contain a cold callsite (or that their successors do).
+  // Potential TODO: We could use static branch hints to assume certain
+  // successor paths are inherently cold, irrespective of if they contain a cold
+  // callsite.
+  for (auto *Succ : Succs) {
+    // Start with false, this is necessary to ensure we don't turn loops into
+    // cold.
+    auto R = Visited.try_emplace(Succ, false);
+    if (!R.second) {
+      if (R.first->second)
+        continue;
+      return false;
+    }
+    if (!allBBPathsGoThroughCold(Succ, Visited))
+      return false;
+    Visited[Succ] = true;
+  }
+
+  return true;
+}
+
+static bool allPathsGoThroughCold(Function &F) {
+  SmallDenseMap<BasicBlock *, bool, 16> Visited;
+  Visited[&F.front()] = false;
+  return allBBPathsGoThroughCold(&F.front(), Visited);
+}
+
+// Set the cold function attribute if possible.
+static void addColdAttrs(const SCCNodeSet &SCCNodes,
+                         SmallSet<Function *, 8> &Changed) {
+  for (Function *F : SCCNodes) {
+    if (!F || !F->hasExactDefinition() || F->hasFnAttribute(Attribute::Naked) ||
+        F->hasFnAttribute(Attribute::Cold) || F->hasFnAttribute(Attribute::Hot))
+      continue;
+
+    // Potential TODO: We could add attribute `cold` on functions with `coldcc`.
+    if (allPathsGoThroughCold(*F)) {
+      F->addFnAttr(Attribute::Cold);
+      ++NumCold;
+      Changed.insert(F);
+      continue;
     }
   }
 }
@@ -1853,6 +1921,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   addArgumentAttrs(Nodes.SCCNodes, Changed);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
+  addColdAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);
   addNoUndefAttrs(Nodes.SCCNodes, Changed);
 

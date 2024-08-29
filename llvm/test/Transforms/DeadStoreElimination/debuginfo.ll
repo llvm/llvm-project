@@ -11,8 +11,8 @@ define ptr @test_salvage(i32 %arg) {
 ; Check that all four original local variables have their values preserved.
 ; CHECK-LABEL: @test_salvage(
 ; CHECK-NEXT: malloc
-; CHECK-NEXT: @llvm.dbg.value(metadata ptr %p, metadata ![[p:.*]], metadata !DIExpression())
-; CHECK-NEXT: @llvm.dbg.value(metadata i32 %arg, metadata ![[DEAD:.*]], metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value))
+; CHECK-NEXT: #dbg_value(ptr %p, ![[p:.*]], !DIExpression(),
+; CHECK-NEXT: #dbg_value(i32 %arg, ![[DEAD:.*]], !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value),
 ; CHECK-NEXT: call void @test_f()
 ; CHECK-NEXT: store i32 0, ptr %p
 

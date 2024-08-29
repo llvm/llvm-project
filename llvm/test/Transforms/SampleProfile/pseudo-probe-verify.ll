@@ -54,10 +54,10 @@ bb24:
   ret void
 }
 
-;; A discriminator of 186646583 which is 0xb200037 in hexdecimal, stands for a direct call probe
+;; A discriminator of 455082031 which is 0x1b200037 in hexdecimal, stands for a direct call probe
 ;; with an index of 6 and a scale of -1%.
 ; CHECK: ![[#PROBE6]] = !DILocation(line: 2, column: 20, scope: ![[#SCOPE:]])
-; CHECK: ![[#SCOPE]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 186646575)
+; CHECK: ![[#SCOPE]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 455082031)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

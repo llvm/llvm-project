@@ -415,7 +415,12 @@ def get_pointer_int_pair(val):
     int_shift = enum_dict[info_name + "::IntShift"]
     int_mask = enum_dict[info_name + "::IntMask"]
     pair_union = val["Value"]
+    value_type = pair_union.type.template_argument(0)
+    value_type_ptr = value_type.pointer()
+    pair_union = pair_union.address.cast(value_type_ptr).dereference()
+    pair_union = pair_union.cast(gdb.lookup_type("intptr_t"))
     pointer = pair_union & ptr_mask
+    pointer = pointer.cast(value_type)
     value = (pair_union >> int_shift) & int_mask
     return (pointer, value)
 

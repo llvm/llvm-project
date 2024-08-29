@@ -19,7 +19,9 @@
 
 namespace llvm {
 namespace SPIRV {
-/// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
+/// Parses the name part of the demangled builtin call.
+std::string lookupBuiltinNameHelper(StringRef DemangledCall);
+/// Lowers a builtin function call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 ///
 /// \return the lowering success status if the called function is a recognized
@@ -37,6 +39,12 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  const Register OrigRet, const Type *OrigRetTy,
                                  const SmallVectorImpl<Register> &Args,
                                  SPIRVGlobalRegistry *GR);
+
+/// Helper function for finding a builtin function attributes
+/// by a demangled function name. Defined in SPIRVBuiltins.cpp.
+std::tuple<int, unsigned, unsigned>
+mapBuiltinToOpcode(const StringRef DemangledCall,
+                   SPIRV::InstructionSet::InstructionSet Set);
 
 /// Parses the provided \p ArgIdx argument base type in the \p DemangledCall
 /// skeleton. A base type is either a basic type (e.g. i32 for int), pointer

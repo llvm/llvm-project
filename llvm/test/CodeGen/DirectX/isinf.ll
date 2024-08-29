@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for isinf are generated for float and half.
 ; CHECK: call i1 @dx.op.isSpecialFloat.f32(i32 9, float %{{.*}})

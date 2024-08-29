@@ -49,9 +49,6 @@ public:
 
   llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index) override;
-
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create = true) override;
 
@@ -72,6 +69,11 @@ private:
   ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager,
                          lldb::RegisterContextSP &reg_ctx_sp, uint32_t set_idx);
+
+  ValueObject *CreateChildAtIndex(size_t idx) override;
+  ValueObject *CreateSyntheticArrayMember(size_t idx) override {
+    return nullptr;
+  }
 
   // For ValueObject only
   ValueObjectRegisterSet(const ValueObjectRegisterSet &) = delete;

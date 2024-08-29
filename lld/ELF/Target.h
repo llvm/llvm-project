@@ -241,7 +241,6 @@ void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
 void initSymbolAnchors();
 
-LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);

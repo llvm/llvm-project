@@ -31,6 +31,12 @@ void initializeRISCVCodeGenPreparePass(PassRegistry &);
 FunctionPass *createRISCVDeadRegisterDefinitionsPass();
 void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
 
+FunctionPass *createRISCVIndirectBranchTrackingPass();
+void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
+
+FunctionPass *createRISCVLandingPadSetupPass();
+void initializeRISCVLandingPadSetupPass(PassRegistry &);
+
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 
@@ -40,8 +46,8 @@ void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 FunctionPass *createRISCVGatherScatterLoweringPass();
 void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
 
-FunctionPass *createRISCVFoldMasksPass();
-void initializeRISCVFoldMasksPass(PassRegistry &);
+FunctionPass *createRISCVVectorPeepholePass();
+void initializeRISCVVectorPeepholePass(PassRegistry &);
 
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
@@ -62,9 +68,6 @@ FunctionPass *createRISCVInsertVSETVLIPass();
 void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 extern char &RISCVInsertVSETVLIID;
 
-FunctionPass *createRISCVCoalesceVSETVLIPass();
-void initializeRISCVCoalesceVSETVLIPass(PassRegistry &);
-
 FunctionPass *createRISCVPostRAExpandPseudoPass();
 void initializeRISCVPostRAExpandPseudoPass(PassRegistry &);
 FunctionPass *createRISCVInsertReadWriteCSRPass();
@@ -82,10 +85,11 @@ void initializeRISCVMoveMergePass(PassRegistry &);
 FunctionPass *createRISCVPushPopOptimizationPass();
 void initializeRISCVPushPopOptPass(PassRegistry &);
 
-InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
-                                                    RISCVSubtarget &,
-                                                    RISCVRegisterBankInfo &);
-void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+InstructionSelector *
+createRISCVInstructionSelector(const RISCVTargetMachine &,
+                               const RISCVSubtarget &,
+                               const RISCVRegisterBankInfo &);
+void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPostLegalizerCombiner();
 void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);

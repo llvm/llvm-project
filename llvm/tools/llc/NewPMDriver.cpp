@@ -45,10 +45,6 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -116,7 +112,6 @@ int llvm::compileModuleWithNewPM(
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM, !NoVerify);
-  SI.registerCallbacks(PIC);
   registerCodeGenCallback(PIC, LLVMTM);
 
   MachineFunctionAnalysisManager MFAM;
@@ -131,6 +126,7 @@ int llvm::compileModuleWithNewPM(
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+  SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });

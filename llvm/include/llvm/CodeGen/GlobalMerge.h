@@ -21,11 +21,15 @@ struct GlobalMergeOptions {
   // functions), see the code that passes in the offset in the ARM backend
   // for more information.
   unsigned MaxOffset = 0;
+  // The minimum size in bytes of each global that should considered in merging.
+  unsigned MinSize = 0;
   bool GroupByUse = true;
   bool IgnoreSingleUse = true;
   bool MergeConst = false;
   /// Whether we should merge global variables that have external linkage.
   bool MergeExternal = true;
+  /// Whether we should merge constant global variables.
+  bool MergeConstantGlobals = false;
   /// Whether we should try to optimize for size only.
   /// Currently, this applies a dead simple heuristic: only consider globals
   /// used in minsize functions for merging.

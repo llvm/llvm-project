@@ -108,16 +108,12 @@
 namespace llvm {
 
 template <class GraphType> struct GraphTraits;
-class BasicBlock;
 class Function;
 class Loop;
-class Instruction;
 class LLVMContext;
 class MemoryAccess;
 class MemorySSAWalker;
 class Module;
-class Use;
-class Value;
 class raw_ostream;
 
 namespace MSSAHelpers {
@@ -937,7 +933,7 @@ public:
   struct Result {
     Result(std::unique_ptr<MemorySSA> &&MSSA) : MSSA(std::move(MSSA)) {}
 
-    MemorySSA &getMSSA() { return *MSSA.get(); }
+    MemorySSA &getMSSA() { return *MSSA; }
 
     std::unique_ptr<MemorySSA> MSSA;
 
@@ -1269,7 +1265,7 @@ private:
     if (WalkingPhi && Location.Ptr) {
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
-          OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
+          OriginalAccess->getBlock()->getDataLayout(), nullptr);
 
       if (Value *Addr =
               Translator.translateValue(OriginalAccess->getBlock(),

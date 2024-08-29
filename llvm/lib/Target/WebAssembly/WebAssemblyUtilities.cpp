@@ -108,8 +108,9 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
+    bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
     Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
-    Sym->setFunctionTable();
+    Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
   }
@@ -175,6 +176,8 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
     return WebAssembly::COPY_FUNCREF;
   case WebAssembly::EXTERNREFRegClassID:
     return WebAssembly::COPY_EXTERNREF;
+  case WebAssembly::EXNREFRegClassID:
+    return WebAssembly::COPY_EXNREF;
   default:
     llvm_unreachable("Unexpected register class");
   }

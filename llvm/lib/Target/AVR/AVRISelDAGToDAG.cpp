@@ -29,12 +29,10 @@ namespace {
 /// Lowers LLVM IR (in DAG form) to AVR MC instructions (in DAG form).
 class AVRDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   AVRDAGToDAGISel() = delete;
 
   AVRDAGToDAGISel(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -60,11 +58,19 @@ private:
   const AVRSubtarget *Subtarget;
 };
 
+class AVRDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  AVRDAGToDAGISelLegacy(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<AVRDAGToDAGISel>(TM, OptLevel)) {}
+};
+
 } // namespace
 
-char AVRDAGToDAGISel::ID = 0;
+char AVRDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(AVRDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(AVRDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool AVRDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AVRSubtarget>();
@@ -116,8 +122,13 @@ bool AVRDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
     // offset allowed.
     MVT VT = cast<MemSDNode>(Op)->getMemoryVT().getSimpleVT();
 
-    // We only accept offsets that fit in 6 bits (unsigned).
-    if (isUInt<6>(RHSC) && (VT == MVT::i8 || VT == MVT::i16)) {
+    // We only accept offsets that fit in 6 bits (unsigned), with the exception
+    // of 16-bit loads - those can only go up to 62, because we desugar them
+    // into a pair of 8-bit loads like `ldd rx, RHSC` + `ldd ry, RHSC + 1`.
+    bool OkI8 = VT == MVT::i8 && RHSC <= 63;
+    bool OkI16 = VT == MVT::i16 && RHSC <= 62;
+
+    if (OkI8 || OkI16) {
       Base = N.getOperand(0);
       Disp = CurDAG->getTargetConstant(RHSC, dl, MVT::i8);
 
@@ -586,5 +597,5 @@ bool AVRDAGToDAGISel::trySelect(SDNode *N) {
 
 FunctionPass *llvm::createAVRISelDag(AVRTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new AVRDAGToDAGISel(TM, OptLevel);
+  return new AVRDAGToDAGISelLegacy(TM, OptLevel);
 }

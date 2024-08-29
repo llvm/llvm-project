@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_LSEEK_H
 #define LLVM_LIBC_SRC_UNISTD_LSEEK_H
 
+#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 off_t lseek(int fd, off_t offset, int whence);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_LSEEK_H

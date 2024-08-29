@@ -7,7 +7,6 @@ algorithm cstdint
 algorithm cstdlib
 algorithm cstring
 algorithm cwchar
-algorithm execution
 algorithm initializer_list
 algorithm iosfwd
 algorithm iterator
@@ -16,6 +15,7 @@ algorithm memory
 algorithm new
 algorithm optional
 algorithm stdexcept
+algorithm tuple
 algorithm type_traits
 algorithm utility
 algorithm version
@@ -41,7 +41,9 @@ array algorithm
 array compare
 array concepts
 array cstddef
+array cstdint
 array cstdlib
+array cwchar
 array initializer_list
 array iterator
 array limits
@@ -130,6 +132,9 @@ chrono type_traits
 chrono vector
 chrono version
 cinttypes cstdint
+cmath cstddef
+cmath cstdint
+cmath initializer_list
 cmath limits
 cmath type_traits
 cmath version
@@ -189,9 +194,6 @@ condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
-coroutine cstddef
-coroutine cstdint
-coroutine cstring
 coroutine iosfwd
 coroutine limits
 coroutine type_traits
@@ -298,6 +300,7 @@ forward_list cstddef
 forward_list cstdint
 forward_list cstdlib
 forward_list cstring
+forward_list cwchar
 forward_list functional
 forward_list initializer_list
 forward_list iosfwd
@@ -458,6 +461,7 @@ list cstddef
 list cstdint
 list cstdlib
 list cstring
+list cwchar
 list functional
 list initializer_list
 list iosfwd
@@ -499,7 +503,9 @@ locale version
 map compare
 map concepts
 map cstddef
+map cstdint
 map cstdlib
+map cwchar
 map functional
 map initializer_list
 map iterator
@@ -583,6 +589,7 @@ numeric iterator
 numeric limits
 numeric new
 numeric optional
+numeric tuple
 numeric type_traits
 numeric version
 optional atomic
@@ -735,7 +742,9 @@ semaphore version
 set compare
 set concepts
 set cstddef
+set cstdint
 set cstdlib
+set cwchar
 set functional
 set initializer_list
 set iterator
@@ -868,7 +877,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -916,6 +924,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new
@@ -973,6 +982,7 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility cstdlib
 utility initializer_list
 utility iosfwd

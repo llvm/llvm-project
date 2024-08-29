@@ -43,24 +43,6 @@ def LLVMRequestCWrappers
   let constructor = "::mlir::LLVM::createRequestCWrappersPass()";
 }
 
-def LLVMTypeConsistency
-    : Pass<"llvm-type-consistency", "::mlir::LLVM::LLVMFuncOp"> {
-  let summary = "Rewrites to improve type consistency";
-  let description = [{
-    Set of rewrites to improve the coherency of types within an LLVM dialect
-    program. This will adjust operations operating on pointers so they interpret
-    their associated pointee type as consistently as possible.
-  }];
-  let constructor = "::mlir::LLVM::createTypeConsistencyPass()";
-
-  let options = [
-    Option<"maxVectorSplitSize", "max-vector-split-size", "unsigned",
-           /*default=*/"512",
-           "Maximum size in bits of a vector value in a load or store operation"
-           " operating on multiple elements that should still be split">,
-  ];
-}
-
 def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
   let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
@@ -79,6 +61,16 @@ def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir:
   }];
 
   let constructor = "mlir::LLVM::createDIScopeForLLVMFuncOpPass()";
+  let options = [
+    Option<"emissionKind", "emission-kind", "mlir::LLVM::DIEmissionKind",
+    /*default=*/"mlir::LLVM::DIEmissionKind::LineTablesOnly", "Emission kind to generate debug info.",
+    [{::llvm::cl::values(
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::None, "None", "None"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::Full, "Full", "Full"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "LineTablesOnly (default)"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::DebugDirectivesOnly, "DebugDirectivesOnly", "DebugDirectivesOnly")
+	   )}]>,
+  ];
 }
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES

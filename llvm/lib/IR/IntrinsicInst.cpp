@@ -285,6 +285,11 @@ ConstantInt *InstrProfCntrInstBase::getIndex() const {
   return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
 }
 
+void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
+  assert(isa<InstrProfCntrInstBase>(this));
+  setArgOperand(3, ConstantInt::get(Type::getInt32Ty(getContext()), Idx));
+}
+
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
     return const_cast<Value *>(getArgOperand(4));
@@ -298,6 +303,11 @@ Value *InstrProfCallsite::getCallee() const {
   if (isa<InstrProfCallsite>(this))
     return getArgOperand(4);
   return nullptr;
+}
+
+void InstrProfCallsite::setCallee(Value *Callee) {
+  assert(isa<InstrProfCallsite>(this));
+  setArgOperand(4, Callee);
 }
 
 std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
@@ -599,6 +609,25 @@ Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
   return Intrinsic::not_intrinsic;
 }
 
+constexpr static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id) {
+  if (::isVPIntrinsic(Id))
+    return Id;
+
+  switch (Id) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
+#define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN) case Intrinsic::INTRIN:
+#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
+  return ::getForIntrinsic(Id);
+}
+
 bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   using namespace PatternMatch;
 
@@ -698,6 +727,9 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   case Intrinsic::vp_scatter:
     VPFunc = Intrinsic::getDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
+    break;
+  case Intrinsic::experimental_vp_splat:
+    VPFunc = Intrinsic::getDeclaration(M, VPID, ReturnType);
     break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");

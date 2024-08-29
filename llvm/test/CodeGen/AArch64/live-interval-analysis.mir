@@ -1,4 +1,5 @@
 # RUN: llc -o /dev/null %s -mtriple=aarch64-darwin-ios -run-pass=liveintervals -debug-only=regalloc -precompute-phys-liveness 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-darwin-ios --passes='print<live-intervals>' -debug-only=regalloc -precompute-phys-liveness 2>&1 | FileCheck %s
 # REQUIRES: asserts
 --- |
   define void @reserved_reg_liveness() { ret void }
