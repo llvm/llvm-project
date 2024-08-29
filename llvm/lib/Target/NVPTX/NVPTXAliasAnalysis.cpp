@@ -57,21 +57,18 @@ static unsigned getAddressSpace(const Value *V, unsigned MaxLookup) {
   // Find the first non-generic address space traversing the UD chain.
   // It is undefined behaviour if a pointer belongs to more than one
   // non-overlapping address spaces along a valid execution path.
-  for (unsigned Count = 0;; ++Count) {
-    const auto *PTy = dyn_cast<PointerType>(V->getType());
-    if (!PTy)
-      return AddressSpace::ADDRESS_SPACE_GENERIC;
-
-    const unsigned AS = PTy->getAddressSpace();
-    if (AS != AddressSpace::ADDRESS_SPACE_GENERIC || Count >= MaxLookup)
-      return AS;
-
-    // Continue traversing if address space is generic
-    const Value *VNext = getUnderlyingObject(V, 1);
-    if (VNext == V)
-      return AddressSpace::ADDRESS_SPACE_GENERIC;
-    V = VNext;
+  auto GetAs = [](const Value *V) -> unsigned {
+    if (const auto *PTy = dyn_cast<PointerType>(V->getType()))
+      return PTy->getAddressSpace();
+    return ADDRESS_SPACE_GENERIC;
+  };
+  while (MaxLookup-- && GetAs(V) == ADDRESS_SPACE_GENERIC) {
+    const Value *NewV = getUnderlyingObject(V, 1);
+    if (NewV == V)
+      break;
+    V = NewV;
   }
+  return GetAs(V);
 }
 
 static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
