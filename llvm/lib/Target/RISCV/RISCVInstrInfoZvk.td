@@ -529,7 +529,8 @@ let Predicates = [HasStdExtZvbb] in {
   defm PseudoVCLZ   : VPseudoVCLZ;
   defm PseudoVCTZ   : VPseudoVCTZ;
   defm PseudoVCPOP  : VPseudoVCPOP;
-  defm PseudoVWSLL : VPseudoVWSLL;
+  let IsWiden = 1 in
+    defm PseudoVWSLL : VPseudoVWSLL;
 } // Predicates = [HasStdExtZvbb]
 
 let Predicates = [HasStdExtZvbc] in {

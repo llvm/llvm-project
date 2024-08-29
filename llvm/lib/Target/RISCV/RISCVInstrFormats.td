@@ -226,6 +226,10 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
 
   bit ActiveElementsAffectResult = 0;
   let TSFlags{23} = ActiveElementsAffectResult;
+
+  // Indicates whether the instruction produces widened result.
+  bit IsWiden = 0;
+  let TSFlags{24} = IsWiden;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

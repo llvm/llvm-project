@@ -126,6 +126,10 @@ enum {
 
   ActiveElementsAffectResultShift = TargetOverlapConstraintTypeShift + 2,
   ActiveElementsAffectResultMask = 1ULL << ActiveElementsAffectResultShift,
+
+  // Indicates whether the instruction produces widened result.
+  IsWidenShift = ActiveElementsAffectResultShift + 1,
+  IsWidenMask = 1 << IsWidenShift,
 };
 
 // Helper functions to read TSFlags.
@@ -149,6 +153,9 @@ static inline bool isTiedPseudo(uint64_t TSFlags) {
 static inline bool hasSEWOp(uint64_t TSFlags) {
   return TSFlags & HasSEWOpMask;
 }
+
+/// \returns true if the instruction produces widened result.
+static inline bool isWiden(uint64_t TSFlags) { return TSFlags & IsWidenMask; }
 /// \returns true if there is a VL operand for the instruction.
 static inline bool hasVLOp(uint64_t TSFlags) {
   return TSFlags & HasVLOpMask;
