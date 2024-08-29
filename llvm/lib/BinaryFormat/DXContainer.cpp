@@ -89,3 +89,33 @@ static const EnumEntry<PSV::InterpolationMode> InterpolationModeNames[] = {
 ArrayRef<EnumEntry<PSV::InterpolationMode>> PSV::getInterpolationModes() {
   return ArrayRef(InterpolationModeNames);
 }
+
+#define RESOURCE_TYPE(Val, Enum) {#Enum, PSV::ResourceType::Enum},
+
+static const EnumEntry<PSV::ResourceType> ResourceTypeNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<PSV::ResourceType>> PSV::getResourceTypes() {
+  return ArrayRef(ResourceTypeNames);
+}
+
+#define RESOURCE_KIND(Val, Enum) {#Enum, PSV::ResourceKind::Enum},
+
+static const EnumEntry<PSV::ResourceKind> ResourceKindNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<PSV::ResourceKind>> PSV::getResourceKinds() {
+  return ArrayRef(ResourceKindNames);
+}
+
+#define RESOURCE_FLAG(Val, Enum) {#Enum, PSV::ResourceFlag::Enum},
+
+static const EnumEntry<PSV::ResourceFlag> ResourceFlagNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<PSV::ResourceFlag>> PSV::getResourceFlags() {
+  return ArrayRef(ResourceFlagNames);
+}
