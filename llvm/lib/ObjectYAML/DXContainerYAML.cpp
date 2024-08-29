@@ -266,12 +266,6 @@ void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
-void ScalarEnumerationTraits<dxbc::PSV::ResourceFlag>::enumeration(
-    IO &IO, dxbc::PSV::ResourceFlag &Value) {
-  for (const auto &E : dxbc::PSV::getResourceFlags())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
-}
-
 void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
     IO &IO, dxbc::D3DSystemValue &Value) {
   for (const auto &E : dxbc::getD3DSystemValues())
