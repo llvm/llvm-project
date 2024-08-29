@@ -1066,4 +1066,52 @@ entry:
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
 }
+
+TEST_F(FunctionPropertiesAnalysisTest, InvokeLandingCanStillBeReached) {
+  LLVMContext C;
+  // %lpad is reachable from a block not involved in the inlining decision. We
+  // make sure that's not the entry - otherwise the DT will be recomputed from
+  // scratch. The idea here is that the edge known to the inliner to potentially
+  // disappear - %lpad->%ehcleanup -should survive because it is still reachable
+  // from %middle.
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+define i64 @f1(i32 noundef %value) {
+entry:
+  br label %middle
+middle:
+  %c = icmp eq i32 %value, 0
+  br i1 %c, label %invoke, label %lpad
+invoke:
+  invoke fastcc void @f2() to label %cont unwind label %lpad
+cont:
+  br label %exit
+lpad:
+  %lp = landingpad i32 cleanup
+  br label %ehcleanup
+ehcleanup:
+  resume i32 0
+exit:
+  ret i64 1
+}
+define void @f2() {
+  ret void
+}
+)IR");
+
+  Function *F1 = M->getFunction("f1");
+  CallBase *CB = findCall(*F1);
+  EXPECT_NE(CB, nullptr);
+
+  auto FPI = buildFPI(*F1);
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  invalidate(*F1);
+  EXPECT_TRUE(FPU.finishAndTest(FAM));
+}
 } // end anonymous namespace

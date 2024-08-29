@@ -383,15 +383,18 @@ DominatorTree &FunctionPropertiesUpdater::getUpdatedDominatorTree(
 
   SmallVector<DominatorTree::UpdateType, 2> FinalDomTreeUpdates;
 
-  for (auto &Upd : DomTreeUpdates)
-    FinalDomTreeUpdates.push_back(Upd);
-
   DenseSet<const BasicBlock *> Inserted;
   for (auto *Succ : successors(&CallSiteBB))
     if (Inserted.insert(Succ).second)
       FinalDomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
                                      const_cast<BasicBlock *>(&CallSiteBB),
                                      const_cast<BasicBlock *>(Succ)});
+
+  // Perform the deletes last, so that any new nodes connected to nodes
+  // participating in the edge deletion are known to the DT.
+  for (auto &Upd : DomTreeUpdates)
+    if (!llvm::is_contained(successors(Upd.getFrom()), Upd.getTo()))
+      FinalDomTreeUpdates.push_back(Upd);
 
   DT.applyUpdates(FinalDomTreeUpdates);
 #ifdef EXPENSIVE_CHECKS
