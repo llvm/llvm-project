@@ -359,6 +359,15 @@ FunctionImporter::ImportMapTy::getSourceModules() const {
   return Modules;
 }
 
+std::optional<GlobalValueSummary::ImportKind>
+FunctionImporter::ImportMapTy::getImportType(
+    const FunctionsToImportTy &GUIDToImportType, GlobalValue::GUID GUID) const {
+  auto Iter = GUIDToImportType.find(GUID);
+  if (Iter == GUIDToImportType.end())
+    return std::nullopt;
+  return Iter->second;
+}
+
 /// Import globals referenced by a function or other globals that are being
 /// imported, if importing such global is possible.
 class GlobalsImporter final {
@@ -1111,7 +1120,7 @@ collectImportStatistics(const ModuleSummaryIndex &Index,
 #ifndef NDEBUG
 static bool checkVariableImport(
     const ModuleSummaryIndex &Index,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   DenseSet<GlobalValue::GUID> FlattenedImports;
 
@@ -1152,7 +1161,7 @@ void llvm::ComputeCrossModuleImport(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   auto MIS = ModuleImportsManager::create(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
@@ -1800,15 +1809,6 @@ Expected<bool> FunctionImporter::importFunctions(
 
   IRMover Mover(DestModule);
 
-  auto getImportType = [&](const FunctionsToImportTy &GUIDToImportType,
-                           GlobalValue::GUID GUID)
-      -> std::optional<GlobalValueSummary::ImportKind> {
-    auto Iter = GUIDToImportType.find(GUID);
-    if (Iter == GUIDToImportType.end())
-      return std::nullopt;
-    return Iter->second;
-  };
-
   // Do the actual import of functions now, one Module at a time
   for (const auto &Name : ImportList.getSourceModules()) {
     // Get the module for the import
@@ -1835,7 +1835,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!F.hasName())
         continue;
       auto GUID = F.getGUID();
-      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = ImportList.getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
@@ -1871,7 +1871,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = ImportList.getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
@@ -1891,7 +1891,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
         continue;
       auto GUID = GA.getGUID();
-      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = ImportList.getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")

@@ -1372,6 +1372,11 @@ enum NodeType {
   LIFETIME_START,
   LIFETIME_END,
 
+  /// FAKE_USE represents a use of the operand but does not do anything.
+  /// Its purpose is the extension of the operand's lifetime mainly for
+  /// debugging purposes.
+  FAKE_USE,
+
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
   /// information that target might need for lowering.  The first operand is

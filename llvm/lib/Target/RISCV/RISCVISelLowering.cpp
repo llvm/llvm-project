@@ -395,7 +395,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FADD,          ISD::FSUB,
       ISD::FMUL,          ISD::FMA,
       ISD::FDIV,          ISD::FSQRT,
-      ISD::FABS,          ISD::FNEG,
       ISD::STRICT_FMA,    ISD::STRICT_FADD,
       ISD::STRICT_FSUB,   ISD::STRICT_FMUL,
       ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
@@ -416,8 +415,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
     setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
-    // FIXME: Need to promote bf16 FCOPYSIGN to f32, but the
-    // DAGCombiner::visitFP_ROUND probably needs improvements first.
+    setOperationAction(ISD::FABS, MVT::bf16, Expand);
+    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   }
 
@@ -433,8 +432,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_LRINT, ISD::STRICT_LLRINT,
                           ISD::STRICT_LROUND, ISD::STRICT_LLROUND},
                          MVT::f16, Legal);
-      // FIXME: Need to promote f16 FCOPYSIGN to f32, but the
-      // DAGCombiner::visitFP_ROUND probably needs improvements first.
+      setOperationAction(ISD::FABS, MVT::f16, Expand);
+      setOperationAction(ISD::FNEG, MVT::f16, Expand);
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     }
 
@@ -10328,6 +10327,50 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+
+  // On some uarchs vrgather.vv will read from every input register for each
+  // output register, regardless of the indices. However to reverse a vector
+  // each output register only needs to read from one register. So decompose it
+  // into LMUL * M1 vrgather.vvs, so we get O(LMUL) performance instead of
+  // O(LMUL^2).
+  //
+  // vsetvli a1, zero, e64, m4, ta, ma
+  // vrgatherei16.vv v12, v8, v16
+  // ->
+  // vsetvli a1, zero, e64, m1, ta, ma
+  // vrgather.vv v15, v8, v16
+  // vrgather.vv v14, v9, v16
+  // vrgather.vv v13, v10, v16
+  // vrgather.vv v12, v11, v16
+  if (ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+      ContainerVT.getVectorElementCount().isKnownMultipleOf(2)) {
+    auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
+    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);
+    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, Hi.getSimpleValueType(), Hi);
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ContainerVT, Hi, Lo);
+
+    // Fixed length vectors might not fit exactly into their container, and so
+    // leave a gap in the front of the vector after being reversed. Slide this
+    // away.
+    //
+    // x x x x 3 2 1 0 <- v4i16 @ vlen=128
+    // 0 1 2 3 x x x x <- reverse
+    // x x x x 0 1 2 3 <- vslidedown.vx
+    if (VecVT.isFixedLengthVector()) {
+      SDValue Offset = DAG.getNode(
+          ISD::SUB, DL, XLenVT,
+          DAG.getElementCount(DL, XLenVT, ContainerVT.getVectorElementCount()),
+          DAG.getElementCount(DL, XLenVT, VecVT.getVectorElementCount()));
+      Concat =
+          getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Concat, Offset, Mask, VL);
+      Concat = convertFromScalableVector(VecVT, Concat, DAG, Subtarget);
+    }
+    return Concat;
+  }
+
   unsigned EltSize = ContainerVT.getScalarSizeInBits();
   unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
   unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
@@ -10374,9 +10417,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IntVT = IntVT.changeVectorElementType(MVT::i16);
   }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
   SDValue VLMinus1 = DAG.getNode(

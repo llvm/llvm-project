@@ -929,7 +929,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   // TODO: add more intrinsic
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     auto LT = getTypeLegalizationCost(RetTy);
     // Legalisation of illegal types involves an `index' instruction plus
     // (LT.first - 1) vector adds.
@@ -1625,9 +1625,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   // For unsupported scalable vector.
   if (LT.second.isScalableVector() && !LT.first.isValid())
     return LT.first;
-
-  if (!isTypeLegal(Val))
-    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
 
   // Mask vector extract/insert is expanded via e8.
   if (Val->getScalarSizeInBits() == 1) {
