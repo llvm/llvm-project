@@ -228,6 +228,10 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     ScStart = AR->getStart();
     const SCEV *BTC = PSE.getBackedgeTakenCount();
     if (!isa<SCEVCouldNotCompute>(BTC))
+      // Evaluating AR at an exact BTC is safe: LAA separately checks that
+      // accesses cannot wrap in the loop. If evaluating AR at BTC wraps, then
+      // the loop either triggers UB when executing a memory access with a
+      // poison pointer or the wrapping/poisoned pointer is not used.
       ScEnd = AR->evaluateAtIteration(BTC, *SE);
     else {
       // Evaluating AR at MaxBTC may wrap and create an expression that is less
