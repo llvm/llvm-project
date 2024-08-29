@@ -231,6 +231,22 @@ define i1 @ip_test_nonnull_caller(ptr %p) {
   ret i1 %res
 }
 
+define ptr @ret_nonnull_pointer(ptr nonnull %p) {
+; CHECK-LABEL: define ptr @ret_nonnull_pointer(
+; CHECK-SAME: ptr nonnull [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
+define ptr @ret_maybe_null_pointer(ptr %p) {
+; CHECK-LABEL: define ptr @ret_maybe_null_pointer(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
 ;.
 ; SCCP: [[META0]] = !{}
 ;.
