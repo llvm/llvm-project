@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
 # RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
 
-# This test is to check below inherit:
+# This test is to check below inherit and other situations EVEX_W and EVEX_OPSIZE both set:
 # IC_EVEX_W       -->    IC_EVEX_W_OPSIZE
 # IC_EVEX_W_B     -->    IC_EVEX_W_OPSIZE_B
 
@@ -23,6 +23,14 @@
 # INTEL: add     r10, r9, 123
 0x62,0xd4,0xad,0x18,0x83,0xc1,0x7b
 
+# ATT:   {nf} addq $123, %r9
+# INTEL: {nf} add  r9, 123
+0x62,0xd4,0xfd,0x0c,0x83,0xc1,0x7b
+
+# ATT:   {nf} addq $123, %r9, %r10
+# INTEL: {nf} add  r10, r9, 123
+0x62,0xd4,0xad,0x1c,0x83,0xc1,0x7b
+
 ## sbb
 # ATT:   {evex}  sbbq    $123, %r9
 # INTEL: {evex}  sbb     r9, 123
@@ -41,10 +49,22 @@
 # INTEL: sub     r10, r9, 123
 0x62,0xd4,0xad,0x18,0x83,0xe9,0x7b
 
+# ATT:   {nf} subq $123, %r9
+# INTEL: {nf} sub  r9, 123
+0x62,0xd4,0xfd,0x0c,0x83,0xe9,0x7b
+
+# ATT:   {nf} subq $123, %r9, %r10
+# INTEL: {nf} sub  r10, r9, 123
+0x62,0xd4,0xad,0x1c,0x83,0xe9,0x7b
+
 ## imul
 # ATT:   {evex}  imulq    $123, %r9, %r10
 # INTEL: {evex}  imul     r10, r9, 123
 0x62,0x54,0xfd,0x08,0x6b,0xd1,0x7b
+
+# ATT:   {nf} imulq    $123, %r9, %r10
+# INTEL: {nf} imul     r10, r9, 123
+0x62,0x54,0xfd,0x0c,0x6b,0xd1,0x7b
 
 ## and
 # ATT:   {evex}  andq    $123, %r9
@@ -55,6 +75,14 @@
 # INTEL: and     r10, r9, 123
 0x62,0xd4,0xad,0x18,0x83,0xe1,0x7b
 
+# ATT:   {nf} andq $123, %r9
+# INTEL: {nf} and  r9, 123
+0x62,0xd4,0xfd,0x0c,0x83,0xe1,0x7b
+
+# ATT:   {nf} andq $123, %r9, %r10
+# INTEL: {nf} and  r10, r9, 123
+0x62,0xd4,0xad,0x1c,0x83,0xe1,0x7b
+
 ## or
 # ATT:   {evex}  orq    $123, %r9
 # INTEL: {evex}  or     r9, 123
@@ -64,6 +92,14 @@
 # INTEL: or     r10, r9, 123
 0x62,0xd4,0xad,0x18,0x83,0xc9,0x7b
 
+# ATT:   {nf} orq $123, %r9
+# INTEL: {nf} or  r9, 123
+0x62,0xd4,0xfd,0x0c,0x83,0xc9,0x7b
+
+# ATT:   {nf} orq $123, %r9, %r10
+# INTEL: {nf} or  r10, r9, 123
+0x62,0xd4,0xad,0x1c,0x83,0xc9,0x7b
+
 ## xor
 # ATT:   {evex}  xorq    $123, %r9
 # INTEL: {evex}  xor     r9, 123
@@ -72,3 +108,11 @@
 # ATT:   xorq    $123, %r9, %r10
 # INTEL: xor     r10, r9, 123
 0x62,0xd4,0xad,0x18,0x83,0xf1,0x7b
+
+# ATT:   {nf} xorq $123, %r9
+# INTEL: {nf} xor  r9, 123
+0x62,0xd4,0xfd,0x0c,0x83,0xf1,0x7b
+
+# ATT:   {nf} xorq $123, %r9, %r10
+# INTEL: {nf} xor  r10, r9, 123
+0x62,0xd4,0xad,0x1c,0x83,0xf1,0x7b
