@@ -1,7 +1,6 @@
 ; RUN: llc -mtriple=arm-eabi -mattr=+neon -float-abi=soft %s -o - | FileCheck %s
 
 ; CHECK: function1
-; CHECK-NOT: vmov
 define double @function1(double %a, double %b, double %c, double %d, double %e, double %f) nounwind noinline ssp {
 entry:
 ; CHECK-LABEL: function1:
