@@ -58,6 +58,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strchrnul
     libc.src.string.strcmp
     libc.src.string.strcoll
+    libc.src.string.strcoll_l
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
@@ -79,6 +80,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
     libc.src.string.strxfrm
+    libc.src.string.strxfrm_l
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc

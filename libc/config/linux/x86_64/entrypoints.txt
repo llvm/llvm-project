@@ -809,6 +809,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.strtoul_l
     libc.src.stdlib.strtoull_l
 
+    # string.h entrypoints
+    libc.src.string.strcoll_l
+    libc.src.string.strxfrm_l
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
