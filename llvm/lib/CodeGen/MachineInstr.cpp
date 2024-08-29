@@ -1342,7 +1342,7 @@ bool MachineInstr::wouldBeTriviallyDead() const {
   // If we can move an instruction, we can remove it.  Otherwise, it has
   // a side-effect of some sort.
   bool SawStore = false;
-  return isSafeToMove(SawStore) || isPHI();
+  return isPHI() || isSafeToMove(SawStore);
 }
 
 static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
