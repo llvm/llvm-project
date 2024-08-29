@@ -33,7 +33,7 @@
 // these new macros as long as we ensure they match the real system definitions.
 #if SANITIZER_WINDOWS
 // Ensure that (S)SIZE_T were already defined as we are about to override them.
-#include <basetsd.h>
+#  include <basetsd.h>
 #endif
 
 #define SIZE_T __sanitizer::usize
@@ -351,7 +351,6 @@ const interpose_substitution substitution_##func_name[]             \
 // ISO C++ forbids casting between pointer-to-function and pointer-to-object,
 // so we use casts via uintptr_t (the local __sanitizer::uptr equivalent).
 namespace __interception {
-
 
 #if defined(__ELF__) && !SANITIZER_FUCHSIA
 // The use of interceptors makes many sanitizers unusable for static linking.
