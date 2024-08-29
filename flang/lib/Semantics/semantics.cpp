@@ -642,8 +642,8 @@ bool Semantics::Perform() {
       CanonicalizeAcc(context_.messages(), program_) &&
       CanonicalizeOmp(context_.messages(), program_) &&
       CanonicalizeCUDA(program_) &&
-      CanonicalizeDirectives(context_.messages(), program_) &&
       PerformStatementSemantics(context_, program_) &&
+      CanonicalizeDirectives(context_.messages(), program_) &&
       ModFileWriter{context_}
           .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
           .WriteAll();

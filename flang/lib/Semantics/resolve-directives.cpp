@@ -2750,6 +2750,14 @@ void OmpAttributeVisitor::CheckObjectInNamelistOrAssociate(
         "Variable '%s' in ASSOCIATE cannot be in a %s clause"_err_en_US,
         name.ToString(), clauseName.str());
   }
+
+  if (stmtFunctionExprSymbols_.find(ultimateSymbol) !=
+      stmtFunctionExprSymbols_.end()) {
+    context_.Say(name.source,
+        "Variable '%s' in STATEMENT FUNCTION expression cannot be in a "
+        "%s clause"_err_en_US,
+        name.ToString(), clauseName.str());
+  }
 }
 
 void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
