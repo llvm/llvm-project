@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/StructuralHash.h"
-#include "llvm/ADT/Hashing.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
@@ -24,61 +24,218 @@ namespace {
 // by the MergeFunctions pass.
 
 class StructuralHashImpl {
-  uint64_t Hash = 4;
+  stable_hash Hash = 4;
 
-  void hash(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
+  bool DetailedHash;
 
-  // This will produce different values on 32-bit and 64-bit systens as
-  // hash_combine returns a size_t. However, this is only used for
-  // detailed hashing which, in-tree, only needs to distinguish between
-  // differences in functions.
-  template <typename T> void hashArbitaryType(const T &V) {
-    hash(hash_combine(V));
-  }
+  IgnoreOperandFunc IgnoreOp = nullptr;
+  std::unique_ptr<IndexInstrMap> IndexInstruction = nullptr;
+  std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap = nullptr;
 
-  void hashType(Type *ValueType) {
-    hash(ValueType->getTypeID());
-    if (ValueType->isIntegerTy())
-      hash(ValueType->getIntegerBitWidth());
+  DenseMap<const Value *, int> ValueToId;
+
+  stable_hash hashType(Type *Ty) {
+    SmallVector<stable_hash> Hashes;
+    Hashes.emplace_back(Ty->getTypeID());
+    if (Ty->isIntegerTy())
+      Hashes.emplace_back(Ty->getIntegerBitWidth());
+    return stable_hash_combine(Hashes);
   }
 
 public:
-  StructuralHashImpl() = default;
-
-  void updateOperand(Value *Operand) {
-    hashType(Operand->getType());
-
-    // The cases enumerated below are not exhaustive and are only aimed to
-    // get decent coverage over the function.
-    if (ConstantInt *ConstInt = dyn_cast<ConstantInt>(Operand)) {
-      hashArbitaryType(ConstInt->getValue());
-    } else if (ConstantFP *ConstFP = dyn_cast<ConstantFP>(Operand)) {
-      hashArbitaryType(ConstFP->getValue());
-    } else if (Argument *Arg = dyn_cast<Argument>(Operand)) {
-      hash(Arg->getArgNo());
-    } else if (Function *Func = dyn_cast<Function>(Operand)) {
-      // Hashing the name will be deterministic as LLVM's hashing infrastructure
-      // has explicit support for hashing strings and will not simply hash
-      // the pointer.
-      hashArbitaryType(Func->getName());
+  StructuralHashImpl() = delete;
+  explicit StructuralHashImpl(bool DetailedHash,
+                              IgnoreOperandFunc IgnoreOp = nullptr)
+      : DetailedHash(DetailedHash), IgnoreOp(IgnoreOp) {
+    if (IgnoreOp) {
+      IndexInstruction = std::make_unique<IndexInstrMap>();
+      IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
     }
   }
 
-  void updateInstruction(const Instruction &Inst, bool DetailedHash) {
-    hash(Inst.getOpcode());
+  // hash_value for APInt should be stable
+  stable_hash hashAPInt(const APInt &I) { return hash_value(I); }
+
+  stable_hash hashAPFloat(const APFloat &F) {
+    SmallVector<stable_hash> Hashes;
+    const fltSemantics &S = F.getSemantics();
+    Hashes.emplace_back(APFloat::semanticsPrecision(S));
+    Hashes.emplace_back(APFloat::semanticsMaxExponent(S));
+    Hashes.emplace_back(APFloat::semanticsMinExponent(S));
+    Hashes.emplace_back(APFloat::semanticsSizeInBits(S));
+    Hashes.emplace_back(hashAPInt(F.bitcastToAPInt()));
+    return stable_hash_combine(Hashes);
+  }
+
+  stable_hash hashGlobalValue(const GlobalValue *GV) {
+    if (!GV->hasName())
+      return 0;
+    return stable_hash_name(GV->getName());
+  }
+
+  stable_hash hashConstant(const Constant *C) {
+    SmallVector<stable_hash> Hashes;
+
+    Type *Ty = C->getType();
+    Hashes.emplace_back(hashType(Ty));
+
+    if (C->isNullValue()) {
+      Hashes.emplace_back(static_cast<stable_hash>('N'));
+      return stable_hash_combine(Hashes);
+    }
+
+    auto *G = dyn_cast<GlobalValue>(C);
+    if (G) {
+      Hashes.emplace_back(hashGlobalValue(G));
+      return stable_hash_combine(Hashes);
+    }
+
+    if (const auto *Seq = dyn_cast<ConstantDataSequential>(C)) {
+      Hashes.emplace_back(xxh3_64bits(Seq->getRawDataValues()));
+      return stable_hash_combine(Hashes);
+    }
+
+    switch (C->getValueID()) {
+    case Value::UndefValueVal:
+    case Value::PoisonValueVal:
+    case Value::ConstantTokenNoneVal: {
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantIntVal: {
+      const APInt &Int = cast<ConstantInt>(C)->getValue();
+      Hashes.emplace_back(hashAPInt(Int));
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantFPVal: {
+      const APFloat &APF = cast<ConstantFP>(C)->getValueAPF();
+      Hashes.emplace_back(hashAPFloat(APF));
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantArrayVal: {
+      const ConstantArray *A = cast<ConstantArray>(C);
+      uint64_t NumElements = cast<ArrayType>(Ty)->getNumElements();
+      Hashes.emplace_back(NumElements);
+      for (uint64_t i = 0; i < NumElements; ++i) {
+        auto H = hashConstant(cast<Constant>(A->getOperand(i)));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantStructVal: {
+      const ConstantStruct *S = cast<ConstantStruct>(C);
+      unsigned NumElements = cast<StructType>(Ty)->getNumElements();
+      Hashes.emplace_back(NumElements);
+      for (unsigned i = 0; i != NumElements; ++i) {
+        auto H = hashConstant(cast<Constant>(S->getOperand(i)));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantVectorVal: {
+      const ConstantVector *V = cast<ConstantVector>(C);
+      unsigned NumElements = cast<FixedVectorType>(Ty)->getNumElements();
+      Hashes.emplace_back(NumElements);
+      for (unsigned i = 0; i != NumElements; ++i) {
+        auto H = hashConstant(cast<Constant>(V->getOperand(i)));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantExprVal: {
+      const ConstantExpr *E = cast<ConstantExpr>(C);
+      unsigned NumOperands = E->getNumOperands();
+      Hashes.emplace_back(NumOperands);
+      for (unsigned i = 0; i < NumOperands; ++i) {
+        auto H = hashConstant(cast<Constant>(E->getOperand(i)));
+        Hashes.emplace_back(H);
+      }
+      // TODO: GEPOperator
+      return stable_hash_combine(Hashes);
+    }
+    case Value::BlockAddressVal: {
+      const BlockAddress *BA = cast<BlockAddress>(C);
+      auto H = hashGlobalValue(BA->getFunction());
+      Hashes.emplace_back(H);
+      // TODO: handle BBs in the same function. can we reference a block
+      // in another TU?
+      return stable_hash_combine(Hashes);
+    }
+    case Value::DSOLocalEquivalentVal: {
+      const auto *Equiv = cast<DSOLocalEquivalent>(C);
+      auto H = hashGlobalValue(Equiv->getGlobalValue());
+      Hashes.emplace_back(H);
+      return stable_hash_combine(Hashes);
+    }
+    default: // Unknown constant, abort.
+      llvm_unreachable("Constant ValueID not recognized.");
+    }
+    return Hash;
+  }
+
+  /// Hash a value in order similar to FunctionCompartor::cmpValue().
+  /// If this is the first time the value are seen, it's added to the mapping
+  /// so that we can use its index for hash computation.
+  stable_hash hashValue(Value *V) {
+    SmallVector<stable_hash> Hashes;
+
+    // Check constant and return its hash.
+    const Constant *C = dyn_cast<Constant>(V);
+    if (C) {
+      Hashes.emplace_back(hashConstant(C));
+      return stable_hash_combine(Hashes);
+    }
+
+    // Hash argument number.
+    if (Argument *Arg = dyn_cast<Argument>(V))
+      Hashes.emplace_back(Arg->getArgNo());
+
+    // Get an index (an insertion order) for the non-constant value.
+    auto I = ValueToId.insert({V, ValueToId.size()});
+    Hashes.emplace_back(I.first->second);
+
+    return stable_hash_combine(Hashes);
+  }
+
+  stable_hash hashOperand(Value *Operand) {
+    SmallVector<stable_hash> Hashes;
+    Hashes.emplace_back(hashType(Operand->getType()));
+    Hashes.emplace_back(hashValue(Operand));
+
+    return stable_hash_combine(Hashes);
+  }
+
+  stable_hash hashInstruction(const Instruction &Inst) {
+    SmallVector<stable_hash> Hashes;
+    Hashes.emplace_back(Inst.getOpcode());
 
     if (!DetailedHash)
-      return;
+      return stable_hash_combine(Hashes);
 
-    hashType(Inst.getType());
+    Hashes.emplace_back(hashType(Inst.getType()));
 
     // Handle additional properties of specific instructions that cause
     // semantic differences in the IR.
+    // TODO: expand cmpOperations for different type of instructions
     if (const auto *ComparisonInstruction = dyn_cast<CmpInst>(&Inst))
-      hash(ComparisonInstruction->getPredicate());
+      Hashes.emplace_back(ComparisonInstruction->getPredicate());
 
-    for (const auto &Op : Inst.operands())
-      updateOperand(Op);
+    unsigned InstIdx = 0;
+    if (IndexInstruction) {
+      InstIdx = IndexInstruction->size();
+      IndexInstruction->insert({InstIdx, const_cast<Instruction *>(&Inst)});
+    }
+
+    for (unsigned OpndIdx = 0; OpndIdx < Inst.getNumOperands(); ++OpndIdx) {
+      auto *Op = Inst.getOperand(OpndIdx);
+      auto OpndHash = hashOperand(Op);
+      if (IgnoreOp && IgnoreOp(&Inst, OpndIdx)) {
+        assert(IndexPairOpndHash);
+        IndexOperandHashMap->insert({{InstIdx, OpndIdx}, OpndHash});
+      } else
+        Hashes.emplace_back(OpndHash);
+    }
+
+    return stable_hash_combine(Hashes);
   }
 
   // A function hash is calculated by considering only the number of arguments
@@ -97,15 +254,17 @@ public:
   // expensive checks for pass modification status). When modifying this
   // function, most changes should be gated behind an option and enabled
   // selectively.
-  void update(const Function &F, bool DetailedHash) {
+  void update(const Function &F) {
     // Declarations don't affect analyses.
     if (F.isDeclaration())
       return;
 
-    hash(0x62642d6b6b2d6b72); // Function header
+    SmallVector<stable_hash> Hashes;
+    Hashes.emplace_back(Hash);
+    Hashes.emplace_back(0x62642d6b6b2d6b72); // Function header
 
-    hash(F.isVarArg());
-    hash(F.arg_size());
+    Hashes.emplace_back(F.isVarArg());
+    Hashes.emplace_back(F.arg_size());
 
     SmallVector<const BasicBlock *, 8> BBs;
     SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
@@ -121,14 +280,17 @@ public:
       // This random value acts as a block header, as otherwise the partition of
       // opcodes into BBs wouldn't affect the hash, only the order of the
       // opcodes
-      hash(45798);
+      Hashes.emplace_back(45798);
       for (auto &Inst : *BB)
-        updateInstruction(Inst, DetailedHash);
+        Hashes.emplace_back(hashInstruction(Inst));
 
       for (const BasicBlock *Succ : successors(BB))
         if (VisitedBBs.insert(Succ).second)
           BBs.push_back(Succ);
     }
+
+    // Update the combined hash in place.
+    Hash = stable_hash_combine(Hashes);
   }
 
   void update(const GlobalVariable &GV) {
@@ -137,30 +299,50 @@ public:
     // we ignore anything with the `.llvm` prefix
     if (GV.isDeclaration() || GV.getName().starts_with("llvm."))
       return;
-    hash(23456); // Global header
-    hash(GV.getValueType()->getTypeID());
+    SmallVector<stable_hash> Hashes;
+    Hashes.emplace_back(Hash);
+    Hashes.emplace_back(23456); // Global header
+    Hashes.emplace_back(GV.getValueType()->getTypeID());
+
+    // Update the combined hash in place.
+    Hash = stable_hash_combine(Hashes);
   }
 
-  void update(const Module &M, bool DetailedHash) {
+  void update(const Module &M) {
     for (const GlobalVariable &GV : M.globals())
       update(GV);
     for (const Function &F : M)
-      update(F, DetailedHash);
+      update(F);
   }
 
   uint64_t getHash() const { return Hash; }
+  std::unique_ptr<IndexInstrMap> getIndexInstrMap() {
+    return std::move(IndexInstruction);
+  }
+  std::unique_ptr<IndexOperandHashMapType> getIndexPairOpndHashMap() {
+    return std::move(IndexOperandHashMap);
+  }
 };
 
 } // namespace
 
 IRHash llvm::StructuralHash(const Function &F, bool DetailedHash) {
-  StructuralHashImpl H;
-  H.update(F, DetailedHash);
+  StructuralHashImpl H(DetailedHash);
+  H.update(F);
   return H.getHash();
 }
 
 IRHash llvm::StructuralHash(const Module &M, bool DetailedHash) {
-  StructuralHashImpl H;
-  H.update(M, DetailedHash);
+  StructuralHashImpl H(DetailedHash);
+  H.update(M);
   return H.getHash();
+}
+
+FunctionHashInfo
+llvm::StructuralHashWithDifferences(const Function &F,
+                                    IgnoreOperandFunc IgnoreOp) {
+  StructuralHashImpl H(/*DetailedHash=*/true, IgnoreOp);
+  H.update(F);
+  return FunctionHashInfo(H.getHash(), H.getIndexInstrMap(),
+                          H.getIndexPairOpndHashMap());
 }
