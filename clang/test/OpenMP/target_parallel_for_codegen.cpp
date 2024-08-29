@@ -1384,7 +1384,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CALL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4
-// CHECK1-NEXT:    [[CALL1:%.*]] = call noundef signext i32 @_ZN2S12r1Ei(ptr noundef nonnull align 8 dereferenceable(8) [[S]], i32 noundef signext [[TMP2]])
+// CHECK1-NEXT:    [[CALL1:%.*]] = call noundef signext i32 @_ZN2S12r1Ei(ptr nofree noundef nonnull align 8 dereferenceable(8) [[S]], i32 noundef signext [[TMP2]])
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
 // CHECK1-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP3]], [[CALL1]]
 // CHECK1-NEXT:    store i32 [[ADD2]], ptr [[A]], align 4
@@ -1403,7 +1403,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -3048,7 +3048,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CALL]]
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4
-// CHECK3-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN2S12r1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[S]], i32 noundef [[TMP2]])
+// CHECK3-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN2S12r1Ei(ptr nofree noundef nonnull align 4 dereferenceable(8) [[S]], i32 noundef [[TMP2]])
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
 // CHECK3-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP3]], [[CALL1]]
 // CHECK3-NEXT:    store i32 [[ADD2]], ptr [[A]], align 4
@@ -3067,7 +3067,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK3-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -6276,7 +6276,7 @@ int bar(int n){
 // CHECK17-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CALL]]
 // CHECK17-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4
-// CHECK17-NEXT:    [[CALL1:%.*]] = call noundef signext i32 @_ZN2S12r1Ei(ptr noundef nonnull align 8 dereferenceable(8) [[S]], i32 noundef signext [[TMP2]])
+// CHECK17-NEXT:    [[CALL1:%.*]] = call noundef signext i32 @_ZN2S12r1Ei(ptr nofree noundef nonnull align 8 dereferenceable(8) [[S]], i32 noundef signext [[TMP2]])
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
 // CHECK17-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP3]], [[CALL1]]
 // CHECK17-NEXT:    store i32 [[ADD2]], ptr [[A]], align 4
@@ -6295,7 +6295,7 @@ int bar(int n){
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK17-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// CHECK17-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -7940,7 +7940,7 @@ int bar(int n){
 // CHECK19-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CALL]]
 // CHECK19-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // CHECK19-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4
-// CHECK19-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN2S12r1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[S]], i32 noundef [[TMP2]])
+// CHECK19-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN2S12r1Ei(ptr nofree noundef nonnull align 4 dereferenceable(8) [[S]], i32 noundef [[TMP2]])
 // CHECK19-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
 // CHECK19-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP3]], [[CALL1]]
 // CHECK19-NEXT:    store i32 [[ADD2]], ptr [[A]], align 4
@@ -7959,7 +7959,7 @@ int bar(int n){
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK19-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK19-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4

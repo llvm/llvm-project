@@ -103,15 +103,15 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[MC2:%.*]] = alloca [[STRUCT_MYCLASS_0:%.*]], align 1
 // CHECK-NEXT:    [[MC3:%.*]] = alloca [[STRUCT_MYCLASS_1:%.*]], align 1
 // CHECK-NEXT:    [[MC4:%.*]] = alloca [[STRUCT_MYCLASS_2:%.*]], align 1
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClassIssE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC1]])
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN7MyClassIisE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC2]])
-// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZN7MyClassIfsE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC3]])
-// CHECK-NEXT:    [[CALL3:%.*]] = call noundef i32 @_ZN7MyClassIdfE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC4]])
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClassIssE7foo_tmlEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[MC1]])
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN7MyClassIisE7foo_tmlEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[MC2]])
+// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZN7MyClassIfsE7foo_tmlEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[MC3]])
+// CHECK-NEXT:    [[CALL3:%.*]] = call noundef i32 @_ZN7MyClassIdfE7foo_tmlEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[MC4]])
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIfsE7foo_tmlEv(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -120,7 +120,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIdfE7foo_tmlEv(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -143,7 +143,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -152,7 +152,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -161,7 +161,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -192,7 +192,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -201,7 +201,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -210,7 +210,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

@@ -49,8 +49,8 @@ extern "C" void call_foo_no_mempcy() {
 A::~A() {} // Anchoring A so A::foo() gets generated
 B::~B() {} // Anchoring B so B::foo() gets generated
 
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK1A3fooEv(ptr noundef{{[^,]*}} %this) unnamed_addr #0 comdat align 2
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK1B3fooEv(ptr noundef{{[^,]*}} %this) unnamed_addr #5 comdat align 2
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK1A3fooEv(ptr nofree noundef{{[^,]*}} %this) unnamed_addr #0 comdat align 2
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK1B3fooEv(ptr nofree noundef{{[^,]*}} %this) unnamed_addr #5 comdat align 2
 
 // CHECK:     attributes #0 = {{{.*}}"no-builtin-memcpy"{{.*}}}
 // CHECK-NOT: attributes #0 = {{{.*}}"no-builtin-memmove"{{.*}}}

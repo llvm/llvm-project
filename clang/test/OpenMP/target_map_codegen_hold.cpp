@@ -368,7 +368,7 @@ void ST::test_present_members() {
 //
 //
 // CHECK-USE-PPC64LE-LABEL: define {{[^@]+}}@_ZN2ST20test_present_membersEv
-// CHECK-USE-PPC64LE-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] {
+// CHECK-USE-PPC64LE-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] {
 // CHECK-USE-PPC64LE-NEXT:  entry:
 // CHECK-USE-PPC64LE-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-USE-PPC64LE-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 8
@@ -669,7 +669,7 @@ void ST::test_present_members() {
 //
 //
 // CHECK-USE-I386-LABEL: define {{[^@]+}}@_ZN2ST20test_present_membersEv
-// CHECK-USE-I386-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] align 2 {
+// CHECK-USE-I386-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] align 2 {
 // CHECK-USE-I386-NEXT:  entry:
 // CHECK-USE-I386-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-USE-I386-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 4
@@ -936,7 +936,7 @@ void ST::test_present_members() {
 //
 //
 // CHECK-NOUSE-PPC64LE-LABEL: define {{[^@]+}}@_ZN2ST20test_present_membersEv
-// CHECK-NOUSE-PPC64LE-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] {
+// CHECK-NOUSE-PPC64LE-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] {
 // CHECK-NOUSE-PPC64LE-NEXT:  entry:
 // CHECK-NOUSE-PPC64LE-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NOUSE-PPC64LE-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 8
@@ -1192,7 +1192,7 @@ void ST::test_present_members() {
 //
 //
 // CHECK-NOUSE-I386-LABEL: define {{[^@]+}}@_ZN2ST20test_present_membersEv
-// CHECK-NOUSE-I386-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] align 2 {
+// CHECK-NOUSE-I386-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] align 2 {
 // CHECK-NOUSE-I386-NEXT:  entry:
 // CHECK-NOUSE-I386-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NOUSE-I386-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 4

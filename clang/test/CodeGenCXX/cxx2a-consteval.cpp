@@ -293,7 +293,7 @@ void f() {
 // EVAL-FN-NEXT:  [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // EVAL-FN-NEXT:  store ptr {{.*}}, ptr [[THIS_ADDR]], align 8
 // EVAL-FN-NEXT:  [[THIS:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// EVAL-FN-NEXT:  call void @_ZN7GH930401CC2Ev(ptr noundef nonnull align 1 dereferenceable(1) [[THIS]])
+// EVAL-FN-NEXT:  call void @_ZN7GH930401CC2Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS]])
 // EVAL-FN-NEXT:  ret void
 }
 }

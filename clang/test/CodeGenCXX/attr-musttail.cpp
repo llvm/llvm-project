@@ -36,7 +36,7 @@ int Foo::TailFrom(int x) {
   [[clang::musttail]] return MemberFunction(x);
 }
 
-// CHECK: %call = musttail call noundef i32 @_ZN3Foo14MemberFunctionEi(ptr noundef nonnull align 1 dereferenceable(1) %this1, i32 noundef %0)
+// CHECK: %call = musttail call noundef i32 @_ZN3Foo14MemberFunctionEi(ptr nofree noundef nonnull align 1 dereferenceable(1) %this1, i32 noundef %0)
 
 int Func3(int x) {
   [[clang::musttail]] return Foo::StaticMethod(x);
@@ -57,13 +57,13 @@ int Foo::TailFrom2(int x) {
   [[clang::musttail]] return ((*this).*pmf)(x);
 }
 
-// CHECK: %call = musttail call noundef i32 %5(ptr noundef nonnull align 1 dereferenceable(1) %1, i32 noundef %6)
+// CHECK: %call = musttail call noundef i32 %5(ptr nofree noundef nonnull align 1 dereferenceable(1) %1, i32 noundef %6)
 
 int Foo::TailFrom3(int x) {
   [[clang::musttail]] return (this->*pmf)(x);
 }
 
-// CHECK: %call = musttail call noundef i32 %5(ptr noundef nonnull align 1 dereferenceable(1) %1, i32 noundef %6)
+// CHECK: %call = musttail call noundef i32 %5(ptr nofree noundef nonnull align 1 dereferenceable(1) %1, i32 noundef %6)
 
 void ReturnsVoid();
 
@@ -152,7 +152,7 @@ void Struct3::NonConstMemberFunction(int *i) {
   [[clang::musttail]] return ConstMemberFunction(i);
 }
 
-// CHECK: musttail call void @_ZNK7Struct319ConstMemberFunctionEPKi(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef %0)
+// CHECK: musttail call void @_ZNK7Struct319ConstMemberFunctionEPKi(ptr nofree noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef %0)
 
 struct HasNonTrivialCopyConstructor {
   HasNonTrivialCopyConstructor(const HasNonTrivialCopyConstructor &);
@@ -213,7 +213,7 @@ int TestNonCapturingLambda() {
   [[clang::musttail]] return (+lambda)();
 }
 
-// CHECK: %call = call noundef ptr @"_ZZ22TestNonCapturingLambdavENK3$_0cvPFivEEv"(ptr noundef nonnull align 1 dereferenceable(1) %lambda)
+// CHECK: %call = call noundef ptr @"_ZZ22TestNonCapturingLambdavENK3$_0cvPFivEEv"(ptr nofree noundef nonnull align 1 dereferenceable(1) %lambda)
 // CHECK: musttail call noundef i32 %call()
 
 class TestVirtual {
@@ -225,4 +225,4 @@ void TestVirtual::TailFrom() {
   [[clang::musttail]] return TailTo();
 }
 
-// CHECK: musttail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %this1)
+// CHECK: musttail call void %0(ptr nofree noundef nonnull align 8 dereferenceable(8) %this1)

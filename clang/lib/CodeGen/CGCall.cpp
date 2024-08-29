@@ -2673,6 +2673,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                 /*TBAAInfo=*/nullptr, /*forPointeeType=*/true)
             .getAsAlign();
     Attrs.addAlignmentAttr(Alignment);
+    Attrs.addAttribute(llvm::Attribute::NoFree);
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }

@@ -85,9 +85,9 @@ void use_object() {
   obj.getData();
   obj.getThis();
 }
-// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(ptr noundef nonnull align 4 dereferenceable(1) %
-// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(ptr noundef nonnull align 4 dereferenceable(1) %
-// CHECK: define linkonce_odr noundef ptr @{{.*}}Object{{.*}}getThis{{.*}}(ptr noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(ptr nofree noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(ptr nofree noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef ptr @{{.*}}Object{{.*}}getThis{{.*}}(ptr nofree noundef nonnull align 4 dereferenceable(1) %
 } // namespace check_this
 
 //************ Passing vector types

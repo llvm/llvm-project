@@ -114,7 +114,7 @@ void test() {
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[REF_TMP]], align 4, !tbaa [[TBAA16:![0-9]+]]
 // CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[REF_TMP2]]) #[[ATTR4]]
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[REF_TMP2]], align 4, !tbaa [[TBAA16]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(ptr nonnull align 4 dereferenceable(8) [[PARTIAL_SUM]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR11:[0-9]+]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(ptr nofree nonnull align 4 dereferenceable(8) [[PARTIAL_SUM]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR11:[0-9]+]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[REF_TMP2]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[IB]], align 4, !tbaa [[TBAA14]]
@@ -156,7 +156,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC1ERKfS2_
-// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -167,7 +167,7 @@ void test() {
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RE_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__IM_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(ptr nonnull align 4 dereferenceable(8) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(ptr nofree nonnull align 4 dereferenceable(8) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR11]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -244,7 +244,7 @@ void test() {
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[REF_TMP]], align 4, !tbaa [[TBAA16]]
 // CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[REF_TMP6]]) #[[ATTR4]]
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[REF_TMP6]], align 4, !tbaa [[TBAA16]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(ptr nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(ptr nofree nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[REF_TMP6]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I7]]) #[[ATTR4]]
@@ -300,8 +300,8 @@ void test() {
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[I7]], align 4, !tbaa [[TBAA14]]
 // CHECK1-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP25]] to float
 // CHECK1-NEXT:    store float [[CONV17]], ptr [[REF_TMP16]], align 4, !tbaa [[TBAA16]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(ptr nonnull align 4 dereferenceable(8) [[REF_TMP14]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP15]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR11]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(ptr nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(ptr nofree nonnull align 4 dereferenceable(8) [[REF_TMP14]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP15]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(ptr nofree nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[REF_TMP16]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[REF_TMP15]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP14]]) #[[ATTR4]]
@@ -335,7 +335,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP35:%.*]] = icmp eq i32 [[TMP34]], 1
 // CHECK1-NEXT:    br i1 [[TMP35]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK1:       .omp.reduction.then:
-// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(ptr nonnull align 4 dereferenceable(8) [[TMP2]], ptr nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(ptr nofree nonnull align 4 dereferenceable(8) [[TMP2]], ptr nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[I7]]) #[[ATTR4]]
@@ -354,7 +354,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIfEpLIfEERS0_RKS_IT_E
-// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__C_ADDR:%.*]] = alloca ptr, align 8
@@ -362,13 +362,13 @@ void test() {
 // CHECK1-NEXT:    store ptr [[__C]], ptr [[__C_ADDR]], align 8, !tbaa [[TBAA10]]
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__C_ADDR]], align 8, !tbaa [[TBAA10]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(ptr nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(ptr nofree nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__RE_:%.*]] = getelementptr inbounds nuw %"class.std::complex", ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load float, ptr [[__RE_]], align 4, !tbaa [[TBAA18:![0-9]+]]
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[CALL]]
 // CHECK1-NEXT:    store float [[ADD]], ptr [[__RE_]], align 4, !tbaa [[TBAA18]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__C_ADDR]], align 8, !tbaa [[TBAA10]]
-// CHECK1-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(ptr nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(ptr nofree nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__IM_:%.*]] = getelementptr inbounds nuw %"class.std::complex", ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load float, ptr [[__IM_]], align 4, !tbaa [[TBAA20:![0-9]+]]
 // CHECK1-NEXT:    [[ADD3:%.*]] = fadd float [[TMP3]], [[CALL2]]
@@ -606,7 +606,7 @@ void test() {
 // CHECK1-NEXT:    store double 0.000000e+00, ptr [[REF_TMP]], align 8, !tbaa [[TBAA23:![0-9]+]]
 // CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[REF_TMP2]]) #[[ATTR4]]
 // CHECK1-NEXT:    store double 0.000000e+00, ptr [[REF_TMP2]], align 8, !tbaa [[TBAA23]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(ptr nonnull align 8 dereferenceable(16) [[PARTIAL_SUM]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(ptr nofree nonnull align 8 dereferenceable(16) [[PARTIAL_SUM]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP2]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[IB]], align 4, !tbaa [[TBAA14]]
@@ -648,7 +648,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC1ERKdS2_
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -659,7 +659,7 @@ void test() {
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RE_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__IM_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(ptr nonnull align 8 dereferenceable(16) [[THIS1]], ptr nonnull align 8 dereferenceable(8) [[TMP0]], ptr nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(ptr nofree nonnull align 8 dereferenceable(16) [[THIS1]], ptr nonnull align 8 dereferenceable(8) [[TMP0]], ptr nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR11]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -736,7 +736,7 @@ void test() {
 // CHECK1-NEXT:    store double 0.000000e+00, ptr [[REF_TMP]], align 8, !tbaa [[TBAA23]]
 // CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[REF_TMP6]]) #[[ATTR4]]
 // CHECK1-NEXT:    store double 0.000000e+00, ptr [[REF_TMP6]], align 8, !tbaa [[TBAA23]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(ptr nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(ptr nofree nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP6]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I7]]) #[[ATTR4]]
@@ -792,8 +792,8 @@ void test() {
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[I7]], align 4, !tbaa [[TBAA14]]
 // CHECK1-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP25]] to double
 // CHECK1-NEXT:    store double [[CONV17]], ptr [[REF_TMP16]], align 8, !tbaa [[TBAA23]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(ptr nonnull align 8 dereferenceable(16) [[REF_TMP14]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP15]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR11]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) ptr @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(ptr nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], ptr nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR11]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(ptr nofree nonnull align 8 dereferenceable(16) [[REF_TMP14]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP15]], ptr nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) ptr @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(ptr nofree nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], ptr nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP16]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[REF_TMP15]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[REF_TMP14]]) #[[ATTR4]]
@@ -827,7 +827,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP35:%.*]] = icmp eq i32 [[TMP34]], 1
 // CHECK1-NEXT:    br i1 [[TMP35]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK1:       .omp.reduction.then:
-// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) ptr @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(ptr nonnull align 8 dereferenceable(16) [[TMP2]], ptr nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) ptr @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(ptr nofree nonnull align 8 dereferenceable(16) [[TMP2]], ptr nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[I7]]) #[[ATTR4]]
@@ -846,7 +846,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIdEpLIdEERS0_RKS_IT_E
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__C_ADDR:%.*]] = alloca ptr, align 8
@@ -854,13 +854,13 @@ void test() {
 // CHECK1-NEXT:    store ptr [[__C]], ptr [[__C_ADDR]], align 8, !tbaa [[TBAA10]]
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__C_ADDR]], align 8, !tbaa [[TBAA10]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(ptr nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(ptr nofree nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__RE_:%.*]] = getelementptr inbounds nuw %"class.std::complex.0", ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load double, ptr [[__RE_]], align 8, !tbaa [[TBAA25:![0-9]+]]
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[CALL]]
 // CHECK1-NEXT:    store double [[ADD]], ptr [[__RE_]], align 8, !tbaa [[TBAA25]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__C_ADDR]], align 8, !tbaa [[TBAA10]]
-// CHECK1-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(ptr nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(ptr nofree nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__IM_:%.*]] = getelementptr inbounds nuw %"class.std::complex.0", ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load double, ptr [[__IM_]], align 8, !tbaa [[TBAA27:![0-9]+]]
 // CHECK1-NEXT:    [[ADD3:%.*]] = fadd double [[TMP3]], [[CALL2]]
@@ -1028,7 +1028,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC2ERKfS2_
-// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -1049,7 +1049,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4realEv
-// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[TBAA10]]
@@ -1060,7 +1060,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4imagEv
-// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[TBAA10]]
@@ -1071,7 +1071,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC2ERKdS2_
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -1092,7 +1092,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4realEv
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[TBAA10]]
@@ -1103,7 +1103,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4imagEv
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[TBAA10]]

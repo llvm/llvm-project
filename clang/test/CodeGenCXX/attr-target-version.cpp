@@ -97,7 +97,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass3gooEi.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], i32 noundef [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], i32 noundef [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
@@ -108,7 +108,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass3gooEi._Mcrc(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], i32 noundef [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], i32 noundef [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
@@ -119,7 +119,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass3gooEi._Mdotprod(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], i32 noundef [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], i32 noundef [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
@@ -130,7 +130,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass32unused_with_forward_default_declEv._Mmops(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -139,7 +139,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass41unused_with_implicit_forward_default_declEv._Mdotprod(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -148,7 +148,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass24unused_with_default_declEv._Maes(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -157,7 +157,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass23unused_with_default_defEv._Msve(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -166,7 +166,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass23unused_with_default_defEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -175,7 +175,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass32unused_with_implicit_default_defEv._Mfp16(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -184,7 +184,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass32unused_with_implicit_default_defEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -193,7 +193,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass40unused_with_implicit_forward_default_defEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -202,7 +202,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass40unused_with_implicit_forward_default_defEv._Mlse(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -211,7 +211,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN7MyClass22unused_without_defaultEv._Mrdm(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR10:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -223,7 +223,7 @@ int bar() {
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr nofree noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z3fooi(i32 noundef 1)
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
 // CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_Z3foov()

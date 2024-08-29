@@ -24,7 +24,7 @@ public:
 template class A<0>;
 #endif // HEADER
 // CHECK-LABEL: define {{[^@]+}}@_ZN1AILi0EE3fooEv
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0:[0-9]+]] align 2 {
+// CHECK-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0:[0-9]+]] align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[PTR:%.*]] = alloca ptr, align 8
@@ -40,7 +40,7 @@ template class A<0>;
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN1AILi0EE3fooEv
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0:[0-9]+]] align 2 {
+// SIMD-ONLY0-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0:[0-9]+]] align 2 {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    [[PTR:%.*]] = alloca ptr, align 8

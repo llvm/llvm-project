@@ -161,11 +161,11 @@ void ArrayInit() {
   // CHECK: store ptr %arr, ptr %arrayinit.endOfInit, align 8
   Printy arr[4] = {
     Printy("a"),
-    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arr, ptr noundef @.str)
+    // CHECK: call void @_ZN6PrintyC1EPKc(ptr nofree noundef nonnull align 8 dereferenceable(8) %arr, ptr noundef @.str)
     // CHECK: [[ARRAYINIT_ELEMENT1:%.+]] = getelementptr inbounds %struct.Printy, ptr %arr, i64 1
     // CHECK: store ptr [[ARRAYINIT_ELEMENT1]], ptr %arrayinit.endOfInit, align 8
     Printy("b"),
-    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT1]], ptr noundef @.str.1)
+    // CHECK: call void @_ZN6PrintyC1EPKc(ptr nofree noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT1]], ptr noundef @.str.1)
     // CHECK: [[ARRAYINIT_ELEMENT2:%.+]] = getelementptr inbounds %struct.Printy, ptr %arr, i64 2
     // CHECK: store ptr [[ARRAYINIT_ELEMENT2]], ptr %arrayinit.endOfInit, align 8
     ({
@@ -217,7 +217,7 @@ void ArrayInit() {
   // CHECK:       [[ARRAY_DESTROY_BODY2]]:
   // CHECK-NEXT:    %arraydestroy.elementPast = phi ptr [ %1, %cleanup ], [ %arraydestroy.element, %[[ARRAY_DESTROY_BODY2]] ]
   // CHECK-NEXT:    %arraydestroy.element = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast, i64 -1
-  // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+  // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr nofree noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
   // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, %arr
   // CHECK-NEXT:    br i1 %arraydestroy.done, label %[[ARRAY_DESTROY_DONE2]], label %[[ARRAY_DESTROY_BODY2]]
 
@@ -265,7 +265,7 @@ void ArraySubobjects() {
     // CHECK:       [[ARRAY_DESTROY_BODY]]:
     // CHECK-NEXT:    %arraydestroy.elementPast = phi ptr [ %0, %if.then ], [ %arraydestroy.element, %[[ARRAY_DESTROY_BODY]] ]
     // CHECK-NEXT:    %arraydestroy.element = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast, i64 -1
-    // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+    // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr nofree noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
     // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, %arr2
     // CHECK-NEXT:    br i1 %arraydestroy.done, label %[[ARRAY_DESTROY_DONE]], label %[[ARRAY_DESTROY_BODY]]
 
@@ -277,7 +277,7 @@ void ArraySubobjects() {
     // CHECK:       [[ARRAY_DESTROY_BODY2]]:
     // CHECK-NEXT:    %arraydestroy.elementPast4 = phi ptr [ %1, %[[ARRAY_DESTROY_DONE]] ], [ %arraydestroy.element5, %[[ARRAY_DESTROY_BODY2]] ]
     // CHECK-NEXT:    %arraydestroy.element5 = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast4, i64 -1
-    // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element5)
+    // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr nofree noundef nonnull align 8 dereferenceable(8) %arraydestroy.element5)
     // CHECK-NEXT:    %arraydestroy.done6 = icmp eq ptr %arraydestroy.element5, [[ARRAY_BEGIN]]
     // CHECK-NEXT:    br i1 %arraydestroy.done6, label %[[ARRAY_DESTROY_DONE2:.+]], label %[[ARRAY_DESTROY_BODY2]]
 
@@ -384,7 +384,7 @@ void NewArrayInit() {
   // CHECK:       arraydestroy.body:
   // CHECK-NEXT:    %arraydestroy.elementPast = phi ptr [ %{{.*}}, %if.then ], [ %arraydestroy.element, %arraydestroy.body ]
   // CHECK-NEXT:    %arraydestroy.element = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast, i64 -1
-  // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+  // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr nofree noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
   // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, %0
   // CHECK-NEXT:    br i1 %arraydestroy.done, label %arraydestroy.done{{.*}}, label %arraydestroy.body
 

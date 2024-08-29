@@ -4,9 +4,9 @@
 
 // CHECK-LABEL: define internal void @"?__invoke@<lambda_0>@?0??test@@YAXXZ@CA@UTrivial@@@Z"(
 // CHECK: %unused.capture = alloca %class.anon, align 1
-// CHECK: call void @"??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(ptr noundef nonnull align 1 dereferenceable(1) %unused.capture,
+// CHECK: call void @"??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(ptr nofree noundef nonnull align 1 dereferenceable(1) %unused.capture,
 
-// CHECK: define internal void @"??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this,
+// CHECK: define internal void @"??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(ptr nofree noundef nonnull align 1 dereferenceable(1) %this,
 
 struct Trivial {
   int x;
@@ -20,9 +20,9 @@ void test() {
 
 // CHECK-LABEL: define internal i32 @"?__invoke@<lambda_1>@?0??test2@@YAXXZ@CA@H@Z"(
 // CHECK: %unused.capture = alloca %class.anon.0, align 1
-// CHECK: call void @"??R<lambda_1>@?0??test2@@YAXXZ@QEBA@H@Z"(ptr noundef nonnull align 1 dereferenceable(1) %unused.capture,
+// CHECK: call void @"??R<lambda_1>@?0??test2@@YAXXZ@QEBA@H@Z"(ptr nofree noundef nonnull align 1 dereferenceable(1) %unused.capture,
 
-// CHECK: define internal void @"??R<lambda_1>@?0??test2@@YAXXZ@QEBA@H@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this,
+// CHECK: define internal void @"??R<lambda_1>@?0??test2@@YAXXZ@QEBA@H@Z"(ptr nofree noundef nonnull align 1 dereferenceable(1) %this,
 
 Trivial (*fnptr2)(int);
 

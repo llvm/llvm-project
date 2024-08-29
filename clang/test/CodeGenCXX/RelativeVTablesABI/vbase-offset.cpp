@@ -9,7 +9,7 @@
 // CHECK-NEXT:   [[vbase_offset_ptr:%.+]] = getelementptr inbounds i8, ptr [[vtable]], i64 -12
 // CHECK-NEXT:   [[vbase_offset:%.+]] = load i32, ptr [[vbase_offset_ptr]], align 4
 // CHECK-NEXT:   [[adj_this:%.+]] = getelementptr inbounds i8, ptr %this1, i32 [[vbase_offset]]
-// CHECK:        [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(ptr noundef{{[^,]*}} [[adj_this]], i32 noundef {{.*}})
+// CHECK:        [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(ptr nofree noundef{{[^,]*}} [[adj_this]], i32 noundef {{.*}})
 // CHECK:        ret i32 [[call]]
 
 class Base {

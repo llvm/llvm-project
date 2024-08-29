@@ -304,7 +304,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[ADD19:%.*]] = add nsw i32 [[CONV18]], 1
 // CHECK1-NEXT:    [[CONV20:%.*]] = trunc i32 [[ADD19]] to i8
 // CHECK1-NEXT:    store i8 [[CONV20]], ptr [[Y]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) ptr @_ZN2TTIxcEixEi(ptr nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR10:[0-9]+]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) ptr @_ZN2TTIxcEixEi(ptr nofree nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR10:[0-9]+]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i64, ptr [[CALL]], align 8
 // CHECK1-NEXT:    [[ADD21:%.*]] = add nsw i64 [[TMP17]], 1
 // CHECK1-NEXT:    store i64 [[ADD21]], ptr [[CALL]], align 8
@@ -315,7 +315,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -690,7 +690,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[ADD19:%.*]] = add nsw i32 [[CONV18]], 1
 // CHECK2-NEXT:    [[CONV20:%.*]] = trunc i32 [[ADD19]] to i8
 // CHECK2-NEXT:    store i8 [[CONV20]], ptr [[Y]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) ptr @_ZN2TTIxcEixEi(ptr nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR10:[0-9]+]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) ptr @_ZN2TTIxcEixEi(ptr nofree nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR10:[0-9]+]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = load i64, ptr [[CALL]], align 8
 // CHECK2-NEXT:    [[ADD21:%.*]] = add nsw i64 [[TMP17]], 1
 // CHECK2-NEXT:    store i64 [[ADD21]], ptr [[CALL]], align 8
@@ -701,7 +701,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK2-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (ptr nofree nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4

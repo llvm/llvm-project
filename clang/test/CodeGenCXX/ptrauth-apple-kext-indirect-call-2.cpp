@@ -20,7 +20,7 @@ void B::VF() {}
 void FUNC(B* p) {
 // CHECK: [[T1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV1A, i64 2)
 // CHECK-NEXT:  [[BT1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV1A, i64 2) to i64), i64 12401)
-// CHECK-NEXT:  [[T2:%.*]] = call noundef ptr [[T1]](ptr noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BT1]]) ]
+// CHECK-NEXT:  [[T2:%.*]] = call noundef ptr [[T1]](ptr nofree noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BT1]]) ]
   const char* c = p->A::abc();
 }
 
@@ -36,7 +36,7 @@ struct Derived : public Base {
 void FUNC1(Derived* p) {
 // CHECK: [[U1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV4Base, i64 2)
 // CHECK-NEXT: [[BU1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV4Base, i64 2) to i64), i64 64320)
-// CHECK-NEXT:  [[U2:%.*]] = call noundef ptr [[U1]](ptr noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BU1]]) ]
+// CHECK-NEXT:  [[U2:%.*]] = call noundef ptr [[U1]](ptr nofree noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BU1]]) ]
   char* c = p->Base::abc();
 }
 
@@ -53,7 +53,7 @@ char* Derived2::efg(void) const { return 0; }
 void FUNC2(Derived2* p) {
 // CHECK: [[V1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV8Derived2, i64 3)
 // CHECK-NEXT:  [[BV1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV8Derived2, i64 3) to i64), i64 36603)
-// CHECK-NEXT:  [[V2:%.*]] = call noundef ptr [[V1]](ptr noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BV1]]) ]
+// CHECK-NEXT:  [[V2:%.*]] = call noundef ptr [[V1]](ptr nofree noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BV1]]) ]
   char* c = p->Derived2::efg();
 }
 
@@ -75,7 +75,7 @@ char* D2::abc(void) const { return 0; }
 void FUNC3(Sub* p) {
 // CHECK: [[W1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2D2, i64 3)
 // CHECK-NEXT:  [[BW1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV2D2, i64 3) to i64), i64 20222)
-// CHECK-NEXT:  [[W2:%.*]] = call noundef ptr [[W1]](ptr noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BW1]]) ]
+// CHECK-NEXT:  [[W2:%.*]] = call noundef ptr [[W1]](ptr nofree noundef {{.*}}) [ "ptrauth"(i32 0, i64 [[BW1]]) ]
   char* c = p->D2::abc();
 }
 
@@ -100,6 +100,6 @@ void FUNC4(Derived4* p) {
 // CHECK: %[[T5:[0-9]+]] = load ptr, ptr %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 426)
-// CHECK: call void %[[T5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](ptr nofree noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
   p->abc();
 }

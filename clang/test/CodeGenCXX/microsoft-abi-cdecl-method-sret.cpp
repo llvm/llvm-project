@@ -41,4 +41,4 @@ struct A {
 S A::f(int x) {
   return S();
 }
-// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(ptr inreg noundef nonnull align 1 dereferenceable(1) %this, ptr dead_on_unwind inreg noalias writable sret(%struct.S) align 4 %agg.result, i32 noundef %x)
+// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(ptr inreg nofree noundef nonnull align 1 dereferenceable(1) %this, ptr dead_on_unwind inreg noalias writable sret(%struct.S) align 4 %agg.result, i32 noundef %x)

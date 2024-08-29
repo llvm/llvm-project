@@ -88,7 +88,7 @@ void something_else_again() {
 // CHECK: load ptr, ptr
 // CHECK: load ptr, ptr
 // CHECK: %[[BG:.*]] = load ptr, ptr
-// CHECK-NEXT: call void %[[BG]](ptr noundef{{.*}}
+// CHECK-NEXT: call void %[[BG]](ptr nofree noundef{{.*}}
 // CHECK: call void @_ZN1AC1Ev({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1fEv({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1gEv({{.*}}) #[[ATTR0]]

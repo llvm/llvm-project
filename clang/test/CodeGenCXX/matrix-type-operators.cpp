@@ -196,7 +196,7 @@ MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 5> Mat1,
 
 void test_IntWrapper_Multiply(MyMatrix<double, 10, 9> &m, IntWrapper &w3) {
   // CHECK-LABEL: define{{.*}} void @_Z24test_IntWrapper_MultiplyR8MyMatrixIdLj10ELj9EER10IntWrapper(
-  // CHECK:       [[SCALAR:%.*]] = call noundef i32 @_ZN10IntWrappercviEv(ptr noundef {{.*}})
+  // CHECK:       [[SCALAR:%.*]] = call noundef i32 @_ZN10IntWrappercviEv(ptr nofree noundef {{.*}})
   // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}

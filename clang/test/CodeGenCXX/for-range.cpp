@@ -40,7 +40,7 @@ extern B array[5];
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_B:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[A]])
 // CHECK-NEXT:    store ptr @array, ptr [[__RANGE1]], align 8
 // CHECK-NEXT:    store ptr @array, ptr [[__BEGIN1]], align 8
 // CHECK-NEXT:    store ptr getelementptr inbounds ([[STRUCT_B]], ptr @array, i64 5), ptr [[__END1]], align 8
@@ -52,8 +52,8 @@ extern B array[5];
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[B]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP2]])
-// CHECK-NEXT:    call void @_ZN1BD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @_ZN1BC1ERKS_(ptr nofree noundef nonnull align 1 dereferenceable(1) [[B]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP2]])
+// CHECK-NEXT:    call void @_ZN1BD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
@@ -61,7 +61,7 @@ extern B array[5];
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND]]
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void for_array() {
@@ -78,8 +78,8 @@ void for_array() {
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_B:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]])
-// CHECK-NEXT:    call void @_ZN1CC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[A]])
+// CHECK-NEXT:    call void @_ZN1CC1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK-NEXT:    store ptr [[REF_TMP]], ptr [[__RANGE1]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE1]], align 8
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z5beginR1C(ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]])
@@ -94,12 +94,12 @@ void for_array() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[TMP2]], [[TMP3]]
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.cond.cleanup:
-// CHECK-NEXT:    call void @_ZN1CD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1CD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_END:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[B]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
-// CHECK-NEXT:    call void @_ZN1BD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1BC1ERKS_(ptr nofree noundef nonnull align 1 dereferenceable(1) [[B]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
+// CHECK-NEXT:    call void @_ZN1BD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
@@ -107,7 +107,7 @@ void for_array() {
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND]]
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void for_range() {
@@ -124,14 +124,14 @@ void for_range() {
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_B:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]])
-// CHECK-NEXT:    call void @_ZN1DC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[A]])
+// CHECK-NEXT:    call void @_ZN1DC1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK-NEXT:    store ptr [[REF_TMP]], ptr [[__RANGE1]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE1]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef ptr @_ZN1D5beginEv(ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]])
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef ptr @_ZN1D5beginEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[TMP0]])
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[__BEGIN1]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef ptr @_ZN1D3endEv(ptr noundef nonnull align 1 dereferenceable(1) [[TMP1]])
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef ptr @_ZN1D3endEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[TMP1]])
 // CHECK-NEXT:    store ptr [[CALL1]], ptr [[__END1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK:       for.cond:
@@ -140,12 +140,12 @@ void for_range() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[TMP2]], [[TMP3]]
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.cond.cleanup:
-// CHECK-NEXT:    call void @_ZN1DD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1DD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_END:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[B]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
-// CHECK-NEXT:    call void @_ZN1BD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1BC1ERKS_(ptr nofree noundef nonnull align 1 dereferenceable(1) [[B]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
+// CHECK-NEXT:    call void @_ZN1BD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
@@ -153,7 +153,7 @@ void for_range() {
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND]]
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void for_member_range() {

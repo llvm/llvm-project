@@ -1945,12 +1945,12 @@ int main (int argc, char **argv) {
 // CHECK17-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK17-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK17-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK17-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK17-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
+// CHECK17-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 8
@@ -2123,12 +2123,12 @@ int main (int argc, char **argv) {
 // CHECK19-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK19-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK19-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK19-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK19-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK19-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 4
@@ -2300,12 +2300,12 @@ int main (int argc, char **argv) {
 // CHECK21-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK21-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK21-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK21-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK21-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
+// CHECK21-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 8
@@ -2528,12 +2528,12 @@ int main (int argc, char **argv) {
 // CHECK23-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK23-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK23-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK23-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK23-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK23-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [3 x ptr], align 4
@@ -2754,12 +2754,12 @@ int main (int argc, char **argv) {
 // CHECK25-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK25-NEXT:  entry:
 // CHECK25-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK25-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK25-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK25-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK25-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
+// CHECK25-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
 // CHECK25-NEXT:  entry:
 // CHECK25-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK25-NEXT:    [[TMP:%.*]] = alloca i32, align 4
@@ -2812,12 +2812,12 @@ int main (int argc, char **argv) {
 // CHECK27-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK27-NEXT:  entry:
 // CHECK27-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK27-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK27-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK27-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK27-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK27-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK27-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
 // CHECK27-NEXT:  entry:
 // CHECK27-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK27-NEXT:    [[TMP:%.*]] = alloca i32, align 4
@@ -2869,12 +2869,12 @@ int main (int argc, char **argv) {
 // CHECK29-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK29-NEXT:  entry:
 // CHECK29-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK29-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK29-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK29-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK29-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK29-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
+// CHECK29-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat {
 // CHECK29-NEXT:  entry:
 // CHECK29-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK29-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
@@ -2969,12 +2969,12 @@ int main (int argc, char **argv) {
 // CHECK31-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK31-NEXT:  entry:
 // CHECK31-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK31-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr noundef nonnull align 4 dereferenceable(496) [[V]])
+// CHECK31-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN2SSIiLi123ELx456EE3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(496) [[V]])
 // CHECK31-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK31-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK31-SAME: (ptr noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK31-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(496) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
 // CHECK31-NEXT:  entry:
 // CHECK31-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK31-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1

@@ -104,7 +104,7 @@ void foo() {
 // CHECK-NEXT:    store ptr null, ptr [[PTR]], align 8
 // CHECK-NEXT:    ret void
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1B3fooEv
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 8
@@ -146,34 +146,34 @@ void foo() {
 // CHECK1-SAME: () #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[B:%.*]] = alloca [[CLASS_B:%.*]], align 8
-// CHECK1-NEXT:    call void @_ZN1BC1Ev(ptr noundef nonnull align 8 dereferenceable(16) [[B]]) #[[ATTR1:[0-9]+]]
-// CHECK1-NEXT:    call void @_ZN1B3fooEv(ptr noundef nonnull align 8 dereferenceable(16) [[B]])
+// CHECK1-NEXT:    call void @_ZN1BC1Ev(ptr nofree noundef nonnull align 8 dereferenceable(16) [[B]]) #[[ATTR1:[0-9]+]]
+// CHECK1-NEXT:    call void @_ZN1B3fooEv(ptr nofree noundef nonnull align 8 dereferenceable(16) [[B]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1BC1Ev
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN1BC2Ev(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]]) #[[ATTR1]]
+// CHECK1-NEXT:    call void @_ZN1BC2Ev(ptr nofree noundef nonnull align 8 dereferenceable(16) [[THIS1]]) #[[ATTR1]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1BC2Ev
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN1AC2Ev(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]]) #[[ATTR1]]
+// CHECK1-NEXT:    call void @_ZN1AC2Ev(ptr nofree noundef nonnull align 8 dereferenceable(16) [[THIS1]]) #[[ATTR1]]
 // CHECK1-NEXT:    store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2), ptr [[THIS1]], align 8
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1AC2Ev
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -185,7 +185,7 @@ void foo() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1B3fooEv
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+// CHECK2-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
@@ -227,34 +227,34 @@ void foo() {
 // CHECK2-SAME: () #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[B:%.*]] = alloca [[CLASS_B:%.*]], align 4
-// CHECK2-NEXT:    call void @_ZN1BC1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[B]]) #[[ATTR1:[0-9]+]]
-// CHECK2-NEXT:    call void @_ZN1B3fooEv(ptr noundef nonnull align 4 dereferenceable(8) [[B]])
+// CHECK2-NEXT:    call void @_ZN1BC1Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[B]]) #[[ATTR1:[0-9]+]]
+// CHECK2-NEXT:    call void @_ZN1B3fooEv(ptr nofree noundef nonnull align 4 dereferenceable(8) [[B]])
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1BC1Ev
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK2-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN1BC2Ev(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR1]]
+// CHECK2-NEXT:    call void @_ZN1BC2Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR1]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1BC2Ev
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK2-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN1AC2Ev(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR1]]
+// CHECK2-NEXT:    call void @_ZN1AC2Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR1]]
 // CHECK2-NEXT:    store ptr getelementptr inbounds inrange(-8, 4) ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2), ptr [[THIS1]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1AC2Ev
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK2-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4

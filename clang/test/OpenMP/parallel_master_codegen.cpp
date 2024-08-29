@@ -440,7 +440,7 @@ void parallel_master_allocate() {
 // CHECK17-NEXT:    [[A:%.*]] = alloca [[STRUCT_ST:%.*]], align 4
 // CHECK17-NEXT:    [[Y_CASTED:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[Y_CASTED1:%.*]] = alloca i64, align 8
-// CHECK17-NEXT:    call void @_ZN2StC1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[A]])
+// CHECK17-NEXT:    call void @_ZN2StC1Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[A]])
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZZ36parallel_master_default_firstprivatevE1y, align 4
 // CHECK17-NEXT:    store i32 [[TMP0]], ptr [[Y_CASTED]], align 4
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i64, ptr [[Y_CASTED]], align 8
@@ -448,17 +448,17 @@ void parallel_master_allocate() {
 // CHECK17-NEXT:    store i32 [[TMP2]], ptr [[Y_CASTED1]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, ptr [[Y_CASTED1]], align 8
 // CHECK17-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1:[0-9]+]], i32 3, ptr @_Z36parallel_master_default_firstprivatev.omp_outlined, ptr [[A]], i64 [[TMP1]], i64 [[TMP3]])
-// CHECK17-NEXT:    call void @_ZN2StD1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK17-NEXT:    call void @_ZN2StD1Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[A]]) #[[ATTR3:[0-9]+]]
 // CHECK17-NEXT:    ret void
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StC1Ev
-// CHECK17-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK17-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK17-NEXT:    call void @_ZN2StC2Ev(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]])
+// CHECK17-NEXT:    call void @_ZN2StC2Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS1]])
 // CHECK17-NEXT:    ret void
 //
 //
@@ -501,22 +501,22 @@ void parallel_master_allocate() {
 // CHECK17-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK17-NEXT:    br label [[OMP_IF_END]]
 // CHECK17:       omp_if.end:
-// CHECK17-NEXT:    call void @_ZN2StD1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[A3]]) #[[ATTR3]]
+// CHECK17-NEXT:    call void @_ZN2StD1Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[A3]]) #[[ATTR3]]
 // CHECK17-NEXT:    ret void
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StD1Ev
-// CHECK17-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK17-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK17-NEXT:    call void @_ZN2StD2Ev(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
+// CHECK17-NEXT:    call void @_ZN2StD2Ev(ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
 // CHECK17-NEXT:    ret void
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StC2Ev
-// CHECK17-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
+// CHECK17-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -529,7 +529,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StD2Ev
-// CHECK17-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
+// CHECK17-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

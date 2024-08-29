@@ -304,7 +304,7 @@ int main()
 // CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK1:       arrayctor.loop:
 // CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN2S2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
+// CHECK1-NEXT:    call void @_ZN2S2C1Ev(ptr nofree noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
 // CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_S2]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
 // CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
@@ -396,12 +396,12 @@ int main()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S2C1Ev
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN2S2C2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]])
+// CHECK1-NEXT:    call void @_ZN2S2C2Ev(ptr nofree noundef nonnull align 4 dereferenceable(4) [[THIS1]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -429,7 +429,7 @@ int main()
 // CHECK1-NEXT:    store ptr [[O]], ptr [[O_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[O_ADDR]], align 8
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x %class.S2], ptr [[TMP0]], i64 0, i64 0
-// CHECK1-NEXT:    call void @_ZN2S2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[O1]])
+// CHECK1-NEXT:    call void @_ZN2S2C1Ev(ptr nofree noundef nonnull align 4 dereferenceable(4) [[O1]])
 // CHECK1-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 // CHECK1-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], [[TMP2]]
@@ -459,7 +459,7 @@ int main()
 // CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN2S2plERS_(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX]], ptr noundef nonnull align 4 dereferenceable(4) [[O1]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN2S2plERS_(ptr nofree noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX]], ptr noundef nonnull align 4 dereferenceable(4) [[O1]])
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX]], ptr align 4 [[CALL]], i64 4, i1 false)
 // CHECK1-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB1]], i32 [[TMP10]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
@@ -467,7 +467,7 @@ int main()
 // CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB2]], i32 [[TMP13]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN2S2plERS_(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX]], ptr noundef nonnull align 4 dereferenceable(4) [[O1]])
+// CHECK1-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN2S2plERS_(ptr nofree noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX]], ptr noundef nonnull align 4 dereferenceable(4) [[O1]])
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX]], ptr align 4 [[CALL2]], i64 4, i1 false)
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB2]], i32 [[TMP13]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
@@ -488,7 +488,7 @@ int main()
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN2S2plERS_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP7]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP5]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN2S2plERS_(ptr nofree noundef nonnull align 4 dereferenceable(4) [[TMP7]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP5]])
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 4 [[CALL]], i64 4, i1 false)
 // CHECK1-NEXT:    ret void
 //
@@ -783,7 +783,7 @@ int main()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S2C2Ev
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK1-SAME: (ptr nofree noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

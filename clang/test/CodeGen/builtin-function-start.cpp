@@ -34,7 +34,7 @@ void A::h() {}
 // CHECK: define {{.*}}i32 @_ZNK1A1iEv(ptr {{.*}}%this)
 int A::i() const { return 0; }
 
-// CHECK: define {{.*}}i32 @_ZNK1A1iEi(ptr noundef {{.*}}%this, i32 noundef %n)
+// CHECK: define {{.*}}i32 @_ZNK1A1iEi(ptr nofree noundef {{.*}}%this, i32 noundef %n)
 int A::i(int n) const { return 0; }
 
 void h(void) {

@@ -17,9 +17,9 @@ template<typename T>
 struct B {
   void test() {a = {};}
   // CHECK: define linkonce_odr void @_ZN1BIiE4testEv
-  // CHECK: call void @_ZN1AC1Ev(ptr noundef nonnull align 1 dereferenceable(1)
+  // CHECK: call void @_ZN1AC1Ev(ptr nofree noundef nonnull align 1 dereferenceable(1)
   // CHECK: [[CALL:%.*]] = call noundef nonnull align 1 dereferenceable(1) ptr @_ZNR1AaSES_
-  // CHECK: call void @_ZN1AD2Ev(ptr noundef nonnull align 1 dereferenceable(1)
+  // CHECK: call void @_ZN1AD2Ev(ptr nofree noundef nonnull align 1 dereferenceable(1)
 
   A a;
 };

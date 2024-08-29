@@ -38,5 +38,5 @@ void f(SubTempl<int>* t) {
 }
 
 // CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
-// CHECK: define internal void @_ZN5TemplIiE1fEv(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %this)
-// CHECK: define internal void @_ZN5TemplIiE1gEv(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %this)
+// CHECK: define internal void @_ZN5TemplIiE1fEv(ptr nofree noundef nonnull align {{[0-9]+}} dereferenceable(8) %this)
+// CHECK: define internal void @_ZN5TemplIiE1gEv(ptr nofree noundef nonnull align {{[0-9]+}} dereferenceable(8) %this)

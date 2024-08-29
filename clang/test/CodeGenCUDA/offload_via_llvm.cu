@@ -72,8 +72,8 @@ __global__ void foo(int, short, void *, void *) {}
 // HST-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_DIM3:%.*]], align 4
 // HST-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_DIM3]], align 4
 // HST-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 4
-// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP]], i32 noundef 3, i32 noundef 1, i32 noundef 1)
-// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP1]], i32 noundef 7, i32 noundef 1, i32 noundef 1)
+// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr nofree noundef nonnull align 4 dereferenceable(12) [[AGG_TMP]], i32 noundef 3, i32 noundef 1, i32 noundef 1)
+// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr nofree noundef nonnull align 4 dereferenceable(12) [[AGG_TMP1]], i32 noundef 7, i32 noundef 1, i32 noundef 1)
 // HST-NEXT:    [[CALL:%.*]] = call i32 @__llvmPushCallConfiguration(ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP1]], i32 noundef 0, ptr noundef null)
 // HST-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[CALL]], 0
 // HST-NEXT:    br i1 [[TOBOOL]], label %[[KCALL_END:.*]], label %[[KCALL_CONFIGOK:.*]]

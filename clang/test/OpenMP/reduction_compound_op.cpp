@@ -86,7 +86,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
 // NORM-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
 // NORM-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // NORM-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.1, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // NORM-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.2, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
@@ -99,12 +99,12 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
-// NORM-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// NORM-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // NORM-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// NORM-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC2Ev(ptr nofree nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
 // NORM-NEXT:    ret void
 //
 //
@@ -155,7 +155,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1:[0-9]+]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -213,18 +213,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -247,9 +247,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -300,7 +300,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -358,18 +358,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -392,9 +392,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -445,7 +445,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -503,18 +503,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointmlERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointmlERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointmlERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointmlERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -537,9 +537,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointmlERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointmlERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -590,7 +590,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -648,18 +648,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointanERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointanERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointanERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointanERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -682,9 +682,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointanERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointanERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -735,7 +735,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -793,18 +793,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointorERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointorERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointorERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointorERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -827,9 +827,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointorERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointorERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -880,7 +880,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -938,18 +938,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointeoERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointeoERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointeoERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointeoERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -972,9 +972,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointeoERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointeoERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -1025,7 +1025,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1083,18 +1083,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -1117,9 +1117,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
@@ -1170,7 +1170,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1228,18 +1228,18 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
 // NORM-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // NORM-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // NORM-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // NORM-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
@@ -1262,14 +1262,14 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // NORM-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // NORM-NEXT:    ret void
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
-// NORM-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// NORM-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1289,7 +1289,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
 // COMP-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
 // COMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // COMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.1, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // COMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.2, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
@@ -1302,12 +1302,12 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
-// COMP-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// COMP-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // COMP-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// COMP-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC2Ev(ptr nofree nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
 // COMP-NEXT:    ret void
 //
 //
@@ -1356,7 +1356,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1:[0-9]+]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1414,14 +1414,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -1443,7 +1443,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    ret void
 //
 //
@@ -1492,7 +1492,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1550,14 +1550,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -1579,7 +1579,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointpLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    ret void
 //
 //
@@ -1628,7 +1628,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1686,14 +1686,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointmLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointmLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointmLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointmLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -1715,7 +1715,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointmLERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointmLERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    ret void
 //
 //
@@ -1764,7 +1764,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1822,14 +1822,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaNERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaNERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaNERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaNERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -1851,7 +1851,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaNERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaNERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    ret void
 //
 //
@@ -1900,7 +1900,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1958,14 +1958,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointoRERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointoRERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointoRERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointoRERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -1987,7 +1987,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointoRERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointoRERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    ret void
 //
 //
@@ -2036,7 +2036,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2094,14 +2094,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointeOERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointeOERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointeOERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointeOERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -2123,7 +2123,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointeOERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointeOERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    ret void
 //
 //
@@ -2174,7 +2174,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2232,18 +2232,18 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// COMP-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// COMP-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -2266,9 +2266,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// COMP-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// COMP-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // COMP-NEXT:    ret void
 //
 //
@@ -2319,7 +2319,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2377,18 +2377,18 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // COMP-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP24]], ptr @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
 // COMP-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4
 // COMP-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
+// COMP-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[RED3]])
 // COMP-NEXT:    store i64 [[CALL11]], ptr [[REF_TMP10]], align 4
-// COMP-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
+// COMP-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP1]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP10]])
 // COMP-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP27]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
@@ -2411,14 +2411,14 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 // COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
+// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[TMP5]])
 // COMP-NEXT:    store i64 [[CALL]], ptr [[REF_TMP]], align 4
-// COMP-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// COMP-NEXT:    [[CALL2:%.*]] = call nonnull align 4 dereferenceable(8) ptr @_ZN5PointaSERKS_(ptr nofree nonnull align 4 dereferenceable(8) [[TMP7]], ptr nonnull align 4 dereferenceable(8) [[REF_TMP]])
 // COMP-NEXT:    ret void
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
-// COMP-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// COMP-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -2446,7 +2446,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[I43:%.*]] = alloca i32, align 4
 // SIMD-ONLY-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // SIMD-ONLY-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// SIMD-ONLY-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
+// SIMD-ONLY-NEXT:    call void @_ZN5PointC1Ev(ptr nofree nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND:%.*]]
 // SIMD-ONLY:       for.cond:
@@ -2595,17 +2595,17 @@ void foo(int N, Point const *Points) {
 //
 //
 // SIMD-ONLY-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
-// SIMD-ONLY-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // SIMD-ONLY-NEXT:  entry:
 // SIMD-ONLY-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY-NEXT:    call void @_ZN5PointC2Ev(ptr nofree nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY-NEXT:    ret void
 //
 //
 // SIMD-ONLY-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
-// SIMD-ONLY-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY-SAME: (ptr nofree nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // SIMD-ONLY-NEXT:  entry:
 // SIMD-ONLY-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

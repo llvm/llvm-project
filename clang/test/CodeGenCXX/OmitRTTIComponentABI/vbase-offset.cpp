@@ -17,7 +17,7 @@
 // POINTER-NEXT:   [[vbase_offset_ptr:%.+]] = getelementptr inbounds i8, ptr [[vtable]], i64 -16
 // POINTER-NEXT:   [[vbase_offset:%.+]] = load i64, ptr [[vbase_offset_ptr]], align 8
 // POINTER-NEXT:   [[adj_this:%.+]] = getelementptr inbounds i8, ptr %this1, i64 [[vbase_offset]]
-// POINTER:   [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(ptr noundef{{[^,]*}} [[adj_this]], i32 noundef {{.*}})
+// POINTER:   [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(ptr nofree noundef{{[^,]*}} [[adj_this]], i32 noundef {{.*}})
 // POINTER:   ret i32 [[call]]
 
 /// For relative vtables, it's almost the same except the offset sizes are
@@ -28,7 +28,7 @@
 // RELATIVE-NEXT:   [[vbase_offset_ptr:%.+]] = getelementptr inbounds i8, ptr [[vtable]], i64 -8
 // RELATIVE-NEXT:   [[vbase_offset:%.+]] = load i32, ptr [[vbase_offset_ptr]], align 4
 // RELATIVE-NEXT:   [[adj_this:%.+]] = getelementptr inbounds i8, ptr %this1, i32 [[vbase_offset]]
-// RELATIVE:        [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(ptr noundef{{[^,]*}} [[adj_this]], i32 noundef {{.*}})
+// RELATIVE:        [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(ptr nofree noundef{{[^,]*}} [[adj_this]], i32 noundef {{.*}})
 // RELATIVE:        ret i32 [[call]]
 
 class Base {

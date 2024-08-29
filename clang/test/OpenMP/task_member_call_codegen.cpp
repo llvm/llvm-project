@@ -86,7 +86,7 @@ void c() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias [[META12]]
 // CHECK1-NEXT:    call void [[TMP10]](ptr [[TMP11]], ptr [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4:[0-9]+]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias [[META12]]
-// CHECK1-NEXT:    call void @_ZN1a1bEv(ptr noundef nonnull align 1 dereferenceable(1) [[TMP12]]) #[[ATTR4]]
+// CHECK1-NEXT:    call void @_ZN1a1bEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[TMP12]]) #[[ATTR4]]
 // CHECK1-NEXT:    ret i32 0
 //
 //
@@ -153,6 +153,6 @@ void c() {
 // CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias [[META12]]
 // CHECK3-NEXT:    call void [[TMP10]](ptr [[TMP11]], ptr [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4:[0-9]+]]
 // CHECK3-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias [[META12]]
-// CHECK3-NEXT:    call void @_ZN1a1bEv(ptr noundef nonnull align 1 dereferenceable(1) [[TMP12]]) #[[ATTR4]]
+// CHECK3-NEXT:    call void @_ZN1a1bEv(ptr nofree noundef nonnull align 1 dereferenceable(1) [[TMP12]]) #[[ATTR4]]
 // CHECK3-NEXT:    ret i32 0
 //
