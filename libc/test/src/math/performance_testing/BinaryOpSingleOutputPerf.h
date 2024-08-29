@@ -16,14 +16,15 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
-template <typename T, typename R> class BinaryOpSingleOutputPerf {
-  using FPBits = fputil::FPBits<T>;
+template <typename OutputType, typename InputType>
+class BinaryOpSingleOutputPerf {
+  using FPBits = fputil::FPBits<OutputType>;
   using StorageType = typename FPBits::StorageType;
   static constexpr StorageType UIntMax =
       cpp::numeric_limits<StorageType>::max();
 
 public:
-  typedef T Func(R, R);
+  typedef OutputType Func(InputType, InputType);
 
   static void run_perf_in_range(Func myFunc, Func otherFunc,
                                 StorageType startingBit, StorageType endingBit,
@@ -32,7 +33,7 @@ public:
       N = cpp::min(N, static_cast<size_t>(endingBit - startingBit));
 
     auto runner = [=](Func func) {
-      [[maybe_unused]] volatile T result;
+      [[maybe_unused]] volatile OutputType result;
       if (endingBit < startingBit) {
         return;
       }
@@ -41,8 +42,8 @@ public:
       for (size_t i = 0; i < rounds; i++) {
         for (StorageType bitsX = startingBit, bitsY = endingBit;;
              bitsX += step, bitsY -= step) {
-          R x = FPBits(bitsX).get_val();
-          R y = FPBits(bitsY).get_val();
+          InputType x = FPBits(bitsX).get_val();
+          InputType y = FPBits(bitsY).get_val();
           result = func(x, y);
           if (endingBit - bitsX < step) {
             break;
@@ -94,8 +95,8 @@ public:
     log << "\n Performance tests with inputs in normal range with exponents "
            "close to each other:\n";
     run_perf_in_range(myFunc, otherFunc,
-                      /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
-                      /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(),
+                      /* startingBit= */ FPBits(OutputType(0x1.0p-10)).uintval(),
+                      /* endingBit= */ FPBits(OutputType(0x1.0p+10)).uintval(),
                       1'000'001, rounds, log);
   }
 
@@ -114,8 +115,8 @@ public:
     log << "\n Diff tests with inputs in normal range with exponents "
            "close to each other:\n";
     diffCount += run_diff_in_range(
-        myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
-        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 10'000'001, log);
+        myFunc, otherFunc, /* startingBit= */ FPBits(OutputType(0x1.0p-10)).uintval(),
+        /* endingBit= */ FPBits(OutputType(0x1.0p+10)).uintval(), 10'000'001, log);
 
     log << "Total number of differing results: " << diffCount << '\n';
   }
@@ -124,18 +125,18 @@ public:
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
 
-#define BINARY_OP_SINGLE_OUTPUT_PERF(T, R, myFunc, otherFunc, filename)        \
+#define BINARY_OP_SINGLE_OUTPUT_PERF(OutputType, InputType, myFunc, otherFunc, filename)        \
   int main() {                                                                 \
-    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(         \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<OutputType, InputType>::run_perf(         \
         &myFunc, &otherFunc, 1, filename);                                     \
     return 0;                                                                  \
   }
 
-#define BINARY_OP_SINGLE_OUTPUT_PERF_EX(T, R, myFunc, otherFunc, rounds,       \
+#define BINARY_OP_SINGLE_OUTPUT_PERF_EX(OutputType, InputType, myFunc, otherFunc, rounds,       \
                                         filename)                              \
   {                                                                            \
-    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(         \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<OutputType, InputType>::run_perf(         \
         &myFunc, &otherFunc, rounds, filename);                                \
-    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T, R>::run_perf(         \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<OutputType, InputType>::run_perf(         \
         &myFunc, &otherFunc, rounds, filename);                                \
   }
