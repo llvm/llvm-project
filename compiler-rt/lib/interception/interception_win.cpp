@@ -234,7 +234,7 @@ static bool FunctionHasPadding(uptr address, uptr size) {
 }
 
 static void WritePadding(uptr from, uptr size) {
-  internal_memset((void*)from, 0xCC, (size_t)size);
+  internal_memset((void *)from, 0xCC, (size_t)size);
 }
 
 static void WriteJumpInstruction(uptr from, uptr target) {
@@ -706,7 +706,7 @@ static bool CopyInstructions(uptr to, uptr from, size_t size) {
     if (!instruction_size)
       return false;
     internal_memcpy((void *)(to + cursor), (void *)(from + cursor),
-            (size_t)instruction_size);
+                    (size_t)instruction_size);
     if (rel_offset) {
 #  if SANITIZER_WINDOWS64
       // we want to make sure that the new relative offset still fits in 32-bits
@@ -1013,7 +1013,7 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
         internal_memcpy(function_name, func, funtion_name_length);
         function_name[funtion_name_length] = '\0';
-        char* separator = internal_strchr(function_name, '.');
+        char *separator = internal_strchr(function_name, '.');
         if (!separator)
           InterceptionFailed();
         *separator = '\0';
