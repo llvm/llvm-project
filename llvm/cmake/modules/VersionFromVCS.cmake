@@ -41,11 +41,9 @@ function(get_source_info path revision repository)
       if(git_result EQUAL 0)
         # Avoid exposing sensitive data, e.g. usernames, passwords and
         # private URLs.
-        string(FIND "${git_output}" "github.com/llvm/llvm-project" git_upstream)
-        if(git_upstream GREATER_EQUAL 0)
+        string(REGEX MATCH "github.com[/:]llvm/llvm-project" git_upstream "${git_output}")
+        if(git_upstream)
           set(${repository} "https://github.com/llvm/llvm-project" PARENT_SCOPE)
-        else()
-          set(${repository} "forked repository" PARENT_SCOPE)
         endif()
       else()
         set(${repository} ${path} PARENT_SCOPE)
