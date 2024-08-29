@@ -219,7 +219,7 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
+          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }

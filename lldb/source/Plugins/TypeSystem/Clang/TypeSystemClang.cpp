@@ -697,6 +697,10 @@ void TypeSystemClang::CreateASTContext() {
   TargetInfo *target_info = getTargetInfo();
   if (target_info)
     m_ast_up->InitBuiltinTypes(*target_info);
+  else if (auto *log = GetLog(LLDBLog::Expressions))
+    LLDB_LOG(log,
+             "Failed to initialize builtin ASTContext types for target '{0}'",
+             m_target_triple);
 
   GetASTMap().Insert(m_ast_up.get(), this);
 

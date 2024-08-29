@@ -285,6 +285,11 @@ ConstantInt *InstrProfCntrInstBase::getIndex() const {
   return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
 }
 
+void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
+  assert(isa<InstrProfCntrInstBase>(this));
+  setArgOperand(3, ConstantInt::get(Type::getInt32Ty(getContext()), Idx));
+}
+
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
     return const_cast<Value *>(getArgOperand(4));
@@ -298,6 +303,11 @@ Value *InstrProfCallsite::getCallee() const {
   if (isa<InstrProfCallsite>(this))
     return getArgOperand(4);
   return nullptr;
+}
+
+void InstrProfCallsite::setCallee(Value *Callee) {
+  assert(isa<InstrProfCallsite>(this));
+  setArgOperand(4, Callee);
 }
 
 std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {

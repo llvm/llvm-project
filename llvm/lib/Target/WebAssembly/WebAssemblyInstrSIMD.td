@@ -43,7 +43,7 @@ multiclass HALF_PRECISION_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                             list<dag> pattern_r, string asmstr_r = "",
                             string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
-                            asmstr_s, simdop, [HasHalfPrecision]>;
+                            asmstr_s, simdop, [HasFP16]>;
 }
 
 
@@ -750,7 +750,7 @@ multiclass SIMDCondition<Vec vec, string name, CondCode cond, bits<32> simdop,
 
 multiclass HalfPrecisionCondition<Vec vec, string name, CondCode cond,
                                   bits<32> simdop> {
-  defm "" : SIMDCondition<vec, name, cond, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDCondition<vec, name, cond, simdop, [HasFP16]>;
 }
 
 multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
@@ -832,7 +832,7 @@ multiclass SIMDBinary<Vec vec, SDPatternOperator node, string name,
 
 multiclass HalfPrecisionBinary<Vec vec, SDPatternOperator node, string name,
                                bits<32> simdop> {
-  defm "" : SIMDBinary<vec, node, name, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDBinary<vec, node, name, simdop, [HasFP16]>;
 }
 
 multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
@@ -857,7 +857,7 @@ multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name,
 
 multiclass HalfPrecisionUnary<Vec vec, SDPatternOperator node, string name,
                               bits<32> simdop> {
-  defm "" : SIMDUnary<vec, node, name, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDUnary<vec, node, name, simdop, [HasFP16]>;
 }
 
 // Bitwise logic: v128.not
@@ -1355,7 +1355,7 @@ multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
 
 multiclass HalfPrecisionConvert<Vec vec, Vec arg, SDPatternOperator op,
                                 string name, bits<32> simdop> {
-  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasHalfPrecision]>;
+  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasFP16]>;
 }
 
 // Floating point to integer with saturation: trunc_sat
@@ -1532,7 +1532,7 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasHalfPrecision]>;
+defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasFP16]>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect

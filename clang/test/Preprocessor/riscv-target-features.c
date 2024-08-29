@@ -176,8 +176,10 @@
 
 // Experimental extensions
 
+// CHECK-NOT: __riscv_smctr{{.*$}}
 // CHECK-NOT: __riscv_smmpm{{.*$}}
 // CHECK-NOT: __riscv_smnpm{{.*$}}
+// CHECK-NOT: __riscv_ssctr{{.*$}}
 // CHECK-NOT: __riscv_ssnpm{{.*$}}
 // CHECK-NOT: __riscv_sspm{{.*$}}
 // CHECK-NOT: __riscv_supm{{.*$}}
@@ -1747,6 +1749,22 @@
 // RUN:   -march=rv64i_supm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
 // CHECK-SUPM-EXT: __riscv_supm 1000000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_smctr1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMCTR-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_smctr1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMCTR-EXT %s
+// CHECK-SMCTR-EXT: __riscv_smctr 1000000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_ssctr1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCTR-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_ssctr1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCTR-EXT %s
+// CHECK-SSCTR-EXT: __riscv_ssctr 1000000{{$}}
 
 // Misaligned
 
