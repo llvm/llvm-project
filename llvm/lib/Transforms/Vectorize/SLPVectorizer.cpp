@@ -3237,15 +3237,25 @@ private:
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
     int findLaneForValue(Value *V) const {
-      unsigned FoundLane = std::distance(Scalars.begin(), find(Scalars, V));
-      assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
-      if (!ReorderIndices.empty())
-        FoundLane = ReorderIndices[FoundLane];
-      assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
-      if (!ReuseShuffleIndices.empty()) {
-        FoundLane = std::distance(ReuseShuffleIndices.begin(),
-                                  find(ReuseShuffleIndices, FoundLane));
+      unsigned FoundLane = getVectorFactor();
+      for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
+           std::advance(It, 1)) {
+        if (*It != V)
+          continue;
+        FoundLane = std::distance(Scalars.begin(), It);
+        assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
+        if (!ReorderIndices.empty())
+          FoundLane = ReorderIndices[FoundLane];
+        assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
+        if (ReuseShuffleIndices.empty())
+          break;
+        if (auto *RIt = find(ReuseShuffleIndices, FoundLane);
+            RIt != ReuseShuffleIndices.end()) {
+          FoundLane = std::distance(ReuseShuffleIndices.begin(), RIt);
+          break;
+        }
       }
+      assert(FoundLane < getVectorFactor() && "Unable to find given value.");
       return FoundLane;
     }
 
