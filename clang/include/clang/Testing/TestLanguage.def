@@ -15,15 +15,15 @@
 // with respect to each language.
 
 #ifndef TESTLANGUAGE
-#error "TESTLANGUAGE must be defined before including this file"
+#  define TESTLANGUAGE(...)
 #endif
 
 #ifndef TESTLANGUAGE_C
-#define TESTLANGUAGE_C TESTLANGUAGE
+#  define TESTLANGUAGE_C(...) TESTLANGUAGE(__VA_ARGS__)
 #endif
 
 #ifndef TESTLANGUAGE_CXX
-#define TESTLANGUAGE_CXX TESTLANGUAGE
+#  define TESTLANGUAGE_CXX(...) TESTLANGUAGE(__VA_ARGS__)
 #endif
 
 TESTLANGUAGE_C(C, 89, c89, 0)
