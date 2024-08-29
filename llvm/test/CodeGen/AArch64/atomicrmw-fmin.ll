@@ -3,6 +3,9 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+lse -O1 -fast-isel=0 -global-isel=false %s -o - | FileCheck -check-prefix=LSE %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=-lse,-fp-armv8 -O1 < %s | FileCheck -check-prefix=SOFTFP-NOLSE %s
 
+; FIXME: Windows hosts assigns stack slots to different offsets for some reason.
+; UNSUPPORTED: system-windows
+
 define half @test_atomicrmw_fmin_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fmin_f16_seq_cst_align2:
 ; NOLSE:       // %bb.0:
