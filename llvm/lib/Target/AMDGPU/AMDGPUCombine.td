@@ -145,6 +145,34 @@ def expand_promoted_fmed3 : GICombineRule<
 
 } // End Predicates = [NotHasMed3_16]
 
+def promote_i16_uniform_binops_frag : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_SMIN, G_UMIN, G_SMAX, G_UMAX, G_ADD,
+                G_SUB, G_SHL, G_ASHR, G_LSHR, G_AND,
+                G_XOR, G_OR, G_MUL],
+          (pattern (op $dst, $lhs, $rhs)))>;
+
+def promote_i16_uniform_ternary_frag : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_ICMP, G_SELECT],
+          (pattern (op $dst, $first, $lhs, $rhs)))>;
+
+let Predicates = [Has16BitInsts] in {
+def promote_i16_uniform_binops : GICombineRule<
+  (defs root:$dst),
+  (match (promote_i16_uniform_binops_frag $dst):$mi,
+    [{ return matchPromote16to32(*${mi}); }]),
+  (apply [{ applyPromote16to32(*${mi}); }])
+>;
+
+def promote_i16_uniform_ternary : GICombineRule<
+  (defs root:$dst),
+  (match (promote_i16_uniform_ternary_frag $dst):$mi,
+    [{ return matchPromote16to32(*${mi}); }]),
+  (apply [{ applyPromote16to32(*${mi}); }])
+>;
+}
+
 // Combines which should only apply on SI/CI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -169,5 +197,6 @@ def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
   [unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
-   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
+   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
+   promote_i16_uniform_binops, promote_i16_uniform_ternary]> {
 }

@@ -89,6 +89,9 @@ public:
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
   void applyClamp(MachineInstr &MI, Register &Reg) const;
 
+  bool matchPromote16to32(MachineInstr &MI) const;
+  void applyPromote16to32(MachineInstr &MI) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -346,6 +349,112 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   }
 
   return false;
+}
+
+bool AMDGPURegBankCombinerImpl::matchPromote16to32(MachineInstr &MI) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  const auto *RB = MRI.getRegBankOrNull(Dst);
+
+  // Only promote between 2 and 16 bits.
+  // For ICMP use the LHS of the comparison to get the type.
+  unsigned TyOpIdx = (MI.getOpcode() == AMDGPU::G_ICMP) ? 2 : 0;
+  LLT OpTy = MRI.getType(MI.getOperand(TyOpIdx).getReg());
+  if (OpTy.getScalarSizeInBits() < 2 || OpTy.getScalarSizeInBits() > 16)
+    return false;
+
+  // Only promote uniform instructions.
+  if (RB->getID() != AMDGPU::SGPRRegBankID)
+    return false;
+
+  // TODO: Support vectors. Vectors will create illegal ops, such as
+  // 2x32 exts, that we'd need to legalize.
+  // We could just scalarize all vectors but then we don't respect
+  // the legalizer's rules. Ideally we should be able to call
+  // the legalizer here, or this should move into the legalizer
+  // if it can tell between uniform and non-uniform values at
+  // some point.
+  if (DstTy.isVector())
+    return false;
+
+  // Promote only if:
+  //    - We have 16 bit insts (not true 16 bit insts).
+  //      - This is already checked by the predicate on the combine rule.
+  //    - We don't have packed instructions (for vector types only).
+  // TODO: For vector types, the set of packed operations is more limited, so
+  // may want to promote some anyway.
+  assert(STI.has16BitInsts());
+  return (DstTy.isVector() ? !STI.hasVOP3PInsts() : true);
+}
+
+static unsigned getExtOpcodeForPromotedOp(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::G_ASHR:
+  case AMDGPU::G_SMIN:
+  case AMDGPU::G_SMAX:
+    return AMDGPU::G_SEXT;
+  case AMDGPU::G_LSHR:
+  case AMDGPU::G_UMIN:
+  case AMDGPU::G_UMAX:
+    return AMDGPU::G_ZEXT;
+  case AMDGPU::G_ADD:
+  case AMDGPU::G_SUB:
+  case AMDGPU::G_AND:
+  case AMDGPU::G_OR:
+  case AMDGPU::G_XOR:
+  case AMDGPU::G_SHL:
+  case AMDGPU::G_SELECT:
+  case AMDGPU::G_MUL:
+    // operation result won't be influenced by garbage high bits.
+    return AMDGPU::G_ANYEXT;
+  case AMDGPU::G_ICMP: {
+    return CmpInst::isSigned(cast<GICmp>(MI).getCond()) ? AMDGPU::G_SEXT
+                                                        : AMDGPU::G_ZEXT;
+  }
+  default:
+    llvm_unreachable("unexpected opcode!");
+  }
+}
+
+void AMDGPURegBankCombinerImpl::applyPromote16to32(MachineInstr &MI) const {
+  const unsigned Opc = MI.getOpcode();
+  const unsigned ExtOpc = getExtOpcodeForPromotedOp(MI);
+
+  Register Dst = MI.getOperand(0).getReg();
+
+  const bool IsSelectOrCmp = (Opc == AMDGPU::G_SELECT || Opc == AMDGPU::G_ICMP);
+  const bool IsShift =
+      (Opc == AMDGPU::G_ASHR || Opc == AMDGPU::G_LSHR || Opc == AMDGPU::G_SHL);
+  Register LHS = MI.getOperand(IsSelectOrCmp + 1).getReg();
+  Register RHS = MI.getOperand(IsSelectOrCmp + 2).getReg();
+
+  assert(MRI.getRegBankOrNull(Dst)->getID() == AMDGPU::SGPRRegBankID &&
+         MRI.getRegBankOrNull(LHS)->getID() == AMDGPU::SGPRRegBankID &&
+         MRI.getRegBankOrNull(RHS)->getID() == AMDGPU::SGPRRegBankID);
+
+  const RegisterBank &RB = *MRI.getRegBankOrNull(Dst);
+  LLT S32 = MRI.getType(LHS).changeElementSize(32);
+
+  B.setInstrAndDebugLoc(MI);
+  LHS = B.buildInstr(ExtOpc, {S32}, {LHS}).getReg(0);
+  RHS = B.buildInstr(IsShift ? AMDGPU::G_ZEXT : ExtOpc, {S32}, {RHS}).getReg(0);
+
+  MRI.setRegBank(LHS, RB);
+  MRI.setRegBank(RHS, RB);
+
+  MachineInstr *NewInst;
+  if (IsSelectOrCmp)
+    NewInst = B.buildInstr(Opc, {Dst}, {MI.getOperand(1), LHS, RHS});
+  else
+    NewInst = B.buildInstr(Opc, {S32}, {LHS, RHS});
+
+  if (Opc != AMDGPU::G_ICMP) {
+    Register Dst32 = NewInst->getOperand(0).getReg();
+    MRI.setRegBank(Dst32, RB);
+    B.buildTrunc(Dst, Dst32);
+  }
+
+  MI.eraseFromParent();
 }
 
 void AMDGPURegBankCombinerImpl::applyClamp(MachineInstr &MI,

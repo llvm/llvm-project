@@ -349,63 +349,67 @@ define amdgpu_ps <2 x i32> @s_orn2_v2i32_commute(<2 x i32> inreg %src0, <2 x i32
 }
 
 define amdgpu_ps i16 @s_orn2_i16(i16 inreg %src0, i16 inreg %src1) {
-; GCN-LABEL: s_orn2_i16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_orn2_b32 s0, s2, s3
-; GCN-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: s_orn2_i16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_orn2_b32 s0, s2, s3
+; GFX6-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: s_orn2_i16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_orn2_b32 s0, s2, s3
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: s_orn2_i16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_xor_b32 s0, s3, -1
+; GFX9-NEXT:    s_or_b32 s0, s2, s0
+; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_orn2_i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_or_not1_b32 s0, s2, s3
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: s_orn2_i16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_xor_b32 s0, s3, -1
+; GFX10PLUS-NEXT:    s_or_b32 s0, s2, s0
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %src0, %not.src1
   ret i16 %or
 }
 
 define amdgpu_ps i16 @s_orn2_i16_commute(i16 inreg %src0, i16 inreg %src1) {
-; GCN-LABEL: s_orn2_i16_commute:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_orn2_b32 s0, s2, s3
-; GCN-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: s_orn2_i16_commute:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_orn2_b32 s0, s2, s3
+; GFX6-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: s_orn2_i16_commute:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_orn2_b32 s0, s2, s3
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: s_orn2_i16_commute:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_xor_b32 s0, s3, -1
+; GFX9-NEXT:    s_or_b32 s0, s0, s2
+; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_orn2_i16_commute:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_or_not1_b32 s0, s2, s3
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: s_orn2_i16_commute:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_xor_b32 s0, s3, -1
+; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s2
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %not.src1, %src0
   ret i16 %or
 }
 
 define amdgpu_ps { i16, i16 } @s_orn2_i16_multi_use(i16 inreg %src0, i16 inreg %src1) {
-; GCN-LABEL: s_orn2_i16_multi_use:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_xor_b32 s1, s3, -1
-; GCN-NEXT:    s_orn2_b32 s0, s2, s3
-; GCN-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: s_orn2_i16_multi_use:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_xor_b32 s1, s3, -1
+; GFX6-NEXT:    s_orn2_b32 s0, s2, s3
+; GFX6-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: s_orn2_i16_multi_use:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_orn2_b32 s0, s2, s3
-; GFX10-NEXT:    s_xor_b32 s1, s3, -1
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: s_orn2_i16_multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_xor_b32 s1, s3, -1
+; GFX9-NEXT:    s_or_b32 s0, s2, s1
+; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_orn2_i16_multi_use:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_or_not1_b32 s0, s2, s3
-; GFX11-NEXT:    s_xor_b32 s1, s3, -1
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: s_orn2_i16_multi_use:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_xor_b32 s1, s3, -1
+; GFX10PLUS-NEXT:    s_or_b32 s0, s2, s1
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %src0, %not.src1
   %insert.0 = insertvalue { i16, i16 } undef, i16 %or, 0
@@ -414,23 +418,25 @@ define amdgpu_ps { i16, i16 } @s_orn2_i16_multi_use(i16 inreg %src0, i16 inreg %
 }
 
 define amdgpu_ps { i16, i16 } @s_orn2_i16_multi_foldable_use(i16 inreg %src0, i16 inreg %src1, i16 inreg %src2) {
-; GCN-LABEL: s_orn2_i16_multi_foldable_use:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_orn2_b32 s0, s2, s4
-; GCN-NEXT:    s_orn2_b32 s1, s3, s4
-; GCN-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: s_orn2_i16_multi_foldable_use:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_orn2_b32 s0, s2, s4
+; GFX6-NEXT:    s_orn2_b32 s1, s3, s4
+; GFX6-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: s_orn2_i16_multi_foldable_use:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_orn2_b32 s0, s2, s4
-; GFX10-NEXT:    s_orn2_b32 s1, s3, s4
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: s_orn2_i16_multi_foldable_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_xor_b32 s1, s4, -1
+; GFX9-NEXT:    s_or_b32 s0, s2, s1
+; GFX9-NEXT:    s_or_b32 s1, s3, s1
+; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_orn2_i16_multi_foldable_use:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_or_not1_b32 s0, s2, s4
-; GFX11-NEXT:    s_or_not1_b32 s1, s3, s4
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: s_orn2_i16_multi_foldable_use:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_xor_b32 s1, s4, -1
+; GFX10PLUS-NEXT:    s_or_b32 s0, s2, s1
+; GFX10PLUS-NEXT:    s_or_b32 s1, s3, s1
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src2 = xor i16 %src2, -1
   %or0 = or i16 %src0, %not.src2
   %or1 = or i16 %src1, %not.src2
