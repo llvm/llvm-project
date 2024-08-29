@@ -3226,6 +3226,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VSELECT:
     Res = SplitVecOp_VSELECT(N, OpNo);
     break;
+  case ISD::VECTOR_COMPRESS:
+    Res = SplitVecOp_VECTOR_COMPRESS(N, OpNo);
+    break;
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
@@ -3370,6 +3373,20 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {
     DAG.getNode(ISD::VSELECT, DL, HiOpVT, HiMask, HiOp0, HiOp1);
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, Src0VT, LoSelect, HiSelect);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo) {
+  // The only possibility for an illegal operand is the mask, since result type
+  // legalization would have handled this node already otherwise.
+  assert(OpNo == 1 && "Illegal operand must be mask");
+
+  // To split the mask, we need to split the result type too, so we can just
+  // reuse that logic here.
+  SDValue Lo, Hi;
+  SplitVecRes_VECTOR_COMPRESS(N, Lo, Hi);
+
+  EVT VecVT = N->getValueType(0);
+  return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VecVT, Lo, Hi);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
