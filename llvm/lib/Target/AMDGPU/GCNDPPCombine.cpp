@@ -754,9 +754,9 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 }
 
 bool GCNDPPCombineLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction())) {
+  if (skipFunction(MF.getFunction()))
     return false;
-  }
+
   return GCNDPPCombine().run(MF);
 }
 
@@ -795,10 +795,15 @@ bool GCNDPPCombine::run(MachineFunction &MF) {
 
 PreservedAnalyses GCNDPPCombinePass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &) {
-  bool Changed = GCNDPPCombine().run(MF);
-  if (!Changed) {
+  if (MF.getFunction().hasOptNone())
     return PreservedAnalyses::all();
-  }
+
+  MFPropsModifier _(*this, MF);
+
+  bool Changed = GCNDPPCombine().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;

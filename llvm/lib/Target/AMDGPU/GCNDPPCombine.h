@@ -25,4 +25,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AMDGPU_GCNDPPCOMBINE_H
