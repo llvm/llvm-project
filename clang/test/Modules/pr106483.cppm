@@ -35,5 +35,7 @@ export module b;
 import a;
 export using ::base;
 
+export extern "C" void func() {}
+
 // We only need to check that the IR are successfully emitted instead of crash.
-// CHECK: define
+// CHECK: func
