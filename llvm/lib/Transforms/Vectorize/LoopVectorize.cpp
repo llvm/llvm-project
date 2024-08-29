@@ -7113,7 +7113,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       IVInsts.push_back(CI);
     }
     for (Instruction *IVInst : IVInsts) {
-      if (!CostCtx.SkipCostComputation.insert(IVInst).second)
+      if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
         continue;
       InstructionCost InductionCost = CostCtx.getLegacyCost(IVInst, VF);
       LLVM_DEBUG({
@@ -7121,6 +7121,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                << ": induction instruction " << *IVInst << "\n";
       });
       Cost += InductionCost;
+      CostCtx.SkipCostComputation.insert(IVInst);
     }
   }
 
