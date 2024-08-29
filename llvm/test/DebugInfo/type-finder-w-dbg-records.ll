@@ -6,18 +6,24 @@
 
 ; CHECK: %union.anon = type { %struct.a }
 ; CHECK: %struct.a = type { i32 }
+; CHECK: %union.anon2 = type { %struct.a2 }
+; CHECK: %struct.a2 = type { i32 }
 
 ; ModuleID = 'bbi-98372.ll'
 source_filename = "bbi-98372.ll"
 
 %union.anon = type { %struct.a }
 %struct.a = type { i32 }
+%union.anon2 = type { %struct.a2 }
+%struct.a2 = type { i32 }
 
 @d = global [1 x { i16, i16 }] [{ i16, i16 } { i16 0, i16 undef }], align 1
+@e = global [1 x { i16, i16 }] [{ i16, i16 } { i16 0, i16 undef }], align 1
 
-define void @e() {
+define void @f() {
 entry:
     #dbg_value(ptr getelementptr inbounds ([1 x %union.anon], ptr @d, i32 0, i32 3), !7, !DIExpression(), !14)
+    #dbg_assign(ptr null, !7, !DIExpression(), !16, ptr getelementptr inbounds ([1 x %union.anon2], ptr @e, i32 0, i32 3), !17, !14)
   ret void, !dbg !15
 }
 
@@ -41,3 +47,5 @@ entry:
 !13 = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
 !14 = !DILocation(line: 0, scope: !8)
 !15 = !DILocation(line: 8, column: 28, scope: !8)
+!16 = distinct !DIAssignID()
+!17 = !DIExpression()
