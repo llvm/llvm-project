@@ -4380,8 +4380,13 @@ private:
   // Check if the insertion point is currently in a device context. HostDevice
   // subprogram are not considered fully device context so it will return false
   // for it.
-  static bool isDeviceContext(fir::FirOpBuilder &builder) {
+  // If the insertion point is inside an OpenACC region op, it is considered
+  // device context.
+  static bool isCudaDeviceContext(fir::FirOpBuilder &builder) {
     if (builder.getRegion().getParentOfType<cuf::KernelOp>())
+      return true;
+    if (builder.getRegion()
+            .getParentOfType<mlir::acc::ComputeRegionOpInterface>())
       return true;
     if (auto funcOp =
             builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
@@ -4401,7 +4406,8 @@ private:
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isInDeviceContext = isDeviceContext(builder);
+    bool isInDeviceContext = isCudaDeviceContext(builder);
+
     bool isCUDATransfer = (Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs) ||
                            Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs)) &&
                           !isInDeviceContext;
