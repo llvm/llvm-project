@@ -4687,24 +4687,29 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                       ParmVarDecl *Param) {
   assert(Param->hasUninstantiatedDefaultArg());
 
-  NamedDecl *Pattern = nullptr;
+  NamedDecl *Pattern = FD;
   std::optional<ArrayRef<TemplateArgument>> Innermost;
-  #if 1
 
-  if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate()) {
+  if (FD->isCXXClassMember() && !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD)) {
+    if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate()) {
+      Pattern = FTD->getFirstDecl();
+      Innermost = FD->getTemplateSpecializationArgs()->asArray();
+    }
+  }
+  #if 0
+
     Pattern = FTD->isCXXClassMember() ? FTD->getFirstDecl() : FTD;
-    Innermost = FD->getTemplateSpecializationArgs()->asArray();
   } else if (FD->isCXXClassMember()) {
     Pattern = FD->getFirstDecl();
   } else {
     Pattern = FD;
   }
-  #else
+  #elif 0
   Pattern = FD;
+  #elif 0
+  Pattern = FD->getTemplateInstantiationPattern(/*ForDefinition=*/true);
+  #elif 1
   #endif
-
-  if (isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD))
-    Pattern = FD;
 
   // Instantiate the expression.
   //
@@ -5204,14 +5209,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    #if 0
-    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-        Function, Function->getLexicalDeclContext(), /*Final=*/false,
-        /*Innermost=*/std::nullopt, false, PatternDecl);
-    #else
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
         Function, Function->getLexicalDeclContext());
-    #endif
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.

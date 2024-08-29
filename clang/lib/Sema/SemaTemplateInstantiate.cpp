@@ -52,36 +52,6 @@ using namespace sema;
 //===----------------------------------------------------------------------===/
 
 namespace {
-struct Response {
-  const Decl *NextDecl = nullptr;
-  bool IsDone = false;
-  bool ClearRelativeToPrimary = true;
-  static Response Done() {
-    Response R;
-    R.IsDone = true;
-    return R;
-  }
-  static Response ChangeDecl(const Decl *ND) {
-    Response R;
-    R.NextDecl = ND;
-    return R;
-  }
-  static Response ChangeDecl(const DeclContext *Ctx) {
-    Response R;
-    R.NextDecl = Decl::castFromDeclContext(Ctx);
-    return R;
-  }
-
-  static Response UseNextDecl(const Decl *CurDecl) {
-    return ChangeDecl(CurDecl->getDeclContext());
-  }
-
-  static Response DontClearRelativeToPrimaryNextDecl(const Decl *CurDecl) {
-    Response R = Response::UseNextDecl(CurDecl);
-    R.ClearRelativeToPrimary = false;
-    return R;
-  }
-};
 // Retrieve the primary template for a lambda call operator. It's
 // unfortunate that we only have the mappings of call operators rather
 // than lambda classes.
@@ -168,25 +138,6 @@ bool isLambdaEnclosedByTypeAliasDecl(
   return !Visitor(getPrimaryTemplateOfGenericLambda(LambdaCallOperator))
               .TraverseType(Underlying);
 }
-
-namespace TemplateInstArgsHelpers {
-
-// If we have a template template parameter with translation unit context,
-// then we're performing substitution into a default template argument of
-// this template template parameter before we've constructed the template
-// that will own this template template parameter. In this case, we
-// use empty template parameter lists for all of the outer templates
-// to avoid performing any substitutions.
-Response
-HandleDefaultTempArgIntoTempTempParam(const TemplateTemplateParmDecl *TTP,
-                                      MultiLevelTemplateArgumentList &Result) {
-  for (unsigned I = 0, N = TTP->getDepth() + 1; I != N; ++I)
-    Result.addOuterTemplateArguments(std::nullopt);
-  return Response::Done();
-}
-
-} // namespace TemplateInstArgsHelpers
-
 
 struct TemplateInstantiationArgumentCollecter
     : DeclVisitor<TemplateInstantiationArgumentCollecter, Decl*> {
@@ -540,8 +491,6 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
   MultiLevelTemplateArgumentList Result;
-
-  using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
 
   if (!CurDecl)
