@@ -13,7 +13,7 @@
 std::array<const int, 1> A1{};  // okay
 std::array<volatile int, 1> A2; // okay
 
-std::array<int&, 1>  A3{};
+std::array<int&, 1> A3{};
 std::array<int&&, 1> A4{};
 // expected-error@*:* 2 {{'std::array' cannot hold references}}
 

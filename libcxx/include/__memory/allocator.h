@@ -82,9 +82,7 @@ class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::v
   static_assert(!is_const<_Tp>::value, "'std::allocator' cannot allocate const types");
   static_assert(!is_volatile<_Tp>::value, "'std::allocator' cannot allocate volatile types");
   static_assert(!is_reference<_Tp>::value, "'std::allocator' cannot allocate references");
-  static_assert(
-      !is_function<_Tp>::value,
-      "'std::allocator' cannot allocate functions");
+  static_assert(!is_function<_Tp>::value, "'std::allocator' cannot allocate functions");
 
 public:
   typedef size_t size_type;

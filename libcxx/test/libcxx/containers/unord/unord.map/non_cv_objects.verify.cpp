@@ -13,20 +13,20 @@
 struct S {};
 
 namespace std {
-	template<>
-	struct hash<S> {
-		using argument_type = S;
-		using result_type = size_t;
+template <>
+struct hash<S> {
+  using argument_type = S;
+  using result_type   = size_t;
 
-		size_t operator()(S) const;
-	};
+  size_t operator()(S) const;
+};
 
-	template<>
-	struct hash<S const> : hash<S> {};
+template <>
+struct hash<S const> : hash<S> {};
 
-	template<>
-	struct hash<S volatile> : hash<S> {};
-}
+template <>
+struct hash<S volatile> : hash<S> {};
+} // namespace std
 
 std::unordered_map<S const, int> K1;
 std::unordered_map<int, int const> M1;
