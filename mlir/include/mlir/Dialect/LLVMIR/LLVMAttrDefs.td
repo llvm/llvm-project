@@ -554,14 +554,16 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
-                                      /*traits=*/[], "DIScopeAttr"> {
+                                      [LLVM_DIRecursiveTypeAttrInterface],
+                                      "DIScopeAttr"> {
   let parameters = (ins
     OptionalParameter<"DistinctAttr">:$id,
+    OptionalParameter<"DistinctAttr">:$recId,
     OptionalParameter<"DICompileUnitAttr">:$compileUnit,
-    "DIScopeAttr":$scope,
+    OptionalParameter<"DIScopeAttr">:$scope,
     OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"StringAttr">:$linkageName,
-    "DIFileAttr":$file,
+    OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
     OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
@@ -577,13 +579,28 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
       "ArrayRef<DINodeAttr>":$retainedNodes
     ), [{
       MLIRContext *ctx = file.getContext();
-      return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
+      return $_get(ctx, id, /*recId=*/nullptr, compileUnit, scope,
+                   StringAttr::get(ctx, name),
                    StringAttr::get(ctx, linkageName), file, line,
                    scopeLine, subprogramFlags, type, retainedNodes);
     }]>
   ];
-
   let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Requirements of DIRecursiveTypeAttrInterface.
+    /// @{
+
+    /// Get whether this attr describes a recursive self reference.
+    bool isRecSelf() { return !getScope(); }
+
+    /// Get a copy of this type attr but with the recursive ID set to `recId`.
+    DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
+
+    /// Build a rec-self instance using the provided `recId`.
+    static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
+
+    /// @}
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -627,13 +644,9 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
 
 def LLVM_DIImportedEntityAttr : LLVM_Attr<"DIImportedEntity", "di_imported_entity",
                                            /*traits=*/[], "DINodeAttr"> {
-  /// TODO: DIImportedEntity has a 'scope' field which represents the scope where
-  /// this entity is imported. Currently, we are not adding a 'scope' field in
-  /// DIImportedEntityAttr to avoid cyclic dependency. As DIImportedEntityAttr
-  /// entries will be contained inside a scope entity (e.g. DISubprogramAttr),
-  /// the scope can easily be inferred.
   let parameters = (ins
     LLVM_DITagParameter:$tag,
+    "DIScopeAttr":$scope,
     "DINodeAttr":$entity,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"unsigned">:$line,

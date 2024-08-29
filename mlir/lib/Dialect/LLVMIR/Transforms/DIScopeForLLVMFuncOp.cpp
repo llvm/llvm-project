@@ -76,8 +76,8 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
     compileUnitAttr = {};
   }
   auto subprogramAttr = LLVM::DISubprogramAttr::get(
-      context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
-      fileAttr,
+      context, id, /*recId=*/{}, compileUnitAttr, fileAttr, funcNameAttr,
+      funcNameAttr, fileAttr,
       /*line=*/line,
       /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
       /*retainedNodes=*/{});

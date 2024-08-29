@@ -216,6 +216,22 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 }
 
 //===----------------------------------------------------------------------===//
+// DISubprogramAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
+  return DISubprogramAttr::get(
+      getContext(), getId(), recId, getCompileUnit(), getScope(), getName(),
+      getLinkageName(), getFile(), getLine(), getScopeLine(),
+      getSubprogramFlags(), getType(), getRetainedNodes());
+}
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
+  return DISubprogramAttr::get(recId.getContext(), {}, recId, {}, {}, {}, {}, 0,
+                               0, {}, {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
