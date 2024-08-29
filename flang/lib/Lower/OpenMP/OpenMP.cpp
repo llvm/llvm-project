@@ -882,7 +882,7 @@ static void genBodyOfTargetOp(
   }
 
   for (auto [argIndex, argSymbol] :
-       llvm::enumerate(dsp.getAllSymbolsToPrivatize())) {
+       llvm::enumerate(dsp.getDelayedPrivSymbols())) {
     argIndex = mapSyms.size() + argIndex;
 
     const mlir::BlockArgument &arg = region.getArgument(argIndex);
@@ -1494,8 +1494,8 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                              allRegionArgLocs);
 
     llvm::SmallVector<const semantics::Symbol *> allSymbols(reductionSyms);
-    allSymbols.append(dsp.getAllSymbolsToPrivatize().begin(),
-                      dsp.getAllSymbolsToPrivatize().end());
+    allSymbols.append(dsp.getDelayedPrivSymbols().begin(),
+                      dsp.getDelayedPrivSymbols().end());
 
     unsigned argIdx = 0;
     for (const semantics::Symbol *arg : allSymbols) {
