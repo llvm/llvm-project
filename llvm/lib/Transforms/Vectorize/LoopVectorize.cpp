@@ -8464,7 +8464,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   // Bucket address.
   HGramOps.push_back(Operands[1]);
   // Increment value.
-  HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1), Plan));
+  HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1)));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
