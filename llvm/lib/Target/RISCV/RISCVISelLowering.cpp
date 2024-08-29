@@ -395,7 +395,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FADD,          ISD::FSUB,
       ISD::FMUL,          ISD::FMA,
       ISD::FDIV,          ISD::FSQRT,
-      ISD::FABS,          ISD::FNEG,
       ISD::STRICT_FMA,    ISD::STRICT_FADD,
       ISD::STRICT_FSUB,   ISD::STRICT_FMUL,
       ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
@@ -416,8 +415,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
     setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
-    // FIXME: Need to promote bf16 FCOPYSIGN to f32, but the
-    // DAGCombiner::visitFP_ROUND probably needs improvements first.
+    setOperationAction(ISD::FABS, MVT::bf16, Expand);
+    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   }
 
@@ -433,8 +432,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_LRINT, ISD::STRICT_LLRINT,
                           ISD::STRICT_LROUND, ISD::STRICT_LLROUND},
                          MVT::f16, Legal);
-      // FIXME: Need to promote f16 FCOPYSIGN to f32, but the
-      // DAGCombiner::visitFP_ROUND probably needs improvements first.
+      setOperationAction(ISD::FABS, MVT::f16, Expand);
+      setOperationAction(ISD::FNEG, MVT::f16, Expand);
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     }
 
