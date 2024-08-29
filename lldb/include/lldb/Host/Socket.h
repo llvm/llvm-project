@@ -34,9 +34,11 @@ namespace lldb_private {
 #if defined(_WIN32)
 typedef SOCKET NativeSocket;
 typedef lldb::pipe_t shared_fd_t;
+typedef const char *set_socket_option_arg_type;
 #else
 typedef int NativeSocket;
 typedef NativeSocket shared_fd_t;
+typedef const void *set_socket_option_arg_type;
 #endif
 class Socket;
 class TCPSocket;
@@ -138,6 +140,8 @@ protected:
 
   virtual size_t Send(const void *buf, const size_t num_bytes);
 
+  static int CloseSocket(NativeSocket sockfd);
+  static Status GetLastError();
   static void SetLastError(Status &error);
   static NativeSocket CreateSocket(const int domain, const int type,
                                    const int protocol,

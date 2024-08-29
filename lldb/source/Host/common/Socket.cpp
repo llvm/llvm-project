@@ -386,11 +386,7 @@ Status Socket::Close() {
   LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 
-#if defined(_WIN32)
-  bool success = closesocket(m_socket) == 0;
-#else
-  bool success = ::close(m_socket) == 0;
-#endif
+  bool success = CloseSocket(m_socket) == 0;
   // A reference to a FD was passed in, set it to an invalid value
   m_socket = kInvalidSocketValue;
   if (!success) {
@@ -424,6 +420,24 @@ void Socket::SetLastError(Status &error) {
   error = Status(::WSAGetLastError(), lldb::eErrorTypeWin32);
 #else
   error = Status::FromErrno();
+#endif
+}
+
+Status Socket::GetLastError() {
+  std::error_code EC;
+#ifdef _WIN32
+  EC = llvm::mapWindowsError(WSAGetLastError());
+#else
+  EC = std::error_code(errno, std::generic_category());
+#endif
+  return EC;
+}
+
+int Socket::CloseSocket(NativeSocket sockfd) {
+#ifdef _WIN32
+  return ::closesocket(sockfd);
+#else
+  return ::close(sockfd);
 #endif
 }
 
