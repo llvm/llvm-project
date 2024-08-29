@@ -220,7 +220,6 @@ findSplitPointForStackProtector(MachineBasicBlock *BB,
 /// test "inf|normal|subnormal|zero", which is an inversion of "nan".
 ///
 /// \param Test The test as specified in 'is_fpclass' intrinsic invocation.
-///
 /// \param UseFCmp The intention is to perform the comparison using
 /// floating-point compare instructions which check for nan.
 ///
