@@ -1806,6 +1806,9 @@ public:
   /// Add [[gsl::Owner]] and [[gsl::Pointer]] attributes for std:: types.
   void inferGslOwnerPointerAttribute(CXXRecordDecl *Record);
 
+  /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
+  void inferLifetimeBoundAttribute(FunctionDecl *FD);
+
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
@@ -13280,6 +13283,10 @@ public:
   /// \param AllowDeducedTST Whether a DeducedTemplateSpecializationType is
   /// acceptable as the top level type of the result.
   ///
+  /// \param IsIncompleteSubstitution If provided, the pointee will be set
+  /// whenever substitution would perform a replacement with a null or
+  /// non-existent template argument.
+  ///
   /// \returns If the instantiation succeeds, the instantiated
   /// type. Otherwise, produces diagnostics and returns a NULL type.
   TypeSourceInfo *SubstType(TypeSourceInfo *T,
@@ -13289,7 +13296,8 @@ public:
 
   QualType SubstType(QualType T,
                      const MultiLevelTemplateArgumentList &TemplateArgs,
-                     SourceLocation Loc, DeclarationName Entity);
+                     SourceLocation Loc, DeclarationName Entity,
+                     bool *IsIncompleteSubstitution = nullptr);
 
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,

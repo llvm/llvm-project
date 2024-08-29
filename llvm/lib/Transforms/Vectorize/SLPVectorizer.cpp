@@ -231,6 +231,20 @@ static bool isValidElementType(Type *Ty) {
          !Ty->isPPC_FP128Ty();
 }
 
+/// Returns the type of the given value/instruction \p V. If it is store,
+/// returns the type of its value operand, for Cmp - the types of the compare
+/// operands and for insertelement - the type os the inserted operand.
+/// Otherwise, just the type of the value is returned.
+template <typename T> static Type *getValueType(T *V) {
+  if (auto *SI = dyn_cast<StoreInst>(V))
+    return SI->getValueOperand()->getType();
+  if (auto *CI = dyn_cast<CmpInst>(V))
+    return CI->getOperand(0)->getType();
+  if (auto *IE = dyn_cast<InsertElementInst>(V))
+    return IE->getOperand(1)->getType();
+  return V->getType();
+}
+
 /// \returns the number of elements for Ty.
 static unsigned getNumElements(Type *Ty) {
   assert(!isa<ScalableVectorType>(Ty) &&
@@ -6987,19 +7001,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Don't handle vectors.
-  if (!SLPReVec && S.OpValue->getType()->isVectorTy() &&
+  if (!SLPReVec && getValueType(S.OpValue)->isVectorTy() &&
       !isa<InsertElementInst>(S.OpValue)) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
     return;
   }
-
-  if (StoreInst *SI = dyn_cast<StoreInst>(S.OpValue))
-    if (!SLPReVec && SI->getValueOperand()->getType()->isVectorTy()) {
-      LLVM_DEBUG(dbgs() << "SLP: Gathering due to store vector type.\n");
-      newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
-      return;
-    }
 
   // If all of the operands are identical or constant we have a simple solution.
   // If we deal with insert/extract instructions, they all must have constant
@@ -9433,15 +9440,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
   ArrayRef<Value *> VL = E->Scalars;
 
-  Type *ScalarTy = VL[0]->getType();
-  if (!E->isGather()) {
-    if (auto *SI = dyn_cast<StoreInst>(VL[0]))
-      ScalarTy = SI->getValueOperand()->getType();
-    else if (auto *CI = dyn_cast<CmpInst>(VL[0]))
-      ScalarTy = CI->getOperand(0)->getType();
-    else if (auto *IE = dyn_cast<InsertElementInst>(VL[0]))
-      ScalarTy = IE->getOperand(1)->getType();
-  }
+  Type *ScalarTy = getValueType(VL[0]);
   if (!isValidElementType(ScalarTy))
     return InstructionCost::getInvalid();
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -13132,11 +13131,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   }
 
   Value *V = E->Scalars.front();
-  Type *ScalarTy = V->getType();
-  if (auto *Store = dyn_cast<StoreInst>(V))
-    ScalarTy = Store->getValueOperand()->getType();
-  else if (auto *IE = dyn_cast<InsertElementInst>(V))
-    ScalarTy = IE->getOperand(1)->getType();
+  Type *ScalarTy = getValueType(V);
+  if (isa<CmpInst>(V))
+    ScalarTy = V->getType();
   auto It = MinBWs.find(E);
   if (It != MinBWs.end()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
@@ -16937,9 +16934,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool Changed = false;
   bool CandidateFound = false;
   InstructionCost MinCost = SLPCostThreshold.getValue();
-  Type *ScalarTy = VL[0]->getType();
-  if (auto *IE = dyn_cast<InsertElementInst>(VL[0]))
-    ScalarTy = IE->getOperand(1)->getType();
+  Type *ScalarTy = getValueType(VL[0]);
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF; VF /= 2) {
@@ -19057,7 +19052,7 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
 
   SmallVector<Value *> Vals;
   for (Instruction *V : CmpInsts)
-    if (!R.isDeleted(V) && isValidElementType(V->getType()))
+    if (!R.isDeleted(V) && isValidElementType(getValueType(V)))
       Vals.push_back(V);
   if (Vals.size() <= 1)
     return Changed;
