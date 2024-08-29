@@ -88,6 +88,17 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
         for (const auto &MD : MDForInst)
           incorporateMDNode(MD.second);
         MDForInst.clear();
+
+        // Incorporate types hiding in variable-location information.
+        for (const auto &Dbg : I.getDbgRecordRange()) {
+          // Pick out records that have Values.
+          if (Dbg.getRecordKind() != DbgRecord::Kind::ValueKind)
+            continue;
+          const DbgVariableRecord &DVI = static_cast<const DbgVariableRecord &>(Dbg);
+          for (Value *V : DVI.location_ops()) {
+            incorporateValue(V);
+          }
+        }
       }
   }
 
