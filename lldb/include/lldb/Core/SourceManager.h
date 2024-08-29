@@ -77,12 +77,8 @@ public:
 
     bool CalculateLineOffsets(uint32_t line = UINT32_MAX);
 
-    /// The original support file that was used.
-    lldb::SupportFileSP m_original_support_file_sp;
-
-    /// The actually support file being used. If the target
-    /// has source mappings, this might be different from
-    /// the original support file.
+    /// The support file. If the target has source mappings, this might be
+    /// different from the original support file passed to the constructor.
     lldb::SupportFileSP m_support_file_sp;
 
     // Keep the modification time that this file data is valid for

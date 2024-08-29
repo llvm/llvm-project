@@ -451,15 +451,13 @@ void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
 
 SourceManager::File::File(SupportFileSP support_file_sp,
                           lldb::DebuggerSP debugger_sp)
-    : m_original_support_file_sp(support_file_sp),
-      m_support_file_sp(std::make_shared<SupportFile>()), m_mod_time(),
+    : m_support_file_sp(std::make_shared<SupportFile>()), m_mod_time(),
       m_debugger_wp(debugger_sp), m_target_wp(TargetSP()) {
   CommonInitializer(support_file_sp, {});
 }
 
 SourceManager::File::File(SupportFileSP support_file_sp, TargetSP target_sp)
-    : m_original_support_file_sp(support_file_sp),
-      m_support_file_sp(std::make_shared<SupportFile>()), m_mod_time(),
+    : m_support_file_sp(std::make_shared<SupportFile>()), m_mod_time(),
       m_debugger_wp(target_sp ? target_sp->GetDebugger().shared_from_this()
                               : DebuggerSP()),
       m_target_wp(target_sp) {
