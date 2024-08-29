@@ -134,16 +134,18 @@ void PseudoProbeRewriter::parsePseudoProbe() {
 
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
   MCPseudoProbeDecoder::Uint64Map FuncStartAddrs;
-  SmallVector<StringRef, 3> Suffixes({".llvm.", ".destroy", ".resume"});
+  SmallVector<StringRef, 3> Suffixes({".destroy", ".resume", ".llvm."});
   for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
     for (const MCSymbol *Sym : F->getSymbols()) {
       StringRef SymName = NameResolver::restore(Sym->getName());
-      if (std::optional<StringRef> CommonName =
-              getCommonName(SymName, false, Suffixes)) {
-        SymName = *CommonName;
-      }
       uint64_t GUID = Function::getGUID(SymName);
       FuncStartAddrs[GUID] = F->getAddress();
+      std::optional<StringRef> CommonName =
+          getCommonName(SymName, false, Suffixes);
+      if (!CommonName)
+        continue;
+      GUID = Function::getGUID(*CommonName);
+      FuncStartAddrs.try_emplace(GUID, F->getAddress());
     }
   }
   Contents = PseudoProbeSection->getContents();
@@ -162,13 +164,25 @@ void PseudoProbeRewriter::parsePseudoProbe() {
     ProbeDecoder.printProbesForAllAddresses(outs());
   }
 
-  for (const auto &FuncDesc : ProbeDecoder.getGUID2FuncDescMap()) {
-    uint64_t GUID = FuncDesc.FuncGUID;
-    if (!FuncStartAddrs.contains(GUID))
-      continue;
-    BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncStartAddrs[GUID]);
-    assert(BF);
-    BF->setGUID(GUID);
+  const GUIDProbeFunctionMap &GUID2Func = ProbeDecoder.getGUID2FuncDescMap();
+  // Checks GUID in GUID2Func and returns it if it's present or null otherwise.
+  auto checkGUID = [&](StringRef SymName) {
+    uint64_t GUID = Function::getGUID(SymName);
+    if (GUID2Func.find(GUID) == GUID2Func.end())
+      return 0ull;
+    return GUID;
+  };
+  for (BinaryFunction *F : BC.getAllBinaryFunctions()) {
+    for (const MCSymbol *Sym : F->getSymbols()) {
+      StringRef SymName = NameResolver::restore(Sym->getName());
+      uint64_t GUID = checkGUID(SymName);
+      std::optional<StringRef> CommonName =
+          getCommonName(SymName, false, Suffixes);
+      if (!GUID && CommonName)
+        GUID = checkGUID(*CommonName);
+      if (GUID)
+        F->setGUID(GUID);
+    }
   }
 }
 
