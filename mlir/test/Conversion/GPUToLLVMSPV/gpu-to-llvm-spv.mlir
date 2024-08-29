@@ -521,6 +521,7 @@ gpu.module @kernels {
 // -----
 
 gpu.module @kernels {
+// OPENCL:        llvm.func spir_funccc @_Z12get_group_idj(i32)
 // OPENCL-LABEL:   llvm.func spir_funccc @no_address_spaces(
 // OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
@@ -528,4 +529,27 @@ gpu.module @kernels {
   gpu.func @no_address_spaces(%arg0: memref<f32>, %arg1: memref<f32, #gpu.address_space<global>>, %arg2: memref<f32>) {
     gpu.return
   }
+
+// OPENCL-LABEL:   llvm.func spir_kernelcc @no_address_spaces_complex(
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// OPENCL:         llvm.call @no_address_spaces_callee
+  gpu.func @no_address_spaces_complex(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) kernel {
+    func.call @no_address_spaces_callee(%arg0, %arg1) : (memref<2x2xf32>, memref<4xf32>) -> ()
+    gpu.return
+  }
+// OPENCL-LABEL:   llvm.func @no_address_spaces_callee(
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// OPENCL:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
+// OPENCL:         llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
+// OPENCL:         [[LD:%.*]] = llvm.load
+// OPENCL:         llvm.store [[LD]]
+  func.func @no_address_spaces_callee(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) {
+    %block_id = gpu.block_id x
+    %0 = memref.load %arg0[%block_id, %block_id] : memref<2x2xf32>
+    memref.store %0, %arg1[%block_id] : memref<4xf32>
+    func.return
+  }
+
 }

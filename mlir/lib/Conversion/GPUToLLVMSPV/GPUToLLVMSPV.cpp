@@ -9,12 +9,14 @@
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
@@ -312,27 +314,22 @@ class MemorySpaceToOpenCLMemorySpaceConverter final : public TypeConverter {
 public:
   MemorySpaceToOpenCLMemorySpaceConverter() {
     addConversion([](Type t) { return t; });
-    addConversion(
-        [this](BaseMemRefType memRefType) -> std::optional<Type> {
-          std::optional<gpu::AddressSpace> addrSpace =
-              memorySpaceMap(memRefType.getMemorySpace());
-          if (!addrSpace) {
-            LLVM_DEBUG(
-                llvm::dbgs()
-                << "cannot convert " << memRefType
-                << " due to being unable to find address space in the map\n");
-            return std::nullopt;
-          }
-          auto addrSpaceAttr =
-              gpu::AddressSpaceAttr::get(memRefType.getContext(), *addrSpace);
-          if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
-            return MemRefType::get(memRefType.getShape(),
-                                   memRefType.getElementType(),
-                                   rankedType.getLayout(), addrSpaceAttr);
-          }
-          return UnrankedMemRefType::get(memRefType.getElementType(),
-                                         addrSpaceAttr);
-        });
+    addConversion([this](BaseMemRefType memRefType) -> std::optional<Type> {
+      // Attach global addr space attribute to memrefs with no addr space attr
+      Attribute memSpaceAttr = memRefType.getMemorySpace();
+      if (memSpaceAttr)
+        return std::nullopt;
+
+      auto addrSpaceAttr = gpu::AddressSpaceAttr::get(
+          memRefType.getContext(), gpu::AddressSpace::Global);
+      if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
+        return MemRefType::get(memRefType.getShape(),
+                               memRefType.getElementType(),
+                               rankedType.getLayout(), addrSpaceAttr);
+      }
+      return UnrankedMemRefType::get(memRefType.getElementType(),
+                                     addrSpaceAttr);
+    });
     addConversion([this](FunctionType type) {
       auto inputs = llvm::map_to_vector(
           type.getInputs(), [this](Type ty) { return convertType(ty); });
@@ -340,13 +337,6 @@ public:
           type.getResults(), [this](Type ty) { return convertType(ty); });
       return FunctionType::get(type.getContext(), inputs, results);
     });
-  }
-
-private:
-  std::optional<gpu::AddressSpace> memorySpaceMap(Attribute memSpaceAttr) {
-    if (!memSpaceAttr)
-      return gpu::AddressSpace::Global;
-    return std::nullopt;
   }
 };
 
@@ -388,6 +378,8 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::ReturnOp, gpu::ShuffleOp, gpu::ThreadIdOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
+    populateFuncToLLVMConversionPatterns(converter, patterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
     populateGpuMemorySpaceAttributeConversions(converter);
 
     if (failed(applyPartialConversion(getOperation(), target,
