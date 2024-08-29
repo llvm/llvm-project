@@ -735,8 +735,8 @@ Intrinsic::getIntrinsicFor{1}Builtin(StringRef TargetPrefix,
     const auto &[Map, CommonPrefix] = Entry;
     if (TargetPrefix.empty())
       continue;
-    OS << formatv(R"(    {{"{0}", {0}Names, "{2}"},)", TargetPrefix,
-                  TargetPrefix, CommonPrefix)
+    OS << formatv(R"(    {{"{0}", {0}Names, "{1}"},)", TargetPrefix,
+                  CommonPrefix)
        << "\n";
   }
   OS << "  };\n";
