@@ -28176,7 +28176,6 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   assert(CID->getZExtValue() == Intrinsic::experimental_vector_histogram_add &&
          "Unexpected histogram update operation");
 
-  EVT IncVT = Inc.getValueType();
   EVT IndexVT = Index.getValueType();
   LLVMContext &Ctx = *DAG.getContext();
   ElementCount EC = IndexVT.getVectorElementCount();
