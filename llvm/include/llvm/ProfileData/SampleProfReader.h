@@ -495,9 +495,9 @@ public:
   /// are present.
   virtual void setProfileUseMD5() { ProfileIsMD5 = true; }
 
-  /// Don't read profile without context if the flag is set. This is only meaningful
-  /// for ExtBinary format.
-  virtual void setSkipFlatProf(bool Skip) {}
+  /// Don't read profile without context if the flag is set.
+  void setSkipFlatProf(bool Skip) { SkipFlatProf = Skip; }
+
   /// Return whether any name in the profile contains ".__uniq." suffix.
   virtual bool hasUniqSuffix() { return false; }
 
@@ -581,6 +581,10 @@ protected:
   /// Whether the profile uses MD5 for Sample Contexts and function names. This
   /// can be one-way overriden by the user to force use MD5.
   bool ProfileIsMD5 = false;
+
+  /// If SkipFlatProf is true, skip functions marked with !Flat in text mode or
+  /// sections with SecFlagFlat flag in ExtBinary mode.
+  bool SkipFlatProf = false;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
@@ -789,10 +793,6 @@ protected:
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
-  /// If SkipFlatProf is true, skip the sections with
-  /// SecFlagFlat flag.
-  bool SkipFlatProf = false;
-
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
@@ -814,8 +814,6 @@ public:
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
   };
-
-  void setSkipFlatProf(bool Skip) override { SkipFlatProf = Skip; }
 
 private:
   /// Read the profiles on-demand for the given functions. This is used after
