@@ -11,6 +11,11 @@
 
 #include "VPlan.h"
 
+namespace llvm {
+class ScalarEvolution;
+class SCEV;
+} // namespace llvm
+
 namespace llvm::vputils {
 /// Returns true if only the first lane of \p Def is used.
 bool onlyFirstLaneUsed(const VPValue *Def);
@@ -45,6 +50,11 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(const VPValue *V, VPlan &Plan);
+
+/// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
+/// SCEV expression could be constructed.
+const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+
 } // end namespace llvm::vputils
 
 #endif

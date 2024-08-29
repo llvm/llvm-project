@@ -323,16 +323,6 @@ void llvm::collectEphemeralRecipesForVPlan(
   }
 }
 
-const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
-  if (V->isLiveIn())
-    return SE.getSCEV(V->getLiveInIRValue());
-
-  // TODO: Support constructing SCEVs for more recipes as needed.
-  return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
-      .Case<VPExpandSCEVRecipe>(
-          [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
-
 template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
     DominatorTreeBase<VPBlockBase, false> &DT);
 
@@ -374,5 +364,4 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
          "No replicate regions expected at this point");
 #endif
   return Base::properlyDominates(ParentA, ParentB);
->>>>>>> origin/main
 }
