@@ -1,3 +1,4 @@
+; RUN: rm -rf %t0 %t1
 ; RUN: llvm-split -o %t %s -j 2 -mtriple amdgcn-amd-amdhsa
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: not llvm-dis -o - %t1
