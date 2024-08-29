@@ -481,6 +481,7 @@ class _LIBCPP_TEMPLATE_VIS deque {
   static_assert(!is_function<_Tp>::value, "'std::deque' cannot hold functions");
   static_assert(!is_void<_Tp>::value, "'std::deque' cannot hold 'void'");
   static_assert(!is_array<_Tp>::value, "'std::deque' cannot hold C arrays");
+
 public:
   // types:
 

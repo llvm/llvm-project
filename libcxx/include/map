@@ -971,6 +971,7 @@ class _LIBCPP_TEMPLATE_VIS map {
   static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::map' cannot hold functions");
   static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::map' cannot hold 'void'");
   static_assert(!__libcpp_is_unbounded_array<_Key>::value, "'std::map' cannot hold C arrays");
+
 public:
   // types:
   typedef _Key key_type;
@@ -1652,6 +1653,7 @@ class _LIBCPP_TEMPLATE_VIS multimap {
   static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::multimap' cannot hold functions");
   static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::multimap' cannot hold 'void'");
   static_assert(!__libcpp_is_unbounded_array<_Key>::value, "'std::multimap' cannot hold C arrays");
+
 public:
   // types:
   typedef _Key key_type;

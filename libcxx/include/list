@@ -478,6 +478,7 @@ class __list_imp {
   static_assert(!is_function<_Tp>::value, "'std::list' cannot hold functions");
   static_assert(!is_void<_Tp>::value, "'std::list' cannot hold 'void'");
   static_assert(!is_array<_Tp>::value, "'std::list' cannot hold C arrays");
+
 public:
   __list_imp(const __list_imp&) = delete;
   __list_imp& operator=(const __list_imp&) = delete;
@@ -674,7 +675,6 @@ void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
-
   typedef __list_imp<_Tp, _Alloc> base;
   typedef typename base::__node_type __node_type;
   typedef typename base::__node_allocator __node_allocator;

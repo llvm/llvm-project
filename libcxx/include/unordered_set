@@ -592,6 +592,7 @@ class _LIBCPP_TEMPLATE_VIS unordered_set {
   static_assert(!is_function<_Value>::value, "'std::unordered_set' cannot hold functions");
   static_assert(!is_void<_Value>::value, "'std::unordered_set' cannot hold 'void'");
   static_assert(!is_array<_Value>::value, "'std::unordered_set' cannot hold C arrays");
+
 public:
   // types
   typedef _Value key_type;
@@ -1193,6 +1194,7 @@ class _LIBCPP_TEMPLATE_VIS unordered_multiset {
   static_assert(!is_function<_Value>::value, "'std::unordered_multiset' cannot hold functions");
   static_assert(!is_void<_Value>::value, "'std::unordered_multiset' cannot hold 'void'");
   static_assert(!is_array<_Value>::value, "'std::unordered_multiset' cannot hold C arrays");
+
 public:
   // types
   typedef _Value key_type;

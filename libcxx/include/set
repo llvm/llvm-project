@@ -574,6 +574,7 @@ class _LIBCPP_TEMPLATE_VIS set {
   static_assert(!is_function<_Key>::value, "'std::set' cannot hold functions");
   static_assert(!is_void<_Key>::value, "'std::set' cannot hold 'void'");
   static_assert(!is_array<_Key>::value, "'std::set' cannot hold C arrays");
+
 public:
   // types:
   typedef _Key key_type;
@@ -1034,6 +1035,7 @@ class _LIBCPP_TEMPLATE_VIS multiset {
   static_assert(!is_function<_Key>::value, "'std::multiset' cannot hold functions");
   static_assert(!is_void<_Key>::value, "'std::multiset' cannot hold 'void'");
   static_assert(!is_array<_Key>::value, "'std::multiset' cannot hold C arrays");
+
 public:
   // types:
   typedef _Key key_type;

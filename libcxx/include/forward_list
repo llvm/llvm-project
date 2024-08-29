@@ -488,6 +488,7 @@ class __forward_list_base {
   static_assert(!is_function<_Tp>::value, "'std::forward_list' cannot hold functions");
   static_assert(!is_void<_Tp>::value, "'std::forward_list' cannot hold 'void'");
   static_assert(!is_array<_Tp>::value, "'std::forward_list' cannot hold C arrays");
+
 protected:
   typedef _Tp value_type;
   typedef _Alloc allocator_type;
