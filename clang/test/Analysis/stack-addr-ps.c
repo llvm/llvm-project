@@ -143,4 +143,4 @@ void no_crash_for_symbol_without_origin_region(void) {
   struct c *ptr = get_c();
   opaque(ptr);
   ptr->nested_ptr->member++;
-}
+} // No crash at the end of the function
