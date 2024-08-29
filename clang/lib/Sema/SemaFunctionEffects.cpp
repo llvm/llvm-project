@@ -63,7 +63,7 @@ public:
 
   explicit ViolationSite(CXXDefaultArgExpr *E)
       : Impl(E, Kind::DefaultArgExpr) {}
-  
+
   Kind kind() const { return static_cast<Kind>(Impl.getInt()); }
   CXXDefaultArgExpr *defaultArgExpr() const { return Impl.getPointer(); }
 
@@ -127,6 +127,13 @@ static bool isNoexcept(const FunctionDecl *FD) {
   return false;
 }
 
+// This list is probably incomplete.
+// FIXME: Investigate:
+// __builtin_eh_return?
+// __builtin_allow_runtime_check?
+// __builtin_unwind_init and other similar things that sound exception-related.
+// va_copy?
+// coroutines?
 static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   FunctionEffectKindSet Result;
 
@@ -149,14 +156,6 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   case Builtin::ID::BIrealloc:
   case Builtin::ID::BIfree:
 
-  case Builtin::ID::BI__builtin_unwind_init: // ????
-  // __builtin_eh_return?
-  // __builtin_allow_runtime_check
-  // va_copy
-  // printf, fprintf, snprintf, sprintf, vprintf, vfprintf, vsnprintf
-  // scanf family
-  // coroutine intrinsics?
-
   case Builtin::ID::BIfopen:
   case Builtin::ID::BIpthread_create:
   case Builtin::ID::BI_Block_object_dispose:
@@ -170,6 +169,7 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   case Builtin::ID::BI__builtin_longjmp:
   case Builtin::ID::BIobjc_exception_throw:
 
+  // Objective-C runtime.
   case Builtin::ID::BIobjc_msgSend:
   case Builtin::ID::BIobjc_msgSend_fpret:
   case Builtin::ID::BIobjc_msgSend_fp2ret:
@@ -185,15 +185,35 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   case Builtin::ID::BINSLog:
   case Builtin::ID::BINSLogv:
 
+  // stdio.h
   case Builtin::ID::BIfread:
   case Builtin::ID::BIfwrite:
+
+  // stdio.h: printf family.
+  case Builtin::ID::BIprintf:
+  case Builtin::ID::BI__builtin_printf:
+  case Builtin::ID::BIfprintf:
+  case Builtin::ID::BIsnprintf:
+  case Builtin::ID::BIsprintf:
+  case Builtin::ID::BIvprintf:
+  case Builtin::ID::BIvfprintf:
+  case Builtin::ID::BIvsnprintf:
+  case Builtin::ID::BIvsprintf:
+
+  // stdio.h: scanf family.
+  case Builtin::ID::BIscanf:
+  case Builtin::ID::BIfscanf:
+  case Builtin::ID::BIsscanf:
+  case Builtin::ID::BIvscanf:
+  case Builtin::ID::BIvfscanf:
+  case Builtin::ID::BIvsscanf:
+
     Result.insert(FunctionEffect(FunctionEffect::Kind::Blocking));
     break;
   }
 
   return Result;
 }
-
 
 // Transitory, more extended information about a callable, which can be a
 // function, block, or function pointer.
