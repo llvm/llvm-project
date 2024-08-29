@@ -210,21 +210,41 @@ define internal i1 @ip_test_nonnull_callee(ptr nonnull %p) {
 ;
 ; IPSCCP-LABEL: define internal i1 @ip_test_nonnull_callee(
 ; IPSCCP-SAME: ptr nonnull [[P:%.*]]) {
-; IPSCCP-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], null
-; IPSCCP-NEXT:    ret i1 [[CMP]]
+; IPSCCP-NEXT:    ret i1 poison
 ;
   %cmp = icmp ne ptr %p, null
   ret i1 %cmp
 }
 
 define i1 @ip_test_nonnull_caller(ptr %p) {
-; CHECK-LABEL: define i1 @ip_test_nonnull_caller(
-; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i1 @ip_test_nonnull_callee(ptr [[P]])
-; CHECK-NEXT:    ret i1 [[RES]]
+; SCCP-LABEL: define i1 @ip_test_nonnull_caller(
+; SCCP-SAME: ptr [[P:%.*]]) {
+; SCCP-NEXT:    [[RES:%.*]] = call i1 @ip_test_nonnull_callee(ptr [[P]])
+; SCCP-NEXT:    ret i1 [[RES]]
+;
+; IPSCCP-LABEL: define i1 @ip_test_nonnull_caller(
+; IPSCCP-SAME: ptr [[P:%.*]]) {
+; IPSCCP-NEXT:    [[RES:%.*]] = call i1 @ip_test_nonnull_callee(ptr [[P]])
+; IPSCCP-NEXT:    ret i1 true
 ;
   %res = call i1 @ip_test_nonnull_callee(ptr %p)
   ret i1 %res
+}
+
+define ptr @ret_nonnull_pointer(ptr nonnull %p) {
+; CHECK-LABEL: define ptr @ret_nonnull_pointer(
+; CHECK-SAME: ptr nonnull [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
+define ptr @ret_maybe_null_pointer(ptr %p) {
+; CHECK-LABEL: define ptr @ret_maybe_null_pointer(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
 }
 
 ;.
