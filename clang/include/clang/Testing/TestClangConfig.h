@@ -29,10 +29,8 @@ struct TestClangConfig {
 
   bool isC() const {
     return false
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   || Language == Lang_##lang##version
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
         ;
   }
