@@ -1821,12 +1821,27 @@ define half @fabs_f16(half %a) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 49
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fabs_f16:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECKIZFHMIN-NEXT:    fabs.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; RV32IZFHMIN-LABEL: fabs_f16:
+; RV32IZFHMIN:       # %bb.0:
+; RV32IZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IZFHMIN-NEXT:    fsh fa0, 12(sp)
+; RV32IZFHMIN-NEXT:    lbu a0, 13(sp)
+; RV32IZFHMIN-NEXT:    andi a0, a0, 127
+; RV32IZFHMIN-NEXT:    sb a0, 13(sp)
+; RV32IZFHMIN-NEXT:    flh fa0, 12(sp)
+; RV32IZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IZFHMIN-NEXT:    ret
+;
+; RV64IZFHMIN-LABEL: fabs_f16:
+; RV64IZFHMIN:       # %bb.0:
+; RV64IZFHMIN-NEXT:    addi sp, sp, -16
+; RV64IZFHMIN-NEXT:    fsh fa0, 8(sp)
+; RV64IZFHMIN-NEXT:    lbu a0, 9(sp)
+; RV64IZFHMIN-NEXT:    andi a0, a0, 127
+; RV64IZFHMIN-NEXT:    sb a0, 9(sp)
+; RV64IZFHMIN-NEXT:    flh fa0, 8(sp)
+; RV64IZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-LABEL: fabs_f16:
 ; RV32IZHINXMIN:       # %bb.0:
