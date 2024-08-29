@@ -305,14 +305,18 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (!Ptr.isLive()) {
     const auto &Src = S.Current->getSource(OpPC);
-    bool IsTemp = Ptr.isTemporary();
 
-    S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
+    if (Ptr.isDynamic()) {
+      S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
+    } else {
+      bool IsTemp = Ptr.isTemporary();
+      S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
 
-    if (IsTemp)
-      S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-    else
-      S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+      if (IsTemp)
+        S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
+      else
+        S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
+    }
 
     return false;
   }
