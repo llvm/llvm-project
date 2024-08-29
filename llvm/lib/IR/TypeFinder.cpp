@@ -94,7 +94,8 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
           // Pick out records that have Values.
           if (Dbg.getRecordKind() != DbgRecord::Kind::ValueKind)
             continue;
-          const DbgVariableRecord &DVI = static_cast<const DbgVariableRecord &>(Dbg);
+          const DbgVariableRecord &DVI =
+              static_cast<const DbgVariableRecord &>(Dbg);
           for (Value *V : DVI.location_ops()) {
             incorporateValue(V);
           }
