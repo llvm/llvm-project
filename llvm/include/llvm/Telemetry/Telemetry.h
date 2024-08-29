@@ -84,7 +84,7 @@ struct TelemetryInfo {
 
   // For isa, dyn_cast, etc, operations.
   virtual KindType getEntryKind() const { return EntryKind::Base; }
-  static bool classof(const TelemetryInfo* T) {
+  static bool classof(const TelemetryInfo *T) {
     return T->getEntryKind() == EntryKind::Base;
   }
 };

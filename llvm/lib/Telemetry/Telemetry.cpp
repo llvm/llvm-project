@@ -4,8 +4,8 @@ namespace llvm {
 namespace telemetry {
 
 llvm::json::Object TelemetryInfo::serializeToJson() const {
-  return json::Object {
-    {"UUID", SessionUuid},
+  return json::Object{
+      {"UUID", SessionUuid},
   };
 };
 

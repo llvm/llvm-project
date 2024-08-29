@@ -20,12 +20,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-#include <cstdio>
-#include <vector>
 #include <chrono>
 #include <ctime>
+#include <vector>
 
-#include <iostream>  // TODO: remove this
 
 // Testing parameters.ve
 static thread_local bool HasExitError = false;
@@ -46,29 +44,29 @@ static std::string nextUuid() {
 }
 
 struct VendorEntryKind {
-   // TODO: should avoid dup with other vendors' Types?
+  // TODO: should avoid dup with other vendors' Types?
   static const KindType VendorCommon = 0b010101000;
-  static const KindType Startup      = 0b010101001;
-  static const KindType Exit         = 0b010101010;
- };
-
+  static const KindType Startup = 0b010101001;
+  static const KindType Exit = 0b010101010;
+};
 
 // Demonstrates that the TelemetryInfo (data courier) struct can be extended
 // by downstream code to store additional data as needed.
 // It can also define additional data serialization method.
 struct VendorCommonTelemetryInfo : public TelemetryInfo {
 
-  static bool classof(const TelemetryInfo* T) {
+  static bool classof(const TelemetryInfo *T) {
     // Subclasses of this is also acceptable.
-    return (T->getEntryKind() & VendorEntryKind::VendorCommon)  == VendorEntryKind::VendorCommon;
-
+    return (T->getEntryKind() & VendorEntryKind::VendorCommon) ==
+           VendorEntryKind::VendorCommon;
   }
 
-  KindType getEntryKind() const override { return VendorEntryKind::VendorCommon;}
+  KindType getEntryKind() const override {
+    return VendorEntryKind::VendorCommon;
+  }
 
   virtual void serializeToStream(llvm::raw_ostream &OS) const = 0;
 };
-
 
 struct StartupEvent : public VendorCommonTelemetryInfo {
   std::string MagicStartupMsg;
@@ -83,21 +81,21 @@ struct StartupEvent : public VendorCommonTelemetryInfo {
     MagicStartupMsg = E.MagicStartupMsg;
   }
 
-  static bool classof(const TelemetryInfo* T) {
+  static bool classof(const TelemetryInfo *T) {
     return T->getEntryKind() == VendorEntryKind::Startup;
   }
 
-  KindType getEntryKind() const override { return VendorEntryKind::Startup;}
+  KindType getEntryKind() const override { return VendorEntryKind::Startup; }
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
-    OS<< "UUID:" << SessionUuid << "\n";
+    OS << "UUID:" << SessionUuid << "\n";
     OS << "MagicStartupMsg:" << MagicStartupMsg << "\n";
   }
 
   json::Object serializeToJson() const override {
     return json::Object{
-      {"Startup", { {"UUID", SessionUuid},
-                    {"MagicStartupMsg", MagicStartupMsg}}},
+        {"Startup",
+         {{"UUID", SessionUuid}, {"MagicStartupMsg", MagicStartupMsg}}},
     };
   }
 };
@@ -117,11 +115,11 @@ struct ExitEvent : public VendorCommonTelemetryInfo {
     MagicExitMsg = E.MagicExitMsg;
   }
 
-  static bool classof(const TelemetryInfo* T) {
+  static bool classof(const TelemetryInfo *T) {
     return T->getEntryKind() == VendorEntryKind::Exit;
   }
 
-  unsigned getEntryKind() const override { return VendorEntryKind::Exit;}
+  unsigned getEntryKind() const override { return VendorEntryKind::Exit; }
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
     OS << "UUID:" << SessionUuid << "\n";
@@ -131,14 +129,14 @@ struct ExitEvent : public VendorCommonTelemetryInfo {
   }
 
   json::Object serializeToJson() const override {
-    json::Array I =  json::Array{
+    json::Array I = json::Array{
         {"UUID", SessionUuid},
         {"MagicExitMsg", MagicExitMsg},
     };
     if (ExitDesc.has_value())
       I.push_back(json::Value({"ExitCode", ExitDesc->ExitCode}));
-    return json::Object {
-      {"Exit", std::move(I)},
+    return json::Object{
+        {"Exit", std::move(I)},
     };
   }
 };
@@ -164,19 +162,16 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
     }
   }
 
-  json::Object serializeToJson() const  override {
+  json::Object serializeToJson() const override {
     json::Object Inner;
     int I = 0;
     for (const std::string &M : Msgs) {
       Inner.try_emplace(("MSG_" + llvm::Twine(I)).str(), M);
       ++I;
     }
-    return json::Object {
-      {"Midpoint", std::move(Inner)}}
-    ;
+    return json::Object{{"Midpoint", std::move(Inner)}};
   }
 };
-
 
 // The following classes demonstrate how downstream code can
 // define one or more custom TelemetryDestination(s) to handle
@@ -185,24 +180,24 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 //    + where to send the data
 //    + in what form
 
-const std::string STRING_DEST( "STRING");
-const std::string JSON_DEST ("JSON");
+const std::string STRING_DEST("STRING");
+const std::string JSON_DEST("JSON");
 
 // This Destination sends data to a std::string given at ctor.
 class StringDestination : public TelemetryDestination {
 public:
   // ShouldSanitize: if true, sanitize the data before emitting, otherwise, emit
   // the full set.
-  StringDestination(bool ShouldSanitize, std::string& Buf)
-      : ShouldSanitize(ShouldSanitize), OS(Buf) {
-  }
+  StringDestination(bool ShouldSanitize, std::string &Buf)
+      : ShouldSanitize(ShouldSanitize), OS(Buf) {}
 
   Error emitEntry(const TelemetryInfo *Entry) override {
     if (isa<VendorCommonTelemetryInfo>(Entry)) {
       if (auto *E = dyn_cast<VendorCommonTelemetryInfo>(Entry)) {
         if (ShouldSanitize) {
           if (isa<StartupEvent>(E) || isa<ExitEvent>(E)) {
-            // There is nothing to sanitize for this type of data, so keep as-is.
+            // There is nothing to sanitize for this type of data, so keep
+            // as-is.
             E->serializeToStream(OS);
           } else if (isa<CustomTelemetryEvent>(E)) {
             auto Sanitized = sanitizeFields(dyn_cast<CustomTelemetryEvent>(E));
@@ -221,65 +216,63 @@ public:
     return Error::success();
   }
 
-  std::string name() const override { return STRING_DEST;}
+  std::string name() const override { return STRING_DEST; }
 
 private:
   // Returns a copy of the given entry, but with some fields sanitized.
-  CustomTelemetryEvent sanitizeFields(const CustomTelemetryEvent* Entry) {
+  CustomTelemetryEvent sanitizeFields(const CustomTelemetryEvent *Entry) {
     CustomTelemetryEvent Sanitized(*Entry);
     // Pretend that messages stored at ODD positions are "sensitive",
     // hence need to be sanitized away.
     int S = Sanitized.Msgs.size() - 1;
     for (int I = S % 2 == 0 ? S - 1 : S; I >= 0; I -= 2)
-      Sanitized.Msgs[I]="";
-      return Sanitized;
+      Sanitized.Msgs[I] = "";
+    return Sanitized;
   }
 
   bool ShouldSanitize;
   llvm::raw_string_ostream OS;
-
 };
 
 // This Destination sends data to some "blackbox" in form of JSON.
 class JsonStreamDestination : public TelemetryDestination {
 public:
-  JsonStreamDestination(bool ShouldSanitize)
-      : ShouldSanitize(ShouldSanitize) {}
+  JsonStreamDestination(bool ShouldSanitize) : ShouldSanitize(ShouldSanitize) {}
 
   Error emitEntry(const TelemetryInfo *Entry) override {
     if (auto *E = dyn_cast<VendorCommonTelemetryInfo>(Entry)) {
-        if (ShouldSanitize) {
-          if (isa<StartupEvent>(E) || isa<ExitEvent>(E)) {
-            // There is nothing to sanitize for this type of data, so keep as-is.
-            return SendToBlackbox(E->serializeToJson());
-          } else if (isa<CustomTelemetryEvent>(E)) {
-            auto Sanitized = sanitizeFields(dyn_cast<CustomTelemetryEvent>(E));
-            return SendToBlackbox(Sanitized.serializeToJson());
-          } else {
-            llvm_unreachable("unexpected type");
-          }
-        } else {
+      if (ShouldSanitize) {
+        if (isa<StartupEvent>(E) || isa<ExitEvent>(E)) {
+          // There is nothing to sanitize for this type of data, so keep as-is.
           return SendToBlackbox(E->serializeToJson());
+        } else if (isa<CustomTelemetryEvent>(E)) {
+          auto Sanitized = sanitizeFields(dyn_cast<CustomTelemetryEvent>(E));
+          return SendToBlackbox(Sanitized.serializeToJson());
+        } else {
+          llvm_unreachable("unexpected type");
         }
-      }  else {
+      } else {
+        return SendToBlackbox(E->serializeToJson());
+      }
+    } else {
       // Unfamiliar entries, just send the entry's UUID
-     return SendToBlackbox(json::Object{{"UUID", Entry->SessionUuid}});
+      return SendToBlackbox(json::Object{{"UUID", Entry->SessionUuid}});
     }
     return make_error<StringError>("unhandled codepath in emitEntry",
-                                        inconvertibleErrorCode());
+                                   inconvertibleErrorCode());
   }
 
-  std::string name() const override { return JSON_DEST;}
-private:
+  std::string name() const override { return JSON_DEST; }
 
+private:
   // Returns a copy of the given entry, but with some fields sanitized.
-  CustomTelemetryEvent sanitizeFields(const CustomTelemetryEvent* Entry) {
+  CustomTelemetryEvent sanitizeFields(const CustomTelemetryEvent *Entry) {
     CustomTelemetryEvent Sanitized(*Entry);
     // Pretend that messages stored at EVEN positions are "sensitive",
     // hence need to be sanitized away.
     int S = Sanitized.Msgs.size() - 1;
     for (int I = S % 2 == 0 ? S : S - 1; I >= 0; I -= 2)
-      Sanitized.Msgs[I]="";
+      Sanitized.Msgs[I] = "";
 
     return Sanitized;
   }
@@ -300,29 +293,35 @@ class TestTelemeter : public Telemeter {
 public:
   TestTelemeter(std::string SessionUuid) : Uuid(SessionUuid), Counter(0) {}
 
-  static std::unique_ptr<TestTelemeter> createInstance(TelemetryConfig *config) {
-    if (!config->EnableTelemetry) return std::unique_ptr<TestTelemeter>(nullptr);
-      std::unique_ptr<TestTelemeter> Telemeter = std::make_unique<TestTelemeter>(nextUuid());
-      // Set up Destination based on the given config.
-      for (const std::string &Dest : config->AdditionalDestinations) {
-        // The destination(s) are ALSO defined by vendor, so it should understand
-        // what the name of each destination signifies.
-        if (Dest == JSON_DEST) {
-          Telemeter->addDestination(new vendor_code::JsonStreamDestination(SanitizeData));
-        } else if (Dest == STRING_DEST) {
-          Telemeter->addDestination(new vendor_code::StringDestination(SanitizeData, Buffer));
-        } else {
-          llvm_unreachable(llvm::Twine("unknown destination: ", Dest).str().c_str());
-        }
+  static std::unique_ptr<TestTelemeter>
+  createInstance(TelemetryConfig *config) {
+    if (!config->EnableTelemetry)
+      return std::unique_ptr<TestTelemeter>(nullptr);
+    std::unique_ptr<TestTelemeter> Telemeter =
+        std::make_unique<TestTelemeter>(nextUuid());
+    // Set up Destination based on the given config.
+    for (const std::string &Dest : config->AdditionalDestinations) {
+      // The destination(s) are ALSO defined by vendor, so it should understand
+      // what the name of each destination signifies.
+      if (Dest == JSON_DEST) {
+        Telemeter->addDestination(
+            new vendor_code::JsonStreamDestination(SanitizeData));
+      } else if (Dest == STRING_DEST) {
+        Telemeter->addDestination(
+            new vendor_code::StringDestination(SanitizeData, Buffer));
+      } else {
+        llvm_unreachable(
+            llvm::Twine("unknown destination: ", Dest).str().c_str());
       }
-      return Telemeter;
+    }
+    return Telemeter;
   }
 
   void logStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
     ToolName = ToolPath.str();
 
     // The vendor can add additional stuff to the entry before logging.
-    if (auto* S = dyn_cast<StartupEvent>(Entry)) {
+    if (auto *S = dyn_cast<StartupEvent>(Entry)) {
       S->MagicStartupMsg = llvm::Twine("One_", ToolPath).str();
     }
     emitToDestinations(Entry);
@@ -330,7 +329,7 @@ public:
 
   void logExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
     // Ensure we're shutting down the same tool we started with.
-    if (ToolPath != ToolName){
+    if (ToolPath != ToolName) {
       std::string Str;
       raw_string_ostream OS(Str);
       OS << "Expected tool with name" << ToolName << ", but got " << ToolPath;
@@ -338,20 +337,20 @@ public:
     }
 
     // The vendor can add additional stuff to the entry before logging.
-    if (auto * E = dyn_cast<ExitEvent>(Entry)) {
+    if (auto *E = dyn_cast<ExitEvent>(Entry)) {
       E->MagicExitMsg = llvm::Twine("Three_", ToolPath).str();
     }
 
     emitToDestinations(Entry);
   }
 
-  void addDestination(TelemetryDestination* Dest) override {
+  void addDestination(TelemetryDestination *Dest) override {
     Destinations.push_back(Dest);
   }
 
   void logMidpoint(TelemetryInfo *Entry) {
     // The custom Telemeter can record and send additional data.
-    if (auto * C = dyn_cast<CustomTelemetryEvent>(Entry)) {
+    if (auto *C = dyn_cast<CustomTelemetryEvent>(Entry)) {
       C->Msgs.push_back("Two");
       C->Msgs.push_back("Deux");
       C->Msgs.push_back("Zwei");
@@ -361,23 +360,22 @@ public:
   }
 
   ~TestTelemeter() {
-    for (auto* Dest : Destinations)
+    for (auto *Dest : Destinations)
       delete Dest;
   }
 
-  template <typename T>
-  T makeDefaultTelemetryInfo() {
+  template <typename T> T makeDefaultTelemetryInfo() {
     T Ret;
     Ret.SessionUuid = Uuid;
     Ret.Counter = Counter++;
     return Ret;
   }
-private:
 
+private:
   void emitToDestinations(TelemetryInfo *Entry) {
     for (TelemetryDestination *Dest : Destinations) {
       llvm::Error err = Dest->emitEntry(Entry);
-      if(err) {
+      if (err) {
         // Log it and move on.
       }
     }
@@ -400,7 +398,7 @@ void ApplyVendorSpecificConfigs(TelemetryConfig *config) {
 
 namespace {
 
-void ApplyCommonConfig(llvm::telemetry::TelemetryConfig* config) {
+void ApplyCommonConfig(llvm::telemetry::TelemetryConfig *config) {
   // Any shareable configs for the upstream tool can go here.
   // .....
 }
@@ -435,23 +433,27 @@ using namespace llvm::telemetry;
 //
 // Preset StartTime to EPOCH.
 auto StartTime = std::chrono::time_point<std::chrono::steady_clock>{};
-// Pretend the time it takes for the tool's initialization is EPOCH + 5 milliseconds
+// Pretend the time it takes for the tool's initialization is EPOCH + 5
+// milliseconds
 auto InitCompleteTime = StartTime + std::chrono::milliseconds(5);
 auto MidPointTime = StartTime + std::chrono::milliseconds(10);
 auto MidPointCompleteTime = MidPointTime + std::chrono::milliseconds(5);
 // Preset ExitTime to EPOCH + 20 milliseconds
 auto ExitTime = StartTime + std::chrono::milliseconds(20);
-// Pretend the time it takes to complete tearing down the tool is 10 milliseconds.
+// Pretend the time it takes to complete tearing down the tool is 10
+// milliseconds.
 auto ExitCompleteTime = ExitTime + std::chrono::milliseconds(10);
 
-void AtToolStart(std::string ToolName, vendor_code::TestTelemeter* T) {
-  vendor_code::StartupEvent Entry = T->makeDefaultTelemetryInfo<vendor_code::StartupEvent>();
+void AtToolStart(std::string ToolName, vendor_code::TestTelemeter *T) {
+  vendor_code::StartupEvent Entry =
+      T->makeDefaultTelemetryInfo<vendor_code::StartupEvent>();
   Entry.Stats = {StartTime, InitCompleteTime};
   T->logStartup(ToolName, &Entry);
 }
 
-void AtToolExit(std::string ToolName, vendor_code::TestTelemeter* T) {
-  vendor_code::ExitEvent Entry = T->makeDefaultTelemetryInfo<vendor_code::ExitEvent>();
+void AtToolExit(std::string ToolName, vendor_code::TestTelemeter *T) {
+  vendor_code::ExitEvent Entry =
+      T->makeDefaultTelemetryInfo<vendor_code::ExitEvent>();
   Entry.Stats = {ExitTime, ExitCompleteTime};
 
   if (HasExitError) {
@@ -460,14 +462,15 @@ void AtToolExit(std::string ToolName, vendor_code::TestTelemeter* T) {
   T->logExit(ToolName, &Entry);
 }
 
-void AtToolMidPoint (vendor_code::TestTelemeter* T) {
-  vendor_code::CustomTelemetryEvent Entry = T->makeDefaultTelemetryInfo<vendor_code::CustomTelemetryEvent>();
+void AtToolMidPoint(vendor_code::TestTelemeter *T) {
+  vendor_code::CustomTelemetryEvent Entry =
+      T->makeDefaultTelemetryInfo<vendor_code::CustomTelemetryEvent>();
   Entry.Stats = {MidPointTime, MidPointCompleteTime};
   T->logMidpoint(&Entry);
 }
 
 // Helper function to print the given object content to string.
-static std::string ValueToString(const json::Value* V) {
+static std::string ValueToString(const json::Value *V) {
   std::string Ret;
   llvm::raw_string_ostream P(Ret);
   P << *V;
@@ -477,7 +480,8 @@ static std::string ValueToString(const json::Value* V) {
 // Without vendor's implementation, telemetry is not enabled by default.
 TEST(TelemetryTest, TelemetryDefault) {
   HasVendorConfig = false;
-  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config = GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
+      GetTelemetryConfig();
   auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
 
   EXPECT_EQ(nullptr, Tool.get());
@@ -492,7 +496,8 @@ TEST(TelemetryTest, TelemetryEnabled) {
   Buffer = "";
   EmittedJsons.clear();
 
-  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config = GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
+      GetTelemetryConfig();
 
   // Add some destinations
   Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST);
@@ -503,7 +508,6 @@ TEST(TelemetryTest, TelemetryEnabled) {
   AtToolStart(ToolName, Tool.get());
   AtToolMidPoint(Tool.get());
   AtToolExit(ToolName, Tool.get());
-
 
   // Check that the StringDestination emitted properly
   {
@@ -524,20 +528,22 @@ TEST(TelemetryTest, TelemetryEnabled) {
     // There should be 3 events emitted by the Telemeter (start, midpoint, exit)
     EXPECT_EQ(3, EmittedJsons.size());
 
-    const json::Value* StartupEntry = EmittedJsons[0].get("Startup");
+    const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ("[[\"UUID\",\"1111\"],[\"MagicStartupMsg\",\"One_TestToolOne\"]]",
-                 ValueToString(StartupEntry).c_str());
+    EXPECT_STREQ(
+        "[[\"UUID\",\"1111\"],[\"MagicStartupMsg\",\"One_TestToolOne\"]]",
+        ValueToString(StartupEntry).c_str());
 
-    const json::Value* MidpointEntry = EmittedJsons[1].get("Midpoint");
+    const json::Value *MidpointEntry = EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
     EXPECT_STREQ("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\"}",
                  ValueToString(MidpointEntry).c_str());
 
-    const json::Value* ExitEntry = EmittedJsons[2].get("Exit");
+    const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ("[[\"UUID\",\"1111\"],[\"MagicExitMsg\",\"Three_TestToolOne\"]]",
-                 ValueToString(ExitEntry).c_str());
+    EXPECT_STREQ(
+        "[[\"UUID\",\"1111\"],[\"MagicExitMsg\",\"Three_TestToolOne\"]]",
+        ValueToString(ExitEntry).c_str());
   }
 }
 
@@ -552,7 +558,8 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   Buffer = "";
   EmittedJsons.clear();
 
-  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config = GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
+      GetTelemetryConfig();
 
   // Add some destinations
   Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST);
@@ -564,14 +571,13 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   AtToolMidPoint(Tool.get());
   AtToolExit(ToolName, Tool.get());
 
-
   // Check that the StringDestination emitted properly
   {
     // The StringDestination should have removed the odd-positioned msgs.
     std::string ExpectedBuff = "UUID:1111\n"
                                "MagicStartupMsg:One_TestToolOne\n"
                                "MSG_0:Two\n"
-                               "MSG_1:\n"    // was sannitized away.
+                               "MSG_1:\n" // was sannitized away.
                                "MSG_2:Zwei\n"
                                "UUID:1111\n"
                                "MagicExitMsg:Three_TestToolOne\n";
@@ -585,21 +591,23 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     // There should be 3 events emitted by the Telemeter (start, midpoint, exit)
     EXPECT_EQ(3, EmittedJsons.size());
 
-    const json::Value* StartupEntry = EmittedJsons[0].get("Startup");
+    const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ("[[\"UUID\",\"1111\"],[\"MagicStartupMsg\",\"One_TestToolOne\"]]",
-                 ValueToString(StartupEntry).c_str());
+    EXPECT_STREQ(
+        "[[\"UUID\",\"1111\"],[\"MagicStartupMsg\",\"One_TestToolOne\"]]",
+        ValueToString(StartupEntry).c_str());
 
-    const json::Value* MidpointEntry = EmittedJsons[1].get("Midpoint");
+    const json::Value *MidpointEntry = EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
     // The JsonDestination should have removed the even-positioned msgs.
     EXPECT_STREQ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\"}",
                  ValueToString(MidpointEntry).c_str());
 
-    const json::Value* ExitEntry = EmittedJsons[2].get("Exit");
+    const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ("[[\"UUID\",\"1111\"],[\"MagicExitMsg\",\"Three_TestToolOne\"]]",
-                 ValueToString(ExitEntry).c_str());
+    EXPECT_STREQ(
+        "[[\"UUID\",\"1111\"],[\"MagicExitMsg\",\"Three_TestToolOne\"]]",
+        ValueToString(ExitEntry).c_str());
   }
 }
 
