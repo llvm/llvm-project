@@ -45,8 +45,7 @@ TEST_F(LlvmLibcNanf16Test, RandomString) {
 }
 
 #if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
-// TEST_F(LlvmLibcNanf16Test, InvalidInput) {
-//   EXPECT_DEATH([] { LIBC_NAMESPACE::nanf16(nullptr); },
-//   WITH_SIGNAL(SIGSEGV));
-// }
+TEST_F(LlvmLibcNanf16Test, InvalidInput) {
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf16(nullptr); }, WITH_SIGNAL(SIGSEGV));
+}
 #endif // LIBC_HAVE_ADDRESS_SANITIZER

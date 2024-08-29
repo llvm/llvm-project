@@ -40,8 +40,8 @@ TEST(LlvmLibcMincoreTest, UnalignedAddr) {
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
   LIBC_NAMESPACE::libc_errno = 0;
-  // int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, nullptr);
-  // EXPECT_THAT(res, Fails(EINVAL, -1));
+  int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, nullptr);
+  EXPECT_THAT(res, Fails(EINVAL, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
 
@@ -107,9 +107,9 @@ TEST(LlvmLibcMincoreTest, PageOut) {
                 Succeeds());
 
     LIBC_NAMESPACE::libc_errno = 0;
-    // int res = LIBC_NAMESPACE::mincore(addr, page_size, &vec);
-    // EXPECT_EQ(vec & 1u, 0u);
-    // EXPECT_THAT(res, Succeeds());
+    int res = LIBC_NAMESPACE::mincore(addr, page_size, &vec);
+    EXPECT_EQ(vec & 1u, 0u);
+    EXPECT_THAT(res, Succeeds());
   }
 
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());

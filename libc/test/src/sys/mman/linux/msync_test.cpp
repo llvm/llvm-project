@@ -38,8 +38,8 @@ struct PageHolder {
 };
 
 TEST(LlvmLibcMsyncTest, UnMappedMemory) {
-  // EXPECT_THAT(LIBC_NAMESPACE::msync(nullptr, 1024, MS_SYNC), Fails(ENOMEM));
-  // EXPECT_THAT(LIBC_NAMESPACE::msync(nullptr, 1024, MS_ASYNC), Fails(ENOMEM));
+  EXPECT_THAT(LIBC_NAMESPACE::msync(nullptr, 1024, MS_SYNC), Fails(ENOMEM));
+  EXPECT_THAT(LIBC_NAMESPACE::msync(nullptr, 1024, MS_ASYNC), Fails(ENOMEM));
 }
 
 TEST(LlvmLibcMsyncTest, LockedPage) {
