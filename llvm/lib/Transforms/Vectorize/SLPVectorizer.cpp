@@ -1369,7 +1369,7 @@ public:
   /// decide if we can canonicalize a computed order.  Undef elements
   /// (represented as size) are ignored.
   bool isIdentityOrder(ArrayRef<unsigned> Order) const {
-    assert(!Order.empty() && "expected non-empty mask");
+    assert(!Order.empty() && "expected non-empty order");
     const unsigned Sz = Order.size();
     return all_of(enumerate(Order), [&](const auto &P) {
       return P.value() == P.index() || P.value() == Sz;
