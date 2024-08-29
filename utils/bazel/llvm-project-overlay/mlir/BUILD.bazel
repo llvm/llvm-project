@@ -2200,6 +2200,7 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -10001,7 +10002,6 @@ cc_binary(
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
         ":GPUTransforms",
-        ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LLVMIRTransforms",
