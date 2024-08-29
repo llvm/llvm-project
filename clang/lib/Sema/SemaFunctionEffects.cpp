@@ -47,19 +47,27 @@ enum class ViolationID : uint8_t {
 
 // Information about the AST context in which a violation was found, so
 // that diagnostics can point to the correct source.
-struct ViolationSite {
+class ViolationSite {
+public:
   enum class Kind : uint8_t {
     Default = 0, // Function body.
     MemberInitializer = 1,
     DefaultArgExpr = 2
   };
 
-  Kind VKind = Kind::Default;
-  CXXDefaultArgExpr *DefaultArgExpr = nullptr;
+private:
+  llvm::PointerIntPair<CXXDefaultArgExpr *, 2, Kind> Impl;
 
+public:
   ViolationSite() = default;
+
   explicit ViolationSite(CXXDefaultArgExpr *E)
-      : VKind(Kind::DefaultArgExpr), DefaultArgExpr(E) {}
+      : Impl(E, Kind::DefaultArgExpr) {}
+  
+  Kind kind() const { return static_cast<Kind>(Impl.getInt()); }
+  CXXDefaultArgExpr *defaultArgExpr() const { return Impl.getPointer(); }
+
+  void setKind(Kind K) { Impl.setPointerAndInt(nullptr, K); }
 };
 
 // Represents a violation of the rules, potentially for the entire duration of
@@ -118,6 +126,74 @@ static bool isNoexcept(const FunctionDecl *FD) {
     return true;
   return false;
 }
+
+static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
+  FunctionEffectKindSet Result;
+
+  switch (BuiltinID) {
+  case 0:  // Not builtin.
+  default: // By default, builtins have no known effects.
+    break;
+
+  // These allocate/deallocate heap memory.
+  case Builtin::ID::BI__builtin_calloc:
+  case Builtin::ID::BI__builtin_malloc:
+  case Builtin::ID::BI__builtin_realloc:
+  case Builtin::ID::BI__builtin_free:
+  case Builtin::ID::BI__builtin_operator_delete:
+  case Builtin::ID::BI__builtin_operator_new:
+  case Builtin::ID::BIaligned_alloc:
+  case Builtin::ID::BIcalloc:
+  case Builtin::ID::BImalloc:
+  case Builtin::ID::BImemalign:
+  case Builtin::ID::BIrealloc:
+  case Builtin::ID::BIfree:
+
+  case Builtin::ID::BI__builtin_unwind_init: // ????
+  // __builtin_eh_return?
+  // __builtin_allow_runtime_check
+  // va_copy
+  // printf, fprintf, snprintf, sprintf, vprintf, vfprintf, vsnprintf
+  // scanf family
+  // coroutine intrinsics?
+
+  case Builtin::ID::BIfopen:
+  case Builtin::ID::BIpthread_create:
+  case Builtin::ID::BI_Block_object_dispose:
+    Result.insert(FunctionEffect(FunctionEffect::Kind::Allocating));
+    break;
+
+  // These block in some other way than allocating memory.
+  case Builtin::ID::BIlongjmp:
+  case Builtin::ID::BI_longjmp:
+  case Builtin::ID::BIsiglongjmp:
+  case Builtin::ID::BI__builtin_longjmp:
+  case Builtin::ID::BIobjc_exception_throw:
+
+  case Builtin::ID::BIobjc_msgSend:
+  case Builtin::ID::BIobjc_msgSend_fpret:
+  case Builtin::ID::BIobjc_msgSend_fp2ret:
+  case Builtin::ID::BIobjc_msgSend_stret:
+  case Builtin::ID::BIobjc_msgSendSuper:
+  case Builtin::ID::BIobjc_getClass:
+  case Builtin::ID::BIobjc_getMetaClass:
+  case Builtin::ID::BIobjc_enumerationMutation:
+  case Builtin::ID::BIobjc_assign_ivar:
+  case Builtin::ID::BIobjc_assign_global:
+  case Builtin::ID::BIobjc_sync_enter:
+  case Builtin::ID::BIobjc_sync_exit:
+  case Builtin::ID::BINSLog:
+  case Builtin::ID::BINSLogv:
+
+  case Builtin::ID::BIfread:
+  case Builtin::ID::BIfwrite:
+    Result.insert(FunctionEffect(FunctionEffect::Kind::Blocking));
+    break;
+  }
+
+  return Result;
+}
+
 
 // Transitory, more extended information about a callable, which can be a
 // function, block, or function pointer.
@@ -701,7 +777,7 @@ private:
       };
 
       if (V != nullptr &&
-          V->Site.VKind == ViolationSite::Kind::MemberInitializer)
+          V->Site.kind() == ViolationSite::Kind::MemberInitializer)
         return VS_MemberInitializer;
       if (isa<BlockDecl>(D))
         return VS_Block;
@@ -720,7 +796,7 @@ private:
     auto MaybeAddSiteContext = [&](const Decl *D, const Violation &V) {
       // If a violation site is a member initializer, add a note pointing to
       // the constructor which invoked it.
-      if (V.Site.VKind == ViolationSite::Kind::MemberInitializer) {
+      if (V.Site.kind() == ViolationSite::Kind::MemberInitializer) {
         unsigned ImplicitCtor = 0;
         if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D);
             Ctor && Ctor->isImplicit())
@@ -731,8 +807,8 @@ private:
 
       // If a violation site is a default argument expression, add a note
       // pointing to the call site using the default argument.
-      else if (V.Site.VKind == ViolationSite::Kind::DefaultArgExpr)
-        S.Diag(V.Site.DefaultArgExpr->getUsedLocation(),
+      else if (V.Site.kind() == ViolationSite::Kind::DefaultArgExpr)
+        S.Diag(V.Site.defaultArgExpr()->getUsedLocation(),
                diag::note_in_evaluating_default_argument);
     };
 
@@ -921,41 +997,21 @@ private:
 
     // Here we have a call to a Decl, either explicitly via a CallExpr or some
     // other AST construct. CallableInfo pertains to the callee.
-    void followCall(const CallableInfo &CI, SourceLocation CallLoc) {
-      if (const auto *FD = dyn_cast<FunctionDecl>(CI.CDecl);
-          FD && isSafeBuiltinFunction(FD))
-        return;
+    void followCall(CallableInfo &CI, SourceLocation CallLoc) {
+      // Check for a call to a builtin function, whose effects are
+      // handled specially.
+      if (const auto *FD = dyn_cast<FunctionDecl>(CI.CDecl)) {
+        if (unsigned BuiltinID = FD->getBuiltinID()) {
+          CI.Effects = getBuiltinFunctionEffects(BuiltinID);
+          if (CI.Effects.empty()) {
+            // A builtin with no known effects is assumed safe.
+            return;
+          }
+        }
+      }
 
       Outer.followCall(CurrentCaller, CurrentFunction, CI, CallLoc,
                        /*AssertNoFurtherInference=*/false, VSite);
-    }
-
-    // FIXME: This is currently specific to the `nonblocking` and
-    // `nonallocating` effects. More ideally, the builtin functions themselves
-    // would have the `allocating` attribute.
-    static bool isSafeBuiltinFunction(const FunctionDecl *FD) {
-      unsigned BuiltinID = FD->getBuiltinID();
-      switch (BuiltinID) {
-      case 0: // Not builtin.
-        return false;
-      default: // Not disallowed via cases below.
-        return true;
-
-      // Disallow list
-      case Builtin::ID::BIaligned_alloc:
-      case Builtin::ID::BI__builtin_calloc:
-      case Builtin::ID::BI__builtin_malloc:
-      case Builtin::ID::BI__builtin_realloc:
-      case Builtin::ID::BI__builtin_free:
-      case Builtin::ID::BI__builtin_operator_delete:
-      case Builtin::ID::BI__builtin_operator_new:
-      case Builtin::ID::BIcalloc:
-      case Builtin::ID::BImalloc:
-      case Builtin::ID::BImemalign:
-      case Builtin::ID::BIrealloc:
-      case Builtin::ID::BIfree:
-        return false;
-      }
     }
 
     void checkIndirectCall(CallExpr *Call, QualType CalleeType) {
@@ -1150,7 +1206,7 @@ private:
     bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
       ViolationSite PrevVS = VSite;
       if (Init->isAnyMemberInitializer())
-        VSite.VKind = ViolationSite::Kind::MemberInitializer;
+        VSite.setKind(ViolationSite::Kind::MemberInitializer);
       bool Result = Base::TraverseConstructorInitializer(Init);
       VSite = PrevVS;
       return Result;
@@ -1163,7 +1219,7 @@ private:
                      << "\n";);
 
       ViolationSite PrevVS = VSite;
-      if (VSite.VKind == ViolationSite::Kind::Default)
+      if (VSite.kind() == ViolationSite::Kind::Default)
         VSite = ViolationSite{E};
 
       bool Result = Base::TraverseCXXDefaultArgExpr(E);
