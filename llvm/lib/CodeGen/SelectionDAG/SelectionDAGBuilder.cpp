@@ -7031,7 +7031,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // If ISD::IS_FPCLASS should be expanded, do it right now, because the
     // expansion can use illegal types. Making expansion early allows
     // legalizing these types prior to selection.
-    if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT)) {
+    if (!TLI.isOperationLegal(ISD::IS_FPCLASS, ArgVT) &&
+        !TLI.isOperationCustom(ISD::IS_FPCLASS, ArgVT)) {
       SDValue Result = TLI.expandIS_FPCLASS(DestVT, Op, Test, Flags, sdl, DAG);
       setValue(&I, Result);
       return;
