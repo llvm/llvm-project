@@ -12006,8 +12006,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // If this is an explicit specialization of a member that is a function
       // template, mark it as a member specialization.
       if (IsMemberSpecialization) {
-        NewTemplateDecl->setMemberSpecialization();
-        // assert(OldTemplateDecl->isMemberSpecialization());
         // Explicit specializations of a member template do not inherit deleted
         // status from the parent member template that they are specializing.
         if (OldFD->isDeleted()) {

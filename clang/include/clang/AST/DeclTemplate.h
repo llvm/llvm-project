@@ -863,6 +863,7 @@ public:
 
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
+    assert(!isMemberSpecialization() && "already a member specialization");
     Common.setInt(true);
   }
 

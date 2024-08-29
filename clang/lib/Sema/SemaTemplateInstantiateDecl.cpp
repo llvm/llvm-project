@@ -4696,20 +4696,6 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
       Innermost = FD->getTemplateSpecializationArgs()->asArray();
     }
   }
-  #if 0
-
-    Pattern = FTD->isCXXClassMember() ? FTD->getFirstDecl() : FTD;
-  } else if (FD->isCXXClassMember()) {
-    Pattern = FD->getFirstDecl();
-  } else {
-    Pattern = FD;
-  }
-  #elif 0
-  Pattern = FD;
-  #elif 0
-  Pattern = FD->getTemplateInstantiationPattern(/*ForDefinition=*/true);
-  #elif 1
-  #endif
 
   // Instantiate the expression.
   //
