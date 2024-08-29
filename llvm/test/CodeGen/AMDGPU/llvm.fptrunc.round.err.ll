@@ -4,9 +4,9 @@
 define amdgpu_gs void @test_fptrunc_round_f64(double %a, ptr addrspace(1) %out) {
 ; SDAG-FAIL: LLVM ERROR: Cannot select
 ; GISEL-FAIL: unable to legalize instruction
-  %res = call half @llvm.fptrunc.round.f64(double %a, metadata !"round.upward")
+  %res = call half @llvm.fptrunc.round.f16.f64(double %a, metadata !"round.upward")
   store half %res, ptr addrspace(1) %out, align 4
   ret void
 }
 
-declare half @llvm.fptrunc.round.f64(double, metadata)
+declare half @llvm.fptrunc.round.f16.f64(double, metadata)

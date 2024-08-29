@@ -31,6 +31,11 @@
 // redefinition by #defining SIZE_T instead of using a typedef.
 // TODO: We should be using __sanitizer::usize (and a new ssize) instead of
 // these new macros as long as we ensure they match the real system definitions.
+#if SANITIZER_WINDOWS
+// Ensure that (S)SIZE_T were already defined as we are about to override them.
+#include <basetsd.h>
+#endif
+
 #define SIZE_T __sanitizer::usize
 #define SSIZE_T __sanitizer::sptr
 typedef __sanitizer::sptr    PTRDIFF_T;
@@ -344,16 +349,9 @@ const interpose_substitution substitution_##func_name[]             \
 #endif
 
 // ISO C++ forbids casting between pointer-to-function and pointer-to-object,
-// so we use casting via an integral type __interception::uptr,
-// assuming that system is POSIX-compliant. Using other hacks seem
-// challenging, as we don't even pass function type to
-// INTERCEPT_FUNCTION macro, only its name.
+// so we use casts via uintptr_t (the local __sanitizer::uptr equivalent).
 namespace __interception {
-#if defined(_WIN64)
-typedef unsigned long long uptr;
-#else
-typedef unsigned long uptr;
-#endif  // _WIN64
+
 
 #if defined(__ELF__) && !SANITIZER_FUCHSIA
 // The use of interceptors makes many sanitizers unusable for static linking.
