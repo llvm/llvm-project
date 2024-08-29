@@ -222,10 +222,15 @@ namespace {
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
 
+    // Flag to indicate that we already parsed a HLSL parameter modifier
+    // attribute. This prevents double-mutating the type.
+    bool ParsedHLSLParamMod;
+
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false) {}
+          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
+          ParsedHLSLParamMod(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -351,6 +356,10 @@ namespace {
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
 
     bool didParseNoDeref() const { return parsedNoDeref; }
+
+    void setParsedHLSLParamMod(bool Parsed) { ParsedHLSLParamMod = Parsed; }
+
+    bool didParseHLSLParamMod() const { return ParsedHLSLParamMod; }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -8506,15 +8515,19 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
-static void HandleHLSLParamModifierAttr(QualType &CurType,
+static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
+                                        QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
   // Don't apply this attribute to template dependent types. It is applied on
-  // substitution during template instantiation.
-  if (CurType->isDependentType())
+  // substitution during template instantiation. Also skip parsing this if we've
+  // already modified the type based on an earlier attribute.
+  if (CurType->isDependentType() || State.didParseHLSLParamMod())
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
-      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out)
+      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
     CurType = S.HLSL().getInoutParameterType(CurType);
+    State.setParsedHLSLParamMod(true);
+  }
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
@@ -8694,7 +8707,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
 
     case ParsedAttr::AT_HLSLParamModifier: {
-      HandleHLSLParamModifierAttr(type, attr, state.getSema());
+      HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
     }
