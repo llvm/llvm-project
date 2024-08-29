@@ -64,7 +64,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             process.ReadMemory(sp - red_zone - 1, 1, error)
             self.assertTrue(error.Fail(), "No failure when reading past the red zone")
             # Verify the registers are the same
-            self.assertTrue(thread_id, stacks_to_registers_map)
+            self.assertIn(thread_id, stacks_to_registers_map)
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
             for x in register_val_list:
