@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -95,6 +96,76 @@ public:
       DenseMap<GlobalValue::GUID,
                std::tuple<unsigned, const GlobalValueSummary *,
                           std::unique_ptr<ImportFailureInfo>>>;
+
+  // Issues import IDs.  Each ID uniquely corresponds to a tuple of
+  // (FromModule, GUID, Definition/Declaration).
+  //
+  // The import IDs make the import list space efficient by referring to each
+  // import with a 32-bit integer ID while maintaining a central table that maps
+  // those integer IDs to tuples of (FromModule, GUID, Def/Decl).
+  //
+  // In one large application, a pair of (FromModule, GUID) is mentioned in
+  // import lists more than 50 times on average across all destination modules.
+  // Mentioning the 32-byte tuple:
+  //
+  // std::tuple<StringRef, GlobalValue::GUID, GlobalValueSummary::ImportKind>
+  //
+  // 50 times by value in various import lists would be costly.  We can reduce
+  // the memory footprint of import lists by placing one copy in a central table
+  // and referring to it with 32-bit integer IDs.
+  //
+  // To save space within the central table, we only store pairs of
+  // (FromModule, GUID) in the central table.  In the actual 32-bit integer ID,
+  // the top 31 bits index into the central table while the bottom 1 bit
+  // indicates whether an ID is for GlobalValueSummary::Declaration or
+  // GlobalValueSummary::Definition.
+  class ImportIDTable {
+  public:
+    using ImportIDTy = uint32_t;
+
+    // Create a pair of import IDs [Def, Decl] for a given pair of FromModule
+    // and GUID.
+    std::pair<ImportIDTy, ImportIDTy> createImportIDs(StringRef FromModule,
+                                                      GlobalValue::GUID GUID) {
+      auto Key = std::make_pair(FromModule, GUID);
+      auto InsertResult = TheTable.try_emplace(Key, TheTable.size());
+      return makeIDPair(InsertResult.first->second);
+    }
+
+    // Get a pair of previously created import IDs [Def, Decl] for a given pair
+    // of FromModule and GUID.  Returns std::nullopt if not available.
+    std::optional<std::pair<ImportIDTy, ImportIDTy>>
+    getImportIDs(StringRef FromModule, GlobalValue::GUID GUID) {
+      auto Key = std::make_pair(FromModule, GUID);
+      auto It = TheTable.find(Key);
+      if (It != TheTable.end())
+        return makeIDPair(It->second);
+      return std::nullopt;
+    }
+
+    // Return a tuple of [FromModule, GUID, Def/Decl] that a given ImportID
+    // corresponds to.
+    std::tuple<StringRef, GlobalValue::GUID, GlobalValueSummary::ImportKind>
+    lookup(ImportIDTy ImportID) const {
+      GlobalValueSummary::ImportKind Kind =
+          (ImportID & 1) ? GlobalValueSummary::Declaration
+                         : GlobalValueSummary::Definition;
+      auto It = TheTable.begin() + (ImportID >> 1);
+      StringRef FromModule = It->first.first;
+      GlobalValue::GUID GUID = It->first.second;
+      return std::make_tuple(FromModule, GUID, Kind);
+    }
+
+  private:
+    // Make a pair of import IDs [Def, Decl] from an index into TheTable.
+    static std::pair<ImportIDTy, ImportIDTy> makeIDPair(ImportIDTy Index) {
+      ImportIDTy Def = Index << 1;
+      ImportIDTy Decl = Def | 1;
+      return std::make_pair(Def, Decl);
+    }
+
+    MapVector<std::pair<StringRef, GlobalValue::GUID>, ImportIDTy> TheTable;
+  };
 
   /// The map maintains the list of imports.  Conceptually, it is a collection
   /// of tuples of the form:
