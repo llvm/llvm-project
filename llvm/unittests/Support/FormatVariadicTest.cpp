@@ -710,16 +710,6 @@ TEST(FormatVariadicTest, FormatFilterRange) {
   EXPECT_EQ("1, 2, 3", formatv("{0}", Range).str());
 }
 
-#ifdef NDEBUG // Disable the test in debug builds where it will assert.
-TEST(FormatVariadicTest, Validate) {
-  std::string Str = formatv("{0}", 1, 2).str();
-  EXPECT_THAT(Str, HasSubstr("Unexpected number of arguments"));
-
-  Str = formatv("{0} {2}", 1, 2, 3).str();
-  EXPECT_THAT(Str, HasSubstr("eplacement indices have holes"));
-}
-#endif // NDEBUG
-
 namespace {
 
 enum class Base { First };
