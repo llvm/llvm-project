@@ -50,6 +50,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -905,6 +906,10 @@ public:
 
   /// Get the file ID for the precompiled preamble if there is one.
   FileID getPreambleFileID() const { return PreambleFileID; }
+
+  /// Set Location information for Time trace events.
+  void setLocationForTimeTrace(SourceLocation Loc,
+                               llvm::TimeTraceMetadata &M) const;
 
   //===--------------------------------------------------------------------===//
   // Methods to create new FileID's and macro expansions.

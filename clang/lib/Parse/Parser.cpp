@@ -1257,10 +1257,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   // "EvaluateAsConstExpr".
   llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
     llvm::TimeTraceMetadata M;
-    const SourceManager &SM = Actions.getASTContext().getSourceManager();
-    auto Loc = SM.getExpansionLoc(Tok.getLocation());
-    M.File = SM.getFilename(Loc);
-    M.Line = SM.getExpansionLineNumber(Loc);
+    Actions.getASTContext().getSourceManager().setLocationForTimeTrace(
+        Tok.getLocation(), M);
     return M;
   });
 

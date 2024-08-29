@@ -1064,6 +1064,14 @@ bool SourceManager::isAtStartOfImmediateMacroExpansion(SourceLocation Loc,
   return true;
 }
 
+void SourceManager::setLocationForTimeTrace(SourceLocation Loc,
+                                            llvm::TimeTraceMetadata &M) const {
+  Loc = getExpansionLoc(Loc);
+  M.File = getFilename(Loc);
+  M.Line = getExpansionLineNumber(Loc);
+  M.Col = getExpansionColumnNumber(Loc);
+}
+
 bool SourceManager::isAtEndOfImmediateMacroExpansion(SourceLocation Loc,
                                                SourceLocation *MacroEnd) const {
   assert(Loc.isValid() && Loc.isMacroID() && "Expected a valid macro loc");
