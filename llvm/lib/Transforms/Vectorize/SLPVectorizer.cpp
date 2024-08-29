@@ -16476,8 +16476,9 @@ bool SLPVectorizerPass::vectorizeStores(
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
-        unsigned CandVF = Operands.size();
-        if (has_single_bit(CandVF + 1) && CandVF <= MaxRegVF)
+        unsigned CandVF =
+            std::clamp<unsigned>(Operands.size(), MaxVF, MaxRegVF);
+        if (has_single_bit(CandVF + 1))
           NonPowerOf2VF = CandVF;
       }
 
