@@ -350,3 +350,4 @@ def ZnVer4PfmCounters : ProcPfmCounters {
   let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver4", ZnVer4PfmCounters>;
+def : PfmCountersBinding<"znver5", ZnVer4PfmCounters>;
