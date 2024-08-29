@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -verify -Wconversion
 void fn(in out float f); // #fn
 
 // expected-error@#fn2{{duplicate parameter modifier 'in'}}
@@ -89,4 +89,12 @@ void fn12(inout T f);
 void fn13() {
   float f;
   fn12<float>(f);
+}
+
+void fn14(out float f);
+
+void fn15() {
+  float f;
+  int x = 5;
+  fn14(f += x); // expected-warning{{implicit conversion from 'int' to 'float' may lose precision}}
 }

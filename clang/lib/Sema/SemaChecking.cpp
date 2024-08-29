@@ -11428,6 +11428,7 @@ static void AnalyzeImplicitConversions(
   }
 
   if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
+    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
     // The base expression is only used to initialize the parameter for
     // arguments to `inout` parameters, so we only traverse down the base
     // expression for `inout` cases.
