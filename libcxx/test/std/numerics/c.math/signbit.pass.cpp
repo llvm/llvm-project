@@ -44,50 +44,11 @@ struct TestFloat {
   }
 };
 
-struct TestUnsignedIntAndFixedWidthChar {
+struct TestInt {
   template <class T>
   static TEST_CONSTEXPR_CXX23 bool test() {
     assert(!std::signbit(std::numeric_limits<T>::max()));
     assert(!std::signbit(T(0)));
-    assert(!std::signbit(std::numeric_limits<T>::lowest()));
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
-  }
-};
-
-struct TestSignedInt {
-  template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(!std::signbit(std::numeric_limits<T>::max()));
-    assert(!std::signbit(T(0)));
-    assert(std::signbit(std::numeric_limits<T>::lowest()));
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
-  }
-};
-
-struct TestVariableWidthChar {
-  template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(!std::signbit(std::numeric_limits<T>::max()));
-    assert(!std::signbit(T(0)));
-    // Signed or unsigned depending on the architecture and platform.
     if (std::is_unsigned<T>::value) {
       assert(!std::signbit(std::numeric_limits<T>::lowest()));
     } else {
@@ -113,10 +74,7 @@ struct ConvertibleTo {
 
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
-  types::for_each(types::concatenate_t<types::unsigned_integer_types, types::fixed_width_character_types>(),
-                  TestUnsignedIntAndFixedWidthChar());
-  types::for_each(types::signed_integer_types(), TestSignedInt());
-  types::for_each(types::variable_width_character_types(), TestVariableWidthChar());
+  types::for_each(types::integral_types(), TestInt());
 
   // Make sure we can call `std::signbit` with convertible types. This checks
   // whether overloads for all cv-unqualified floating-point types are working
