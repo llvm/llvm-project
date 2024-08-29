@@ -157,8 +157,8 @@ private:
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
-void initializeGCNDPPCombinePass(PassRegistry &);
-extern char &GCNDPPCombineID;
+void initializeGCNDPPCombineLegacyPass(PassRegistry &);
+extern char &GCNDPPCombineLegacyID;
 
 void initializeSIFoldOperandsLegacyPass(PassRegistry &);
 extern char &SIFoldOperandsLegacyID;
