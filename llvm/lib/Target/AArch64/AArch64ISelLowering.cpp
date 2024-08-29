@@ -21777,7 +21777,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  if (!Subtarget->isSVEAvailable() && !Subtarget->isNeonAvailable())
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue();
 
   SDLoc DL(N);
@@ -21819,8 +21819,6 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   // The wide type with four times as many elements as the reduced type. Should
   // be a vector of i32 or i64, the same as the fully-reduced type
   EVT WideType = MulOp.getValueType();
-  if (WideType.getScalarSizeInBits() != ReducedType.getScalarSizeInBits())
-    return SDValue();
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
