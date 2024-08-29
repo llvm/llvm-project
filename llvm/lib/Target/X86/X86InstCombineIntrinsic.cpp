@@ -2950,22 +2950,42 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
   case Intrinsic::x86_ssse3_pshuf_b_128:
   case Intrinsic::x86_avx2_pshuf_b:
-  case Intrinsic::x86_avx512_pshuf_b_512:
+  case Intrinsic::x86_avx512_pshuf_b_512: {
     if (Value *V = simplifyX86pshufb(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+
+    KnownBits KnownMask(8);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(8, 0b10001111), KnownMask))
+      return &II;
     break;
+  }
 
   case Intrinsic::x86_avx_vpermilvar_ps:
   case Intrinsic::x86_avx_vpermilvar_ps_256:
-  case Intrinsic::x86_avx512_vpermilvar_ps_512:
-  case Intrinsic::x86_avx_vpermilvar_pd:
-  case Intrinsic::x86_avx_vpermilvar_pd_256:
-  case Intrinsic::x86_avx512_vpermilvar_pd_512:
+  case Intrinsic::x86_avx512_vpermilvar_ps_512: {
     if (Value *V = simplifyX86vpermilvar(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+
+    KnownBits KnownMask(32);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(32, 0b00011), KnownMask))
+      return &II;
     break;
+  }
+
+  case Intrinsic::x86_avx_vpermilvar_pd:
+  case Intrinsic::x86_avx_vpermilvar_pd_256:
+  case Intrinsic::x86_avx512_vpermilvar_pd_512: {
+    if (Value *V = simplifyX86vpermilvar(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+
+    KnownBits KnownMask(64);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(64, 0b00010), KnownMask))
+      return &II;
+    break;
+  }
 
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:
