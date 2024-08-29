@@ -2280,7 +2280,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     unsigned VMovOpc = MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64
                            ? AMDGPU::V_MOV_B64_PSEUDO
                            : AMDGPU::V_MOV_B32_e32;
-    Register ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    Register ExecReg = RI.getExec();
     Register DstReg = MI.getOperand(0).getReg();
     MachineOperand &ActiveSrc = MI.getOperand(1);
     MachineOperand &InactiveSrc = MI.getOperand(2);
@@ -2307,7 +2307,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // present an issue.
     // Fallback to V_MOV base lowering in all but the common cases.
     const bool VMov64 = VMovOpc != AMDGPU::V_MOV_B32_e32;
-    const MachineFunction *MF = MI.getParent()->getParent();
+    const MachineFunction *MF = MBB.getParent();
     const MachineRegisterInfo &MRI = MF->getRegInfo();
     const unsigned Opcode = AMDGPU::V_CNDMASK_B32_e64;
     const MCInstrDesc &Desc = get(Opcode);
