@@ -225,7 +225,6 @@ This case also checks suspicious ``alignof`` and ``offsetof`` usages in
 pointer arithmetic, as both return the "size" in bytes and not elements,
 potentially resulting in doubly-scaled offsets.
 
-
 .. code-block:: c++
 
   void printEveryEvenIndexElement(int *Array, size_t N) {

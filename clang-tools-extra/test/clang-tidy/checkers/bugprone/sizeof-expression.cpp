@@ -289,6 +289,35 @@ int Test6() {
   return sum;
 }
 
+static constexpr inline int BufferSize = 1024;
+
+template <typename T>
+T next(const T *&Read) {
+  T value = *Read;
+  Read += sizeof(T);
+  return value;
+}
+
+void Test7() {
+  int Buffer[BufferSize];
+  int *P = &Buffer[0];
+
+  const int *P2 = P;
+  int V1 = next(P2);
+  // CHECK-MESSAGES: :[[@LINE-10]]:8: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic; this scaled value will be scaled again by the '+=' operator
+  // CHECK-MESSAGES: :[[@LINE-11]]:8: note: '+=' in pointer arithmetic internally scales with 'sizeof(const int)' == {{[0-9]+}}
+  int V2 = next(P2);
+  (void)V1;
+  (void)V2;
+
+  int *Q = P;
+  while (Q < P + sizeof(Buffer)) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic; this scaled value will be scaled again by the '+' operator
+    // CHECK-MESSAGES: :[[@LINE-2]]:16: note: '+' in pointer arithmetic internally scales with 'sizeof(int)' == {{[0-9]+}}
+    *Q++ = 0;
+  }
+}
+
 #ifdef __SIZEOF_INT128__
 template <__int128_t N>
 #else
@@ -296,7 +325,7 @@ template <long N> // Fallback for platforms which do not define `__int128_t`
 #endif
 bool Baz() { return sizeof(A) < N; }
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: suspicious comparison of 'sizeof(expr)' to a constant
-bool Test7() { return Baz<-1>(); }
+bool Test8() { return Baz<-1>(); }
 
 void some_generic_function(const void *arg, int argsize);
 int *IntP, **IntPP;

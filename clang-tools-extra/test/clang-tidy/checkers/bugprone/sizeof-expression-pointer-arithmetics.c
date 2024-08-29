@@ -6,13 +6,14 @@ typedef __SIZE_TYPE__ size_t;
 typedef __WCHAR_TYPE__ wchar_t;
 
 extern void *memset(void *Dest, int Ch, size_t Count);
-extern void sink(const void *P);
 extern size_t strlen(const char *Str);
 extern size_t wcslen(const wchar_t *Str);
 extern char *strcpy(char *Dest, const char *Src);
 extern wchar_t *wcscpy(wchar_t *Dest, const wchar_t *Src);
 extern int scanf(const char *Format, ...);
 extern int wscanf(const wchar_t *Format, ...);
+
+extern void sink(const void *P);
 
 enum { BufferSize = 1024 };
 
@@ -345,4 +346,27 @@ void good12(void) {
   wchar_t Message[BufferSize];
   wcscpy(Message, L"Message: ");
   wscanf(L"%s", Message + wcslen(Message));
+}
+
+void good13(void) {
+  int Buffer[BufferSize];
+
+  int *P = &Buffer[0];
+  while (P < (Buffer + sizeof(Buffer) / sizeof(int))) {
+    // NO-WARNING: Calculating the element count of the buffer here, which is
+    // safe with this idiom (as long as the types don't change).
+    ++P;
+  }
+
+  while (P < (Buffer + sizeof(Buffer) / sizeof(Buffer[0]))) {
+    // NO-WARNING: Calculating the element count of the buffer here, which is
+    // safe with this idiom.
+    ++P;
+  }
+
+  while (P < (Buffer + sizeof(Buffer) / sizeof(*P))) {
+    // NO-WARNING: Calculating the element count of the buffer here, which is
+    // safe with this idiom.
+    ++P;
+  }
 }
