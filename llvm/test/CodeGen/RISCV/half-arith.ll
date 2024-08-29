@@ -630,29 +630,39 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fneg_s:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa4
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fneg_s:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa4, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV32-FSGNJ-NEXT:    feq.s a0, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fneg_s:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fadd.s a0, a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fneg.s a1, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    feq.s a0, a0, a1
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fneg_s:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa4, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV64-FSGNJ-NEXT:    feq.s a0, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fneg_s:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -771,9 +781,11 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa0
 ; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-RV32-FSGNJ-NEXT:    fneg.s fa5, fa5
-; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 4(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 5(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 5(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 4(sp)
 ; CHECK-RV32-FSGNJ-NEXT:    fsh fa0, 8(sp)
 ; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
 ; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 9(sp)
@@ -788,24 +800,26 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ;
 ; CHECK-RV64-FSGNJ-LABEL: fsgnjn_s:
 ; CHECK-RV64-FSGNJ:       # %bb.0:
-; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -32
 ; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
 ; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa0
 ; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-RV64-FSGNJ-NEXT:    fneg.s fa5, fa5
-; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-RV64-FSGNJ-NEXT:    fsh fa0, 0(sp)
 ; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
-; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 1(sp)
-; CHECK-RV64-FSGNJ-NEXT:    lbu a1, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa0, 16(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 24(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 17(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a1, 25(sp)
 ; CHECK-RV64-FSGNJ-NEXT:    andi a0, a0, 127
 ; CHECK-RV64-FSGNJ-NEXT:    andi a1, a1, 128
 ; CHECK-RV64-FSGNJ-NEXT:    or a0, a0, a1
-; CHECK-RV64-FSGNJ-NEXT:    sb a0, 1(sp)
-; CHECK-RV64-FSGNJ-NEXT:    flh fa0, 0(sp)
-; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 17(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa0, 16(sp)
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 32
 ; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fsgnjn_s:
 ; CHECK-ZHINXMIN:       # %bb.0:
@@ -971,33 +985,43 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fabs_s:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fabs.s fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fabs_s:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    andi a0, a0, 127
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa4, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fabs_s:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fadd.s a0, a0, a1
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fabs.s a1, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fadd.s a0, a1, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fabs_s:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    andi a0, a0, 127
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa4, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fabs_s:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
@@ -1409,36 +1433,45 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmsub_s:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fmsub_s:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fmsub_s:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fneg.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fmsub_s:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fmsub_s:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
@@ -1591,48 +1624,61 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa2
-; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fneg.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmadd_s:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa4, 8(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa4, fa3, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fnmadd_s:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fneg.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fneg.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fnmadd_s:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 0(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 1(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 1(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa4, 0(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa4, fa3, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fnmadd_s:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -1793,48 +1839,61 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s_2:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa2
-; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fneg.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmadd_s_2:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa4, 8(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fnmadd_s_2:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fneg.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fneg.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fnmadd_s_2:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 0(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 1(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 1(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa4, 0(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fnmadd_s_2:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
@@ -1959,17 +2018,37 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s_3:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmadd_s_3:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa0, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
+;
+; CHECK-RV64-FSGNJ-LABEL: fnmadd_s_3:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa0, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ;
 ; CHECKZHINXMIN-LABEL: fnmadd_s_3:
 ; CHECKZHINXMIN:       # %bb.0:
@@ -2090,17 +2169,37 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_nsz:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmadd_nsz:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa0, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
+;
+; CHECK-RV64-FSGNJ-LABEL: fnmadd_nsz:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa0, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ;
 ; CHECKZHINXMIN-LABEL: fnmadd_nsz:
 ; CHECKZHINXMIN:       # %bb.0:
@@ -2227,36 +2326,45 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmsub_s:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmsub_s:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fnmsub_s:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fneg.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fnmsub_s:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fnmsub_s:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -2379,36 +2487,45 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmsub_s_2:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmsub_s_2:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fnmsub_s_2:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fneg.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fnmsub_s_2:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fnmsub_s_2:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
@@ -2847,54 +2964,63 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s_contract:
-; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fadd.s fa3, fa3, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa3, fa3
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa2
-; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa2, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa3
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fmul.s fa5, fa5, fa3
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fsub.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    ret
+; CHECK-RV32-FSGNJ-LABEL: fnmadd_s_contract:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV32-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa3, fa3, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa3, fa3
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa3, fa3
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fmul.s fa5, fa5, fa3
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV32-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa3, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa3
+; CHECK-RV32-FSGNJ-NEXT:    fsub.s fa5, fa4, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
 ;
-; CHECKZHINXMIN-LABEL: fnmadd_s_contract:
-; CHECKZHINXMIN:       # %bb.0:
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fmul.s a0, a0, a1
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fneg.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKZHINXMIN-NEXT:    fcvt.s.h a1, a2
-; CHECKZHINXMIN-NEXT:    fsub.s a0, a0, a1
-; CHECKZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKZHINXMIN-NEXT:    ret
+; CHECK-RV64-FSGNJ-LABEL: fnmadd_s_contract:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-RV64-FSGNJ-NEXT:    fmv.w.x fa4, zero
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa3, fa3, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa3, fa3
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa3, fa3
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fmul.s fa5, fa5, fa3
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-RV64-FSGNJ-NEXT:    xori a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa3, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa3
+; CHECK-RV64-FSGNJ-NEXT:    fsub.s fa5, fa4, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
 ; CHECK-ZHINXMIN-LABEL: fnmadd_s_contract:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
