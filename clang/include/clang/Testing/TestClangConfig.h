@@ -35,6 +35,14 @@ struct TestClangConfig {
         ;
   }
 
+  bool isC(int Version) const {
+    return false
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  || (Version == version && Language == Lang_##lang##version)
+#include "clang/Testing/TestLanguage.def"
+        ;
+  }
+
   bool isCOrLater(int MinimumStdVersion) const {
     const auto MinimumStdVersionIndex = 0
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
@@ -54,25 +62,21 @@ struct TestClangConfig {
   bool isC99OrLater() const { return isCOrLater(99); }
 
   bool isCOrEarlier(int MaximumStdVersion) const {
-    const auto MaximumStdVersionIndex = 0
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
-  +(MaximumStdVersion == version ? version_index : 0)
-#include "clang/Testing/TestLanguage.def"
-        ;
-    switch (Language) {
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
-  case Lang_##lang##version:                                                   \
-    return MaximumStdVersionIndex >= version_index;
-#include "clang/Testing/TestLanguage.def"
-    default:
-      return false;
-    }
+    return isC() && (isC(MaximumStdVersion) || !isCOrLater(MaximumStdVersion));
   }
 
   bool isCXX() const {
     return false
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   || Language == Lang_##lang##version
+#include "clang/Testing/TestLanguage.def"
+        ;
+  }
+
+  bool isCXX(int Version) const {
+    return false
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  || (Version == version && Language == Lang_##lang##version)
 #include "clang/Testing/TestLanguage.def"
         ;
   }
@@ -104,19 +108,8 @@ struct TestClangConfig {
   bool isCXX23OrLater() const { return isCXXOrLater(23); }
 
   bool isCXXOrEarlier(int MaximumStdVersion) const {
-    const auto MaximumStdVersionIndex = 0
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
-  +(MaximumStdVersion == version ? version_index : 0)
-#include "clang/Testing/TestLanguage.def"
-        ;
-    switch (Language) {
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
-  case Lang_##lang##version:                                                   \
-    return MaximumStdVersionIndex >= version_index;
-#include "clang/Testing/TestLanguage.def"
-    default:
-      return false;
-    }
+    return isCXX() &&
+           (isCXX(MaximumStdVersion) || !isCXXOrLater(MaximumStdVersion));
   }
 
   bool supportsCXXDynamicExceptionSpecification() const {
