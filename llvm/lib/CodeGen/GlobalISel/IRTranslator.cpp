@@ -3176,7 +3176,7 @@ bool IRTranslator::translateExtractElement(const User &U,
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // A ShuffleVector that operates on scalable vectors is a splat vector where
-  // the value of the splat vector is the 0th element of the first/ operand,
+  // the value of the splat vector is the 0th element of the first operand,
   // since the index mask operand is the zeroinitializer (undef and
   // poison are treated as zeroinitializer here).
   if (U.getOperand(0)->getType()->isScalableTy()) {
