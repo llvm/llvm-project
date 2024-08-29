@@ -72,6 +72,9 @@ static unsigned getAddressSpace(const Value *V, unsigned MaxLookup) {
       return AddressSpace::ADDRESS_SPACE_GENERIC;
     V = VNext;
   }
+  // If V's AS is not generic it should be returned above
+  assert(V->getType()->getPointerAddressSpace() ==
+         AddressSpace::ADDRESS_SPACE_GENERIC);
   return AddressSpace::ADDRESS_SPACE_GENERIC;
 }
 
