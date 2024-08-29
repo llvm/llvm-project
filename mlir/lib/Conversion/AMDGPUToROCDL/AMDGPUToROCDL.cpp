@@ -399,8 +399,12 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
     return;
   }
 
-  auto mlirInputType = dyn_cast<VectorType>(mlirInput.getType());
-  if (mlirInputType.getElementType().isInteger(8)) {
+  // We need to check the type of the input before conversion to properly test
+  // for int8. This is because, in LLVM, fp8 type is converted to int8, so the
+  // fp8/int8 information is lost during the conversion process.
+  auto mlirInputType = cast<VectorType>(mlirInput.getType());
+  bool isInputInt8 = mlirInputType.getElementType().isInteger(8);
+  if (isInputInt8) {
     // if element type is 8-bit signed or unsigned, ignore the isUnsigned flag
     bool localIsUnsigned = isUnsigned;
     if (elemType.isUnsignedInteger(8)) {
@@ -593,22 +597,20 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
   auto elemSourceType = sourceVectorType.getElementType();
   auto elemDestType = destVectorType.getElementType();
 
-  if (elemSourceType.isF16() && elemDestType.isF32()) {
+  if (elemSourceType.isF16() && elemDestType.isF32())
     return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
-  }
-  if (elemSourceType.isBF16() && elemDestType.isF32()) {
+  if (elemSourceType.isBF16() && elemDestType.isF32())
     return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
-  } else if (elemSourceType.isF16() && elemDestType.isF16()) {
+  if (elemSourceType.isF16() && elemDestType.isF16())
     return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
-  } else if (elemSourceType.isBF16() && elemDestType.isBF16()) {
+  if (elemSourceType.isBF16() && elemDestType.isBF16())
     return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
-  } else if (elemSourceType.isInteger(8) && elemDestType.isInteger(32)) {
+  if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
     return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-  } else if (elemSourceType.isFloat8E4M3FN() && elemDestType.isF32()) {
+  if (elemSourceType.isFloat8E4M3FN() && elemDestType.isF32())
     return ROCDL::wmma_f32_16x16x16_fp8::getOperationName();
-  } else if (elemSourceType.isFloat8E5M2() && elemDestType.isF32()) {
+  if (elemSourceType.isFloat8E5M2() && elemDestType.isF32())
     return ROCDL::wmma_f32_16x16x16_bf8::getOperationName();
-  }
   return std::nullopt;
 }
 
