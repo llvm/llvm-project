@@ -19,9 +19,9 @@
 /// This framework is intended to be configurable and extensible:
 ///    - Any LLVM tool that wants to use Telemetry can extend/customize it.
 ///    - Toolchain vendors can also provide custom implementation/config of the
-///      Telemetry library, which could either overrides or extends the given tool's
-///      upstream implementation, to best fit their organization's usage and
-///      security models.
+///      Telemetry library, which could either overrides or extends the given
+///      tool's upstream implementation, to best fit their organization's usage
+///      and security models.
 ///    - End users of such tool can also configure telemetry (as allowed
 ///      by their vendor).
 ///
@@ -41,14 +41,14 @@
 ///      any of the collected data due to privacy and security reasons:
 ///        + Different organizations have different opinions on which data
 ///          is sensitive and which is not.
-///        + Data ownerships and data collection consents are hare to
+///        + Data ownerships and data collection consents are hard to
 ///          accommodate from LLVM developers' point of view.
 ///          (Eg., the data collected by Telemetry framework is NOT neccessarily
 ///           owned by the user of a LLVM tool with Telemetry enabled, hence
 ///           their consent to data collection isn't meaningful. On the other
-///           hand, we have no practical way to request consent from "real" owners.
+///           hand, we have no practical way to request consent from "real"
+///           owners.
 //===---------------------------------------------------------------------===//
-
 
 #ifndef LLVM_TELEMETRY_TELEMETRY_H
 #define LLVM_TELEMETRY_TELEMETRY_H
@@ -66,7 +66,6 @@
 
 namespace llvm {
 namespace telemetry {
-
 
 struct TelemetryConfig {
   // If true, telemetry will be enabled.
