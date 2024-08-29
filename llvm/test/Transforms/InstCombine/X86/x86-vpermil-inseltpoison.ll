@@ -221,6 +221,80 @@ define <8 x double> @poison_test_vpermilvar_pd_512(<8 x double> %v) {
   ret <8 x double> %a
 }
 
+; Simplify demanded bits (PR106413)
+
+define <4 x float> @bits_test_vpermilvar_ps(<4 x float> %InVec, <4 x i32> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_ps(
+; CHECK-NEXT:    [[S:%.*]] = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> [[INVEC:%.*]], <4 x i32> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %m = or <4 x i32> %InMask, <i32 0, i32 12, i32 4294967292, i32 -4>
+  %s = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %InVec, <4 x i32> %m)
+  ret <4 x float> %s
+}
+
+define <8 x float> @bits_test_vpermilvar_ps_256(<8 x float> %InVec, <8 x i32> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_ps_256(
+; CHECK-NEXT:    [[S:%.*]] = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> [[INVEC:%.*]], <8 x i32> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <8 x float> [[S]]
+;
+  %m = or <8 x i32> %InMask, <i32 0, i32 12, i32 4294967292, i32 -4, i32 0, i32 12, i32 4294967292, i32 -4>
+  %s = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %InVec, <8 x i32> %m)
+  ret <8 x float> %s
+}
+
+define <16 x float> @bits_test_vpermilvar_ps_512(<16 x float> %InVec, <16 x i32> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_ps_512(
+; CHECK-NEXT:    [[S:%.*]] = tail call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[INVEC:%.*]], <16 x i32> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <16 x float> [[S]]
+;
+  %m = or <16 x i32> %InMask, <i32 0, i32 12, i32 4294967292, i32 -4, i32 0, i32 12, i32 4294967292, i32 -4, i32 0, i32 12, i32 4294967292, i32 -4, i32 0, i32 12, i32 4294967292, i32 -4>
+  %s = tail call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %InVec, <16 x i32> %m)
+  ret <16 x float> %s
+}
+
+define <2 x double> @bits_test_vpermilvar_pd(<2 x double> %InVec, <2 x i64> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_pd(
+; CHECK-NEXT:    [[S:%.*]] = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> [[INVEC:%.*]], <2 x i64> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[S]]
+;
+  %m = or <2 x i64> %InMask, <i64 0, i64 4294967293>
+  %s = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %InVec, <2 x i64> %m)
+  ret <2 x double> %s
+}
+
+define <4 x double> @bits_test_vpermilvar_pd_256(<4 x double> %InVec, <4 x i64> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_pd_256(
+; CHECK-NEXT:    [[S:%.*]] = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> [[INVEC:%.*]], <4 x i64> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <4 x double> [[S]]
+;
+  %m = or <4 x i64> %InMask, <i64 0, i64 1, i64 4294967293, i64 -3>
+  %s = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %InVec, <4 x i64> %m)
+  ret <4 x double> %s
+}
+
+define <8 x double> @bits_test_vpermilvar_pd_512(<8 x double> %InVec, <8 x i64> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_pd_512(
+; CHECK-NEXT:    [[S:%.*]] = tail call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> [[INVEC:%.*]], <8 x i64> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <8 x double> [[S]]
+;
+  %m = or <8 x i64> %InMask, <i64 0, i64 1, i64 4294967293, i64 -3, i64 0, i64 1, i64 4294967293, i64 -3>
+  %s = tail call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> %InVec, <8 x i64> %m)
+  ret <8 x double> %s
+}
+
+; negative test - vpermilpd uses bit1 not bit0 for the index bit
+define <2 x double> @bits_test_vpermilvar_pd_negative(<2 x double> %InVec, <2 x i64> %InMask) {
+; CHECK-LABEL: @bits_test_vpermilvar_pd_negative(
+; CHECK-NEXT:    [[M:%.*]] = or <2 x i64> [[INMASK:%.*]], <i64 0, i64 2>
+; CHECK-NEXT:    [[S:%.*]] = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> [[INVEC:%.*]], <2 x i64> [[M]])
+; CHECK-NEXT:    ret <2 x double> [[S]]
+;
+  %m = or <2 x i64> %InMask, <i64 0, i64 2>
+  %s = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %InVec, <2 x i64> %m)
+  ret <2 x double> %s
+}
+
 ; Simplify demanded elts
 
 define <4 x float> @elts_test_vpermilvar_ps(<4 x float> %a0, i32 %a1) {

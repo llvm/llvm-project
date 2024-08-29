@@ -2630,7 +2630,11 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallable(S, OpPC, Func))
     return false;
 
-  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression())
+  // FIXME: The isConstructor() check here is not always right. The current
+  // constant evaluator is somewhat inconsistent in when it allows a function
+  // call when checking for a constant expression.
+  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
+      !Func->isConstructor())
     return false;
 
   if (!CheckCallDepth(S, OpPC))
