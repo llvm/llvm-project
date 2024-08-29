@@ -4385,13 +4385,8 @@ private:
   static bool isCudaDeviceContext(fir::FirOpBuilder &builder) {
     if (builder.getRegion().getParentOfType<cuf::KernelOp>())
       return true;
-    if (builder.getRegion().getParentOfType<mlir::acc::LoopOp>())
-      return true;
-    if (builder.getRegion().getParentOfType<mlir::acc::KernelsOp>())
-      return true;
-    if (builder.getRegion().getParentOfType<mlir::acc::ParallelOp>())
-      return true;
-    if (builder.getRegion().getParentOfType<mlir::acc::SerialOp>())
+    if (builder.getRegion()
+            .getParentOfType<mlir::acc::ComputeRegionOpInterface>())
       return true;
     if (auto funcOp =
             builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
