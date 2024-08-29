@@ -6164,6 +6164,7 @@ public:
     uint8_t IsROV : 1;
     Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV)
         : ResourceClass(ResourceClass), IsROV(IsROV) {}
+    Attributes() : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0) {}
   };
 
 private:
