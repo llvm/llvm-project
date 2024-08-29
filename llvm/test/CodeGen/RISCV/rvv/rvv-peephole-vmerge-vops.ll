@@ -776,15 +776,12 @@ define <vscale x 2 x i32> @vpselect_vslide1up(<vscale x 2 x i32> %passthru, <vsc
   ret <vscale x 2 x i32> %b
 }
 
-; FIXME: We can still fold this given that the vmerge and the vslide1down have
-; the same vl.
 declare <vscale x 2 x i32> @llvm.riscv.vslide1down.nxv2i32.i32(<vscale x 2 x i32>, <vscale x 2 x i32>, i32, i64)
 define <vscale x 2 x i32> @vpselect_vslide1down(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %v, i32 %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vslide1down:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v9, v9, a0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vslide1down.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call <vscale x 2 x i32> @llvm.riscv.vslide1down.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> %v, i32 %x, i64 %1)
