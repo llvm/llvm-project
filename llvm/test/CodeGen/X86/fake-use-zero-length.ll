@@ -1,4 +1,4 @@
-; RUN: llc < %s -stop-after=finalize-isel | FileCheck %s --implicit-check-not=FAKE_USE
+; RUN: llc < %s -stop-after=finalize-isel -mtriple=x86_64-unknown-linux | FileCheck %s --implicit-check-not=FAKE_USE
 ;
 ; Make sure SelectionDAG does not crash handling fake uses of zero-length arrays
 ; and structs. Check also that they are not propagated.
