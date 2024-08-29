@@ -167,7 +167,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 
   json::Object serializeToJson() const override {
     json::Object Inner;
-    Inner.try_emplace ("UUID", SessionUuid);
+    Inner.try_emplace("UUID", SessionUuid);
     int I = 0;
     for (const std::string &M : Msgs) {
       Inner.try_emplace(("MSG_" + llvm::Twine(I)).str(), M);
@@ -300,7 +300,8 @@ public:
 
   static std::unique_ptr<TestTelemeter>
   createInstance(TelemetryConfig *config) {
-    llvm::errs() << "============================== createInstance is called" << "\n";
+    llvm::errs() << "============================== createInstance is called"
+                 << "\n";
     if (!config->EnableTelemetry)
       return nullptr;
     ExpectedUuid = nextUuid();
@@ -366,7 +367,7 @@ public:
     emitToDestinations(Entry);
   }
 
-  const std::string& getUuid() const {return Uuid;}
+  const std::string &getUuid() const { return Uuid; }
 
   ~TestTelemeter() {
     for (auto *Dest : Destinations)
@@ -524,14 +525,13 @@ TEST(TelemetryTest, TelemetryEnabled) {
 
   // Check that the StringDestination emitted properly
   {
-    std::string ExpectedBuffer = ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
-                                  "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
-                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
-                                  "MSG_0:Two\n" +
-                                  "MSG_1:Deux\n" +
-                                  "MSG_2:Zwei\n" +
-                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
-                                  "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n").str();
+    std::string ExpectedBuffer =
+        ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
+         llvm::Twine(ToolName) + "\n" + "UUID:" + llvm::Twine(ExpectedUuid) +
+         "\n" + "MSG_0:Two\n" + "MSG_1:Deux\n" + "MSG_2:Zwei\n" +
+         "UUID:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicExitMsg:Three_" +
+         llvm::Twine(ToolName) + "\n")
+            .str();
 
     EXPECT_STREQ(ExpectedBuffer.c_str(), Buffer.c_str());
   }
@@ -544,23 +544,33 @@ TEST(TelemetryTest, TelemetryEnabled) {
 
     const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ(
-        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
-        ValueToString(StartupEntry).c_str());
+    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+                  "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName) +
+                  "\"]]")
+                     .str()
+                     .c_str(),
+                 ValueToString(StartupEntry).c_str());
 
     const json::Value *MidpointEntry = EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
-    // TODO: This is a bit flaky in that the json string printer sort the entries (for now),
-    // so the "UUID" field is put at the end of the array even though it was emitted first.
-    EXPECT_STREQ(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\",\"UUID\":\""
-                  + llvm::Twine(ExpectedUuid) + "\"}").str().c_str(),
+    // TODO: This is a bit flaky in that the json string printer sort the
+    // entries (for now), so the "UUID" field is put at the end of the array
+    // even though it was emitted first.
+    EXPECT_STREQ(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\","
+                  "\"UUID\":\"" +
+                  llvm::Twine(ExpectedUuid) + "\"}")
+                     .str()
+                     .c_str(),
                  ValueToString(MidpointEntry).c_str());
 
     const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ(
-        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
-        ValueToString(ExitEntry).c_str());
+    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+                  "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName) +
+                  "\"]]")
+                     .str()
+                     .c_str(),
+                 ValueToString(ExitEntry).c_str());
   }
 }
 
@@ -592,14 +602,13 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   {
     // The StringDestination should have removed the odd-positioned msgs.
 
-    std::string ExpectedBuffer = ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
-                                  "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
-                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
-                                  "MSG_0:Two\n" +
-                                  "MSG_1:\n" + // <<< was sanitized away.
-                                  "MSG_2:Zwei\n" +
-                                  "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
-                                  "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n").str();
+    std::string ExpectedBuffer =
+        ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
+         llvm::Twine(ToolName) + "\n" + "UUID:" + llvm::Twine(ExpectedUuid) +
+         "\n" + "MSG_0:Two\n" + "MSG_1:\n" + // <<< was sanitized away.
+         "MSG_2:Zwei\n" + "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+         "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n")
+            .str();
     EXPECT_STREQ(ExpectedBuffer.c_str(), Buffer.c_str());
   }
 
@@ -611,23 +620,31 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
 
     const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ(
-        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
-        ValueToString(StartupEntry).c_str());
+    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+                  "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName) +
+                  "\"]]")
+                     .str()
+                     .c_str(),
+                 ValueToString(StartupEntry).c_str());
 
     const json::Value *MidpointEntry = EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
     // The JsonDestination should have removed the even-positioned msgs.
-    EXPECT_STREQ(("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"UUID\":\""
-                  + llvm::Twine(ExpectedUuid) + "\"}").str().c_str(),
-                 ValueToString(MidpointEntry).c_str());
-
+    EXPECT_STREQ(
+        ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"UUID\":\"" +
+         llvm::Twine(ExpectedUuid) + "\"}")
+            .str()
+            .c_str(),
+        ValueToString(MidpointEntry).c_str());
 
     const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ(
-        ("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) + "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName)+"\"]]").str().c_str(),
-        ValueToString(ExitEntry).c_str());
+    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+                  "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName) +
+                  "\"]]")
+                     .str()
+                     .c_str(),
+                 ValueToString(ExitEntry).c_str());
   }
 }
 
