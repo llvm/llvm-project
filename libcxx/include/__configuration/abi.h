@@ -137,6 +137,19 @@
 // - `string_view`.
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS
 
+// Changes the iterator type of `basic_string` to a bounded iterator that keeps track of whether it's within the bounds
+// of the original container and asserts it on every dereference and when performing iterator arithmetics.
+//
+// ABI impact: changes the iterator type of `basic_string` and its specializations, such as `string` and `wstring`.
+// #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+
+// Changes the iterator type of `vector` to a bounded iterator that keeps track of whether it's within the bounds of the
+// original container and asserts it on every dereference and when performing iterator arithmetics. Note: this doesn't
+// yet affect `vector<bool>`.
+//
+// ABI impact: changes the iterator type of `vector` (except `vector<bool>`).
+// #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
+
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if defined(__APPLE__)
 #    if defined(__i386__) || defined(__x86_64__)

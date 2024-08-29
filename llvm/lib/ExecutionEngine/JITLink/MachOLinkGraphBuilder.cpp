@@ -366,7 +366,7 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
                                    orc::ExecutorAddrDiff(NSym.Value),
                                    orc::ExecutorAddr(),
                                    1ull << MachO::GET_COMM_ALIGN(NSym.Desc), 0),
-            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Strong,
+            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Weak,
             NSym.S, false, NSym.Desc & MachO::N_NO_DEAD_STRIP);
       } else {
         if (!NSym.Name)

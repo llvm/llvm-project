@@ -138,13 +138,13 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                           "^::sigismember$;"
                                           "^::strcasecmp$;"
                                           "^::strsignal$;"
-                                          "^::ttyname"))),
+                                          "^::ttyname$"))),
       CheckedReturnTypes(utils::options::parseStringList(
-          Options.get("CheckedReturnTypes", "::std::error_code$;"
-                                            "::std::error_condition$;"
-                                            "::std::errc$;"
-                                            "::std::expected$;"
-                                            "::boost::system::error_code"))),
+          Options.get("CheckedReturnTypes", "^::std::error_code$;"
+                                            "^::std::error_condition$;"
+                                            "^::std::errc$;"
+                                            "^::std::expected$;"
+                                            "^::boost::system::error_code$"))),
       AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
 
 UnusedReturnValueCheck::UnusedReturnValueCheck(

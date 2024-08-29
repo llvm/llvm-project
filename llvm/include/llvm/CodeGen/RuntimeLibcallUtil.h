@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_RUNTIMELIBCALLS_H
 #define LLVM_CODEGEN_RUNTIMELIBCALLS_H
 
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -89,6 +90,9 @@ Libcall getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 /// MEMSET_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or
 /// UNKNOW_LIBCALL if there is none.
 Libcall getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
+
+/// Initialize the default condition code on the libcalls.
+void initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs);
 
 } // namespace RTLIB
 } // namespace llvm

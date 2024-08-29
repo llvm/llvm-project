@@ -327,3 +327,28 @@ join:
   %add = add <2 x i16> %phi, <i16 2, i16 3>
   ret <2 x i16> %add
 }
+
+;; Check if ICMP instruction is constant folded or not.
+define <2 x i1> @insertelement_fold1() {
+; CHECK-LABEL: define <2 x i1> @insertelement_fold1() {
+; CHECK-NEXT:    [[IE1:%.*]] = insertelement <2 x i32> poison, i32 10, i64 0
+; CHECK-NEXT:    [[IE2:%.*]] = insertelement <2 x i32> [[IE1]], i32 20, i64 1
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %ie1 = insertelement <2 x i32> poison, i32 10, i64 0
+  %ie2 = insertelement <2 x i32> %ie1, i32 20, i64 1
+  %icmp1 = icmp slt <2 x i32> %ie2, <i32 1024, i32 1024>
+  ret <2 x i1> %icmp1
+}
+
+;; Check if LVI is able to handle constant vector operands
+;; in InsertElementInst and CVP is able to fold ICMP instruction.
+define <2 x i1> @insertelement_fold2() {
+; CHECK-LABEL: define <2 x i1> @insertelement_fold2() {
+; CHECK-NEXT:    [[IE1:%.*]] = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %ie1 = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
+  %icmp1 = icmp slt <2 x i32> %ie1, <i32 1024, i32 1024>
+  ret <2 x i1> %icmp1
+}

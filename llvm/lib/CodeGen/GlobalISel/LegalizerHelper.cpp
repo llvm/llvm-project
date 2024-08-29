@@ -735,8 +735,7 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
   if (MemType.isVector())
     return RTLIB::UNKNOWN_LIBCALL;
 
-#define LCALLS(A, B)                                                           \
-  { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
+#define LCALLS(A, B) {A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL}
 #define LCALL5(A)                                                              \
   LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
   switch (Opc) {
@@ -992,6 +991,150 @@ LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
                        LocObserver, nullptr);
 }
 
+/// Returns the corresponding libcall for the given Pred and
+/// the ICMP predicate that should be generated to compare with #0
+/// after the libcall.
+static std::pair<RTLIB::Libcall, CmpInst::Predicate>
+getFCMPLibcallDesc(const CmpInst::Predicate Pred) {
+
+  switch (Pred) {
+  case CmpInst::FCMP_OEQ:
+    return {RTLIB::OEQ_F128, CmpInst::ICMP_EQ};
+  case CmpInst::FCMP_UNE:
+    return {RTLIB::UNE_F128, CmpInst::ICMP_NE};
+  case CmpInst::FCMP_OGE:
+    return {RTLIB::OGE_F128, CmpInst::ICMP_SGE};
+  case CmpInst::FCMP_OLT:
+    return {RTLIB::OLT_F128, CmpInst::ICMP_SLT};
+  case CmpInst::FCMP_OLE:
+    return {RTLIB::OLE_F128, CmpInst::ICMP_SLE};
+  case CmpInst::FCMP_OGT:
+    return {RTLIB::OGT_F128, CmpInst::ICMP_SGT};
+  case CmpInst::FCMP_UNO:
+    return {RTLIB::UO_F128, CmpInst::ICMP_NE};
+  default:
+    return {RTLIB::UNKNOWN_LIBCALL, CmpInst::BAD_ICMP_PREDICATE};
+  }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
+                                   MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver) {
+  auto &MF = MIRBuilder.getMF();
+  auto &Ctx = MF.getFunction().getContext();
+  const GFCmp *Cmp = cast<GFCmp>(&MI);
+
+  LLT OpLLT = MRI.getType(Cmp->getLHSReg());
+  if (OpLLT != LLT::scalar(128) || OpLLT != MRI.getType(Cmp->getRHSReg()))
+    return UnableToLegalize;
+
+  Type *OpType = getFloatTypeForLLT(Ctx, OpLLT);
+
+  // DstReg type is s32
+  const Register DstReg = Cmp->getReg(0);
+  const auto Cond = Cmp->getCond();
+
+  // Reference:
+  // https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html#Comparison-functions-1
+  // Generates a libcall followed by ICMP.
+  const auto BuildLibcall =
+      [&](const RTLIB::Libcall Libcall, const CmpInst::Predicate ICmpPred,
+          const DstOp &Res = LLT::scalar(32)) -> Register {
+    // FCMP libcall always returns an i32, and needs an ICMP with #0.
+    constexpr LLT TempLLT = LLT::scalar(32);
+    Register Temp = MRI.createGenericVirtualRegister(TempLLT);
+    // Generate libcall, holding result in Temp
+    const auto Status = createLibcall(
+        MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
+        LocObserver, &MI);
+    if (!Status)
+      return {};
+
+    // Compare temp with #0 to get the final result.
+    return MIRBuilder
+        .buildICmp(ICmpPred, Res, Temp, MIRBuilder.buildConstant(TempLLT, 0))
+        .getReg(0);
+  };
+
+  // Simple case if we have a direct mapping from predicate to libcall
+  if (const auto [Libcall, ICmpPred] = getFCMPLibcallDesc(Cond);
+      Libcall != RTLIB::UNKNOWN_LIBCALL &&
+      ICmpPred != CmpInst::BAD_ICMP_PREDICATE) {
+    if (BuildLibcall(Libcall, ICmpPred, DstReg)) {
+      return Legalized;
+    }
+    return UnableToLegalize;
+  }
+
+  // No direct mapping found, should be generated as combination of libcalls.
+
+  switch (Cond) {
+  case CmpInst::FCMP_UEQ: {
+    // FCMP_UEQ: unordered or equal
+    // Convert into (FCMP_OEQ || FCMP_UNO).
+
+    const auto [OeqLibcall, OeqPred] = getFCMPLibcallDesc(CmpInst::FCMP_OEQ);
+    const auto Oeq = BuildLibcall(OeqLibcall, OeqPred);
+
+    const auto [UnoLibcall, UnoPred] = getFCMPLibcallDesc(CmpInst::FCMP_UNO);
+    const auto Uno = BuildLibcall(UnoLibcall, UnoPred);
+    if (Oeq && Uno)
+      MIRBuilder.buildOr(DstReg, Oeq, Uno);
+    else
+      return UnableToLegalize;
+
+    break;
+  }
+  case CmpInst::FCMP_ONE: {
+    // FCMP_ONE: ordered and operands are unequal
+    // Convert into (!FCMP_OEQ && !FCMP_UNO).
+
+    // We inverse the predicate instead of generating a NOT
+    // to save one instruction.
+    // On AArch64 isel can even select two cmp into a single ccmp.
+    const auto [OeqLibcall, OeqPred] = getFCMPLibcallDesc(CmpInst::FCMP_OEQ);
+    const auto NotOeq =
+        BuildLibcall(OeqLibcall, CmpInst::getInversePredicate(OeqPred));
+
+    const auto [UnoLibcall, UnoPred] = getFCMPLibcallDesc(CmpInst::FCMP_UNO);
+    const auto NotUno =
+        BuildLibcall(UnoLibcall, CmpInst::getInversePredicate(UnoPred));
+
+    if (NotOeq && NotUno)
+      MIRBuilder.buildAnd(DstReg, NotOeq, NotUno);
+    else
+      return UnableToLegalize;
+
+    break;
+  }
+  case CmpInst::FCMP_ULT:
+  case CmpInst::FCMP_UGE:
+  case CmpInst::FCMP_UGT:
+  case CmpInst::FCMP_ULE:
+  case CmpInst::FCMP_ORD: {
+    // Convert into: !(inverse(Pred))
+    // E.g. FCMP_ULT becomes !FCMP_OGE
+    // This is equivalent to the following, but saves some instructions.
+    //   MIRBuilder.buildNot(
+    //       PredTy,
+    //       MIRBuilder.buildFCmp(CmpInst::getInversePredicate(Pred), PredTy,
+    //                            Op1, Op2));
+    const auto [InversedLibcall, InversedPred] =
+        getFCMPLibcallDesc(CmpInst::getInversePredicate(Cond));
+    if (!BuildLibcall(InversedLibcall,
+                      CmpInst::getInversePredicate(InversedPred), DstReg))
+      return UnableToLegalize;
+    break;
+  }
+  default:
+    return UnableToLegalize;
+  }
+
+  return Legalized;
+}
+
 // The function is used to legalize operations that set default environment
 // state. In C library a call like `fesetmode(FE_DFL_MODE)` is used for that.
 // On most targets supported in glibc FE_DFL_MODE is defined as
@@ -1137,6 +1280,13 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     if (Status != Legalized)
       return Status;
     break;
+  }
+  case TargetOpcode::G_FCMP: {
+    LegalizeResult Status = createFCMPLibcall(MIRBuilder, MI, LocObserver);
+    if (Status != Legalized)
+      return Status;
+    MI.eraseFromParent();
+    return Status;
   }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
@@ -2373,7 +2523,8 @@ LegalizerHelper::widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
-  switch (MI.getOpcode()) {
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
   default:
     return UnableToLegalize;
   case TargetOpcode::G_ATOMICRMW_XCHG:
@@ -2457,13 +2608,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Register SrcReg = MI.getOperand(1).getReg();
 
     // First extend the input.
-    unsigned ExtOpc = MI.getOpcode() == TargetOpcode::G_CTTZ ||
-                              MI.getOpcode() == TargetOpcode::G_CTTZ_ZERO_UNDEF
+    unsigned ExtOpc = Opcode == TargetOpcode::G_CTTZ ||
+                              Opcode == TargetOpcode::G_CTTZ_ZERO_UNDEF
                           ? TargetOpcode::G_ANYEXT
                           : TargetOpcode::G_ZEXT;
     auto MIBSrc = MIRBuilder.buildInstr(ExtOpc, {WideTy}, {SrcReg});
     LLT CurTy = MRI.getType(SrcReg);
-    unsigned NewOpc = MI.getOpcode();
+    unsigned NewOpc = Opcode;
     if (NewOpc == TargetOpcode::G_CTTZ) {
       // The count is the same in the larger type except if the original
       // value was zero.  This can be handled by setting the bit just off
@@ -2478,7 +2629,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
 
-    if (MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
+    if (Opcode == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
       // An optimization where the result is the CTLZ after the left shift by
       // (Difference in widety and current ty), that is,
       // MIBSrc = MIBSrc << (sizeinbits(WideTy) - sizeinbits(CurTy))
@@ -2490,7 +2641,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // Perform the operation at the larger size.
     auto MIBNewOp = MIRBuilder.buildInstr(NewOpc, {WideTy}, {MIBSrc});
     // This is already the correct result for CTPOP and CTTZs
-    if (MI.getOpcode() == TargetOpcode::G_CTLZ) {
+    if (Opcode == TargetOpcode::G_CTLZ) {
       // The correct result is NewOp - (Difference in widety and current ty).
       MIBNewOp = MIRBuilder.buildSub(
           WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
@@ -2638,8 +2789,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0) {
-      unsigned CvtOp = MI.getOpcode() == TargetOpcode::G_ASHR ?
-        TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
+      unsigned CvtOp = Opcode == TargetOpcode::G_ASHR ? TargetOpcode::G_SEXT
+                                                      : TargetOpcode::G_ZEXT;
 
       widenScalarSrc(MI, WideTy, 1, CvtOp);
       widenScalarDst(MI, WideTy);
@@ -2951,7 +3102,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_STRICT_FLDEXP: {
     if (TypeIdx == 0) {
-      if (MI.getOpcode() == TargetOpcode::G_STRICT_FLDEXP)
+      if (Opcode == TargetOpcode::G_STRICT_FLDEXP)
         return UnableToLegalize;
 
       Observer.changingInstr(MI);
@@ -3881,12 +4032,34 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFMad(MI);
   case TargetOpcode::G_FFLOOR:
     return lowerFFloor(MI);
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    auto Round = MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_ROUND, {SrcTy},
+                                       {SrcReg});
+    MIRBuilder.buildFPTOSI(DstReg, Round);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
   case TargetOpcode::G_FRINT: {
     // Since round even is the assumed rounding mode for unconstrained FP
     // operations, rint and roundeven are the same operation.
     changeOpcode(MI, TargetOpcode::G_INTRINSIC_ROUNDEVEN);
+    return Legalized;
+  }
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    auto Round =
+        MIRBuilder.buildInstr(TargetOpcode::G_FRINT, {SrcTy}, {SrcReg});
+    MIRBuilder.buildFPTOSI(DstReg, Round);
+    MI.eraseFromParent();
     return Legalized;
   }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
@@ -4006,6 +4179,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_UMIN:
   case G_UMAX:
     return lowerMinMax(MI);
+  case G_SCMP:
+  case G_UCMP:
+    return lowerThreewayCompare(MI);
   case G_FCOPYSIGN:
     return lowerFCopySign(MI);
   case G_FMINNUM:
@@ -4741,12 +4917,22 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FCEIL:
   case G_FFLOOR:
   case G_FRINT:
+  case G_INTRINSIC_LRINT:
+  case G_INTRINSIC_LLRINT:
   case G_INTRINSIC_ROUND:
   case G_INTRINSIC_ROUNDEVEN:
+  case G_LROUND:
+  case G_LLROUND:
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
   case G_FSIN:
   case G_FTAN:
+  case G_FACOS:
+  case G_FASIN:
+  case G_FATAN:
+  case G_FCOSH:
+  case G_FSINH:
+  case G_FTANH:
   case G_FSQRT:
   case G_BSWAP:
   case G_BITREVERSE:
@@ -7264,6 +7450,36 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMinMax(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
+  GSUCmp *Cmp = cast<GSUCmp>(&MI);
+
+  Register Dst = Cmp->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT CmpTy = DstTy.changeElementSize(1);
+
+  CmpInst::Predicate LTPredicate = Cmp->isSigned()
+                                       ? CmpInst::Predicate::ICMP_SLT
+                                       : CmpInst::Predicate::ICMP_ULT;
+  CmpInst::Predicate GTPredicate = Cmp->isSigned()
+                                       ? CmpInst::Predicate::ICMP_SGT
+                                       : CmpInst::Predicate::ICMP_UGT;
+
+  auto One = MIRBuilder.buildConstant(DstTy, 1);
+  auto Zero = MIRBuilder.buildConstant(DstTy, 0);
+  auto IsGT = MIRBuilder.buildICmp(GTPredicate, CmpTy, Cmp->getLHSReg(),
+                                   Cmp->getRHSReg());
+  auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
+
+  auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
+  auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, Cmp->getLHSReg(),
+                                   Cmp->getRHSReg());
+  MIRBuilder.buildSelect(Dst, IsLT, MinusOne, SelectZeroOrOne);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   auto [Dst, DstTy, Src0, Src0Ty, Src1, Src1Ty] = MI.getFirst3RegLLTs();
   const int Src0Size = Src0Ty.getScalarSizeInBits();
@@ -8920,8 +9136,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;
@@ -9028,8 +9244,8 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
-      while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign.previous();
+      if (MaybeAlign StackAlign = DL.getStackAlignment())
+        NewAlign = std::min(NewAlign, *StackAlign);
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;

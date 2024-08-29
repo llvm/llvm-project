@@ -14,9 +14,9 @@ int ca[] = {
 };
 
 // CHECK: %arrayinit.element = getelementptr inbounds i32, ptr %notca, i64 1
-// CHECK: store i8 106, ptr %arrayinit.element, align 4
+// CHECK: store i32 106, ptr %arrayinit.element, align 4
 // CHECK: %arrayinit.element1 = getelementptr inbounds i32, ptr %notca, i64 2
-// CHECK: store i8 107, ptr %arrayinit.element1, align 4
+// CHECK: store i32 107, ptr %arrayinit.element1, align 4
 int notca[] = {
 a
 #embed <jk.txt> prefix(,)
@@ -32,11 +32,11 @@ S1 sc = {
 0
 };
 
-// CHECK: %x = getelementptr inbounds %struct.S1, ptr %s, i32 0, i32 0
+// CHECK: %x = getelementptr inbounds nuw %struct.S1, ptr %s, i32 0, i32 0
 // CHECK: store i32 106, ptr %x, align 4
-// CHECK: %y = getelementptr inbounds %struct.S1, ptr %s, i32 0, i32 1
+// CHECK: %y = getelementptr inbounds nuw %struct.S1, ptr %s, i32 0, i32 1
 // CHECK: store i32 107, ptr %y, align 4
-// CHECK: %z = getelementptr inbounds %struct.S1, ptr %s, i32 0, i32 2
+// CHECK: %z = getelementptr inbounds nuw %struct.S1, ptr %s, i32 0, i32 2
 // CHECK: %1 = load i32, ptr %a.addr, align 4
 S1 s = {
 #embed <jk.txt> suffix(,)
@@ -60,24 +60,24 @@ constexpr struct T t[] = {
 #embed <numbers.txt>
 };
 
-// CHECK:  %arr = getelementptr inbounds %struct.T, ptr %tnonc, i32 0, i32 0
+// CHECK:  %arr = getelementptr inbounds nuw %struct.T, ptr %tnonc, i32 0, i32 0
 // CHECK:  %2 = load i32, ptr %a.addr, align 4
 // CHECK:  store i32 %2, ptr %arr, align 4
 // CHECK:  %arrayinit.element2 = getelementptr inbounds i32, ptr %arr, i64 1
 // CHECK:  store i32 300, ptr %arrayinit.element2, align 4
-// CHECK:  %s3 = getelementptr inbounds %struct.T, ptr %tnonc, i32 0, i32 1
-// CHECK:  %x4 = getelementptr inbounds %struct.S1, ptr %s3, i32 0, i32 0
+// CHECK:  %s3 = getelementptr inbounds nuw %struct.T, ptr %tnonc, i32 0, i32 1
+// CHECK:  %x4 = getelementptr inbounds nuw %struct.S1, ptr %s3, i32 0, i32 0
 // CHECK:  store i32 1, ptr %x4, align 4
-// CHECK:  %y5 = getelementptr inbounds %struct.S1, ptr %s3, i32 0, i32 1
+// CHECK:  %y5 = getelementptr inbounds nuw %struct.S1, ptr %s3, i32 0, i32 1
 // CHECK:  store i32 2, ptr %y5, align 4
-// CHECK:  %z6 = getelementptr inbounds %struct.S1, ptr %s3, i32 0, i32 2
+// CHECK:  %z6 = getelementptr inbounds nuw %struct.S1, ptr %s3, i32 0, i32 2
 // CHECK:  store i32 3, ptr %z6, align 4
 // CHECK:  %arrayinit.element7 = getelementptr inbounds %struct.T, ptr %tnonc, i64 1
 // CHECK:  call void @llvm.memset.p0.i64(ptr align 4 %arrayinit.element7, i8 0, i64 20, i1 false)
-// CHECK:  %arr8 = getelementptr inbounds %struct.T, ptr %arrayinit.element7, i32 0, i32 0
-// CHECK:  store i8 106, ptr %arr8, align 4
+// CHECK:  %arr8 = getelementptr inbounds nuw %struct.T, ptr %arrayinit.element7, i32 0, i32 0
+// CHECK:  store i32 106, ptr %arr8, align 4
 // CHECK:  %arrayinit.element9 = getelementptr inbounds i32, ptr %arr8, i64 1
-// CHECK:  store i8 107, ptr %arrayinit.element9, align 4
+// CHECK:  store i32 107, ptr %arrayinit.element9, align 4
 struct T tnonc[] = {
   a, 300, 1, 2, 3
 #embed <jk.txt> prefix(,)

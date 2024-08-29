@@ -43,9 +43,8 @@ static constexpr bool HasMemberEraseIter =
 template <class S1Ty, class S2Ty> bool set_union(S1Ty &S1, const S2Ty &S2) {
   bool Changed = false;
 
-  for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end(); SI != SE;
-       ++SI)
-    if (S1.insert(*SI).second)
+  for (const auto &E : S2)
+    if (S1.insert(E).second)
       Changed = true;
 
   return Changed;
@@ -61,11 +60,11 @@ template <class S1Ty, class S2Ty> void set_intersect(S1Ty &S1, const S2Ty &S2) {
   if constexpr (detail::HasMemberRemoveIf<S1Ty, decltype(Pred)>) {
     S1.remove_if(Pred);
   } else {
-    for (typename S1Ty::iterator I = S1.begin(); I != S1.end();) {
-      const auto &E = *I;
-      ++I;
-      if (!S2.count(E))
-        S1.erase(E); // Erase element if not in S2
+    typename S1Ty::iterator Next;
+    for (typename S1Ty::iterator I = S1.begin(); I != S1.end(); I = Next) {
+      Next = std::next(I);
+      if (!S2.count(*I))
+        S1.erase(I); // Erase element if not in S2
     }
   }
 }
@@ -73,10 +72,9 @@ template <class S1Ty, class S2Ty> void set_intersect(S1Ty &S1, const S2Ty &S2) {
 template <class S1Ty, class S2Ty>
 S1Ty set_intersection_impl(const S1Ty &S1, const S2Ty &S2) {
   S1Ty Result;
-  for (typename S1Ty::const_iterator SI = S1.begin(), SE = S1.end(); SI != SE;
-       ++SI)
-    if (S2.count(*SI))
-      Result.insert(*SI);
+  for (const auto &E : S1)
+    if (S2.count(E))
+      Result.insert(E);
   return Result;
 }
 
@@ -94,10 +92,9 @@ S1Ty set_intersection(const S1Ty &S1, const S2Ty &S2) {
 template <class S1Ty, class S2Ty>
 S1Ty set_difference(const S1Ty &S1, const S2Ty &S2) {
   S1Ty Result;
-  for (typename S1Ty::const_iterator SI = S1.begin(), SE = S1.end(); SI != SE;
-       ++SI)
-    if (!S2.count(*SI)) // if the element is not in set2
-      Result.insert(*SI);
+  for (const auto &E : S1)
+    if (!S2.count(E)) // if the element is not in set2
+      Result.insert(E);
   return Result;
 }
 
@@ -132,9 +129,8 @@ template <class S1Ty, class S2Ty> void set_subtract(S1Ty &S1, const S2Ty &S2) {
     }
   }
 
-  for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end(); SI != SE;
-       ++SI)
-    S1.erase(*SI);
+  for (const auto &E : S2)
+    S1.erase(E);
 }
 
 /// set_subtract(A, B, C, D) - Compute A := A - B, set C to the elements of B
@@ -142,12 +138,11 @@ template <class S1Ty, class S2Ty> void set_subtract(S1Ty &S1, const S2Ty &S2) {
 /// from A (B - A).
 template <class S1Ty, class S2Ty>
 void set_subtract(S1Ty &S1, const S2Ty &S2, S1Ty &Removed, S1Ty &Remaining) {
-  for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end(); SI != SE;
-       ++SI)
-    if (S1.erase(*SI))
-      Removed.insert(*SI);
+  for (const auto &E : S2)
+    if (S1.erase(E))
+      Removed.insert(E);
     else
-      Remaining.insert(*SI);
+      Remaining.insert(E);
 }
 
 /// set_is_subset(A, B) - Return true iff A in B

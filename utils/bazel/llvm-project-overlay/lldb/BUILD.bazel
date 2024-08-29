@@ -432,6 +432,7 @@ cc_library(
         ":Version",
         "//clang:codegen",
         "//clang:frontend",
+        "//clang:serialization",
         "//llvm:Support",
     ],
 )
@@ -468,7 +469,7 @@ cc_library(
         "include/lldb/Host/posix/*.h",
     ]),
     strip_include_prefix = "include",
-    deps = [":Utility"],
+    deps = [":UtilityHeaders"],
 )
 
 cc_library(
@@ -483,7 +484,7 @@ cc_library(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":Utility"],
+    deps = [":UtilityHeaders"],
 )
 
 objc_library(
@@ -501,7 +502,7 @@ objc_library(
         ":Headers",
         ":HostMacOSXHeaders",
         ":HostMacOSXPrivateHeaders",
-        ":Utility",
+        ":UtilityHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -563,7 +564,7 @@ cc_library(
     strip_include_prefix = "include",
     deps = [
         ":Headers",
-        ":Utility",
+        ":UtilityHeaders",
         "//llvm:Object",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -616,7 +617,6 @@ cc_library(
         ":InterpreterHeaders",
         ":SymbolHeaders",
         ":TargetHeaders",
-        ":Utility",
         "//clang:driver",
         "//llvm:Demangle",
         "//llvm:Support",
@@ -678,7 +678,10 @@ cc_library(
     name = "TargetHeaders",
     hdrs = glob(["include/lldb/Target/**/*.h"]),
     strip_include_prefix = "include",
-    deps = [":AppleArm64ExceptionClass"],
+    deps = [
+        ":AppleArm64ExceptionClass",
+        ":BreakpointHeaders",
+    ],
 )
 
 cc_library(
@@ -707,7 +710,9 @@ cc_library(
 
 cc_library(
     name = "Headers",
-    hdrs = glob(["include/lldb/lldb-*.h"]),
+    hdrs = glob(["include/lldb/lldb-*.h"]) + [
+        "include/lldb/Symbol/SaveCoreOptions.h",
+    ],
     strip_include_prefix = "include",
 )
 
@@ -719,12 +724,20 @@ cc_library(
 )
 
 cc_library(
+    name = "UtilityHeaders",
+    hdrs = glob(["include/lldb/Utility/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
     name = "Utility",
     srcs = glob(["source/Utility/**/*.cpp"]),
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
     strip_include_prefix = "include",
     deps = [
+        ":CoreHeaders",
         ":Headers",
+        ":TargetHeaders",
         ":UtilityPrivateHeaders",
         "//llvm:BinaryFormat",
         "//llvm:Support",
@@ -1001,4 +1014,52 @@ cc_binary(
         ],
         "//conditions:default": [],
     }),
+)
+
+expand_template(
+    name = "lldb-dap-plist",
+    out = "lldb-dap-Info.plist",
+    substitutions = {
+        "${LLDB_VERSION}": PACKAGE_VERSION,
+    },
+    template = "tools/lldb-dap/lldb-dap-Info.plist.in",
+)
+
+gentbl_cc_library(
+    name = "lldb_dap_opts_gen",
+    strip_include_prefix = "tools/lldb-dap",
+    tbl_outs = [(
+        ["-gen-opt-parser-defs"],
+        "tools/lldb-dap/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/lldb-dap/Options.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "lldb-dap",
+    srcs = glob([
+        "tools/lldb-dap/*.cpp",
+        "tools/lldb-dap/*.h",
+    ]),
+    additional_linker_inputs = [
+        ":lldb-dap-plist",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":lldb_dap_opts_gen",
+        "//lldb:APIHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
 )

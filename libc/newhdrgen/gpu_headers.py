@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # ===- GPU HeaderFile Class for --export-decls version --------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -17,7 +15,6 @@ class GpuHeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
-        self.includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)

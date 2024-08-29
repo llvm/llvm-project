@@ -133,7 +133,7 @@ static ThreadAttributes main_thread_attrib;
   // We register the cleanup_tls function to be the last atexit callback to be
   // invoked. It will tear down the TLS. Other callbacks may depend on TLS (such
   // as the stack protector canary).
-  atexit([]() { cleanup_tls(tls.tp, tls.size); });
+  atexit([]() { cleanup_tls(tls.addr, tls.size); });
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit

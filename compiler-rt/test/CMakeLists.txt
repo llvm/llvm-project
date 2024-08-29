@@ -48,7 +48,7 @@ umbrella_lit_testsuite_begin(check-compiler-rt)
 
 function(compiler_rt_test_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
-  if(COMPILER_RT_HAS_${runtime_uppercase})
+  if(COMPILER_RT_HAS_${runtime_uppercase} AND COMPILER_RT_INCLUDE_TESTS)
     if (${runtime} STREQUAL cfi AND NOT COMPILER_RT_HAS_UBSAN)
       # CFI tests require diagnostic mode, which is implemented in UBSan.
     elseif (${runtime} STREQUAL scudo_standalone)

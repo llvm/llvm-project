@@ -4,14 +4,14 @@ add_public_tablegen_target(omp_common_td)
 
 set(LLVM_TARGET_DEFINITIONS OpenMPOps.td)
 
-# Run the OpenMP verifier tablegen pseudo-backend while preventing the produced
-# dummy output from being added as a dependency to any tablegen targets defined
-# below.
-set(TABLEGEN_OUTPUT_TMP ${TABLEGEN_OUTPUT})
+# The OpenMP verifier tablegen pseudo-backend does not produce any output, but
+# mlir_tablegen expects an output file name to be passed. An empty "no-output"
+# file is created by the statement below.
+#
+# This output will be added to the list of dependencies of the
+# MLIROpenMPOpsIncGen target below, which results in triggering this
+# verification pass every time OpenMPOps.td is modified and recompiled.
 mlir_tablegen(no-output -verify-openmp-ops)
-file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/no-output ${CMAKE_CURRENT_BINARY_DIR}/no-output.d)
-set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT_TMP})
-unset(TABLEGEN_OUTPUT_TMP)
 
 mlir_tablegen(OpenMPOpsDialect.h.inc -gen-dialect-decls -dialect=omp)
 mlir_tablegen(OpenMPOpsDialect.cpp.inc -gen-dialect-defs -dialect=omp)

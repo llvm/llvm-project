@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ===- Generate headers for libc functions  -------------------*- python -*--==#
 #
@@ -16,7 +16,6 @@ from gpu_headers import GpuHeaderFile as GpuHeader
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
 from class_implementation.classes.function import Function
-from class_implementation.classes.include import Include
 from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
@@ -103,9 +102,6 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
             Object(object_data["object_name"], object_data["object_type"])
         )
 
-    for include_data in yaml_data.get("includes", []):
-        header.add_include(Include(include_data))
-
     return header
 
 
@@ -178,7 +174,6 @@ def add_function_to_yaml(yaml_file, function_details):
 
     with open(yaml_file, "r") as f:
         yaml_data = yaml.safe_load(f)
-
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 
@@ -195,7 +190,15 @@ def add_function_to_yaml(yaml_file, function_details):
     if new_function.attributes:
         function_dict["attributes"] = new_function.attributes
 
-    yaml_data["functions"].append(function_dict)
+    insert_index = 0
+    for i, func in enumerate(yaml_data["functions"]):
+        if func["name"] > new_function.name:
+            insert_index = i
+            break
+    else:
+        insert_index = len(yaml_data["functions"])
+
+    yaml_data["functions"].insert(insert_index, function_dict)
 
     class IndentYamlListDumper(yaml.Dumper):
         def increase_indent(self, flow=False, indentless=False):
@@ -256,8 +259,6 @@ def main(
     else:
         with open(output_file_path, "w") as f:
             f.write(header_str)
-
-    print(f"Generated header file: {output_file_path}")
 
 
 if __name__ == "__main__":

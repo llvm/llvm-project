@@ -80,7 +80,7 @@ LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
     return -ret;
 
   statbuf->st_dev = MKDEV(xbuf.stx_dev_major, xbuf.stx_dev_minor);
-  statbuf->st_ino = xbuf.stx_ino;
+  statbuf->st_ino = static_cast<decltype(statbuf->st_ino)>(xbuf.stx_ino);
   statbuf->st_mode = xbuf.stx_mode;
   statbuf->st_nlink = xbuf.stx_nlink;
   statbuf->st_uid = xbuf.stx_uid;
@@ -94,7 +94,8 @@ LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
   statbuf->st_ctim.tv_sec = xbuf.stx_ctime.tv_sec;
   statbuf->st_ctim.tv_nsec = xbuf.stx_ctime.tv_nsec;
   statbuf->st_blksize = xbuf.stx_blksize;
-  statbuf->st_blocks = xbuf.stx_blocks;
+  statbuf->st_blocks =
+      static_cast<decltype(statbuf->st_blocks)>(xbuf.stx_blocks);
 
   return 0;
 }

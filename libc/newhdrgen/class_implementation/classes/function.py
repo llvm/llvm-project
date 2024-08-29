@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # ====-- Function class for libc function headers -------------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -26,7 +24,7 @@ class Function:
         attributes_str = " ".join(self.attributes)
         arguments_str = ", ".join(self.arguments)
         if attributes_str == "":
-            result = f"{self.return_type} {self.name}({arguments_str});"
+            result = f"{self.return_type} {self.name}({arguments_str})"
         else:
             result = f"{attributes_str} {self.return_type} {self.name}({arguments_str})"
         return result

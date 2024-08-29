@@ -365,6 +365,40 @@ llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
   return getFunctionPointer(getRawFunctionPointer(GD, Ty), FuncType);
 }
 
+CGPointerAuthInfo CodeGenModule::getMemberFunctionPointerAuthInfo(QualType FT) {
+  assert(FT->getAs<MemberPointerType>() && "MemberPointerType expected");
+  const auto &Schema = getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
+  if (!Schema)
+    return CGPointerAuthInfo();
+
+  assert(!Schema.isAddressDiscriminated() &&
+         "function pointers cannot use address-specific discrimination");
+
+  llvm::ConstantInt *Discriminator =
+      getPointerAuthOtherDiscriminator(Schema, GlobalDecl(), FT);
+  return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
+                           /* IsIsaPointer */ false,
+                           /* AuthenticatesNullValues */ false, Discriminator);
+}
+
+llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
+                                                        QualType FT) {
+  if (CGPointerAuthInfo PointerAuth = getMemberFunctionPointerAuthInfo(FT))
+    return getConstantSignedPointer(
+        Pointer, PointerAuth.getKey(), nullptr,
+        cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
+
+  return Pointer;
+}
+
+llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
+                                                        llvm::Type *Ty) {
+  QualType FT = FD->getType();
+  FT = getContext().getMemberPointerType(
+      FT, cast<CXXMethodDecl>(FD)->getParent()->getTypeForDecl());
+  return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT);
+}
+
 std::optional<PointerAuthQualifier>
 CodeGenModule::computeVTPointerAuthentication(const CXXRecordDecl *ThisClass) {
   auto DefaultAuthentication = getCodeGenOpts().PointerAuth.CXXVTablePointers;
@@ -564,6 +598,10 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
   Val = CGF.Builder.CreateBitCast(Val, getType());
   return Address(Val, getElementType(), getAlignment(), NewInfo,
                  /*Offset=*/nullptr, isKnownNonNull());
+}
+
+llvm::Value *Address::emitRawPointerSlow(CodeGenFunction &CGF) const {
+  return CGF.getAsNaturalPointerTo(*this, QualType());
 }
 
 llvm::Value *LValue::getPointer(CodeGenFunction &CGF) const {

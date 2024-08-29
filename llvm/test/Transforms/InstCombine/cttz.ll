@@ -193,7 +193,7 @@ define i32 @cttz_of_lowest_set_bit_wrong_const(i32 %x) {
 define i32 @cttz_of_lowest_set_bit_wrong_operand(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_operand(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
@@ -206,7 +206,7 @@ define i32 @cttz_of_lowest_set_bit_wrong_operand(i32 %x, i32 %y) {
 define i32 @cttz_of_lowest_set_bit_wrong_intrinsic(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_intrinsic(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[SUB]]
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;

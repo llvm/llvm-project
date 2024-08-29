@@ -92,6 +92,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.realloc
     libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
+
+    # errno.h entrypoints
+    libc.src.errno.errno
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -118,6 +121,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -132,6 +136,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.daddl
+    libc.src.math.ddivl
+    libc.src.math.dfmal
+    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf
@@ -144,9 +152,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd
+    libc.src.math.faddl
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.floorl
@@ -189,6 +203,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
+    libc.src.math.fsub
+    libc.src.math.fsubl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -235,6 +251,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nexttoward
     libc.src.math.nexttowardf
     libc.src.math.nexttowardl
+    libc.src.math.pow
     libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
@@ -248,6 +265,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl

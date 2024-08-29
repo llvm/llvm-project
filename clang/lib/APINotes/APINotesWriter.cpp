@@ -62,6 +62,13 @@ class APINotesWriter::Implementation {
       llvm::SmallVector<std::pair<VersionTuple, ObjCPropertyInfo>, 1>>
       ObjCProperties;
 
+  /// Information about C record fields.
+  ///
+  /// Indexed by the context ID and name ID.
+  llvm::DenseMap<SingleDeclTableKey,
+                 llvm::SmallVector<std::pair<VersionTuple, FieldInfo>, 1>>
+      Fields;
+
   /// Information about Objective-C methods.
   ///
   /// Indexed by the context ID, selector ID, and Boolean (stored as a char)
@@ -69,6 +76,13 @@ class APINotesWriter::Implementation {
   llvm::DenseMap<std::tuple<unsigned, unsigned, char>,
                  llvm::SmallVector<std::pair<VersionTuple, ObjCMethodInfo>, 1>>
       ObjCMethods;
+
+  /// Information about C++ methods.
+  ///
+  /// Indexed by the context ID and name ID.
+  llvm::DenseMap<SingleDeclTableKey,
+                 llvm::SmallVector<std::pair<VersionTuple, CXXMethodInfo>, 1>>
+      CXXMethods;
 
   /// Mapping from selectors to selector ID.
   llvm::DenseMap<StoredObjCSelector, SelectorID> SelectorIDs;
@@ -150,6 +164,8 @@ private:
   void writeContextBlock(llvm::BitstreamWriter &Stream);
   void writeObjCPropertyBlock(llvm::BitstreamWriter &Stream);
   void writeObjCMethodBlock(llvm::BitstreamWriter &Stream);
+  void writeCXXMethodBlock(llvm::BitstreamWriter &Stream);
+  void writeFieldBlock(llvm::BitstreamWriter &Stream);
   void writeObjCSelectorBlock(llvm::BitstreamWriter &Stream);
   void writeGlobalVariableBlock(llvm::BitstreamWriter &Stream);
   void writeGlobalFunctionBlock(llvm::BitstreamWriter &Stream);
@@ -181,6 +197,8 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &OS) {
     writeContextBlock(Stream);
     writeObjCPropertyBlock(Stream);
     writeObjCMethodBlock(Stream);
+    writeCXXMethodBlock(Stream);
+    writeFieldBlock(Stream);
     writeObjCSelectorBlock(Stream);
     writeGlobalVariableBlock(Stream);
     writeGlobalFunctionBlock(Stream);
@@ -765,6 +783,34 @@ public:
     emitFunctionInfo(OS, OMI);
   }
 };
+
+/// Used to serialize the on-disk C++ method table.
+class CXXMethodTableInfo
+    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+                                CXXMethodInfo> {
+public:
+  unsigned getKeyLength(key_type_ref) {
+    return sizeof(uint32_t) + sizeof(uint32_t);
+  }
+
+  void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+    writer.write<uint32_t>(Key.parentContextID);
+    writer.write<uint32_t>(Key.nameID);
+  }
+
+  hash_value_type ComputeHash(key_type_ref key) {
+    return static_cast<size_t>(key.hashValue());
+  }
+
+  unsigned getUnversionedInfoSize(const CXXMethodInfo &OMI) {
+    return getFunctionInfoSize(OMI);
+  }
+
+  void emitUnversionedInfo(raw_ostream &OS, const CXXMethodInfo &OMI) {
+    emitFunctionInfo(OS, OMI);
+  }
+};
 } // namespace
 
 void APINotesWriter::Implementation::writeObjCMethodBlock(
@@ -791,6 +837,89 @@ void APINotesWriter::Implementation::writeObjCMethodBlock(
 
     objc_method_block::ObjCMethodDataLayout ObjCMethodData(Stream);
     ObjCMethodData.emit(Scratch, Offset, HashTableBlob);
+  }
+}
+
+void APINotesWriter::Implementation::writeCXXMethodBlock(
+    llvm::BitstreamWriter &Stream) {
+  llvm::BCBlockRAII Scope(Stream, CXX_METHOD_BLOCK_ID, 3);
+
+  if (CXXMethods.empty())
+    return;
+
+  {
+    llvm::SmallString<4096> HashTableBlob;
+    uint32_t Offset;
+    {
+      llvm::OnDiskChainedHashTableGenerator<CXXMethodTableInfo> Generator;
+      for (auto &MD : CXXMethods)
+        Generator.insert(MD.first, MD.second);
+
+      llvm::raw_svector_ostream BlobStream(HashTableBlob);
+      // Make sure that no bucket is at offset 0
+      llvm::support::endian::write<uint32_t>(BlobStream, 0,
+                                             llvm::endianness::little);
+      Offset = Generator.Emit(BlobStream);
+    }
+
+    cxx_method_block::CXXMethodDataLayout CXXMethodData(Stream);
+    CXXMethodData.emit(Scratch, Offset, HashTableBlob);
+  }
+}
+
+namespace {
+/// Used to serialize the on-disk C field table.
+class FieldTableInfo
+    : public VersionedTableInfo<FieldTableInfo, SingleDeclTableKey, FieldInfo> {
+public:
+  unsigned getKeyLength(key_type_ref) {
+    return sizeof(uint32_t) + sizeof(uint32_t);
+  }
+
+  void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+    writer.write<uint32_t>(Key.parentContextID);
+    writer.write<uint32_t>(Key.nameID);
+  }
+
+  hash_value_type ComputeHash(key_type_ref key) {
+    return static_cast<size_t>(key.hashValue());
+  }
+
+  unsigned getUnversionedInfoSize(const FieldInfo &FI) {
+    return getVariableInfoSize(FI);
+  }
+
+  void emitUnversionedInfo(raw_ostream &OS, const FieldInfo &FI) {
+    emitVariableInfo(OS, FI);
+  }
+};
+} // namespace
+
+void APINotesWriter::Implementation::writeFieldBlock(
+    llvm::BitstreamWriter &Stream) {
+  llvm::BCBlockRAII Scope(Stream, FIELD_BLOCK_ID, 3);
+
+  if (Fields.empty())
+    return;
+
+  {
+    llvm::SmallString<4096> HashTableBlob;
+    uint32_t Offset;
+    {
+      llvm::OnDiskChainedHashTableGenerator<FieldTableInfo> Generator;
+      for (auto &FD : Fields)
+        Generator.insert(FD.first, FD.second);
+
+      llvm::raw_svector_ostream BlobStream(HashTableBlob);
+      // Make sure that no bucket is at offset 0
+      llvm::support::endian::write<uint32_t>(BlobStream, 0,
+                                             llvm::endianness::little);
+      Offset = Generator.Emit(BlobStream);
+    }
+
+    field_block::FieldDataLayout FieldData(Stream);
+    FieldData.emit(Scratch, Offset, HashTableBlob);
   }
 }
 
@@ -1125,6 +1254,7 @@ public:
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
+           2 + (TI.SwiftConformance ? TI.SwiftConformance->size() : 0) +
            2 + getCommonTypeInfoSize(TI);
   }
 
@@ -1163,6 +1293,12 @@ public:
     if (auto ReleaseOp = TI.SwiftReleaseOp) {
       writer.write<uint16_t>(ReleaseOp->size() + 1);
       OS.write(ReleaseOp->c_str(), ReleaseOp->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto Conformance = TI.SwiftConformance) {
+      writer.write<uint16_t>(Conformance->size() + 1);
+      OS.write(Conformance->c_str(), Conformance->size());
     } else {
       writer.write<uint16_t>(0);
     }
@@ -1342,6 +1478,22 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
       VersionedVec.back().second.setHasDesignatedInits(true);
     }
   }
+}
+
+void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                                  const CXXMethodInfo &Info,
+                                  VersionTuple SwiftVersion) {
+  IdentifierID NameID = Implementation->getIdentifier(Name);
+  SingleDeclTableKey Key(CtxID.Value, NameID);
+  Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
+}
+
+void APINotesWriter::addField(ContextID CtxID, llvm::StringRef Name,
+                              const FieldInfo &Info,
+                              VersionTuple SwiftVersion) {
+  IdentifierID NameID = Implementation->getIdentifier(Name);
+  SingleDeclTableKey Key(CtxID.Value, NameID);
+  Implementation->Fields[Key].push_back({SwiftVersion, Info});
 }
 
 void APINotesWriter::addGlobalVariable(std::optional<Context> Ctx,

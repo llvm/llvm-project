@@ -781,7 +781,7 @@ define void @string_type(ptr %arg1) {
 !6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
 !7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
-!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6);
+!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6, flags: 64);
 !10 = !DILocation(line: 1, column: 2, scope: !5)
 
 ; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
@@ -791,3 +791,29 @@ define void @string_type(ptr %arg1) {
 ; CHECK-SAME: stringLength = #[[VAR]]
 ; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
 ; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "str", file = #di_file, type = #di_string_type, flags = Artificial>
+
+; // -----
+
+; Test that imported entities for a functions are handled correctly.
+
+define void @imp_fn() !dbg !12 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!4}
+
+!2 = !DIModule(scope: !4, name: "mod1", file: !3, line: 1)
+!3 = !DIFile(filename: "test.f90", directory: "")
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3)
+!8 = !DIModule(scope: !4, name: "mod1", file: !3, line: 5)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = distinct !DISubprogram(name: "imp_fn", linkageName: "imp_fn", scope: !3, file: !3, line: 10, type: !14, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !4, retainedNodes: !16)
+!14 = !DISubroutineType(cc: DW_CC_program, types: !15)
+!15 = !{}
+!16 = !{!17}
+!17 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !12, entity: !8, file: !3, line: 1, elements: !15)
+
+; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module, entity = #[[M]]{{.*}}>>

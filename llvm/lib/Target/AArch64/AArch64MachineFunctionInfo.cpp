@@ -38,6 +38,8 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return {true, false}; // non-leaf
   // The function should be signed in the following situations:
   // - sign-return-address=all
   // - sign-return-address=non-leaf and the functions spills the LR
@@ -56,6 +58,8 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
     if (STI.getTargetTriple().isOSWindows())
       return true;

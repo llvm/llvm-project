@@ -106,6 +106,7 @@ RUN sudo apt-get update \
 #RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
 # TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
 RUN <<EOF
+  set -e
   wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
   gunzip /tmp/ninja.gz
   chmod a+x /tmp/ninja
@@ -115,6 +116,7 @@ EOF
 
 # These two locales are not enabled by default so generate them
 RUN <<EOF
+  set -e
   printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /etc/locale.gen
   sudo mkdir /usr/local/share/i1en/
   printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /usr/local/share/i1en/SUPPORTED
@@ -129,6 +131,7 @@ EOF
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
 RUN <<EOF
+  set -e
   sudo apt-get update
   wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
   chmod +x /tmp/llvm.sh
@@ -142,6 +145,7 @@ EOF
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 RUN <<EOF
+  set -e
   sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
   (cd /tmp/ce-infra && sudo make ce)
   sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $GCC_LATEST_VERSION.1.0
@@ -155,13 +159,14 @@ EOF
 
 RUN <<EOF
     # Install a recent CMake
+    set -e
     wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF
 
 # ===----------------------------------------------------------------------===##
-#                       Android Buildkite Image
+#                       Android Builder Base Image
 # ===----------------------------------------------------------------------===##
 
 FROM ubuntu:jammy AS android-builder-base
@@ -170,10 +175,11 @@ ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
 ARG ANDROID_SYSROOT_BID
 
-RUN  apt-get update && apt-get install -y curl unzip git
+RUN apt-get update && apt-get install -y curl bzip2 git unzip
 
 # Install the Android platform tools (e.g. adb) into /opt/android/sdk.
 RUN <<EOF
+  set -e
   mkdir -p /opt/android/sdk
   cd /opt/android/sdk
   curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
@@ -187,6 +193,7 @@ EOF
 ENV ANDROID_CLANG_VERSION=$ANDROID_CLANG_VERSION
 ENV ANDROID_CLANG_PREBUILTS_COMMIT=$ANDROID_CLANG_PREBUILTS_COMMIT
 RUN <<EOF
+    set -e
     git clone --filter=blob:none --sparse \
         https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
         /opt/android/clang
@@ -206,24 +213,12 @@ EOF
 
 ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
 RUN <<EOF
+  set -e
   cd /opt/android
   curl -L -o ndk_platform.tar.bz2 \
       https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
   tar xf ndk_platform.tar.bz2
   rm ndk_platform.tar.bz2
-EOF
-
-# Install Docker
-RUN <<EOF
-  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-  sh /tmp/get-docker.sh
-  rm /tmp/get-docker.sh
-
-  # Install Docker. Mark the binary setuid so it can be run without prefixing it
-  # with sudo. Adding the container user to the docker group doesn't work because
-  # /var/run/docker.sock is owned by the host's docker GID, not the container's
-  # docker GID.
-  chmod u+s /usr/bin/docker
 EOF
 
 # ===----------------------------------------------------------------------===##
@@ -243,6 +238,7 @@ WORKDIR /home/libcxx-builder
 # Install the Buildkite agent and dependencies. This must be done as non-root
 # for the Buildkite agent to be installed in a path where we can find it.
 RUN <<EOF
+  set -e
   cd /home/libcxx-builder
   curl -sL https://raw.githubusercontent.com/buildkite/agent/main/install.sh -o /tmp/install-agent.sh
   bash /tmp/install-agent.sh
@@ -270,6 +266,22 @@ COPY --from=android-builder-base /opt/android /opt/android
 COPY ./vendor/android/container-setup.sh /opt/android/container-setup.sh
 
 ENV PATH="/opt/android/sdk/platform-tools:${PATH}"
+
+USER root
+
+# Install Docker
+RUN <<EOF
+  set -e
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sh /tmp/get-docker.sh
+  rm /tmp/get-docker.sh
+
+  # Install Docker. Mark the binary setuid so it can be run without prefixing it
+  # with sudo. Adding the container user to the docker group doesn't work because
+  # /var/run/docker.sock is owned by the host's docker GID, not the container's
+  # docker GID.
+  chmod u+s /usr/bin/docker
+EOF
 
 USER libcxx-builder
 WORKDIR /home/libcxx-builder

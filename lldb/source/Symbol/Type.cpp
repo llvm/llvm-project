@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cstdio>
+#include <iterator>
 #include <optional>
 
 #include "lldb/Core/Module.h"
@@ -30,6 +32,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -41,35 +44,6 @@ llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os,
   StreamString lldb_stream;
   rhs.Dump(lldb_stream);
   return os << lldb_stream.GetString();
-}
-
-bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
-                                  llvm::ArrayRef<CompilerContext> pattern) {
-  auto ctx = context_chain.begin();
-  auto ctx_end = context_chain.end();
-  for (const CompilerContext &pat : pattern) {
-    // Early exit if the pattern is too long.
-    if (ctx == ctx_end)
-      return false;
-    if (*ctx != pat) {
-      // Skip any number of module matches.
-      if (pat.kind == CompilerContextKind::AnyModule) {
-        // Greedily match 0..n modules.
-        ctx = std::find_if(ctx, ctx_end, [](const CompilerContext &ctx) {
-          return ctx.kind != CompilerContextKind::Module;
-        });
-        continue;
-      }
-      // See if there is a kind mismatch; they should have 1 bit in common.
-      if (((uint16_t)ctx->kind & (uint16_t)pat.kind) == 0)
-        return false;
-      // The name is ignored for AnyModule, but not for AnyType.
-      if (pat.kind != CompilerContextKind::AnyModule && ctx->name != pat.name)
-        return false;
-    }
-    ++ctx;
-  }
-  return true;
 }
 
 static CompilerContextKind ConvertTypeClass(lldb::TypeClass type_class) {
@@ -153,19 +127,36 @@ void TypeQuery::SetLanguages(LanguageSet languages) {
 
 bool TypeQuery::ContextMatches(
     llvm::ArrayRef<CompilerContext> context_chain) const {
-  if (GetExactMatch() || context_chain.size() == m_context.size())
-    return ::contextMatches(context_chain, m_context);
+  auto ctx = context_chain.rbegin(), ctx_end = context_chain.rend();
+  for (auto pat = m_context.rbegin(), pat_end = m_context.rend();
+       pat != pat_end;) {
 
-  // We don't have an exact match, we need to bottom m_context.size() items to
-  // match for a successful lookup.
-  if (context_chain.size() < m_context.size())
-    return false; // Not enough items in context_chain to allow for a match.
+    if (ctx == ctx_end)
+      return false; // Pattern too long.
 
-  size_t compare_count = context_chain.size() - m_context.size();
-  return ::contextMatches(
-      llvm::ArrayRef<CompilerContext>(context_chain.data() + compare_count,
-                                      m_context.size()),
-      m_context);
+    // See if there is a kind mismatch; they should have 1 bit in common.
+    if ((ctx->kind & pat->kind) == CompilerContextKind())
+      return false;
+
+    if (ctx->name != pat->name)
+      return false;
+
+    ++ctx;
+    ++pat;
+  }
+
+  // Skip over any remaining module entries if we were asked to do that.
+  while (GetIgnoreModules() && ctx != ctx_end &&
+         ctx->kind == CompilerContextKind::Module)
+    ++ctx;
+
+  // At this point, we have exhausted the pattern and we have a partial match at
+  // least. If that's all we're looking for, we're done.
+  if (!GetExactMatch())
+    return true;
+
+  // We have an exact match if we've exhausted the target context as well.
+  return ctx == ctx_end;
 }
 
 bool TypeQuery::LanguageMatches(lldb::LanguageType language) const {
@@ -222,9 +213,6 @@ void CompilerContext::Dump(Stream &s) const {
     break;
   case CompilerContextKind::Typedef:
     s << "Typedef";
-    break;
-  case CompilerContextKind::AnyModule:
-    s << "AnyModule";
     break;
   case CompilerContextKind::AnyType:
     s << "AnyType";

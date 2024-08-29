@@ -1,12 +1,14 @@
 // RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- -fptrauth-function-pointer-type-discrimination | FileCheck -check-prefixes CHECK,TYPE %s
+// RUN: %clang_cc1 %s -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- -fptrauth-function-pointer-type-discrimination | FileCheck -check-prefixes CHECK,TYPE %s
 // RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- | FileCheck -check-prefixes CHECK,ZERO %s
+// RUN: %clang_cc1 %s -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- | FileCheck -check-prefixes CHECK,ZERO %s
 
 typedef void (*fptr_t)(void);
 
 char *cptr;
 void (*fptr)(void);
 
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 void test1() {
   // TYPE: [[LOAD:%.*]] = load ptr, ptr @cptr
   // TYPE: [[TOINT:%.*]] = ptrtoint ptr [[LOAD]] to i64
@@ -17,7 +19,7 @@ void test1() {
   (*(fptr_t)cptr)();
 }
 
-// CHECK-LABEL: define i8 @test2
+// CHECK-LABEL: define{{.*}} i8 @test2
 char test2() {
   return *(char *)fptr;
 
@@ -35,7 +37,7 @@ char test2() {
   // ZERO-NOT: @llvm.ptrauth.resign
 }
 
-// CHECK-LABEL: define void @test4
+// CHECK-LABEL: define{{.*}} void @test4
 void test4() {
   (*((fptr_t)(&*((char *)(&*(fptr_t)cptr)))))();
 
@@ -49,7 +51,7 @@ void test4() {
 }
 
 void *vptr;
-// CHECK-LABEL: define void @test5
+// CHECK-LABEL: define{{.*}} void @test5
 void test5() {
   vptr = &*(char *)fptr;
 

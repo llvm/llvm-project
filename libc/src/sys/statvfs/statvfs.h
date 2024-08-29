@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_STATVFS_STATVFS_H
 #define LLVM_LIBC_SRC_SYS_STATVFS_STATVFS_H
 
-#include "llvm-libc-types/struct_statvfs.h"
+#include "include/llvm-libc-types/struct_statvfs.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

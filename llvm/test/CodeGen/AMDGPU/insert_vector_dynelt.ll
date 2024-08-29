@@ -974,19 +974,19 @@ define amdgpu_kernel void @bit4_inselt(ptr addrspace(1) %out, <4 x i1> %vec, i32
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s3, s3, 3
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    v_lshrrev_b16_e64 v2, 1, s2
-; GCN-NEXT:    v_lshrrev_b16_e64 v3, 2, s2
-; GCN-NEXT:    v_lshrrev_b16_e64 v4, 3, s2
+; GCN-NEXT:    v_mov_b32_e32 v3, s2
+; GCN-NEXT:    v_lshrrev_b16_e64 v4, 2, s2
+; GCN-NEXT:    v_lshrrev_b16_e64 v5, 3, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    v_or_b32_e32 v0, s3, v0
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
-; GCN-NEXT:    v_and_b32_e32 v3, 3, v3
-; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    buffer_store_byte v1, off, s[12:15], 0
-; GCN-NEXT:    buffer_store_byte v4, off, s[12:15], 0 offset:3
-; GCN-NEXT:    buffer_store_byte v3, off, s[12:15], 0 offset:2
+; GCN-NEXT:    v_and_b32_e32 v4, 3, v4
+; GCN-NEXT:    v_and_b32_e32 v5, 1, v5
+; GCN-NEXT:    buffer_store_byte v3, off, s[12:15], 0
+; GCN-NEXT:    buffer_store_byte v5, off, s[12:15], 0 offset:3
+; GCN-NEXT:    buffer_store_byte v4, off, s[12:15], 0 offset:2
 ; GCN-NEXT:    buffer_store_byte v2, off, s[12:15], 0 offset:1
-; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    buffer_store_byte v1, v0, s[12:15], 0 offen
 ; GCN-NEXT:    buffer_load_ubyte v0, off, s[12:15], 0
 ; GCN-NEXT:    buffer_load_ubyte v1, off, s[12:15], 0 offset:1

@@ -217,6 +217,11 @@ struct Configuration {
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
 
+  llvm::StringRef irpgoProfileSortProfilePath;
+  bool functionOrderForCompression = false;
+  bool dataOrderForCompression = false;
+  bool verboseBpSectionOrderer = false;
+
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;
 

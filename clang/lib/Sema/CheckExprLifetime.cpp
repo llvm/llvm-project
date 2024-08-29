@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CheckExprLifetime.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
@@ -308,8 +309,7 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
   if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
     return false;
-  if (!isRecordWithAttr<PointerAttr>(QualType(RD->getTypeForDecl(), 0)) &&
-      !isRecordWithAttr<OwnerAttr>(QualType(RD->getTypeForDecl(), 0)))
+  if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
     return false;
   if (FD->getReturnType()->isPointerType() ||
       isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
@@ -324,66 +324,6 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
         .Default(false);
   }
   return false;
-}
-
-static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
-                                    LocalVisitor Visit) {
-  auto VisitPointerArg = [&](const Decl *D, Expr *Arg, bool Value) {
-    // We are not interested in the temporary base objects of gsl Pointers:
-    //   Temp().ptr; // Here ptr might not dangle.
-    if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
-      return;
-    // Once we initialized a value with a reference, it can no longer dangle.
-    if (!Value) {
-      for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
-        if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit)
-          continue;
-        if (PE.Kind == IndirectLocalPathEntry::GslPointerInit ||
-            PE.Kind == IndirectLocalPathEntry::GslPointerAssignment)
-          return;
-        break;
-      }
-    }
-    Path.push_back({Value ? IndirectLocalPathEntry::GslPointerInit
-                          : IndirectLocalPathEntry::GslReferenceInit,
-                    Arg, D});
-    if (Arg->isGLValue())
-      visitLocalsRetainedByReferenceBinding(Path, Arg, RK_ReferenceBinding,
-                                            Visit,
-                                            /*EnableLifetimeWarnings=*/true);
-    else
-      visitLocalsRetainedByInitializer(Path, Arg, Visit, true,
-                                       /*EnableLifetimeWarnings=*/true);
-    Path.pop_back();
-  };
-
-  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
-    const auto *MD = cast_or_null<CXXMethodDecl>(MCE->getDirectCallee());
-    if (MD && shouldTrackImplicitObjectArg(MD))
-      VisitPointerArg(MD, MCE->getImplicitObjectArgument(),
-                      !MD->getReturnType()->isReferenceType());
-    return;
-  } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
-    FunctionDecl *Callee = OCE->getDirectCallee();
-    if (Callee && Callee->isCXXInstanceMember() &&
-        shouldTrackImplicitObjectArg(cast<CXXMethodDecl>(Callee)))
-      VisitPointerArg(Callee, OCE->getArg(0),
-                      !Callee->getReturnType()->isReferenceType());
-    return;
-  } else if (auto *CE = dyn_cast<CallExpr>(Call)) {
-    FunctionDecl *Callee = CE->getDirectCallee();
-    if (Callee && shouldTrackFirstArgument(Callee))
-      VisitPointerArg(Callee, CE->getArg(0),
-                      !Callee->getReturnType()->isReferenceType());
-    return;
-  }
-
-  if (auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
-    const auto *Ctor = CCE->getConstructor();
-    const CXXRecordDecl *RD = Ctor->getParent();
-    if (CCE->getNumArgs() > 0 && RD->hasAttr<PointerAttr>())
-      VisitPointerArg(Ctor->getParamDecl(0), CCE->getArgs()[0], true);
-  }
 }
 
 static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
@@ -423,8 +363,10 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return false;
 }
 
-static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
-                                        LocalVisitor Visit) {
+// Visit lifetimebound or gsl-pointer arguments.
+static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
+                                       LocalVisitor Visit,
+                                       bool EnableLifetimeWarnings) {
   const FunctionDecl *Callee;
   ArrayRef<Expr *> Args;
 
@@ -458,6 +400,34 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
                                        /*EnableLifetimeWarnings=*/false);
     Path.pop_back();
   };
+  auto VisitGSLPointerArg = [&](const Decl *D, Expr *Arg, bool Value) {
+    // We are not interested in the temporary base objects of gsl Pointers:
+    //   Temp().ptr; // Here ptr might not dangle.
+    if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
+      return;
+    // Once we initialized a value with a reference, it can no longer dangle.
+    if (!Value) {
+      for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
+        if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit)
+          continue;
+        if (PE.Kind == IndirectLocalPathEntry::GslPointerInit ||
+            PE.Kind == IndirectLocalPathEntry::GslPointerAssignment)
+          return;
+        break;
+      }
+    }
+    Path.push_back({Value ? IndirectLocalPathEntry::GslPointerInit
+                          : IndirectLocalPathEntry::GslReferenceInit,
+                    Arg, D});
+    if (Arg->isGLValue())
+      visitLocalsRetainedByReferenceBinding(Path, Arg, RK_ReferenceBinding,
+                                            Visit,
+                                            /*EnableLifetimeWarnings=*/true);
+    else
+      visitLocalsRetainedByInitializer(Path, Arg, Visit, true,
+                                       /*EnableLifetimeWarnings=*/true);
+    Path.pop_back();
+  };
 
   bool CheckCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
@@ -478,6 +448,12 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
       CheckCoroObjArg = false;
     if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
       VisitLifetimeBoundArg(Callee, ObjectArg);
+    else if (EnableLifetimeWarnings) {
+      if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
+          CME && shouldTrackImplicitObjectArg(CME))
+        VisitGSLPointerArg(Callee, ObjectArg,
+                           !Callee->getReturnType()->isReferenceType());
+    }
   }
 
   for (unsigned I = 0,
@@ -485,6 +461,17 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
        I != N; ++I) {
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
+    else if (EnableLifetimeWarnings && I == 0) {
+      if (shouldTrackFirstArgument(Callee)) {
+        VisitGSLPointerArg(Callee, Args[0],
+                           !Callee->getReturnType()->isReferenceType());
+      } else {
+        if (auto *CCE = dyn_cast<CXXConstructExpr>(Call);
+            CCE && CCE->getConstructor()->getParent()->hasAttr<PointerAttr>())
+          VisitGSLPointerArg(CCE->getConstructor()->getParamDecl(0), Args[0],
+                             true);
+      }
+    }
   }
 }
 
@@ -549,11 +536,17 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                        EnableLifetimeWarnings);
   }
 
-  if (isa<CallExpr>(Init)) {
-    if (EnableLifetimeWarnings)
-      handleGslAnnotatedTypes(Path, Init, Visit);
-    return visitLifetimeBoundArguments(Path, Init, Visit);
+  if (auto *M = dyn_cast<MemberExpr>(Init)) {
+    // Lifetime of a non-reference type field is same as base object.
+    if (auto *F = dyn_cast<FieldDecl>(M->getMemberDecl());
+        F && !F->getType()->isReferenceType())
+      visitLocalsRetainedByInitializer(Path, M->getBase(), Visit, true,
+                                       EnableLifetimeWarnings);
   }
+
+  if (isa<CallExpr>(Init))
+    return visitFunctionCallArguments(Path, Init, Visit,
+                                      EnableLifetimeWarnings);
 
   switch (Init->getStmtClass()) {
   case Stmt::DeclRefExprClass: {
@@ -817,7 +810,6 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (auto *CCE = dyn_cast<CXXConstructExpr>(Init)) {
     if (CCE->getConstructor()->isCopyOrMoveConstructor()) {
       if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(CCE->getArg(0))) {
-        // assert(false && "hit temporary copy path");
         Expr *Arg = MTE->getSubExpr();
         Path.push_back({IndirectLocalPathEntry::TemporaryCopy, Arg,
                         CCE->getConstructor()});
@@ -828,11 +820,9 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
     }
   }
 
-  if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init)) {
-    if (EnableLifetimeWarnings)
-      handleGslAnnotatedTypes(Path, Init, Visit);
-    return visitLifetimeBoundArguments(Path, Init, Visit);
-  }
+  if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init))
+    return visitFunctionCallArguments(Path, Init, Visit,
+                                      EnableLifetimeWarnings);
 
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {

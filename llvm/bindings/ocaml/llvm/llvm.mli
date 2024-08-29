@@ -331,6 +331,10 @@ module AtomicRMWBinOp : sig
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -759,10 +763,6 @@ val void_type : llcontext -> lltype
 (** [label_type c] creates a type of a basic block in the context [c]. See
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
-
-(** [x86_mmx_type c] returns the x86 64-bit MMX register type in the
-    context [c]. See [llvm::Type::X86_MMXTy]. *)
-val x86_mmx_type : llcontext -> lltype
 
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.

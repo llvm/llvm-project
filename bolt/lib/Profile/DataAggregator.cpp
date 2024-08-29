@@ -88,6 +88,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
+extern cl::opt<bool> ProfileUsePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
@@ -2298,6 +2299,9 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
   yaml::bolt::BinaryProfile BP;
 
+  const MCPseudoProbeDecoder *PseudoProbeDecoder =
+      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+
   // Fill out the header info.
   BP.Header.Version = 1;
   BP.Header.FileName = std::string(BC.getFilename());
@@ -2397,6 +2401,31 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         }
         const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
+      }
+      if (PseudoProbeDecoder) {
+        if ((YamlBF.GUID = BF->getGUID())) {
+          const MCPseudoProbeFuncDesc *FuncDesc =
+              PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
+          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+        }
+        // Fetch probes belonging to all fragments
+        const AddressProbesMap &ProbeMap =
+            PseudoProbeDecoder->getAddress2ProbesMap();
+        BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
+        Fragments.insert(BF);
+        for (const BinaryFunction *F : Fragments) {
+          const uint64_t FuncAddr = F->getAddress();
+          for (const MCDecodedPseudoProbe &Probe :
+               ProbeMap.find(FuncAddr, FuncAddr + F->getSize())) {
+            const uint32_t OutputAddress = Probe.getAddress();
+            const uint32_t InputOffset = BAT->translate(
+                FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
+            const unsigned BlockIndex = getBlock(InputOffset).second;
+            YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
+                yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
+                                            Probe.getType()});
+          }
+        }
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements platform specific parts of SafeStack runtime.
+// Don't use equivalent functionality from sanitizer_common to avoid dragging
+// a large codebase into security sensitive code.
 //
 //===----------------------------------------------------------------------===//
 
@@ -43,6 +45,19 @@ extern "C" void *__mmap(void *, size_t, int, int, int, int, off_t);
 
 #if SANITIZER_SOLARIS
 #  include <thread.h>
+#endif
+
+// Keep in sync with sanitizer_linux.cpp.
+//
+// Are we using 32-bit or 64-bit Linux syscalls?
+// x32 (which defines __x86_64__) has SANITIZER_WORDSIZE == 32
+// but it still needs to use 64-bit syscalls.
+#if SANITIZER_LINUX &&                                \
+    (defined(__x86_64__) || defined(__powerpc64__) || \
+     SANITIZER_WORDSIZE == 64 || (defined(__mips__) && _MIPS_SIM == _ABIN32))
+#  define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
+#else
+#  define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
 #endif
 
 namespace safestack {
@@ -117,7 +132,8 @@ inline int TgKill(pid_t pid, ThreadId tid, int sig) {
 #elif SANITIZER_FREEBSD
   return syscall(SYS_thr_kill2, pid, tid, sig);
 #else
-  return syscall(SYS_tgkill, pid, tid, sig);
+  // tid is pid_t (int), not ThreadId (uint64_t).
+  return syscall(SYS_tgkill, pid, (pid_t)tid, sig);
 #endif
 }
 
@@ -127,10 +143,17 @@ inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
   return __mmap(addr, length, prot, flags, fd, 0, offset);
 #elif SANITIZER_FREEBSD && (defined(__aarch64__) || defined(__x86_64__))
   return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#elif SANITIZER_FREEBSD && (defined(__i386__))
+  return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
 #elif SANITIZER_SOLARIS
   return _REAL64(mmap)(addr, length, prot, flags, fd, offset);
-#else
+#elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#else
+  // mmap2 specifies file offset in 4096-byte units.
+  SFS_CHECK(IsAligned(offset, 4096));
+  return (void *)syscall(SYS_mmap2, addr, length, prot, flags, fd,
+                         offset / 4096);
 #endif
 }
 

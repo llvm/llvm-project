@@ -33,7 +33,7 @@ u32 GetMallocContextSize();
 // don't want stack trace to contain functions from MemProf internals.
 
 #define GET_STACK_TRACE(max_size, fast)                                        \
-  BufferedStackTrace stack;                                                    \
+  UNINITIALIZED BufferedStackTrace stack;                                                    \
   if (max_size <= 2) {                                                         \
     stack.size = max_size;                                                     \
     if (max_size > 0) {                                                        \
