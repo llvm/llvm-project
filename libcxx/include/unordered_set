@@ -551,10 +551,10 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
-#include <__type_traits/is_volatile.h>
-#include <__type_traits/is_reference.h>
 #include <__type_traits/is_function.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/is_volatile.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <version>

@@ -530,8 +530,8 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__tree>
-#include <__type_traits/is_array.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
