@@ -451,6 +451,7 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
         case CodeGenIntrinsic::Dereferenceable:
           return "Dereferenceable";
         }
+        llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
       };
 
       OS << formatv(R"(

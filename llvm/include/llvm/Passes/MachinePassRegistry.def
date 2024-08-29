@@ -250,6 +250,7 @@ DUMMY_MACHINE_FUNCTION_PASS("reg-usage-propagation", RegUsageInfoPropagationPass
 DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass)
+DUMMY_MACHINE_FUNCTION_PASS("remove-loads-into-fake-uses", RemoveLoadsIntoFakeUsesPass)
 DUMMY_MACHINE_FUNCTION_PASS("removeredundantdebugvalues", RemoveRedundantDebugValuesPass)
 DUMMY_MACHINE_FUNCTION_PASS("rename-independent-subregs", RenameIndependentSubregsPass)
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass)
