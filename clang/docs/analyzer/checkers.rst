@@ -1256,7 +1256,7 @@ Warn on uses of inferior random number generating functions (only if arc4random 
 
 security.insecureAPI.strcpy (C)
 """""""""""""""""""""""""""""""
-Warn on uses of the ``strcpy`` and ``strcat`` functions.
+Warn on uses of the ``strcpy, lstrcpy, strcat, lstrcat`` functions.
 
 .. code-block:: c
 
