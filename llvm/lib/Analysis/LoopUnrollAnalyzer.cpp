@@ -155,7 +155,7 @@ bool UnrolledInstAnalyzer::visitCmpInst(CmpInst &I) {
     if (Value *SimpleRHS = SimplifiedValues.lookup(RHS))
       RHS = SimpleRHS;
 
-  if (!isa<Constant>(LHS) && !isa<Constant>(RHS)) {
+  if (!isa<Constant>(LHS) && !isa<Constant>(RHS) && !I.isSigned()) {
     auto SimplifiedLHS = SimplifiedAddresses.find(LHS);
     if (SimplifiedLHS != SimplifiedAddresses.end()) {
       auto SimplifiedRHS = SimplifiedAddresses.find(RHS);
@@ -163,6 +163,11 @@ bool UnrolledInstAnalyzer::visitCmpInst(CmpInst &I) {
         SimplifiedAddress &LHSAddr = SimplifiedLHS->second;
         SimplifiedAddress &RHSAddr = SimplifiedRHS->second;
         if (LHSAddr.Base == RHSAddr.Base) {
+          // FIXME: This is only correct for equality predicates. For
+          // unsigned predicates, this only holds if we have nowrap flags,
+          // which we don't track (for nuw it's valid as-is, for nusw it
+          // requires converting the predicated to signed). As this is used only
+          // for cost modelling, this is not a correctness issue.
           bool Res = ICmpInst::compare(LHSAddr.Offset, RHSAddr.Offset,
                                        I.getPredicate());
           SimplifiedValues[&I] = ConstantInt::getBool(I.getType(), Res);
