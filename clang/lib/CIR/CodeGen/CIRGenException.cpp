@@ -863,6 +863,7 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
       tryOp.setSynthetic(true);
     } else {
       tryOp = currLexScope->getClosestTryParent();
+      assert(tryOp && "cir.try expected");
     }
     LP = buildLandingPad(tryOp);
   }
