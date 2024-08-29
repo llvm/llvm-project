@@ -6775,8 +6775,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
         DAG.getConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64),
         DAG.getConstant(0, DL, MVT::i64), Offset);
 
-    Compressed =
-        DAG.getNode(ISD::VSELECT, DL, VecVT, IndexMask, Compressed, Passthru);
+    if (ContainerVT != VecVT) {
+      Passthru = DAG.getBitcast(CastVT, Passthru);
+      Passthru = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Passthru);
+    }
+
+    Compressed = DAG.getNode(ISD::VSELECT, DL, Vec.getValueType(), IndexMask,
+                             Compressed, Passthru);
   }
 
   // Extracting from a legal SVE type before truncating produces better code.
