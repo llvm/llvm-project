@@ -226,15 +226,15 @@ def testOdsEquallySizedAccessor():
             op = TestOpMultiResultSegments.build_generic(
                 results=[ts[0], ts[1], ts[2], ts[3]], operands=[v]
             )
-            start, pg = equally_sized_accessor(op.results, 3, 1, 0)
-            # CHECK: start: 1, pg: 1
-            print(f"start: {start}, pg: {pg}")
+            start, elements_per_group = equally_sized_accessor(op.results, 3, 1, 0)
+            # CHECK: start: 1, elements_per_group: 1
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: i8
             print(op.results[start].type)
 
-            start, pg = equally_sized_accessor(op.results, 3, 1, 1)
-            # CHECK: start: 2, pg: 1
-            print(f"start: {start}, pg: {pg}")
+            start, elements_per_group = equally_sized_accessor(op.results, 3, 1, 1)
+            # CHECK: start: 2, elements_per_group: 1
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: i16
             print(op.results[start].type)
 
@@ -262,17 +262,17 @@ def testOdsEquallySizedAccessorMultipleSegments():
                 results=[ts[0], [ts[1], ts[2], ts[3]], [ts[4], ts[5], ts[6]]],
                 operands=[v],
             )
-            start, pg = equally_sized_accessor(op.results, 2, 1, 0)
-            # CHECK: start: 1, pg: 3
-            print(f"start: {start}, pg: {pg}")
+            start, elements_per_group = equally_sized_accessor(op.results, 2, 1, 0)
+            # CHECK: start: 1, elements_per_group: 3
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: [IntegerType(i8), IntegerType(i16), IntegerType(i24)]
-            print(types(op.results[start : start + pg]))
+            print(types(op.results[start : start + elements_per_group]))
 
-            start, pg = equally_sized_accessor(op.results, 2, 1, 1)
-            # CHECK: start: 4, pg: 3
-            print(f"start: {start}, pg: {pg}")
+            start, elements_per_group = equally_sized_accessor(op.results, 2, 1, 1)
+            # CHECK: start: 4, elements_per_group: 3
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: [IntegerType(i32), IntegerType(i40), IntegerType(i48)]
-            print(types(op.results[start : start + pg]))
+            print(types(op.results[start : start + elements_per_group]))
 
 
 run(testOdsEquallySizedAccessorMultipleSegments)

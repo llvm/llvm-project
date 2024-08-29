@@ -145,7 +145,7 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
   @builtins.property
   def {0}(self):
-    start, pg = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}))Py";
+    start, elements_per_group = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}))Py";
 
 /// Second part of the template for equally-sized case, accessing a single
 /// element:
@@ -158,7 +158,7 @@ constexpr const char *opVariadicEqualSimpleTemplate = R"Py(
 /// group:
 ///   {0} is either 'operand' or 'result'.
 constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
-    return self.operation.{0}s[start:start + pg]
+    return self.operation.{0}s[start:start + elements_per_group]
 )Py";
 
 /// Template for an attribute-sized group accessor:
