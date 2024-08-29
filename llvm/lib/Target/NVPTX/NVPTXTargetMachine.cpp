@@ -315,6 +315,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
+  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   addPass(createNVPTXAAWrapperPass());
   addPass(createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
