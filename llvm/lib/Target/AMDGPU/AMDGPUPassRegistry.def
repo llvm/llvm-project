@@ -98,4 +98,5 @@ MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
+MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 #undef MACHINE_FUNCTION_PASS
