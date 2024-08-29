@@ -9465,6 +9465,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return 0;
     if (isa<InsertElementInst>(VL[0]))
       return InstructionCost::getInvalid();
+    if (isa<CmpInst>(VL.front()))
+      ScalarTy = VL.front()->getType();
     return processBuildVector<ShuffleCostEstimator, InstructionCost>(
         E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
   }
