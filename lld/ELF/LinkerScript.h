@@ -112,11 +112,11 @@ private:
 
 class UnaryExpr : public ScriptExpr {
 public:
-  static const UnaryExpr *create();
-
-private:
   UnaryExpr(StringRef op, ScriptExpr *operand)
       : ScriptExpr(ExprKind::Unary), op_(op), operand_(operand) {}
+  ExprValue getExprValue() const;
+
+private:
   StringRef op_;
   const ScriptExpr *operand_;
 };

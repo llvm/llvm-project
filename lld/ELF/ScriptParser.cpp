@@ -1360,20 +1360,10 @@ ScriptExpr *ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
 
-  if (consume("~")) {
-    ScriptExpr *e = readPrimary();
-    return make<DynamicExpr>([=] { return ~e->getExprValue().getValue(); });
-  }
-  if (consume("!")) {
-    ScriptExpr *e = readPrimary();
-    return make<DynamicExpr>([=] { return !e->getExprValue().getValue(); });
-  }
-  if (consume("-")) {
-    ScriptExpr *e = readPrimary();
-    return make<DynamicExpr>([=] { return -e->getExprValue().getValue(); });
-  }
-
   StringRef tok = next();
+  if (tok == "~" || tok == "!" || tok == "-")
+    return make<UnaryExpr>(tok, readPrimary());
+
   std::string location = getCurrentLocation();
 
   // Built-in functions are parsed here.

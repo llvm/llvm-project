@@ -140,8 +140,21 @@ ExprValue ScriptExpr::getExprValue() const {
     return static_cast<const DynamicExpr *>(this)->getExprValue();
   case ExprKind::Binary:
     return static_cast<const BinaryExpr *>(this)->getExprValue();
+  case ExprKind::Unary:
+    return static_cast<const UnaryExpr *>(this)->getExprValue();
   default:
     return ExprValue(0);
+  }
+}
+
+ExprValue UnaryExpr::getExprValue() const {
+  switch (op_[0]) {
+  case '~':
+    return ExprValue(~operand_->getExprValue().getValue());
+  case '!':
+    return ExprValue(!operand_->getExprValue().getValue());
+  case '-':
+    return ExprValue(-operand_->getExprValue().getValue());
   }
 }
 
