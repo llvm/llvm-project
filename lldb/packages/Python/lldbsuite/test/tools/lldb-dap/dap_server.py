@@ -765,6 +765,7 @@ class DebugCommunication(object):
         runInTerminal=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
+        enableDisplayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -817,6 +818,7 @@ class DebugCommunication(object):
 
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
+        args_dict["enableDisplayExtendedBacktrace"] = enableDisplayExtendedBacktrace
         args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)

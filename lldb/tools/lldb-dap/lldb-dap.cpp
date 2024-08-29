@@ -704,6 +704,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -2048,6 +2050,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -3284,6 +3288,10 @@ void request_stackTrace(const llvm::json::Object &request) {
         offset += current.GetNumFrames() +
                   1 /* one extra frame for a label between threads*/;
         threadCluster.pop_back();
+
+        if (!g_dap.enable_display_extended_backtrace) {
+          break;
+        }
 
         // Check for any extended backtraces.
         for (uint32_t i = 0; i < process.GetNumExtendedBacktraceTypes(); i++) {
