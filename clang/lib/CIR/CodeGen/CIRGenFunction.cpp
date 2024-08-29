@@ -469,7 +469,7 @@ mlir::cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
   while (scope) {
     if (scope->isTry())
       return getTry();
-    scope = ParentScope;
+    scope = scope->ParentScope;
   }
   return nullptr;
 }
