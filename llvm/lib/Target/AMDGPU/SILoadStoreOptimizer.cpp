@@ -2584,10 +2584,10 @@ bool SILoadStoreOptimizer::run(MachineFunction &MF) {
 PreservedAnalyses
 SILoadStoreOptimizerPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
   if (MF.getFunction().hasOptNone())
     return PreservedAnalyses::all();
-
-  MFPropsModifier _(*this, MF);
 
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
