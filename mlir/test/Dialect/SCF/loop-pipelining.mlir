@@ -764,11 +764,46 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: 
 //      NOEPILOGUE:     memref.load %[[A]][%[[IV3]]] : memref<?xf32>
 //      NOEPILOGUE:   scf.yield %[[V2]], %[[L3]] : f32, f32
 
-// In case dynamic loop pipelining is off check that the transformation didn't
-// apply.
+// Check for predicated epilogue for dynamic loop.
 // CHECK-LABEL: dynamic_loop(
-//   CHECK-NOT:   memref.load
-//       CHECK:   scf.for
+//        CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
+//        CHECK:       memref.store %[[ARG6]], %{{.*}}[%[[ARG5]]] 
+//        CHECK:       %[[ADDF_26:.*]] = arith.addf %[[ARG7]], %{{.*}} 
+//        CHECK:       %[[MULI_27:.*]] = arith.muli %{{.*}}, %{{.*}} 
+//        CHECK:       %[[ADDI_28:.*]] = arith.addi %[[ARG5]], %[[MULI_27]] 
+//        CHECK:       %[[LOAD_29:.*]] = memref.load %{{.*}}[%[[ADDI_28]]] 
+//        CHECK:       scf.yield %[[ADDF_26]], %[[LOAD_29]] 
+//        CHECK:   }
+//        CHECK:   %[[SUBI_10:.*]] = arith.subi %{{.*}}, %{{.*}} 
+//        CHECK:   %[[REMUI_11:.*]] = arith.remui %[[SUBI_10]], %{{.*}} 
+//        CHECK:   %[[CMPI_12:.*]] = arith.cmpi ne, %[[REMUI_11]], %{{.*}} 
+//        CHECK:   %[[SELECT_13:.*]] = arith.select %[[CMPI_12]], %{{.*}}, %{{.*}} 
+//        CHECK:   %[[DIVUI_14:.*]] = arith.divui %[[SUBI_10]], %{{.*}} 
+//        CHECK:   %[[ADDI_15:.*]] = arith.addi %[[DIVUI_14]], %[[SELECT_13]] 
+//        CHECK:   %[[ADDI_16:.*]] = arith.addi %[[ADDI_15]], %{{.*}}-1 
+//        CHECK:   %[[MULI_17:.*]] = arith.muli %{{.*}}, %[[ADDI_16]] 
+//        CHECK:   %[[ADDI_18:.*]] = arith.addi %{{.*}}, %[[MULI_17]] 
+//        CHECK:   %[[CMPI_19:.*]] = arith.cmpi sge, %[[ADDI_16]], %{{.*}} 
+//        CHECK:   %[[ADDI_20:.*]] = arith.addi %[[ADDI_15]], %{{.*}}-1 
+//        CHECK:   %[[ADDI_21:.*]] = arith.addi %[[ADDI_20]], %{{.*}}-1 
+//        CHECK:   %[[MULI_22:.*]] = arith.muli %{{.*}}, %[[ADDI_21]] 
+//        CHECK:   %[[ADDI_23:.*]] = arith.addi %{{.*}}, %[[MULI_22]] 
+//        CHECK:   %[[CMPI_24:.*]] = arith.cmpi sge, %[[ADDI_21]], %{{.*}} 
+//        CHECK:   scf.if %[[CMPI_19]] {
+//        CHECK:     memref.store %{{.*}}#0, %{{.*}}[%[[ADDI_23]]] 
+//        CHECK:   } else {
+//        CHECK:   }
+//        CHECK:   %[[IF_25:.*]] = scf.if %[[CMPI_24]] -> (f32) {
+//        CHECK:     %[[ADDF_26:.*]] = arith.addf %{{.*}}#1, %{{.*}} 
+//        CHECK:     scf.yield %[[ADDF_26]] 
+//        CHECK:   } else {
+//        CHECK:     scf.yield %{{.*}} 
+//        CHECK:   }
+//        CHECK:   scf.if %[[CMPI_24]] {
+//        CHECK:     memref.store %[[IF_25]], %{{.*}}[%[[ADDI_18]]] 
+//        CHECK:   } else {
+//        CHECK:   }
+//        CHECK:   return
 func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %ub: index, %step: index) {
   %cf = arith.constant 1.0 : f32
   scf.for %i0 = %lb to %ub step %step {
