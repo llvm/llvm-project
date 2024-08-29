@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -105,7 +106,6 @@ bool UnrolledInstAnalyzer::visitLoad(LoadInst &I) {
   auto AddressIt = SimplifiedAddresses.find(AddrOp);
   if (AddressIt == SimplifiedAddresses.end())
     return false;
-  const APInt &SimplifiedAddrOp = AddressIt->second.Offset;
 
   auto *GV = dyn_cast<GlobalVariable>(AddressIt->second.Base);
   // We're only interested in loads that can be completely folded to a
@@ -113,37 +113,13 @@ bool UnrolledInstAnalyzer::visitLoad(LoadInst &I) {
   if (!GV || !GV->hasDefinitiveInitializer() || !GV->isConstant())
     return false;
 
-  ConstantDataSequential *CDS =
-      dyn_cast<ConstantDataSequential>(GV->getInitializer());
-  if (!CDS)
+  Constant *Res =
+      ConstantFoldLoadFromConst(GV->getInitializer(), I.getType(),
+                                AddressIt->second.Offset, I.getDataLayout());
+  if (!Res)
     return false;
 
-  // We might have a vector load from an array. FIXME: for now we just bail
-  // out in this case, but we should be able to resolve and simplify such
-  // loads.
-  if (CDS->getElementType() != I.getType())
-    return false;
-
-  unsigned ElemSize = CDS->getElementType()->getPrimitiveSizeInBits() / 8U;
-  if (SimplifiedAddrOp.getActiveBits() > 64)
-    return false;
-  int64_t SimplifiedAddrOpV = SimplifiedAddrOp.getSExtValue();
-  if (SimplifiedAddrOpV < 0) {
-    // FIXME: For now we conservatively ignore out of bound accesses, but
-    // we're allowed to perform the optimization in this case.
-    return false;
-  }
-  uint64_t Index = static_cast<uint64_t>(SimplifiedAddrOpV) / ElemSize;
-  if (Index >= CDS->getNumElements()) {
-    // FIXME: For now we conservatively ignore out of bound accesses, but
-    // we're allowed to perform the optimization in this case.
-    return false;
-  }
-
-  Constant *CV = CDS->getElementAsConstant(Index);
-  assert(CV && "Constant expected.");
-  SimplifiedValues[&I] = CV;
-
+  SimplifiedValues[&I] = Res;
   return true;
 }
 
