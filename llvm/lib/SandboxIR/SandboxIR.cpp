@@ -2145,6 +2145,21 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(
       llvm::ShuffleVectorInst::convertShuffleMaskForBitcode(Mask, ResultTy));
 }
 
+Value *ExtractValueInst::create(Value *Agg, ArrayRef<unsigned> Idxs,
+                                BBIterator WhereIt, BasicBlock *WhereBB,
+                                Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::Value *NewV = Builder.CreateExtractValue(Agg->Val, Idxs, Name);
+  if (auto *NewExtractValueInst = dyn_cast<llvm::ExtractValueInst>(NewV))
+    return Ctx.createExtractValueInst(NewExtractValueInst);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
 Value *InsertValueInst::create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
                                BBIterator WhereIt, BasicBlock *WhereBB,
                                Context &Ctx, const Twine &Name) {
@@ -2318,6 +2333,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     auto *LLVMIns = cast<llvm::ShuffleVectorInst>(LLVMV);
     It->second = std::unique_ptr<ShuffleVectorInst>(
         new ShuffleVectorInst(LLVMIns, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::ExtractValue: {
+    auto *LLVMIns = cast<llvm::ExtractValueInst>(LLVMV);
+    It->second =
+        std::unique_ptr<ExtractValueInst>(new ExtractValueInst(LLVMIns, *this));
     return It->second.get();
   }
   case llvm::Instruction::InsertValue: {
@@ -2546,6 +2567,12 @@ Context::createShuffleVectorInst(llvm::ShuffleVectorInst *SVI) {
   auto NewPtr =
       std::unique_ptr<ShuffleVectorInst>(new ShuffleVectorInst(SVI, *this));
   return cast<ShuffleVectorInst>(registerValue(std::move(NewPtr)));
+}
+
+ExtractValueInst *Context::createExtractValueInst(llvm::ExtractValueInst *EVI) {
+  auto NewPtr =
+      std::unique_ptr<ExtractValueInst>(new ExtractValueInst(EVI, *this));
+  return cast<ExtractValueInst>(registerValue(std::move(NewPtr)));
 }
 
 InsertValueInst *Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
