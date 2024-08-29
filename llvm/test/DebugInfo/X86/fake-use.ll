@@ -3,9 +3,9 @@
 ; Make sure the fake use of 'b' at the end of 'foo' causes location information for 'b'
 ; to extend all the way to the end of the function.
 
-; RUN: %llc_dwarf -O2 -filetype=obj -dwarf-linkage-names=Abstract < %s | llvm-dwarfdump --debug-info --debug-line -v - -o %t
+; RUN: %llc_dwarf -O2 -filetype=obj -mtriple=x86_64-unknown-linux -dwarf-linkage-names=Abstract < %s | llvm-dwarfdump --debug-info --debug-line -v - -o %t
 ; RUN: %python %p/../Inputs/check-fake-use.py %t
-; RUN: sed -e 's,call void (...) @llvm.fake.use,;,' %s | %llc_dwarf - -O2 -filetype=obj -dwarf-linkage-names=Abstract | llvm-dwarfdump --debug-info --debug-line -v - -o %t
+; RUN: sed -e 's,call void (...) @llvm.fake.use,;,' %s | %llc_dwarf - -O2 -filetype=obj -mtriple=x86_64-unknown-linux -dwarf-linkage-names=Abstract | llvm-dwarfdump --debug-info --debug-line -v - -o %t
 ; RUN: not %python %p/../Inputs/check-fake-use.py %t
 
 ; Generated with:
