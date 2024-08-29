@@ -2990,7 +2990,7 @@ void OmpStructureChecker::CheckReductionModifier(
     // or "simd" directive.
     // The worksharing-loop directives are OMPD_do and OMPD_for. Only the
     // former is allowed in Fortran.
-    if (!llvm::omp::scanAllowedSet.test(dirCtx.directive)) {
+    if (!llvm::omp::scanParentAllowedSet.test(dirCtx.directive)) {
       context_.Say(GetContext().clauseSource,
           "Modifier 'INSCAN' on REDUCTION clause is only allowed with "
           "worksharing-loop, worksharing-loop simd, "
