@@ -121,7 +121,8 @@ TEST(ASTExpr, NoUnsignedOverflowICE) {
   EXPECT_TRUE(ICE->isUnsigned());
   EXPECT_EQ(8u, *ICE);
 
-  const auto ICEOverflowCheck = Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
+  const auto ICEOverflowCheck =
+      Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
   EXPECT_TRUE(ICEOverflowCheck.has_value());
   EXPECT_TRUE(ICEOverflowCheck->isUnsigned());
   EXPECT_EQ(8u, *ICEOverflowCheck);
@@ -139,6 +140,7 @@ TEST(ASTExpr, CheckForUnsignedOverflowICE) {
   EXPECT_TRUE(ICE->isUnsigned());
   EXPECT_EQ(3'705'032'704u, *ICE);
 
-  const auto ICEOverflowCheck = Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
+  const auto ICEOverflowCheck =
+      Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
   EXPECT_FALSE(ICEOverflowCheck.has_value());
 }
