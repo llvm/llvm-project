@@ -11,3 +11,4 @@ declare float @frexpf(float noundef, ptr nocapture noundef) local_unnamed_addr #
 attributes #0 = { mustprogress nofree nounwind willreturn memory(argmem: write) "frame-pointer"="non-leaf" "hwasan-abi"="interceptor" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fix-cortex-a53-835769,+fp-armv8,+neon,+outline-atomics,+tagged-globals,+v8a" }
 
 ; CHECK-NOT: memory(argmem: write)
+; CHECK: nobuiltin

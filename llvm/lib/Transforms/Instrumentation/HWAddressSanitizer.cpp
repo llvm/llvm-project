@@ -607,6 +607,10 @@ void HWAddressSanitizer::initializeModule() {
     // This is not only true for sanitized functions, because AttrInfer can
     // infer those attributes on libc functions, which is not true if those
     // are instrumented (Android) or intercepted.
+
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F.addFnAttr(llvm::Attribute::NoBuiltin);
     F.removeFnAttr(llvm::Attribute::Memory);
     for (auto &A : F.args())
       A.removeAttr(llvm::Attribute::WriteOnly);
