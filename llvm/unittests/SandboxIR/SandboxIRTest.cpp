@@ -1317,6 +1317,10 @@ define void @foo({i32, float} %agg) {
             llvm::ExtractValueInst::getIndexedType(AggType,
                                                    ArrayRef<unsigned>({1, 0})));
 
+  EXPECT_EQ(sandboxir::ExtractValueInst::getIndexedType(
+                AggType, ArrayRef<unsigned>({2})),
+            nullptr);
+
   // idx_begin / idx_end
   {
     SmallVector<int, 2> IndicesSimple(ExtSimple->idx_begin(),

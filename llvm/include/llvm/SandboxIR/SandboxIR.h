@@ -1642,6 +1642,10 @@ public:
     return From->getSubclassID() == ClassID::ExtractValue;
   }
 
+  /// Returns the type of the element that would be extracted
+  /// with an extractvalue instruction with the specified parameters.
+  ///
+  /// Null is returned if the indices are invalid for the specified type.
   static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs) {
     return llvm::ExtractValueInst::getIndexedType(Agg, Idxs);
   }
