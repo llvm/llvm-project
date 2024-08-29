@@ -1534,9 +1534,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
-  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
-                                         .convertSwitchRangeToICmp(true)
-                                         .speculateUnpredictables(true)));
+  OptimizePM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions()
+                          .convertSwitchRangeToICmp(true)
+                          .speculateUnpredictables(true)
+                          .hoistLoadsStoresWithCondFaulting(true)));
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
