@@ -6991,11 +6991,12 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
       if (Extension.Features.none())
         report_fatal_error("unsupported architectural extension: " + Name);
 
-      FeatureBitset ToggleFeatures =
-          EnableFeature
-              ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
-              : STI.ToggleFeature(Features & Extension.Features);
-      setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
+      if (EnableFeature)
+        STI.SetFeatureBitsTransitively(Extension.Features);
+      else
+        STI.ClearFeatureBitsTransitively(Extension.Features);
+      FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
+      setAvailableFeatures(Features);
       break;
     }
   }
@@ -7018,8 +7019,6 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     Name = Name.substr(2);
   }
 
-  MCSubtargetInfo &STI = copySTI();
-  FeatureBitset Features = STI.getFeatureBits();
   for (const auto &Extension : ExtensionMap) {
     if (Extension.Name != Name)
       continue;
@@ -7027,11 +7026,13 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     if (Extension.Features.none())
       return Error(ExtLoc, "unsupported architectural extension: " + Name);
 
-    FeatureBitset ToggleFeatures =
-        EnableFeature
-            ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
-            : STI.ToggleFeature(Features & Extension.Features);
-    setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
+    MCSubtargetInfo &STI = copySTI();
+    if (EnableFeature)
+      STI.SetFeatureBitsTransitively(Extension.Features);
+    else
+      STI.ClearFeatureBitsTransitively(Extension.Features);
+    FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
+    setAvailableFeatures(Features);
     return false;
   }
 
@@ -7083,12 +7084,12 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       if (Extension.Features.none())
         report_fatal_error("unsupported architectural extension: " + Name);
 
-      FeatureBitset Features = STI.getFeatureBits();
-      FeatureBitset ToggleFeatures =
-          EnableFeature
-              ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
-              : STI.ToggleFeature(Features & Extension.Features);
-      setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
+      if (EnableFeature)
+        STI.SetFeatureBitsTransitively(Extension.Features);
+      else
+        STI.ClearFeatureBitsTransitively(Extension.Features);
+      FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
+      setAvailableFeatures(Features);
       FoundExtension = true;
 
       break;
