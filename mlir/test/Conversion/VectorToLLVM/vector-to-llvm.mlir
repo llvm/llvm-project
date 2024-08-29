@@ -1729,11 +1729,11 @@ func.func @extract_strided_slice_f32(%arg0: vector<4xf32>) -> vector<2xf32> {
 
 // -----
 
-func.func @extract_strided_index_slice_index(%arg0: vector<4xindex>) -> vector<2xindex> {
+func.func @extract_strided_slice_index(%arg0: vector<4xindex>) -> vector<2xindex> {
   %0 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4xindex> to vector<2xindex>
   return %0 : vector<2xindex>
 }
-// CHECK-LABEL: @extract_strided_index_slice_index(
+// CHECK-LABEL: @extract_strided_slice_index(
 //  CHECK-SAME:    %[[A:.*]]: vector<4xindex>)
 //       CHECK:    %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<4xindex> to vector<4xi64>
 //       CHECK:    %[[T2:.*]] = llvm.shufflevector %[[T0]], %[[T0]] [2, 3] : vector<4xi64>
