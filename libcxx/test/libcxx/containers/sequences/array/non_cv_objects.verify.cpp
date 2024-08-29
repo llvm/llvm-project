@@ -10,7 +10,7 @@
 
 #include <array>
 
-std::array<const int, 1> A1{0};  // okay
+std::array<const int, 1> A1{0}; // okay
 std::array<volatile int, 1> A2; // okay
 
 std::array<int&, 1> A3{};
