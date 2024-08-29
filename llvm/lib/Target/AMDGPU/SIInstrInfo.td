@@ -1255,7 +1255,7 @@ def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
 class FPT16VCSrcInputMods<bit IsFake16 = 1>
   : FPInputMods<FP16VCSrcInputModsMatchClass<IsFake16>> {
-let EncoderMethod = "getMachineOpValueT16";
+  let EncoderMethod = "getMachineOpValueT16";
 }
 def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
 

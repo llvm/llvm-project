@@ -295,7 +295,7 @@ defm V_CVT_U32_F32 : VOP1Inst <"v_cvt_u32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_
 defm V_CVT_I32_F32 : VOP1Inst <"v_cvt_i32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_sint>;
 let FPDPRounding = 1, isReMaterializable = 0 in {
   // V_CVT_F16_F32 and V_CVT_F32_F16 are special cases because they are
-  // present in targets without Has16BitInsts. Otherwise they can use
+  // present in targets without Has16BitInsts. Otherwise they could use
   // class VOP1Inst_t16
   let OtherPredicates = [NotHasTrue16BitInsts] in
     defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
