@@ -1044,7 +1044,6 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
   cp.processAllocate(clauseOps);
   cp.processDistSchedule(stmtCtx, clauseOps);
   cp.processOrder(clauseOps);
-  // TODO Support delayed privatization.
 }
 
 static void genFlushClauses(lower::AbstractConverter &converter,
@@ -1128,7 +1127,6 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
 
-  // TODO Support delayed privatization.
   cp.processTODO<clause::Linear, clause::Nontemporal>(
       loc, llvm::omp::Directive::OMPD_simd);
 }
@@ -1299,7 +1297,6 @@ static void genWsloopClauses(
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
-  // TODO Support delayed privatization.
 
   cp.processTODO<clause::Allocate, clause::Linear>(
       loc, llvm::omp::Directive::OMPD_do);
@@ -1924,16 +1921,24 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 // also be a leaf of a composite construct
 //===----------------------------------------------------------------------===//
 
-static void genStandaloneDistribute(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+static void genStandaloneDistribute(lower::AbstractConverter &converter,
+                                    lower::SymMap &symTable,
+                                    semantics::SemanticsContext &semaCtx,
+                                    lower::pft::Evaluation &eval,
+                                    mlir::Location loc,
+                                    const ConstructQueue &queue,
+                                    ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
 
   mlir::omp::DistributeOperands distributeClauseOps;
   genDistributeClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                        distributeClauseOps);
+
+  // TODO: Support delayed privatization.
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, &symTable);
+  dsp.processStep1();
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -1955,8 +1960,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
                             semantics::SemanticsContext &semaCtx,
                             lower::pft::Evaluation &eval, mlir::Location loc,
                             const ConstructQueue &queue,
-                            ConstructQueue::const_iterator item,
-                            DataSharingProcessor &dsp) {
+                            ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
 
   mlir::omp::WsloopOperands wsloopClauseOps;
@@ -1964,6 +1968,12 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Type> reductionTypes;
   genWsloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                    wsloopClauseOps, reductionTypes, reductionSyms);
+
+  // TODO: Support delayed privatization.
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, &symTable);
+  dsp.processStep1();
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -2004,10 +2014,15 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                               semantics::SemanticsContext &semaCtx,
                               lower::pft::Evaluation &eval, mlir::Location loc,
                               const ConstructQueue &queue,
-                              ConstructQueue::const_iterator item,
-                              DataSharingProcessor &dsp) {
+                              ConstructQueue::const_iterator item) {
   mlir::omp::SimdOperands simdClauseOps;
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps);
+
+  // TODO: Support delayed privatization.
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, &symTable);
+  dsp.processStep1();
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -2024,11 +2039,13 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                 llvm::omp::Directive::OMPD_simd, dsp);
 }
 
-static void genStandaloneTaskloop(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+static void genStandaloneTaskloop(lower::AbstractConverter &converter,
+                                  lower::SymMap &symTable,
+                                  semantics::SemanticsContext &semaCtx,
+                                  lower::pft::Evaluation &eval,
+                                  mlir::Location loc,
+                                  const ConstructQueue &queue,
+                                  ConstructQueue::const_iterator item) {
   TODO(loc, "Taskloop construct");
 }
 
@@ -2040,7 +2057,7 @@ static void genCompositeDistributeParallelDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+    ConstructQueue::const_iterator item) {
   assert(std::distance(item, queue.end()) == 3 && "Invalid leaf constructs");
   TODO(loc, "Composite DISTRIBUTE PARALLEL DO");
 }
@@ -2049,16 +2066,18 @@ static void genCompositeDistributeParallelDoSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+    ConstructQueue::const_iterator item) {
   assert(std::distance(item, queue.end()) == 4 && "Invalid leaf constructs");
   TODO(loc, "Composite DISTRIBUTE PARALLEL DO SIMD");
 }
 
-static void genCompositeDistributeSimd(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+static void genCompositeDistributeSimd(lower::AbstractConverter &converter,
+                                       lower::SymMap &symTable,
+                                       semantics::SemanticsContext &semaCtx,
+                                       lower::pft::Evaluation &eval,
+                                       mlir::Location loc,
+                                       const ConstructQueue &queue,
+                                       ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
 
   assert(std::distance(item, queue.end()) == 2 && "Invalid leaf constructs");
@@ -2072,6 +2091,12 @@ static void genCompositeDistributeSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps);
+
+  // TODO: Support delayed privatization.
+  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, &symTable);
+  dsp.processStep1();
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -2109,8 +2134,7 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
                                semantics::SemanticsContext &semaCtx,
                                lower::pft::Evaluation &eval, mlir::Location loc,
                                const ConstructQueue &queue,
-                               ConstructQueue::const_iterator item,
-                               DataSharingProcessor &dsp) {
+                               ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
 
   assert(std::distance(item, queue.end()) == 2 && "Invalid leaf constructs");
@@ -2126,6 +2150,12 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
 
   mlir::omp::SimdOperands simdClauseOps;
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps);
+
+  // TODO: Support delayed privatization.
+  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, &symTable);
+  dsp.processStep1();
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -2157,11 +2187,13 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
                 llvm::omp::Directive::OMPD_do_simd, dsp);
 }
 
-static void genCompositeTaskloopSimd(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+static void genCompositeTaskloopSimd(lower::AbstractConverter &converter,
+                                     lower::SymMap &symTable,
+                                     semantics::SemanticsContext &semaCtx,
+                                     lower::pft::Evaluation &eval,
+                                     mlir::Location loc,
+                                     const ConstructQueue &queue,
+                                     ConstructQueue::const_iterator item) {
   assert(std::distance(item, queue.end()) == 2 && "Invalid leaf constructs");
   TODO(loc, "Composite TASKLOOP SIMD");
 }
@@ -2170,30 +2202,35 @@ static void genCompositeTaskloopSimd(
 // Dispatch
 //===----------------------------------------------------------------------===//
 
-static bool genOMPCompositeDispatch(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+static bool genOMPCompositeDispatch(lower::AbstractConverter &converter,
+                                    lower::SymMap &symTable,
+                                    semantics::SemanticsContext &semaCtx,
+                                    lower::pft::Evaluation &eval,
+                                    mlir::Location loc,
+                                    const ConstructQueue &queue,
+                                    ConstructQueue::const_iterator item) {
   using llvm::omp::Directive;
   using lower::omp::matchLeafSequence;
 
+  // TODO: Privatization for composite constructs is currently only done based
+  // on the clauses for their last leaf construct, which may not always be
+  // correct. Consider per-leaf privatization of composite constructs once
+  // delayed privatization is supported by all participating ops.
   if (matchLeafSequence(item, queue, Directive::OMPD_distribute_parallel_do))
     genCompositeDistributeParallelDo(converter, symTable, semaCtx, eval, loc,
-                                     queue, item, dsp);
+                                     queue, item);
   else if (matchLeafSequence(item, queue,
                              Directive::OMPD_distribute_parallel_do_simd))
     genCompositeDistributeParallelDoSimd(converter, symTable, semaCtx, eval,
-                                         loc, queue, item, dsp);
+                                         loc, queue, item);
   else if (matchLeafSequence(item, queue, Directive::OMPD_distribute_simd))
     genCompositeDistributeSimd(converter, symTable, semaCtx, eval, loc, queue,
-                               item, dsp);
+                               item);
   else if (matchLeafSequence(item, queue, Directive::OMPD_do_simd))
-    genCompositeDoSimd(converter, symTable, semaCtx, eval, loc, queue, item,
-                       dsp);
+    genCompositeDoSimd(converter, symTable, semaCtx, eval, loc, queue, item);
   else if (matchLeafSequence(item, queue, Directive::OMPD_taskloop_simd))
     genCompositeTaskloopSimd(converter, symTable, semaCtx, eval, loc, queue,
-                             item, dsp);
+                             item);
   else
     return false;
 
@@ -2208,20 +2245,12 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                            ConstructQueue::const_iterator item) {
   assert(item != queue.end());
 
-  std::optional<DataSharingProcessor> loopDsp;
   bool loopLeaf = llvm::omp::getDirectiveAssociation(item->id) ==
                   llvm::omp::Association::Loop;
   if (loopLeaf) {
     symTable.pushScope();
-    // TODO: Use one DataSharingProcessor for each leaf of a composite
-    // construct.
-    loopDsp.emplace(converter, semaCtx, item->clauses, eval,
-                    /*shouldCollectPreDeterminedSymbols=*/true,
-                    /*useDelayedPrivatization=*/false, &symTable);
-    loopDsp->processStep1();
-
     if (genOMPCompositeDispatch(converter, symTable, semaCtx, eval, loc, queue,
-                                item, *loopDsp)) {
+                                item)) {
       symTable.popScope();
       return;
     }
@@ -2233,11 +2262,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_distribute:
     genStandaloneDistribute(converter, symTable, semaCtx, eval, loc, queue,
-                            item, *loopDsp);
+                            item);
     break;
   case llvm::omp::Directive::OMPD_do:
-    genStandaloneDo(converter, symTable, semaCtx, eval, loc, queue, item,
-                    *loopDsp);
+    genStandaloneDo(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_loop:
     TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
@@ -2266,8 +2294,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     // in genBodyOfOp
     break;
   case llvm::omp::Directive::OMPD_simd:
-    genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item,
-                      *loopDsp);
+    genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_single:
     genSingleOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -2297,8 +2324,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genTaskgroupOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskloop:
-    genStandaloneTaskloop(converter, symTable, semaCtx, eval, loc, queue, item,
-                          *loopDsp);
+    genStandaloneTaskloop(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
     genTaskwaitOp(converter, symTable, semaCtx, eval, loc, queue, item);
