@@ -184,6 +184,7 @@ struct MissingFeatures {
   static bool deferredReplacements() { return false; }
   static bool shouldInstrumentFunction() { return false; }
   static bool xray() { return false; }
+  static bool flagLoad() { return false; }
 
   // Inline assembly
   static bool asmGoto() { return false; }
