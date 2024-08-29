@@ -9,17 +9,64 @@ program main
   integer :: i
 
   ! TODO When they are supported, add tests for:
-  ! - DISTRIBUTE PARALLEL DO
   ! - DISTRIBUTE PARALLEL DO SIMD
   ! - PARALLEL SECTIONS
   ! - PARALLEL WORKSHARE
-  ! - TARGET TEAMS DISTRIBUTE PARALLEL DO
   ! - TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
   ! - TARGET UPDATE
   ! - TASKLOOP
   ! - TASKLOOP SIMD
-  ! - TEAMS DISTRIBUTE PARALLEL DO
   ! - TEAMS DISTRIBUTE PARALLEL DO SIMD
+
+  ! ----------------------------------------------------------------------------
+  ! DISTRIBUTE PARALLEL DO
+  ! ----------------------------------------------------------------------------
+  !$omp teams
+
+  ! CHECK:      omp.parallel
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp distribute parallel do
+  do i = 1, 10
+  end do
+  !$omp end distribute parallel do
+
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp distribute parallel do if(.true.)
+  do i = 1, 10
+  end do
+  !$omp end distribute parallel do
+
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp distribute parallel do if(parallel: .true.)
+  do i = 1, 10
+  end do
+  !$omp end distribute parallel do
+
+  !$omp end teams
 
   ! ----------------------------------------------------------------------------
   ! DISTRIBUTE SIMD
@@ -662,6 +709,126 @@ program main
   !$omp end target teams distribute
 
   ! ----------------------------------------------------------------------------
+  ! TARGET TEAMS DISTRIBUTE PARALLEL DO
+  ! ----------------------------------------------------------------------------
+  ! CHECK:      omp.target
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.parallel
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! CHECK:      omp.target
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do if(.true.)
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! CHECK:      omp.target
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do if(target: .true.) if(teams: .false.) if(parallel: .true.)
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! CHECK:      omp.target
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.parallel
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do if(target: .true.)
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! CHECK:      omp.target
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.parallel
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do if(teams: .true.)
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! CHECK:      omp.target
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp target teams distribute parallel do if(parallel: .true.)
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute parallel do
+
+  ! ----------------------------------------------------------------------------
   ! TARGET TEAMS DISTRIBUTE SIMD
   ! ----------------------------------------------------------------------------
   ! CHECK:      omp.target
@@ -865,6 +1032,93 @@ program main
   do i = 1, 10
   end do
   !$omp end teams distribute
+
+  ! ----------------------------------------------------------------------------
+  ! TEAMS DISTRIBUTE PARALLEL DO
+  ! ----------------------------------------------------------------------------
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.parallel
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do
+
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do if(.true.)
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do
+
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do if(teams: .true.) if(parallel: .false.)
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do
+
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.parallel
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do if(teams: .true.)
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do
+
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.parallel
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.distribute
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp teams distribute parallel do if(parallel: .true.)
+  do i = 1, 10
+  end do
+  !$omp end teams distribute parallel do
 
   ! ----------------------------------------------------------------------------
   ! TEAMS DISTRIBUTE SIMD
