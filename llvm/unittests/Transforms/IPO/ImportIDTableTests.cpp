@@ -39,7 +39,7 @@ TEST(ImportIDTableTests, Basic) {
   EXPECT_EQ(std::get<1>(DefTuple), 123U);
   EXPECT_EQ(std::get<2>(DefTuple), GlobalValueSummary::Definition);
 
-  // Verify what Def maps to.
+  // Verify what Decl maps to.
   auto DeclTuple = Table.lookup(Decl);
   EXPECT_EQ(std::get<0>(DeclTuple), StringRef("mod"));
   EXPECT_EQ(std::get<1>(DeclTuple), 123U);
@@ -51,7 +51,7 @@ TEST(ImportIDTableTests, Basic) {
   EXPECT_EQ(std::get<1>(Def2Tuple), 456U);
   EXPECT_EQ(std::get<2>(Def2Tuple), GlobalValueSummary::Definition);
 
-  // Verify what Def2 maps to.
+  // Verify what Decl2 maps to.
   auto Decl2Tuple = Table.lookup(Decl2);
   EXPECT_EQ(std::get<0>(Decl2Tuple), StringRef("stuff"));
   EXPECT_EQ(std::get<1>(Decl2Tuple), 456U);
@@ -67,6 +67,18 @@ TEST(ImportIDTableTests, Duplicates) {
   // Verify we get the same IDs back.
   EXPECT_EQ(Def1, Def2);
   EXPECT_EQ(Decl1, Decl2);
+}
+
+TEST(ImportIDTableTests, Present) {
+  FunctionImporter::ImportIDTable Table;
+
+  auto [Def, Decl] = Table.createImportIDs("mod", 123U);
+  auto Result = Table.getImportIDs("mod", 123U);
+
+  // Verify that we get the same IDs back.
+  ASSERT_NE(Result, std::nullopt);
+  EXPECT_EQ(Result->first, Def);
+  EXPECT_EQ(Result->second, Decl);
 }
 
 TEST(ImportIDTableTests, Missing) {
