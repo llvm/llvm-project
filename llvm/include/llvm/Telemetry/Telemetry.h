@@ -27,35 +27,37 @@ using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
 struct TelemetryConfig {
   // If true, telemetry will be enabled.
-  bool enable_telemetry;
+  bool EnableTelemetry;
 
   // Additional destinations to send the logged entries.
   // Could be stdout, stderr, or some local paths.
   // Note: these are destinations are __in addition to__ whatever the default
   // destination(s) are, as implemented by vendors.
-  std::vector<std::string> additional_destinations;
+  std::vector<std::string> AdditionalDestinations;
 };
 
 struct TelemetryEventStats {
   // REQUIRED: Start time of event
-  SteadyTimePoint m_start;
+  SteadyTimePoint Start;
   // OPTIONAL: End time of event - may be empty if not meaningful.
-  std::optional<SteadyTimePoint> m_end;
+  std::optional<SteadyTimePoint> End;
   // TBD: could add some memory stats here too?
 
   TelemetryEventStats() = default;
-  TelemetryEventStats(SteadyTimePoint start) : m_start(start) {}
-  TelemetryEventStats(SteadyTimePoint start, SteadyTimePoint end)
-      : m_start(start), m_end(end) {}
-
-  std::string ToString() const;
+  TelemetryEventStats(SteadyTimePoint Start) : Start(Start) {}
+  TelemetryEventStats(SteadyTimePoint Start, SteadyTimePoint End)
+      : Start(Start), End(End) {}
 };
 
 struct ExitDescription {
-  int exit_code;
-  std::string description;
+  int ExitCode;
+  std::string Description;
+};
 
-  std::string ToString() const;
+// For isa, dyn_cast, etc operations on TelemetryInfo.
+typedef unsigned KindType;
+struct EntryKind {
+  static const KindType Base = 0;
 };
 
 // The base class contains the basic set of data.
@@ -64,41 +66,46 @@ struct TelemetryInfo {
   // A "session" corresponds to every time the tool starts.
   // All entries emitted for the same session will have
   // the same session_uuid
-  std::string session_uuid;
+  std::string SessionUuid;
 
-  TelemetryEventStats stats;
+  TelemetryEventStats Stats;
 
-  std::optional<ExitDescription> exit_description;
+  std::optional<ExitDescription> ExitDesc;
 
   // Counting number of entries.
   // (For each set of entries with the same session_uuid, this value should
   // be unique for each entry)
-  size_t counter;
+  size_t Counter;
 
   TelemetryInfo() = default;
   ~TelemetryInfo() = default;
-  virtual std::string ToString() const;
+
+  virtual json::Object serializeToJson() const;
+
+  // For isa, dyn_cast, etc, operations.
+  virtual KindType getEntryKind() const { return EntryKind::Base; }
+  static bool classof(const TelemetryInfo* T) {
+    return T->getEntryKind() == EntryKind::Base;
+  }
 };
 
 // Where/how to send the telemetry entries.
 class TelemetryDestination {
 public:
   virtual ~TelemetryDestination() = default;
-  virtual Error EmitEntry(const TelemetryInfo *entry) = 0;
+  virtual Error emitEntry(const TelemetryInfo *Entry) = 0;
   virtual std::string name() const = 0;
 };
 
 class Telemeter {
 public:
-  virtual ~Telemeter() = default;
-
   // Invoked upon tool startup
-  virtual void LogStartup(llvm::StringRef tool_path, TelemetryInfo *entry) = 0;
+  virtual void logStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
 
   // Invoked upon tool exit.
-  virtual void LogExit(llvm::StringRef tool_path, TelemetryInfo *entry) = 0;
+  virtual void logExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
 
-  virtual void AddDestination(TelemetryDestination *destination) = 0;
+  virtual void addDestination(TelemetryDestination *Destination) = 0;
 };
 
 } // namespace telemetry
