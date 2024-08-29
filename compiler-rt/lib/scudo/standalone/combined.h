@@ -140,6 +140,11 @@ public:
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
   void init() {
+#if !defined(SCUDO_PAGE_SIZE)
+    // Make sure that the page size is initialized if it's not a constant.
+    CHECK_NE(getPageSizeCached(), 0U);
+#endif
+
     performSanityChecks();
 
     // Check if hardware CRC32 is supported in the binary and by the platform,

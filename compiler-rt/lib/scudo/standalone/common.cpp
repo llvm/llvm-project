@@ -12,13 +12,19 @@
 
 namespace scudo {
 
-uptr PageSizeCached;
+#if !defined(SCUDO_PAGE_SIZE)
+uptr PageSizeCached = 0;
+uptr PageSizeLogCached = 0;
 uptr getPageSize();
 
+// This must be called in the init path or there could be a race if multiple
+// threads try to set the cached values.
 uptr getPageSizeSlow() {
   PageSizeCached = getPageSize();
   CHECK_NE(PageSizeCached, 0);
+  PageSizeLogCached = static_cast<uptr>(__builtin_ctzl(PageSizeCached));
   return PageSizeCached;
 }
+#endif
 
 } // namespace scudo
