@@ -79,16 +79,12 @@ struct __non_trivial_if<true, _Unique> {
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
-  static_assert(!is_const<_Tp>::value, "'std::allocator' can only allocate non-const object types");
-  static_assert(!is_volatile<_Tp>::value, "'std::allocator' can only allocate non-volatile object types");
-  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value,
-                "'std::allocator' can only allocate object types; function references are not objects (consider using "
-                "a function pointer)");
-  static_assert(!is_reference<_Tp>::value,
-                "'std::allocator' can only allocate object types; references are not objects");
+  static_assert(!is_const<_Tp>::value, "'std::allocator' cannot allocate const types");
+  static_assert(!is_volatile<_Tp>::value, "'std::allocator' cannot allocate volatile types");
+  static_assert(!is_reference<_Tp>::value, "'std::allocator' cannot allocate references");
   static_assert(
       !is_function<_Tp>::value,
-      "'std::allocator' can only allocate object types; functions are not objects (consider using a function pointer)");
+      "'std::allocator' cannot allocate functions");
 
 public:
   typedef size_t size_type;

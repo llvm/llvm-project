@@ -10,20 +10,24 @@
 
 #include <vector>
 
-std::vector<const int> C1;    // expected-error@*:* {{'std::vector' can only hold non-const types}}
-std::vector<volatile int> C2; // expected-error@*:* {{'std::vector' can only hold non-volatile types}}
-std::vector<int&> C3;  // expected-error@*:*{{'std::vector' can only hold object types; references are not objects}}
-std::vector<int&&> C4; // expected-error@*:*{{'std::vector' can only hold object types; references are not objects}}
-std::vector<int()>
-    C5; // expected-error@*:*{{'std::vector' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::vector<int(int)>
-    C6; // expected-error@*:*{{'std::vector' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::vector<int(int, int)>
-    C7; // expected-error@*:*{{'std::vector' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::vector<int (&)()>
-    C8; // expected-error@*:*{{'std::vector' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::vector<int (&)(int)>
-    C9; // expected-error@*:*{{'std::vector' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::vector<int (&)(int, int)>
-    C10; // expected-error@*:*{{'std::vector' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::vector<void> C11; // expected-error@*:*{{'std::vector' can only hold object types; 'void' is not an object}}
+std::vector<const int> C1;
+// expected-error@*:*{{'std::vector' cannot hold const types}}
+
+std::vector<volatile int> C2;
+// expected-error@*:*{{'std::vector' cannot hold volatile types}}
+
+std::vector<int&> C3;
+std::vector<int&&> C4;
+// expected-error@*:* 2 {{'std::vector' cannot hold references}}
+
+std::vector<int()> C5;
+std::vector<int(int)> C6;
+std::vector<int(int, int)> C7;
+// expected-error@*:* 3 {{'std::vector' cannot hold functions}}
+
+std::vector<void> C8;
+// expected-error@*:*{{'std::vector' cannot hold 'void'}}
+
+std::vector<int[]> C9;
+std::vector<int[2]> C10;
+// expected-error@*:* 2 {{'std::vector' cannot hold C arrays}}

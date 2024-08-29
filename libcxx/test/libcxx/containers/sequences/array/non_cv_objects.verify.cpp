@@ -13,13 +13,19 @@
 std::array<const int, 1> A1{};  // okay
 std::array<volatile int, 1> A2; // okay
 
-int I;
+std::array<int&, 1>  A3{};
+std::array<int&&, 1> A4{};
+// expected-error@*:* 2 {{'std::array' cannot hold references}}
 
-std::array<int&, 1> A3{I}; // expected-error@*:*{{'std::array' can only hold object types; references are not objects}}
-std::array<int&&, 1> A4{
-    static_cast<int&&>(I)}; // expected-error@*:*{{'std::array' can only hold object types; references are not objects}}
-std::array<int(), 1>
-    A5; // expected-error@*:*{{'std::array' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::array<int (&)(), 1>
-    A6; // expected-error@*:*{{'std::array' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::array<void, 1> A7; // expected-error@*:*{{'std::array' can only hold object types; 'void' is not an object}}
+std::array<int(), 1> A5;
+std::array<int(int), 1> A6;
+std::array<int(int, int), 1> A7;
+// expected-error@*:* 3 {{'std::array' cannot hold functions}}
+
+std::array<void, 1> A8;
+// expected-error@*:*{{'std::array' cannot hold 'void'}}
+
+std::array<int[], 1> A9;
+// expected-error@*:*{{'std::array' cannot hold C arrays of an unknown size}}
+
+std::array<int[2], 1> A10; // okay

@@ -757,12 +757,12 @@ struct __init_with_sentinel_tag {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
-  static_assert(!is_const<_CharT>::value, "'std::basic_string' can only hold non-const types");
-  static_assert(!is_volatile<_CharT>::value, "'std::basic_string' can only hold non-volatile types");
-  static_assert(!is_reference<_CharT>::value || !is_function<typename remove_reference<_CharT>::type>::value, "'std::basic_string' can only hold object types; function references are not objects (consider using a function pointer)");
-  static_assert(!is_reference<_CharT>::value, "'std::basic_string' can only hold object types; references are not objects");
-  static_assert(!is_function<_CharT>::value, "'std::basic_string' can only hold object types; functions are not objects (consider using a function pointer)");
-  static_assert(!is_void<_CharT>::value, "'std::basic_string' can only hold object types; 'void' is not an object");
+  static_assert(!is_const<_CharT>::value, "'std::basic_string' cannot hold const types");
+  static_assert(!is_volatile<_CharT>::value, "'std::basic_string' cannot hold volatile types");
+  static_assert(!is_reference<_CharT>::value, "'std::basic_string' cannot hold references");
+  static_assert(!is_function<_CharT>::value, "'std::basic_string' cannot hold functions");
+  static_assert(!is_void<_CharT>::value, "'std::basic_string' cannot hold 'void'");
+  static_assert(!is_array<_CharT>::value, "'std::basic_string' cannot hold C arrays");
 
   using __default_allocator_type = allocator<_CharT>;
 
@@ -827,7 +827,6 @@ public:
 #  define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
 #endif
 
-  static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
   static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
   static_assert(is_same<_CharT, typename traits_type::char_type>::value,

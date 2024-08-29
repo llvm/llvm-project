@@ -10,20 +10,24 @@
 
 #include <deque>
 
-std::deque<const int> C1;    // expected-error@*:* {{'std::deque' can only hold non-const types}}
-std::deque<volatile int> C2; // expected-error@*:* {{'std::deque' can only hold non-volatile types}}
-std::deque<int&> C3;  // expected-error@*:*{{'std::deque' can only hold object types; references are not objects}}
-std::deque<int&&> C4; // expected-error@*:*{{'std::deque' can only hold object types; references are not objects}}
-std::deque<int()>
-    C5; // expected-error@*:*{{'std::deque' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::deque<int(int)>
-    C6; // expected-error@*:*{{'std::deque' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::deque<int(int, int)>
-    C7; // expected-error@*:*{{'std::deque' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::deque<int (&)()>
-    C8; // expected-error@*:*{{'std::deque' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::deque<int (&)(int)>
-    C9; // expected-error@*:*{{'std::deque' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::deque<int (&)(int, int)>
-    C10; // expected-error@*:*{{'std::deque' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::deque<void> C11; // expected-error@*:*{{'std::deque' can only hold object types; 'void' is not an object}}
+std::deque<const int> C1;
+// expected-error@*:*{{'std::deque' cannot hold const types}}
+
+std::deque<volatile int> C2;
+// expected-error@*:*{{'std::deque' cannot hold volatile types}}
+
+std::deque<int&> C3;
+std::deque<int&&> C4;
+// expected-error@*:* 2 {{'std::deque' cannot hold references}}
+
+std::deque<int()> C5;
+std::deque<int(int)> C6;
+std::deque<int(int, int)> C7;
+// expected-error@*:* 3 {{'std::deque' cannot hold functions}}
+
+std::deque<void> C8;
+// expected-error@*:*{{'std::deque' cannot hold 'void'}}
+
+std::deque<int[]> C9;
+std::deque<int[2]> C10;
+// expected-error@*:* 2 {{'std::deque' cannot hold C arrays}}

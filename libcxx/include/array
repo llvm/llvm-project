@@ -171,10 +171,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array {
-  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value, "'std::array' can only hold object types; function references are not objects (consider using a function pointer)");
-  static_assert(!is_reference<_Tp>::value, "'std::array' can only hold object types; references are not objects");
-  static_assert(!is_function<_Tp>::value, "'std::array' can only hold object types; functions are not objects (consider using a function pointer)");
-  static_assert(!is_void<_Tp>::value, "'std::array' can only hold object types; 'void' is not an object");
+  static_assert(!is_reference<_Tp>::value, "'std::array' cannot hold references");
+  static_assert(!is_function<_Tp>::value, "'std::array' cannot hold functions");
+  static_assert(!is_void<_Tp>::value, "'std::array' cannot hold 'void'");
+  static_assert(!__is_unbounded_array(_Tp), "'std::array' cannot hold C arrays of an unknown size");
 
   using __trivially_relocatable = __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, array, void>;
 

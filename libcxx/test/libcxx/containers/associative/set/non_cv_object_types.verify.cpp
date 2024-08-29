@@ -10,20 +10,24 @@
 
 #include <set>
 
-std::set<const int> C1;    // expected-error@*:* {{'std::set' can only hold non-const types}}
-std::set<volatile int> C2; // expected-error@*:* {{'std::set' can only hold non-volatile types}}
-std::set<int&> C3;         // expected-error@*:*{{'std::set' can only hold object types; references are not objects}}
-std::set<int&&> C4;        // expected-error@*:*{{'std::set' can only hold object types; references are not objects}}
-std::set<int()>
-    C5; // expected-error@*:*{{'std::set' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::set<int(int)>
-    C6; // expected-error@*:*{{'std::set' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::set<int(int, int)>
-    C7; // expected-error@*:*{{'std::set' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::set<int (&)()>
-    C8; // expected-error@*:*{{'std::set' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::set<int (&)(int)>
-    C9; // expected-error@*:*{{'std::set' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::set<int (&)(int, int)>
-    C10; // expected-error@*:*{{'std::set' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::set<void> C11; // expected-error@*:*{{'std::set' can only hold object types; 'void' is not an object}}
+std::set<const int> C1;
+// expected-error@*:*{{'std::set' cannot hold const types}}
+
+std::set<volatile int> C2;
+// expected-error@*:*{{'std::set' cannot hold volatile types}}
+
+std::set<int&> C3;
+std::set<int&&> C4;
+// expected-error@*:* 2 {{'std::set' cannot hold references}}
+
+std::set<int()> C5;
+std::set<int(int)> C6;
+std::set<int(int, int)> C7;
+// expected-error@*:* 3 {{'std::set' cannot hold functions}}
+
+std::set<void> C8;
+// expected-error@*:*{{'std::set' cannot hold 'void'}}
+
+std::set<int[]> C9;
+std::set<int[2]> C10;
+// expected-error@*:* 2 {{'std::set' cannot hold C arrays}}

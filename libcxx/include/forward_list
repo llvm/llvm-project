@@ -219,6 +219,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -763,12 +764,12 @@ public:
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS forward_list : private __forward_list_base<_Tp, _Alloc> {
-  static_assert(!is_const<_Tp>::value, "'std::forward_list' can only hold non-const types");
-  static_assert(!is_volatile<_Tp>::value, "'std::forward_list' can only hold non-volatile types");
-  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value, "'std::forward_list' can only hold object types; function references are not objects (consider using a function pointer)");
-  static_assert(!is_reference<_Tp>::value, "'std::forward_list' can only hold object types; references are not objects");
-  static_assert(!is_function<_Tp>::value, "'std::forward_list' can only hold object types; functions are not objects (consider using a function pointer)");
-  static_assert(!is_void<_Tp>::value, "'std::forward_list' can only hold object types; 'void' is not an object");
+  static_assert(!is_const<_Tp>::value, "'std::forward_list' cannot hold const types");
+  static_assert(!is_volatile<_Tp>::value, "'std::forward_list' cannot hold volatile types");
+  static_assert(!is_reference<_Tp>::value, "'std::forward_list' cannot hold references");
+  static_assert(!is_function<_Tp>::value, "'std::forward_list' cannot hold functions");
+  static_assert(!is_void<_Tp>::value, "'std::forward_list' cannot hold 'void'");
+  static_assert(!is_array<_Tp>::value, "'std::forward_list' cannot hold C arrays");
 
   typedef __forward_list_base<_Tp, _Alloc> base;
   typedef typename base::__node_allocator __node_allocator;

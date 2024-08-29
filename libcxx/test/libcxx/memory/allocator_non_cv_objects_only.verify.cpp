@@ -11,15 +11,17 @@
 #include <memory>
 #include "test_macros.h"
 
-std::allocator<const int> A1;    // expected-error@*:* {{'std::allocator' can only allocate non-const object types}}
-std::allocator<volatile int> A2; // expected-error@*:* {{'std::allocator' can only allocate non-volatile object types}}
-std::allocator<int&>
-    A3; // expected-error@*:*{{'std::allocator' can only allocate object types; references are not objects}}
-std::allocator<int&&>
-    A4; // expected-error@*:*{{'std::allocator' can only allocate object types; references are not objects}}
-std::allocator<int()>
-    A5; // expected-error@*:*{{'std::allocator' can only allocate object types; functions are not objects (consider using a function pointer)}}
-std::allocator<int(int)>
-    A6; // expected-error@*:*{{'std::allocator' can only allocate object types; functions are not objects (consider using a function pointer)}}
-std::allocator<int(int, int)>
-    A7; // expected-error@*:*{{'std::allocator' can only allocate object types; functions are not objects (consider using a function pointer)}}
+std::allocator<const int> A1;
+// expected-error@*:* {{'std::allocator' cannot allocate const types}}
+
+std::allocator<volatile int> A2;
+// expected-error@*:* {{'std::allocator' cannot allocate volatile types}}
+
+std::allocator<int&> A3;
+std::allocator<int&&> A4;
+// expected-error@*:* 2 {{'std::allocator' cannot allocate references}}
+
+std::allocator<int()> A5;
+std::allocator<int(int)> A6;
+std::allocator<int(int, int)> A7;
+// expected-error@*:* 3 {{'std::allocator' cannot allocate functions}}

@@ -10,20 +10,24 @@
 
 #include <set>
 
-std::multiset<const int> C1;    // expected-error@*:* {{'std::multiset' can only hold non-const types}}
-std::multiset<volatile int> C2; // expected-error@*:* {{'std::multiset' can only hold non-volatile types}}
-std::multiset<int&> C3;  // expected-error@*:*{{'std::multiset' can only hold object types; references are not objects}}
-std::multiset<int&&> C4; // expected-error@*:*{{'std::multiset' can only hold object types; references are not objects}}
-std::multiset<int()>
-    C5; // expected-error@*:*{{'std::multiset' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::multiset<int(int)>
-    C6; // expected-error@*:*{{'std::multiset' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::multiset<int(int, int)>
-    C7; // expected-error@*:*{{'std::multiset' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::multiset<int (&)()>
-    C8; // expected-error@*:*{{'std::multiset' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::multiset<int (&)(int)>
-    C9; // expected-error@*:*{{'std::multiset' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::multiset<int (&)(int, int)>
-    C10; // expected-error@*:*{{'std::multiset' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::multiset<void> C11; // expected-error@*:*{{'std::multiset' can only hold object types; 'void' is not an object}}
+std::multiset<const int> C1;
+// expected-error@*:*{{'std::multiset' cannot hold const types}}
+
+std::multiset<volatile int> C2;
+// expected-error@*:*{{'std::multiset' cannot hold volatile types}}
+
+std::multiset<int&> C3;
+std::multiset<int&&> C4;
+// expected-error@*:* 2 {{'std::multiset' cannot hold references}}
+
+std::multiset<int()> C5;
+std::multiset<int(int)> C6;
+std::multiset<int(int, int)> C7;
+// expected-error@*:* 3 {{'std::multiset' cannot hold functions}}
+
+std::multiset<void> C8;
+// expected-error@*:*{{'std::multiset' cannot hold 'void'}}
+
+std::multiset<int[]> C9;
+std::multiset<int[2]> C10;
+// expected-error@*:* 2 {{'std::multiset' cannot hold C arrays}}

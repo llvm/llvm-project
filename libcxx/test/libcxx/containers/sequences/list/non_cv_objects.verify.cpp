@@ -10,20 +10,24 @@
 
 #include <list>
 
-std::list<const int> C1;    // expected-error@*:* {{'std::list' can only hold non-const types}}
-std::list<volatile int> C2; // expected-error@*:* {{'std::list' can only hold non-volatile types}}
-std::list<int&> C3;         // expected-error@*:*{{'std::list' can only hold object types; references are not objects}}
-std::list<int&&> C4;        // expected-error@*:*{{'std::list' can only hold object types; references are not objects}}
-std::list<int()>
-    C5; // expected-error@*:*{{'std::list' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::list<int(int)>
-    C6; // expected-error@*:*{{'std::list' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::list<int(int, int)>
-    C7; // expected-error@*:*{{'std::list' can only hold object types; functions are not objects (consider using a function pointer)}}
-std::list<int (&)()>
-    C8; // expected-error@*:*{{'std::list' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::list<int (&)(int)>
-    C9; // expected-error@*:*{{'std::list' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::list<int (&)(int, int)>
-    C10; // expected-error@*:*{{'std::list' can only hold object types; function references are not objects (consider using a function pointer)}}
-std::list<void> C11; // expected-error@*:*{{'std::list' can only hold object types; 'void' is not an object}}
+std::list<const int> C1;
+// expected-error@*:*{{'std::list' cannot hold const types}}
+
+std::list<volatile int> C2;
+// expected-error@*:*{{'std::list' cannot hold volatile types}}
+
+std::list<int&> C3;
+std::list<int&&> C4;
+// expected-error@*:* 2 {{'std::list' cannot hold references}}
+
+std::list<int()> C5;
+std::list<int(int)> C6;
+std::list<int(int, int)> C7;
+// expected-error@*:* 3 {{'std::list' cannot hold functions}}
+
+std::list<void> C8;
+// expected-error@*:*{{'std::list' cannot hold 'void'}}
+
+std::list<int[]> C9;
+std::list<int[2]> C10;
+// expected-error@*:* 2 {{'std::list' cannot hold C arrays}}

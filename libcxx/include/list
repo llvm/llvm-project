@@ -225,6 +225,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/is_array.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_function.h>
@@ -788,12 +789,12 @@ public:
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
-  static_assert(!is_const<_Tp>::value, "'std::list' can only hold non-const types");
-  static_assert(!is_volatile<_Tp>::value, "'std::list' can only hold non-volatile types");
-  static_assert(!is_reference<_Tp>::value || !is_function<typename remove_reference<_Tp>::type>::value, "'std::list' can only hold object types; function references are not objects (consider using a function pointer)");
-  static_assert(!is_reference<_Tp>::value, "'std::list' can only hold object types; references are not objects");
-  static_assert(!is_function<_Tp>::value, "'std::list' can only hold object types; functions are not objects (consider using a function pointer)");
-  static_assert(!is_void<_Tp>::value, "'std::list' can only hold object types; 'void' is not an object");
+  static_assert(!is_const<_Tp>::value, "'std::list' cannot hold const types");
+  static_assert(!is_volatile<_Tp>::value, "'std::list' cannot hold volatile types");
+  static_assert(!is_reference<_Tp>::value, "'std::list' cannot hold references");
+  static_assert(!is_function<_Tp>::value, "'std::list' cannot hold functions");
+  static_assert(!is_void<_Tp>::value, "'std::list' cannot hold 'void'");
+  static_assert(!is_array<_Tp>::value, "'std::list' cannot hold C arrays");
 
   typedef __list_imp<_Tp, _Alloc> base;
   typedef typename base::__node_type __node_type;
