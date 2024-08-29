@@ -123,20 +123,24 @@ public:
 };
 
 static std::optional<llvm::SmallVector<MachineInstr *>>
-moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
+moveInstructionsOutOfTheWayIfWeCan(MachineInstr *DstInstr, MachineInstr *SrcInstr, ScheduleDAGMCP &DG) {
+  SUnit *Dst;
+  //SUnit *Src;
+
+  MachineBasicBlock *MBB = SrcInstr->getParent();
+  int SectionSize =
+      std::distance(SrcInstr->getIterator(), DstInstr->getIterator());
+
+  DG.enterRegion(MBB, (SrcInstr->getIterator()), ++(DstInstr->getIterator()), SectionSize+1);
+  DG.buildSchedGraph(nullptr);
+  Dst = DG.getSUnit(DstInstr);
   unsigned MaxNumberOfNodesToBeProcessed = 10;
-  MachineInstr *DstInstr = Dst->getInstr();
-  MachineInstr *SrcInstr = Src->getInstr();
   if (DstInstr == nullptr || SrcInstr == nullptr)
     return {};
 
-  MachineBasicBlock *MBB = SrcInstr->getParent();
   assert("This function only operates on a basic block level." &&
          MBB == DstInstr->getParent());
 
-  
-  int SectionSize =
-      std::distance(SrcInstr->getIterator(), DstInstr->getIterator());
 
   assert(SectionSize > 0 &&
          "The copy source must precede the copy destination.");
@@ -205,9 +209,13 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   while (!Edges.empty()) {
     const auto *Current = Edges.front();
     Edges.pop();
-    if (!ProcessSNodeChildren(Current, false))
+    if (!ProcessSNodeChildren(Current, false)) {
+      DG.exitRegion();
       return {};
+    }
   }
+
+  DG.exitRegion();
 
   // If all of the dependencies were deemed valid during the BFS then we
   // are moving them before the copy source here keeping their relative
@@ -1207,11 +1215,9 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
       LLVM_DEBUG(
           dbgs()
           << "MCP: Found potential backward copy that has dependency.\n");
-      SUnit *DstSUnit = DG->getSUnit(Copy);
-      SUnit *SrcSUnit = DG->getSUnit(&MI);
 
       InstructionsToMove =
-          moveInstructionsOutOfTheWayIfWeCan(DstSUnit, SrcSUnit);
+          moveInstructionsOutOfTheWayIfWeCan(Copy, &MI, *DG);
       if (!InstructionsToMove)
         continue;
     }
@@ -1256,8 +1262,6 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     MachineBasicBlock &MBB, ScheduleDAGMCP *DG) {
   if (DG) {
     DG->startBlock(&MBB);
-    DG->enterRegion(&MBB, MBB.begin(), MBB.end(), MBB.size());
-    DG->buildSchedGraph(nullptr);
     // DG.viewGraph();
   }
  
@@ -1342,7 +1346,6 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     ++NumDeletes;
   }
   if (DG) {
-    DG->exitRegion();
     DG->finishBlock();
     // QUESTION: Does it makes sense to keep the kill flags here?
     //           On the other parts of this pass we juts throw out
