@@ -1262,7 +1262,8 @@ void CIRGenFunction::pushDestroyAndDeferDeactivation(
 void CIRGenFunction::pushDestroyAndDeferDeactivation(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray) {
-  assert(!MissingFeatures::flagLoad());
+  mlir::Operation *flag =
+      builder.create<mlir::cir::UnreachableOp>(builder.getUnknownLoc());
   pushDestroy(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
-  DeferredDeactivationCleanupStack.push_back({EHStack.stable_begin(), nullptr});
+  DeferredDeactivationCleanupStack.push_back({EHStack.stable_begin(), flag});
 }

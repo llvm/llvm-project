@@ -389,6 +389,36 @@ public:
   };
   llvm::SmallVector<DeferredDeactivateCleanup> DeferredDeactivationCleanupStack;
 
+  // Enters a new scope for capturing cleanups which are deferred to be
+  // deactivated, all of which will be deactivated once the scope is exited.
+  struct CleanupDeactivationScope {
+    CIRGenFunction &CGF;
+    size_t OldDeactivateCleanupStackSize;
+    bool Deactivated;
+    CleanupDeactivationScope(CIRGenFunction &CGF)
+        : CGF(CGF), OldDeactivateCleanupStackSize(
+                        CGF.DeferredDeactivationCleanupStack.size()),
+          Deactivated(false) {}
+
+    void ForceDeactivate() {
+      assert(!Deactivated && "Deactivating already deactivated scope");
+      auto &Stack = CGF.DeferredDeactivationCleanupStack;
+      for (size_t I = Stack.size(); I > OldDeactivateCleanupStackSize; I--) {
+        CGF.DeactivateCleanupBlock(Stack[I - 1].Cleanup,
+                                   Stack[I - 1].DominatingIP);
+        Stack[I - 1].DominatingIP->erase();
+      }
+      Stack.resize(OldDeactivateCleanupStackSize);
+      Deactivated = true;
+    }
+
+    ~CleanupDeactivationScope() {
+      if (Deactivated)
+        return;
+      ForceDeactivate();
+    }
+  };
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> NRVOFlags;
@@ -535,6 +565,7 @@ public:
 
   CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
                  bool suppressNewContext = false);
+  ~CIRGenFunction();
 
   CIRGenTypes &getTypes() const { return CGM.getTypes(); }
 
