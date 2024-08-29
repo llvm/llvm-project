@@ -966,8 +966,8 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 // VCIX
 //
 // In principle we don't know the latency of any VCIX instructions. But instead
-// of taking the default of 1, which can lead to issues [1], we assume that they
-// have a fairly high latency.
+// of taking the default of 1, which can lead to issues [1], we use the default
+// latency provided by `SiFive7GetCyclesDefault`.
 //
 // [1] https://github.com/llvm/llvm-project/issues/83391
 foreach mx = SchedMxList in {
