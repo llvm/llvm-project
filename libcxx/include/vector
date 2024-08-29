@@ -404,8 +404,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  typedef __bounded_iter<__wrap_iter<pointer>> iterator;
-  typedef __bounded_iter<__wrap_iter<const_pointer>> const_iterator;
+  typedef __bounded_iter<__wrap_iter<pointer> > iterator;
+  typedef __bounded_iter<__wrap_iter<const_pointer> > const_iterator;
 #else
   typedef __wrap_iter<pointer> iterator;
   typedef __wrap_iter<const_pointer> const_iterator;

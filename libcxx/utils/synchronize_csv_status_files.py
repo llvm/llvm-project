@@ -8,6 +8,7 @@
 # ===----------------------------------------------------------------------===##
 
 from typing import List, Dict, Tuple, Optional
+import copy
 import csv
 import itertools
 import json
@@ -18,6 +19,25 @@ import subprocess
 
 # Number of the 'Libc++ Standards Conformance' project on Github
 LIBCXX_CONFORMANCE_PROJECT = '31'
+
+def extract_between_markers(text: str, begin_marker: str, end_marker: str) -> Optional[str]:
+    """
+    Given a string containing special markers, extract everything located beetwen these markers.
+
+    If the beginning marker is not found, None is returned. If the beginning marker is found but
+    there is no end marker, it is an error (this is done to avoid silently accepting inputs that
+    are erroneous by mistake).
+    """
+    start = text.find(begin_marker)
+    if start == -1:
+        return None
+
+    start += len(begin_marker) # skip the marker itself
+    end = text.find(end_marker, start)
+    if end == -1:
+        raise ArgumentError(f"Could not find end marker {end_marker} in: {text[start:]}")
+
+    return text[start:end]
 
 class PaperStatus:
     TODO = 1
@@ -60,19 +80,16 @@ class PaperStatus:
         - '|Partial|'
         - '|Complete|'
         - '|Nothing To Do|'
-
-        Note that since we sometimes add additional notes after the status, we only check that the entry
-        starts with the above patterns.
         """
         if entry == '':
             return PaperStatus(PaperStatus.TODO, entry)
-        elif entry.startswith('|In Progress|'):
+        elif entry == '|In Progress|':
             return PaperStatus(PaperStatus.IN_PROGRESS, entry)
-        elif entry.startswith('|Partial|'):
+        elif entry == '|Partial|':
             return PaperStatus(PaperStatus.PARTIAL, entry)
-        elif entry.startswith('|Complete|'):
+        elif entry == '|Complete|':
             return PaperStatus(PaperStatus.DONE, entry)
-        elif entry.startswith('|Nothing To Do|'):
+        elif entry == '|Nothing To Do|':
             return PaperStatus(PaperStatus.NOTHING_TO_DO, entry)
         else:
             raise RuntimeError(f'Unexpected CSV entry for status: {entry}')
@@ -140,10 +157,10 @@ class PaperInfo:
     First version of LLVM in which this paper/issue was resolved.
     """
 
-    labels: Optional[List[str]]
+    notes: Optional[str]
     """
-    List of labels to associate to the issue in the status-tracking table. Supported labels are
-    'format', 'ranges', 'spaceship', 'flat_containers', 'concurrency TS' and 'DR'.
+    Optional plain text string representing notes to associate to the paper.
+    This is used to populate the "Notes" column in the CSV status pages.
     """
 
     original: Optional[object]
@@ -156,14 +173,14 @@ class PaperInfo:
                        status: PaperStatus,
                        meeting: Optional[str] = None,
                        first_released_version: Optional[str] = None,
-                       labels: Optional[List[str]] = None,
+                       notes: Optional[str] = None,
                        original: Optional[object] = None):
         self.paper_number = paper_number
         self.paper_name = paper_name
         self.status = status
         self.meeting = meeting
         self.first_released_version = first_released_version
-        self.labels = labels
+        self.notes = notes
         self.original = original
 
     def for_printing(self) -> Tuple[str, str, str, str, str, str]:
@@ -173,7 +190,7 @@ class PaperInfo:
             self.meeting if self.meeting is not None else '',
             self.status.to_csv_entry(),
             self.first_released_version if self.first_released_version is not None else '',
-            ' '.join(f'|{label}|' for label in self.labels) if self.labels is not None else '',
+            self.notes if self.notes is not None else '',
         )
 
     def __repr__(self) -> str:
@@ -195,7 +212,7 @@ class PaperInfo:
             status=PaperStatus.from_csv_entry(row[3]),
             meeting=row[2] or None,
             first_released_version=row[4] or None,
-            labels=[l.strip('|') for l in row[5].split(' ') if l] or None,
+            notes=row[5] or None,
             original=row,
         )
 
@@ -210,9 +227,10 @@ class PaperInfo:
             raise RuntimeError(f"Issue doesn't have a title that we know how to parse: {issue}")
         paper = match.group(1)
 
-        # Handle labels
-        valid_labels = ('format', 'ranges', 'spaceship', 'flat_containers', 'concurrency TS', 'DR')
-        labels = [label for label in issue['labels'] if label in valid_labels]
+        # Extract any notes from the Github issue and populate the RST notes with them
+        issue_description = issue['content']['body']
+        notes = extract_between_markers(issue_description, 'BEGIN-RST-NOTES', 'END-RST-NOTES')
+        notes = notes.strip() if notes is not None else notes
 
         return PaperInfo(
             paper_number=paper,
@@ -220,9 +238,33 @@ class PaperInfo:
             status=PaperStatus.from_github_issue(issue),
             meeting=issue.get('meeting Voted', None),
             first_released_version=None, # TODO
-            labels=labels if labels else None,
+            notes=notes,
             original=issue,
         )
+
+def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
+    """
+    Merge a paper coming from a CSV row with a corresponding Github-tracked paper.
+
+    If the CSV row has a status that is "less advanced" than the Github issue, simply update the CSV
+    row with the newer status. Otherwise, report an error if they have a different status because
+    something must be wrong.
+
+    In case we don't update the CSV row's status, we still take any updated notes coming
+    from the Github issue.
+    """
+    if paper.status < gh.status:
+        return gh
+    elif paper.status != gh.status:
+        print(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
+        return paper
+    else:
+        # Retain the notes from the Github issue, if any
+        if gh.notes is not None:
+            cp = copy.deepcopy(paper)
+            cp.notes = gh.notes
+            return cp
+        return paper
 
 def load_csv(file: pathlib.Path) -> List[Tuple]:
     rows = []
@@ -275,17 +317,7 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
             results.append(row)
             continue
 
-        gh = tracking[0]
-
-        # If the CSV row has a status that is "less advanced" than the Github issue, simply update the CSV
-        # row with the newer status. Otherwise, report an error if they have a different status because
-        # something must be wrong.
-        if paper.status < gh.status:
-            results.append(gh.for_printing())
-            continue
-        elif paper.status != gh.status:
-            print(f"We found a CSV row and a Github issue with different statuses:\nrow: {row}\Github issue: {gh}")
-        results.append(row)
+        results.append(merge(paper, tracking[0]).for_printing())
 
     return results
 

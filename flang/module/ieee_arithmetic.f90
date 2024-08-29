@@ -161,6 +161,8 @@ module ieee_arithmetic
   G(1) G(2) G(4) G(8) G(16)
 #define SPECIFICS_L(G) \
   G(1) G(2) G(4) G(8)
+
+#if FLANG_SUPPORT_R16
 #if __x86_64__
 #define SPECIFICS_R(G) \
   G(2) G(3) G(4) G(8) G(10) G(16)
@@ -168,12 +170,24 @@ module ieee_arithmetic
 #define SPECIFICS_R(G) \
   G(2) G(3) G(4) G(8) G(16)
 #endif
+#else
+#if __x86_64__
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8) G(10)
+#else
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8)
+#endif
+#endif
+
 #define SPECIFICS_II(G) \
   G(1,1) G(1,2) G(1,4) G(1,8) G(1,16) \
   G(2,1) G(2,2) G(2,4) G(2,8) G(2,16) \
   G(4,1) G(4,2) G(4,4) G(4,8) G(4,16) \
   G(8,1) G(8,2) G(8,4) G(8,8) G(8,16) \
   G(16,1) G(16,2) G(16,4) G(16,8) G(16,16)
+
+#if FLANG_SUPPORT_R16
 #if __x86_64__
 #define SPECIFICS_RI(G) \
   G(2,1) G(2,2) G(2,4) G(2,8) G(2,16) \
@@ -190,7 +204,24 @@ module ieee_arithmetic
   G(8,1) G(8,2) G(8,4) G(8,8) G(8,16) \
   G(16,1) G(16,2) G(16,4) G(16,8) G(16,16)
 #endif
+#else
+#if __x86_64__
+#define SPECIFICS_RI(G) \
+  G(2,1) G(2,2) G(2,4) G(2,8) \
+  G(3,1) G(3,2) G(3,4) G(3,8) \
+  G(4,1) G(4,2) G(4,4) G(4,8) \
+  G(8,1) G(8,2) G(8,4) G(8,8) \
+  G(10,1) G(10,2) G(10,4) G(10,8)
+#else
+#define SPECIFICS_RI(G) \
+  G(2,1) G(2,2) G(2,4) G(2,8) \
+  G(3,1) G(3,2) G(3,4) G(3,8) \
+  G(4,1) G(4,2) G(4,4) G(4,8) \
+  G(8,1) G(8,2) G(8,4) G(8,8)
+#endif
+#endif
 
+#if FLANG_SUPPORT_R16
 #if __x86_64__
 #define SPECIFICS_RR(G) \
   G(2,2) G(2,3) G(2,4) G(2,8) G(2,10) G(2,16) \
@@ -206,6 +237,22 @@ module ieee_arithmetic
   G(4,2) G(4,3) G(4,4) G(4,8) G(4,16) \
   G(8,2) G(8,3) G(8,4) G(8,8) G(8,16) \
   G(16,2) G(16,3) G(16,4) G(16,8) G(16,16)
+#endif
+#else
+#if __x86_64__
+#define SPECIFICS_RR(G) \
+  G(2,2) G(2,3) G(2,4) G(2,8) G(2,10) \
+  G(3,2) G(3,3) G(3,4) G(3,8) G(3,10) \
+  G(4,2) G(4,3) G(4,4) G(4,8) G(4,10) \
+  G(8,2) G(8,3) G(8,4) G(8,8) G(8,10) \
+  G(10,2) G(10,3) G(10,4) G(10,8) G(10,10)
+#else
+#define SPECIFICS_RR(G) \
+  G(2,2) G(2,3) G(2,4) G(2,8) \
+  G(3,2) G(3,3) G(3,4) G(3,8) \
+  G(4,2) G(4,3) G(4,4) G(4,8) \
+  G(8,2) G(8,3) G(8,4) G(8,8)
+#endif
 #endif
 
 #define IEEE_CLASS_R(XKIND) \
@@ -462,8 +509,10 @@ module ieee_arithmetic
   interface ieee_real
     SPECIFICS_I(IEEE_REAL_I)
     SPECIFICS_R(IEEE_REAL_R)
+#if FLANG_SUPPORT_R16
     SPECIFICS_II(IEEE_REAL_II)
     SPECIFICS_RI(IEEE_REAL_RI)
+#endif
   end interface ieee_real
   public :: ieee_real
 #undef IEEE_REAL_I

@@ -1479,8 +1479,8 @@ bool InductionDescriptor::isInductionPHI(
     InductionDescriptor &D, const SCEV *Expr,
     SmallVectorImpl<Instruction *> *CastsToIgnore) {
   Type *PhiTy = Phi->getType();
-  // We only handle integer and pointer inductions variables.
-  if (!PhiTy->isIntegerTy() && !PhiTy->isPointerTy())
+  // isSCEVable returns true for integer and pointer types.
+  if (!SE->isSCEVable(PhiTy))
     return false;
 
   // Check that the PHI is consecutive.
