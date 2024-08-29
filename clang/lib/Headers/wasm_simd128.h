@@ -1891,14 +1891,14 @@ static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_splat(float __a) {
 static __inline__ float __FP16_FN_ATTRS wasm_f16x8_extract_lane(v128_t __a,
                                                                 int __i)
     __REQUIRE_CONSTANT(__i) {
-  return __builtin_wasm_extract_lane_f16x8(__a, __i);
+  return __builtin_wasm_extract_lane_f16x8((__f16x8)__a, __i);
 }
 
 static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_replace_lane(v128_t __a,
                                                                  int __i,
                                                                  float __b)
     __REQUIRE_CONSTANT(__i) {
-  return (v128_t)__builtin_wasm_replace_lane_f16x8(__a, __i, __b);
+  return (v128_t)__builtin_wasm_replace_lane_f16x8((__f16x8)__a, __i, __b);
 }
 
 static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_abs(v128_t __a) {
