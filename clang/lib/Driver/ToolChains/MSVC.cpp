@@ -427,7 +427,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
-      RocmInstallation(D, Triple, Args) {
+      RocmInstallation(D, Triple, Args), SYCLInstallation(D) {
   getProgramPaths().push_back(getDriver().Dir);
 
   std::optional<llvm::StringRef> VCToolsDir, VCToolsVersion;
@@ -504,6 +504,11 @@ void MSVCToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                       ArgStringList &CC1Args) const {
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
+void MSVCToolChain::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+                                       ArgStringList &CC1Args) const {
+  SYCLInstallation.AddSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,

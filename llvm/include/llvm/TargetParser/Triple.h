@@ -831,6 +831,13 @@ public:
            getArch() == Triple::spirv;
   }
 
+  // Tests whether the target is SPIR-V or SPIR. Currently, we use spir-based
+  // target triples to represent JIT compilation targets for SYCL. We will
+  // transition to using spir-v based target triples to represent JIT
+  // compilation targets for SYCL very soon. This helper function is used
+  // (instead of isSPIR) to ease that transition.
+  bool isSPIROrSPIRV() const { return isSPIR() || isSPIRV(); }
+
   /// Tests whether the target is SPIR-V Logical
   bool isSPIRVLogical() const {
     return getArch() == Triple::spirv;
