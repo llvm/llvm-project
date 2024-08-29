@@ -10198,6 +10198,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             // If a group uses mask in order, the shufflevector can be
             // eliminated by instcombine. Then the cost is 0.
             bool IsIdentity = true;
+            assert(isa<ShuffleVectorInst>(VL.front()) &&
+                   "Not supported shufflevector usage.");
             auto *SV = cast<ShuffleVectorInst>(VL.front());
             unsigned SVNumElements =
                 cast<FixedVectorType>(SV->getOperand(0)->getType())
@@ -10207,9 +10209,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               ArrayRef<Value *> Group = VL.slice(I, GroupSize);
               int NextIndex = 0;
               if (!all_of(Group, [&](Value *V) {
+                    assert(isa<ShuffleVectorInst>(V) &&
+                           "Not supported shufflevector usage.");
                     auto *SV = cast<ShuffleVectorInst>(V);
                     int Index;
-                    SV->isExtractSubvectorMask(Index);
+                    bool isExtractSubvectorMask =
+                        SV->isExtractSubvectorMask(Index);
+                    assert(isExtractSubvectorMask &&
+                           "Not supported shufflevector usage.");
                     if (NextIndex != Index)
                       return false;
                     NextIndex += SV->getShuffleMask().size();
