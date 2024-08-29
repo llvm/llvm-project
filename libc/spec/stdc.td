@@ -355,6 +355,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "strcoll_l",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
               "strncmp",
               RetValSpec<IntType>,
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
@@ -365,6 +370,14 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<CharRestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
+              "strxfrm_l",
+              RetValSpec<SizeTType>,
+              [ArgSpec<CharRestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<SizeTType>,
+               ArgSpec<LocaleT>]
           >,
           FunctionSpec<
               "strchr",
