@@ -388,7 +388,7 @@ static void handleFullArchString(StringRef FullArchStr,
       FullArchStr, /* EnableExperimentalExtension */ true);
   if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
-    Features.push_back("+" + FullArchStr.str());
+    Features.push_back(FullArchStr.str());
   } else {
     // Append a full list of features, including any negative extensions so that
     // we override the CPU's features.
