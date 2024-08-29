@@ -275,7 +275,6 @@ struct SCFFuseConsumerOfSliceResult {
       *tiledAndFusedConsumerOperand; // Tiled and fused consumer's operand.
   SmallVector<Operation *> tiledOps;
 };
-
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
 tileAndFuseConsumerOfSlice(RewriterBase &rewriter, Operation *candidateSliceOp);
 
