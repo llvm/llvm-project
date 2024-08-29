@@ -36,7 +36,7 @@ define <vscale x 8 x half> @famin_u_f16(<vscale x 8 x i1> %pg, <vscale x 8 x hal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    famin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-    %r = call <vscale x 8 x half> @llvm.aarch64.sve.famin.u.nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+    %r = call <vscale x 8 x half> @llvm.aarch64.sve.famin.u.nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %b, <vscale x 8 x half> %a)
     ret <vscale x 8 x half> %r
 }
 
@@ -45,7 +45,7 @@ define <vscale x 4 x float> @famin_u_f32(<vscale x 4 x i1> %pg, <vscale x 4 x fl
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    famin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-    %r = call <vscale x 4 x float> @llvm.aarch64.sve.famin.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
+    %r = call <vscale x 4 x float> @llvm.aarch64.sve.famin.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %b, <vscale x 4 x float> %a)
     ret <vscale x 4 x float> %r
 }
 
@@ -54,7 +54,7 @@ define <vscale x 2 x double> @famin_u_f64(<vscale x 2 x i1> %pg, <vscale x 2 x d
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    famin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-    %r = call <vscale x 2 x double> @llvm.aarch64.sve.famin.u.nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
+    %r = call <vscale x 2 x double> @llvm.aarch64.sve.famin.u.nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %b, <vscale x 2 x double> %a)
     ret <vscale x 2 x double> %r
 }
 
@@ -90,7 +90,7 @@ define <vscale x 8 x half> @famax_u_f16(<vscale x 8 x i1> %pg, <vscale x 8 x hal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    famax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-    %r = call <vscale x 8 x half> @llvm.aarch64.sve.famax.u.nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+    %r = call <vscale x 8 x half> @llvm.aarch64.sve.famax.u.nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %b, <vscale x 8 x half> %a)
     ret <vscale x 8 x half> %r
 }
 
@@ -99,7 +99,7 @@ define <vscale x 4 x float> @famax_u_f32(<vscale x 4 x i1> %pg, <vscale x 4 x fl
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    famax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-    %r = call <vscale x 4 x float> @llvm.aarch64.sve.famax.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
+    %r = call <vscale x 4 x float> @llvm.aarch64.sve.famax.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %b, <vscale x 4 x float> %a)
     ret <vscale x 4 x float> %r
 }
 
@@ -108,7 +108,7 @@ define <vscale x 2 x double> @famax_u_f64(<vscale x 2 x i1> %pg, <vscale x 2 x d
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    famax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-    %r = call <vscale x 2 x double> @llvm.aarch64.sve.famax.u.nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
+    %r = call <vscale x 2 x double> @llvm.aarch64.sve.famax.u.nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %b, <vscale x 2 x double> %a)
     ret <vscale x 2 x double> %r
 }
 
