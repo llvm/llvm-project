@@ -1699,6 +1699,11 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
 }
 
 QualType SemaHLSL::getInoutParameterType(QualType Ty) {
+  // If HLSL gains support for pointers and/or references, all the cites that
+  // use this will need to be updated with semantic checking to produce errors
+  // for pointers/references.
+  assert(!(Ty.isReferenceType() || Ty.isPointerType()) &&
+         "Pointer and reference types cannot be inout or out parameters");
   Ty = SemaRef.getASTContext().getLValueReferenceType(Ty);
   Ty.addRestrict();
   return Ty;
