@@ -31,3 +31,10 @@ std::list<void> C8;
 std::list<int[]> C9;
 std::list<int[2]> C10;
 // expected-error@*:* 2 {{'std::list' cannot hold C arrays}}
+
+// Spurious errors below
+
+// expected-error@*:* 7 {{'std::allocator'}}
+// expected-error@*:* 3 {{multiple overloads of}}
+// expected-error@*:* 14 {{cannot form a reference to 'void'}}
+// expected-error@*:* 144 {{no type named}}

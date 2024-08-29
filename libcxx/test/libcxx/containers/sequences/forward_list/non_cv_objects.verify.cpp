@@ -31,3 +31,10 @@ std::forward_list<void> C8;
 std::forward_list<int[]> C9;
 std::forward_list<int[2]> C10;
 // expected-error@*:* 2 {{'std::forward_list' cannot hold C arrays}}
+
+// Spurious errors below
+
+// expected-error@*:* 7 {{'std::allocator'}}
+// expected-error@*:* 2 {{multiple overloads of}}
+// expected-error@*:* 12 {{cannot form a reference to 'void'}}
+// expected-error@*:* 84 {{no type named}}
