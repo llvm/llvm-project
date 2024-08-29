@@ -7,33 +7,17 @@ define half @test_atomicrmw_fadd_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_f16_seq_cst_align2:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    fcvt s1, h0
-; NOLSE-NEXT:    ldr h0, [x0]
-; NOLSE-NEXT:    b .LBB0_2
 ; NOLSE-NEXT:  .LBB0_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; NOLSE-NEXT:    fmov s0, w10
-; NOLSE-NEXT:    cmp w10, w9, uxth
-; NOLSE-NEXT:    b.eq .LBB0_5
-; NOLSE-NEXT:  .LBB0_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB0_3 Depth 2
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxrh w8, [x0]
+; NOLSE-NEXT:    fmov s0, w8
 ; NOLSE-NEXT:    fcvt s2, h0
-; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:    fadd s2, s2, s1
 ; NOLSE-NEXT:    fcvt h2, s2
 ; NOLSE-NEXT:    fmov w8, s2
-; NOLSE-NEXT:  .LBB0_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB0_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxrh w10, [x0]
-; NOLSE-NEXT:    cmp w10, w9, uxth
-; NOLSE-NEXT:    b.ne .LBB0_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB0_3 Depth=2
-; NOLSE-NEXT:    stlxrh wzr, w8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB0_3
-; NOLSE-NEXT:    b .LBB0_1
-; NOLSE-NEXT:  .LBB0_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxrh w9, w8, [x0]
+; NOLSE-NEXT:    cbnz w9, .LBB0_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
@@ -108,33 +92,17 @@ define half @test_atomicrmw_fadd_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_f16_seq_cst_align4:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    fcvt s1, h0
-; NOLSE-NEXT:    ldr h0, [x0]
-; NOLSE-NEXT:    b .LBB1_2
 ; NOLSE-NEXT:  .LBB1_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; NOLSE-NEXT:    fmov s0, w10
-; NOLSE-NEXT:    cmp w10, w9, uxth
-; NOLSE-NEXT:    b.eq .LBB1_5
-; NOLSE-NEXT:  .LBB1_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB1_3 Depth 2
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxrh w8, [x0]
+; NOLSE-NEXT:    fmov s0, w8
 ; NOLSE-NEXT:    fcvt s2, h0
-; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:    fadd s2, s2, s1
 ; NOLSE-NEXT:    fcvt h2, s2
 ; NOLSE-NEXT:    fmov w8, s2
-; NOLSE-NEXT:  .LBB1_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB1_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxrh w10, [x0]
-; NOLSE-NEXT:    cmp w10, w9, uxth
-; NOLSE-NEXT:    b.ne .LBB1_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB1_3 Depth=2
-; NOLSE-NEXT:    stlxrh wzr, w8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB1_3
-; NOLSE-NEXT:    b .LBB1_1
-; NOLSE-NEXT:  .LBB1_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxrh w9, w8, [x0]
+; NOLSE-NEXT:    cbnz w9, .LBB1_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
@@ -211,19 +179,12 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
-; NOLSE-NEXT:    ldr h0, [x0]
 ; NOLSE-NEXT:    lsl w9, w9, #16
 ; NOLSE-NEXT:    fmov s1, w9
-; NOLSE-NEXT:    b .LBB2_2
 ; NOLSE-NEXT:  .LBB2_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB2_2 Depth=1
-; NOLSE-NEXT:    fmov s0, w11
-; NOLSE-NEXT:    cmp w11, w9, uxth
-; NOLSE-NEXT:    b.eq .LBB2_5
-; NOLSE-NEXT:  .LBB2_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB2_3 Depth 2
-; NOLSE-NEXT:    fmov w9, s0
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxrh w9, [x0]
+; NOLSE-NEXT:    fmov s0, w9
 ; NOLSE-NEXT:    lsl w9, w9, #16
 ; NOLSE-NEXT:    fmov s2, w9
 ; NOLSE-NEXT:    fadd s2, s2, s1
@@ -232,21 +193,9 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    add w9, w9, w8
 ; NOLSE-NEXT:    add w9, w10, w9
 ; NOLSE-NEXT:    lsr w9, w9, #16
-; NOLSE-NEXT:    fmov s2, w9
-; NOLSE-NEXT:    fmov w9, s0
-; NOLSE-NEXT:    fmov w10, s2
-; NOLSE-NEXT:  .LBB2_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB2_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxrh w11, [x0]
-; NOLSE-NEXT:    cmp w11, w9, uxth
-; NOLSE-NEXT:    b.ne .LBB2_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB2_3 Depth=2
-; NOLSE-NEXT:    stlxrh wzr, w10, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB2_3
-; NOLSE-NEXT:    b .LBB2_1
-; NOLSE-NEXT:  .LBB2_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxrh w10, w9, [x0]
+; NOLSE-NEXT:    cbnz w10, .LBB2_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
@@ -325,19 +274,12 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
-; NOLSE-NEXT:    ldr h0, [x0]
 ; NOLSE-NEXT:    lsl w9, w9, #16
 ; NOLSE-NEXT:    fmov s1, w9
-; NOLSE-NEXT:    b .LBB3_2
 ; NOLSE-NEXT:  .LBB3_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB3_2 Depth=1
-; NOLSE-NEXT:    fmov s0, w11
-; NOLSE-NEXT:    cmp w11, w9, uxth
-; NOLSE-NEXT:    b.eq .LBB3_5
-; NOLSE-NEXT:  .LBB3_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB3_3 Depth 2
-; NOLSE-NEXT:    fmov w9, s0
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxrh w9, [x0]
+; NOLSE-NEXT:    fmov s0, w9
 ; NOLSE-NEXT:    lsl w9, w9, #16
 ; NOLSE-NEXT:    fmov s2, w9
 ; NOLSE-NEXT:    fadd s2, s2, s1
@@ -346,21 +288,9 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    add w9, w9, w8
 ; NOLSE-NEXT:    add w9, w10, w9
 ; NOLSE-NEXT:    lsr w9, w9, #16
-; NOLSE-NEXT:    fmov s2, w9
-; NOLSE-NEXT:    fmov w9, s0
-; NOLSE-NEXT:    fmov w10, s2
-; NOLSE-NEXT:  .LBB3_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB3_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxrh w11, [x0]
-; NOLSE-NEXT:    cmp w11, w9, uxth
-; NOLSE-NEXT:    b.ne .LBB3_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB3_3 Depth=2
-; NOLSE-NEXT:    stlxrh wzr, w10, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB3_3
-; NOLSE-NEXT:    b .LBB3_1
-; NOLSE-NEXT:  .LBB3_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxrh w10, w9, [x0]
+; NOLSE-NEXT:    cbnz w10, .LBB3_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
@@ -436,31 +366,15 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 define float @test_atomicrmw_fadd_f32_seq_cst_align4(ptr %ptr, float %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_f32_seq_cst_align4:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    ldr s1, [x0]
-; NOLSE-NEXT:    b .LBB4_2
 ; NOLSE-NEXT:  .LBB4_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB4_2 Depth=1
-; NOLSE-NEXT:    fmov s1, w10
-; NOLSE-NEXT:    cmp w10, w9
-; NOLSE-NEXT:    b.eq .LBB4_5
-; NOLSE-NEXT:  .LBB4_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB4_3 Depth 2
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxr w8, [x0]
+; NOLSE-NEXT:    fmov s1, w8
 ; NOLSE-NEXT:    fadd s2, s1, s0
-; NOLSE-NEXT:    fmov w9, s1
 ; NOLSE-NEXT:    fmov w8, s2
-; NOLSE-NEXT:  .LBB4_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB4_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxr w10, [x0]
-; NOLSE-NEXT:    cmp w10, w9
-; NOLSE-NEXT:    b.ne .LBB4_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB4_3 Depth=2
-; NOLSE-NEXT:    stlxr wzr, w8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB4_3
-; NOLSE-NEXT:    b .LBB4_1
-; NOLSE-NEXT:  .LBB4_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxr w9, w8, [x0]
+; NOLSE-NEXT:    cbnz w9, .LBB4_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    fmov s0, s1
 ; NOLSE-NEXT:    ret
 ;
@@ -523,31 +437,15 @@ define float @test_atomicrmw_fadd_f32_seq_cst_align4(ptr %ptr, float %value) #0 
 define double @test_atomicrmw_fadd_f32_seq_cst_align8(ptr %ptr, double %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_f32_seq_cst_align8:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    ldr d1, [x0]
-; NOLSE-NEXT:    b .LBB5_2
 ; NOLSE-NEXT:  .LBB5_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; NOLSE-NEXT:    fmov d1, x10
-; NOLSE-NEXT:    cmp x10, x9
-; NOLSE-NEXT:    b.eq .LBB5_5
-; NOLSE-NEXT:  .LBB5_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB5_3 Depth 2
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxr x8, [x0]
+; NOLSE-NEXT:    fmov d1, x8
 ; NOLSE-NEXT:    fadd d2, d1, d0
-; NOLSE-NEXT:    fmov x9, d1
 ; NOLSE-NEXT:    fmov x8, d2
-; NOLSE-NEXT:  .LBB5_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB5_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxr x10, [x0]
-; NOLSE-NEXT:    cmp x10, x9
-; NOLSE-NEXT:    b.ne .LBB5_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB5_3 Depth=2
-; NOLSE-NEXT:    stlxr wzr, x8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB5_3
-; NOLSE-NEXT:    b .LBB5_1
-; NOLSE-NEXT:  .LBB5_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxr w9, x8, [x0]
+; NOLSE-NEXT:    cbnz w9, .LBB5_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    fmov d0, d1
 ; NOLSE-NEXT:    ret
 ;
@@ -748,35 +646,19 @@ define fp128 @test_atomicrmw_fadd_fp128_seq_cst_align16(ptr %ptr, fp128 %value) 
 define <2 x half> @test_atomicrmw_fadd_v2f16_seq_cst_align4(ptr %ptr, <2 x half> %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_v2f16_seq_cst_align4:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    fcvtl v1.4s, v0.4h
-; NOLSE-NEXT:    ldr s0, [x0]
-; NOLSE-NEXT:    b .LBB7_2
+; NOLSE-NEXT:    fcvtl v0.4s, v0.4h
 ; NOLSE-NEXT:  .LBB7_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB7_2 Depth=1
-; NOLSE-NEXT:    fmov s0, w10
-; NOLSE-NEXT:    cmp w10, w9
-; NOLSE-NEXT:    b.eq .LBB7_5
-; NOLSE-NEXT:  .LBB7_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB7_3 Depth 2
-; NOLSE-NEXT:    fcvtl v2.4s, v0.4h
-; NOLSE-NEXT:    fmov w9, s0
-; NOLSE-NEXT:    fadd v2.4s, v2.4s, v1.4s
-; NOLSE-NEXT:    fcvtn v2.4h, v2.4s
-; NOLSE-NEXT:    fmov w8, s2
-; NOLSE-NEXT:  .LBB7_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB7_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxr w10, [x0]
-; NOLSE-NEXT:    cmp w10, w9
-; NOLSE-NEXT:    b.ne .LBB7_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB7_3 Depth=2
-; NOLSE-NEXT:    stlxr wzr, w8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB7_3
-; NOLSE-NEXT:    b .LBB7_1
-; NOLSE-NEXT:  .LBB7_5: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxr w8, [x0]
+; NOLSE-NEXT:    fmov s1, w8
+; NOLSE-NEXT:    fcvtl v1.4s, v1.4h
+; NOLSE-NEXT:    fadd v1.4s, v1.4s, v0.4s
+; NOLSE-NEXT:    fcvtn v1.4h, v1.4s
+; NOLSE-NEXT:    fmov w9, s1
+; NOLSE-NEXT:    stlxr w10, w9, [x0]
+; NOLSE-NEXT:    cbnz w10, .LBB7_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOLSE-NEXT:    fmov d0, x8
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fadd_v2f16_seq_cst_align4:
@@ -867,38 +749,22 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    movi v1.4s, #1
 ; NOLSE-NEXT:    movi v2.4s, #127, msl #8
-; NOLSE-NEXT:    shll v3.4s, v0.4h, #16
-; NOLSE-NEXT:    ldr s0, [x0]
-; NOLSE-NEXT:    b .LBB8_2
+; NOLSE-NEXT:    shll v0.4s, v0.4h, #16
 ; NOLSE-NEXT:  .LBB8_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB8_2 Depth=1
-; NOLSE-NEXT:    fmov s0, w10
-; NOLSE-NEXT:    cmp w10, w9
-; NOLSE-NEXT:    b.eq .LBB8_5
-; NOLSE-NEXT:  .LBB8_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB8_3 Depth 2
-; NOLSE-NEXT:    shll v4.4s, v0.4h, #16
-; NOLSE-NEXT:    fmov w9, s0
-; NOLSE-NEXT:    fadd v4.4s, v4.4s, v3.4s
-; NOLSE-NEXT:    ushr v5.4s, v4.4s, #16
-; NOLSE-NEXT:    and v5.16b, v5.16b, v1.16b
-; NOLSE-NEXT:    add v4.4s, v5.4s, v4.4s
-; NOLSE-NEXT:    addhn v4.4h, v4.4s, v2.4s
-; NOLSE-NEXT:    fmov w8, s4
-; NOLSE-NEXT:  .LBB8_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB8_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxr w10, [x0]
-; NOLSE-NEXT:    cmp w10, w9
-; NOLSE-NEXT:    b.ne .LBB8_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB8_3 Depth=2
-; NOLSE-NEXT:    stlxr wzr, w8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB8_3
-; NOLSE-NEXT:    b .LBB8_1
-; NOLSE-NEXT:  .LBB8_5: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxr w8, [x0]
+; NOLSE-NEXT:    fmov s3, w8
+; NOLSE-NEXT:    shll v3.4s, v3.4h, #16
+; NOLSE-NEXT:    fadd v3.4s, v3.4s, v0.4s
+; NOLSE-NEXT:    ushr v4.4s, v3.4s, #16
+; NOLSE-NEXT:    and v4.16b, v4.16b, v1.16b
+; NOLSE-NEXT:    add v3.4s, v4.4s, v3.4s
+; NOLSE-NEXT:    addhn v3.4h, v3.4s, v2.4s
+; NOLSE-NEXT:    fmov w9, s3
+; NOLSE-NEXT:    stlxr w10, w9, [x0]
+; NOLSE-NEXT:    cbnz w10, .LBB8_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOLSE-NEXT:    fmov d0, x8
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fadd_v2bf16_seq_cst_align4:
@@ -984,31 +850,15 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 define <2 x float> @test_atomicrmw_fadd_v2f32_seq_cst_align8(ptr %ptr, <2 x float> %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_v2f32_seq_cst_align8:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    ldr d1, [x0]
-; NOLSE-NEXT:    b .LBB9_2
 ; NOLSE-NEXT:  .LBB9_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB9_2 Depth=1
-; NOLSE-NEXT:    fmov d1, x10
-; NOLSE-NEXT:    cmp x10, x9
-; NOLSE-NEXT:    b.eq .LBB9_5
-; NOLSE-NEXT:  .LBB9_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB9_3 Depth 2
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxr x8, [x0]
+; NOLSE-NEXT:    fmov d1, x8
 ; NOLSE-NEXT:    fadd v2.2s, v1.2s, v0.2s
-; NOLSE-NEXT:    fmov x9, d1
 ; NOLSE-NEXT:    fmov x8, d2
-; NOLSE-NEXT:  .LBB9_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB9_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxr x10, [x0]
-; NOLSE-NEXT:    cmp x10, x9
-; NOLSE-NEXT:    b.ne .LBB9_1
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB9_3 Depth=2
-; NOLSE-NEXT:    stlxr wzr, x8, [x0]
-; NOLSE-NEXT:    cbnz wzr, .LBB9_3
-; NOLSE-NEXT:    b .LBB9_1
-; NOLSE-NEXT:  .LBB9_5: // %atomicrmw.end
+; NOLSE-NEXT:    stlxr w9, x8, [x0]
+; NOLSE-NEXT:    cbnz w9, .LBB9_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    fmov d0, d1
 ; NOLSE-NEXT:    ret
 ;
@@ -1086,43 +936,17 @@ define <2 x float> @test_atomicrmw_fadd_v2f32_seq_cst_align8(ptr %ptr, <2 x floa
 define <2 x double> @test_atomicrmw_fadd_v2f64_seq_cst_align8(ptr %ptr, <2 x double> %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fadd_v2f64_seq_cst_align8:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    ldr q1, [x0]
-; NOLSE-NEXT:    b .LBB10_2
 ; NOLSE-NEXT:  .LBB10_1: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB10_2 Depth=1
-; NOLSE-NEXT:    fmov d1, x12
-; NOLSE-NEXT:    cmp x13, x9
-; NOLSE-NEXT:    ccmp x12, x11, #0, eq
-; NOLSE-NEXT:    mov v1.d[1], x13
-; NOLSE-NEXT:    b.eq .LBB10_6
-; NOLSE-NEXT:  .LBB10_2: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Loop Header: Depth=1
-; NOLSE-NEXT:    // Child Loop BB10_3 Depth 2
+; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; NOLSE-NEXT:    ldaxp x8, x9, [x0]
+; NOLSE-NEXT:    fmov d1, x8
+; NOLSE-NEXT:    mov v1.d[1], x9
 ; NOLSE-NEXT:    fadd v2.2d, v1.2d, v0.2d
-; NOLSE-NEXT:    mov x9, v1.d[1]
-; NOLSE-NEXT:    fmov x11, d1
 ; NOLSE-NEXT:    mov x8, v2.d[1]
-; NOLSE-NEXT:    fmov x10, d2
-; NOLSE-NEXT:  .LBB10_3: // %atomicrmw.start
-; NOLSE-NEXT:    // Parent Loop BB10_2 Depth=1
-; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; NOLSE-NEXT:    ldaxp x12, x13, [x0]
-; NOLSE-NEXT:    cmp x12, x11
-; NOLSE-NEXT:    cset w14, ne
-; NOLSE-NEXT:    cmp x13, x9
-; NOLSE-NEXT:    cinc w14, w14, ne
-; NOLSE-NEXT:    cbz w14, .LBB10_5
-; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB10_3 Depth=2
-; NOLSE-NEXT:    stlxp w14, x12, x13, [x0]
-; NOLSE-NEXT:    cbnz w14, .LBB10_3
-; NOLSE-NEXT:    b .LBB10_1
-; NOLSE-NEXT:  .LBB10_5: // %atomicrmw.start
-; NOLSE-NEXT:    // in Loop: Header=BB10_3 Depth=2
-; NOLSE-NEXT:    stlxp w14, x10, x8, [x0]
-; NOLSE-NEXT:    cbnz w14, .LBB10_3
-; NOLSE-NEXT:    b .LBB10_1
-; NOLSE-NEXT:  .LBB10_6: // %atomicrmw.end
+; NOLSE-NEXT:    fmov x9, d2
+; NOLSE-NEXT:    stlxp w10, x9, x8, [x0]
+; NOLSE-NEXT:    cbnz w10, .LBB10_1
+; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    mov v0.16b, v1.16b
 ; NOLSE-NEXT:    ret
 ;
