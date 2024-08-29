@@ -8,6 +8,8 @@
 
 // Checks that we can only form arrays of object types.
 
+// UNSUPPORTED: c++03
+
 #include <array>
 
 std::array<const int, 1> A1{0}; // okay
