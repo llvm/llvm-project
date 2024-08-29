@@ -103,20 +103,20 @@ private:
   SymbolAssignment *readProvideHidden(bool provide, bool hidden);
   SymbolAssignment *readAssignment(StringRef tok);
   void readSort();
-  ScriptExpr *readAssert();
-  ScriptExpr *readConstant();
+  Expr *readAssert();
+  Expr *readConstant();
   DynamicExpr *getPageSize();
 
-  ScriptExpr *readMemoryAssignment(StringRef, StringRef, StringRef);
+  Expr *readMemoryAssignment(StringRef, StringRef, StringRef);
   void readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
                             uint32_t &negFlags, uint32_t &negInvFlags);
 
-  ScriptExpr *readExpr();
-  ScriptExpr *readExpr1(ScriptExpr *lhs, int minPrec);
+  Expr *readExpr();
+  Expr *readExpr1(Expr *lhs, int minPrec);
   StringRef readParenName();
-  ScriptExpr *readPrimary();
-  ScriptExpr *readTernary(ScriptExpr *cond);
-  ScriptExpr *readParenExpr();
+  Expr *readPrimary();
+  Expr *readTernary(Expr *cond);
+  Expr *readParenExpr();
 
   // For parsing version script.
   SmallVector<SymbolVersion, 0> readVersionExtern();
@@ -250,7 +250,7 @@ void ScriptParser::readDefsym() {
   inExpr = true;
   StringRef name = readName();
   expect("=");
-  ScriptExpr *e = readExpr();
+  Expr *e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
   auto *cmd = make<SymbolAssignment>(
@@ -519,7 +519,7 @@ void ScriptParser::readSearchDir() {
 // linker's sections sanity check failures.
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
-  ScriptExpr *addrExpr;
+  Expr *addrExpr;
   if (consume(":")) {
     addrExpr = make<DynamicExpr>([] { return script->getDot(); });
   } else {
@@ -528,9 +528,9 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   }
   // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
   // lmaExpr will ensure this, even if the start address is specified.
-  ScriptExpr *lmaExpr =
-      consume("AT") ? readParenExpr()
-                    : make<DynamicExpr>([] { return script->getDot(); });
+  Expr *lmaExpr = consume("AT")
+                      ? readParenExpr()
+                      : make<DynamicExpr>([] { return script->getDot(); });
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
@@ -559,11 +559,10 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   // counter should be equal to the overlay base address plus size of the
   // largest section seen in the overlay.
   // Here we want to create the Dot assignment command to achieve that.
-  ScriptExpr *moveDot = make<DynamicExpr>([=] {
+  Expr *moveDot = make<DynamicExpr>([=] {
     uint64_t max = 0;
     for (SectionCommand *cmd : v)
       max = std::max(max, cast<OutputDesc>(cmd)->osec.size);
-    // return addrExpr().getValue() + max;
     return addrExpr->getExprValue().getValue() + max;
   });
   v.push_back(make<SymbolAssignment>(".", moveDot, 0, getCurrentLocation()));
@@ -847,9 +846,9 @@ void ScriptParser::readSort() {
   expect(")");
 }
 
-ScriptExpr *ScriptParser::readAssert() {
+Expr *ScriptParser::readAssert() {
   expect("(");
-  ScriptExpr *e = readExpr();
+  Expr *e = readExpr();
   expect(",");
   StringRef msg = readName();
   expect(")");
@@ -934,7 +933,7 @@ void ScriptParser::readSectionAddressType(OutputSection *cmd) {
   }
 }
 
-static ScriptExpr *checkAlignment(ScriptExpr *e, std::string &loc) {
+static Expr *checkAlignment(Expr *e, std::string &loc) {
   return make<DynamicExpr>([=] {
     uint64_t alignment = std::max((uint64_t)1, e->getExprValue().getValue());
     if (!isPowerOf2_64(alignment)) {
@@ -1156,7 +1155,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   assert(op == "=" || op == "*=" || op == "/=" || op == "+=" || op == "-=" ||
          op == "&=" || op == "^=" || op == "|=" || op == "<<=" || op == ">>=");
   // Note: GNU ld does not support %=.
-  ScriptExpr *e = readExpr();
+  Expr *e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
     DynamicExpr *lhs =
@@ -1169,17 +1168,17 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 
 // This is an operator-precedence parser to parse a linker
 // script expression.
-ScriptExpr *ScriptParser::readExpr() {
+Expr *ScriptParser::readExpr() {
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
   SaveAndRestore saved(inExpr, true);
-  ScriptExpr *e = readExpr1(readPrimary(), 0);
+  Expr *e = readExpr1(readPrimary(), 0);
   return e;
 }
 
 // This is a part of the operator-precedence parser. This function
 // assumes that the remaining token stream starts with an operator.
-ScriptExpr *ScriptParser::readExpr1(ScriptExpr *lhs, int minPrec) {
+Expr *ScriptParser::readExpr1(Expr *lhs, int minPrec) {
   while (!atEOF() && !errorCount()) {
     // Read an operator and an expression.
     StringRef op1 = peek();
@@ -1188,7 +1187,7 @@ ScriptExpr *ScriptParser::readExpr1(ScriptExpr *lhs, int minPrec) {
     skip();
     if (op1 == "?")
       return readTernary(lhs);
-    ScriptExpr *rhs = readPrimary();
+    Expr *rhs = readPrimary();
 
     // Evaluate the remaining part of the expression first if the
     // next operator has greater precedence than the previous one.
@@ -1217,7 +1216,7 @@ DynamicExpr *ScriptParser::getPageSize() {
   });
 }
 
-ScriptExpr *ScriptParser::readConstant() {
+Expr *ScriptParser::readConstant() {
   StringRef s = readParenName();
   if (s == "COMMONPAGESIZE")
     return getPageSize();
@@ -1271,7 +1270,7 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
     return nullptr;
 
   const char *oldS = prevTok.data();
-  ScriptExpr *e = readParenExpr();
+  Expr *e = readParenExpr();
   std::string commandString = StringRef(oldS, curBuf.s.data() - oldS).str();
   squeezeSpaces(commandString);
   return make<ByteCommand>(e, size, std::move(commandString));
@@ -1356,7 +1355,7 @@ static bool isValidSymbolName(StringRef s) {
   return !s.empty() && !isDigit(s[0]) && llvm::all_of(s, valid);
 }
 
-ScriptExpr *ScriptParser::readPrimary() {
+Expr *ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
 
@@ -1369,7 +1368,7 @@ ScriptExpr *ScriptParser::readPrimary() {
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   if (tok == "ABSOLUTE") {
-    ScriptExpr *inner = readParenExpr();
+    Expr *inner = readParenExpr();
     return make<DynamicExpr>([=] {
       ExprValue i = inner->getExprValue();
       i.forceAbsolute = true;
@@ -1387,7 +1386,7 @@ ScriptExpr *ScriptParser::readPrimary() {
   }
   if (tok == "ALIGN") {
     expect("(");
-    ScriptExpr *e = readExpr();
+    Expr *e = readExpr();
     if (consume(")")) {
       e = checkAlignment(e, location);
       return make<DynamicExpr>([=] {
@@ -1395,7 +1394,7 @@ ScriptExpr *ScriptParser::readPrimary() {
       });
     }
     expect(",");
-    ScriptExpr *e2 = checkAlignment(readExpr(), location);
+    Expr *e2 = checkAlignment(readExpr(), location);
     expect(")");
     return make<DynamicExpr>([=] {
       ExprValue v = e->getExprValue();
@@ -1417,7 +1416,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     return readConstant();
   if (tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
-    ScriptExpr *e = readExpr();
+    Expr *e = readExpr();
     expect(",");
     readExpr();
     expect(")");
@@ -1476,7 +1475,7 @@ ScriptExpr *ScriptParser::readPrimary() {
   }
   if (tok == "LOG2CEIL") {
     expect("(");
-    ScriptExpr *a = readExpr();
+    Expr *a = readExpr();
     expect(")");
     return make<DynamicExpr>([=] {
       // LOG2CEIL(0) is defined to be 0.
@@ -1486,9 +1485,9 @@ ScriptExpr *ScriptParser::readPrimary() {
   }
   if (tok == "MAX" || tok == "MIN") {
     expect("(");
-    ScriptExpr *a = readExpr();
+    Expr *a = readExpr();
     expect(",");
-    ScriptExpr *b = readExpr();
+    Expr *b = readExpr();
     expect(")");
     if (tok == "MIN")
       return make<DynamicExpr>([=] {
@@ -1512,7 +1511,7 @@ ScriptExpr *ScriptParser::readPrimary() {
     expect("(");
     skip();
     expect(",");
-    ScriptExpr *e = readExpr();
+    Expr *e = readExpr();
     expect(")");
     return e;
   }
@@ -1549,19 +1548,19 @@ ScriptExpr *ScriptParser::readPrimary() {
       [=] { return script->getSymbolValue(tok, location); });
 }
 
-ScriptExpr *ScriptParser::readTernary(ScriptExpr *cond) {
-  ScriptExpr *l = readExpr();
+Expr *ScriptParser::readTernary(Expr *cond) {
+  Expr *l = readExpr();
   expect(":");
-  ScriptExpr *r = readExpr();
+  Expr *r = readExpr();
   return make<DynamicExpr>([=] {
     return cond->getExprValue().getValue() ? l->getExprValue()
                                            : r->getExprValue();
   });
 }
 
-ScriptExpr *ScriptParser::readParenExpr() {
+Expr *ScriptParser::readParenExpr() {
   expect("(");
-  ScriptExpr *e = readExpr();
+  Expr *e = readExpr();
   expect(")");
   return e;
 }
@@ -1700,8 +1699,8 @@ SmallVector<SymbolVersion, 0> ScriptParser::readVersionExtern() {
   return ret;
 }
 
-ScriptExpr *ScriptParser::readMemoryAssignment(StringRef s1, StringRef s2,
-                                               StringRef s3) {
+Expr *ScriptParser::readMemoryAssignment(StringRef s1, StringRef s2,
+                                         StringRef s3) {
   if (!consume(s1) && !consume(s2) && !consume(s3)) {
     setError("expected one of: " + s1 + ", " + s2 + ", or " + s3);
     return make<ConstantExpr>(0);
@@ -1732,9 +1731,9 @@ void ScriptParser::readMemory() {
     }
     expect(":");
 
-    ScriptExpr *origin = readMemoryAssignment("ORIGIN", "org", "o");
+    Expr *origin = readMemoryAssignment("ORIGIN", "org", "o");
     expect(",");
-    ScriptExpr *length = readMemoryAssignment("LENGTH", "len", "l");
+    Expr *length = readMemoryAssignment("LENGTH", "len", "l");
 
     // Add the memory region to the region map.
     MemoryRegion *mr = make<MemoryRegion>(tok, origin, length, flags, invFlags,

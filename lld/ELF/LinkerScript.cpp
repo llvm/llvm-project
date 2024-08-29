@@ -132,7 +132,7 @@ uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
 
-ExprValue ScriptExpr::getExprValue() const {
+ExprValue Expr::getExprValue() const {
   switch (kind_) {
   case ExprKind::Constant:
     return static_cast<const ConstantExpr *>(this)->getExprValue();
@@ -333,7 +333,7 @@ void LinkerScript::expandOutputSection(uint64_t size) {
   expandMemoryRegions(size);
 }
 
-void LinkerScript::setDot(ScriptExpr *e, const Twine &loc, bool inSec) {
+void LinkerScript::setDot(Expr *e, const Twine &loc, bool inSec) {
   uint64_t val = e->getExprValue().getValue();
   // If val is smaller and we are in an output section, record the error and
   // report it if this is the last assignAddresses iteration. dot may be smaller

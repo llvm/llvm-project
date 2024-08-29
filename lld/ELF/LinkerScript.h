@@ -73,9 +73,8 @@ struct ExprValue {
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
 // Later, we evaluate the expression by calling the function.
-using Expr = std::function<ExprValue()>;
 
-class ScriptExpr {
+class Expr {
 public:
   enum class ExprKind : uint8_t { Constant, Dynamic, Unary, Binary };
 
@@ -83,7 +82,7 @@ private:
   ExprKind kind_;
 
 protected:
-  explicit ScriptExpr(ExprKind kind) : kind_(kind) {}
+  explicit Expr(ExprKind kind) : kind_(kind) {}
 
 public:
   ExprKind getKind() const { return kind_; }
@@ -91,37 +90,37 @@ public:
   ExprValue getExprValue() const;
 };
 
-class ConstantExpr : public ScriptExpr {
+class ConstantExpr : public Expr {
 public:
-  ConstantExpr(uint64_t val) : ScriptExpr(ExprKind::Constant), val_(val) {}
+  ConstantExpr(uint64_t val) : Expr(ExprKind::Constant), val_(val) {}
   ExprValue getExprValue() const { return ExprValue(val_); }
 
 private:
   uint64_t val_;
 };
 
-class DynamicExpr : public ScriptExpr {
+class DynamicExpr : public Expr {
 public:
   DynamicExpr(std::function<ExprValue()> impl)
-      : ScriptExpr(ExprKind::Dynamic), impl_(impl) {}
+      : Expr(ExprKind::Dynamic), impl_(impl) {}
   ExprValue getExprValue() const { return impl_(); }
 
 private:
   std::function<ExprValue()> impl_;
 };
 
-class UnaryExpr : public ScriptExpr {
+class UnaryExpr : public Expr {
 public:
-  UnaryExpr(StringRef op, ScriptExpr *operand)
-      : ScriptExpr(ExprKind::Unary), op_(op), operand_(operand) {}
+  UnaryExpr(StringRef op, Expr *operand)
+      : Expr(ExprKind::Unary), op_(op), operand_(operand) {}
   ExprValue getExprValue() const;
 
 private:
   StringRef op_;
-  const ScriptExpr *operand_;
+  const Expr *operand_;
 };
 
-class BinaryExpr : public ScriptExpr {
+class BinaryExpr : public Expr {
 public:
   enum class Op {
     Add,
@@ -153,9 +152,8 @@ public:
     XorAssign,
     Invalid
   };
-  BinaryExpr(StringRef op, ScriptExpr *LHS, ScriptExpr *RHS,
-             const std::string loc)
-      : ScriptExpr(ExprKind::Binary), LHS(LHS), RHS(RHS), loc_(loc) {
+  BinaryExpr(StringRef op, Expr *LHS, Expr *RHS, const std::string loc)
+      : Expr(ExprKind::Binary), LHS(LHS), RHS(RHS), loc_(loc) {
     opcode = stringToOp(op);
   }
   ExprValue getExprValue() const;
@@ -170,7 +168,7 @@ public:
 
 private:
   Op opcode;
-  const ScriptExpr *LHS, *RHS;
+  const Expr *LHS, *RHS;
   std::string loc_;
   static Op stringToOp(const StringRef op);
 };
@@ -192,8 +190,7 @@ struct SectionCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : SectionCommand {
-  SymbolAssignment(StringRef name, ScriptExpr *e, unsigned symOrder,
-                   std::string loc)
+  SymbolAssignment(StringRef name, Expr *e, unsigned symOrder, std::string loc)
       : SectionCommand(AssignmentKind), name(name), expression(e),
         symOrder(symOrder), location(loc) {}
 
@@ -206,7 +203,7 @@ struct SymbolAssignment : SectionCommand {
   Defined *sym = nullptr;
 
   // The RHS of an expression.
-  ScriptExpr *expression;
+  Expr *expression;
 
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool provide = false;
@@ -241,15 +238,14 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // target memory. Instances of the struct are created by parsing the
 // MEMORY command.
 struct MemoryRegion {
-  MemoryRegion(StringRef name, ScriptExpr *origin, ScriptExpr *length,
-               uint32_t flags, uint32_t invFlags, uint32_t negFlags,
-               uint32_t negInvFlags)
+  MemoryRegion(StringRef name, Expr *origin, Expr *length, uint32_t flags,
+               uint32_t invFlags, uint32_t negFlags, uint32_t negInvFlags)
       : name(std::string(name)), origin(origin), length(length), flags(flags),
         invFlags(invFlags), negFlags(negFlags), negInvFlags(negInvFlags) {}
 
   std::string name;
-  ScriptExpr *origin = nullptr;
-  ScriptExpr *length = nullptr;
+  Expr *origin = nullptr;
+  Expr *length = nullptr;
   // A section can be assigned to the region if any of these ELF section flags
   // are set...
   uint32_t flags;
@@ -349,7 +345,7 @@ public:
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct ByteCommand : SectionCommand {
-  ByteCommand(ScriptExpr *e, unsigned size, std::string commandString)
+  ByteCommand(Expr *e, unsigned size, std::string commandString)
       : SectionCommand(ByteKind), commandString(commandString), expression(e),
         size(size) {}
 
@@ -358,7 +354,7 @@ struct ByteCommand : SectionCommand {
   // Keeps string representing the command. Used for -Map" is perhaps better.
   std::string commandString;
 
-  ScriptExpr *expression = nullptr;
+  Expr *expression = nullptr;
 
   // This is just an offset of this assignment command in the output section.
   unsigned offset;
@@ -389,7 +385,7 @@ struct PhdrsCommand {
   bool hasFilehdr = false;
   bool hasPhdrs = false;
   std::optional<unsigned> flags;
-  ScriptExpr *lmaExpr = nullptr;
+  Expr *lmaExpr = nullptr;
 };
 
 class LinkerScript final {
@@ -409,7 +405,7 @@ class LinkerScript final {
 
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
-  void setDot(ScriptExpr *e, const Twine &loc, bool inSec);
+  void setDot(Expr *e, const Twine &loc, bool inSec);
   void expandOutputSection(uint64_t size);
   void expandMemoryRegions(uint64_t size);
 
