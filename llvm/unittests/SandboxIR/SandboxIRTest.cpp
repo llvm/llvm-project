@@ -1261,6 +1261,106 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   }
 }
 
+TEST_F(SandboxIRTest, ExtractValueInst) {
+  parseIR(C, R"IR(
+define void @foo({i32, float} %agg) {
+  %ext_simple = extractvalue {i32, float} %agg, 0
+  %ext_nested = extractvalue {float, {i32}} undef, 1, 0
+  %const1 = extractvalue {i32, float} {i32 0, float 99.0}, 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgAgg = F.getArg(0);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *ExtSimple = cast<sandboxir::ExtractValueInst>(&*It++);
+  auto *ExtNested = cast<sandboxir::ExtractValueInst>(&*It++);
+  auto *Const1 = cast<sandboxir::ExtractValueInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(ExtSimple->getOperand(0), ArgAgg);
+
+  // create before instruction
+  auto *NewExtBeforeRet =
+      cast<sandboxir::ExtractValueInst>(sandboxir::ExtractValueInst::create(
+          ArgAgg, ArrayRef<unsigned>({0}), Ret->getIterator(), Ret->getParent(),
+          Ctx, "NewExtBeforeRet"));
+  EXPECT_EQ(NewExtBeforeRet->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewExtBeforeRet->getName(), "NewExtBeforeRet");
+#endif // NDEBUG
+
+  // create at end of BB
+  auto *NewExtAtEnd =
+      cast<sandboxir::ExtractValueInst>(sandboxir::ExtractValueInst::create(
+          ArgAgg, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx, "NewExtAtEnd"));
+  EXPECT_EQ(NewExtAtEnd->getPrevNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewExtAtEnd->getName(), "NewExtAtEnd");
+#endif // NDEBUG
+
+  // Test the path that creates a folded constant.
+  auto *ShouldBeConstant = sandboxir::ExtractValueInst::create(
+      Const1->getOperand(0), ArrayRef<unsigned>({0}), BB->end(), BB, Ctx);
+  EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
+
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
+  EXPECT_EQ(ShouldBeConstant, Zero);
+
+  // getIndexedType
+  Type *AggType = ExtNested->getAggregateOperand()->getType();
+  EXPECT_EQ(sandboxir::ExtractValueInst::getIndexedType(
+                AggType, ArrayRef<unsigned>({1, 0})),
+            llvm::ExtractValueInst::getIndexedType(AggType,
+                                                   ArrayRef<unsigned>({1, 0})));
+
+  EXPECT_EQ(sandboxir::ExtractValueInst::getIndexedType(
+                AggType, ArrayRef<unsigned>({2})),
+            nullptr);
+
+  // idx_begin / idx_end
+  {
+    SmallVector<int, 2> IndicesSimple(ExtSimple->idx_begin(),
+                                      ExtSimple->idx_end());
+    EXPECT_THAT(IndicesSimple, testing::ElementsAre(0u));
+
+    SmallVector<int, 2> IndicesNested(ExtNested->idx_begin(),
+                                      ExtNested->idx_end());
+    EXPECT_THAT(IndicesNested, testing::ElementsAre(1u, 0u));
+  }
+
+  // indices
+  {
+    SmallVector<int, 2> IndicesSimple(ExtSimple->indices());
+    EXPECT_THAT(IndicesSimple, testing::ElementsAre(0u));
+
+    SmallVector<int, 2> IndicesNested(ExtNested->indices());
+    EXPECT_THAT(IndicesNested, testing::ElementsAre(1u, 0u));
+  }
+
+  // getAggregateOperand
+  EXPECT_EQ(ExtSimple->getAggregateOperand(), ArgAgg);
+  const auto *ConstExtSimple = ExtSimple;
+  EXPECT_EQ(ConstExtSimple->getAggregateOperand(), ArgAgg);
+
+  // getAggregateOperandIndex
+  EXPECT_EQ(sandboxir::ExtractValueInst::getAggregateOperandIndex(),
+            llvm::ExtractValueInst::getAggregateOperandIndex());
+
+  // getIndices
+  EXPECT_EQ(ExtSimple->getIndices().size(), 1u);
+  EXPECT_EQ(ExtSimple->getIndices()[0], 0u);
+
+  // getNumIndices
+  EXPECT_EQ(ExtSimple->getNumIndices(), 1u);
+
+  // hasIndices
+  EXPECT_EQ(ExtSimple->hasIndices(), true);
+}
+
 TEST_F(SandboxIRTest, InsertValueInst) {
   parseIR(C, R"IR(
 define void @foo({i32, float} %agg, i32 %i) {

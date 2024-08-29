@@ -74,6 +74,8 @@
 //                                      |
 //                                      +- ShuffleVectorInst
 //                                      |
+//                                      +- ExtractValueInst
+//                                      |
 //                                      +- InsertValueInst
 //                                      |
 //                                      +- StoreInst
@@ -120,6 +122,7 @@ class SelectInst;
 class ExtractElementInst;
 class InsertElementInst;
 class ShuffleVectorInst;
+class ExtractValueInst;
 class InsertValueInst;
 class BranchInst;
 class UnaryInstruction;
@@ -270,6 +273,7 @@ protected:
   friend class ExtractElementInst;    // For getting `Val`.
   friend class InsertElementInst;     // For getting `Val`.
   friend class ShuffleVectorInst;     // For getting `Val`.
+  friend class ExtractValueInst;      // For getting `Val`.
   friend class InsertValueInst;       // For getting `Val`.
   friend class BranchInst;            // For getting `Val`.
   friend class LoadInst;              // For getting `Val`.
@@ -710,6 +714,7 @@ protected:
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
   friend class InsertElementInst;  // For getTopmostLLVMInstruction().
   friend class ShuffleVectorInst;  // For getTopmostLLVMInstruction().
+  friend class ExtractValueInst;   // For getTopmostLLVMInstruction().
   friend class InsertValueInst;    // For getTopmostLLVMInstruction().
   friend class BranchInst;         // For getTopmostLLVMInstruction().
   friend class LoadInst;           // For getTopmostLLVMInstruction().
@@ -1618,6 +1623,65 @@ public:
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class ExtractValueInst : public UnaryInstruction {
+  /// Use Context::createExtractValueInst() instead.
+  ExtractValueInst(llvm::ExtractValueInst *EVI, Context &Ctx)
+      : UnaryInstruction(ClassID::ExtractValue, Opcode::ExtractValue, EVI,
+                         Ctx) {}
+  friend Context; // for ExtractValueInst()
+
+public:
+  static Value *create(Value *Agg, ArrayRef<unsigned> Idxs, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ExtractValue;
+  }
+
+  /// Returns the type of the element that would be extracted
+  /// with an extractvalue instruction with the specified parameters.
+  ///
+  /// Null is returned if the indices are invalid for the specified type.
+  static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs) {
+    return llvm::ExtractValueInst::getIndexedType(Agg, Idxs);
+  }
+
+  using idx_iterator = llvm::ExtractValueInst::idx_iterator;
+
+  inline idx_iterator idx_begin() const {
+    return cast<llvm::ExtractValueInst>(Val)->idx_begin();
+  }
+  inline idx_iterator idx_end() const {
+    return cast<llvm::ExtractValueInst>(Val)->idx_end();
+  }
+  inline iterator_range<idx_iterator> indices() const {
+    return cast<llvm::ExtractValueInst>(Val)->indices();
+  }
+
+  Value *getAggregateOperand() {
+    return getOperand(getAggregateOperandIndex());
+  }
+  const Value *getAggregateOperand() const {
+    return getOperand(getAggregateOperandIndex());
+  }
+  static unsigned getAggregateOperandIndex() {
+    return llvm::ExtractValueInst::getAggregateOperandIndex();
+  }
+
+  ArrayRef<unsigned> getIndices() const {
+    return cast<llvm::ExtractValueInst>(Val)->getIndices();
+  }
+
+  unsigned getNumIndices() const {
+    return cast<llvm::ExtractValueInst>(Val)->getNumIndices();
+  }
+
+  unsigned hasIndices() const {
+    return cast<llvm::ExtractValueInst>(Val)->hasIndices();
   }
 };
 
@@ -3123,6 +3187,8 @@ protected:
   friend ExtractElementInst; // For createExtractElementInst()
   ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
   friend ShuffleVectorInst; // For createShuffleVectorInst()
+  ExtractValueInst *createExtractValueInst(llvm::ExtractValueInst *IVI);
+  friend ExtractValueInst; // For createExtractValueInst()
   InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
