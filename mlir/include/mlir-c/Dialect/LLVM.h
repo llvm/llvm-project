@@ -235,12 +235,12 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIBasicTypeAttrGet(
     MlirLLVMTypeEncoding encoding);
 
 /// Creates a self-referencing LLVM DICompositeType attribute.
-MlirAttribute mlirLLVMDICompositeTypeAttrGetSelfRec(MlirAttribute recId);
+MlirAttribute mlirLLVMDICompositeTypeAttrGetRecSelf(MlirAttribute recId);
 
 /// Creates a LLVM DICompositeType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
-    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, unsigned int tag,
+    MlirAttribute name, MlirAttribute file, uint32_t line, MlirAttribute scope,
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
     MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
@@ -315,11 +315,11 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILocalVariableAttrGet(
     unsigned int alignInBits, MlirAttribute diType, int64_t flags);
 
 /// Creates a self-referencing LLVM DISubprogramAttr attribute.
-MlirAttribute mlirLLVMDISubprogramAttrGetSelfRec(MlirAttribute recId);
+MlirAttribute mlirLLVMDISubprogramAttrGetRecSelf(MlirAttribute recId);
 
 /// Creates a LLVM DISubprogramAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(
-    MlirContext ctx, MlirAttribute id, MlirAttribute recId,
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
     MlirAttribute compileUnit, MlirAttribute scope, MlirAttribute name,
     MlirAttribute linkageName, MlirAttribute file, unsigned int line,
     unsigned int scopeLine, uint64_t subprogramFlags, MlirAttribute type,

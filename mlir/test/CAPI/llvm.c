@@ -257,7 +257,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_null_type
   mlirAttributeDump(mlirLLVMDINullTypeAttrGet(ctx));
 
-  // CHECK: #llvm.di_basic_type<tag = DW_TAG_null, name = "foo", sizeInBits =
+  // CHECK: #llvm.di_basic_type<name = "foo", sizeInBits =
   // CHECK-SAME: 64, encoding = DW_ATE_signed>
   MlirAttribute di_type =
       mlirLLVMDIBasicTypeAttrGet(ctx, 0, foo, 64, MlirLLVMTypeEncodingSigned);
@@ -317,7 +317,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   mlirAttributeDump(subroutine_type);
 
   MlirAttribute di_subprogram_self_rec =
-      mlirLLVMDISubprogramAttrGetSelfRec(recId0);
+      mlirLLVMDISubprogramAttrGetRecSelf(recId0);
   MlirAttribute di_imported_entity = mlirLLVMDIImportedEntityAttrGet(
       ctx, 0, di_subprogram_self_rec, di_module, file, 1, foo, 1, &local_var);
 
@@ -325,8 +325,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_imported_entity<{{.*}}>
 
   MlirAttribute di_subprogram = mlirLLVMDISubprogramAttrGet(
-      ctx, id, recId0, compile_unit, compile_unit, foo, bar, file, 1, 2, 0,
-      subroutine_type, 1, &di_imported_entity);
+      ctx, recId0, false, id, compile_unit, compile_unit, foo, bar, file, 1, 2,
+      0, subroutine_type, 1, &di_imported_entity);
   // CHECK: #llvm.di_subprogram<{{.*}}>
   mlirAttributeDump(di_subprogram);
 
@@ -356,12 +356,12 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_string_type<{{.*}}>
   mlirAttributeDump(string_type);
 
-  // CHECK: #llvm.di_composite_type<tag = DW_TAG_null, recId = {{.*}}>
-  mlirAttributeDump(mlirLLVMDICompositeTypeAttrGetSelfRec(recId1));
+  // CHECK: #llvm.di_composite_type<recId = {{.*}}, isRecSelf = true>
+  mlirAttributeDump(mlirLLVMDICompositeTypeAttrGetRecSelf(recId1));
 
   // CHECK: #llvm.di_composite_type<{{.*}}>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
-      ctx, 0, recId1, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1,
+      ctx, recId1, false, 0, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1,
       &di_type, expression, expression, expression, expression));
 }
 

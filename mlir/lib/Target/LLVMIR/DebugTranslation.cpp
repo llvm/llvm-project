@@ -267,7 +267,7 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
       iter != recursiveNodeMap.end()) {
     return iter->second;
   }
-  assert(!attr.isRecSelf() && "unbound DI recursive self reference");
+  assert(!attr.getIsRecSelf() && "unbound DI recursive self reference");
 
   auto setRecursivePlaceholder = [&](llvm::DINode *placeholder) {
     recursiveNodeMap.try_emplace(recursiveId, placeholder);

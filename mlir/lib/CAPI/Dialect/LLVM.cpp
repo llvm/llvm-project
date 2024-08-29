@@ -159,14 +159,14 @@ MlirAttribute mlirLLVMDIBasicTypeAttrGet(MlirContext ctx, unsigned int tag,
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)), sizeInBits, encoding));
 }
 
-MlirAttribute mlirLLVMDICompositeTypeAttrGetSelfRec(MlirAttribute recId) {
+MlirAttribute mlirLLVMDICompositeTypeAttrGetRecSelf(MlirAttribute recId) {
   return wrap(
       DICompositeTypeAttr::getRecSelf(cast<DistinctAttr>(unwrap(recId))));
 }
 
 MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
-    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, unsigned int tag,
+    MlirAttribute name, MlirAttribute file, uint32_t line, MlirAttribute scope,
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
     MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
@@ -175,7 +175,7 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
   elementsStorage.reserve(nElements);
 
   return wrap(DICompositeTypeAttr::get(
-      unwrap(ctx), tag, cast<DistinctAttr>(unwrap(recId)),
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf, tag,
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(file)), line,
       cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
       DIFlags(flags), sizeInBits, alignInBits,
@@ -294,12 +294,12 @@ MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
                           [](Attribute a) { return cast<DITypeAttr>(a); })));
 }
 
-MlirAttribute mlirLLVMDISubprogramAttrGetSelfRec(MlirAttribute recId) {
+MlirAttribute mlirLLVMDISubprogramAttrGetRecSelf(MlirAttribute recId) {
   return wrap(DISubprogramAttr::getRecSelf(cast<DistinctAttr>(unwrap(recId))));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGet(
-    MlirContext ctx, MlirAttribute id, MlirAttribute recId,
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
     MlirAttribute compileUnit, MlirAttribute scope, MlirAttribute name,
     MlirAttribute linkageName, MlirAttribute file, unsigned int line,
     unsigned int scopeLine, uint64_t subprogramFlags, MlirAttribute type,
@@ -307,8 +307,8 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
   SmallVector<Attribute> nodesStorage;
   nodesStorage.reserve(nRetainedNodes);
   return wrap(DISubprogramAttr::get(
-      unwrap(ctx), cast<DistinctAttr>(unwrap(id)),
-      cast<DistinctAttr>(unwrap(recId)),
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
+      cast<DistinctAttr>(unwrap(id)),
       cast<DICompileUnitAttr>(unwrap(compileUnit)),
       cast<DIScopeAttr>(unwrap(scope)), cast<StringAttr>(unwrap(name)),
       cast<StringAttr>(unwrap(linkageName)), cast<DIFileAttr>(unwrap(file)),

@@ -89,10 +89,9 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   if (node->getTag() == llvm::dwarf::DW_TAG_array_type && !baseType)
     return nullptr;
   return DICompositeTypeAttr::get(
-      context, node->getTag(), /*recId=*/{},
-      getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
-      node->getLine(), translate(node->getScope()), baseType,
-      flags.value_or(DIFlags::Zero), node->getSizeInBits(),
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      translate(node->getFile()), node->getLine(), translate(node->getScope()),
+      baseType, flags.value_or(DIFlags::Zero), node->getSizeInBits(),
       node->getAlignInBits(), elements,
       translateExpression(node->getDataLocationExp()),
       translateExpression(node->getRankExp()),
@@ -246,12 +245,12 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   if (llvm::is_contained(retainedNodes, nullptr))
     retainedNodes.clear();
 
-  return DISubprogramAttr::get(
-      context, id, /*recId=*/{}, translate(node->getUnit()), scope,
-      getStringAttrOrNull(node->getRawName()),
-      getStringAttrOrNull(node->getRawLinkageName()),
-      translate(node->getFile()), node->getLine(), node->getScopeLine(),
-      *subprogramFlags, type, retainedNodes);
+  return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
+                               getStringAttrOrNull(node->getRawName()),
+                               getStringAttrOrNull(node->getRawLinkageName()),
+                               translate(node->getFile()), node->getLine(),
+                               node->getScopeLine(), *subprogramFlags, type,
+                               retainedNodes);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
