@@ -10653,6 +10653,17 @@ static T *performExtractsShuffleAction(
   return Prev;
 }
 
+namespace {
+/// Data type for handling buildvector sequences with the reused scalars from
+/// other tree entries.
+template <typename T> struct ShuffledInsertData {
+  /// List of insertelements to be replaced by shuffles.
+  SmallVector<InsertElementInst *> InsertElements;
+  /// The parent vectors and shuffle mask for the given list of inserts.
+  MapVector<T, SmallVector<int>> ValueMasks;
+};
+} // namespace
+
 InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   InstructionCost Cost = 0;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
@@ -10694,8 +10705,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
   SmallPtrSet<Value *, 16> ExtractCostCalculated;
   InstructionCost ExtractCost = 0;
-  SmallVector<MapVector<const TreeEntry *, SmallVector<int>>> ShuffleMasks;
-  SmallVector<std::pair<Value *, const TreeEntry *>> FirstUsers;
+  SmallVector<ShuffledInsertData<const TreeEntry *>> ShuffledInserts;
   SmallVector<APInt> DemandedElts;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
@@ -10732,11 +10742,12 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         if (InsertIdx) {
           const TreeEntry *ScalarTE = getTreeEntry(EU.Scalar);
           auto *It = find_if(
-              FirstUsers,
-              [this, VU](const std::pair<Value *, const TreeEntry *> &Pair) {
+              ShuffledInserts,
+              [this, VU](const ShuffledInsertData<const TreeEntry *> &Data) {
+                // Checks if 2 insertelements are from the same buildvector.
+                InsertElementInst *VecInsert = Data.InsertElements.front();
                 return areTwoInsertFromSameBuildVector(
-                    VU, cast<InsertElementInst>(Pair.first),
-                    [this](InsertElementInst *II) -> Value * {
+                    VU, VecInsert, [this](InsertElementInst *II) -> Value * {
                       Value *Op0 = II->getOperand(0);
                       if (getTreeEntry(II) && !getTreeEntry(Op0))
                         return nullptr;
@@ -10744,36 +10755,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
                     });
               });
           int VecId = -1;
-          if (It == FirstUsers.end()) {
-            (void)ShuffleMasks.emplace_back();
-            SmallVectorImpl<int> &Mask = ShuffleMasks.back()[ScalarTE];
-            if (Mask.empty())
-              Mask.assign(FTy->getNumElements(), PoisonMaskElem);
-            // Find the insertvector, vectorized in tree, if any.
-            Value *Base = VU;
-            while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
-              if (IEBase != EU.User &&
-                  (!IEBase->hasOneUse() ||
-                   getElementIndex(IEBase).value_or(*InsertIdx) == *InsertIdx))
-                break;
-              // Build the mask for the vectorized insertelement instructions.
-              if (const TreeEntry *E = getTreeEntry(IEBase)) {
-                VU = IEBase;
-                do {
-                  IEBase = cast<InsertElementInst>(Base);
-                  int Idx = *getElementIndex(IEBase);
-                  assert(Mask[Idx] == PoisonMaskElem &&
-                         "InsertElementInstruction used already.");
-                  Mask[Idx] = Idx;
-                  Base = IEBase->getOperand(0);
-                } while (E == getTreeEntry(Base));
-                break;
-              }
-              Base = cast<InsertElementInst>(Base)->getOperand(0);
-            }
-            FirstUsers.emplace_back(VU, ScalarTE);
+          if (It == ShuffledInserts.end()) {
+            auto &Data = ShuffledInserts.emplace_back();
+            Data.InsertElements.emplace_back(VU);
             DemandedElts.push_back(APInt::getZero(FTy->getNumElements()));
-            VecId = FirstUsers.size() - 1;
+            VecId = ShuffledInserts.size() - 1;
             auto It = MinBWs.find(ScalarTE);
             if (It != MinBWs.end() &&
                 VectorCasts
@@ -10799,12 +10785,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
               Cost += C;
             }
           } else {
-            if (isFirstInsertElement(VU, cast<InsertElementInst>(It->first)))
-              It->first = VU;
-            VecId = std::distance(FirstUsers.begin(), It);
+            if (isFirstInsertElement(VU, It->InsertElements.front()))
+              It->InsertElements.front() = VU;
+            VecId = std::distance(ShuffledInserts.begin(), It);
           }
           int InIdx = *InsertIdx;
-          SmallVectorImpl<int> &Mask = ShuffleMasks[VecId][ScalarTE];
+          SmallVectorImpl<int> &Mask =
+              ShuffledInserts[VecId].ValueMasks[ScalarTE];
           if (Mask.empty())
             Mask.assign(FTy->getNumElements(), PoisonMaskElem);
           Mask[InIdx] = EU.Lane;
@@ -10978,9 +10965,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     return std::make_pair(TE, false);
   };
   // Calculate the cost of the reshuffled vectors, if any.
-  for (int I = 0, E = FirstUsers.size(); I < E; ++I) {
-    Value *Base = cast<Instruction>(FirstUsers[I].first)->getOperand(0);
-    auto Vector = ShuffleMasks[I].takeVector();
+  for (int I = 0, E = ShuffledInserts.size(); I < E; ++I) {
+    Value *Base = ShuffledInserts[I].InsertElements.front()->getOperand(0);
+    auto Vector = ShuffledInserts[I].ValueMasks.takeVector();
     unsigned VF = 0;
     auto EstimateShufflesCost = [&](ArrayRef<int> Mask,
                                     ArrayRef<const TreeEntry *> TEs) {
@@ -11031,7 +11018,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         [](const TreeEntry *E) { return E->getVectorFactor(); }, ResizeToVF,
         EstimateShufflesCost);
     InstructionCost InsertCost = TTI->getScalarizationOverhead(
-        cast<FixedVectorType>(FirstUsers[I].first->getType()), DemandedElts[I],
+        cast<FixedVectorType>(
+            ShuffledInserts[I].InsertElements.front()->getType()),
+        DemandedElts[I],
         /*Insert*/ true, /*Extract*/ false, TTI::TCK_RecipThroughput);
     Cost -= InsertCost;
   }
@@ -14131,17 +14120,6 @@ Value *BoUpSLP::vectorizeTree() {
   return vectorizeTree(ExternallyUsedValues, ReplacedExternals);
 }
 
-namespace {
-/// Data type for handling buildvector sequences with the reused scalars from
-/// other tree entries.
-struct ShuffledInsertData {
-  /// List of insertelements to be replaced by shuffles.
-  SmallVector<InsertElementInst *> InsertElements;
-  /// The parent vectors and shuffle mask for the given list of inserts.
-  MapVector<Value *, SmallVector<int>> ValueMasks;
-};
-} // namespace
-
 Value *BoUpSLP::vectorizeTree(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     SmallVectorImpl<std::pair<Value *, Value *>> &ReplacedExternals,
@@ -14279,7 +14257,7 @@ Value *BoUpSLP::vectorizeTree(
   LLVM_DEBUG(dbgs() << "SLP: Extracting " << ExternalUses.size()
                     << " values .\n");
 
-  SmallVector<ShuffledInsertData> ShuffledInserts;
+  SmallVector<ShuffledInsertData<Value *>> ShuffledInserts;
   // Maps vector instruction to original insertelement instruction
   DenseMap<Value *, InsertElementInst *> VectorToInsertElement;
   // Maps extract Scalar to the corresponding extractelement instruction in the
@@ -14492,8 +14470,8 @@ Value *BoUpSLP::vectorizeTree(
 
           std::optional<unsigned> InsertIdx = getElementIndex(VU);
           if (InsertIdx) {
-            auto *It =
-                find_if(ShuffledInserts, [VU](const ShuffledInsertData &Data) {
+            auto *It = find_if(
+                ShuffledInserts, [VU](const ShuffledInsertData<Value *> &Data) {
                   // Checks if 2 insertelements are from the same buildvector.
                   InsertElementInst *VecInsert = Data.InsertElements.front();
                   return areTwoInsertFromSameBuildVector(
@@ -14505,36 +14483,6 @@ Value *BoUpSLP::vectorizeTree(
               (void)ShuffledInserts.emplace_back();
               It = std::next(ShuffledInserts.begin(),
                              ShuffledInserts.size() - 1);
-              SmallVectorImpl<int> &Mask = It->ValueMasks[Vec];
-              if (Mask.empty())
-                Mask.assign(FTy->getNumElements(), PoisonMaskElem);
-              // Find the insertvector, vectorized in tree, if any.
-              Value *Base = VU;
-              while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
-                if (IEBase != User &&
-                    (!IEBase->hasOneUse() ||
-                     getElementIndex(IEBase).value_or(Idx) == Idx))
-                  break;
-                // Build the mask for the vectorized insertelement instructions.
-                if (const TreeEntry *E = getTreeEntry(IEBase)) {
-                  do {
-                    IEBase = cast<InsertElementInst>(Base);
-                    int IEIdx = *getElementIndex(IEBase);
-                    assert(Mask[IEIdx] == PoisonMaskElem &&
-                           "InsertElementInstruction used already.");
-                    Mask[IEIdx] = IEIdx;
-                    Base = IEBase->getOperand(0);
-                  } while (E == getTreeEntry(Base));
-                  break;
-                }
-                Base = cast<InsertElementInst>(Base)->getOperand(0);
-                // After the vectorization the def-use chain has changed, need
-                // to look through original insertelement instructions, if they
-                // get replaced by vector instructions.
-                auto It = VectorToInsertElement.find(Base);
-                if (It != VectorToInsertElement.end())
-                  Base = It->second;
-              }
             }
             SmallVectorImpl<int> &Mask = It->ValueMasks[Vec];
             if (Mask.empty())
