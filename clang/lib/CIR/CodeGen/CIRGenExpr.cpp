@@ -2183,8 +2183,29 @@ static void pushTemporaryCleanup(CIRGenFunction &CGF,
   if (!ReferenceTemporaryDtor)
     return;
 
-  // TODO(cir): Call the destructor for the temporary.
-  assert(0 && "NYI");
+  // Call the destructor for the temporary.
+  switch (M->getStorageDuration()) {
+  case SD_Static:
+  case SD_Thread: {
+    if (E->getType()->isArrayType()) {
+      llvm_unreachable("SD_Static|SD_Thread + array types not implemented");
+    } else {
+      llvm_unreachable("SD_Static|SD_Thread for general types not implemented");
+    }
+    llvm_unreachable("SD_Static|SD_Thread not implemented");
+  }
+
+  case SD_FullExpression:
+    llvm_unreachable("SD_FullExpression not implemented");
+    break;
+
+  case SD_Automatic:
+    llvm_unreachable("SD_Automatic not implemented");
+    break;
+
+  case SD_Dynamic:
+    llvm_unreachable("temporary cannot have dynamic storage duration");
+  }
 }
 
 LValue CIRGenFunction::buildMaterializeTemporaryExpr(
