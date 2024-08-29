@@ -1582,7 +1582,7 @@ Check the size argument passed into C string functions for common erroneous patt
 unix.cstring.NullArg (C)
 """"""""""""""""""""""""
 Check for null pointers being passed as arguments to C string functions:
-``strlen, strnlen, strcpy, strncpy, strcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp, wcslen, wcsnlen``.
+``strlen, lstrlen, strnlen, strcpy, lstrcpy, strncpy, strcat, lstrcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp, wcslen, wcsnlen``.
 
 .. code-block:: c
 

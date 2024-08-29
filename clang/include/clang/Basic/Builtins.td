@@ -4788,3 +4788,25 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
   let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
+
+// Windows - WinBase.h
+def LStrLen : LibBuiltin<"WinBase.h"> {
+  let Spellings = ["lstrlen"];
+  let Attributes = [NoThrow, Constexpr];
+  let Prototype = "int(LPCTSTR)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def LStrCpy : LibBuiltin<"WinBase.h"> {
+  let Spellings = ["lstrcpy"];
+  let Attributes = [NoThrow];
+  let Prototype = "LPCTSTR(LPTSTR, LPCTSTR)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def LStrCat : LibBuiltin<"WinBase.h"> {
+  let Spellings = ["lstrcat"];
+  let Attributes = [NoThrow];
+  let Prototype = "LPTSTR(LPTSTR, LPCTSTR)";
+  let AddBuiltinPrefixedAlias = 1;
+}
