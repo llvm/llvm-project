@@ -304,12 +304,6 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
-]>;
-
-def SIfptrunc_round : SDNode<"ISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
-
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//

@@ -232,7 +232,7 @@ def FPTRUNC_ROUND_F16_F32_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VGPR_32:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
-def : GCNPat <(f16 (SIfptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
