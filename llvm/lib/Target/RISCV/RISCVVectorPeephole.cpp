@@ -69,7 +69,7 @@ private:
   bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
 
-  bool hasSameEEWVLMAX(const MachineInstr &User, const MachineInstr &Src) const;
+  bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
   bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
@@ -99,28 +99,17 @@ static bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
   return LHS.getImm() <= RHS.getImm();
 }
 
-static unsigned getSEWLMULRatio(const MachineInstr &MI) {
-  RISCVII::VLMUL LMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
-  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-  return RISCVVType::getSEWLMULRatio(1 << Log2SEW, LMUL);
-}
-
-/// Given \p User that has an input operand with EEW=SEW, which uses an output
-/// operand of \p Src with an unknown EEW, return true if their EEWs match and
-/// they have the same VLMAX.
-bool RISCVVectorPeephole::hasSameEEWVLMAX(const MachineInstr &User,
-                                          const MachineInstr &Src) const {
-  if (getSEWLMULRatio(User) != getSEWLMULRatio(Src))
-    return false;
-  unsigned UserLog2SEW =
+/// Given \p User that has an input operand with EEW=SEW, which uses the dest
+/// operand of \p Src with an unknown EEW, return true if their EEWs match.
+bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
+                                     const MachineInstr &Src) const {
+  unsigned UserSEW =
       User.getOperand(RISCVII::getSEWOpNum(User.getDesc())).getImm();
-  unsigned SrcLog2SEW =
+  unsigned SrcSEW =
       Src.getOperand(RISCVII::getSEWOpNum(Src.getDesc())).getImm();
-  if (RISCV::getDestEEW(TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())),
-                        SrcLog2SEW) != UserLog2SEW)
-    return false;
-
-  return true;
+  unsigned SrcEEW = RISCV::getDestEEW(
+      TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcSEW);
+  return SrcEEW == UserSEW;
 }
 
 // Attempt to reduce the VL of an instruction whose sole use is feeding a
@@ -173,8 +162,8 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
       !RISCVII::hasSEWOp(Src->getDesc().TSFlags))
     return false;
 
-  // Src needs to have the same VLMAX and EEW as MI
-  if (!hasSameEEWVLMAX(MI, *Src))
+  // Src's dest needs to have the same EEW as MI's input.
+  if (!hasSameEEW(MI, *Src))
     return false;
 
   bool ElementsDependOnVL = RISCVII::elementsDependOnVL(
@@ -505,8 +494,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   if (Src && !Src->hasUnmodeledSideEffects() &&
       MRI->hasOneUse(MI.getOperand(2).getReg()) &&
       RISCVII::hasVLOp(Src->getDesc().TSFlags) &&
-      RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags) &&
-      hasSameEEWVLMAX(MI, *Src)) {
+      RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags) && hasSameEEW(MI, *Src)) {
     const MachineOperand &MIVL = MI.getOperand(3);
     const MachineOperand &SrcVL =
         Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
@@ -551,8 +539,8 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
       !RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags))
     return false;
 
-  // Src needs to have the same VLMAX and EEW as MI
-  if (!hasSameEEWVLMAX(MI, *Src))
+  // Src's dest needs to have the same EEW as MI's input.
+  if (!hasSameEEW(MI, *Src))
     return false;
 
   // Src needs to have the same passthru as VMV_V_V
