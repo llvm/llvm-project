@@ -1626,9 +1626,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (LT.second.isScalableVector() && !LT.first.isValid())
     return LT.first;
 
-  if (!isTypeLegal(Val))
-    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
-
   // Mask vector extract/insert is expanded via e8.
   if (Val->getScalarSizeInBits() == 1) {
     VectorType *WideTy =

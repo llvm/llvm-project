@@ -163,6 +163,8 @@ add_llvm_component_library(LLVMAnalysis
   TargetParser
   )
 
-if(LLVM_HAS_LOGF128)
-  target_compile_definitions(LLVMAnalysis PRIVATE HAS_LOGF128)
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+if(HAS_LOGF128)
+ target_compile_definitions(LLVMAnalysis PRIVATE HAS_LOGF128)
 endif()
