@@ -517,11 +517,18 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
 
     // Den = real(RHS)² + imag(RHS)²
     T A, B;
-    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B))
-      return false;
+    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B)) {
+      // Ignore overflow here, because that's what the current interpeter does.
+    }
     T Den;
     if (T::add(A, B, Bits, &Den))
       return false;
+
+    if (Compare(Den, Zero) == ComparisonCategoryResult::Equal) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_expr_divide_by_zero);
+      return false;
+    }
 
     // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
     T &ResultR = Result.atIndex(0).deref<T>();
@@ -2537,7 +2544,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
     return false;
 
-  if (Ptr.isRoot() || !Ptr.isUnknownSizeArray() || Ptr.isDummy()) {
+  if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
   }
@@ -2623,7 +2630,11 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallable(S, OpPC, Func))
     return false;
 
-  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression())
+  // FIXME: The isConstructor() check here is not always right. The current
+  // constant evaluator is somewhat inconsistent in when it allows a function
+  // call when checking for a constant expression.
+  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
+      !Func->isConstructor())
     return false;
 
   if (!CheckCallDepth(S, OpPC))

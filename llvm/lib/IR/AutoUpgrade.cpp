@@ -1168,6 +1168,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
       break; // No other 'experimental.vector.*'.
     }
+    if (Name.consume_front("experimental.stepvector.")) {
+      Intrinsic::ID ID = Intrinsic::stepvector;
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                        F->getFunctionType()->getReturnType());
+      return true;
+    }
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {

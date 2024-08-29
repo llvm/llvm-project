@@ -655,7 +655,7 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
 
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "GetDIE for DIE {0:x16} is outside of its CU {0:x16}", die_offset,
+        "GetDIE for DIE {0:x16} is outside of its CU {1:x16}", die_offset,
         GetOffset());
     return DWARFDIE(); // Not found
   }
