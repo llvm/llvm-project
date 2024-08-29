@@ -299,8 +299,7 @@ static bool runIPSCCP(
     // Infer nonnull return attribute.
     if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
         ReturnValue.getNotConstant()->isNullValue() &&
-        !F->hasRetAttribute(Attribute::NonNull) &&
-        !F->hasRetAttribute(Attribute::Dereferenceable)) {
+        !F->hasRetAttribute(Attribute::NonNull)) {
       F->addRetAttr(Attribute::NonNull);
       continue;
     }
