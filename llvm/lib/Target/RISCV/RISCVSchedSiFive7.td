@@ -973,7 +973,7 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !mul(Cycles, 10),
+  let Latency = Cycles,
       AcquireAtCycles = [0, 1],
       ReleaseAtCycles = [1, !add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVC_V_I",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
