@@ -7,7 +7,7 @@
 
 ## Test the env command's successful executions.
 
-# CHECK: -- Testing: 9 tests{{.*}}
+# CHECK: -- Testing: 10 tests{{.*}}
 
 # CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
@@ -47,6 +47,12 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
+# CHECK: PASS: shtest-env :: env-temp-redirect.txt ({{[^)]*}})
+# CHECK: env {{.*}}/env-temp-redirect.txt.tmp
+# CHECK: # executed command: env
+# CHECK-NOT: # error:
+# CHECK: --
+
 # CHECK: PASS: shtest-env :: env-u.txt ({{[^)]*}})
 # CHECK: env -u FOO | {{.*}}
 # CHECK: # executed command: env -u FOO
@@ -65,6 +71,6 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
-# CHECK: Total Discovered Tests: 9
-# CHECK: Passed: 9 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Total Discovered Tests: 10
+# CHECK: Passed: 10 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}
