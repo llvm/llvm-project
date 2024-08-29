@@ -1785,7 +1785,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT :
          {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv2f32,
           MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16, MVT::nxv4i32, MVT::nxv4f32,
-          MVT::nxv8i8, MVT::nxv8i16, MVT::nxv16i8})
+          MVT::nxv8i8, MVT::nxv8i16, MVT::nxv16i8, MVT::nxv8f16, MVT::nxv8bf16})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     // If we have SVE, we can use SVE logic for legal (or smaller than legal)
@@ -6693,14 +6693,20 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
   // we split and compact them as <vscale x 4 x i32>, store them on the stack,
   // and then merge them again. In the other cases, emit compact directly.
   SDValue Compressed;
-  if (VecVT == MVT::nxv8i16 || VecVT == MVT::nxv8i8 || VecVT == MVT::nxv16i8) {
+  if (VecVT == MVT::nxv8i16 || VecVT == MVT::nxv8i8 || VecVT == MVT::nxv16i8 ||
+      VecVT == MVT::nxv8f16 || VecVT == MVT::nxv8bf16) {
     SDValue Chain = DAG.getEntryNode();
     SDValue StackPtr = DAG.CreateStackTemporary(
         VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));
     MachineFunction &MF = DAG.getMachineFunction();
 
-    EVT PartialVecVT =
-        EVT::getVectorVT(*DAG.getContext(), ElmtVT, 4, /*isScalable*/ true);
+    bool isFloatingPoint = ElmtVT.isFloatingPoint();
+    if (isFloatingPoint)
+      Vec = DAG.getBitcast(CastVT, Vec);
+
+    EVT PartialVecVT = EVT::getVectorVT(
+        *DAG.getContext(), Vec.getValueType().getVectorElementType(), 4,
+        /*isScalable*/ true);
     EVT OffsetVT = getVectorIdxTy(DAG.getDataLayout());
     SDValue Offset = DAG.getConstant(0, DL, OffsetVT);
 
@@ -6738,6 +6744,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
     MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
         MF, cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
     Compressed = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+
+    if (isFloatingPoint)
+      Compressed = DAG.getBitcast(VecVT, Compressed);
+
     CompressedViaStack = true;
   } else {
     // Convert to i32 or i64 for smaller types, as these are the only supported
@@ -6780,7 +6790,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
   }
 
   // If we changed the element type before, we need to convert it back.
-  if (ContainerVT != VecVT) {
+  if (ContainerVT != VecVT && !CompressedViaStack) {
     Compressed = DAG.getNode(ISD::TRUNCATE, DL, CastVT, Compressed);
     Compressed = DAG.getBitcast(VecVT, Compressed);
   }
