@@ -2150,8 +2150,78 @@ static void genCompositeDistributeParallelDoSimd(
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     mlir::Location loc, const ConstructQueue &queue,
     ConstructQueue::const_iterator item) {
+  lower::StatementContext stmtCtx;
+
   assert(std::distance(item, queue.end()) == 4 && "Invalid leaf constructs");
-  TODO(loc, "Composite DISTRIBUTE PARALLEL DO SIMD");
+  ConstructQueue::const_iterator distributeItem = item;
+  ConstructQueue::const_iterator parallelItem = std::next(distributeItem);
+  ConstructQueue::const_iterator doItem = std::next(parallelItem);
+  ConstructQueue::const_iterator simdItem = std::next(doItem);
+
+  // Create parent omp.parallel first.
+  mlir::omp::ParallelOperands parallelClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> parallelReductionSyms;
+  llvm::SmallVector<mlir::Type> parallelReductionTypes;
+  genParallelClauses(converter, semaCtx, stmtCtx, parallelItem->clauses, loc,
+                     parallelClauseOps, parallelReductionTypes,
+                     parallelReductionSyms);
+
+  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/true, &symTable);
+  dsp.processStep1(&parallelClauseOps);
+
+  genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
+                parallelClauseOps, parallelReductionSyms,
+                parallelReductionTypes, &dsp, /*isComposite=*/true);
+
+  // Clause processing.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
+                       loc, distributeClauseOps);
+
+  mlir::omp::WsloopOperands wsloopClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> wsloopReductionSyms;
+  llvm::SmallVector<mlir::Type> wsloopReductionTypes;
+  genWsloopClauses(converter, semaCtx, stmtCtx, doItem->clauses, loc,
+                   wsloopClauseOps, wsloopReductionTypes, wsloopReductionSyms);
+
+  mlir::omp::SimdOperands simdClauseOps;
+  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps);
+
+  mlir::omp::LoopNestOperands loopNestClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
+                     loopNestClauseOps, iv);
+
+  // Operation creation.
+  // TODO: Populate entry block arguments with private variables.
+  auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
+      converter, loc, distributeClauseOps, /*blockArgTypes=*/{});
+  distributeOp.setComposite(/*val=*/true);
+
+  // TODO: Add private variables to entry block arguments.
+  auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
+      converter, loc, wsloopClauseOps, wsloopReductionTypes);
+  wsloopOp.setComposite(/*val=*/true);
+
+  // TODO: Populate entry block arguments with reduction and private variables.
+  auto simdOp = genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps,
+                                                /*blockArgTypes=*/{});
+  simdOp.setComposite(/*val=*/true);
+
+  // Construct wrapper entry block list and associated symbols. It is important
+  // that the symbol order and the block argument order match, so that the
+  // symbol-value bindings created are correct.
+  auto &wrapperSyms = wsloopReductionSyms;
+
+  auto wrapperArgs = llvm::to_vector(llvm::concat<mlir::BlockArgument>(
+      distributeOp.getRegion().getArguments(),
+      wsloopOp.getRegion().getArguments(), simdOp.getRegion().getArguments()));
+
+  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
+                loopNestClauseOps, iv, wrapperSyms, wrapperArgs,
+                llvm::omp::Directive::OMPD_distribute_parallel_do_simd, dsp);
 }
 
 static void genCompositeDistributeSimd(lower::AbstractConverter &converter,
