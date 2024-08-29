@@ -1705,6 +1705,7 @@ class ExtQualsTypeCommonBase {
   friend class ExtQuals;
   friend class QualType;
   friend class Type;
+  friend class ASTReader;
 
   /// The "base" type of an extended qualifiers type (\c ExtQuals) or
   /// a self-referential pointer (for \c Type).
