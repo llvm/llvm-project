@@ -1257,6 +1257,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   // "EvaluateAsConstExpr".
   llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
     llvm::TimeTraceMetadata M;
+    // Parsing events are not as common as instantiations. Add location for them
+    // without verbose mode check.
     Actions.getASTContext().getSourceManager().setLocationForTimeTrace(
         Tok.getLocation(), M);
     return M;
