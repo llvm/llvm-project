@@ -4,10 +4,9 @@
 define <8 x i32> @test1(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP0:%.*]], i1 false)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP1:%.*]], i1 false)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <8 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> [[TMP2]], i1 false)
+; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
 ;
 entry:
   %2 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %0, i1 false)
