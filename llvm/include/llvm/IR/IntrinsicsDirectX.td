@@ -30,31 +30,39 @@ def int_dx_handle_fromBinding
           [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
           [IntrNoMem]>;
 
+// Cast between target extension handle types and dxil-style opaque handles
+def int_dx_cast_handle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
+
 def int_dx_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
 def int_dx_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
 def int_dx_clamp : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
 def int_dx_uclamp : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>; 
+def int_dx_saturate : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 
-def int_dx_dot2 : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+def int_dx_dot2 :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_dot3 : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_dot3 :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_dot4 : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_dot4 :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_sdot : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_fdot :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+    [IntrNoMem, Commutative] >;
+def int_dx_sdot :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_udot : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_udot :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
+    [IntrNoMem, Commutative] >;
 
 def int_dx_frac  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 

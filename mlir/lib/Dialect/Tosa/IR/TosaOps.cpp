@@ -990,10 +990,15 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     return emitOpError() << "new shape does not match result rank";
 
   for (auto [newShapeDim, outputShapeDim] :
-       zip(getNewShape(), outputType.getShape()))
+       zip(getNewShape(), outputType.getShape())) {
     if (newShapeDim != -1 && outputShapeDim != ShapedType::kDynamic &&
         newShapeDim != outputShapeDim)
       return emitOpError() << "new shape is inconsistent with result shape";
+
+    if (newShapeDim != ShapedType::kDynamic && newShapeDim < -1)
+      return emitOpError() << "new shape has invalid tensor dimension size "
+                           << newShapeDim;
+  }
 
   if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();

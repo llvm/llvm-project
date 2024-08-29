@@ -225,20 +225,12 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 >;
 } // End usesCustomInserter = 1
 
-// Pseudo instructions used for @llvm.fptrunc.round upward
-// and @llvm.fptrunc.round downward.
-// These intrinsics will be legalized to G_FPTRUNC_ROUND_UPWARD
-// and G_FPTRUNC_ROUND_DOWNWARD before being lowered to
-// FPTRUNC_UPWARD_PSEUDO and FPTRUNC_DOWNWARD_PSEUDO.
-// The final codegen is done in the ModeRegister pass.
+// Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
+// in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {
-def FPTRUNC_UPWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32:$src0),
-  [(set f16:$vdst, (SIfptrunc_round_upward f32:$src0))]>;
-
-def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32:$src0),
-  [(set f16:$vdst, (SIfptrunc_round_downward f32:$src0))]>;
+def FPTRUNC_ROUND_F16_F32_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0, i32imm:$round),
+  [(set f16:$vdst, (SIfptrunc_round f32:$src0, i32:$round))]>;
 } // End Uses = [MODE, EXEC]
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
@@ -428,15 +420,6 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
 // generation as well as simplied CFG during Machine IR optimization stage.
 
 let isTerminator = 1, isNotDuplicable = 1 in {
-
-let OtherPredicates = [EnableLateCFGStructurize] in {
- def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
-  (outs),
-  (ins SReg_1:$vcc, brtarget:$target),
-  [(brcond i1:$vcc, bb:$target)]> {
-    let Size = 12;
-}
-}
 
 def SI_IF: CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, brtarget:$target),
@@ -4072,15 +4055,9 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let isConvergent = 1;
 }
 
-def G_FPTRUNC_ROUND_UPWARD : AMDGPUGenericInstruction {
+def G_FPTRUNC_ROUND : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$vdst);
-  let InOperandList = (ins type1:$src0);
-  let hasSideEffects = 0;
-}
-
-def G_FPTRUNC_ROUND_DOWNWARD : AMDGPUGenericInstruction {
-  let OutOperandList = (outs type0:$vdst);
-  let InOperandList = (ins type1:$src0);
+  let InOperandList = (ins type1:$src0, untyped_imm_0:$round);
   let hasSideEffects = 0;
 }
 

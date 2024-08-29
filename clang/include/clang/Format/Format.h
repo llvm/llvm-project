@@ -659,7 +659,7 @@ struct FormatStyle {
 
   /// If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
-  /// the next line even if ``BinPackParameters`` is ``false``.
+  /// the next line even if ``BinPackParameters`` is ``OnePerLine``.
   /// \code
   ///   true:
   ///   void myFunction(
@@ -1192,20 +1192,36 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
-  /// If ``false``, a function declaration's or function definition's
-  /// parameters will either all be on the same line or will have one line each.
-  /// \code
-  ///   true:
-  ///   void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-  ///
-  ///   false:
-  ///   void f(int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-  /// \endcode
+  /// Different way to try to fit all parameters on a line.
+  enum BinPackParametersStyle : int8_t {
+    /// Bin-pack parameters.
+    /// \code
+    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_BinPack,
+    /// Put all parameters on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    void f(int a, int b, int c);
+    ///
+    ///    void f(int a,
+    ///           int b,
+    ///           int ccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_OnePerLine,
+    /// Always put each parameter on its own line.
+    /// \code
+    ///    void f(int a,
+    ///           int b,
+    ///           int c);
+    /// \endcode
+    BPPS_AlwaysOnePerLine,
+  };
+
+  /// The bin pack parameters style to use.
   /// \version 3.7
-  bool BinPackParameters;
+  BinPackParametersStyle BinPackParameters;
 
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
@@ -2858,7 +2874,8 @@ struct FormatStyle {
   PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indent the requires clause in a template. This only applies when
-  /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  /// ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  /// or ``WithFollowing``.
   ///
   /// In clang-format 12, 13 and 14 it was named ``IndentRequires``.
   /// \code
@@ -3413,7 +3430,7 @@ struct FormatStyle {
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
   /// If ``Auto`` (the default), delegates to the value in
-  /// ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  /// ``BinPackParameters``. If that is ``BinPack``, bin-packs Objective-C
   /// protocol conformance list items into as few lines as possible
   /// whenever they go over ``ColumnLimit``.
   ///
@@ -3425,13 +3442,13 @@ struct FormatStyle {
   /// onto individual lines whenever they go over ``ColumnLimit``.
   ///
   /// \code{.objc}
-  ///    Always (or Auto, if BinPackParameters=true):
+  ///    Always (or Auto, if BinPackParameters==BinPack):
   ///    @interface ccccccccccccc () <
   ///        ccccccccccccc, ccccccccccccc,
   ///        ccccccccccccc, ccccccccccccc> {
   ///    }
   ///
-  ///    Never (or Auto, if BinPackParameters=false):
+  ///    Never (or Auto, if BinPackParameters!=BinPack):
   ///    @interface ddddddddddddd () <
   ///        ddddddddddddd,
   ///        ddddddddddddd,
@@ -3944,22 +3961,45 @@ struct FormatStyle {
   /// ``IndentRequires`` option is only used if the ``requires`` is put on the
   /// start of a line.
   enum RequiresClausePositionStyle : int8_t {
-    /// Always put the ``requires`` clause on its own line.
+    /// Always put the ``requires`` clause on its own line (possibly followed by
+    /// a semicolon).
     /// \code
     ///   template <typename T>
-    ///   requires C<T>
+    ///     requires C<T>
     ///   struct Foo {...
     ///
     ///   template <typename T>
-    ///   requires C<T>
+    ///   void bar(T t)
+    ///     requires C<T>;
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
     ///   void bar(T t) {...
     ///
     ///   template <typename T>
     ///   void baz(T t)
-    ///   requires C<T>
+    ///     requires C<T>
     ///   {...
     /// \endcode
     RCPS_OwnLine,
+    /// As with ``OwnLine``, except, unless otherwise prohibited, place a
+    /// following open brace (of a function definition) to follow on the same
+    /// line.
+    /// \code
+    ///   void bar(T t)
+    ///     requires C<T> {
+    ///     return;
+    ///   }
+    ///
+    ///   void bar(T t)
+    ///     requires C<T> {}
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
+    ///   void baz(T t) {
+    ///     ...
+    /// \endcode
+    RCPS_OwnLineWithBrace,
     /// Try to put the clause together with the preceding part of a declaration.
     /// For class templates: stick to the template declaration.
     /// For function templates: stick to the template declaration.

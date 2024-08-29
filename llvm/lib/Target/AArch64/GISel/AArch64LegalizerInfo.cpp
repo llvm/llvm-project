@@ -149,6 +149,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return Query.Types[0].getNumElements() <= 16;
           },
           0, s8)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -196,12 +197,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
       .lowerFor({s8, s16, s32, s64, v2s64, v4s32, v2s32})
+      .libcallFor({s128})
       .widenScalarOrEltToNextPow2(0)
-      .clampScalarOrElt(0, s32, s64)
+      .minScalarOrElt(0, s32)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .moreElementsToNextPow2(0);
-
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_SMULO, G_UMULO})
       .widenScalarToNextPow2(0, /*Min = */ 32)
@@ -953,6 +954,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .minScalarOrElt(0, s8)
       .widenVectorEltsToVectorMinSize(0, 64)
+      .widenScalarOrEltToNextPow2(0)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();

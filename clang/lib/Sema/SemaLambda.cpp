@@ -14,6 +14,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"

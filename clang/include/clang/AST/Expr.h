@@ -3888,6 +3888,7 @@ protected:
   /// Construct an empty binary operator.
   explicit BinaryOperator(EmptyShell Empty) : Expr(BinaryOperatorClass, Empty) {
     BinaryOperatorBits.Opc = BO_Comma;
+    BinaryOperatorBits.ExcludedOverflowPattern = false;
   }
 
 public:

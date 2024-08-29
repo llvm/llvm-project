@@ -10,7 +10,6 @@
 #define LLVM_ANALYSIS_DXILMETADATA_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
@@ -24,6 +23,7 @@ struct ModuleMetadataInfo {
   VersionTuple DXILVersion{};
   VersionTuple ShaderModelVersion{};
   Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
+  VersionTuple ValidatorVersion{};
 
   void print(raw_ostream &OS) const;
 };
