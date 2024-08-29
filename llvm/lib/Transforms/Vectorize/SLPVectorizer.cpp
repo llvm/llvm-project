@@ -5226,6 +5226,9 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       !TE.isAltShuffle())
     return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
+    if (!TE.ReorderIndices.empty())
+      return TE.ReorderIndices;
+
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
@@ -5259,8 +5262,6 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
           return false;
       return true;
     };
-    if (!TE.ReorderIndices.empty())
-      return TE.ReorderIndices;
     DenseMap<unsigned, unsigned> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
