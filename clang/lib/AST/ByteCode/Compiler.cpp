@@ -3287,6 +3287,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
     return this->visitInitializer(E);
   }
 
@@ -4254,9 +4255,6 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // instance pointer of the current function frame, but e.g. to the declaration
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
-  if (!InitStackActive || !E->isImplicit())
-    return this->emitThis(E);
-
   if (InitStackActive && !InitStack.empty()) {
     unsigned StartIndex = 0;
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {

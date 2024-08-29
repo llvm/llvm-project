@@ -1653,3 +1653,9 @@ namespace ExprWithCleanups {
   constexpr auto F = true ? 1i : 2i;
   static_assert(F == 1i, "");
 }
+
+namespace ExplicitThisInTemporary {
+  struct B { B *p = this; };
+  constexpr bool g(B b) { return &b == b.p; }
+  static_assert(g({}), "");
+}
