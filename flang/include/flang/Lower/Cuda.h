@@ -31,18 +31,16 @@ static bool isCudaDeviceContext(fir::FirOpBuilder &builder) {
   if (builder.getRegion()
           .getParentOfType<mlir::acc::ComputeRegionOpInterface>())
     return true;
-  if (auto funcOp =
-          builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
+  if (auto funcOp = builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {
       return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
-              cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
     }
   }
   return false;
 }
 } // end namespace Fortran::lower
-
 
 #endif // FORTRAN_LOWER_CUDA_H
