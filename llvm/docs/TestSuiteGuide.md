@@ -24,7 +24,8 @@ Quickstart
    ```
 
    Installing the official Python release of lit in a Python virtual
-   environment would also work.
+   environment would also work. This will install the most recent 
+   release of lit:
    ```bash
    % python3 -m venv .venv
    % . .venv/bin/activate
