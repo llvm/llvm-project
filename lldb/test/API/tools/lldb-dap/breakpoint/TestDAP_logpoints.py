@@ -19,7 +19,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
-    @skipIfWindows
     def test_logmessage_basic(self):
         """Tests breakpoint logmessage basic functionality."""
         before_loop_line = line_number("main.cpp", "// before loop")
