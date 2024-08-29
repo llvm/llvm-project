@@ -16817,7 +16817,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     }
 
     // mul(zext(i8), sext) can be transformed into smull(zext, sext) when
-    // destination type is at least i32, which is faster than using tbl
+    // destination type is at least SrcWidth * 4, which is faster than using tbl
     // instructions
     if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
       auto *SingleUser = cast<Instruction>(*I->user_begin());
