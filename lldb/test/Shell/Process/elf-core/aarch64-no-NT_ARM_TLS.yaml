@@ -1,5 +1,3 @@
-# REQUIRES: aarch64
-
 ## Check that lldb does not crash if a core file does not contain an NT_ARM_TLS
 ## note while there are notes for other dynamic register sets.
 
