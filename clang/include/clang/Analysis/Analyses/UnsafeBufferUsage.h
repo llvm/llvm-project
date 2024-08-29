@@ -115,8 +115,11 @@ public:
   ///  safe pattern;
   ///  is 3 if string arguments do not guarantee null-termination
   ///  is 4 if the callee takes va_list
+  /// \param UnsafeArg one of the actual arguments that is unsafe, non-null
+  /// only when `2 <= PrintfInfo <= 3`
   virtual void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
-                                    ASTContext &Ctx) = 0;
+                                    ASTContext &Ctx,
+                                    const Expr *UnsafeArg = nullptr) = 0;
 
   /// Invoked when an unsafe operation with a std container is found.
   virtual void handleUnsafeOperationInContainer(const Stmt *Operation,

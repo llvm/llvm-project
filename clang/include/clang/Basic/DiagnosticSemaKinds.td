@@ -12388,8 +12388,8 @@ def warn_unsafe_buffer_libc_call : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def note_unsafe_buffer_printf_call : Note<
   "%select{| change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
-          "| use 'std::string::c_str' or string literal as string pointer to guarantee null-termination"
-          "| do not use va_list that cannot be checked at compile-time for bounds safety}0">;
+          "| use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination"
+          "| do not use va_list, which cannot be checked at compile-time for bounds safety}0">;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<

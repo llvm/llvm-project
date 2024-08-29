@@ -64,18 +64,23 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
 
 
   /* Test printfs */
-  fprintf((FILE*)p, "%s%d", p, *p);  // expected-warning{{function 'fprintf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or string literal as string pointer to guarantee null-termination}}
-  printf("%s%d", p, *p);  // expected-warning{{function 'printf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or string literal as string pointer to guarantee null-termination}}
+  fprintf((FILE*)p, "%s%d", p, *p);  // expected-warning{{function 'fprintf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination}}
+  printf("%s%d", // expected-warning{{function 'printf' introduces unsafe buffer access}}
+	 p,    // expected-note{{use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination}} note attached to the unsafe argument
+	 *p);
   sprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'sprintf' introduces unsafe buffer access}} expected-note{{change to 'snprintf' for explicit bounds checking}}
   swprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'swprintf' introduces unsafe buffer access}} expected-note{{change to 'snprintf' for explicit bounds checking}}
   snprintf(q, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
   snprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
   snwprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
-  snwprintf_s(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf_s' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
-  vsnprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // expected-warning{{function 'vsnprintf' introduces unsafe buffer access}} expected-note{{do not use va_list that cannot be checked at compile-time for bounds safety}}
+  snwprintf_s(                      // expected-warning{{function 'snwprintf_s' introduces unsafe buffer access}}
+	      s.data(),             // expected-note{{buffer pointer and size may not match}} // note attached to the buffer
+	      s2.size(),
+	      "%s%d", "hello", *p);
+  vsnprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // expected-warning{{function 'vsnprintf' introduces unsafe buffer access}} expected-note{{do not use va_list, which cannot be checked at compile-time for bounds safety}}
   sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function 'sscanf' introduces unsafe buffer access}}
   sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function 'sscanf_s' introduces unsafe buffer access}}
-  fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or string literal as string pointer to guarantee null-termination}}
+  fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   printf("%s%d", "hello", *p); // no warn
   snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn

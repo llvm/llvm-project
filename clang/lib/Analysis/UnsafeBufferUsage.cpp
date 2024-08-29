@@ -521,16 +521,22 @@ static bool isNullTermPointer(const Expr *Ptr) {
 //     corresponding to an `s` specifier;
 //  2. Format string is not a literal and there is least an unsafe pointer
 //     argument (including the formatter argument).
-static bool hasUnsafeFormatOrSArg(const CallExpr *Call, unsigned FmtArgIdx,
-                                  ASTContext &Ctx, bool isKprintf = false) {
+//
+// `UnsafeArg` is the output argument that will be set only if this function
+// returns true.
+static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
+                                  const unsigned FmtArgIdx, ASTContext &Ctx,
+                                  bool isKprintf = false) {
   class StringFormatStringHandler
       : public analyze_format_string::FormatStringHandler {
     const CallExpr *Call;
     unsigned FmtArgIdx;
+    const Expr *&UnsafeArg;
 
   public:
-    StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx)
-        : Call(Call), FmtArgIdx(FmtArgIdx) {}
+    StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
+                              const Expr *&UnsafeArg)
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg) {}
 
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
@@ -541,8 +547,11 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, unsigned FmtArgIdx,
         unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
 
         if (0 < ArgIdx && ArgIdx < Call->getNumArgs())
-          if (!isNullTermPointer(Call->getArg(ArgIdx)))
-            return false; // stop parsing
+          if (!isNullTermPointer(Call->getArg(ArgIdx))) {
+            UnsafeArg = Call->getArg(ArgIdx); // output
+            // returning false stops parsing immediately
+            return false;
+          }
       }
       return true; // continue parsing
     }
@@ -552,7 +561,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, unsigned FmtArgIdx,
 
   if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
     StringRef FmtStr = SL->getString();
-    StringFormatStringHandler Handler(Call, FmtArgIdx);
+    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
 
     return analyze_format_string::ParsePrintfString(
         Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
@@ -563,8 +572,12 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, unsigned FmtArgIdx,
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
       llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
-      [](const Expr *Arg) {
-        return Arg->getType()->isPointerType() && !isNullTermPointer(Arg);
+      [&UnsafeArg](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+          UnsafeArg = Arg;
+          return true;
+        }
+        return false;
       });
 }
 
@@ -748,7 +761,9 @@ AST_MATCHER(FunctionDecl, isNormalPrintfFunc) {
 // Then if the format string is a string literal, this matcher matches when at
 // least one string argument is unsafe. If the format is not a string literal,
 // this matcher matches when at least one pointer type argument is unsafe.
-AST_MATCHER(CallExpr, hasUnsafePrintfStringArg) {
+AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
+              clang::ast_matchers::internal::Matcher<Expr>,
+              UnsafeStringArgMatcher) {
   // Determine what printf it is:
   const Expr *FirstArg = Node.getArg(0);
   ASTContext &Ctx = Finder->getASTContext();
@@ -756,10 +771,14 @@ AST_MATCHER(CallExpr, hasUnsafePrintfStringArg) {
   if (isa<StringLiteral>(FirstArg->IgnoreParenImpCasts())) {
     // It is a printf/kprintf. And, the format is a string literal:
     bool isKprintf = false;
+    const Expr *UnsafeArg;
+
     if (auto *Callee = Node.getDirectCallee())
       if (auto *II = Node.getDirectCallee()->getIdentifier())
         isKprintf = II->getName() == "kprintf";
-    return hasUnsafeFormatOrSArg(&Node, 0, Ctx, isKprintf);
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf))
+      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    return false;
   }
 
   QualType PtrTy = FirstArg->getType();
@@ -772,20 +791,31 @@ AST_MATCHER(CallExpr, hasUnsafePrintfStringArg) {
                                      there can't be any file pointer then */
       && PteTy.getCanonicalType() == Ctx.getFILEType().getCanonicalType()) {
     // It is a fprintf:
-    return hasUnsafeFormatOrSArg(&Node, 1, Ctx, false);
+    const Expr *UnsafeArg;
+
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false))
+      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    return false;
   }
 
   const Expr *SecondArg = Node.getArg(1);
 
   if (SecondArg->getType()->isIntegerType()) {
     // It is a snprintf:
-    return hasUnsafeFormatOrSArg(&Node, 2, Ctx, false);
+    const Expr *UnsafeArg;
+
+    if (unsigned UnsafeArgIdx =
+            hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
+      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    return false;
   }
   // It is printf but the format string is passed by pointer. The only thing we
   // can do is to require all pointers to be null-terminated:
-  return llvm::any_of(Node.arguments(), [](const Expr *Arg) -> bool {
-    return Arg->getType()->isPointerType() && !isNullTermPointer(Arg);
-  });
+  for (auto Arg : Node.arguments())
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg))
+      if (UnsafeStringArgMatcher.matches(*Arg, Finder, Builder))
+        return true;
+  return false;
 }
 
 // This matcher requires that it is known that the callee `isNormalPrintf`.
@@ -1423,6 +1453,7 @@ public:
 
 class UnsafeLibcFunctionCallGadget : public WarningGadget {
   const CallExpr *const Call;
+  const Expr *UnsafeArg = nullptr;
   constexpr static const char *const Tag = "UnsafeLibcFunctionCall";
   // Extra tags for additional information:
   constexpr static const char *const UnsafeSprintfTag =
@@ -1437,8 +1468,8 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
   enum UnsafeKind {
     OTHERS = 0,   // no specific information, the callee function is unsafe
     SPRINTF = 1,  // never call `-sprintf`s, call `-snprintf`s instead.
-    SIZED_BY = 2, // a pair of function arguments have "__sized_by" relation but
-                  // they do not conform to safe patterns
+    SIZED_BY = 2, // the first two arguments of `snprintf` function have
+                  // "__sized_by" relation but they do not conform to safe patterns
     STRING = 3,   // an argument is a pointer-to-char-as-string but does not
                   // guarantee null-termination
     VA_LIST = 4,  // one of the `-printf`s function that take va_list, which is
@@ -1449,49 +1480,52 @@ public:
   UnsafeLibcFunctionCallGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::UnsafeLibcFunctionCall),
         Call(Result.Nodes.getNodeAs<CallExpr>(Tag)) {
-    if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSprintfTag))
+    if (Result.Nodes.getNodeAs<Decl>(UnsafeSprintfTag))
       WarnedFunKind = SPRINTF;
-    else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeStringTag))
+    else if (auto *E = Result.Nodes.getNodeAs<Expr>(UnsafeStringTag)) {
       WarnedFunKind = STRING;
-    else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSizedByTag))
+      UnsafeArg = E;
+    } else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSizedByTag)) {
       WarnedFunKind = SIZED_BY;
-    else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeVaListTag))
+      UnsafeArg = Call->getArg(0);
+    } else if (Result.Nodes.getNodeAs<Decl>(UnsafeVaListTag))
       WarnedFunKind = VA_LIST;
   }
 
   static Matcher matcher() {
-    return stmt(
-        stmt(
-            anyOf(
-                // Match a call to a predefined unsafe libc function (unless the
-                // call has a sole string literal argument):
-                callExpr(callee(functionDecl(
-                             libc_func_matchers::isPredefinedUnsafeLibcFunc())),
-                         unless(allOf(hasArgument(0, expr(stringLiteral())),
-                                      hasNumArgs(1)))),
-                // Match a call to one of the `v*printf` functions taking
-                // va-list, which cannot be checked at compile-time:
-                callExpr(callee(functionDecl(
-                             libc_func_matchers::isUnsafeVaListPrintfFunc())))
+    return stmt(anyOf(
+        callExpr(
+            callee(functionDecl(anyOf(
+                // Match a predefined unsafe libc
+                // function:
+                functionDecl(libc_func_matchers::isPredefinedUnsafeLibcFunc()),
+                // Match a call to one of the `v*printf` functions
+                // taking va-list, which cannot be checked at
+                // compile-time:
+                functionDecl(libc_func_matchers::isUnsafeVaListPrintfFunc())
                     .bind(UnsafeVaListTag),
-                // Match a call to a `sprintf` function, which is never safe:
-                callExpr(callee(functionDecl(
-                             libc_func_matchers::isUnsafeSprintfFunc())))
-                    .bind(UnsafeSprintfTag),
-                // Match a call to an `snprintf` function. And first two
-                // arguments of the call (that describe a buffer) are not in
-                // safe patterns:
-                callExpr(callee(functionDecl(
-                             libc_func_matchers::isNormalPrintfFunc())),
-                         libc_func_matchers::hasUnsafeSnprintfBuffer())
-                    .bind(UnsafeSizedByTag),
-                // Match a call to a `printf` function, which can be safe if all
-                // arguments are null-terminated:
-                callExpr(callee(functionDecl(
-                             libc_func_matchers::isNormalPrintfFunc())),
-                         libc_func_matchers::hasUnsafePrintfStringArg())
-                    .bind(UnsafeStringTag)))
-            .bind(Tag));
+                // Match a call to a `sprintf` function, which is never
+                // safe:
+                functionDecl(libc_func_matchers::isUnsafeSprintfFunc())
+                    .bind(UnsafeSprintfTag)))),
+            //  (unless the call has a sole string literal argument):
+            unless(
+                allOf(hasArgument(0, expr(stringLiteral())), hasNumArgs(1)))),
+
+        // The following two cases require checking against actual
+        // arguments of the call:
+
+        // Match a call to an `snprintf` function. And first two
+        // arguments of the call (that describe a buffer) are not in
+        // safe patterns:
+        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+                 libc_func_matchers::hasUnsafeSnprintfBuffer())
+            .bind(UnsafeSizedByTag),
+        // Match a call to a `printf` function, which can be safe if
+        // all arguments are null-terminated:
+        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+                 libc_func_matchers::hasUnsafePrintfStringArg(
+                     expr().bind(UnsafeStringTag)))));
   }
 
   const Stmt *getBaseStmt() const { return Call; }
@@ -1501,7 +1535,7 @@ public:
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
-    Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Ctx);
+    Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Ctx, UnsafeArg);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
