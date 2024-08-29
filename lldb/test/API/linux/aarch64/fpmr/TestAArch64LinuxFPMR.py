@@ -45,6 +45,11 @@ class AArch64LinuxFPMR(TestBase):
             substrs=["Floating Point Mode Register", f"fpmr = {expected_fpmr:#018x}"],
         )
 
+        if self.hasXMLSupport():
+            self.expect(
+                "register read fpmr", substrs=["LSCALE2 = 42", "F8S1 = FP8_E4M3 | 0x4"]
+            )
+
         # Write a value for the program to find. Same fields but with bit values
         # inverted.
         new_fpmr = (0b010101 << 32) | 0b010
