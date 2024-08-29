@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRSCFToControlFlow
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRControlFlowDialect
+  MLIRLLVMDialect
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRTransforms
