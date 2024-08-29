@@ -326,35 +326,36 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE5:%.*]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
-; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[P2]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x i32>, ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[DEST:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], [[TMP14]]
-; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[WIDE_LOAD3]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
-; CHECK-NEXT:    br i1 [[TMP18]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], [[TMP21]]
-; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP22]], align 4
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
+; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5]]
+; CHECK:       pred.store.if4:
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i32> [[WIDE_LOAD3]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
+; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5]]
+; CHECK:       pred.store.continue5:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

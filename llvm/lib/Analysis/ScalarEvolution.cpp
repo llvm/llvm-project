@@ -8191,10 +8191,13 @@ ScalarEvolution::getSmallConstantTripCount(const Loop *L,
   return getConstantTripCount(ExitCount);
 }
 
-unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
+unsigned ScalarEvolution::getSmallConstantMaxTripCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+
   const auto *MaxExitCount =
-      dyn_cast<SCEVConstant>(getConstantMaxBackedgeTakenCount(L));
-  return getConstantTripCount(MaxExitCount);
+      Predicates ? getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
+                 : getConstantMaxBackedgeTakenCount(L);
+  return getConstantTripCount(dyn_cast<SCEVConstant>(MaxExitCount));
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
@@ -8301,6 +8304,11 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
 const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+}
+
+const SCEV *ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
+  return getPredicatedBackedgeTakenInfo(L).getConstantMax(this, &Preds);
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
@@ -8624,14 +8632,20 @@ ScalarEvolution::BackedgeTakenInfo::getExitNotTaken(
 }
 
 /// getConstantMax - Get the constant max backedge taken count for the loop.
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
-  auto PredicateNotAlwaysTrue = [](const ExitNotTakenInfo &ENT) {
-    return !ENT.hasAlwaysTruePredicate();
-  };
-
-  if (!getConstantMax() || any_of(ExitNotTaken, PredicateNotAlwaysTrue))
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
+    ScalarEvolution *SE,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
+  if (!getConstantMax())
     return SE->getCouldNotCompute();
+
+  for (const auto &ENT : ExitNotTaken)
+    if (!ENT.hasAlwaysTruePredicate())
+      if (!Predicates)
+        return SE->getCouldNotCompute();
+      else {
+        for (const auto *P : ENT.Predicates)
+          Predicates->push_back(P);
+      }
 
   assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
           isa<SCEVConstant>(getConstantMax())) &&
