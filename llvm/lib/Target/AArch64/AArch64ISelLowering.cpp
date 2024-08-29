@@ -21800,17 +21800,14 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   if (A.getValueType() != B.getValueType())
     return SDValue();
 
-  unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
+  unsigned Opcode = 0;
 
   if (IsSExt)
-    DotIntrinsicId = Intrinsic::aarch64_sve_sdot;
+    Opcode = AArch64ISD::SDOT;
   else if (IsZExt)
-    DotIntrinsicId = Intrinsic::aarch64_sve_udot;
+    Opcode = AArch64ISD::UDOT;
 
-  assert(DotIntrinsicId != Intrinsic::not_intrinsic &&
-         "Unexpected dot product case encountered.");
-
-  auto IntrinsicId = DAG.getConstant(DotIntrinsicId, DL, MVT::i64);
+  assert(Opcode != 0 && "Unexpected dot product case encountered.");
 
   // The fully-reduced type. Should be a vector of i32 or i64
   EVT ReducedType = N->getValueType(0);
@@ -21824,13 +21821,13 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   // as many elements in the wide type
   if (WideType == MVT::nxv16i32 && ReducedType == MVT::nxv4i32 &&
       ExtendedType == MVT::nxv16i8)
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4i32,
-                       {IntrinsicId, NarrowOp, A, B});
+    return DAG.getNode(Opcode, DL, MVT::nxv4i32,
+                              NarrowOp, A, B);
 
   if (WideType == MVT::nxv8i64 && ReducedType == MVT::nxv2i64 &&
       ExtendedType == MVT::nxv8i16)
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv2i64,
-                       {IntrinsicId, NarrowOp, A, B});
+    return DAG.getNode(Opcode, DL, MVT::nxv2i64,
+                              NarrowOp, A, B);
 
   return SDValue();
 }
