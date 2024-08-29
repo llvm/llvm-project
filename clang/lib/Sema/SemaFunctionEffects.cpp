@@ -1043,13 +1043,9 @@ private:
       for (const FieldDecl *Field : Rec->fields())
         followTypeDtor(Field->getType(), DtorLoc);
 
-      if (const auto *Class = dyn_cast<CXXRecordDecl>(Rec)) {
+      if (const auto *Class = dyn_cast<CXXRecordDecl>(Rec))
         for (const CXXBaseSpecifier &Base : Class->bases())
           followTypeDtor(Base.getType(), DtorLoc);
-
-        for (const CXXBaseSpecifier &Base : Class->vbases())
-          followTypeDtor(Base.getType(), DtorLoc);
-      }
     }
 
     void followTypeDtor(QualType QT, SourceLocation CallSite) {

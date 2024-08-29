@@ -294,6 +294,20 @@ struct DerivedFromUnsafe : public Unsafe {
   ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' destructor must not call non-'nonblocking' destructor 'Unsafe::~Unsafe'}}
 };
 
+// Virtual inheritance
+struct VBase {
+  int *Ptr;
+
+  VBase() { Ptr = new int; }       // expected-note {{constructor cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+  virtual ~VBase() { delete Ptr; } // expected-note {{virtual method cannot be inferred 'nonblocking'}}
+};
+
+struct VDerived : virtual VBase {
+  VDerived() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'VBase::VBase'}}
+
+  ~VDerived() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' destructor must not call non-'nonblocking' destructor 'VBase::~VBase'}}
+};
+
 // Contexts where there is no function call, no diagnostic.
 bool bad();
 
