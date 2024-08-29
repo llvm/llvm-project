@@ -1,22 +1,26 @@
 # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 
-# Create the library and add the default arguments.
-add_target_library(omptarget.rtl.amdgpu AMDGPU)
-
-target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp)
-target_include_directories(omptarget.rtl.amdgpu PRIVATE
-                           ${CMAKE_CURRENT_SOURCE_DIR}/utils)
+set(inc_dirs ${CMAKE_CURRENT_SOURCE_DIR}/utils)
+set(link_libs)
+set(tgt_srcs src/rtl.cpp)
 
 if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building AMDGPU plugin linked against libhsa")
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64 LLVMFrontendOffloading)
+  list(APPEND link_comps FrontendOffloading)
+  list(APPEND link_libs hsa-runtime64::hsa-runtime64)
 else()
   message(STATUS "Building AMDGPU plugin for dlopened libhsa")
-  target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
-  target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE LLVMFrontendOffloading)
+  list(APPEND inc_dirs dynamic_hsa)
+  list(APPEND tgt_srcs dynamic_hsa/hsa.cpp)
+  list(APPEND link_comps FrontendOffloading)
 endif()
+
+# Create the library and add the default arguments.
+add_target_library(omptarget.rtl.amdgpu AMDGPU LINK_COMPONENTS ${link_comps})
+target_sources(omptarget.rtl.amdgpu PRIVATE ${tgt_srcs})
+target_include_directories(omptarget.rtl.amdgpu PRIVATE ${inc_dirs})
+target_link_libraries(omptarget.rtl.amdgpu PRIVATE ${link_libs})
 
 # Configure testing for the AMDGPU plugin. We will build tests if we could a
 # functional AMD GPU on the system, or if manually specifies by the user.
