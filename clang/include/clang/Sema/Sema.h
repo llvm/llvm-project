@@ -204,6 +204,24 @@ class SemaPPCallbacks;
 class TemplateDeductionInfo;
 } // namespace sema
 
+// AssignmentAction - This is used by all the assignment diagnostic functions
+// to represent what is actually causing the operation
+enum class AssignmentAction {
+  Assigning,
+  Passing,
+  Returning,
+  Converting,
+  Initializing,
+  Sending,
+  Casting,
+  Passing_CFAudited
+};
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AssignmentAction &AA) {
+  DB << llvm::to_underlying(AA);
+  return DB;
+}
+
 namespace threadSafety {
 class BeforeSet;
 void threadSafetyCleanup(BeforeSet *Cache);
@@ -6492,19 +6510,6 @@ public:
   /// ExprCleanupObjects - This is the stack of objects requiring
   /// cleanup that are created by the current full expression.
   SmallVector<ExprWithCleanups::CleanupObject, 8> ExprCleanupObjects;
-
-  // AssignmentAction - This is used by all the assignment diagnostic functions
-  // to represent what is actually causing the operation
-  enum AssignmentAction {
-    AA_Assigning,
-    AA_Passing,
-    AA_Returning,
-    AA_Converting,
-    AA_Initializing,
-    AA_Sending,
-    AA_Casting,
-    AA_Passing_CFAudited
-  };
 
   /// Determine whether the use of this declaration is valid, without
   /// emitting diagnostics.
