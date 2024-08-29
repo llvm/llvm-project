@@ -4447,7 +4447,7 @@ void checkCommonPredicates(sandboxir::CmpInst *SBCmp, llvm::CmpInst *LLVMCmp) {
 TEST_F(SandboxIRTest, ICmpInst) {
   SCOPED_TRACE("SandboxIRTest sandboxir::ICmpInst tests");
   parseIR(C, R"IR(
-define void @foo(float %f0, float %f1, i32 %i0, i32 %i1) {
+define void @foo(i32 %i0, i32 %i1) {
  bb:
   %ine  = icmp ne i32 %i0, %i1
   %iugt = icmp ugt i32 %i0, %i1
@@ -4478,6 +4478,10 @@ define void @foo(float %f0, float %f1, i32 %i0, i32 %i1) {
     EXPECT_EQ(ICmp->getSignedPredicate(), LLVMICmp->getSignedPredicate());
     EXPECT_EQ(ICmp->getUnsignedPredicate(), LLVMICmp->getUnsignedPredicate());
   }
+  auto *NewCmp = sandboxir::CmpInst::create(
+      CmpInst::OtherOps::ICmp, llvm::CmpInst::ICMP_ULE, F.getArg(0),
+      F.getArg(1), Ctx, "", &*BB->begin());
+  EXPECT_EQ(NewCmp, &*BB->begin());
 }
 
 TEST_F(SandboxIRTest, FCmpInst) {
@@ -4501,6 +4505,9 @@ bb:
   %fune = fcmp une float %f0, %f1
   %ftrue = fcmp true float %f0, %f1
   ret void
+bb1:
+  %copyfrom = fadd reassoc float %f0, 42.0
+  ret void
 }
 )IR");
   Function &LLVMF = *M->getFunction("foo");
@@ -4517,6 +4524,25 @@ bb:
     checkSwapOperands(Ctx, FCmp, LLVMFCmp);
     checkCommonPredicates(FCmp, LLVMFCmp);
   }
+
+  auto *LLVMBB1 = getBasicBlockByName(LLVMF, "bb1");
+  auto *BB1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB1));
+  auto It1 = BB1->begin();
+  auto *CopyFrom = &*It1++;
+  CopyFrom->setFastMathFlags(FastMathFlags::getFast());
+
+  // create with default flags
+  auto *NewFCmp = sandboxir::CmpInst::create(
+      CmpInst::OtherOps::FCmp, llvm::CmpInst::FCMP_ONE, F.getArg(0),
+      F.getArg(1), Ctx, "", &*It1);
+  FastMathFlags DefaultFMF = NewFCmp->getFastMathFlags();
+  EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
+  // create with copied flags
+  auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
+      CmpInst::OtherOps::FCmp, llvm::CmpInst::FCMP_ONE, F.getArg(0),
+      F.getArg(1), CopyFrom, Ctx, "", &*It1);
+  EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
+               CopyFrom->getFastMathFlags());
 }
 
 TEST_F(SandboxIRTest, UnreachableInst) {

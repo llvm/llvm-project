@@ -2716,12 +2716,13 @@ CmpInst *CmpInst::create(OtherOps Op, Predicate P, Value *S1, Value *S2,
   auto &Builder = Ctx.getLLVMIRBuilder();
   if (InsertBefore)
     Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  auto *LLVMI =
-      cast<llvm::CmpInst>(Builder.CreateCmp(P, S1->Val, S2->Val, Name));
-  if (llvm::ICmpInst *IC = dyn_cast<llvm::ICmpInst>(LLVMI))
-    return Ctx.createICmpInst(IC);
-  else
-    return Ctx.createFCmpInst(cast<llvm::FCmpInst>(IC));
+  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  if (Op == OtherOps::ICmp)
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
+  else {
+    assert(Op == OtherOps::FCmp);
+    return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+  }
 }
 
 CmpInst *CmpInst::createWithCopiedFlags(OtherOps Op, Predicate P, Value *S1,
