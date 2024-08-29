@@ -1,9 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
 # RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
 
-# This test is to check below inherit and other situations EVEX_W and EVEX_OPSIZE both set:
-# IC_EVEX_W       -->    IC_EVEX_W_OPSIZE
-# IC_EVEX_W_B     -->    IC_EVEX_W_OPSIZE_B
+## This test is to check OSIZE=64b when EVEX.W=1 and EVEX.pp = 01.
 
 ## adc
 # ATT:   {evex}  adcq    $123, %r9
