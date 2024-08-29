@@ -1368,13 +1368,12 @@ public:
   /// should be represented as an empty order, so this is used to
   /// decide if we can canonicalize a computed order.  Undef elements
   /// (represented as size) are ignored.
-  bool IsIdentityOrder(ArrayRef<unsigned> Order) const {
-    assert(!Order.empty());
+  bool isIdentityOrder(ArrayRef<unsigned> Order) const {
+    assert(!Order.empty() && "expected non-empty mask");
     const unsigned Sz = Order.size();
-    for (unsigned Idx : seq<unsigned>(0, Sz))
-      if (Idx != Order[Idx] && Order[Idx] != Sz)
-        return false;
-    return true;
+    return all_of(enumerate(Order), [&](const auto &P) {
+      return P.value() == P.index() || P.value() == Sz;
+    });
   }
 
   /// Checks if the specified gather tree entry \p TE can be represented as a
@@ -5278,7 +5277,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     stable_sort(Phis, PHICompare);
     for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
       ResOrder[Id] = PhiToId[Phis[Id]];
-    if (IsIdentityOrder(ResOrder))
+    if (isIdentityOrder(ResOrder))
       return std::nullopt; // No need to reorder.
     return std::move(ResOrder);
   }
@@ -5577,7 +5576,7 @@ void BoUpSLP::reorderTopToBottom() {
     unsigned FilledIdentityCnt = 0;
     OrdersType IdentityOrder(VF, VF);
     for (auto &Pair : OrdersUses) {
-      if (Pair.first.empty() || IsIdentityOrder(Pair.first)) {
+      if (Pair.first.empty() || isIdentityOrder(Pair.first)) {
         if (!Pair.first.empty())
           FilledIdentityCnt += Pair.second;
         IdentityCnt += Pair.second;
@@ -5593,7 +5592,7 @@ void BoUpSLP::reorderTopToBottom() {
       if (Cnt < Pair.second ||
           (Cnt == IdentityCnt && IdentityCnt == FilledIdentityCnt &&
            Cnt == Pair.second && !BestOrder.empty() &&
-           IsIdentityOrder(BestOrder))) {
+           isIdentityOrder(BestOrder))) {
         combineOrders(Pair.first, BestOrder);
         BestOrder = Pair.first;
         Cnt = Pair.second;
@@ -5602,7 +5601,7 @@ void BoUpSLP::reorderTopToBottom() {
       }
     }
     // Set order of the user node.
-    if (IsIdentityOrder(BestOrder))
+    if (isIdentityOrder(BestOrder))
       continue;
     fixupOrderingIndices(BestOrder);
     SmallVector<int> Mask;
@@ -5896,7 +5895,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       unsigned VF = Data.second.front().second->getVectorFactor();
       OrdersType IdentityOrder(VF, VF);
       for (auto &Pair : OrdersUses) {
-        if (Pair.first.empty() || IsIdentityOrder(Pair.first)) {
+        if (Pair.first.empty() || isIdentityOrder(Pair.first)) {
           IdentityCnt += Pair.second;
           combineOrders(IdentityOrder, Pair.first);
         }
@@ -5916,7 +5915,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
       }
       // Set order of the user node.
-      if (IsIdentityOrder(BestOrder)) {
+      if (isIdentityOrder(BestOrder)) {
         for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
           OrderedEntries.remove(Op.second);
         continue;
@@ -6179,7 +6178,7 @@ bool BoUpSLP::canFormVector(ArrayRef<StoreInst *> StoresVec,
   // Identity order (e.g., {0,1,2,3}) is modeled as an empty OrdersType in
   // reorderTopToBottom() and reorderBottomToTop(), so we are following the
   // same convention here.
-  if (IsIdentityOrder(ReorderIndices))
+  if (isIdentityOrder(ReorderIndices))
     ReorderIndices.clear();
 
   return true;
