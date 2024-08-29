@@ -3246,6 +3246,16 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_ClassLBrace);
   EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_TOKEN(Tokens[8], tok::r_brace, TT_ClassRBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+
+  Tokens = annotate("#define FOO(X) \\\n"
+                    "  struct X##_tag_ {};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_StructLBrace);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_StructRBrace);
+  EXPECT_BRACE_KIND(Tokens[11], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
