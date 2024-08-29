@@ -14,7 +14,6 @@ namespace clang {
 std::vector<TestLanguage> getCOrLater(const int MinimumStd) {
   std::vector<TestLanguage> Result{};
 
-#define TESTLANGUAGE(lang, version, std_flag, version_index)
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   if (version >= MinimumStd)                                                   \
     Result.push_back(Lang_##lang##version);
@@ -25,7 +24,6 @@ std::vector<TestLanguage> getCOrLater(const int MinimumStd) {
 std::vector<TestLanguage> getCXXOrLater(const int MinimumStd) {
   std::vector<TestLanguage> Result{};
 
-#define TESTLANGUAGE(lang, version, std_flag, version_index)
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   if (version >= MinimumStd)                                                   \
     Result.push_back(Lang_##lang##version);
@@ -37,7 +35,6 @@ std::vector<TestLanguage> getCXXOrLater(const int MinimumStd) {
 std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
   // Test with basic arguments.
   switch (Lang) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   case Lang_##lang##version:                                                   \
     return { "-x", "c", "-std=" #std_flag };
@@ -58,7 +55,6 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
 
 std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
   switch (Lang) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   case Lang_##lang##version:                                                   \
     return { "-xc", "-std=" #std_flag };
@@ -81,7 +77,6 @@ std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
 
 StringRef getFilenameForTesting(TestLanguage Lang) {
   switch (Lang) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   case Lang_##lang##version:                                                   \
     return "input.c";

@@ -37,18 +37,14 @@ struct TestClangConfig {
 
   bool isCOrLater(int MinimumStdVersion) const {
     const auto MinimumStdVersionIndex = 0
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   +(MinimumStdVersion == version ? version_index : 0)
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
         ;
     switch (Language) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   case Lang_##lang##version:                                                   \
     return MinimumStdVersionIndex <= version_index;
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
     default:
       return false;
@@ -59,18 +55,14 @@ struct TestClangConfig {
 
   bool isCOrEarlier(int MaximumStdVersion) const {
     const auto MaximumStdVersionIndex = 0
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   +(MaximumStdVersion == version ? version_index : 0)
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
         ;
     switch (Language) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
   case Lang_##lang##version:                                                   \
     return MaximumStdVersionIndex >= version_index;
-#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
     default:
       return false;
@@ -79,28 +71,22 @@ struct TestClangConfig {
 
   bool isCXX() const {
     return false
-#define TESTLANGUAGE
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   || Language == Lang_##lang##version
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
         ;
   }
 
   bool isCXXOrLater(int MinimumStdVersion) const {
     const auto MinimumStdVersionIndex = 0
-#define TESTLANGUAGE
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   +(MinimumStdVersion == version ? version_index : 0)
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
         ;
     switch (Language) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   case Lang_##lang##version:                                                   \
     return MinimumStdVersionIndex <= version_index;
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
     default:
       return false;
@@ -119,18 +105,14 @@ struct TestClangConfig {
 
   bool isCXXOrEarlier(int MaximumStdVersion) const {
     const auto MaximumStdVersionIndex = 0
-#define TESTLANGUAGE
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   +(MaximumStdVersion == version ? version_index : 0)
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
         ;
     switch (Language) {
-#define TESTLANGUAGE
 #define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
   case Lang_##lang##version:                                                   \
     return MaximumStdVersionIndex >= version_index;
-#define TESTLANGUAGE_C(lang, version, std_flag, version_index)
 #include "clang/Testing/TestLanguage.def"
     default:
       return false;
