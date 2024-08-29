@@ -806,6 +806,7 @@ class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
 let Constraints = "$dst = $val" in {
   let Predicates = [BPFNoALU32] in {
     def XADDW : XADD<BPF_W, "u32", atomic_load_add_i32>;
+    def XADDD : XADD<BPF_DW, "u64", atomic_load_add_i64>;
   }
 }
 
@@ -849,8 +850,6 @@ let Constraints = "$dst = $val" in {
     def XORW32  : ATOMIC32_NOFETCH<BPF_OR, "|">;
     def XXORW32 : ATOMIC32_NOFETCH<BPF_XOR, "^">;
   }
-
-  def XADDD  : ATOMIC_NOFETCH<BPF_ADD, "+">;
   def XANDD  : ATOMIC_NOFETCH<BPF_AND, "&">;
   def XORD   : ATOMIC_NOFETCH<BPF_OR, "|">;
   def XXORD  : ATOMIC_NOFETCH<BPF_XOR, "^">;
@@ -901,7 +900,9 @@ let Constraints = "$dst = $val" in {
     def XFXORW32 : XFALU32<BPF_W, BPF_XOR, "u32", "xor", atomic_load_xor_i32>;
   }
 
-  def XFADDD : XFALU64<BPF_DW, BPF_ADD, "u64", "add", atomic_load_add_i64>;
+  let Predicates = [BPFHasALU32] in {
+    def XFADDD : XFALU64<BPF_DW, BPF_ADD, "u64", "add", atomic_load_add_i64>;
+  }
   def XFANDD : XFALU64<BPF_DW, BPF_AND, "u64", "and", atomic_load_and_i64>;
   def XFORD  : XFALU64<BPF_DW, BPF_OR,  "u64", "or",  atomic_load_or_i64>;
   def XFXORD : XFALU64<BPF_DW, BPF_XOR, "u64", "xor", atomic_load_xor_i64>;
