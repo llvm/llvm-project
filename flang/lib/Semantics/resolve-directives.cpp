@@ -2754,7 +2754,7 @@ void OmpAttributeVisitor::CheckObjectInNamelistOrAssociate(
   if (stmtFunctionExprSymbols_.find(ultimateSymbol) !=
       stmtFunctionExprSymbols_.end()) {
     context_.Say(name.source,
-        "Variable '%s' in STATEMENT FUNCTION expression cannot be in a "
+        "Variable '%s' in statement function expression cannot be in a "
         "%s clause"_err_en_US,
         name.ToString(), clauseName.str());
   }
