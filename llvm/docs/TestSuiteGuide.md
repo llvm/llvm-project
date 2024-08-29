@@ -9,10 +9,10 @@ Quickstart
 
    ```bash
    % <path to llvm build>/bin/llvm-lit --version
-   lit 0.8.0dev
+   lit 20.0.0dev
    ```
 
-   An alternative is installing it as a python package in a python virtual
+   An alternative is installing it as a Python package in a python virtual
    environment:
 
    ```bash
@@ -20,7 +20,17 @@ Quickstart
    % . .venv/bin/activate
    % pip install git+https://github.com/llvm/llvm-project.git#subdirectory=llvm/utils/lit
    % lit --version
-   lit 0.8.0dev
+   lit 20.0.0dev
+   ```
+
+   Installing the official Python release of lit in a Python virtual
+   environment would also work.
+   ```bash
+   % python3 -m venv .venv
+   % . .venv/bin/activate
+   % pip install lit
+   % lit --version
+   lit 18.1.8
    ```
 
 2. Check out the `test-suite` module with:
