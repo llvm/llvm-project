@@ -378,7 +378,7 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
 
     // Counter the effects of sign-extension with a bitwise not.
     // This is only faster and smaller for 32 bit values.
-  } else if (DR32->contains(Reg) && std::abs(Imm) <= 255) {
+  } else if (DR32->contains(Reg) && isUInt<8>(Imm)) {
     LLVM_DEBUG(dbgs() << "MOVEQ and NOT\n");
 
     MachineBasicBlock &MBB = *MIB->getParent();
@@ -410,7 +410,7 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
     //
     // TODO: use lea imm.w, %an for further constants when 16-bit
     // absolute addressing is implemented.
-  } else if (AR32->contains(Reg) && Imm >= -32768 && Imm <= 32767) {
+  } else if (AR32->contains(Reg) && isUInt<16>(Imm)) {
     LLVM_DEBUG(dbgs() << "MOVEA w/ implicit extend\n");
 
     unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo);
