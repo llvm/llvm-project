@@ -970,6 +970,7 @@ PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
