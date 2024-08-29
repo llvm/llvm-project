@@ -702,14 +702,14 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
               newOperand->set(replacement);
             }
           });
-      if (annotateFn)
-        annotateFn(newOp, PipeliningOption::PipelinerPart::Epilogue, i - 1);
       if (dynamicLoop) {
         OpBuilder::InsertionGuard insertGuard(rewriter);
         newOp = predicateFn(rewriter, newOp, predicates[currentVersion]);
         if (!newOp)
           return failure();
       }
+      if (annotateFn)
+        annotateFn(newOp, PipeliningOption::PipelinerPart::Epilogue, i - 1);
 
       for (auto [opRes, newRes] :
            llvm::zip(op->getResults(), newOp->getResults())) {
