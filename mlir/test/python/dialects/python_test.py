@@ -597,7 +597,9 @@ def testVariadicOperandAccess():
             three = arith.ConstantOp(i32, 3)
             four = arith.ConstantOp(i32, 4)
 
-            variadic_operands = test.SameVariadicOperandSizeOp([zero, one], two, [three, four])
+            variadic_operands = test.SameVariadicOperandSizeOp(
+                [zero, one], two, [three, four]
+            )
             # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
             print(variadic_operands.non_variadic)
             # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']

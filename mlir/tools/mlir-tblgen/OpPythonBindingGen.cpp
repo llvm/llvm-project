@@ -325,8 +325,7 @@ static std::string attrSizedTraitForKind(const char *kind) {
 /// `operand` or `result` and is used verbatim in the emitted code.
 static void emitElementAccessors(
     const Operator &op, raw_ostream &os, const char *kind,
-    unsigned numVariadicGroups,
-    unsigned numElements,
+    unsigned numVariadicGroups, unsigned numElements,
     llvm::function_ref<const NamedTypeConstraint &(const Operator &, int)>
         getElement) {
   assert(llvm::is_contained(
@@ -354,12 +353,10 @@ static void emitElementAccessors(
       if (element.isVariableLength()) {
         os << llvm::formatv(element.isOptional() ? opOneOptionalTemplate
                                                  : opOneVariadicTemplate,
-                            sanitizeName(element.name), kind,
-                            numElements, i);
+                            sanitizeName(element.name), kind, numElements, i);
       } else if (seenVariableLength) {
         os << llvm::formatv(opSingleAfterVariableTemplate,
-                            sanitizeName(element.name), kind,
-                            numElements, i);
+                            sanitizeName(element.name), kind, numElements, i);
       } else {
         os << llvm::formatv(opSingleTemplate, sanitizeName(element.name), kind,
                             i);
@@ -386,9 +383,9 @@ static void emitElementAccessors(
       const NamedTypeConstraint &element = getElement(op, i);
       if (!element.name.empty()) {
         os << llvm::formatv(opVariadicEqualPrefixTemplate,
-                            sanitizeName(element.name), kind,
-                            numSimpleLength, numVariadicGroups,
-                            numPrecedingSimple, numPrecedingVariadic);
+                            sanitizeName(element.name), kind, numSimpleLength,
+                            numVariadicGroups, numPrecedingSimple,
+                            numPrecedingVariadic);
         os << llvm::formatv(element.isVariableLength()
                                 ? opVariadicEqualVariadicTemplate
                                 : opVariadicEqualSimpleTemplate,
@@ -437,18 +434,14 @@ static const NamedTypeConstraint &getResult(const Operator &op, int i) {
 
 /// Emits accessors to Op operands.
 static void emitOperandAccessors(const Operator &op, raw_ostream &os) {
-  emitElementAccessors(op, os, "operand",
-                       op.getNumVariableLengthOperands(),
-                       getNumOperands(op),
-                       getOperand);
+  emitElementAccessors(op, os, "operand", op.getNumVariableLengthOperands(),
+                       getNumOperands(op), getOperand);
 }
 
 /// Emits accessors Op results.
 static void emitResultAccessors(const Operator &op, raw_ostream &os) {
-  emitElementAccessors(op, os, "result",
-                       op.getNumVariableLengthResults(),
-                       getNumResults(op),
-                       getResult);
+  emitElementAccessors(op, os, "result", op.getNumVariableLengthResults(),
+                       getNumResults(op), getResult);
 }
 
 /// Emits accessors to Op attributes.
