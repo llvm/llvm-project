@@ -81,7 +81,7 @@ public:
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
-                                 MCContext* ExternalContext = nullptr) const;
+                                 MCContext *ExternalContext = nullptr) const;
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
 
 private:
@@ -155,7 +155,7 @@ MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
 /// operand to an MCSymbol.
 MCSymbol *
 X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO,
-                                     MCContext* ExternalContext) const {
+                                     MCContext *ExternalContext) const {
   const Triple &TT = TM.getTargetTriple();
   if (MO.isGlobal() && TT.isOSBinFormatELF())
     return AsmPrinter.getSymbolPreferLocal(*MO.getGlobal());
