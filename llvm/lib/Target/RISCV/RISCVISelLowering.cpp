@@ -891,16 +891,30 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA};
 
     // TODO: support more vp ops.
-    static const unsigned ZvfhminPromoteVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FSUB,         ISD::VP_FMUL,
-        ISD::VP_FDIV,        ISD::VP_FNEG,         ISD::VP_FABS,
-        ISD::VP_FMA,         ISD::VP_REDUCE_FADD,  ISD::VP_REDUCE_SEQ_FADD,
-        ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX,  ISD::VP_SQRT,
-        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,      ISD::VP_FCEIL,
-        ISD::VP_FFLOOR,      ISD::VP_FROUND,       ISD::VP_FROUNDEVEN,
-        ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO, ISD::VP_FRINT,
-        ISD::VP_FNEARBYINT,  ISD::VP_SETCC,        ISD::VP_FMINIMUM,
-        ISD::VP_FMAXIMUM,    ISD::VP_REDUCE_FMINIMUM, ISD::VP_REDUCE_FMAXIMUM};
+    static const unsigned ZvfhminPromoteVPOps[] = {ISD::VP_FADD,
+                                                   ISD::VP_FSUB,
+                                                   ISD::VP_FMUL,
+                                                   ISD::VP_FDIV,
+                                                   ISD::VP_FMA,
+                                                   ISD::VP_REDUCE_FADD,
+                                                   ISD::VP_REDUCE_SEQ_FADD,
+                                                   ISD::VP_REDUCE_FMIN,
+                                                   ISD::VP_REDUCE_FMAX,
+                                                   ISD::VP_SQRT,
+                                                   ISD::VP_FMINNUM,
+                                                   ISD::VP_FMAXNUM,
+                                                   ISD::VP_FCEIL,
+                                                   ISD::VP_FFLOOR,
+                                                   ISD::VP_FROUND,
+                                                   ISD::VP_FROUNDEVEN,
+                                                   ISD::VP_FROUNDTOZERO,
+                                                   ISD::VP_FRINT,
+                                                   ISD::VP_FNEARBYINT,
+                                                   ISD::VP_SETCC,
+                                                   ISD::VP_FMINIMUM,
+                                                   ISD::VP_FMAXIMUM,
+                                                   ISD::VP_REDUCE_FMINIMUM,
+                                                   ISD::VP_REDUCE_FMAXIMUM};
 
     // Sets common operation actions on RVV floating-point vector types.
     const auto SetCommonVFPActions = [&](MVT VT) {
@@ -16440,6 +16454,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDLoc DL(N);
     SDValue Op0 = N->getOperand(0);
     MVT VT = N->getSimpleValueType(0);
+
+    // Constant fold.
+    if (auto *CFP = dyn_cast<ConstantFPSDNode>(Op0)) {
+      APInt Val = CFP->getValueAPF().bitcastToAPInt().sext(VT.getSizeInBits());
+      return DAG.getConstant(Val, DL, VT);
+    }
+
     // If the input to FMV_X_ANYEXTW_RV64 is just FMV_W_X_RV64 then the
     // conversion is unnecessary and can be replaced with the FMV_W_X_RV64
     // operand. Similar for FMV_X_ANYEXTH and FMV_H_X.

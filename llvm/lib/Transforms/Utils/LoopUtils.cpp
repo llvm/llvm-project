@@ -1212,37 +1212,25 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   switch (RdxKind) {
   case RecurKind::Add:
-    return Builder.CreateAddReduce(Src);
   case RecurKind::Mul:
-    return Builder.CreateMulReduce(Src);
   case RecurKind::And:
-    return Builder.CreateAndReduce(Src);
   case RecurKind::Or:
-    return Builder.CreateOrReduce(Src);
   case RecurKind::Xor:
-    return Builder.CreateXorReduce(Src);
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin:
+  case RecurKind::FMax:
+  case RecurKind::FMin:
+  case RecurKind::FMinimum:
+  case RecurKind::FMaximum:
+    return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
                                     Src);
   case RecurKind::FMul:
     return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
-  case RecurKind::SMax:
-    return Builder.CreateIntMaxReduce(Src, true);
-  case RecurKind::SMin:
-    return Builder.CreateIntMinReduce(Src, true);
-  case RecurKind::UMax:
-    return Builder.CreateIntMaxReduce(Src, false);
-  case RecurKind::UMin:
-    return Builder.CreateIntMinReduce(Src, false);
-  case RecurKind::FMax:
-    return Builder.CreateFPMaxReduce(Src);
-  case RecurKind::FMin:
-    return Builder.CreateFPMinReduce(Src);
-  case RecurKind::FMinimum:
-    return Builder.CreateFPMinimumReduce(Src);
-  case RecurKind::FMaximum:
-    return Builder.CreateFPMaximumReduce(Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
