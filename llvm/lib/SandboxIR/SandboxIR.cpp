@@ -2248,6 +2248,54 @@ ConstantInt *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned) {
   return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
 }
 
+Constant *ConstantFP::get(Type *Ty, double V) {
+  auto *LLVMC = llvm::ConstantFP::get(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
+  auto *LLVMC = llvm::ConstantFP::get(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantFP::get(Type *Ty, StringRef Str) {
+  auto *LLVMC = llvm::ConstantFP::get(Ty->LLVMTy, Str);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+ConstantFP *ConstantFP::get(const APFloat &V, Context &Ctx) {
+  auto *LLVMC = llvm::ConstantFP::get(Ctx.LLVMCtx, V);
+  return cast<ConstantFP>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
+  auto *LLVMC = llvm::ConstantFP::getNaN(Ty->LLVMTy, Negative, Payload);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
+  auto *LLVMC = llvm::ConstantFP::getQNaN(Ty->LLVMTy, Negative, Payload);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
+  auto *LLVMC = llvm::ConstantFP::getSNaN(Ty->LLVMTy, Negative, Payload);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
+  auto *LLVMC = llvm::ConstantFP::getZero(Ty->LLVMTy, Negative);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getNegativeZero(Type *Ty) {
+  auto *LLVMC = llvm::ConstantFP::getNegativeZero(Ty->LLVMTy);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
+  auto *LLVMC = llvm::ConstantFP::getInfinity(Ty->LLVMTy, Negative);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+bool ConstantFP::isValueValidForType(Type *Ty, const APFloat &V) {
+  return llvm::ConstantFP::isValueValidForType(Ty->LLVMTy, V);
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2337,6 +2385,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
     if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
       It->second = std::unique_ptr<ConstantInt>(new ConstantInt(CI, *this));
+      return It->second.get();
+    }
+    if (auto *CF = dyn_cast<llvm::ConstantFP>(C)) {
+      It->second = std::unique_ptr<ConstantFP>(new ConstantFP(CF, *this));
       return It->second.get();
     }
     if (auto *F = dyn_cast<llvm::Function>(LLVMV))

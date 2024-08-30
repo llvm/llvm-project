@@ -97,7 +97,7 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
     for (uint64_t Lsb = Msb; Lsb > 0; --Lsb) {
       uint64_t LowMask = (1ULL << Lsb) - 1;
       uint64_t Mask = HighMask | LowMask;
-      uint64_t LsbToZero = TmpVal1 & ((1UL << (Msb - Lsb + 1)) - 1);
+      uint64_t LsbToZero = TmpVal1 & ((1ULL << (Msb - Lsb + 1)) - 1);
       uint64_t MsbToLsb = LsbToZero << Lsb;
       if ((MsbToLsb | (TmpVal1 & Mask)) == (uint64_t)Val) {
         if (Insts[1].Opc == LoongArch::ORI && N == 3)
@@ -107,7 +107,7 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
         return Insts;
       }
       if (TmpVal2 != 0) {
-        LsbToZero = TmpVal2 & ((1UL << (Msb - Lsb + 1)) - 1);
+        LsbToZero = TmpVal2 & ((1ULL << (Msb - Lsb + 1)) - 1);
         MsbToLsb = LsbToZero << Lsb;
         if ((MsbToLsb | (TmpVal2 & Mask)) == (uint64_t)Val) {
           Insts[0] = Insts[1];
