@@ -1770,7 +1770,6 @@ static bool allPathsGoThroughCold(Function &F) {
 
   while (!Jobs.empty()) {
     BasicBlock *BB = Jobs.pop_back_val();
-    Jobs.pop_back();
 
     // If block contains a cold callsite this path through the CG is cold.
     // Ignore whether the instructions actually are guaranteed to transfer
