@@ -624,10 +624,9 @@ private:
 class ReplaceOperationRewrite : public OperationRewrite {
 public:
   ReplaceOperationRewrite(ConversionPatternRewriterImpl &rewriterImpl,
-                          Operation *op, const TypeConverter *converter,
-                          bool changedResults)
+                          Operation *op, const TypeConverter *converter)
       : OperationRewrite(Kind::ReplaceOperation, rewriterImpl, op),
-        converter(converter), changedResults(changedResults) {}
+        converter(converter) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::ReplaceOperation;
@@ -641,15 +640,10 @@ public:
 
   const TypeConverter *getConverter() const { return converter; }
 
-  bool hasChangedResults() const { return changedResults; }
-
 private:
   /// An optional type converter that can be used to materialize conversions
   /// between the new and old values if necessary.
   const TypeConverter *converter;
-
-  /// A boolean flag that indicates whether result types have changed or not.
-  bool changedResults;
 };
 
 class CreateOperationRewrite : public OperationRewrite {
@@ -941,6 +935,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// to modify/access them is invalid rewriter API usage.
   SetVector<Operation *> replacedOps;
 
+  /// A set of all unresolved materializations.
   DenseSet<Operation *> unresolvedMaterializations;
 
   /// The current type converter, or nullptr if no type converter is currently
@@ -1383,9 +1378,6 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
   assert(newValues.size() == op->getNumResults());
   assert(!ignoredOps.contains(op) && "operation was already replaced");
 
-  // Track if any of the results changed, e.g. erased and replaced with null.
-  bool resultChanged = false;
-
   // Create mappings for each of the new result values.
   for (auto [newValue, result] : llvm::zip(newValues, op->getResults())) {
     if (!newValue) {
@@ -1393,7 +1385,6 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
       if (unresolvedMaterializations.contains(op)) {
         // Do not create another materializations if we are erasing a
         // materialization.
-        resultChanged = true;
         continue;
       }
 
@@ -1406,11 +1397,9 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
 
     // Remap, and check for any result type changes.
     mapping.map(result, newValue);
-    resultChanged |= (newValue.getType() != result.getType());
   }
 
-  appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter,
-                                         resultChanged);
+  appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
 
   // Mark this operation and all nested ops as replaced.
   op->walk([&](Operation *op) { replacedOps.insert(op); });
@@ -2585,7 +2574,7 @@ LogicalResult OperationConverter::legalizeConvertedOpResultTypes(
   for (unsigned i = 0; i < rewriterImpl.rewrites.size(); ++i) {
     auto *opReplacement =
         dyn_cast<ReplaceOperationRewrite>(rewriterImpl.rewrites[i].get());
-    if (!opReplacement || !opReplacement->hasChangedResults())
+    if (!opReplacement)
       continue;
     Operation *op = opReplacement->getOperation();
     for (OpResult result : op->getResults()) {
