@@ -1095,6 +1095,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 
+  // FIXME: This should eventually be replaced by a first-class driver option.
+  // This should be done for both clang and flang simultaneously.
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
   if (PrintPipelinePasses) {

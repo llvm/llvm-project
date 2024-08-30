@@ -1358,6 +1358,18 @@ public:
   /// Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
 
+  /// Does this non-empty order represent an identity order?  Identity
+  /// should be represented as an empty order, so this is used to
+  /// decide if we can canonicalize a computed order.  Undef elements
+  /// (represented as size) are ignored.
+  bool isIdentityOrder(ArrayRef<unsigned> Order) const {
+    assert(!Order.empty() && "expected non-empty order");
+    const unsigned Sz = Order.size();
+    return all_of(enumerate(Order), [&](const auto &P) {
+      return P.value() == P.index() || P.value() == Sz;
+    });
+  }
+
   /// Checks if the specified gather tree entry \p TE can be represented as a
   /// shuffled vector entry + (possibly) permutation with other gathers. It
   /// implements the checks only for possibly ordered scalars (Loads,
@@ -3219,15 +3231,25 @@ private:
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
     int findLaneForValue(Value *V) const {
-      unsigned FoundLane = std::distance(Scalars.begin(), find(Scalars, V));
-      assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
-      if (!ReorderIndices.empty())
-        FoundLane = ReorderIndices[FoundLane];
-      assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
-      if (!ReuseShuffleIndices.empty()) {
-        FoundLane = std::distance(ReuseShuffleIndices.begin(),
-                                  find(ReuseShuffleIndices, FoundLane));
+      unsigned FoundLane = getVectorFactor();
+      for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
+           std::advance(It, 1)) {
+        if (*It != V)
+          continue;
+        FoundLane = std::distance(Scalars.begin(), It);
+        assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
+        if (!ReorderIndices.empty())
+          FoundLane = ReorderIndices[FoundLane];
+        assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
+        if (ReuseShuffleIndices.empty())
+          break;
+        if (auto *RIt = find(ReuseShuffleIndices, FoundLane);
+            RIt != ReuseShuffleIndices.end()) {
+          FoundLane = std::distance(ReuseShuffleIndices.begin(), RIt);
+          break;
+        }
       }
+      assert(FoundLane < getVectorFactor() && "Unable to find given value.");
       return FoundLane;
     }
 
@@ -5220,6 +5242,9 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       !TE.isAltShuffle())
     return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
+    if (!TE.ReorderIndices.empty())
+      return TE.ReorderIndices;
+
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
@@ -5247,14 +5272,6 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         }
       return I1 < I2;
     };
-    auto IsIdentityOrder = [](const OrdersType &Order) {
-      for (unsigned Idx : seq<unsigned>(0, Order.size()))
-        if (Idx != Order[Idx])
-          return false;
-      return true;
-    };
-    if (!TE.ReorderIndices.empty())
-      return TE.ReorderIndices;
     DenseMap<unsigned, unsigned> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
@@ -5264,7 +5281,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     stable_sort(Phis, PHICompare);
     for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
       ResOrder[Id] = PhiToId[Phis[Id]];
-    if (IsIdentityOrder(ResOrder))
+    if (isIdentityOrder(ResOrder))
       return std::nullopt; // No need to reorder.
     return std::move(ResOrder);
   }
@@ -5558,19 +5575,12 @@ void BoUpSLP::reorderTopToBottom() {
     }
     if (OrdersUses.empty())
       continue;
-    auto IsIdentityOrder = [](ArrayRef<unsigned> Order) {
-      const unsigned Sz = Order.size();
-      for (unsigned Idx : seq<unsigned>(0, Sz))
-        if (Idx != Order[Idx] && Order[Idx] != Sz)
-          return false;
-      return true;
-    };
     // Choose the most used order.
     unsigned IdentityCnt = 0;
     unsigned FilledIdentityCnt = 0;
     OrdersType IdentityOrder(VF, VF);
     for (auto &Pair : OrdersUses) {
-      if (Pair.first.empty() || IsIdentityOrder(Pair.first)) {
+      if (Pair.first.empty() || isIdentityOrder(Pair.first)) {
         if (!Pair.first.empty())
           FilledIdentityCnt += Pair.second;
         IdentityCnt += Pair.second;
@@ -5586,7 +5596,7 @@ void BoUpSLP::reorderTopToBottom() {
       if (Cnt < Pair.second ||
           (Cnt == IdentityCnt && IdentityCnt == FilledIdentityCnt &&
            Cnt == Pair.second && !BestOrder.empty() &&
-           IsIdentityOrder(BestOrder))) {
+           isIdentityOrder(BestOrder))) {
         combineOrders(Pair.first, BestOrder);
         BestOrder = Pair.first;
         Cnt = Pair.second;
@@ -5595,7 +5605,7 @@ void BoUpSLP::reorderTopToBottom() {
       }
     }
     // Set order of the user node.
-    if (IsIdentityOrder(BestOrder))
+    if (isIdentityOrder(BestOrder))
       continue;
     fixupOrderingIndices(BestOrder);
     SmallVector<int> Mask;
@@ -5884,19 +5894,12 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           OrderedEntries.remove(Op.second);
         continue;
       }
-      auto IsIdentityOrder = [](ArrayRef<unsigned> Order) {
-        const unsigned Sz = Order.size();
-        for (unsigned Idx : seq<unsigned>(0, Sz))
-          if (Idx != Order[Idx] && Order[Idx] != Sz)
-            return false;
-        return true;
-      };
       // Choose the most used order.
       unsigned IdentityCnt = 0;
       unsigned VF = Data.second.front().second->getVectorFactor();
       OrdersType IdentityOrder(VF, VF);
       for (auto &Pair : OrdersUses) {
-        if (Pair.first.empty() || IsIdentityOrder(Pair.first)) {
+        if (Pair.first.empty() || isIdentityOrder(Pair.first)) {
           IdentityCnt += Pair.second;
           combineOrders(IdentityOrder, Pair.first);
         }
@@ -5916,7 +5919,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
       }
       // Set order of the user node.
-      if (IsIdentityOrder(BestOrder)) {
+      if (isIdentityOrder(BestOrder)) {
         for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
           OrderedEntries.remove(Op.second);
         continue;
@@ -6179,13 +6182,7 @@ bool BoUpSLP::canFormVector(ArrayRef<StoreInst *> StoresVec,
   // Identity order (e.g., {0,1,2,3}) is modeled as an empty OrdersType in
   // reorderTopToBottom() and reorderBottomToTop(), so we are following the
   // same convention here.
-  auto IsIdentityOrder = [](const OrdersType &Order) {
-    for (unsigned Idx : seq<unsigned>(0, Order.size()))
-      if (Idx != Order[Idx])
-        return false;
-    return true;
-  };
-  if (IsIdentityOrder(ReorderIndices))
+  if (isIdentityOrder(ReorderIndices))
     ReorderIndices.clear();
 
   return true;
@@ -16412,8 +16409,9 @@ bool SLPVectorizerPass::vectorizeStores(
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
-        unsigned CandVF = Operands.size();
-        if (has_single_bit(CandVF + 1) && CandVF <= MaxRegVF)
+        unsigned CandVF =
+            std::clamp<unsigned>(Operands.size(), MaxVF, MaxRegVF);
+        if (has_single_bit(CandVF + 1))
           NonPowerOf2VF = CandVF;
       }
 
