@@ -4,7 +4,7 @@
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
-// CHECK: error: unknown architectural extension: axp64
+// CHECK: error: unsupported architectural extension: axp64
 // CHECK-NEXT: .arch_extension axp64
 
 crc32cx w0, w1, x3
