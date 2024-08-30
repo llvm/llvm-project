@@ -576,12 +576,12 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
-// Checks if two pointers fall within the same memory granule.
+// Checks if a buffer [p; q) falls into a single granule.
 static bool WithinOneGranule(uptr p, uptr q) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   if (p == q)
     return true;
-  return RoundDownTo(p, ASAN_SHADOW_GRANULARITY) ==
-         RoundDownTo(q - 1, ASAN_SHADOW_GRANULARITY);
+  return RoundDownTo(p, granularity) == RoundDownTo(q - 1, granularity);
 }
 
 // Copies ASan memory annotation (a shadow memory value)
@@ -606,72 +606,107 @@ static void AnnotateContainerGranuleAccessibleBytes(uptr ptr, u8 n) {
 // Performs a byte-by-byte copy of ASan annotations (shadow memory values).
 // Result may be different due to ASan limitations, but result cannot lead
 // to false positives (more memory than requested may get unpoisoned).
-static void SlowCopyContainerAnnotations(uptr old_storage_beg,
-                                         uptr old_storage_end,
-                                         uptr new_storage_beg,
-                                         uptr new_storage_end) {
+static void SlowCopyContainerAnnotations(uptr src_storage_beg,
+                                         uptr src_storage_end,
+                                         uptr dst_storage_beg,
+                                         uptr dst_storage_end) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
-  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
-  uptr old_ptr = old_storage_beg;
-  uptr new_ptr = new_storage_beg;
+  uptr dst_internal_end = RoundDownTo(dst_storage_end, granularity);
+  uptr src_ptr = src_storage_beg;
+  uptr dst_ptr = dst_storage_beg;
 
-  while (new_ptr < new_storage_end) {
-    uptr next_new = RoundUpTo(new_ptr + 1, granularity);
+  while (dst_ptr < dst_storage_end) {
+    uptr next_new = RoundUpTo(dst_ptr + 1, granularity);
     uptr granule_begin = next_new - granularity;
     uptr unpoisoned_bytes = 0;
 
-    for (; new_ptr != next_new && new_ptr != new_storage_end;
-         ++new_ptr, ++old_ptr) {
-      if (!AddressIsPoisoned(old_ptr)) {
-        unpoisoned_bytes = new_ptr - granule_begin + 1;
+    for (; dst_ptr != next_new && dst_ptr != dst_storage_end;
+         ++dst_ptr, ++src_ptr) {
+      if (!AddressIsPoisoned(src_ptr)) {
+        unpoisoned_bytes = dst_ptr - granule_begin + 1;
       }
     }
-    if (new_ptr < new_storage_end || new_ptr == new_internal_end ||
-        AddressIsPoisoned(new_storage_end)) {
-      if (unpoisoned_bytes != 0 || granule_begin >= new_storage_beg) {
+    if (dst_ptr < dst_storage_end || dst_ptr == dst_internal_end ||
+        AddressIsPoisoned(dst_storage_end)) {
+      if (unpoisoned_bytes != 0 || granule_begin >= dst_storage_beg) {
         AnnotateContainerGranuleAccessibleBytes(granule_begin,
                                                 unpoisoned_bytes);
-      } else if (!AddressIsPoisoned(new_storage_beg)) {
+      } else if (!AddressIsPoisoned(dst_storage_beg)) {
         AnnotateContainerGranuleAccessibleBytes(
-            granule_begin, new_storage_beg - granule_begin);
+            granule_begin, dst_storage_beg - granule_begin);
       }
     }
   }
 }
 
-// This function is basically the same as SlowCopyContainerAnnotations,
-// but goes through elements in reversed order
-static void SlowRCopyContainerAnnotations(uptr old_storage_beg,
-                                          uptr old_storage_end,
-                                          uptr new_storage_beg,
-                                          uptr new_storage_end) {
+// Performs a byte-by-byte copy of ASan annotations (shadow memory values),
+// going through bytes in reversed order, but not reversing annotations.
+// Result may be different due to ASan limitations, but result cannot lead
+// to false positives (more memory than requested may get unpoisoned).
+static void SlowReversedCopyContainerAnnotations(uptr src_storage_beg,
+                                                 uptr src_storage_end,
+                                                 uptr dst_storage_beg,
+                                                 uptr dst_storage_end) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
-  uptr new_internal_beg = RoundDownTo(new_storage_beg, granularity);
-  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
-  uptr old_ptr = old_storage_end;
-  uptr new_ptr = new_storage_end;
+  uptr dst_internal_beg = RoundDownTo(dst_storage_beg, granularity);
+  uptr dst_internal_end = RoundDownTo(dst_storage_end, granularity);
+  uptr src_ptr = src_storage_end;
+  uptr dst_ptr = dst_storage_end;
 
-  while (new_ptr > new_storage_beg) {
-    uptr granule_begin = RoundDownTo(new_ptr - 1, granularity);
+  while (dst_ptr > dst_storage_beg) {
+    uptr granule_begin = RoundDownTo(dst_ptr - 1, granularity);
     uptr unpoisoned_bytes = 0;
 
-    for (; new_ptr != granule_begin && new_ptr != new_storage_beg;
-         --new_ptr, --old_ptr) {
-      if (unpoisoned_bytes == 0 && !AddressIsPoisoned(old_ptr - 1)) {
-        unpoisoned_bytes = new_ptr - granule_begin;
+    for (; dst_ptr != granule_begin && dst_ptr != dst_storage_beg;
+         --dst_ptr, --src_ptr) {
+      if (unpoisoned_bytes == 0 && !AddressIsPoisoned(src_ptr - 1)) {
+        unpoisoned_bytes = dst_ptr - granule_begin;
       }
     }
 
-    if (new_ptr >= new_internal_end && !AddressIsPoisoned(new_storage_end)) {
+    if (dst_ptr >= dst_internal_end && !AddressIsPoisoned(dst_storage_end)) {
       continue;
     }
 
-    if (granule_begin == new_ptr || unpoisoned_bytes != 0) {
+    if (granule_begin == dst_ptr || unpoisoned_bytes != 0) {
       AnnotateContainerGranuleAccessibleBytes(granule_begin, unpoisoned_bytes);
-    } else if (!AddressIsPoisoned(new_storage_beg)) {
+    } else if (!AddressIsPoisoned(dst_storage_beg)) {
       AnnotateContainerGranuleAccessibleBytes(granule_begin,
-                                              new_storage_beg - granule_begin);
+                                              dst_storage_beg - granule_begin);
     }
+  }
+}
+
+// A helper function for __sanitizer_copy_contiguous_container_annotations,
+// has assumption about begin and end of the container.
+// Should not be used stand alone.
+static void CopyContainerFirstGranuleAnnotation(uptr src_storage_begin,
+                                                uptr dst_storage_begin) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  // First granule
+  uptr dst_external_begin = RoundDownTo(dst_storage_begin, granularity);
+  uptr src_external_begin = RoundDownTo(src_storage_begin, granularity);
+  if (!AddressIsPoisoned(src_storage_begin)) {
+    CopyGranuleAnnotation(dst_external_begin, src_external_begin);
+  } else if (!AddressIsPoisoned(dst_storage_begin)) {
+    AnnotateContainerGranuleAccessibleBytes(
+        dst_external_begin, dst_storage_begin - dst_external_begin);
+  }
+}
+
+// A helper function for __sanitizer_copy_contiguous_container_annotations,
+// has assumption about begin and end of the container.
+// Should not be used stand alone.
+static void CopyContainerLastGranuleAnnotation(uptr src_storage_end,
+                                               uptr dst_internal_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  // Last granule
+  uptr src_internal_end = RoundDownTo(src_storage_end, granularity);
+  if (AddressIsPoisoned(src_storage_end)) {
+    CopyGranuleAnnotation(dst_internal_end, src_internal_end);
+  } else {
+    AnnotateContainerGranuleAccessibleBytes(dst_internal_end,
+                                            src_storage_end - src_internal_end);
   }
 }
 
@@ -682,130 +717,90 @@ static void SlowRCopyContainerAnnotations(uptr old_storage_beg,
 // However, it does not move memory content itself, only annotations.
 // If the buffers aren't aligned (the distance between buffers isn't
 // granule-aligned)
-//     // old_storage_beg % granularity != new_storage_beg % granularity
+//     // src_storage_beg % granularity != dst_storage_beg % granularity
 // the function handles this by going byte by byte, slowing down performance.
 // The old buffer annotations are not removed. If necessary,
 // user can unpoison old buffer with __asan_unpoison_memory_region.
 void __sanitizer_copy_contiguous_container_annotations(
-    const void *old_storage_beg_p, const void *old_storage_end_p,
-    const void *new_storage_beg_p, const void *new_storage_end_p) {
+    const void *src_begin_p, const void *src_end_p, const void *dst_begin_p) {
   if (!flags()->detect_container_overflow)
     return;
 
-  VPrintf(2, "contiguous_container_old: %p %p\n", old_storage_beg_p,
-          old_storage_end_p);
-  VPrintf(2, "contiguous_container_new: %p %p\n", new_storage_beg_p,
-          new_storage_end_p);
+  VPrintf(2, "contiguous_container_src: %p %p\n", src_begin_p, src_end_p);
+  VPrintf(2, "contiguous_container_dst: %p\n", dst_begin_p);
 
-  uptr old_storage_beg = reinterpret_cast<uptr>(old_storage_beg_p);
-  uptr old_storage_end = reinterpret_cast<uptr>(old_storage_end_p);
-  uptr new_storage_beg = reinterpret_cast<uptr>(new_storage_beg_p);
-  uptr new_storage_end = reinterpret_cast<uptr>(new_storage_end_p);
+  uptr src_storage_begin = reinterpret_cast<uptr>(src_begin_p);
+  uptr src_storage_end = reinterpret_cast<uptr>(src_end_p);
+  uptr dst_storage_begin = reinterpret_cast<uptr>(dst_begin_p);
+  uptr dst_storage_end =
+      dst_storage_begin + (src_storage_end - src_storage_begin);
 
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
 
-  if (!(old_storage_beg <= old_storage_end) ||
-      !(new_storage_beg <= new_storage_end) ||
-      (old_storage_end - old_storage_beg) !=
-          (new_storage_end - new_storage_beg)) {
+  if (src_storage_begin > src_storage_end) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportBadParamsToCopyContiguousContainerAnnotations(
-        old_storage_beg, old_storage_end, new_storage_beg, new_storage_end,
+        src_storage_begin, src_storage_end, dst_storage_begin, dst_storage_end,
         &stack);
   }
 
-  if (old_storage_beg == old_storage_end || old_storage_beg == new_storage_beg)
+  if (src_storage_begin == src_storage_end ||
+      src_storage_begin == dst_storage_begin)
     return;
-  // The only edge cases involve edge granules when the container starts or
-  // ends within a granule. We already know that the container's start and end
-  // points lie in different granules.
-  uptr old_external_end = RoundUpTo(old_storage_end, granularity);
-  if (old_storage_beg < new_storage_beg &&
-      new_storage_beg <= old_external_end) {
-    // In this case, we have to copy elements in reversed order, because
-    // destination buffer starts in the middle of the source buffer (or shares
-    // first granule with it).
-    // It still may be possible to optimize, but reversed order has to be kept.
-    if (old_storage_beg % granularity != new_storage_beg % granularity ||
-        WithinOneGranule(new_storage_beg, new_storage_end)) {
-      SlowRCopyContainerAnnotations(old_storage_beg, old_storage_end,
-                                    new_storage_beg, new_storage_end);
-      return;
-    }
-
-    uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
-    if (new_internal_end != new_storage_end &&
-        AddressIsPoisoned(new_storage_end)) {
-      // Last granule
-      uptr old_internal_end = RoundDownTo(old_storage_end, granularity);
-      if (AddressIsPoisoned(old_storage_end)) {
-        CopyGranuleAnnotation(new_internal_end, old_internal_end);
-      } else {
-        AnnotateContainerGranuleAccessibleBytes(
-            new_internal_end, old_storage_end - old_internal_end);
-      }
-    }
-
-    uptr new_internal_beg = RoundUpTo(new_storage_beg, granularity);
-    if (new_internal_end > new_internal_beg) {
-      uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
-      __builtin_memmove((u8 *)MemToShadow(new_internal_beg),
-                        (u8 *)MemToShadow(old_internal_beg),
-                        (new_internal_end - new_internal_beg) / granularity);
-    }
-
-    if (new_internal_beg != new_storage_beg) {
-      // First granule
-      uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
-      uptr old_external_beg = RoundDownTo(old_storage_beg, granularity);
-      if (!AddressIsPoisoned(old_storage_beg)) {
-        CopyGranuleAnnotation(new_external_beg, old_external_beg);
-      } else if (!AddressIsPoisoned(new_storage_beg)) {
-        AnnotateContainerGranuleAccessibleBytes(
-            new_external_beg, new_storage_beg - new_external_beg);
-      }
-    }
-    return;
-  }
-
-  // Simple copy of annotations of all internal granules.
-  if (old_storage_beg % granularity != new_storage_beg % granularity ||
-      WithinOneGranule(new_storage_beg, new_storage_end)) {
-    SlowCopyContainerAnnotations(old_storage_beg, old_storage_end,
-                                 new_storage_beg, new_storage_end);
-    return;
-  }
-
-  uptr new_internal_beg = RoundUpTo(new_storage_beg, granularity);
-  if (new_internal_beg != new_storage_beg) {
-    // First granule
-    uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
-    uptr old_external_beg = RoundDownTo(old_storage_beg, granularity);
-    if (!AddressIsPoisoned(old_storage_beg)) {
-      CopyGranuleAnnotation(new_external_beg, old_external_beg);
-    } else if (!AddressIsPoisoned(new_storage_beg)) {
-      AnnotateContainerGranuleAccessibleBytes(
-          new_external_beg, new_storage_beg - new_external_beg);
-    }
-  }
-
-  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
-  if (new_internal_end > new_internal_beg) {
-    uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
-    __builtin_memmove((u8 *)MemToShadow(new_internal_beg),
-                      (u8 *)MemToShadow(old_internal_beg),
-                      (new_internal_end - new_internal_beg) / granularity);
-  }
-
-  if (new_internal_end != new_storage_end &&
-      AddressIsPoisoned(new_storage_end)) {
-    // Last granule
-    uptr old_internal_end = RoundDownTo(old_storage_end, granularity);
-    if (AddressIsPoisoned(old_storage_end)) {
-      CopyGranuleAnnotation(new_internal_end, old_internal_end);
+  // Due to support for overlapping buffers, we may have to copy elements
+  // in reversed order, when destination buffer starts in the middle of
+  // the source buffer (or shares first granule with it).
+  //
+  // When buffers are not granule-aligned (or distance between them,
+  // to be specific), annotatios have to be copied byte by byte.
+  //
+  // The only remaining edge cases involve edge granules,
+  // when the container starts or ends within a granule.
+  uptr src_external_end = RoundUpTo(src_storage_end, granularity);
+  bool copy_in_reversed_order = src_storage_begin < dst_storage_begin &&
+                                dst_storage_begin <= src_external_end;
+  if (src_storage_begin % granularity != dst_storage_begin % granularity ||
+      WithinOneGranule(dst_storage_begin, dst_storage_end)) {
+    if (copy_in_reversed_order) {
+      SlowReversedCopyContainerAnnotations(src_storage_begin, src_storage_end,
+                                           dst_storage_begin, dst_storage_end);
     } else {
-      AnnotateContainerGranuleAccessibleBytes(
-          new_internal_end, old_storage_end - old_internal_end);
+      SlowCopyContainerAnnotations(src_storage_begin, src_storage_end,
+                                   dst_storage_begin, dst_storage_end);
+    }
+    return;
+  }
+
+  // As buffers are granule-aligned, we can just copy annotations of granules
+  // from the middle.
+  uptr dst_internal_begin = RoundUpTo(dst_storage_begin, granularity);
+  uptr dst_internal_end = RoundDownTo(dst_storage_end, granularity);
+  if (copy_in_reversed_order) {
+    if (dst_internal_end != dst_storage_end &&
+        AddressIsPoisoned(dst_storage_end)) {
+      CopyContainerLastGranuleAnnotation(src_storage_end, dst_internal_end);
+    }
+  } else {
+    if (dst_internal_begin != dst_storage_begin) {
+      CopyContainerFirstGranuleAnnotation(src_storage_begin, dst_storage_begin);
+    }
+  }
+
+  if (dst_internal_end > dst_internal_begin) {
+    uptr src_internal_begin = RoundUpTo(src_storage_begin, granularity);
+    __builtin_memmove((u8 *)MemToShadow(dst_internal_begin),
+                      (u8 *)MemToShadow(src_internal_begin),
+                      (dst_internal_end - dst_internal_begin) / granularity);
+  }
+
+  if (copy_in_reversed_order) {
+    if (dst_internal_begin != dst_storage_begin) {
+      CopyContainerFirstGranuleAnnotation(src_storage_begin, dst_storage_begin);
+    }
+  } else {
+    if (dst_internal_end != dst_storage_end &&
+        AddressIsPoisoned(dst_storage_end)) {
+      CopyContainerLastGranuleAnnotation(src_storage_end, dst_internal_end);
     }
   }
 }

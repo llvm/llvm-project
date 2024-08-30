@@ -84,8 +84,8 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
 
     RandomPoison(old_beg, old_end);
     std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
-    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end, new_beg,
-                                                      new_end);
+    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end,
+                                                      new_beg);
 
     // If old_buffer were poisoned, expected state of memory before old_beg
     // is undetermined.
@@ -167,8 +167,8 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
 
     RandomPoison(old_beg, old_end);
     std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
-    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end, new_beg,
-                                                      new_end);
+    __sanitizer_copy_contiguous_container_annotations(old_beg, old_end,
+                                                      new_beg);
     // This variable is used only when buffer ends in the middle of a granule.
     bool can_modify_last_granule = __asan_address_is_poisoned(new_end);
 
