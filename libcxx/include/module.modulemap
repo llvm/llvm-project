@@ -419,6 +419,7 @@ module std_clocale [system] {
 }
 module std_cmath [system] {
   header "cmath"
+  module special_functions { header "__math/special_functions.h" }
   export *
 }
 module std_csetjmp [system] {
@@ -517,6 +518,25 @@ module std_locale_h [system] {
 }
 module std_math_h [system] {
   header "math.h"
+  module abs                             { header "__math/abs.h" }
+  module copysign                        { header "__math/copysign.h" }
+  module error_functions                 { header "__math/error_functions.h" }
+  module exponential_functions           { header "__math/exponential_functions.h" }
+  module fdim                            { header "__math/fdim.h" }
+  module fma                             { header "__math/fma.h" }
+  module gamma                           { header "__math/gamma.h" }
+  module hyperbolic_functions            { header "__math/hyperbolic_functions.h" }
+  module hypot                           { header "__math/hypot.h" }
+  module inverse_hyperbolic_functions    { header "__math/inverse_hyperbolic_functions.h" }
+  module inverse_trigonometric_functions { header "__math/inverse_trigonometric_functions.h" }
+  module logarithms                      { header "__math/logarithms.h" }
+  module min_max                         { header "__math/min_max.h" }
+  module modulo                          { header "__math/modulo.h" }
+  module remainder                       { header "__math/remainder.h" }
+  module roots                           { header "__math/roots.h" }
+  module rounding_functions              { header "__math/rounding_functions.h" }
+  module traits                          { header "__math/traits.h" }
+  module trigonometric_functions         { header "__math/trigonometric_functions.h" }
   export *
 }
 // <setjmp.h> provided by C library.
@@ -1469,27 +1489,6 @@ module std_private_locale_locale_base_api                      [system] {
   export *
 }
 
-module std_private_math_abs                             [system] { header "__math/abs.h" }
-module std_private_math_copysign                        [system] { header "__math/copysign.h" }
-module std_private_math_error_functions                 [system] { header "__math/error_functions.h" }
-module std_private_math_exponential_functions           [system] { header "__math/exponential_functions.h" }
-module std_private_math_fdim                            [system] { header "__math/fdim.h" }
-module std_private_math_fma                             [system] { header "__math/fma.h" }
-module std_private_math_gamma                           [system] { header "__math/gamma.h" }
-module std_private_math_hyperbolic_functions            [system] { header "__math/hyperbolic_functions.h" }
-module std_private_math_hypot                           [system] { header "__math/hypot.h" }
-module std_private_math_inverse_hyperbolic_functions    [system] { header "__math/inverse_hyperbolic_functions.h" }
-module std_private_math_inverse_trigonometric_functions [system] { header "__math/inverse_trigonometric_functions.h" }
-module std_private_math_logarithms                      [system] { header "__math/logarithms.h" }
-module std_private_math_min_max                         [system] { header "__math/min_max.h" }
-module std_private_math_modulo                          [system] { header "__math/modulo.h" }
-module std_private_math_remainder                       [system] { header "__math/remainder.h" }
-module std_private_math_roots                           [system] { header "__math/roots.h" }
-module std_private_math_rounding_functions              [system] { header "__math/rounding_functions.h" }
-module std_private_math_special_functions               [system] { header "__math/special_functions.h" }
-module std_private_math_traits                          [system] { header "__math/traits.h" }
-module std_private_math_trigonometric_functions         [system] { header "__math/trigonometric_functions.h" }
-
 module std_private_memory_addressof                       [system] { header "__memory/addressof.h" }
 module std_private_memory_align                           [system] { header "__memory/align.h" }
 module std_private_memory_aligned_alloc                   [system] { header "__memory/aligned_alloc.h" }
@@ -1805,26 +1804,27 @@ module std_private_thread_thread               [system] {
 }
 module std_private_thread_timed_backoff_policy [system] { header "__thread/timed_backoff_policy.h" }
 
-module std_private_tuple_find_index             [system] { header "__tuple/find_index.h" }
-module std_private_tuple_ignore                 [system] { header "__tuple/ignore.h" }
-module std_private_tuple_make_tuple_types       [system] { header "__tuple/make_tuple_types.h" }
-module std_private_tuple_tuple_like_no_subrange [system] {
-  header "__tuple/tuple_like_no_subrange.h"
+module std_private_tuple_fwd [system] { header "__fwd/tuple.h" }
+
+module std_private_tuple [system] {
+  module find_index             { header "__tuple/find_index.h" }
+  module ignore                 { header "__tuple/ignore.h" }
+  module make_tuple_types       { header "__tuple/make_tuple_types.h" }
+  module tuple_like_no_subrange { header "__tuple/tuple_like_no_subrange.h" }
+  module sfinae_helpers         { header "__tuple/sfinae_helpers.h" }
+  module tuple_element          { header "__tuple/tuple_element.h" }
+  module tuple_indices          { header "__tuple/tuple_indices.h" }
+  module tuple_like             {
+    header "__tuple/tuple_like.h"
+    export *
+  }
+  module tuple_like_ext         { header "__tuple/tuple_like_ext.h" }
+  module tuple_size             {
+    header "__tuple/tuple_size.h"
+    export std_private_type_traits_integral_constant
+  }
+  module tuple_types            { header "__tuple/tuple_types.h" }
 }
-module std_private_tuple_sfinae_helpers         [system] { header "__tuple/sfinae_helpers.h" }
-module std_private_tuple_tuple_element          [system] { header "__tuple/tuple_element.h" }
-module std_private_tuple_tuple_fwd              [system] { header "__fwd/tuple.h" }
-module std_private_tuple_tuple_indices          [system] { header "__tuple/tuple_indices.h" }
-module std_private_tuple_tuple_like             [system] {
-  header "__tuple/tuple_like.h"
-  export *
-}
-module std_private_tuple_tuple_like_ext         [system] { header "__tuple/tuple_like_ext.h" }
-module std_private_tuple_tuple_size             [system] {
-  header "__tuple/tuple_size.h"
-  export std_private_type_traits_integral_constant
-}
-module std_private_tuple_tuple_types            [system] { header "__tuple/tuple_types.h" }
 
 module std_private_type_traits_add_const                                 [system] { header "__type_traits/add_const.h" }
 module std_private_type_traits_add_cv                                    [system] { header "__type_traits/add_cv.h" }
@@ -2079,7 +2079,7 @@ module std_private_utility_no_destroy             [system] { header "__utility/n
 module std_private_utility_pair                   [system] {
   header "__utility/pair.h"
   export std_private_ranges_subrange_fwd
-  export std_private_tuple_pair_like
+  export std_private_tuple.pair_like
   export std_private_type_traits_is_assignable
   export std_private_type_traits_is_constructible
   export std_private_type_traits_is_convertible
