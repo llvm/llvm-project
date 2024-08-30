@@ -1133,7 +1133,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     InstructionCost Cost = 0;
     if ((SrcEltSize == 16) &&
         (!ST->hasVInstructionsF16() || ((DstEltSize / 2) > SrcEltSize))) {
-      // If the target only supports vfhmin or it is fp16-to-i64 conversion
+      // If the target only supports zvfhmin or it is fp16-to-i64 conversion
       // pre-widening to f32 and then convert f32 to integer
       VectorType *VecF32Ty =
           VectorType::get(Type::getFloatTy(Dst->getContext()),
@@ -1176,16 +1176,16 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     InstructionCost Cost = 0;
     if ((DstEltSize == 16) &&
         (!ST->hasVInstructionsF16() || ((SrcEltSize / 2) > DstEltSize))) {
-      // If the target only supports vfhmin or it is i64-to-fp16 conversion
+      // If the target only supports zvfhmin or it is i64-to-fp16 conversion
       // it is converted to f32 and then converted to f16
       VectorType *VecF32Ty =
           VectorType::get(Type::getFloatTy(Dst->getContext()),
                           cast<VectorType>(Dst)->getElementCount());
       std::pair<InstructionCost, MVT> VecF32LT =
           getTypeLegalizationCost(VecF32Ty);
-      Cost = VecF32LT.first * getRISCVInstructionCost(RISCV::VFNCVT_F_F_W,
-                                                      DstLT.second, CostKind);
       Cost += getCastInstrCost(Opcode, VecF32Ty, Src, CCH, CostKind, I);
+      Cost += VecF32LT.first * getRISCVInstructionCost(RISCV::VFNCVT_F_F_W,
+                                                       DstLT.second, CostKind);
       return Cost;
     }
 
@@ -1193,9 +1193,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       Cost += getRISCVInstructionCost(FCVT, DstLT.second, CostKind);
     else if (DstEltSize > SrcEltSize) {
       if ((DstEltSize / 2) > SrcEltSize) {
-        SrcEltSize = DstEltSize / 2;
         VectorType *VecTy =
-            VectorType::get(IntegerType::get(Dst->getContext(), SrcEltSize),
+            VectorType::get(IntegerType::get(Dst->getContext(), DstEltSize / 2),
                             cast<VectorType>(Dst)->getElementCount());
         unsigned Op = IsSigned ? Instruction::SExt : Instruction::ZExt;
         Cost += getCastInstrCost(Op, VecTy, Src, CCH, CostKind, I);
