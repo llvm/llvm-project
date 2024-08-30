@@ -226,13 +226,13 @@ def testOdsEquallySizedAccessor():
             op = TestOpMultiResultSegments.build_generic(
                 results=[ts[0], ts[1], ts[2], ts[3]], operands=[v]
             )
-            start, elements_per_group = equally_sized_accessor(op.results, 3, 1, 0)
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 3, 1, 0)
             # CHECK: start: 1, elements_per_group: 1
             print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: i8
             print(op.results[start].type)
 
-            start, elements_per_group = equally_sized_accessor(op.results, 3, 1, 1)
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 3, 1, 1)
             # CHECK: start: 2, elements_per_group: 1
             print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: i16
@@ -262,13 +262,13 @@ def testOdsEquallySizedAccessorMultipleSegments():
                 results=[ts[0], [ts[1], ts[2], ts[3]], [ts[4], ts[5], ts[6]]],
                 operands=[v],
             )
-            start, elements_per_group = equally_sized_accessor(op.results, 2, 1, 0)
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 2, 1, 0)
             # CHECK: start: 1, elements_per_group: 3
             print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: [IntegerType(i8), IntegerType(i16), IntegerType(i24)]
             print(types(op.results[start : start + elements_per_group]))
 
-            start, elements_per_group = equally_sized_accessor(op.results, 2, 1, 1)
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 2, 1, 1)
             # CHECK: start: 4, elements_per_group: 3
             print(f"start: {start}, elements_per_group: {elements_per_group}")
             # CHECK: [IntegerType(i32), IntegerType(i40), IntegerType(i48)]

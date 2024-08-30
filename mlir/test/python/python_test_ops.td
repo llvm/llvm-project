@@ -227,4 +227,16 @@ def OptionalOperandOp : TestOp<"optional_operand_op"> {
   let results = (outs I32:$result);
 }
 
+def SameVariadicResultSizeOp : TestOp<"same_variadic_result",
+                                      [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
+                 Variadic<AnyType>:$variadic2);
+}
+
+def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
+                                       [SameVariadicOperandSize]> {
+  let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
+                   Variadic<AnyType>:$variadic2);
+}
+
 #endif // PYTHON_TEST_OPS

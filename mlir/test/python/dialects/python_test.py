@@ -555,3 +555,52 @@ def testInferTypeOpInterface():
             two_operands = test.InferResultsVariadicInputsOp(single=zero, doubled=zero)
             # CHECK: f32
             print(two_operands.result.type)
+
+
+# CHECK-LABEL: TEST: testVariadicResultAccess
+@run
+def testVariadicResultAccess():
+    def types(lst):
+        return [e.type for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i8 = IntegerType.get_signless(8)
+            i16 = IntegerType.get_signless(16)
+            i24 = IntegerType.get_signless(24)
+            i32 = IntegerType.get_signless(32)
+            i40 = IntegerType.get_signless(40)
+
+            variadic_result = test.SameVariadicResultSizeOp([i8, i16], i24, [i32, i40])
+            # CHECK: i24
+            print(variadic_result.non_variadic.type)
+            # CHECK: [IntegerType(i8), IntegerType(i16)]
+            print(types(variadic_result.variadic1))
+            # CHECK: [IntegerType(i32), IntegerType(i40)]
+            print(types(variadic_result.variadic2))
+
+
+# CHECK-LABEL: TEST: testVariadicOperandAccess
+@run
+def testVariadicOperandAccess():
+    def values(lst):
+        return [str(e) for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i32 = IntegerType.get_signless(32)
+            zero = arith.ConstantOp(i32, 0)
+            one = arith.ConstantOp(i32, 1)
+            two = arith.ConstantOp(i32, 2)
+            three = arith.ConstantOp(i32, 3)
+            four = arith.ConstantOp(i32, 4)
+
+            variadic_operands = test.SameVariadicOperandSizeOp([zero, one], two, [three, four])
+            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            print(variadic_operands.non_variadic)
+            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            print(values(variadic_operands.variadic1))
+            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            print(values(variadic_operands.variadic2))
