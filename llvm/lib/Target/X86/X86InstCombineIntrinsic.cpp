@@ -2157,7 +2157,7 @@ static bool simplifyX86VPERMMask(Instruction *II, bool IsBinary,
   APInt DemandedMask = APInt::getLowBitsSet(EltSizeInBits, IdxSizeInBits);
 
   KnownBits KnownMask(EltSizeInBits);
-  return IC.SimplifyDemandedBits(II, 1, DemandedMask, KnownMask);
+  return IC.SimplifyDemandedBits(II, /*OpNo=*/1, DemandedMask, KnownMask);
 }
 
 std::optional<Instruction *>
