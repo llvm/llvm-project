@@ -367,7 +367,7 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
 
         // Detect control flow change and resume iteration from the original
         // block to inspect any newly inserted blocks. This allows incremental
-        // legalizaton of atomicrmw and cmpxchg.
+        // legalization of atomicrmw and cmpxchg.
         if (Next == E || BB != Next->getParent()) {
           BBI = BB->getIterator();
           BBE = F.end();
