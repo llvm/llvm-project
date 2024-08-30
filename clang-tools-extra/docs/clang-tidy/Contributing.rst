@@ -127,13 +127,13 @@ Writing a clang-tidy Check
 
 So you have an idea of a useful check for :program:`clang-tidy`.
 
-First, if you're not familiar with LLVM development, read through the `Getting
-Started with LLVM`_ document for instructions on setting up your workflow and
+First, if you're not familiar with LLVM development, read through the `Getting Started 
+with the LLVM System`_ document for instructions on setting up your workflow and
 the `LLVM Coding Standards`_ document to familiarize yourself with the coding
 style used in the project. For code reviews we currently use `LLVM Github`_,
 though historically we used Phabricator.
 
-.. _Getting Started with LLVM: https://llvm.org/docs/GettingStarted.html
+.. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
 .. _LLVM Coding Standards: https://llvm.org/docs/CodingStandards.html
 .. _LLVM Github: https://github.com/llvm/llvm-project
 
@@ -343,16 +343,16 @@ matching expressions to simplify your matcher.
   clang-query> let c1 cxxRecordDecl()
   clang-query> match c1
 
-Alternatively, pressing tab after a previous matcher's open brace would also show which 
-matchers can be chained with the previous matcher, though some matchers that work may not 
-be listed.
+Alternatively, pressing the tab key after a previous matcher's open parentheses would also 
+show which matchers can be chained with the previous matcher, though some matchers that work 
+may not be listed.
 
 Just like breaking up a huge function into smaller chunks with intention-revealing names 
 can help you understand a complex algorithm, breaking up a matcher into smaller matchers 
 with intention-revealing names can help you understand a complicated matcher.  
 
-Once you have a working clang-query matcher, the C++ API will be the same or similar to your 
-interactively constructed matcher (there will be cases where they differ slightly). 
+Once you have a working clang-query matcher, the C++ API matchers will be the same or similar 
+to your interactively constructed matcher (there can be cases where they differ slightly). 
 You can use local variables to preserve your intention-revealing names that you applied 
 to nested matchers.
 
@@ -664,7 +664,7 @@ outlined above, including creating a new module and doing the hacks to
 register the module. The plugin is a shared library whose code lives outside
 the clang-tidy build system. Build and link this shared library against
 LLVM as done for other kinds of Clang plugins. If using CMake, use the keyword
-MODULE while invoking add_library or llvm_add_library.
+``MODULE`` while invoking ``add_library`` or ``llvm_add_library``.
 
 The plugin can be loaded by passing `-load` to `clang-tidy` in addition to the
 names of the checks to enable.
@@ -679,12 +679,14 @@ compiled against the version of clang-tidy that will be loading the plugin.
 The plugins can use threads, TLS, or any other facilities available to in-tree
 code which is accessible from the external headers.
 
-Note that testing checks out of tree might involve getting ``llvm-lit`` from an 
-installed version of LLVM through the `Stand-alone Builds`_ section. Alternatively,
-get `lit`_ following the `test-suite guide`_ and get the `FileCheck`_ binary, and
-write a version of `check_clang_tidy.py`_ to suit your needs.
+Note that testing out-of-tree checks might involve getting ``llvm-lit`` from an LLVM 
+installation compiled from source. See `Getting Started with the LLVM System`_ for ways 
+to do so.
 
-.. _Stand-alone Builds: https://llvm.org/docs/GettingStarted.html
+Alternatively, get `lit`_ following the `test-suite guide`_ and get the `FileCheck`_ binary, 
+and write a version of `check_clang_tidy.py`_ to suit your needs.
+
+.. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
 .. _test-suite guide: https://llvm.org/docs/TestSuiteGuide.html
 .. _lit: https://llvm.org/docs/CommandGuide/lit.html
 .. _FileCheck: https://llvm.org/docs/CommandGuide/FileCheck.html
@@ -714,10 +716,10 @@ warnings and errors. The script provides multiple configuration flags.
 
 * To restrict the files examined you can provide one or more regex arguments
   that the file names are matched against.
-  ``run-clang-tidy.py clang-tidy/.*Check\.cpp`` will only analyze clang-tidy
+  ``run-clang-tidy.py clang-tidy/.*Check\.cpp`` will only analyze `clang-tidy`
   checks. It may also be necessary to restrict the header files that warnings
-  are displayed from using the ``-exclude-header-filter`` flag. It has the same 
-  behavior as the corresponding :program:`clang-tidy` flag.
+  are displayed from by using the ``-header-filter`` and ``-exclude-header-filter`` flags. 
+  They have the same behavior as the corresponding :program:`clang-tidy` flags.
 
 * To apply suggested fixes ``-fix`` can be passed as an argument. This gathers
   all changes in a temporary directory and applies them. Passing ``-format``
