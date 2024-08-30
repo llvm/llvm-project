@@ -337,13 +337,24 @@ a starting point for your test cases.  A rough outline of the process looks like
 The quickest way to prototype your matcher is to use :program:`clang-query` to
 interactively build up your matcher.  For complicated matchers, build up a matching
 expression incrementally and use :program:`clang-query`'s ``let`` command to save named
-matching expressions to simplify your matcher.  Just like breaking up a huge function
-into smaller chunks with intention-revealing names can help you understand a complex
-algorithm, breaking up a matcher into smaller matchers with intention-revealing names
-can help you understand a complicated matcher.  Once you have a working matcher, the
-C++ API will be virtually identical to your interactively constructed matcher.  You can
-use local variables to preserve your intention-revealing names that you applied to
-nested matchers.
+matching expressions to simplify your matcher.
+
+.. code-block:: console
+  clang-query> let c1 cxxRecordDecl()
+  clang-query> match c1
+
+Alternatively, pressing tab after a previous matcher's open brace would also show which 
+matchers can be chained with the previous matcher, though some matchers that work may not 
+be listed.
+
+Just like breaking up a huge function into smaller chunks with intention-revealing names 
+can help you understand a complex algorithm, breaking up a matcher into smaller matchers 
+with intention-revealing names can help you understand a complicated matcher.  
+
+Once you have a working clang-query matcher, the C++ API will be the same or similar to your 
+interactively constructed matcher (there will be cases where they differ slightly). 
+You can use local variables to preserve your intention-revealing names that you applied 
+to nested matchers.
 
 Creating private matchers
 ^^^^^^^^^^^^^^^^^^^^^^^^^
