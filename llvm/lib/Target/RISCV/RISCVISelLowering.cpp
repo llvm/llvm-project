@@ -16440,6 +16440,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDLoc DL(N);
     SDValue Op0 = N->getOperand(0);
     MVT VT = N->getSimpleValueType(0);
+
+    // Constant fold.
+    if (auto *CFP = dyn_cast<ConstantFPSDNode>(Op0)) {
+      APInt Val = CFP->getValueAPF().bitcastToAPInt().sext(VT.getSizeInBits());
+      return DAG.getConstant(Val, DL, VT);
+    }
+
     // If the input to FMV_X_ANYEXTW_RV64 is just FMV_W_X_RV64 then the
     // conversion is unnecessary and can be replaced with the FMV_W_X_RV64
     // operand. Similar for FMV_X_ANYEXTH and FMV_H_X.
