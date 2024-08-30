@@ -1,0 +1,25 @@
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
+
+
+// expected-error@+1 {{invalid space specifier 's2' used; expected 'space' followed by an integer, like space1}}
+cbuffer a : register(b0, s2) {
+
+}
+
+// expected-error@+1 {{invalid space specifier 'spaces' used; expected 'space' followed by an integer, like space1}}
+cbuffer b : register(b2, spaces) {
+
+}
+
+// expected-error@+1 {{wrong argument format for hlsl attribute, use space3 instead}}
+cbuffer c : register(b2, space 3) {}
+
+// expected-error@+1 {{register space cannot be specified on global constants}}
+int d : register(c2, space3);
+
+struct S {
+    RWBuffer<int> a;
+};
+
+// expected-error@+1 {{register space cannot be specified on global constants}}
+S thing : register(u2, space2);
