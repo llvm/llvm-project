@@ -141,6 +141,9 @@ static cl::opt<RunOutliner> EnableMachineOutliner(
                           "Disable all outlining"),
                // Sentinel value for unspecified option.
                clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+cl::opt<bool> EnableGlobalMergeFunc(
+    "enable-global-merge-func", cl::Hidden,
+    cl::desc("Enable global merge functions that are based on hash function"));
 // Disable the pass to fix unwind information. Whether the pass is included in
 // the pipeline is controlled via the target options, this option serves as
 // manual override.
