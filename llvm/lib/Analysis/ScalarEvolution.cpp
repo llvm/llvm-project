@@ -8639,13 +8639,14 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
     return SE->getCouldNotCompute();
 
   for (const auto &ENT : ExitNotTaken)
-    if (!ENT.hasAlwaysTruePredicate())
+    if (!ENT.hasAlwaysTruePredicate()) {
       if (!Predicates)
         return SE->getCouldNotCompute();
       else {
         for (const auto *P : ENT.Predicates)
           Predicates->push_back(P);
       }
+    }
 
   assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
           isa<SCEVConstant>(getConstantMax())) &&
