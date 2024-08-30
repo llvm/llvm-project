@@ -87,7 +87,7 @@
 #include <cctype>
 #include <cstring>
 
-//#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
+// #define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
 
 #ifdef ENABLE_DEBUG_PRINTF
 #include <cstdio>
@@ -128,6 +128,11 @@ public:
 
   bool IgnoreFileIndexes() const {
     return GetPropertyAtIndexAs<bool>(ePropertyIgnoreIndexes, false);
+  }
+
+  bool EmitUnsupportedDWFormValueWarning() const {
+    return GetPropertyAtIndexAs<bool>(
+        ePropertyEmitUnsupportedDWFormValueWarning, true);
   }
 };
 
@@ -624,12 +629,14 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       llvm::DWARFDebugAbbrev *abbrev = DebugAbbrev();
       std::set<dw_form_t> unsupported_forms = GetUnsupportedForms(abbrev);
       if (!unsupported_forms.empty()) {
-        StreamString error;
-        error.Printf("unsupported DW_FORM value%s:",
-                     unsupported_forms.size() > 1 ? "s" : "");
-        for (auto form : unsupported_forms)
-          error.Printf(" %#x", form);
-        m_objfile_sp->GetModule()->ReportWarning("{0}", error.GetString());
+        if (GetGlobalPluginProperties().EmitUnsupportedDWFormValueWarning()) {
+          StreamString error;
+          error.Printf("unsupported DW_FORM value%s:",
+                       unsupported_forms.size() > 1 ? "s" : "");
+          for (auto form : unsupported_forms)
+            error.Printf(" %#x", form);
+          m_objfile_sp->GetModule()->ReportWarning("{0}", error.GetString());
+        }
         return 0;
       }
 
@@ -1770,16 +1777,17 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
     return this;
 
   if (file_index) {
-      // We have a SymbolFileDWARFDebugMap, so let it find the right file
+    // We have a SymbolFileDWARFDebugMap, so let it find the right file
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
-    
+
     // Handle the .dwp file case correctly
     if (*file_index == DIERef::k_file_index_mask)
       return GetDwpSymbolFile().get(); // DWP case
 
     // Handle the .dwo file case correctly
-    return DebugInfo().GetUnitAtIndex(*die_ref.file_index())
+    return DebugInfo()
+        .GetUnitAtIndex(*die_ref.file_index())
         ->GetDwoSymbolFile(); // DWO case
   }
   return this;
@@ -3621,7 +3629,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
     if (!location_is_const_value_data) {
       bool op_error = false;
-      const DWARFExpression* location = location_list.GetAlwaysValidExpr();
+      const DWARFExpression *location = location_list.GetAlwaysValidExpr();
       if (location)
         location_DW_OP_addr =
             location->GetLocation_DW_OP_addr(location_form.GetUnit(), op_error);
