@@ -1079,6 +1079,14 @@ public:
                            nullptr, Name);
   }
 
+  /// Create a call to llvm.experimental_cttz_elts
+  Value *CreateCountTrailingZeroElems(Type *ResTy, Value *Mask,
+                                      const Twine &Name = "") {
+    return CreateIntrinsic(
+        Intrinsic::experimental_cttz_elts, {ResTy, Mask->getType()},
+        {Mask, getInt1(/*ZeroIsPoison=*/true)}, nullptr, Name);
+  }
+
 private:
   /// Create a call to a masked intrinsic with given Id.
   CallInst *CreateMaskedIntrinsic(Intrinsic::ID Id, ArrayRef<Value *> Ops,
