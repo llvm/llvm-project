@@ -10897,7 +10897,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
           ExprResult This =
               ActOnCXXThis(OperatorDelete->getParamDecl(0)->getLocation());
           assert(!This.isInvalid() && "couldn't form 'this' expr in dtor?");
-          This = PerformImplicitConversion(This.get(), ParamType, AA_Passing);
+          This = PerformImplicitConversion(This.get(), ParamType,
+                                           AssignmentAction::Passing);
           if (This.isInvalid()) {
             // FIXME: Register this as a context note so that it comes out
             // in the right order.

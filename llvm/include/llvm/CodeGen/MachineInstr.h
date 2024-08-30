@@ -1453,6 +1453,8 @@ public:
     return getOpcode() == TargetOpcode::EXTRACT_SUBREG;
   }
 
+  bool isFakeUse() const { return getOpcode() == TargetOpcode::FAKE_USE; }
+
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.
   bool isCopyLike() const {
