@@ -587,9 +587,7 @@ define i64 @nested_cond_and(ptr noalias nocapture readonly %a, ptr noalias nocap
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; CHECK:       pred.load.continue14:
 ; CHECK-NEXT:    [[TMP46:%.*]] = phi <4 x i64> [ [[TMP41]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP45]], [[PRED_LOAD_IF13]] ]
-; CHECK-NEXT:    [[TMP47:%.*]] = xor <4 x i1> [[TMP25]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP48:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP47]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI_V:%.*]] = select <4 x i1> [[TMP48]], <4 x i64> [[TMP24]], <4 x i64> [[TMP46]]
+; CHECK-NEXT:    [[PREDPHI_V:%.*]] = select <4 x i1> [[TMP26]], <4 x i64> [[TMP46]], <4 x i64> [[TMP24]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[PREDPHI_V]], <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    [[PREDPHI15]] = and <4 x i64> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
