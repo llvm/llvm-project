@@ -771,9 +771,9 @@ private:
                       CommandReturnObject &result) {
     // First use the Source Manager's default file. Then use the current stack
     // frame's file.
-    auto file_and_line = target.GetSourceManager().GetDefaultFileAndLine();
-    if (file_and_line) {
-      file = file_and_line->support_file_sp->GetSpecOnly();
+    if (auto maybe_file_and_line =
+            target.GetSourceManager().GetDefaultFileAndLine()) {
+      file = maybe_file_and_line->support_file_sp->GetSpecOnly();
       return true;
     }
 
