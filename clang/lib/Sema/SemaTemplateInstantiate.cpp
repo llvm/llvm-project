@@ -1656,43 +1656,25 @@ namespace {
 
     ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                  LambdaScopeInfo *LSI) {
-#if 1
       CXXMethodDecl *MD = LSI->CallOperator;
-      // if (MD->getParentFunctionOrMethod()) {
-      if (true) {
-#if 0
-        NamedDecl *Pattern = MD;
-          std::optional<ArrayRef<TemplateArgument>> Innermost;
-        if (FunctionTemplateDecl *FTD = MD->getDescribedFunctionTemplate()) {
-          Pattern = FTD;
-          Innermost = FTD->getInjectedTemplateArgs();
-        }
-        MultiLevelTemplateArgumentList MLTAL =
-            SemaRef.getTemplateInstantiationArgs(Pattern, Pattern->getLexicalDeclContext(),
-                                                 /*Final=*/false, Innermost,
-                                                 /*RelativeToPrimary=*/true);
-#endif
-        ;
-        for (ParmVarDecl *PVD : MD->parameters()) {
-          assert(PVD && "null in a parameter list");
-          if (!PVD->hasDefaultArg())
-            continue;
-          Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
-          // FIXME: Obtain the source location for the '=' token.
-          SourceLocation EqualLoc = UninstExpr->getBeginLoc();
-          if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
-            // If substitution fails, the default argument is set to a
-            // RecoveryExpr that wraps the uninstantiated default argument so
-            // that downstream diagnostics are omitted.
-            ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
-                UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(),
-                {UninstExpr}, UninstExpr->getType());
-            if (ErrorResult.isUsable())
-              PVD->setDefaultArg(ErrorResult.get());
-          }
+      for (ParmVarDecl *PVD : MD->parameters()) {
+        assert(PVD && "null in a parameter list");
+        if (!PVD->hasDefaultArg())
+          continue;
+        Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
+        // FIXME: Obtain the source location for the '=' token.
+        SourceLocation EqualLoc = UninstExpr->getBeginLoc();
+        if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
+          // If substitution fails, the default argument is set to a
+          // RecoveryExpr that wraps the uninstantiated default argument so
+          // that downstream diagnostics are omitted.
+          ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
+              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(), {UninstExpr},
+              UninstExpr->getType());
+          if (ErrorResult.isUsable())
+            PVD->setDefaultArg(ErrorResult.get());
         }
       }
-#endif
       return inherited::RebuildLambdaExpr(StartLoc, EndLoc, LSI);
     }
 

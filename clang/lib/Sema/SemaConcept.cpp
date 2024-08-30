@@ -1068,11 +1068,7 @@ bool Sema::FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD) {
   SmallVector<const Expr *, 3> ACs;
   FTD->getAssociatedConstraints(ACs);
 
-#if 0
-  unsigned OldTemplateDepth = CalculateTemplateDepthForConstraints(*this, FD);
-#else
   unsigned OldTemplateDepth = FTD->getTemplateParameters()->getDepth();
-#endif
   for (const Expr *Constraint : ACs)
     if (ConstraintExpressionDependsOnEnclosingTemplate(FD, OldTemplateDepth,
                                                        Constraint))

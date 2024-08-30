@@ -317,8 +317,7 @@ struct ConvertConstructorToDeductionGuideTransform {
     }
 
     if (NestedPattern)
-      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(
-          /*D=*/nullptr, Template->getDeclContext());
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(Template);
   }
 
   Sema &SemaRef;
@@ -833,7 +832,6 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
                                            /*Innermost=*/InnerArgsForBuildingRC,
                                            /*RelativeToPrimary=*/true,
                                            /*ForConstraintInstantiation=*/true);
-  ;
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
 
   ExprResult E = SemaRef.SubstExpr(RC, ArgsForBuildingRC);
