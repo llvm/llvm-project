@@ -1,13 +1,13 @@
-// DISABLED_RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR_BEFORE
-// DISABLED_RUN: FileCheck %s -check-prefix=CIR_AFTER --input-file=%t.cir
-// DISABLED_RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm %s -o %t.ll
-// DISABLED_RUN: FileCheck %s -check-prefix=LLVM --input-file=%t.ll
-// DISABLED_RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir -fexceptions -fcxx-exceptions %s -o %t.eh.cir
-// DISABLED_RUN: FileCheck %s -check-prefix=CIR_EH --input-file=%t.eh.cir
-// DISABLED_RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir-flat -fexceptions -fcxx-exceptions %s -o %t.eh.flat.cir
-// DISABLED_RUN: FileCheck %s -check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir
-// DISABLED_RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm -fexceptions -fcxx-exceptions %s -o %t.eh.ll
-// DISABLED_RUN: FileCheck %s -check-prefix=LLVM_EH --input-file=%t.eh.ll
+// DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR_BEFORE
+// DISABLED: FileCheck %s -check-prefix=CIR_AFTER --input-file=%t.cir
+// DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm %s -o %t.ll
+// DISABLED: FileCheck %s -check-prefix=LLVM --input-file=%t.ll
+// DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir -fexceptions -fcxx-exceptions %s -o %t.eh.cir
+// DISABLED: FileCheck %s -check-prefix=CIR_EH --input-file=%t.eh.cir
+// DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir-flat -fexceptions -fcxx-exceptions %s -o %t.eh.flat.cir
+// DISABLED: FileCheck %s -check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir
+// DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm -fexceptions -fcxx-exceptions %s -o %t.eh.ll
+// DISABLED: FileCheck %s -check-prefix=LLVM_EH --input-file=%t.eh.ll
 
 struct e { e(int); };
 e *g = new e(0);
