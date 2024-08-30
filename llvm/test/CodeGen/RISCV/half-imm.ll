@@ -30,14 +30,14 @@ define half @half_imm() nounwind {
 ;
 ; RV32IZHINX-LABEL: half_imm:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV32IZHINX-NEXT:    lh a0, %lo(.LCPI0_0)(a0)
+; RV32IZHINX-NEXT:    lui a0, 4
+; RV32IZHINX-NEXT:    addi a0, a0, 512
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: half_imm:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV64IZHINX-NEXT:    lh a0, %lo(.LCPI0_0)(a0)
+; RV64IZHINX-NEXT:    lui a0, 4
+; RV64IZHINX-NEXT:    addiw a0, a0, 512
 ; RV64IZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: half_imm:
@@ -45,12 +45,6 @@ define half @half_imm() nounwind {
 ; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI0_0)
 ; CHECKIZFHMIN-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
 ; CHECKIZFHMIN-NEXT:    ret
-;
-; CHECKIZHINXMIN-LABEL: half_imm:
-; CHECKIZHINXMIN:       # %bb.0:
-; CHECKIZHINXMIN-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECKIZHINXMIN-NEXT:    lh a0, %lo(.LCPI0_0)(a0)
-; CHECKIZHINXMIN-NEXT:    ret
   ret half 3.0
 }
 
