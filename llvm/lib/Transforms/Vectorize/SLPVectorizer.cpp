@@ -4903,7 +4903,6 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       if (DemandedElts.isAllOnes())
         // All loads gathered - try smaller VF.
         continue;
-      InstructionCost ScalarVFGEPCost = 0;
       // Can be vectorized later as a serie of loads/insertelements.
       InstructionCost VecLdCost = 0;
       if (!DemandedElts.isZero()) {
