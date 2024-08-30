@@ -1193,7 +1193,7 @@ def executeScriptInternal(
         if litConfig.update_tests:
             for test_updater in litConfig.test_updaters:
                 try:
-                    update_output = test_updater(result)
+                    update_output = test_updater(result, test)
                 except Exception as e:
                     out += f"Exception occurred in test updater: {e}"
                     continue
