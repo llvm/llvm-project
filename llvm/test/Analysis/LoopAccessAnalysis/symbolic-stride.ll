@@ -223,7 +223,7 @@ exit:
   ret void
 }
 
-define double @single_iteration_unknown_stride(i32 %arg, ptr %arg1, i1 %arg2) {
+define double @single_iteration_unknown_stride(i32 %x, ptr %y, i1 %cond) {
 ; CHECK-LABEL: 'single_iteration_unknown_stride'
 ; CHECK-NEXT:    loop.body:
 ; CHECK-NEXT:      Memory dependences are safe
@@ -233,40 +233,40 @@ define double @single_iteration_unknown_stride(i32 %arg, ptr %arg1, i1 %arg2) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %arg == 1
+; CHECK-NEXT:      Equal predicate: %x == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep10 = getelementptr double, ptr %gep8, i64 %mul:
-; CHECK-NEXT:        {(8 + %arg1),+,(8 * (sext i32 %arg to i64))<nsw>}<%loop.body>
-; CHECK-NEXT:        --> {(8 + %arg1),+,8}<%loop.body>
+; CHECK-NEXT:        {(8 + %y),+,(8 * (sext i32 %x to i64))<nsw>}<%loop.body>
+; CHECK-NEXT:        --> {(8 + %y),+,8}<%loop.body>
 ;
 entry:
-  br i1 %arg2, label %noloop.exit, label %loop.ph
+  br i1 %cond, label %noloop.exit, label %loop.ph
 
 loop.ph:                                          ; preds = %entry
-  %sext7 = sext i32 %arg to i64
-  %gep8 = getelementptr i8, ptr %arg1, i64 8
+  %sext7 = sext i32 %x to i64
+  %gep8 = getelementptr i8, ptr %y, i64 8
   br label %loop.body
 
 loop.body:                                        ; preds = %loop.body, %loop.ph
-  %phi = phi i64 [ 0, %loop.ph ], [ %add, %loop.body ]
-  %mul = mul i64 %phi, %sext7
+  %iv = phi i64 [ 0, %loop.ph ], [ %iv.next, %loop.body ]
+  %mul = mul i64 %iv, %sext7
   %gep10 = getelementptr double, ptr %gep8, i64 %mul
   %load11 = load double, ptr %gep10, align 8
-  store double %load11, ptr %arg1, align 8
-  %add = add i64 %phi, 1
-  %icmp = icmp eq i64 %phi, 0
+  store double %load11, ptr %y, align 8
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp eq i64 %iv, 0
   br i1 %icmp, label %loop.exit, label %loop.body
 
 noloop.exit:                                      ; preds = %entry
-  %sext = sext i32 %arg to i64
-  %gep = getelementptr double, ptr %arg1, i64 %sext
+  %sext = sext i32 %x to i64
+  %gep = getelementptr double, ptr %y, i64 %sext
   %load5 = load double, ptr %gep, align 8
   ret double %load5
 
 loop.exit:                                        ; preds = %loop.body
-  %sext2 = sext i32 %arg to i64
-  %gep2 = getelementptr double, ptr %arg1, i64 %sext2
+  %sext2 = sext i32 %x to i64
+  %gep2 = getelementptr double, ptr %y, i64 %sext2
   %load6 = load double, ptr %gep2, align 8
   ret double %load6
 }
