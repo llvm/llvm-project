@@ -23,7 +23,6 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/nat.h>
 #include <__utility/declval.h>
-#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -213,7 +212,7 @@ template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper {
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static _Ret __call(_Args&&... __args) {
-    return std::__invoke(std::forward<_Args>(__args)...);
+    return std::__invoke(static_cast<_Args&&>(__args)...);
   }
 };
 
@@ -221,7 +220,7 @@ template <class _Ret>
 struct __invoke_void_return_wrapper<_Ret, true> {
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __call(_Args&&... __args) {
-    std::__invoke(std::forward<_Args>(__args)...);
+    std::__invoke(static_cast<_Args&&>(__args)...);
   }
 };
 
