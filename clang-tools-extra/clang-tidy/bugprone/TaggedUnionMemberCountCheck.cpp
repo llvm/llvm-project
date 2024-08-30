@@ -36,30 +36,20 @@ static constexpr llvm::StringLiteral UnionMatchBindName = "union";
 static constexpr llvm::StringLiteral TagMatchBindName = "tags";
 
 namespace {
-AST_MATCHER(FieldDecl, isUnion) {
-  const Type *T = Node.getType().getCanonicalType().getTypePtr();
-  assert(T);
-  return T->isUnionType();
-}
-
-AST_MATCHER(FieldDecl, isEnum) {
-  const Type *T = Node.getType().getCanonicalType().getTypePtr();
-  assert(T);
-  return T->isEnumeralType();
-}
 
 AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsGT,
                ast_matchers::internal::Matcher<FieldDecl>, InnerMatcher,
                unsigned, N) {
-  unsigned matchCount = 0;
-  for (const auto field : Node.fields()) {
-    if (InnerMatcher.matches(*field, Finder, Builder)) {
-      matchCount += 1;
+  unsigned MatchCount = 0;
+  for (const auto Field : Node.fields()) {
+    if (InnerMatcher.matches(*Field, Finder, Builder)) {
+      MatchCount += 1;
     }
   }
-  return matchCount > N;
+  return MatchCount > N;
 }
-}; // namespace
+
+} // namespace
 
 TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -100,14 +90,20 @@ void TaggedUnionMemberCountCheck::storeOptions(
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
 
+  static const auto UnionField = fieldDecl(hasType(qualType(
+      hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
+
+  static const auto EnumField = fieldDecl(hasType(
+      qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
+
   static const auto hasMultipleUnionsOrEnums = anyOf(
-      fieldCountOfKindIsGT(isUnion(), 1), fieldCountOfKindIsGT(isEnum(), 1));
+      fieldCountOfKindIsGT(UnionField, 1), fieldCountOfKindIsGT(EnumField, 1));
 
   Finder->addMatcher(
       recordDecl(anyOf(isStruct(), isClass()),
                  unless(anyOf(isImplicit(), hasMultipleUnionsOrEnums)),
-                 has(fieldDecl(isUnion()).bind(UnionMatchBindName)),
-                 has(fieldDecl(isEnum()).bind(TagMatchBindName)))
+                 has(UnionField.bind(UnionMatchBindName)),
+                 has(EnumField.bind(TagMatchBindName)))
           .bind(RootMatchBindName),
       this);
 }
@@ -134,12 +130,10 @@ TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
     LastEnumConstant = Enumerator;
   }
 
-  if (EnableCountingEnumHeuristic && LastEnumConstant) {
-    if (isCountingEnumLikeName(LastEnumConstant->getName())) {
-      if (LastEnumConstant->getInitVal() == (EnumValues.size() - 1)) {
-        return {EnumValues.size() - 1, LastEnumConstant};
-      }
-    }
+  if (EnableCountingEnumHeuristic && LastEnumConstant &&
+      isCountingEnumLikeName(LastEnumConstant->getName()) &&
+      (LastEnumConstant->getInitVal() == (EnumValues.size() - 1))) {
+    return {EnumValues.size() - 1, LastEnumConstant};
   }
 
   return {EnumValues.size(), nullptr};
