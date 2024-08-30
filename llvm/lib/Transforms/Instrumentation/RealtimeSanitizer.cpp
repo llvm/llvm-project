@@ -45,6 +45,26 @@ static void insertCallAtAllFunctionExitPoints(Function &Fn,
         insertCallBeforeInstruction(Fn, I, InsertFnName);
 }
 
+static PreservedAnalyses rtsanPreservedAnalyses() {
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+static void transformRealtimeUnsafeFunction(Function &F) {
+  IRBuilder<> Builder(&F.front().front());
+  Value *NameArg = Builder.CreateGlobalString(F.getName());
+
+  FunctionType *FuncType =
+      FunctionType::get(Type::getVoidTy(F.getContext()),
+                        {PointerType::getUnqual(F.getContext())}, false);
+
+  FunctionCallee Func = F.getParent()->getOrInsertFunction(
+      "__rtsan_expect_not_realtime", FuncType);
+
+  Builder.CreateCall(Func, {NameArg});
+}
+
 RealtimeSanitizerPass::RealtimeSanitizerPass(
     const RealtimeSanitizerOptions &Options) {}
 
@@ -53,10 +73,12 @@ PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
   if (F.hasFnAttribute(Attribute::SanitizeRealtime)) {
     insertCallAtFunctionEntryPoint(F, "__rtsan_realtime_enter");
     insertCallAtAllFunctionExitPoints(F, "__rtsan_realtime_exit");
+    return rtsanPreservedAnalyses();
+  }
 
-    PreservedAnalyses PA;
-    PA.preserveSet<CFGAnalyses>();
-    return PA;
+  if (F.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe)) {
+    transformRealtimeUnsafeFunction(F);
+    return rtsanPreservedAnalyses();
   }
 
   return PreservedAnalyses::all();
