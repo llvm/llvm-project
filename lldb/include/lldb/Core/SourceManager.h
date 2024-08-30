@@ -43,7 +43,6 @@ public:
 
     bool ModificationTimeIsStale() const;
     bool PathRemappingIsStale() const;
-    bool ChecksumIsStale() const;
 
     size_t DisplaySourceLines(uint32_t line, std::optional<size_t> column,
                               uint32_t context_before, uint32_t context_after,
@@ -75,8 +74,6 @@ public:
 
     const Checksum &GetChecksum() const { return m_checksum; }
 
-    llvm::once_flag &GetChecksumOnceFlag() { return m_checksum_once_flag; }
-
   protected:
     /// Set file and update modification time.
     void SetSupportFile(lldb::SupportFileSP support_file_sp);
@@ -89,9 +86,6 @@ public:
 
     /// Keep track of the on-disk checksum.
     Checksum m_checksum;
-
-    /// Only warn once of checksum mismatch.
-    llvm::once_flag m_checksum_once_flag;
 
     // Keep the modification time that this file data is valid for
     llvm::sys::TimePoint<> m_mod_time;
