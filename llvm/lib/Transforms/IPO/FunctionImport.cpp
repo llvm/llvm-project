@@ -1817,9 +1817,9 @@ Expected<bool> FunctionImporter::importFunctions(
   IRMover Mover(DestModule);
 
   // Do the actual import of functions now, one Module at a time
-  for (const auto &Name : ImportList.getSourceModules()) {
+  for (const auto &ModName : ImportList.getSourceModules()) {
     // Get the module for the import
-    Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(Name);
+    Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(ModName);
     if (!SrcModuleOrErr)
       return SrcModuleOrErr.takeError();
     std::unique_ptr<Module> SrcModule = std::move(*SrcModuleOrErr);
@@ -1837,7 +1837,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!F.hasName())
         continue;
       auto GUID = F.getGUID();
-      auto MaybeImportType = ImportList.getImportType(Name, GUID);
+      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
@@ -1873,7 +1873,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      auto MaybeImportType = ImportList.getImportType(Name, GUID);
+      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
@@ -1893,7 +1893,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
         continue;
       auto GUID = GA.getGUID();
-      auto MaybeImportType = ImportList.getImportType(Name, GUID);
+      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
