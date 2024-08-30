@@ -38,6 +38,7 @@ public:
 
   llvm::BumpPtrAllocator bAlloc;
   llvm::StringSaver saver{bAlloc};
+  llvm::UniqueStringSaver unique_saver{bAlloc};
   llvm::DenseMap<void *, SpecificAllocBase *> instances;
 
   ErrorHandler e;
@@ -56,6 +57,10 @@ bool hasContext();
 
 inline llvm::StringSaver &saver() { return context().saver; }
 inline llvm::BumpPtrAllocator &bAlloc() { return context().bAlloc; }
+
+inline llvm::UniqueStringSaver &unique_saver() {
+  return context().unique_saver;
+}
 } // namespace lld
 
 #endif

@@ -1695,6 +1695,22 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
+StringRef BitcodeFile::saved_symbol(const char *S) {
+  return unique_saver().save(S);
+}
+
+StringRef BitcodeFile::saved_symbol(StringRef S) {
+  return unique_saver().save(S);
+}
+
+StringRef BitcodeFile::saved_symbol(const Twine &S) {
+  return unique_saver().save(S);
+}
+
+StringRef BitcodeFile::saved_symbol(const std::string &S) {
+  return unique_saver().save(S);
+}
+
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, mb) {
@@ -1712,8 +1728,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringRef name = archiveName.empty()
-                       ? saver().save(path)
-                       : saver().save(archiveName + "(" + path::filename(path) +
+                       ? saved_symbol(path)
+                       : saved_symbol(archiveName + "(" + path::filename(path) +
                                       " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
@@ -1745,7 +1761,7 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
   if (!sym)
-    sym = symtab.insert(saver().save(objSym.getName()));
+    sym = symtab.insert(unique_saver().save(objSym.getName()));
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
@@ -1797,7 +1813,7 @@ void BitcodeFile::parseLazy() {
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
-      auto *sym = symtab.insert(saver().save(irSym.getName()));
+      auto *sym = symtab.insert(saved_symbol(irSym.getName()));
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }
