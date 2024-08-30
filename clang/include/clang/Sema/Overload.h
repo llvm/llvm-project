@@ -225,11 +225,11 @@ class Sema;
     /// HLSL Scalar Widening with promotion
     ICR_HLSL_Scalar_Widening_Promotion,
 
-    /// HLSL Matching Dimension Reduction
-    ICR_HLSL_Dimension_Reduction,
-
     /// Conversion
     ICR_Conversion,
+
+    /// HLSL Matching Dimension Reduction
+    ICR_HLSL_Dimension_Reduction,
 
     /// OpenCL Scalar Widening
     ICR_OCL_Scalar_Widening,
