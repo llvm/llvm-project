@@ -3009,15 +3009,15 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_vpermi2var_d_128:
   case Intrinsic::x86_avx512_vpermi2var_d_256:
   case Intrinsic::x86_avx512_vpermi2var_d_512:
-  case Intrinsic::x86_avx512_vpermi2var_hi_128: 
-  case Intrinsic::x86_avx512_vpermi2var_hi_256: 
-  case Intrinsic::x86_avx512_vpermi2var_hi_512: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_128: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_256: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_512: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_128: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_256: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_512: 
+  case Intrinsic::x86_avx512_vpermi2var_hi_128:
+  case Intrinsic::x86_avx512_vpermi2var_hi_256:
+  case Intrinsic::x86_avx512_vpermi2var_hi_512:
+  case Intrinsic::x86_avx512_vpermi2var_pd_128:
+  case Intrinsic::x86_avx512_vpermi2var_pd_256:
+  case Intrinsic::x86_avx512_vpermi2var_pd_512:
+  case Intrinsic::x86_avx512_vpermi2var_ps_128:
+  case Intrinsic::x86_avx512_vpermi2var_ps_256:
+  case Intrinsic::x86_avx512_vpermi2var_ps_512:
   case Intrinsic::x86_avx512_vpermi2var_q_128:
   case Intrinsic::x86_avx512_vpermi2var_q_256:
   case Intrinsic::x86_avx512_vpermi2var_q_512:
