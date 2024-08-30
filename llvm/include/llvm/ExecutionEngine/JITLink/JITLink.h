@@ -15,8 +15,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -389,11 +389,7 @@ const char *getLinkageName(Linkage L);
 ///   Default -- Visible in the public interface of the linkage unit.
 ///   Hidden -- Visible within the linkage unit, but not exported from it.
 ///   Local -- Visible only within the LinkGraph.
-enum class Scope : uint8_t {
-  Default,
-  Hidden,
-  Local
-};
+enum class Scope : uint8_t { Default, Hidden, Local };
 
 /// For debugging output.
 const char *getScopeName(Scope S);
@@ -853,8 +849,7 @@ private:
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
 
-  template <typename... ArgTs>
-  Addressable &createAddressable(ArgTs &&... Args) {
+  template <typename... ArgTs> Addressable &createAddressable(ArgTs &&...Args) {
     Addressable *A =
         reinterpret_cast<Addressable *>(Allocator.Allocate<Addressable>());
     new (A) Addressable(std::forward<ArgTs>(Args)...);
@@ -866,7 +861,7 @@ private:
     Allocator.Deallocate(&A);
   }
 
-  template <typename... ArgTs> Block &createBlock(ArgTs &&... Args) {
+  template <typename... ArgTs> Block &createBlock(ArgTs &&...Args) {
     Block *B = reinterpret_cast<Block *>(Allocator.Allocate<Block>());
     new (B) Block(std::forward<ArgTs>(Args)...);
     B->getSection().addBlock(*B);
@@ -1212,8 +1207,8 @@ public:
   /// of 0.
   Symbol &addExternalSymbol(StringRef Name, orc::ExecutorAddrDiff Size,
                             bool IsWeaklyReferenced) {
-    if(ExternalSymbols.contains(Name))
-       llvm::dbgs() << "Duplicate external symbol: " << Name << "\n";
+    if (ExternalSymbols.contains(Name))
+      llvm::dbgs() << "Duplicate external symbol: " << Name << "\n";
     assert(!ExternalSymbols.contains(Name) && "Duplicate external symbol");
 
     auto &Sym = Symbol::constructExternal(
@@ -1228,10 +1223,10 @@ public:
                             orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                             bool IsLive) {
     assert((S == Scope::Local || llvm::count_if(AbsoluteSymbols,
-                                               [&](const Symbol *Sym) {
-                                                 return Sym->getName() == Name;
-                                               }) == 0) &&
-                                    "Duplicate absolute symbol");
+                                                [&](const Symbol *Sym) {
+                                                  return Sym->getName() == Name;
+                                                }) == 0) &&
+           "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator, createAddressable(Address),
                                           Name, Size, L, S, IsLive);
     AbsoluteSymbols.insert(&Sym);
@@ -1508,10 +1503,9 @@ public:
   /// Remove a block. The block reference is defunct after calling this
   /// function and should no longer be used.
   void removeBlock(Block &B) {
-    assert(llvm::none_of(B.getSection().symbols(),
-                         [&](const Symbol *Sym) {
-                           return &Sym->getBlock() == &B;
-                         }) &&
+    assert(llvm::none_of(
+               B.getSection().symbols(),
+               [&](const Symbol *Sym) { return &Sym->getBlock() == &B; }) &&
            "Block still has symbols attached");
     B.getSection().removeBlock(B);
     destroyBlock(B);
