@@ -1613,8 +1613,8 @@ double4 saturate(double4);
 /// \param TrueVal The Value returned if Cond is true.
 /// \param FalseVal The Value returned if Cond is false.
 
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-template<typename T>
 T select(bool, T, T);
   
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals, vector<T,Sz>, FalseVals)
@@ -1623,8 +1623,8 @@ T select(bool, T, T);
 /// \param TrueVals The vector values are chosen from when conditions are true.
 /// \param FalseVals The vector values are chosen from when conditions are false.
 
+template <typename T, int Sz>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-template<typename T, int Sz>
 vector<T,Sz> select(vector<bool,Sz>, vector<T,Sz>, vector<T,Sz>);
   
 //===----------------------------------------------------------------------===//

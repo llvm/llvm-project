@@ -1619,7 +1619,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     } else { // first operand is not a bool or a vector of bools.
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
 		   diag::err_typecheck_convert_incompatible)
-	<< TheCall->getArg(0)->getType() << SemaRef.Context.getBOOLType()
+	<< TheCall->getArg(0)->getType() << getASTContext().BoolTy
 	<< 1 << 0 << 0;
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
 		   diag::err_builtin_non_vector_type)

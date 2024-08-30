@@ -18703,13 +18703,13 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
 
     // if cond is a bool emit a select instruction
     if (TCond->isIntegerTy(1))
-      return Builder.CreateSelect(OpCond, OpTrue, OpFalse);
+      return Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");
 
     // if cond is a vector of bools lower to a shufflevector
     // todo check if that true and false are vectors
     // todo check that the size of true and false and cond are the same
     if (TCond->isVectorTy() &&
-	E->getArg(0)->getType()->getAs<VectorType>()->isBooleanType()) {
+	E->getArg(0)->getType()->getAs<VectorType>()->getElementType()->isBooleanType()) {
       assert(OpTrue->getType()->isVectorTy() && OpFalse->getType()->isVectorTy() &&
 	     "Select's second and third operands must be vectors if first operand is a vector.");
 
@@ -18723,15 +18723,18 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
       assert(N == VecTyFalse->getNumElements() &&
 	     N == E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() &&
 	     "Select requires vectors to be of the same size.");
-      
-      llvm::SmallVector<Value *> Mask;
+
+      llvm::Value *Result = llvm::PoisonValue::get(llvm::FixedVectorType::get(IntTy, N));
       for (unsigned I = 0; I < N; I++) {
 	Value *Index = ConstantInt::get(IntTy, I);
 	Value *IndexBool = Builder.CreateExtractElement(OpCond, Index);
-	Mask.push_back(Builder.CreateSelect(IndexBool, Index, ConstantInt::get(IntTy, I + N)));
+	Value *TVal = Builder.CreateExtractElement(OpTrue, Index);
+	Value *FVal = Builder.CreateExtractElement(OpFalse, Index);
+	Value *IndexSelect = Builder.CreateSelect(IndexBool, TVal, FVal);
+	Result = Builder.CreateInsertElement(Result, IndexSelect, Index); 
       }
-      
-      return Builder.CreateShuffleVector(OpTrue, OpFalse, BuildVector(Mask));
+
+      return Result;
     }
     
     llvm_unreachable("Select requires a bool or vector of bools as its first operand.");
