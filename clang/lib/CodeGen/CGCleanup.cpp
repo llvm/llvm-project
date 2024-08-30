@@ -112,11 +112,11 @@ void EHScopeStack::deallocate(size_t Size) {
   StartOfData += llvm::alignTo(Size, ScopeStackAlignment);
 }
 
-bool EHScopeStack::containsOnlyLifetimeMarkers(
+bool EHScopeStack::containsOnlyNoopCleanups(
     EHScopeStack::stable_iterator Old) const {
   for (EHScopeStack::iterator it = begin(); stabilize(it) != Old; it++) {
     EHCleanupScope *cleanup = dyn_cast<EHCleanupScope>(&*it);
-    if (!cleanup || !cleanup->isLifetimeMarker())
+    if (!cleanup || !(cleanup->isLifetimeMarker() || cleanup->isFakeUse()))
       return false;
   }
 
@@ -154,6 +154,7 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsNormalCleanup = Kind & NormalCleanup;
   bool IsEHCleanup = Kind & EHCleanup;
   bool IsLifetimeMarker = Kind & LifetimeMarker;
+  bool IsFakeUse = Kind & FakeUse;
 
   // Per C++ [except.terminate], it is implementation-defined whether none,
   // some, or all cleanups are called before std::terminate. Thus, when
@@ -176,6 +177,8 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     InnermostEHScope = stable_begin();
   if (IsLifetimeMarker)
     Scope->setLifetimeMarker();
+  if (IsFakeUse)
+    Scope->setFakeUse();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
