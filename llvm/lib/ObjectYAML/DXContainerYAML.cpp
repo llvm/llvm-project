@@ -208,8 +208,7 @@ void MappingTraits<DXContainerYAML::Object>::mapping(
 
 void MappingTraits<DXContainerYAML::ResourceFlags>::mapping(
     IO &IO, DXContainerYAML::ResourceFlags &Flags) {
-#define RESOURCE_FLAG(FlagIndex, Enum)                      \
-  IO.mapRequired(#Enum, Flags.Bits.Enum);
+#define RESOURCE_FLAG(FlagIndex, Enum) IO.mapRequired(#Enum, Flags.Bits.Enum);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
