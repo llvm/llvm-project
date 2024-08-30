@@ -188,6 +188,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
+    FuseLiteralsLimit = 3;
     switch (ARMProcFamily) {
     case AppleA14:
     case AppleA15:
