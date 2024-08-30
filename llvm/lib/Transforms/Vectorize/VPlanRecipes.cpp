@@ -1829,13 +1829,18 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       Value *NewCond = State.get(Cond, Part, State.VF.isScalar());
       VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
       Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
-      Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
-                                                  RdxDesc.getFastMathFlags());
-      if (State.VF.isVector()) {
-        Iden = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Iden);
-      }
 
-      Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Iden);
+      Value *Start;
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind))
+        Start = RdxDesc.getRecurrenceStartValue();
+      else
+        Start = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
+                                              RdxDesc.getFastMathFlags());
+      if (State.VF.isVector())
+        Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(),
+                                                Start);
+
+      Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Start);
       NewVecOp = Select;
     }
     Value *NewRed;
