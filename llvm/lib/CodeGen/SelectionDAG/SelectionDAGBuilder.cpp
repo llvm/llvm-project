@@ -1622,6 +1622,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     SDValue N = NodeMap[V];
     if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
       N = UnusedArgNodeMap[V];
+
     if (N.getNode()) {
       // Only emit func arg dbg value for non-variadic dbg.values for now.
       if (!IsVariadic &&
@@ -7031,7 +7032,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // If ISD::IS_FPCLASS should be expanded, do it right now, because the
     // expansion can use illegal types. Making expansion early allows
     // legalizing these types prior to selection.
-    if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT)) {
+    if (!TLI.isOperationLegal(ISD::IS_FPCLASS, ArgVT) &&
+        !TLI.isOperationCustom(ISD::IS_FPCLASS, ArgVT)) {
       SDValue Result = TLI.expandIS_FPCLASS(DestVT, Op, Test, Flags, sdl, DAG);
       setValue(&I, Result);
       return;
@@ -7699,6 +7701,38 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Add = DAG.getMemBasePlusOffset(FPVal, OffsetVal, sdl);
     setValue(&I, Add);
 
+    return;
+  }
+
+  case Intrinsic::fake_use: {
+    Value *V = I.getArgOperand(0);
+    SDValue Ops[2];
+    // For Values not declared or previously used in this basic block, the
+    // NodeMap will not have an entry, and `getValue` will assert if V has no
+    // valid register value.
+    auto FakeUseValue = [&]() -> SDValue {
+      SDValue &N = NodeMap[V];
+      if (N.getNode())
+        return N;
+
+      // If there's a virtual register allocated and initialized for this
+      // value, use it.
+      if (SDValue copyFromReg = getCopyFromRegs(V, V->getType()))
+        return copyFromReg;
+      // FIXME: Do we want to preserve constants? It seems pointless.
+      if (isa<Constant>(V))
+        return getValue(V);
+      return SDValue();
+    }();
+    if (!FakeUseValue || FakeUseValue.isUndef())
+      return;
+    Ops[0] = getRoot();
+    Ops[1] = FakeUseValue;
+    // Also, do not translate a fake use with an undef operand, or any other
+    // empty SDValues.
+    if (!Ops[1] || Ops[1].isUndef())
+      return;
+    DAG.setRoot(DAG.getNode(ISD::FAKE_USE, sdl, MVT::Other, Ops));
     return;
   }
 
@@ -9557,9 +9591,11 @@ static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
   std::pair<unsigned, const TargetRegisterClass *> InputRC =
       TLI.getRegForInlineAsmConstraint(TRI, MatchingOpInfo.ConstraintCode,
                                        MatchingOpInfo.ConstraintVT);
-  if ((OpInfo.ConstraintVT.isInteger() !=
-       MatchingOpInfo.ConstraintVT.isInteger()) ||
-      (MatchRC.second != InputRC.second)) {
+  const bool OutOpIsIntOrFP =
+      OpInfo.ConstraintVT.isInteger() || OpInfo.ConstraintVT.isFloatingPoint();
+  const bool InOpIsIntOrFP = MatchingOpInfo.ConstraintVT.isInteger() ||
+                             MatchingOpInfo.ConstraintVT.isFloatingPoint();
+  if ((OutOpIsIntOrFP != InOpIsIntOrFP) || (MatchRC.second != InputRC.second)) {
     // FIXME: error out in a more elegant fashion
     report_fatal_error("Unsupported asm: input constraint"
                        " with a matching output constraint of"

@@ -1,4 +1,3 @@
-! REQUIRES: flang-supports-f128-math
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
   ! CHECK-LABEL: func @_QQmain

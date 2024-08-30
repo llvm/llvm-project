@@ -2199,8 +2199,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (getLangOpts().CPlusPlus14) {
       assert(Context.getTargetInfo().getIntWidth() && "Builtin type of size 0?");
 
-      ConvertedSize = PerformImplicitConversion(*ArraySize, Context.getSizeType(),
-                                                AA_Converting);
+      ConvertedSize = PerformImplicitConversion(
+          *ArraySize, Context.getSizeType(), AssignmentAction::Converting);
 
       if (!ConvertedSize.isInvalid() &&
           (*ArraySize)->getType()->getAs<RecordType>())
@@ -3851,7 +3851,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
             Context.getQualifiedType(Pointee.getUnqualifiedType(), Qs));
         Ex = ImpCastExprToType(Ex.get(), Unqual, CK_NoOp);
       }
-      Ex = PerformImplicitConversion(Ex.get(), ParamType, AA_Passing);
+      Ex = PerformImplicitConversion(Ex.get(), ParamType,
+                                     AssignmentAction::Passing);
       if (Ex.isInvalid())
         return ExprError();
     }
@@ -4256,10 +4257,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       }
       // Watch out for ellipsis conversion.
       if (!ICS.UserDefined.EllipsisConversion) {
-        ExprResult Res =
-          PerformImplicitConversion(From, BeforeToType,
-                                    ICS.UserDefined.Before, AA_Converting,
-                                    CCK);
+        ExprResult Res = PerformImplicitConversion(
+            From, BeforeToType, ICS.UserDefined.Before,
+            AssignmentAction::Converting, CCK);
         if (Res.isInvalid())
           return ExprError();
         From = Res.get();
@@ -4282,7 +4282,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         return From;
 
       return PerformImplicitConversion(From, ToType, ICS.UserDefined.After,
-                                       AA_Converting, CCK);
+                                       AssignmentAction::Converting, CCK);
   }
 
   case ImplicitConversionSequence::AmbiguousConversion:
@@ -4451,19 +4451,19 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     //   target entity shall allow at least the exceptions allowed by the
     //   source value in the assignment or initialization.
     switch (Action) {
-    case AA_Assigning:
-    case AA_Initializing:
+    case AssignmentAction::Assigning:
+    case AssignmentAction::Initializing:
       // Note, function argument passing and returning are initialization.
-    case AA_Passing:
-    case AA_Returning:
-    case AA_Sending:
-    case AA_Passing_CFAudited:
+    case AssignmentAction::Passing:
+    case AssignmentAction::Returning:
+    case AssignmentAction::Sending:
+    case AssignmentAction::Passing_CFAudited:
       if (CheckExceptionSpecCompatibility(From, ToType))
         return ExprError();
       break;
 
-    case AA_Casting:
-    case AA_Converting:
+    case AssignmentAction::Casting:
+    case AssignmentAction::Converting:
       // Casts and implicit conversions are not initialization, so are not
       // checked for exception specification mismatches.
       break;
@@ -4577,9 +4577,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   case ICK_Writeback_Conversion:
   case ICK_Pointer_Conversion: {
-    if (SCS.IncompatibleObjC && Action != AA_Casting) {
+    if (SCS.IncompatibleObjC && Action != AssignmentAction::Casting) {
       // Diagnose incompatible Objective-C conversions
-      if (Action == AA_Initializing || Action == AA_Assigning)
+      if (Action == AssignmentAction::Initializing ||
+          Action == AssignmentAction::Assigning)
         Diag(From->getBeginLoc(),
              diag::ext_typecheck_convert_incompatible_pointer)
             << ToType << From->getType() << Action << From->getSourceRange()
@@ -4596,12 +4597,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
                !ObjC().CheckObjCARCUnavailableWeakConversion(ToType,
                                                              From->getType())) {
-      if (Action == AA_Initializing)
+      if (Action == AssignmentAction::Initializing)
         Diag(From->getBeginLoc(), diag::err_arc_weak_unavailable_assign);
       else
         Diag(From->getBeginLoc(), diag::err_arc_convesion_of_weak_unavailable)
-            << (Action == AA_Casting) << From->getType() << ToType
-            << From->getSourceRange();
+            << (Action == AssignmentAction::Casting) << From->getType()
+            << ToType << From->getSourceRange();
     }
 
     // Defer address space conversion to the third conversion.
@@ -6666,14 +6667,14 @@ static bool FindConditionalOverload(Sema &Self, ExprResult &LHS, ExprResult &RHS
       // We found a match. Perform the conversions on the arguments and move on.
       ExprResult LHSRes = Self.PerformImplicitConversion(
           LHS.get(), Best->BuiltinParamTypes[0], Best->Conversions[0],
-          Sema::AA_Converting);
+          AssignmentAction::Converting);
       if (LHSRes.isInvalid())
         break;
       LHS = LHSRes;
 
       ExprResult RHSRes = Self.PerformImplicitConversion(
           RHS.get(), Best->BuiltinParamTypes[1], Best->Conversions[1],
-          Sema::AA_Converting);
+          AssignmentAction::Converting);
       if (RHSRes.isInvalid())
         break;
       RHS = RHSRes;

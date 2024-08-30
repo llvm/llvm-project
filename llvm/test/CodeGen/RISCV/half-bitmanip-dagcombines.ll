@@ -208,13 +208,15 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV32IZFHMIN-LABEL: fcopysign_fneg:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFHMIN-NEXT:    fmv.h.x fa4, a1
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; RV32IZFHMIN-NEXT:    fneg.s fa4, fa4
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; RV32IZFHMIN-NEXT:    fsh fa5, 8(sp)
-; RV32IZFHMIN-NEXT:    fsh fa4, 12(sp)
+; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a1
+; RV32IZFHMIN-NEXT:    fsh fa5, 4(sp)
+; RV32IZFHMIN-NEXT:    lbu a1, 5(sp)
+; RV32IZFHMIN-NEXT:    xori a1, a1, 128
+; RV32IZFHMIN-NEXT:    sb a1, 5(sp)
+; RV32IZFHMIN-NEXT:    flh fa5, 4(sp)
+; RV32IZFHMIN-NEXT:    fmv.h.x fa4, a0
+; RV32IZFHMIN-NEXT:    fsh fa4, 8(sp)
+; RV32IZFHMIN-NEXT:    fsh fa5, 12(sp)
 ; RV32IZFHMIN-NEXT:    lbu a0, 9(sp)
 ; RV32IZFHMIN-NEXT:    lbu a1, 13(sp)
 ; RV32IZFHMIN-NEXT:    andi a0, a0, 127
@@ -228,31 +230,35 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ;
 ; RV64IZFHMIN-LABEL: fcopysign_fneg:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFHMIN-NEXT:    fmv.h.x fa4, a1
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; RV64IZFHMIN-NEXT:    fneg.s fa4, fa4
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; RV64IZFHMIN-NEXT:    fsh fa5, 0(sp)
-; RV64IZFHMIN-NEXT:    fsh fa4, 8(sp)
-; RV64IZFHMIN-NEXT:    lbu a0, 1(sp)
+; RV64IZFHMIN-NEXT:    addi sp, sp, -32
+; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a1
+; RV64IZFHMIN-NEXT:    fsh fa5, 8(sp)
 ; RV64IZFHMIN-NEXT:    lbu a1, 9(sp)
+; RV64IZFHMIN-NEXT:    xori a1, a1, 128
+; RV64IZFHMIN-NEXT:    sb a1, 9(sp)
+; RV64IZFHMIN-NEXT:    flh fa5, 8(sp)
+; RV64IZFHMIN-NEXT:    fmv.h.x fa4, a0
+; RV64IZFHMIN-NEXT:    fsh fa4, 16(sp)
+; RV64IZFHMIN-NEXT:    fsh fa5, 24(sp)
+; RV64IZFHMIN-NEXT:    lbu a0, 17(sp)
+; RV64IZFHMIN-NEXT:    lbu a1, 25(sp)
 ; RV64IZFHMIN-NEXT:    andi a0, a0, 127
 ; RV64IZFHMIN-NEXT:    andi a1, a1, 128
 ; RV64IZFHMIN-NEXT:    or a0, a0, a1
-; RV64IZFHMIN-NEXT:    sb a0, 1(sp)
-; RV64IZFHMIN-NEXT:    flh fa5, 0(sp)
+; RV64IZFHMIN-NEXT:    sb a0, 17(sp)
+; RV64IZFHMIN-NEXT:    flh fa5, 16(sp)
 ; RV64IZFHMIN-NEXT:    fmv.x.h a0, fa5
-; RV64IZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IZFHMIN-NEXT:    addi sp, sp, 32
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-LABEL: fcopysign_fneg:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV32IZHINXMIN-NEXT:    fneg.s a1, a1
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; RV32IZHINXMIN-NEXT:    sh a1, 4(sp)
+; RV32IZHINXMIN-NEXT:    lbu a1, 5(sp)
+; RV32IZHINXMIN-NEXT:    xori a1, a1, 128
+; RV32IZHINXMIN-NEXT:    sb a1, 5(sp)
+; RV32IZHINXMIN-NEXT:    lh a1, 4(sp)
 ; RV32IZHINXMIN-NEXT:    sh a0, 8(sp)
 ; RV32IZHINXMIN-NEXT:    sh a1, 12(sp)
 ; RV32IZHINXMIN-NEXT:    lbu a0, 9(sp)
@@ -267,20 +273,22 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ;
 ; RV64IZHINXMIN-LABEL: fcopysign_fneg:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV64IZHINXMIN-NEXT:    fneg.s a1, a1
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; RV64IZHINXMIN-NEXT:    sh a0, 0(sp)
+; RV64IZHINXMIN-NEXT:    addi sp, sp, -32
 ; RV64IZHINXMIN-NEXT:    sh a1, 8(sp)
-; RV64IZHINXMIN-NEXT:    lbu a0, 1(sp)
 ; RV64IZHINXMIN-NEXT:    lbu a1, 9(sp)
+; RV64IZHINXMIN-NEXT:    xori a1, a1, 128
+; RV64IZHINXMIN-NEXT:    sb a1, 9(sp)
+; RV64IZHINXMIN-NEXT:    lh a1, 8(sp)
+; RV64IZHINXMIN-NEXT:    sh a0, 16(sp)
+; RV64IZHINXMIN-NEXT:    sh a1, 24(sp)
+; RV64IZHINXMIN-NEXT:    lbu a0, 17(sp)
+; RV64IZHINXMIN-NEXT:    lbu a1, 25(sp)
 ; RV64IZHINXMIN-NEXT:    andi a0, a0, 127
 ; RV64IZHINXMIN-NEXT:    andi a1, a1, 128
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
-; RV64IZHINXMIN-NEXT:    sb a0, 1(sp)
-; RV64IZHINXMIN-NEXT:    lh a0, 0(sp)
-; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV64IZHINXMIN-NEXT:    sb a0, 17(sp)
+; RV64IZHINXMIN-NEXT:    lh a0, 16(sp)
+; RV64IZHINXMIN-NEXT:    addi sp, sp, 32
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fneg half %b
   %2 = call half @llvm.copysign.f16(half %a, half %1)
