@@ -9,6 +9,7 @@
 // Checks that we can only form sets of object types.
 
 #include <set>
+#include "test_macros.h"
 
 std::set<const int> C1;
 // expected-error@*:*{{'std::set' cannot hold const types}}
@@ -29,5 +30,9 @@ std::set<void> C8;
 // expected-error@*:*{{'std::set' cannot hold 'void'}}
 
 std::set<int[]> C9;
+// expected-error@*:*{{'std::set' cannot hold C arrays of an unknown size}}
+
 std::set<int[2]> C10;
-// expected-error@*:* 2 {{'std::set' cannot hold C arrays}}
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::set' cannot hold C arrays before C++20}}
+#endif

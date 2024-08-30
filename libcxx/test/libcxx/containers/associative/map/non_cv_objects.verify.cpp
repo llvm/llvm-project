@@ -12,19 +12,19 @@
 
 std::map<int const, int> K1;
 std::map<int, int const> M1;
-// TODO(cjdb): turn this into a compile-time error
+// TODO(#106635): turn this into a compile-time error
 
 std::map<int volatile, int> K2;
 std::map<int, int volatile> M2;
-// TODO(cjdb): turn this into a compile-time error
+// TODO(#106635): turn this into a compile-time error
 
 std::map<int&, int> K3;
-std::map<int, int&> M3; // TODO(cjdb): turn this into a compile-time error
+std::map<int, int&> M3; // TODO(#106635): turn this into a compile-time error
 // expected-error@*:* 1 {{'std::map' cannot hold references}}
 
 std::map<int&&, int> K4;
 std::map<int, int&&> M4;
-// TODO(cjdb): turn this into a compile-time error
+// TODO(#106635): turn this into a compile-time error
 
 std::map<int(), int> K5;
 std::map<int(int), int> K6;
@@ -39,9 +39,9 @@ std::map<int, void> M8;
 // expected-error@*:* 2 {{'std::map' cannot hold 'void'}}
 
 std::map<int[], int> K9;
-std::map<int, int[]> M9; // TODO(cjdb): turn this into a compile-time error
-// expected-error@*:*{{'std::map' cannot hold C arrays}}
+std::map<int, int[]> M9; // TODO(#106635): turn this into a compile-time error
+// expected-error@*:*{{'std::map' cannot hold C arrays of an unknown size}}
 
 std::map<int[2], int> K10;
 std::map<int, int[2]> M10;
-// TODO(cjdb): turn this into a compile-time error
+// TODO(#106635): turn this into a compile-time error

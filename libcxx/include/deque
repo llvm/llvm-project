@@ -211,6 +211,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/from_range.h>
 #include <__ranges/size.h>
 #include <__split_buffer>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
@@ -475,12 +476,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS deque {
-  static_assert(!is_const<_Tp>::value, "'std::deque' cannot hold const types");
-  static_assert(!is_volatile<_Tp>::value, "'std::deque' cannot hold volatile types");
-  static_assert(!is_reference<_Tp>::value, "'std::deque' cannot hold references");
-  static_assert(!is_function<_Tp>::value, "'std::deque' cannot hold functions");
-  static_assert(!is_void<_Tp>::value, "'std::deque' cannot hold 'void'");
-  static_assert(!is_array<_Tp>::value, "'std::deque' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("deque", _Tp);
 
 public:
   // types:

@@ -9,6 +9,7 @@
 // Checks that we can only form unordered_multisets of object types.
 
 #include <unordered_set>
+#include "test_macros.h"
 
 std::unordered_multiset<const int> C1;
 // expected-error@*:*{{'std::unordered_multiset' cannot hold const types}}
@@ -29,5 +30,19 @@ std::unordered_multiset<void> C8;
 // expected-error@*:*{{'std::unordered_multiset' cannot hold 'void'}}
 
 std::unordered_multiset<int[]> C9;
-std::unordered_multiset<int[2]> C10;
-// expected-error@*:* 2 {{'std::unordered_multiset' cannot hold C arrays}}
+// expected-error@*:*{{'std::unordered_multiset' cannot hold C arrays of an unknown size}}
+
+// std::hash doesn't work with C arrays, so we need to test it with something else to ensure the
+// correct diagnostic is issued.
+template <class T>
+struct test_hash {
+  using argument_type = T;
+  using result_type   = std::size_t;
+
+  result_type operator()(T const&) const;
+};
+
+std::unordered_multiset<int[2], test_hash<int[2]> > C10;
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::unordered_multiset' cannot hold C arrays before C++20}}
+#endif

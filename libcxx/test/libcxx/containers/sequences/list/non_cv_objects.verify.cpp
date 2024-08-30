@@ -9,6 +9,7 @@
 // Checks that we can only form lists of object types.
 
 #include <list>
+#include "test_macros.h"
 
 std::list<const int> C1;
 // expected-error@*:*{{'std::list' cannot hold const types}}
@@ -29,12 +30,16 @@ std::list<void> C8;
 // expected-error@*:*{{'std::list' cannot hold 'void'}}
 
 std::list<int[]> C9;
+// expected-error@*:*{{'std::list' cannot hold C arrays of an unknown size}}
+
 std::list<int[2]> C10;
-// expected-error@*:* 2 {{'std::list' cannot hold C arrays}}
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::list' cannot hold C arrays before C++20}}
+#endif
 
 // Spurious errors below
 
-// expected-error@*:* 7 {{'std::allocator'}}
-// expected-error@*:* 3 {{multiple overloads of}}
-// expected-error@*:* 14 {{cannot form a reference to 'void'}}
-// expected-error@*:* 144 {{no type named}}
+// expected-error@*:*   0+ {{multiple overloads of}}
+// expected-error@*:*   7  {{'std::allocator'}}
+// expected-error@*:*  11+ {{cannot form a reference to 'void'}}
+// expected-error@*:* 130+ {{no type named}}

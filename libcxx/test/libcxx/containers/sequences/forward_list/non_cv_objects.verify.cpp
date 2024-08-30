@@ -9,6 +9,7 @@
 // Checks that we can only form forward_lists of object types.
 
 #include <forward_list>
+#include "test_macros.h"
 
 std::forward_list<const int> C1;
 // expected-error@*:*{{'std::forward_list' cannot hold const types}}
@@ -29,12 +30,16 @@ std::forward_list<void> C8;
 // expected-error@*:*{{'std::forward_list' cannot hold 'void'}}
 
 std::forward_list<int[]> C9;
+// expected-error@*:*{{'std::forward_list' cannot hold C arrays of an unknown size}}
+
 std::forward_list<int[2]> C10;
-// expected-error@*:* 2 {{'std::forward_list' cannot hold C arrays}}
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::forward_list' cannot hold C arrays before C++20}}
+#endif
 
 // Spurious errors below
 
-// expected-error@*:* 7 {{'std::allocator'}}
-// expected-error@*:* 2 {{multiple overloads of}}
-// expected-error@*:* 12 {{cannot form a reference to 'void'}}
-// expected-error@*:* 84 {{no type named}}
+// expected-error@*:*  7  {{'std::allocator'}}
+// expected-error@*:* 77+ {{no type named}}
+// expected-error@*:*  9+ {{cannot form a reference to 'void'}}
+// expected-error@*:*  0+ {{multiple overloads of}}

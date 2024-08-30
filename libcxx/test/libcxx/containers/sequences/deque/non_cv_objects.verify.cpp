@@ -9,6 +9,7 @@
 // Checks that we can only form deques of object types.
 
 #include <deque>
+#include "test_macros.h"
 
 std::deque<const int> C1;
 // expected-error@*:*{{'std::deque' cannot hold const types}}
@@ -29,5 +30,9 @@ std::deque<void> C8;
 // expected-error@*:*{{'std::deque' cannot hold 'void'}}
 
 std::deque<int[]> C9;
+// expected-error@*:*{{'std::deque' cannot hold C arrays of an unknown size}}
+
 std::deque<int[2]> C10;
-// expected-error@*:* 2 {{'std::deque' cannot hold C arrays}}
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::deque' cannot hold C arrays before C++20}}
+#endif

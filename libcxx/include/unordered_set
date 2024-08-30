@@ -548,6 +548,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
@@ -586,12 +587,7 @@ class unordered_multiset;
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_set {
-  static_assert(!is_const<_Value>::value, "'std::unordered_set' cannot hold const types");
-  static_assert(!is_volatile<_Value>::value, "'std::unordered_set' cannot hold volatile types");
-  static_assert(!is_reference<_Value>::value, "'std::unordered_set' cannot hold references");
-  static_assert(!is_function<_Value>::value, "'std::unordered_set' cannot hold functions");
-  static_assert(!is_void<_Value>::value, "'std::unordered_set' cannot hold 'void'");
-  static_assert(!is_array<_Value>::value, "'std::unordered_set' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("unordered_set", _Value);
 
 public:
   // types
@@ -1188,12 +1184,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_set<_Value, _Hash, 
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_multiset {
-  static_assert(!is_const<_Value>::value, "'std::unordered_multiset' cannot hold const types");
-  static_assert(!is_volatile<_Value>::value, "'std::unordered_multiset' cannot hold volatile types");
-  static_assert(!is_reference<_Value>::value, "'std::unordered_multiset' cannot hold references");
-  static_assert(!is_function<_Value>::value, "'std::unordered_multiset' cannot hold functions");
-  static_assert(!is_void<_Value>::value, "'std::unordered_multiset' cannot hold 'void'");
-  static_assert(!is_array<_Value>::value, "'std::unordered_multiset' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("unordered_multiset", _Value);
 
 public:
   // types

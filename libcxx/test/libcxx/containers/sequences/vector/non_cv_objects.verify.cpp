@@ -9,6 +9,7 @@
 // Checks that we can only form vectors of object types.
 
 #include <vector>
+#include "test_macros.h"
 
 std::vector<const int> C1;
 // expected-error@*:*{{'std::vector' cannot hold const types}}
@@ -29,5 +30,9 @@ std::vector<void> C8;
 // expected-error@*:*{{'std::vector' cannot hold 'void'}}
 
 std::vector<int[]> C9;
+// expected-error@*:*{{'std::vector' cannot hold C arrays of an unknown size}}
+
 std::vector<int[2]> C10;
-// expected-error@*:* 2 {{'std::vector' cannot hold C arrays}}
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::vector' cannot hold C arrays before C++20}}
+#endif

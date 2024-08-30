@@ -345,6 +345,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__ranges/from_range.h>
 #include <__ranges/size.h>
 #include <__split_buffer>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
@@ -394,12 +395,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
 private:
-  static_assert(!is_const<_Tp>::value, "'std::vector' cannot hold const types");
-  static_assert(!is_volatile<_Tp>::value, "'std::vector' cannot hold volatile types");
-  static_assert(!is_reference<_Tp>::value, "'std::vector' cannot hold references");
-  static_assert(!is_function<_Tp>::value, "'std::vector' cannot hold functions");
-  static_assert(!is_void<_Tp>::value, "'std::vector' cannot hold 'void'");
-  static_assert(!is_array<_Tp>::value, "'std::vector' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("vector", _Tp);
 
   typedef allocator<_Tp> __default_allocator_type;
 

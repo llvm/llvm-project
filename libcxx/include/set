@@ -530,6 +530,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__tree>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_const.h>
@@ -568,12 +569,7 @@ class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set {
-  static_assert(!is_const<_Key>::value, "'std::set' cannot hold const types");
-  static_assert(!is_volatile<_Key>::value, "'std::set' cannot hold volatile types");
-  static_assert(!is_reference<_Key>::value, "'std::set' cannot hold references");
-  static_assert(!is_function<_Key>::value, "'std::set' cannot hold functions");
-  static_assert(!is_void<_Key>::value, "'std::set' cannot hold 'void'");
-  static_assert(!is_array<_Key>::value, "'std::set' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("set", _Key);
 
 public:
   // types:
@@ -1029,12 +1025,7 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
-  static_assert(!is_const<_Key>::value, "'std::multiset' cannot hold const types");
-  static_assert(!is_volatile<_Key>::value, "'std::multiset' cannot hold volatile types");
-  static_assert(!is_reference<_Key>::value, "'std::multiset' cannot hold references");
-  static_assert(!is_function<_Key>::value, "'std::multiset' cannot hold functions");
-  static_assert(!is_void<_Key>::value, "'std::multiset' cannot hold 'void'");
-  static_assert(!is_array<_Key>::value, "'std::multiset' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("multiset", _Key);
 
 public:
   // types:

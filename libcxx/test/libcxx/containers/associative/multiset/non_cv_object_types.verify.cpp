@@ -9,6 +9,7 @@
 // Checks that we can only form multisets of object types.
 
 #include <set>
+#include "test_macros.h"
 
 std::multiset<const int> C1;
 // expected-error@*:*{{'std::multiset' cannot hold const types}}
@@ -29,5 +30,9 @@ std::multiset<void> C8;
 // expected-error@*:*{{'std::multiset' cannot hold 'void'}}
 
 std::multiset<int[]> C9;
+// expected-error@*:*{{'std::multiset' cannot hold C arrays of an unknown size}}
+
 std::multiset<int[2]> C10;
-// expected-error@*:* 2 {{'std::multiset' cannot hold C arrays}}
+#if TEST_STD_VER < 20
+// expected-error@*:*{{'std::multiset' cannot hold C arrays before C++20}}
+#endif

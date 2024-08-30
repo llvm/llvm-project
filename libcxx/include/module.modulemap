@@ -1897,6 +1897,10 @@ module std_private_type_traits_decay                                     [system
 }
 module std_private_type_traits_dependent_type                            [system] { header "__type_traits/dependent_type.h" }
 module std_private_type_traits_desugars_to                               [system] { header "__type_traits/desugars_to.h" }
+module std_private_type_traits_diagnostic_utilities [system] {
+  textual header "__type_traits/diagnostic_utilities.h"
+  export *
+}
 module std_private_type_traits_disjunction                               [system] { header "__type_traits/disjunction.h" }
 module std_private_type_traits_enable_if                                 [system] { header "__type_traits/enable_if.h" }
 module std_private_type_traits_extent                                    [system] { header "__type_traits/extent.h" }
