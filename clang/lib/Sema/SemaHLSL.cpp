@@ -723,7 +723,7 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
                                           Decl *TheDecl, RegisterType regType,
-                                          StringRef SpaceNum) {
+                                          const ParsedAttr &AL) {
 
   // Samplers, UAVs, and SRVs are VarDecl types
   VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
@@ -796,8 +796,8 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
       else if (regType != RegisterType::C)
         S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
-      // non-zero SpaceNum cannot be specified for global constants
-      if (SpaceNum != "0")
+      // Space argument cannot be specified for global constants
+      if (AL.getNumArgs() == 2)
         S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
       return;
     }
@@ -821,9 +821,9 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
       S.Diag(TheDecl->getLocation(),
              diag::warn_hlsl_user_defined_type_missing_member)
           << regTypeNum;
-    // non-zero SpaceNum cannot be specified for global constants
+    // Space argument cannot be specified for global constants
     if (!isDeclaredWithinCOrTBuffer(TheDecl)) {
-      if (SpaceNum != "0")
+      if (AL.getNumArgs() == 2)
         S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
       return;
     }
@@ -899,7 +899,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     return;
   }
 
-  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType, SpaceNum);
+  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType, AL);
 
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(getASTContext(), Slot, Space, AL);

@@ -17,6 +17,18 @@ cbuffer c : register(b2, space 3) {}
 // expected-error@+1 {{register space cannot be specified on global constants}}
 int d : register(c2, space3);
 
+// expected-error@+1 {{register space cannot be specified on global constants}}
+int e : register(c2, space0);
+
+// expected-error@+1 {{register space cannot be specified on global constants}}
+int f : register(c2, space00);
+
+// valid
+RWBuffer<int> g : register(u2, space0);
+
+// valid
+RWBuffer<int> h : register(u2, space0);
+
 struct S {
     RWBuffer<int> a;
 };
