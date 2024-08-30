@@ -1812,7 +1812,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // cross module importing, which adds to peak memory via the computed import
   // and export lists.
   GlobalResolutions.reset();
-  // Reset the bump pointer allocator to release its memory.
+  // Release the string saver memory.
   GlobalResolutionSymbolSaver.reset();
   Alloc.reset();
 

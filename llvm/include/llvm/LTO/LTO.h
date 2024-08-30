@@ -40,7 +40,6 @@ class MemoryBufferRef;
 class Module;
 class raw_pwrite_stream;
 class ToolOutputFile;
-class UniqueStringSaver;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
 /// recorded in the index and the ThinLTO backends must apply the changes to
