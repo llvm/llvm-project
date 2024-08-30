@@ -887,6 +887,12 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPTargetParallelGenericLoopDirective;
     break;
+  case Stmt::OMPCompoundBlockDirectiveClass:
+    K = CXCursor_OMPCompoundBlockDirective;
+    break;
+  case Stmt::OMPCompoundLoopDirectiveClass:
+    K = CXCursor_OMPCompoundLoopDirective;
+    break;
   case Stmt::BuiltinBitCastExprClass:
     K = CXCursor_BuiltinBitCastExpr;
     break;

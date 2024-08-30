@@ -32,6 +32,8 @@ bool isLeafConstruct(Directive D);
 bool isCompositeConstruct(Directive D);
 bool isCombinedConstruct(Directive D);
 
+bool isUniqueClause(Clause C);
+
 /// Create a nicer version of a function name for humans to look at.
 std::string prettifyFunctionName(StringRef FunctionName);
 

@@ -366,6 +366,8 @@ public:
   void VisitPragmaCommentDecl(const PragmaCommentDecl *D);
   void VisitPragmaDetectMismatchDecl(const PragmaDetectMismatchDecl *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
+  void VisitOMPCompoundBlockDirective(const OMPCompoundBlockDirective *D);
+  void VisitOMPCompoundLoopDirective(const OMPCompoundLoopDirective *D);
   void VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D);
   void VisitOMPRequiresDecl(const OMPRequiresDecl *D);
   void VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D);
