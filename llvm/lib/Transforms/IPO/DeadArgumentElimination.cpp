@@ -891,6 +891,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   NF->takeName(F);
   if (NumArgumentsEliminated)
     NF->setName(NF->getName() + ".argelim");
+  else
+    NF->setName(NF->getName() + ".retelim");
   NF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
 
   // Loop over all the callers of the function, transforming the call sites to

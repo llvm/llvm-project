@@ -5,7 +5,7 @@
 
 @g = global i8 0
 
-; CHECK: define internal void @foo(i8 signext %y) [[NUW:#[0-9]+]]
+; CHECK: define internal void @foo.argelim(i8 signext %y) [[NUW:#[0-9]+]]
 ;
 ; REMARK-LABEL: Function: foo
 ; REMARK:       Args:
