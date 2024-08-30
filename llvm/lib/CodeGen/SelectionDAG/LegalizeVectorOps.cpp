@@ -1698,8 +1698,7 @@ SDValue VectorLegalizer::ExpandFABS(SDNode *Node) {
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
   // FIXME: We shouldn't restrict this to scalable vectors.
-  if (TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) &&
-      VT.isScalableVector()) {
+  if (TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) && VT.isScalableVector()) {
     SDLoc DL(Node);
     SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
     SDValue ClearSignMask = DAG.getConstant(
@@ -1717,8 +1716,7 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
   // FIXME: We shouldn't restrict this to scalable vectors.
   if (VT == Node->getOperand(1).getValueType() &&
       TLI.isOperationLegalOrCustom(ISD::AND, IntVT) &&
-      TLI.isOperationLegalOrCustom(ISD::OR, IntVT) &&
-      VT.isScalableVector()) {
+      TLI.isOperationLegalOrCustom(ISD::OR, IntVT) && VT.isScalableVector()) {
     SDLoc DL(Node);
     SDValue Mag = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
     SDValue Sign = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(1));
@@ -1734,7 +1732,8 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
     SDNodeFlags Flags;
     Flags.setDisjoint(true);
 
-    SDValue CopiedSign = DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit, Flags);
+    SDValue CopiedSign =
+        DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit, Flags);
 
     return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
   }
