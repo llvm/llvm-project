@@ -221,7 +221,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       return ELF::R_X86_64_REX_GOTPCRELX;
     case X86::reloc_riprel_4byte_relax_rex2:
     case X86::reloc_riprel_4byte_movq_load_rex2:
-     return ELF::R_X86_64_REX2_GOTPCRELX;
+      return ELF::R_X86_64_REX2_GOTPCRELX;
     }
     llvm_unreachable("unexpected relocation type!");
   case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
