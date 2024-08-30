@@ -19149,7 +19149,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       }
       // Undefs come last.
       assert(U1 && U2 && "The only thing left should be undef & undef.");
-      continue;
     }
     return false;
   };
