@@ -1569,14 +1569,12 @@ TEST(BasicBlockDbgInfoTest, CloneTrailingRecordsToEmptyBlock) {
   // The trailing records should've been absorbed into NewBB.
   EXPECT_FALSE(BB.getTrailingDbgRecords());
   EXPECT_TRUE(NewBB->getTrailingDbgRecords());
-  if (NewBB->getTrailingDbgRecords()) {
-    EXPECT_EQ(
-        llvm::range_size(NewBB->getTrailingDbgRecords()->getDbgRecordRange()),
-        1u);
+  if (DbgMarker *Trailing = NewBB->getTrailingDbgRecords()) {
+    EXPECT_EQ(llvm::range_size(Trailing->getDbgRecordRange()), 1u);
+    // Drop the trailing records now, to prevent a cleanup assertion.
+    Trailing->eraseFromParent();
+    NewBB->deleteTrailingDbgRecords();
   }
-
-  // Drop the trailing records now, to prevent a cleanup assertion.
-  NewBB->deleteTrailingDbgRecords();
 }
 
 } // End anonymous namespace.

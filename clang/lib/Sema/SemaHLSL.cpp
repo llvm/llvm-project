@@ -14,6 +14,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -465,6 +466,27 @@ void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc));
+}
+
+// Validates HLSL resource type attribute and adds it to the list to be
+// processed into a single HLSLAttributedResourceType later on.
+// Returns false if the attribute is invalid.
+bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
+  // FIXME: placeholder - not yet implemented
+  return true;
+}
+
+// Combines all resource type attributes and create HLSLAttributedResourceType.
+QualType SemaHLSL::ProcessResourceTypeAttributes(QualType CurrentType) {
+  // FIXME: placeholder - not yet implemented
+  return CurrentType;
+}
+
+// Returns source location for the HLSLAttributedResourceType
+SourceLocation
+SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
+  // FIXME: placeholder - not yet implemented
+  return SourceLocation();
 }
 
 struct RegisterBindingFlags {
