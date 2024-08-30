@@ -4029,6 +4029,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       break;
     case tok::coloncolon:
+    case tok::hashhash:
       break;
     default:
       if (!JSPastExtendsOrImplements && !ClassName &&
