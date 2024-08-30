@@ -786,52 +786,13 @@ let Predicates = [BPFNoALU32] in {
   def : Pat<(i64 (extloadi32 ADDRri:$src)), (i64 (LDW ADDRri:$src))>;
 }
 
-// Atomic XADD for BPFNoALU32
-class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+// Atomic add, and, or, xor
+class ATOMIC_NOFETCH<BPFWidthModifer SizeOp, string OpType, RegisterClass RegTp,
+                     BPFArithOp Opc, string Opstr>
     : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
                  (outs GPR:$dst),
-                 (ins MEMri:$addr, GPR:$val),
-                 "lock *("#OpcodeStr#" *)($addr) += $val",
-                 [(set GPR:$dst, (OpNode ADDRri:$addr, GPR:$val))]> {
-  bits<4> dst;
-  bits<20> addr;
-
-  let Inst{51-48} = addr{19-16}; // base reg
-  let Inst{55-52} = dst;
-  let Inst{47-32} = addr{15-0}; // offset
-  let Inst{7-4} = BPF_ADD.Value;
-  let BPFClass = BPF_STX;
-}
-
-let Constraints = "$dst = $val" in {
-  let Predicates = [BPFNoALU32] in {
-    def XADDW : XADD<BPF_W, "u32", atomic_load_add_i32>;
-    def XADDD : XADD<BPF_DW, "u64", atomic_load_add_i64>;
-  }
-}
-
-// Atomic add, and, or, xor
-class ATOMIC_NOFETCH<BPFArithOp Opc, string Opstr>
-    : TYPE_LD_ST<BPF_ATOMIC.Value, BPF_DW.Value,
-                 (outs GPR:$dst),
-                 (ins MEMri:$addr, GPR:$val),
-                 "lock *(u64 *)($addr) " #Opstr# "= $val",
-                 []> {
-  bits<4> dst;
-  bits<20> addr;
-
-  let Inst{51-48} = addr{19-16}; // base reg
-  let Inst{55-52} = dst;
-  let Inst{47-32} = addr{15-0}; // offset
-  let Inst{7-4} = Opc.Value;
-  let BPFClass = BPF_STX;
-}
-
-class ATOMIC32_NOFETCH<BPFArithOp Opc, string Opstr>
-    : TYPE_LD_ST<BPF_ATOMIC.Value, BPF_W.Value,
-                 (outs GPR32:$dst),
-                 (ins MEMri:$addr, GPR32:$val),
-                 "lock *(u32 *)($addr) " #Opstr# "= $val",
+                 (ins MEMri:$addr, RegTp:$val),
+                 "lock *(" #OpType# " *)($addr) " #Opstr# "= $val",
                  []> {
   bits<4> dst;
   bits<20> addr;
@@ -845,14 +806,23 @@ class ATOMIC32_NOFETCH<BPFArithOp Opc, string Opstr>
 
 let Constraints = "$dst = $val" in {
   let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
-    def XADDW32 : ATOMIC32_NOFETCH<BPF_ADD, "+">;
-    def XANDW32 : ATOMIC32_NOFETCH<BPF_AND, "&">;
-    def XORW32  : ATOMIC32_NOFETCH<BPF_OR, "|">;
-    def XXORW32 : ATOMIC32_NOFETCH<BPF_XOR, "^">;
+    def XADDW32 : ATOMIC_NOFETCH<BPF_W, "u32", GPR32, BPF_ADD, "+">;
+    def XANDW32 : ATOMIC_NOFETCH<BPF_W, "u32", GPR32, BPF_AND, "&">;
+    def XORW32  : ATOMIC_NOFETCH<BPF_W, "u32", GPR32, BPF_OR, "|">;
+    def XXORW32 : ATOMIC_NOFETCH<BPF_W, "u32", GPR32, BPF_XOR, "^">;
   }
-  def XANDD  : ATOMIC_NOFETCH<BPF_AND, "&">;
-  def XORD   : ATOMIC_NOFETCH<BPF_OR, "|">;
-  def XXORD  : ATOMIC_NOFETCH<BPF_XOR, "^">;
+  def XADDW  : ATOMIC_NOFETCH<BPF_W,  "u32", GPR, BPF_ADD, "+">;
+  def XADDD  : ATOMIC_NOFETCH<BPF_DW, "u64", GPR, BPF_ADD, "+">;
+  def XANDD  : ATOMIC_NOFETCH<BPF_DW, "u64", GPR, BPF_AND, "&">;
+  def XORD   : ATOMIC_NOFETCH<BPF_DW, "u64", GPR, BPF_OR, "|">;
+  def XXORD  : ATOMIC_NOFETCH<BPF_DW, "u64", GPR, BPF_XOR, "^">;
+}
+
+let Predicates = [BPFNoALU32] in {
+  def : Pat<(atomic_load_add_i32 ADDRri:$addr, GPR:$val),
+            (XADDW ADDRri:$addr, GPR:$val)>;
+  def : Pat<(atomic_load_add_i64 ADDRri:$addr, GPR:$val),
+            (XADDD ADDRri:$addr, GPR:$val)>;
 }
 
 // Atomic Fetch-and-<add, and, or, xor> operations
