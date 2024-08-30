@@ -5012,7 +5012,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
         LoongArch::R23, LoongArch::R24, LoongArch::R25,
         LoongArch::R26, LoongArch::R27, LoongArch::R28,
         LoongArch::R29, LoongArch::R30, LoongArch::R31};
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5023,7 +5023,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     //                        fs0,fs1,fs2,fs3
     static const MCPhysReg FPR32List[] = {LoongArch::F24, LoongArch::F25,
                                           LoongArch::F26, LoongArch::F27};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5034,7 +5034,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     //                        fs4,fs5,fs6,fs7
     static const MCPhysReg FPR64List[] = {LoongArch::F28_64, LoongArch::F29_64,
                                           LoongArch::F30_64, LoongArch::F31_64};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5619,8 +5619,9 @@ bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
 
   // On LA64, atomic store operations with IntegerBitWidth of 32 and 64 do not
   // require fences beacuse we can use amswap_db.[w/d].
-  if (isa<StoreInst>(I)) {
-    unsigned Size = I->getOperand(0)->getType()->getIntegerBitWidth();
+  Type *Ty = I->getOperand(0)->getType();
+  if (isa<StoreInst>(I) && Ty->isIntegerTy()) {
+    unsigned Size = Ty->getIntegerBitWidth();
     return (Size == 8 || Size == 16);
   }
 

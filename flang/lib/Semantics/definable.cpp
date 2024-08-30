@@ -127,7 +127,7 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
       (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
-  } else if (acceptAllocatable &&
+  } else if (acceptAllocatable && IsAllocatable(ultimate) &&
       !flags.test(DefinabilityFlag::SourcedAllocation)) {
     // allocating a function result doesn't count as a def'n
     // unless there's SOURCE=

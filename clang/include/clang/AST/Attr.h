@@ -372,7 +372,7 @@ public:
 static_assert(sizeof(ParamIdx) == sizeof(ParamIdx::SerialType),
               "ParamIdx does not fit its serialization type");
 
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attrs.inc" // IWYU pragma: export
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const Attr *At) {

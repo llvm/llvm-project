@@ -4230,6 +4230,17 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
 )
 
+add_entrypoint_object(
+  atan2l
+  SRCS
+    atan2l.cpp
+  HDRS
+    ../atan2l.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    .atan2
+)
 
 add_entrypoint_object(
   scalbln

@@ -665,8 +665,8 @@ void IRPromoter::Mutate() {
     } else if (auto *Switch = dyn_cast<SwitchInst>(I))
       TruncTysMap[I].push_back(Switch->getCondition()->getType());
     else {
-      for (unsigned i = 0; i < I->getNumOperands(); ++i)
-        TruncTysMap[I].push_back(I->getOperand(i)->getType());
+      for (const Value *Op : I->operands())
+        TruncTysMap[I].push_back(Op->getType());
     }
   }
   for (auto *V : Visited) {
