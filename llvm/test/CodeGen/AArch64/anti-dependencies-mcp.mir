@@ -177,9 +177,9 @@ body:             |
     ; CHECK-NEXT: $w1 = KILL killed renamable $w1, implicit $x1
     ; CHECK-NEXT: BL @chain, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp, implicit-def $w0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: renamable $w8 = LDRWui %stack.0.c, 0 :: (dereferenceable load (s32) from %ir.c)
     ; CHECK-NEXT: renamable $w1 = COPY $w0
     ; CHECK-NEXT: $w0 = ADDWrr killed $w0, $w0
+    ; CHECK-NEXT: $w0 = LDRWui %stack.0.c, 0 :: (dereferenceable load (s32) from %ir.c)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: BL @chain, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp, implicit-def dead $w0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
