@@ -154,15 +154,6 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   ];
   // TODO(57514): These enum options are duplicated in Passes.h.
   let options = [
-    Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
-           "mlir::SparseEmitStrategy::kFunctional",
-           "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
-             clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
-                        "Emit functional code (with scf.for/while)."),
-             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
-                        "Emit (experimental) loops (with sparse.iterate)."),
-             clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
-                        "Emit non-functional but easy-to-read interfaces to debug."))}]>,
     Option<"parallelization", "parallelization-strategy", "mlir::SparseParallelizationStrategy",
            "mlir::SparseParallelizationStrategy::kNone",
            "Set the parallelization strategy", [{llvm::cl::values(
@@ -180,6 +171,15 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
+           "mlir::SparseEmitStrategy::kFunctional",
+           "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
+             clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
+                        "Emit functional code (with scf.for/while)."),
+             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
+                        "Emit (experimental) loops (with sparse.iterate)."),
+             clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
+                        "Emit non-functional but easy-to-read interfaces to debug."))}]>,
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
            "true", "Enable runtime library for manipulating sparse tensors">,
   ];
@@ -487,6 +487,15 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
            "Enable i32 indexing into vectors (for efficient gather/scatter)">,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool", "false",
            "Enable GPU acceleration by means of direct library calls">,
+    Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
+           "mlir::SparseEmitStrategy::kFunctional",
+           "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
+             clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
+                        "Emit functional code (with scf.for/while)."),
+             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
+                        "Emit (experimental) loops (with sparse.iterate)."),
+             clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
+                        "Emit non-functional but easy-to-read interfaces to debug."))}]>,
     Option<"parallelization", "parallelization-strategy", "mlir::SparseParallelizationStrategy",
            "mlir::SparseParallelizationStrategy::kNone",
            "Set the parallelization strategy", [{llvm::cl::values(
@@ -504,15 +513,6 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
-    Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
-           "mlir::SparseEmitStrategy::kFunctional",
-           "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
-             clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
-                        "Emit functional code (with scf.for/while)."),
-             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
-                        "Emit (experimental) loops (with sparse.iterate)."),
-             clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
-                        "Emit non-functional but easy-to-read interfaces to debug."))}]>,
   ];
 }
 
