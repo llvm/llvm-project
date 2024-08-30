@@ -139,10 +139,18 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
+    addOp(llvm::dwarf::DW_OP_push_object_address, {});
+    addOp(llvm::dwarf::DW_OP_plus_uconst,
+          {offset + (indexSize * kDimStridePos)});
+    addOp(llvm::dwarf::DW_OP_deref, {});
+    // stride[i] = *(base_addr + offset + (indexSize * kDimStridePos))
+    mlir::LLVM::DIExpressionAttr strideAttr =
+        mlir::LLVM::DIExpressionAttr::get(context, ops);
+    ops.clear();
+
     offset += dimsSize;
     mlir::LLVM::DISubrangeAttr subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-        context, countAttr, lowerAttr, /*upperBound=*/nullptr,
-        /*stride=*/nullptr);
+        context, countAttr, lowerAttr, /*upperBound=*/nullptr, strideAttr);
     elements.push_back(subrangeTy);
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
