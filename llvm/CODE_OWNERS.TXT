@@ -267,3 +267,7 @@ D: SPIR-V backend (lib/Target/SPIRV/*)
 N: Christopher Apple, David Trevelyan
 E: cja-private@pm.me, david.trevelyan@gmail.com
 D: RealtimeSanitizer (LLVM part)
+
+N: John Doe
+E: john_doe@gmail.com
+D: FOOTARGET backend (lib/Target/FOOTARGET)
