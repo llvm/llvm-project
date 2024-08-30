@@ -81,7 +81,7 @@ raw_ostream &WriteGraph<>(raw_ostream &O, const EdgeBundles &G,
   for (const auto &MBB : *MF) {
     unsigned BB = MBB.getNumber();
     O << "\t\"" << printMBBReference(MBB) << "\" [ shape=box, label=\""
-      << printMBBReference(MBB) << "\"" << " ]\n"
+      << printMBBReference(MBB) << "\" ]\n"
       << '\t' << G.getBundle(BB, false) << " -> \"" << printMBBReference(MBB)
       << "\"\n"
       << "\t\"" << printMBBReference(MBB) << "\" -> " << G.getBundle(BB, true)
