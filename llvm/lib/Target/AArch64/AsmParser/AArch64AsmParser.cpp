@@ -6991,7 +6991,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
     bool EnableFeature = !Name.consume_front_insensitive("no");
 
     auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
-        return Extension.Name == Name; });
+      return Extension.Name == Name;
+    });
 
     if (It == std::end(ExtensionMap))
       Error(CurLoc, "unsupported architectural extension: " + Name);
@@ -7025,7 +7026,8 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
   }
 
   auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
-      return Extension.Name == Name; });
+    return Extension.Name == Name;
+  });
 
   if (It == std::end(ExtensionMap))
     return Error(ExtLoc, "unsupported architectural extension: " + Name);
@@ -7074,7 +7076,8 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
     bool EnableFeature = !Name.consume_front_insensitive("no");
 
     auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
-        return Extension.Name == Name; });
+      return Extension.Name == Name;
+    });
 
     if (It == std::end(ExtensionMap))
       Error(CurLoc, "unsupported architectural extension: " + Name);
