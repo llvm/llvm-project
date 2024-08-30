@@ -13137,7 +13137,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   }
 
   bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
-  auto FinalShuffle = [&](Value *V, const TreeEntry *E, VectorType *VecTy) {
+  auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
     ShuffleInstructionBuilder ShuffleBuilder(ScalarTy, Builder, *this);
     if (E->getOpcode() == Instruction::Store &&
         E->State == TreeEntry::Vectorize) {
@@ -13197,7 +13197,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                                PH->getParent()->getFirstInsertionPt());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
 
-        V = FinalShuffle(V, E, VecTy);
+        V = FinalShuffle(V, E);
 
         E->VectorizedValue = V;
         if (PostponedPHIs)
@@ -13249,7 +13249,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (const TreeEntry *TE = getTreeEntry(V))
         V = TE->VectorizedValue;
       setInsertPointAfterBundle(E);
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       return V;
     }
@@ -13259,7 +13259,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *Ptr = LI->getPointerOperand();
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
       Value *NewV = propagateMetadata(V, E->Scalars);
-      NewV = FinalShuffle(NewV, E, VecTy);
+      NewV = FinalShuffle(NewV, E);
       E->VectorizedValue = NewV;
       return NewV;
     }
@@ -13474,7 +13474,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
                      : Builder.CreateCast(VecOpcode, InVec, VecTy);
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13518,7 +13518,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       propagateIRFlags(V, E->Scalars, VL0);
       // Do not cast for cmps.
       VecTy = cast<FixedVectorType>(V->getType());
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13571,7 +13571,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       assert(getNumElements(Cond->getType()) == TrueNumElements &&
              "Cannot vectorize Instruction::Select");
       Value *V = Builder.CreateSelect(Cond, True, False);
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13593,7 +13593,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13611,7 +13611,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       }
 
       Value *V = Builder.CreateFreeze(Op);
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13655,7 +13655,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                 auto *CI = dyn_cast<ConstantInt>(Op);
                 return CI && CI->getValue().countr_one() >= It->second.first;
               })) {
-            V = FinalShuffle(I == 0 ? RHS : LHS, E, VecTy);
+            V = FinalShuffle(I == 0 ? RHS : LHS, E);
             E->VectorizedValue = V;
             ++NumVectorInstructions;
             return V;
@@ -13688,7 +13688,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           I->setHasNoUnsignedWrap(/*b=*/false);
       }
 
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13780,7 +13780,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       }
       Value *V = propagateMetadata(NewLI, E->Scalars);
 
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -13794,7 +13794,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (VecValue->getType() != VecTy)
         VecValue =
             Builder.CreateIntCast(VecValue, VecTy, GetOperandSignedness(0));
-      VecValue = FinalShuffle(VecValue, E, VecTy);
+      VecValue = FinalShuffle(VecValue, E);
 
       Value *Ptr = SI->getPointerOperand();
       Instruction *ST;
@@ -13859,7 +13859,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         V = propagateMetadata(I, GEPs);
       }
 
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -13941,7 +13941,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateCall(CF, OpVecs, OpBundles);
 
       propagateIRFlags(V, E->Scalars, VL0);
-      V = FinalShuffle(V, E, VecTy);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -14039,6 +14039,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                      "Expected same type as operand.");
               if (auto *I = dyn_cast<Instruction>(LHS))
                 LHS = propagateMetadata(I, E->Scalars);
+              LHS = FinalShuffle(LHS, E);
               E->VectorizedValue = LHS;
               ++NumVectorInstructions;
               return LHS;
