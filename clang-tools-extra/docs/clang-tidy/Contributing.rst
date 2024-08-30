@@ -658,10 +658,13 @@ directory.  The path to this directory is available in a lit test with the varia
 Out-of-tree check plugins
 -------------------------
 
+
 Developing an out-of-tree check as a plugin largely follows the steps
-outlined above. The plugin is a shared library whose code lives outside
+outlined above, including creating a new module and doing the hacks to 
+register the module. The plugin is a shared library whose code lives outside
 the clang-tidy build system. Build and link this shared library against
-LLVM as done for other kinds of Clang plugins.
+LLVM as done for other kinds of Clang plugins. If using CMake, use the keyword
+MODULE while invoking add_library or llvm_add_library.
 
 The plugin can be loaded by passing `-load` to `clang-tidy` in addition to the
 names of the checks to enable.
@@ -675,6 +678,17 @@ compiled against the version of clang-tidy that will be loading the plugin.
 
 The plugins can use threads, TLS, or any other facilities available to in-tree
 code which is accessible from the external headers.
+
+Note that testing checks out of tree might involve getting ``llvm-lit`` from an 
+installed version of LLVM through the `Stand-alone Builds`_ section. Alternatively,
+get `lit`_ following the `test-suite guide`_ and get the `FileCheck`_ binary, and
+write a version of `check_clang_tidy.py`_ to suit your needs.
+
+.. _Stand-alone Builds: https://llvm.org/docs/GettingStarted.html
+.. _test-suite guide: https://llvm.org/docs/TestSuiteGuide.html
+.. _lit: https://llvm.org/docs/CommandGuide/lit.html
+.. _FileCheck: https://llvm.org/docs/CommandGuide/FileCheck.html
+.. _check_clang_tidy.py: https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/test/clang-tidy/check_clang_tidy.py
 
 Running clang-tidy on LLVM
 --------------------------
