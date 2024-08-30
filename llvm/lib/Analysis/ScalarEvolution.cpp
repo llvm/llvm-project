@@ -8591,56 +8591,22 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
   return SE->getUMinFromMismatchedTypes(Ops, /* Sequential */ true);
 }
 
-/// Get the exact not taken count for this loop exit.
-const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
-    const BasicBlock *ExitingBlock, ScalarEvolution *SE,
+const ScalarEvolution::ExitNotTakenInfo *
+ScalarEvolution::BackedgeTakenInfo::getExitNotTaken(
+    const BasicBlock *ExitingBlock,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
   for (const auto &ENT : ExitNotTaken)
     if (ENT.ExitingBlock == ExitingBlock) {
       if (ENT.hasAlwaysTruePredicate())
-        return ENT.ExactNotTaken;
+        return &ENT;
       else if (Predicates) {
         for (const auto *P : ENT.Predicates)
           Predicates->push_back(P);
-        return ENT.ExactNotTaken;
+        return &ENT;
       }
     }
 
-  return SE->getCouldNotCompute();
-}
-
-const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
-    const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
-  for (const auto &ENT : ExitNotTaken)
-    if (ENT.ExitingBlock == ExitingBlock) {
-      if (ENT.hasAlwaysTruePredicate())
-        return ENT.ConstantMaxNotTaken;
-      else if (Predicates) {
-        for (const auto *P : ENT.Predicates)
-          Predicates->push_back(P);
-        return ENT.ConstantMaxNotTaken;
-      }
-    }
-
-  return SE->getCouldNotCompute();
-}
-
-const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
-    const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
-  for (const auto &ENT : ExitNotTaken)
-    if (ENT.ExitingBlock == ExitingBlock) {
-      if (ENT.hasAlwaysTruePredicate())
-        return ENT.SymbolicMaxNotTaken;
-      else if (Predicates) {
-        for (const auto *P : ENT.Predicates)
-          Predicates->push_back(P);
-        return ENT.SymbolicMaxNotTaken;
-      }
-    }
-
-  return SE->getCouldNotCompute();
+  return nullptr;
 }
 
 /// getConstantMax - Get the constant max backedge taken count for the loop.

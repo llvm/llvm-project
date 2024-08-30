@@ -1524,6 +1524,10 @@ private:
     bool isComplete() const { return IsComplete; }
     const SCEV *getConstantMax() const { return ConstantMax; }
 
+    const ExitNotTakenInfo *getExitNotTaken(
+        const BasicBlock *ExitingBlock,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
+
   public:
     BackedgeTakenInfo() = default;
     BackedgeTakenInfo(BackedgeTakenInfo &&) = default;
@@ -1574,7 +1578,12 @@ private:
     /// predicates are required, otherwise it fills in the required predicates.
     const SCEV *getExact(
         const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const {
+      if (auto *ENT = getExitNotTaken(ExitingBlock, Predicates))
+        return ENT->ExactNotTaken;
+      else
+        return SE->getCouldNotCompute();
+    }
 
     /// Get the constant max backedge taken count for the loop.
     const SCEV *getConstantMax(ScalarEvolution *SE) const;
@@ -1582,7 +1591,12 @@ private:
     /// Get the constant max backedge taken count for the particular loop exit.
     const SCEV *getConstantMax(
         const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const {
+      if (auto *ENT = getExitNotTaken(ExitingBlock, Predicates))
+        return ENT->ConstantMaxNotTaken;
+      else
+        return SE->getCouldNotCompute();
+    }
 
     /// Get the symbolic max backedge taken count for the loop.
     const SCEV *getSymbolicMax(
@@ -1592,7 +1606,12 @@ private:
     /// Get the symbolic max backedge taken count for the particular loop exit.
     const SCEV *getSymbolicMax(
         const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const {
+      if (auto *ENT = getExitNotTaken(ExitingBlock, Predicates))
+        return ENT->SymbolicMaxNotTaken;
+      else
+        return SE->getCouldNotCompute();
+    }
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getConstantMax or zero.
