@@ -1,6 +1,6 @@
-// RUN: %clangxx -DRTSAN_ENABLED -fsanitize=realtime %s -o %t
+// RUN: %clangxx -DSANITIZE_REALTIME=1 -fsanitize=realtime %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx %s -DRTSAN_ENABLED -o - -S -emit-llvm | FileCheck %s --check-prefix=CHECK-ENABLED-IR
+// RUN: %clangxx %s -DSANITIZE_REALTIME=1 -o - -S -emit-llvm | FileCheck %s --check-prefix=CHECK-ENABLED-IR
 // RUN: %clangxx %s -o - -S -emit-llvm | FileCheck %s --check-prefix=CHECK-DISABLED-IR
 // UNSUPPORTED: ios
 
