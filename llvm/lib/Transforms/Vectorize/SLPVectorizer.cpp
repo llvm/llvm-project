@@ -2864,6 +2864,8 @@ private:
   /// avoid issues with def-use order.
   Value *vectorizeTree(TreeEntry *E, bool PostponedPHIs);
 
+  /// Returns vectorized operand node, that matches the order of the scalars
+  /// operand number \p NodeIdx in entry \p E.
   TreeEntry *getMatchedVectorizedOperand(const TreeEntry *E, unsigned NodeIdx);
   const TreeEntry *getMatchedVectorizedOperand(const TreeEntry *E,
                                                unsigned NodeIdx) const {
