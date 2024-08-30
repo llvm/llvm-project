@@ -23,6 +23,14 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+#else
+namespace __lsan {
+struct ScopedDisabler {};
+} // namespace __lsan
+#endif
+
 using namespace llvm;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
@@ -1527,6 +1535,10 @@ TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
 
 TEST(BasicBlockDbgInfoTest, CloneTrailingRecordsToEmptyBlock) {
   LLVMContext C;
+  // FIXME: There is a leak introduced with
+  // https://github.com/llvm/llvm-project/pull/105671
+  __lsan::ScopedDisabler Leaks;
+  (void)Leaks;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @foo(i16 %a) !dbg !6 {
     entry:
