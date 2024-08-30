@@ -290,6 +290,8 @@ Error mergeCodeGenData(
       return E;
   }
 
+  GlobalStableFunctionMapRecord.finalize();
+
   if (!GlobalOutlineRecord.empty())
     cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
   if (!GlobalStableFunctionMapRecord.empty())

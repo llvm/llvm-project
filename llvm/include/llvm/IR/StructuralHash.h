@@ -26,6 +26,7 @@ class Function;
 class Module;
 
 using IRHash = stable_hash;
+using OpndHash = stable_hash;
 
 /// Returns a hash of the function \p F.
 /// \param F The function to hash.
@@ -46,8 +47,8 @@ using IndexPair = std::pair<unsigned, unsigned>;
 /// A map from an instruction index to an instruction pointer.
 using IndexInstrMap = MapVector<unsigned, Instruction *>;
 
-/// A map from an IndexPair to a stable_hash.
-using IndexOperandHashMapType = DenseMap<IndexPair, stable_hash>;
+/// A map from an IndexPair to an OpndHash.
+using IndexOperandHashMapType = DenseMap<IndexPair, OpndHash>;
 
 /// A function that takes an instruction and an operand index and returns true
 /// if the operand should be ignored in the function hash computation.

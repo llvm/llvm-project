@@ -75,6 +75,7 @@ MODULE_PASS("hipstdpar-interpose-alloc", HipStdParAllocationInterpositionPass())
 MODULE_PASS("hipstdpar-select-accelerator-code",
             HipStdParAcceleratorCodeSelectionPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
+//MODULE_PASS("global-merge-func", GlobalMergeFuncNewPM())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-ml-advisor-release",
             ModuleInlinerWrapperPass(getInlineParams(), true, {},

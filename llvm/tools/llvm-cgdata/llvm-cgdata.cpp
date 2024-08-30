@@ -214,6 +214,8 @@ static int merge_main(int argc, const char *argv[]) {
   if (!Result)
     exitWithError("failed to merge codegen data files.");
 
+  GlobalFunctionMapRecord.finalize();
+
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
     Writer.addRecord(GlobalOutlineRecord);

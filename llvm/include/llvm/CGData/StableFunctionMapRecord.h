@@ -41,6 +41,9 @@ struct StableFunctionMapRecord {
   /// Deserialize the stable function map from a YAML stream.
   void deserializeYAML(yaml::Input &YIS);
 
+  /// Finalize the stable function map by trimming content.
+  void finalize() { FunctionMap->finalize(); }
+
   /// Merge the stable function map into this one.
   void merge(const StableFunctionMapRecord &Other) {
     FunctionMap->merge(*Other.FunctionMap);

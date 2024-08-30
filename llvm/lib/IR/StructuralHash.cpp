@@ -53,8 +53,12 @@ public:
     }
   }
 
-  // hash_value for APInt should be stable
-  stable_hash hashAPInt(const APInt &I) { return hash_value(I); }
+  stable_hash hashAPInt(const APInt &I) {
+    SmallVector<stable_hash> Hashes;
+    for (unsigned J = 0; J < I.getNumWords(); ++J)
+      Hashes.emplace_back((I.getRawData())[J]);
+    return stable_hash_combine(Hashes);
+  }
 
   stable_hash hashAPFloat(const APFloat &F) {
     SmallVector<stable_hash> Hashes;
@@ -229,7 +233,7 @@ public:
       auto *Op = Inst.getOperand(OpndIdx);
       auto OpndHash = hashOperand(Op);
       if (IgnoreOp && IgnoreOp(&Inst, OpndIdx)) {
-        assert(IndexPairOpndHash);
+        assert(IndexOperandHashMap);
         IndexOperandHashMap->insert({{InstIdx, OpndIdx}, OpndHash});
       } else
         Hashes.emplace_back(OpndHash);

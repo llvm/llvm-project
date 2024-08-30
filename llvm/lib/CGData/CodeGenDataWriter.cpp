@@ -53,7 +53,7 @@ void CodeGenDataWriter::addRecord(OutlinedHashTreeRecord &Record) {
 }
 
 void CodeGenDataWriter::addRecord(StableFunctionMapRecord &Record) {
-  assert(Record.StableHashTree && "empty function map in the record");
+  assert(Record.FunctionMap && "empty function map in the record");
   FunctionMapRecord.FunctionMap = std::move(Record.FunctionMap);
 
   DataKind |= CGDataKind::StableFunctionMergingMap;

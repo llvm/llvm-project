@@ -36,6 +36,7 @@ std::optional<std::string> StableFunctionMap::getNameForId(unsigned Id) const {
 }
 
 void StableFunctionMap::insert(const StableFunction &Func) {
+  assert(!Finalized && "Cannot insert after finalization");
   auto FuncNameId = getIdOrCreateForName(Func.FunctionName);
   auto ModuleNameId = getIdOrCreateForName(Func.ModuleName);
   auto IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
@@ -48,6 +49,7 @@ void StableFunctionMap::insert(const StableFunction &Func) {
 }
 
 void StableFunctionMap::merge(const StableFunctionMap &OtherMap) {
+  assert(!Finalized && "Cannot merge after finalization");
   for (auto &[Hash, Funcs] : OtherMap.HashToFuncs) {
     auto &ThisFuncs = HashToFuncs[Hash];
     for (auto &Func : Funcs) {
@@ -83,4 +85,93 @@ size_t StableFunctionMap::size(SizeType Type) const {
   }
   }
   return 0;
+}
+
+using ParamLocs = SmallVector<IndexPair>;
+static void removeIdenticalIndexPair(
+    SmallVector<std::unique_ptr<StableFunctionEntry>> &SFS) {
+  auto &RSF = SFS[0];
+  unsigned StableFunctionCount = SFS.size();
+
+  SmallVector<IndexPair> ToDelete;
+  for (auto &[Pair, Hash] : *(RSF->IndexOperandHashMap)) {
+    bool Identical = true;
+    for (unsigned J = 1; J < StableFunctionCount; ++J) {
+      auto &SF = SFS[J];
+      assert(SF->IndexOperandHashMap->count(Pair));
+      auto SHash = (*SF->IndexOperandHashMap)[Pair];
+      if (Hash != SHash) {
+        Identical = false;
+        break;
+      }
+    }
+
+    // No need to parameterize them if the hashes are identical across stable
+    // functions.
+    if (Identical)
+      ToDelete.emplace_back(Pair);
+  }
+
+  for (auto &Pair : ToDelete)
+    for (auto &SF : SFS)
+      SF->IndexOperandHashMap->erase(Pair);
+}
+
+bool StableFunctionMap::finalize() {
+  bool Changed = false;
+
+  for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
+    auto &[StableHash, SFS] = *It;
+    // No interest if there is no common stable function globally.
+    if (SFS.size() < 2) {
+      HashToFuncs.erase(It);
+      Changed = true;
+      continue;
+    }
+
+    // Group stable functions by ModuleIdentifier.
+    std::stable_sort(SFS.begin(), SFS.end(),
+                     [&](const std::unique_ptr<StableFunctionEntry> &L,
+                         const std::unique_ptr<StableFunctionEntry> &R) {
+                       return *getNameForId(L->ModuleNameId) <
+                              *getNameForId(R->ModuleNameId);
+                     });
+
+    // Consider the first function as the root function.
+    auto &RSF = SFS[0];
+
+    bool IsValid = true;
+    unsigned StableFunctionCount = SFS.size();
+    for (unsigned I = 1; I < StableFunctionCount; ++I) {
+      auto &SF = SFS[I];
+      assert(RSF->Hash == SF->Hash);
+      if (RSF->InstCount != SF->InstCount) {
+        IsValid = false;
+        break;
+      }
+      if (RSF->IndexOperandHashMap->size() != SF->IndexOperandHashMap->size()) {
+        IsValid = false;
+        break;
+      }
+      for (auto &P : *RSF->IndexOperandHashMap) {
+        auto &InstOpndIndex = P.first;
+        if (!SF->IndexOperandHashMap->count(InstOpndIndex)) {
+          IsValid = false;
+          break;
+        }
+      }
+    }
+    if (!IsValid) {
+      HashToFuncs.erase(It);
+      Changed = true;
+      continue;
+    }
+
+    // Trim the index pair that has the same operand hash across
+    // stable functions.
+    removeIdenticalIndexPair(SFS);
+  }
+  Finalized = true;
+
+  return Changed;
 }

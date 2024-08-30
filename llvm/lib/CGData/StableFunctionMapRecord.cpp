@@ -137,10 +137,12 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
         endian::readNext<stable_hash, endianness::little, unaligned>(Ptr);
     auto FunctionNameId =
         endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-    assert(FunctionNameId < IdToName.size() && "FunctionNameId out of range");
+    assert(FunctionMap->getNameForId(FunctionNameId) &&
+           "FunctionNameId out of range");
     auto ModuleNameId =
         endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-    assert(ModuleNameId < IdToName.size() && "ModuleNameId out of range");
+    assert(FunctionMap->getNameForId(ModuleNameId) &&
+           "ModuleNameId out of range");
     auto InstCount =
         endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
 
