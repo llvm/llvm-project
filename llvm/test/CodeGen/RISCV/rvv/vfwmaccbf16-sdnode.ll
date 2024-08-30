@@ -8,10 +8,7 @@ define <vscale x 1 x float> @vfwmaccbf16_vv_nxv1f32(<vscale x 1 x float> %a, <vs
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vv_nxv1f32:
 ; ZVFBFWMA:       # %bb.0:
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v9, v10
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v9, v10
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vv_nxv1f32:
@@ -31,11 +28,8 @@ define <vscale x 1 x float> @vfwmaccbf16_vv_nxv1f32(<vscale x 1 x float> %a, <vs
 define <vscale x 1 x float> @vfwmaccbf16_vf_nxv1f32(<vscale x 1 x float> %a, bfloat %b, <vscale x 1 x bfloat> %c) {
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vf_nxv1f32:
 ; ZVFBFWMA:       # %bb.0:
-; ZVFBFWMA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v10, v9
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vf v8, fa5, v10
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vf v8, fa0, v9
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv1f32:
@@ -60,10 +54,7 @@ define <vscale x 2 x float> @vfwmaccbf16_vv_nxv2f32(<vscale x 2 x float> %a, <vs
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vv_nxv2f32:
 ; ZVFBFWMA:       # %bb.0:
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v9, v10
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v9, v10
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vv_nxv2f32:
@@ -83,11 +74,8 @@ define <vscale x 2 x float> @vfwmaccbf16_vv_nxv2f32(<vscale x 2 x float> %a, <vs
 define <vscale x 2 x float> @vfwmaccbf16_vf_nxv2f32(<vscale x 2 x float> %a, bfloat %b, <vscale x 2 x bfloat> %c) {
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vf_nxv2f32:
 ; ZVFBFWMA:       # %bb.0:
-; ZVFBFWMA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v10, v9
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vf v8, fa5, v10
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vf v8, fa0, v9
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv2f32:
@@ -112,10 +100,7 @@ define <vscale x 4 x float> @vfwmaccbf16_vv_nxv4f32(<vscale x 4 x float> %a, <vs
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vv_nxv4f32:
 ; ZVFBFWMA:       # %bb.0:
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v12, v10
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v14, v11
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vv v8, v12, v14
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v10, v11
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vv_nxv4f32:
@@ -135,11 +120,8 @@ define <vscale x 4 x float> @vfwmaccbf16_vv_nxv4f32(<vscale x 4 x float> %a, <vs
 define <vscale x 4 x float> @vfwmaccbf16_vf_nxv4f32(<vscale x 4 x float> %a, bfloat %b, <vscale x 4 x bfloat> %c) {
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vf_nxv4f32:
 ; ZVFBFWMA:       # %bb.0:
-; ZVFBFWMA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v12, v10
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vf v8, fa5, v12
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vf v8, fa0, v10
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv4f32:
@@ -164,10 +146,7 @@ define <vscale x 8 x float> @vfwmaccbf16_vv_nxv8f32(<vscale x 8 x float> %a, <vs
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vv_nxv8f32:
 ; ZVFBFWMA:       # %bb.0:
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v16, v12
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v20, v14
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vv v8, v16, v20
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v12, v14
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vv_nxv8f32:
@@ -187,11 +166,8 @@ define <vscale x 8 x float> @vfwmaccbf16_vv_nxv8f32(<vscale x 8 x float> %a, <vs
 define <vscale x 8 x float> @vfwmaccbf16_vf_nxv8f32(<vscale x 8 x float> %a, bfloat %b, <vscale x 8 x bfloat> %c) {
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vf_nxv8f32:
 ; ZVFBFWMA:       # %bb.0:
-; ZVFBFWMA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v16, v12
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vf v8, fa5, v16
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vf v8, fa0, v12
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv8f32:
@@ -216,10 +192,7 @@ define <vscale x 16 x float> @vfwmaccbf16_vv_nxv16f32(<vscale x 16 x float> %a, 
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vv_nxv16f32:
 ; ZVFBFWMA:       # %bb.0:
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v24, v16
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v0, v20
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vv v8, v24, v0
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v16, v20
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vv_nxv16f32:
@@ -239,11 +212,8 @@ define <vscale x 16 x float> @vfwmaccbf16_vv_nxv16f32(<vscale x 16 x float> %a, 
 define <vscale x 16 x float> @vfwmaccbf16_vf_nxv16f32(<vscale x 16 x float> %a, bfloat %b, <vscale x 16 x bfloat> %c) {
 ; ZVFBFWMA-LABEL: vfwmaccbf16_vf_nxv16f32:
 ; ZVFBFWMA:       # %bb.0:
-; ZVFBFWMA-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFWMA-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v24, v16
-; ZVFBFWMA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFBFWMA-NEXT:    vfmacc.vf v8, fa5, v24
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vf v8, fa0, v16
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv16f32:
