@@ -1697,44 +1697,36 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!ShuffleDstTy || !II0Ty)
     return false;
 
-  switch (IID) {
-  case Intrinsic::abs: {
-    if (cast<Constant>(II0->getArgOperand(1))->isOneValue() !=
-        cast<Constant>(II1->getArgOperand(1))->isOneValue())
-      return false;
-    break;
-  }
-  default:
+  if (!isTriviallyVectorizable(IID))
     return false;
-  }
 
-  SmallVector<Value *> Args0;
-  SmallVector<Value *> Args1;
-  for (unsigned I = 0; I != II0->arg_size(); ++I) {
-    Args0.push_back(II0->getArgOperand(I));
-    Args1.push_back(II1->getArgOperand(I));
-  }
-  IntrinsicCostAttributes Attr0(IID, II0Ty, Args0);
-  IntrinsicCostAttributes Attr1(IID, II1->getType(), Args1);
+  for (unsigned I = 0; I != II0->arg_size(); ++I)
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I) &&
+        II0->getArgOperand(I) != II1->getArgOperand(I))
+      return false;
+
   InstructionCost OldCost =
-      TTI.getIntrinsicInstrCost(Attr0, TTI::TCK_RecipThroughput) +
-      TTI.getIntrinsicInstrCost(Attr1, TTI::TCK_RecipThroughput) +
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0),
+                                TTI::TCK_RecipThroughput) +
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1),
+                                TTI::TCK_RecipThroughput) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, II0Ty, OldMask,
                          TTI::TCK_RecipThroughput, 0, nullptr, {II0, II1}, &I);
 
-  InstructionCost NewCost;
-  switch (IID) {
-  case Intrinsic::abs: {
-    IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy,
-                                    {ShuffleDstTy, Builder.getInt1Ty()});
-    NewCost = TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, II0Ty,
-                                 OldMask, TTI::TCK_RecipThroughput) +
-              TTI.getIntrinsicInstrCost(NewAttr, TTI::TCK_RecipThroughput);
-    break;
-  }
-  default:
-    llvm_unreachable("Unexpected intrinsic");
-  }
+  SmallVector<Type *> NewArgsTy;
+  InstructionCost NewCost = 0;
+  for (unsigned I = 0; I != II0->arg_size(); ++I)
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
+      NewArgsTy.push_back(II0->getArgOperand(I)->getType());
+    } else {
+      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(I)->getType());
+      NewArgsTy.push_back(FixedVectorType::get(VecTy->getElementType(),
+                                               VecTy->getNumElements() * 2));
+      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                    VecTy, OldMask, TTI::TCK_RecipThroughput);
+    }
+  IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
+  NewCost += TTI.getIntrinsicInstrCost(NewAttr, TTI::TCK_RecipThroughput);
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two intrinsics: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1743,18 +1735,17 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (NewCost > OldCost)
     return false;
 
-  Value *NewIntrinsic;
-  switch (IID) {
-  case Intrinsic::abs: {
-    Value *Shuf = Builder.CreateShuffleVector(Args0[0], Args1[0], OldMask);
-    NewIntrinsic = Builder.CreateIntrinsic(
-        ShuffleDstTy, IID, {Shuf, cast<Constant>(II0->getArgOperand(1))});
-    Worklist.pushValue(Shuf);
-    break;
-  }
-  default:
-    llvm_unreachable("Unexpected intrinsic");
-  }
+  SmallVector<Value *> NewArgs;
+  for (unsigned I = 0; I != II0->arg_size(); ++I)
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
+      NewArgs.push_back(II0->getArgOperand(I));
+    } else {
+      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I),
+                                                II1->getArgOperand(I), OldMask);
+      NewArgs.push_back(Shuf);
+      Worklist.pushValue(Shuf);
+    }
+  Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
 
   // Intersect flags from the old intrinsics.
   if (auto *NewInst = dyn_cast<Instruction>(NewIntrinsic)) {
