@@ -9,7 +9,7 @@
 #ifndef LLVM_ANALYSIS_DXILMETADATA_H
 #define LLVM_ANALYSIS_DXILMETADATA_H
 
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -22,11 +22,14 @@ namespace llvm {
 namespace dxil {
 
 struct EntryProperties {
+  const Function *Entry;
   // Specific target shader stage may be specified for entry functions
   Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
-  unsigned NumThreadsX; // X component
-  unsigned NumThreadsY; // Y component
-  unsigned NumThreadsZ; // Z component
+  unsigned NumThreadsX{0}; // X component
+  unsigned NumThreadsY{0}; // Y component
+  unsigned NumThreadsZ{0}; // Z component
+
+  EntryProperties(const Function &Fn) : Entry(&Fn){};
 };
 
 struct ModuleMetadataInfo {
@@ -34,7 +37,7 @@ struct ModuleMetadataInfo {
   VersionTuple ShaderModelVersion{};
   Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
   VersionTuple ValidatorVersion{};
-  MapVector<Function *, EntryProperties> EntryPropertyMap;
+  SmallVector<EntryProperties, 4> EntryPropertyVec{};
   void print(raw_ostream &OS) const;
 };
 

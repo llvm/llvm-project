@@ -44,7 +44,7 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
 
-    EntryProperties EFP{};
+    EntryProperties EFP(F);
     // Get "hlsl.shader" attribute
     Attribute EntryAttr = F.getFnAttribute("hlsl.shader");
     assert(EntryAttr.isValid() &&
@@ -60,14 +60,14 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
       NumThreadsStr.split(NumThreadsVec, ',');
       assert(NumThreadsVec.size() == 3 && "Invalid numthreads specified");
       // Read in the three component values of numthreads
-      if (!llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10))
-        assert(false && "Failed to parse X component of numthreads");
-      if (!llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10))
-        assert(false && "Failed to parse Y component of numthreads");
-      if (!llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10))
-        assert(false && "Failed to parse Z component of numthreads");
+      bool Success = llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10);
+      assert(Success && "Failed to parse X component of numthreads");
+      Success = llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10);
+      assert(Success && "Failed to parse Y component of numthreads");
+      Success = llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10);
+      assert(Success && "Failed to parse Z component of numthreads");
     }
-    MMDAI.EntryPropertyMap.insert(std::make_pair(std::addressof(F), EFP));
+    MMDAI.EntryPropertyVec.push_back(EFP);
   }
   return MMDAI;
 }
@@ -78,13 +78,11 @@ void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Target Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
-  for (auto MapItem : EntryPropertyMap) {
-    OS << " " << MapItem.first->getName() << "\n";
-    OS << "  Function Shader Stage : "
-       << Triple::getEnvironmentTypeName(MapItem.second.ShaderStage) << "\n";
-    OS << "  NumThreads: " << MapItem.second.NumThreadsX << ","
-       << MapItem.second.NumThreadsY << "," << MapItem.second.NumThreadsZ
+  for (const auto [Ent, SS, NX, NY, NZ] : EntryPropertyVec) {
+    OS << " " << Ent->getName() << "\n";
+    OS << "  Function Shader Stage : " << Triple::getEnvironmentTypeName(SS)
        << "\n";
+    OS << "  NumThreads: " << NX << "," << NY << "," << NZ << "\n";
   }
 }
 
