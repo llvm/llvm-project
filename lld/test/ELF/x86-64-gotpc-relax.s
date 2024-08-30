@@ -120,3 +120,16 @@ _start:
  jmp *hid@GOTPCREL(%rip)
  jmp *ifunc@GOTPCREL(%rip)
  jmp *ifunc@GOTPCREL(%rip)
+
+ movq foo@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
