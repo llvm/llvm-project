@@ -557,30 +557,6 @@ def testInferTypeOpInterface():
             print(two_operands.result.type)
 
 
-# CHECK-LABEL: TEST: testVariadicResultAccess
-@run
-def testVariadicResultAccess():
-    def types(lst):
-        return [e.type for e in lst]
-
-    with Context() as ctx, Location.unknown(ctx):
-        module = Module.create()
-        with InsertionPoint(module.body):
-            i8 = IntegerType.get_signless(8)
-            i16 = IntegerType.get_signless(16)
-            i24 = IntegerType.get_signless(24)
-            i32 = IntegerType.get_signless(32)
-            i40 = IntegerType.get_signless(40)
-
-            variadic_result = test.SameVariadicResultSizeOp([i8, i16], i24, [i32, i40])
-            # CHECK: i24
-            print(variadic_result.non_variadic.type)
-            # CHECK: [IntegerType(i8), IntegerType(i16)]
-            print(types(variadic_result.variadic1))
-            # CHECK: [IntegerType(i32), IntegerType(i40)]
-            print(types(variadic_result.variadic2))
-
-
 # CHECK-LABEL: TEST: testVariadicOperandAccess
 @run
 def testVariadicOperandAccess():
@@ -606,3 +582,96 @@ def testVariadicOperandAccess():
             print(values(variadic_operands.variadic1))
             # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
             print(values(variadic_operands.variadic2))
+
+
+# CHECK-LABEL: TEST: testVariadicResultAccess
+@run
+def testVariadicResultAccess():
+    def types(lst):
+        return [e.type for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i = [IntegerType.get_signless(k) for k in range(7)]
+
+            # Test Variadic-Fixed-Variadic
+            op = test.SameVariadicResultSizeOpVFV([i[0], i[1]], i[2], [i[3], i[4]])
+            # CHECK: i2
+            print(op.non_variadic.type)
+            # CHECK: [IntegerType(i0), IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i3), IntegerType(i4)]
+            print(types(op.variadic2))
+
+            #  Test Variadic-Variadic-Variadic
+            op = test.SameVariadicResultSizeOpVVV(
+                [i[0], i[1]], [i[2], i[3]], [i[4], i[5]]
+            )
+            # CHECK: [IntegerType(i0), IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i2), IntegerType(i3)]
+            print(types(op.variadic2))
+            # CHECK: [IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic3))
+
+            #  Test Fixed-Fixed-Variadic
+            op = test.SameVariadicResultSizeOpFFV(i[0], i[1], [i[2], i[3], i[4]])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: i1
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i2), IntegerType(i3), IntegerType(i4)]
+            print(types(op.variadic))
+
+            #  Test Variadic-Variadic-Fixed
+            op = test.SameVariadicResultSizeOpVVF(
+                [i[0], i[1], i[2]], [i[3], i[4], i[5]], i[6]
+            )
+            # CHECK: [IntegerType(i0), IntegerType(i1), IntegerType(i2)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i3), IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic2))
+            # CHECK: i6
+            print(op.non_variadic.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed
+            op = test.SameVariadicResultSizeOpFVFVF(
+                i[0], [i[1], i[2]], i[3], [i[4], i[5]], i[6]
+            )
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: [IntegerType(i1), IntegerType(i2)]
+            print(types(op.variadic1))
+            # CHECK: i3
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic2))
+            # CHECK: i6
+            print(op.non_variadic3.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed - Variadic group size 0
+            op = test.SameVariadicResultSizeOpFVFVF(i[0], [], i[1], [], i[2])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: []
+            print(types(op.variadic1))
+            # CHECK: i1
+            print(op.non_variadic2.type)
+            # CHECK: []
+            print(types(op.variadic2))
+            # CHECK: i2
+            print(op.non_variadic3.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed - Variadic group size 1
+            op = test.SameVariadicResultSizeOpFVFVF(i[0], [i[1]], i[2], [i[3]], i[4])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: [IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: i2
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i3)]
+            print(types(op.variadic2))
+            # CHECK: i4
+            print(op.non_variadic3.type)
