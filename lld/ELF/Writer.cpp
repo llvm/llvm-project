@@ -2406,7 +2406,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
           (config->zSeparate == SeparateSegmentKind::Code && prev &&
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)
-        cmd->addrExpr = make<DynamicExpr>([] {
+        cmd->addrExpr = make<FallbackExpr>([] {
           return alignToPowerOf2(script->getDot(), config->maxPageSize);
         });
       // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
@@ -2423,13 +2423,13 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // bug, musl (TLS Variant 1 architectures) before 1.1.23 handled TLS
       // blocks correctly. We need to keep the workaround for a while.
       else if (ctx.tlsPhdr && ctx.tlsPhdr->firstSec == p->firstSec)
-        cmd->addrExpr = make<DynamicExpr>([] {
+        cmd->addrExpr = make<FallbackExpr>([] {
           return alignToPowerOf2(script->getDot(), config->maxPageSize) +
                  alignToPowerOf2(script->getDot() % config->maxPageSize,
                                  ctx.tlsPhdr->p_align);
         });
       else
-        cmd->addrExpr = make<DynamicExpr>([] {
+        cmd->addrExpr = make<FallbackExpr>([] {
           return alignToPowerOf2(script->getDot(), config->maxPageSize) +
                  script->getDot() % config->maxPageSize;
         });

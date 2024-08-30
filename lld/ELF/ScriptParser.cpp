@@ -105,7 +105,7 @@ private:
   void readSort();
   Expr *readAssert();
   Expr *readConstant();
-  DynamicExpr *getPageSize();
+  FallbackExpr *getPageSize();
 
   Expr *readMemoryAssignment(StringRef, StringRef, StringRef);
   void readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
@@ -521,7 +521,7 @@ void ScriptParser::readSearchDir() {
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   Expr *addrExpr;
   if (consume(":")) {
-    addrExpr = make<DynamicExpr>([] { return script->getDot(); });
+    addrExpr = make<FallbackExpr>([] { return script->getDot(); });
   } else {
     addrExpr = readExpr();
     expect(":");
@@ -530,7 +530,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   // lmaExpr will ensure this, even if the start address is specified.
   Expr *lmaExpr = consume("AT")
                       ? readParenExpr()
-                      : make<DynamicExpr>([] { return script->getDot(); });
+                      : make<FallbackExpr>([] { return script->getDot(); });
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
@@ -542,13 +542,13 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     osd->osec.addrExpr = addrExpr;
     if (prev) {
       osd->osec.lmaExpr =
-          make<DynamicExpr>([=] { return prev->getLMA() + prev->size; });
+          make<FallbackExpr>([=] { return prev->getLMA() + prev->size; });
     } else {
       osd->osec.lmaExpr = lmaExpr;
       // Use first section address for subsequent sections as initial addrExpr
       // can be DOT. Ensure the first section, even if empty, is not discarded.
       osd->osec.usedInExpression = true;
-      addrExpr = make<DynamicExpr>(
+      addrExpr = make<FallbackExpr>(
           [=]() -> ExprValue { return {&osd->osec, false, 0, ""}; });
     }
     v.push_back(osd);
@@ -559,7 +559,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   // counter should be equal to the overlay base address plus size of the
   // largest section seen in the overlay.
   // Here we want to create the Dot assignment command to achieve that.
-  Expr *moveDot = make<DynamicExpr>([=] {
+  Expr *moveDot = make<FallbackExpr>([=] {
     uint64_t max = 0;
     for (SectionCommand *cmd : v)
       max = std::max(max, cast<OutputDesc>(cmd)->osec.size);
@@ -853,7 +853,7 @@ Expr *ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return make<DynamicExpr>([=] {
+  return make<FallbackExpr>([=] {
     if (!e->getExprValue().getValue())
       errorOrWarn(msg);
     return script->getDot();
@@ -934,7 +934,7 @@ void ScriptParser::readSectionAddressType(OutputSection *cmd) {
 }
 
 static Expr *checkAlignment(Expr *e, std::string &loc) {
-  return make<DynamicExpr>([=] {
+  return make<FallbackExpr>([=] {
     uint64_t alignment = std::max((uint64_t)1, e->getExprValue().getValue());
     if (!isPowerOf2_64(alignment)) {
       error(loc + ": alignment must be power of 2");
@@ -1158,8 +1158,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   Expr *e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
-    DynamicExpr *lhs =
-        make<DynamicExpr>([=] { return script->getSymbolValue(name, loc); });
+    FallbackExpr *lhs =
+        make<FallbackExpr>([=] { return script->getSymbolValue(name, loc); });
     e = make<BinaryExpr>(op, lhs, e, loc);
   }
   return make<SymbolAssignment>(name, e, ctx.scriptSymOrderCounter++,
@@ -1206,9 +1206,9 @@ Expr *ScriptParser::readExpr1(Expr *lhs, int minPrec) {
   return lhs;
 }
 
-DynamicExpr *ScriptParser::getPageSize() {
+FallbackExpr *ScriptParser::getPageSize() {
   std::string location = getCurrentLocation();
-  return make<DynamicExpr>([=]() -> uint64_t {
+  return make<FallbackExpr>([=]() -> uint64_t {
     if (target)
       return config->commonPageSize;
     error(location + ": unable to calculate page size");
@@ -1221,7 +1221,7 @@ Expr *ScriptParser::readConstant() {
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
-    return make<DynamicExpr>([] { return config->maxPageSize; });
+    return make<FallbackExpr>([] { return config->maxPageSize; });
   setError("unknown constant: " + s);
   return make<ConstantExpr>(0);
 }
@@ -1369,7 +1369,7 @@ Expr *ScriptParser::readPrimary() {
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   if (tok == "ABSOLUTE") {
     Expr *inner = readParenExpr();
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       ExprValue i = inner->getExprValue();
       i.forceAbsolute = true;
       return i;
@@ -1379,7 +1379,7 @@ Expr *ScriptParser::readPrimary() {
     StringRef name = readParenName();
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
-    return make<DynamicExpr>([=]() -> ExprValue {
+    return make<FallbackExpr>([=]() -> ExprValue {
       checkIfExists(*osec, location);
       return {osec, false, 0, location};
     });
@@ -1389,14 +1389,14 @@ Expr *ScriptParser::readPrimary() {
     Expr *e = readExpr();
     if (consume(")")) {
       e = checkAlignment(e, location);
-      return make<DynamicExpr>([=] {
+      return make<FallbackExpr>([=] {
         return alignToPowerOf2(script->getDot(), e->getExprValue().getValue());
       });
     }
     expect(",");
     Expr *e2 = checkAlignment(readExpr(), location);
     expect(")");
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       ExprValue v = e->getExprValue();
       v.alignment = e2->getExprValue().getValue();
       return v;
@@ -1405,7 +1405,7 @@ Expr *ScriptParser::readPrimary() {
   if (tok == "ALIGNOF") {
     StringRef name = readParenName();
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       checkIfExists(*osec, location);
       return osec->addralign;
     });
@@ -1421,7 +1421,7 @@ Expr *ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     script->seenDataAlign = true;
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       uint64_t align = std::max(uint64_t(1), e->getExprValue().getValue());
       return (script->getDot() + align - 1) & -align;
     });
@@ -1430,7 +1430,7 @@ Expr *ScriptParser::readPrimary() {
     expect("(");
     expect(".");
     expect(")");
-    return make<DynamicExpr>([] { return script->getDot(); });
+    return make<FallbackExpr>([] { return script->getDot(); });
   }
   if (tok == "DATA_SEGMENT_RELRO_END") {
     // GNU linkers implements more complicated logic to handle
@@ -1442,7 +1442,7 @@ Expr *ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     script->seenRelroEnd = true;
-    return make<DynamicExpr>(
+    return make<FallbackExpr>(
         [=] { return alignToPowerOf2(script->getDot(), config->maxPageSize); });
   }
   if (tok == "DEFINED") {
@@ -1450,7 +1450,7 @@ Expr *ScriptParser::readPrimary() {
     // Return 1 if s is defined. If the definition is only found in a linker
     // script, it must happen before this DEFINED.
     auto order = ctx.scriptSymOrderCounter++;
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       Symbol *s = symtab.find(name);
       return s && s->isDefined() && ctx.scriptSymOrder.lookup(s) < order ? 1
                                                                          : 0;
@@ -1468,7 +1468,7 @@ Expr *ScriptParser::readPrimary() {
     StringRef name = readParenName();
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       checkIfExists(*osec, location);
       return osec->getLMA();
     });
@@ -1477,7 +1477,7 @@ Expr *ScriptParser::readPrimary() {
     expect("(");
     Expr *a = readExpr();
     expect(")");
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       // LOG2CEIL(0) is defined to be 0.
       return llvm::Log2_64_Ceil(
           std::max(a->getExprValue().getValue(), UINT64_C(1)));
@@ -1490,11 +1490,11 @@ Expr *ScriptParser::readPrimary() {
     Expr *b = readExpr();
     expect(")");
     if (tok == "MIN")
-      return make<DynamicExpr>([=] {
+      return make<FallbackExpr>([=] {
         return std::min(a->getExprValue().getValue(),
                         b->getExprValue().getValue());
       });
-    return make<DynamicExpr>([=] {
+    return make<FallbackExpr>([=] {
       return std::max(a->getExprValue().getValue(),
                       b->getExprValue().getValue());
     });
@@ -1521,14 +1521,14 @@ Expr *ScriptParser::readPrimary() {
     // Linker script does not create an output section if its content is empty.
     // We want to allow SIZEOF(.foo) where .foo is a section which happened to
     // be empty.
-    return make<DynamicExpr>([=] { return cmd->size; });
+    return make<FallbackExpr>([=] { return cmd->size; });
   }
   if (tok == "SIZEOF_HEADERS")
-    return make<DynamicExpr>([=] { return elf::getHeaderSize(); });
+    return make<FallbackExpr>([=] { return elf::getHeaderSize(); });
 
   // Tok is the dot.
   if (tok == ".")
-    return make<DynamicExpr>(
+    return make<FallbackExpr>(
         [=] { return script->getSymbolValue(tok, location); });
 
   // Tok is a literal number.
@@ -1544,7 +1544,7 @@ Expr *ScriptParser::readPrimary() {
     script->provideMap[*activeProvideSym].push_back(tok);
   else
     script->referencedSymbols.push_back(tok);
-  return make<DynamicExpr>(
+  return make<FallbackExpr>(
       [=] { return script->getSymbolValue(tok, location); });
 }
 
@@ -1552,7 +1552,7 @@ Expr *ScriptParser::readTernary(Expr *cond) {
   Expr *l = readExpr();
   expect(":");
   Expr *r = readExpr();
-  return make<DynamicExpr>([=] {
+  return make<FallbackExpr>([=] {
     return cond->getExprValue().getValue() ? l->getExprValue()
                                            : r->getExprValue();
   });

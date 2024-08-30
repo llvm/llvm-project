@@ -136,8 +136,8 @@ ExprValue Expr::getExprValue() const {
   switch (kind_) {
   case ExprKind::Constant:
     return static_cast<const ConstantExpr *>(this)->getExprValue();
-  case ExprKind::Dynamic:
-    return static_cast<const DynamicExpr *>(this)->getExprValue();
+  case ExprKind::Fallback:
+    return static_cast<const FallbackExpr *>(this)->getExprValue();
   case ExprKind::Binary:
     return static_cast<const BinaryExpr *>(this)->getExprValue();
   case ExprKind::Unary:

@@ -72,11 +72,11 @@ struct ExprValue {
 
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
-// Later, we evaluate the expression by calling the function.
-
+// Later, we evaluate the expression by calling the function if the
+// expression type is FallbackExpr.
 class Expr {
 public:
-  enum class ExprKind : uint8_t { Constant, Dynamic, Unary, Binary };
+  enum class ExprKind : uint8_t { Constant, Fallback, Unary, Binary };
 
 private:
   ExprKind kind_;
@@ -99,10 +99,10 @@ private:
   uint64_t val_;
 };
 
-class DynamicExpr : public Expr {
+class FallbackExpr : public Expr {
 public:
-  DynamicExpr(std::function<ExprValue()> impl)
-      : Expr(ExprKind::Dynamic), impl_(impl) {}
+  FallbackExpr(std::function<ExprValue()> impl)
+      : Expr(ExprKind::Fallback), impl_(impl) {}
   ExprValue getExprValue() const { return impl_(); }
 
 private:
