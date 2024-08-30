@@ -6995,7 +6995,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
     });
 
     if (It == std::end(ExtensionMap))
-      Error(CurLoc, "unsupported architectural extension: " + Name);
+      return Error(CurLoc, "unsupported architectural extension: " + Name);
 
     if (EnableFeature)
       STI.SetFeatureBitsTransitively(It->Features);
