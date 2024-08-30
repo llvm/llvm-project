@@ -1906,10 +1906,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     // Check all node callees and see if in the same function.
     // We need to check all of the calls recorded in this Node, because in some
     // cases we may have had multiple calls with the same debug info calling
-    // different callees. Here we will prune any that don't match all callee
-    // nodes.
-    std::vector<CallInfo> AllCalls = Node->MatchingCalls;
-    AllCalls.insert(AllCalls.begin(), Node->Call);
+    // different callees. This can happen, for example, when an object is
+    // constructed in the paramter list - the destructor call of the object has
+    // the same debug info (line/col) as the call the object was passed to.
+    // Here we will prune any that don't match all callee nodes.
+    std::vector<CallInfo> AllCalls;
+    AllCalls.reserve(Node->MatchingCalls.size() + 1);
+    AllCalls.push_back(Node->Call);
+    AllCalls.insert(AllCalls.end(), Node->MatchingCalls.begin(), Node->MatchingCalls.end());
     auto It = AllCalls.begin();
     // Iterate through the calls until we find the first that matches.
     for (; It != AllCalls.end(); ++It) {
@@ -2206,12 +2210,12 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(
 
 bool ModuleCallsiteContextGraph::sameCallee(Instruction *Call1,
                                             Instruction *Call2) {
-  auto *CB1 = dyn_cast<CallBase>(Call1);
+  auto *CB1 = cast<CallBase>(Call1);
   if (!CB1->getCalledOperand() || CB1->isIndirectCall())
     return false;
   auto *CalleeVal1 = CB1->getCalledOperand()->stripPointerCasts();
   auto *CalleeFunc1 = dyn_cast<Function>(CalleeVal1);
-  auto *CB2 = dyn_cast<CallBase>(Call2);
+  auto *CB2 = cast<CallBase>(Call2);
   if (!CB2->getCalledOperand() || CB2->isIndirectCall())
     return false;
   auto *CalleeVal2 = CB2->getCalledOperand()->stripPointerCasts();
