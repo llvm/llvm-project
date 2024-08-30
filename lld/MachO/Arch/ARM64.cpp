@@ -181,7 +181,7 @@ void ARM64::populateThunk(InputSection *thunk, Symbol *funcSym) {
 }
 // Just a single direct branch to the target function.
 static constexpr uint32_t icfSafeThunkCode[] = {
-    0x94000000, // 08: b    target
+    0x14000000, // 08: b    target
 };
 
 void ARM64::initICFSafeThunkBody(InputSection *thunk,

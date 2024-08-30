@@ -30,11 +30,11 @@
 ; CHECK-ARM64-NEXT:        adr
 ;
 ; CHECK-ARM64:        _func_2identical_v2:
-; CHECK-ARM64-NEXT:         bl  _func_unique_2_canmerge
+; CHECK-ARM64-NEXT:        b  _func_unique_2_canmerge
 ; CHECK-ARM64-NEXT:   _func_3identical_v2:
-; CHECK-ARM64-NEXT:        bl  _func_3identical_v1
+; CHECK-ARM64-NEXT:        b  _func_3identical_v1
 ; CHECK-ARM64-NEXT:   _func_3identical_v3:
-; CHECK-ARM64-NEXT:        bl  _func_3identical_v1
+; CHECK-ARM64-NEXT:        b  _func_3identical_v1
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx11.0.0"
