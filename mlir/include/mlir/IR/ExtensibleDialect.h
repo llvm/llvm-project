@@ -496,6 +496,7 @@ public:
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
   bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
+  void printProperties(Operation *, OpAsmPrinter &) final {}
 
 private:
   DynamicOpDefinition(
