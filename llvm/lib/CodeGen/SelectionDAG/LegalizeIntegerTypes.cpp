@@ -2043,6 +2043,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXPERIMENTAL_VP_SPLICE:
     Res = PromoteIntOp_VP_SPLICE(N, OpNo);
     break;
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    Res = PromoteIntOp_VECTOR_HISTOGRAM(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2752,6 +2755,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo) {
   assert((OpNo == 4 || OpNo == 5) && "Unexpected operand for promotion");
 
   NewOps[OpNo] = ZExtPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
+                                                        unsigned OpNo) {
+  assert(OpNo == 1 && "Unexpected operand for promotion");
+  SmallVector<SDValue, 7> NewOps(N->ops());
+  NewOps[1] = GetPromotedInteger(N->getOperand(1));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 

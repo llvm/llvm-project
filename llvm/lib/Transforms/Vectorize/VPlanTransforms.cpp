@@ -878,6 +878,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     // value with the others blended into it.
 
     unsigned StartIndex = 0;
+    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+      // If a value's mask is used only by the blend then is can be deadcoded.
+      // TODO: Find the most expensive mask that can be deadcoded, or a mask
+      // that's used by multiple blends where it can be removed from them all.
+      VPValue *Mask = Blend->getMask(I);
+      if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
+        StartIndex = I;
+        break;
+      }
+    }
+
     SmallVector<VPValue *, 4> OperandsWithMask;
     OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
 
@@ -956,6 +967,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                          m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
       X == X1 && Y == Y1) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
+    R.eraseFromParent();
     return;
   }
 
