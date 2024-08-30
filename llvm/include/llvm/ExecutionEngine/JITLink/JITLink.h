@@ -1212,7 +1212,10 @@ public:
   /// of 0.
   Symbol &addExternalSymbol(StringRef Name, orc::ExecutorAddrDiff Size,
                             bool IsWeaklyReferenced) {
+    if(ExternalSymbols.contains(Name))
+       llvm::dbgs() << "Duplicate external symbol: " << Name << "\n";
     assert(!ExternalSymbols.contains(Name) && "Duplicate external symbol");
+
     auto &Sym = Symbol::constructExternal(
         Allocator, createAddressable(orc::ExecutorAddr(), false), Name, Size,
         Linkage::Strong, IsWeaklyReferenced);
