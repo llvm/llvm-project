@@ -945,6 +945,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     MOUse.setIsUndef(CopySrc.isUndef());
 
     LLVM_DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
+
     // Clear kill markers that may have been invalidated.
     for (MachineInstr &KMI :
          make_range(Copy->getIterator(), std::next(MI.getIterator())))
@@ -1237,31 +1238,32 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
 
     if (hasOverlappingMultipleDef(MI, MODef, Def))
       continue;
-    if (InstructionsToMove)
-      for (auto *I : *InstructionsToMove) {
-        MI.getParent()->splice(MI.getIterator(), MI.getParent(), I->getIterator());
-      }
+
     LLVM_DEBUG(dbgs() << "MCP: Replacing " << printReg(MODef.getReg(), TRI)
                       << "\n     with " << printReg(Def, TRI) << "\n     in "
                       << MI << "     from " << *Copy);
+    if (!DG) {
+      MODef.setReg(Def);
+      MODef.setIsRenamable(CopyOperands->Destination->isRenamable());
 
-    
-    MODef.setReg(Def);
-    MODef.setIsRenamable(CopyOperands->Destination->isRenamable());
-
-    LLVM_DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
-    MaybeDeadCopies.insert(Copy);
-    Changed = true;
-    ++NumCopyBackwardPropagated;
-     
-      
+      LLVM_DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
+      MaybeDeadCopies.insert(Copy);
+      Changed = true;
+      ++NumCopyBackwardPropagated;
+    } else if (InstructionsToMove) {
+      for (auto *I : *InstructionsToMove) {
+        MI.getParent()->splice(MI.getIterator(), MI.getParent(), I->getIterator());
+      }
+    }
   }
 }
 
 void MachineCopyPropagation::BackwardCopyPropagateBlock(
     MachineBasicBlock &MBB, ScheduleDAGMCP *DG) {
-  DG->startBlock(&MBB);
-  // DG.viewGraph();
+  if (DG) {
+    DG->startBlock(&MBB);
+    // DG.viewGraph();
+  }
  
 
   LLVM_DEBUG(dbgs() << "MCP: BackwardCopyPropagateBlock " << MBB.getName()
@@ -1343,12 +1345,13 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     Copy->eraseFromParent();
     ++NumDeletes;
   }
-  
-  DG->finishBlock();
-  // QUESTION: Does it makes sense to keep the kill flags here?
-  //           On the other parts of this pass we juts throw out
-  //           the kill flags.
-  DG->fixupKills(MBB);
+  if (DG) {
+    DG->finishBlock();
+    // QUESTION: Does it makes sense to keep the kill flags here?
+    //           On the other parts of this pass we juts throw out
+    //           the kill flags.
+    DG->fixupKills(MBB);
+  }
 
 
   MaybeDeadCopies.clear();
@@ -1706,7 +1709,22 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     if (isSpillageCopyElimEnabled)
       EliminateSpillageCopies(MBB);
+
+    // BackwardCopyPropagateBlock happens in two stages.
+    // First we move those unnecessary dependencies out of the way
+    // that may block copy propagations.
+    //
+    // The reason for this two stage approach is that the ScheduleDAG can not
+    // handle register renaming.
+    // QUESTION: I think these two stages could be merged together, if I were to change
+    // the renaming mechanism.
+    //
+    // The renaming wouldn't happen instantly. There would be a data structure
+    // that contained what register should be renamed to what. Then after the
+    // backward propagation has concluded the renaming would happen.
     BackwardCopyPropagateBlock(MBB, &DG);
+    // Then we do the actual copy propagation.
+    BackwardCopyPropagateBlock(MBB);
 
     ForwardCopyPropagateBlock(MBB);
   }
