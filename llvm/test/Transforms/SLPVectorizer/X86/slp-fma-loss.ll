@@ -54,10 +54,10 @@ define double @hr_or_mul() {
 ; CHECK-LABEL: @hr_or_mul(
 ; CHECK-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast double [[TMP3]], [[CVT0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast double [[TMP4]], [[CVT0]]
 ; CHECK-NEXT:    ret double [[OP_RDX]]
 ;
   %cvt0 = uitofp i16 3 to double
