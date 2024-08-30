@@ -158,11 +158,11 @@ HLSLWaveSizeAttr *SemaHLSL::mergeWaveSizeAttr(Decl *D,
                                               const AttributeCommonInfo &AL,
                                               int Min, int Max, int Preferred,
                                               int SpelledArgsCount) {
-  if (HLSLWaveSizeAttr *NT = D->getAttr<HLSLWaveSizeAttr>()) {
-    if (NT->getMin() != Min || NT->getMax() != Max ||
-        NT->getPreferred() != Preferred ||
-        NT->getSpelledArgsCount() != SpelledArgsCount) {
-      Diag(NT->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
+  if (HLSLWaveSizeAttr *WS = D->getAttr<HLSLWaveSizeAttr>()) {
+    if (WS->getMin() != Min || WS->getMax() != Max ||
+        WS->getPreferred() != Preferred ||
+        WS->getSpelledArgsCount() != SpelledArgsCount) {
+      Diag(WS->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
       Diag(AL.getLoc(), diag::note_conflicting_attribute);
     }
     return nullptr;
