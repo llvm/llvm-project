@@ -38,7 +38,7 @@ if (CAN_USE_ASSEMBLER)
       # Supress the copyright message and 'Assembling...' message.
       foreach(LLVM_BLAKE3_ASM_FILE ${LLVM_BLAKE3_ASM_FILES})
         set_source_files_properties(${LLVM_BLAKE3_ASM_FILE}
-          PROPERTIES COMPILE_OPTIONS "/quiet;/nologo")
+          PROPERTIES COMPILE_OPTIONS "/nologo")
       endforeach()
     else()
       disable_blake3_x86_simd()
