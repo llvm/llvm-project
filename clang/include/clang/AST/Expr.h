@@ -7085,7 +7085,7 @@ private:
 ///
 /// This AST node has three sub-expressions:
 ///  - An OpaqueValueExpr with a source that is the argument lvalue expression.
-///  - An OpaqueValueExpr with a source that is a an implicit conversion
+///  - An OpaqueValueExpr with a source that is an implicit conversion
 ///    sequence from the source lvalue to the argument type.
 ///  - A BinaryOperatorExpr that assigns the first sub-expression with the
 ///    value from an implict conversion sequence from the second expression to
