@@ -122,7 +122,7 @@ bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(StringRef Name) const {
 
 std::pair<const std::size_t, const EnumConstantDecl *>
 TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
-  llvm::SmallSet<llvm::APSInt, 32> EnumValues;
+  llvm::SmallSet<llvm::APSInt, 16> EnumValues;
 
   const EnumConstantDecl *LastEnumConstant = nullptr;
   for (const auto Enumerator : ED->enumerators()) {
