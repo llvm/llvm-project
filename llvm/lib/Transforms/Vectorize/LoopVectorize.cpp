@@ -7281,6 +7281,26 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
         continue;
       IVInsts.push_back(CI);
     }
+
+    // If the given VF loop gets fully unrolled, ignore the costs of comparison
+    // and increment instruction, as they'll get simplified away
+    auto TC = CM.PSE.getSE()->getSmallConstantTripCount(OrigLoop);
+    auto *Cmp = OrigLoop->getLatchCmpInst();
+    if (Cmp && VF.isFixed() && VF.getFixedValue() == TC) {
+      CostCtx.SkipCostComputation.insert(Cmp);
+      for (Instruction *IVInst : IVInsts) {
+        bool IsSimplifiedAway = true;
+        for (auto *UIV : IVInst->users()) {
+          if (!Legal->isInductionVariable(UIV) && UIV != Cmp) {
+            IsSimplifiedAway = false;
+            break;
+          }
+        }
+        if (IsSimplifiedAway)
+          CostCtx.SkipCostComputation.insert(IVInst);
+      }
+    }
+
     for (Instruction *IVInst : IVInsts) {
       if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
         continue;
