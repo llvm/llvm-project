@@ -12178,25 +12178,6 @@ public:
         VecBase = TE->VectorizedValue;
       assert(VecBase && "Expected vectorized value.");
       UniqueBases.insert(VecBase);
-      // If the only one use is vectorized - can delete the extractelement
-      // itself.
-      if (!EI->hasOneUse() || (NumParts != 1 && count(E->Scalars, EI) > 1) ||
-          any_of(EI->users(), [&](User *U) {
-            const TreeEntry *UTE = R.getTreeEntry(U);
-            return !UTE || R.MultiNodeScalars.contains(U) ||
-                   (isa<GetElementPtrInst>(U) &&
-                    !R.areAllUsersVectorized(cast<Instruction>(U))) ||
-                   count_if(R.VectorizableTree,
-                            [&](const std::unique_ptr<TreeEntry> &TE) {
-                              return any_of(TE->UserTreeIndices,
-                                            [&](const EdgeInfo &Edge) {
-                                              return Edge.UserTE == UTE;
-                                            }) &&
-                                     is_contained(TE->Scalars, EI);
-                            }) != 1;
-          }))
-        continue;
-      R.eraseInstruction(EI);
     }
     if (NumParts == 1 || UniqueBases.size() == 1) {
       assert(VecBase && "Expected vectorized value.");
