@@ -4392,55 +4392,56 @@ bb5:
   EXPECT_EQ(NewPHI->getNumIncomingValues(), PHI->getNumIncomingValues());
 }
 
-void checkSwapOperands(sandboxir::Context &Ctx, llvm::sandboxir::CmpInst *SBCmp,
-                       llvm::CmpInst *LLVMCmp) {
-  auto OrigOp0 = SBCmp->getOperand(0);
-  auto OrigOp1 = SBCmp->getOperand(1);
+static void checkSwapOperands(sandboxir::Context &Ctx,
+                              llvm::sandboxir::CmpInst *Cmp,
+                              llvm::CmpInst *LLVMCmp) {
+  auto OrigOp0 = Cmp->getOperand(0);
+  auto OrigOp1 = Cmp->getOperand(1);
   EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp0);
   EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp1);
   // This checks the dispatch mechanism in CmpInst, as well as
   // the specific implementations.
-  SBCmp->swapOperands();
-  EXPECT_NE(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp0);
-  EXPECT_NE(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp1);
+  Cmp->swapOperands();
   EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp0);
   EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp1);
   // Undo it to keep the rest of the test consistent
-  SBCmp->swapOperands();
+  Cmp->swapOperands();
 }
 
-void checkCommonPredicates(sandboxir::CmpInst *SBCmp, llvm::CmpInst *LLVMCmp) {
+static void checkCommonPredicates(sandboxir::CmpInst *Cmp,
+                                  llvm::CmpInst *LLVMCmp) {
   // Check proper creation
-  auto SBPred = SBCmp->getPredicate();
+  auto Pred = Cmp->getPredicate();
   auto LLVMPred = LLVMCmp->getPredicate();
-  EXPECT_EQ(SBPred, LLVMPred);
+  EXPECT_EQ(Pred, LLVMPred);
   // Check setPredicate
-  SBCmp->setPredicate(llvm::CmpInst::FCMP_FALSE);
+  Cmp->setPredicate(llvm::CmpInst::FCMP_FALSE);
+  EXPECT_EQ(Cmp->getPredicate(), llvm::CmpInst::FCMP_FALSE);
   EXPECT_EQ(LLVMCmp->getPredicate(), llvm::CmpInst::FCMP_FALSE);
-  SBCmp->setPredicate(SBPred);
-  EXPECT_EQ(LLVMCmp->getPredicate(), SBPred);
+  Cmp->setPredicate(Pred);
+  EXPECT_EQ(LLVMCmp->getPredicate(), Pred);
   // Ensure the accessors properly forward to the underlying implementation
-  EXPECT_STREQ(sandboxir::CmpInst::getPredicateName(SBPred).data(),
+  EXPECT_STREQ(sandboxir::CmpInst::getPredicateName(Pred).data(),
                llvm::CmpInst::getPredicateName(LLVMPred).data());
-  EXPECT_EQ(SBCmp->isFPPredicate(), LLVMCmp->isFPPredicate());
-  EXPECT_EQ(SBCmp->isIntPredicate(), LLVMCmp->isIntPredicate());
-  EXPECT_EQ(SBCmp->getInversePredicate(), LLVMCmp->getInversePredicate());
-  EXPECT_EQ(SBCmp->getOrderedPredicate(), LLVMCmp->getOrderedPredicate());
-  EXPECT_EQ(SBCmp->getUnorderedPredicate(), LLVMCmp->getUnorderedPredicate());
-  EXPECT_EQ(SBCmp->getSwappedPredicate(), LLVMCmp->getSwappedPredicate());
-  EXPECT_EQ(SBCmp->isStrictPredicate(), LLVMCmp->isStrictPredicate());
-  EXPECT_EQ(SBCmp->isNonStrictPredicate(), LLVMCmp->isNonStrictPredicate());
-  EXPECT_EQ(SBCmp->isRelational(), LLVMCmp->isRelational());
-  if (SBCmp->isRelational()) {
-    EXPECT_EQ(SBCmp->getFlippedStrictnessPredicate(),
+  EXPECT_EQ(Cmp->isFPPredicate(), LLVMCmp->isFPPredicate());
+  EXPECT_EQ(Cmp->isIntPredicate(), LLVMCmp->isIntPredicate());
+  EXPECT_EQ(Cmp->getInversePredicate(), LLVMCmp->getInversePredicate());
+  EXPECT_EQ(Cmp->getOrderedPredicate(), LLVMCmp->getOrderedPredicate());
+  EXPECT_EQ(Cmp->getUnorderedPredicate(), LLVMCmp->getUnorderedPredicate());
+  EXPECT_EQ(Cmp->getSwappedPredicate(), LLVMCmp->getSwappedPredicate());
+  EXPECT_EQ(Cmp->isStrictPredicate(), LLVMCmp->isStrictPredicate());
+  EXPECT_EQ(Cmp->isNonStrictPredicate(), LLVMCmp->isNonStrictPredicate());
+  EXPECT_EQ(Cmp->isRelational(), LLVMCmp->isRelational());
+  if (Cmp->isRelational()) {
+    EXPECT_EQ(Cmp->getFlippedStrictnessPredicate(),
               LLVMCmp->getFlippedStrictnessPredicate());
   }
-  EXPECT_EQ(SBCmp->isCommutative(), LLVMCmp->isCommutative());
-  EXPECT_EQ(SBCmp->isTrueWhenEqual(), LLVMCmp->isTrueWhenEqual());
-  EXPECT_EQ(SBCmp->isFalseWhenEqual(), LLVMCmp->isFalseWhenEqual());
-  EXPECT_EQ(sandboxir::CmpInst::isOrdered(SBPred),
+  EXPECT_EQ(Cmp->isCommutative(), LLVMCmp->isCommutative());
+  EXPECT_EQ(Cmp->isTrueWhenEqual(), LLVMCmp->isTrueWhenEqual());
+  EXPECT_EQ(Cmp->isFalseWhenEqual(), LLVMCmp->isFalseWhenEqual());
+  EXPECT_EQ(sandboxir::CmpInst::isOrdered(Pred),
             llvm::CmpInst::isOrdered(LLVMPred));
-  EXPECT_EQ(sandboxir::CmpInst::isUnordered(SBPred),
+  EXPECT_EQ(sandboxir::CmpInst::isUnordered(Pred),
             llvm::CmpInst::isUnordered(LLVMPred));
 }
 
@@ -4478,9 +4479,9 @@ define void @foo(i32 %i0, i32 %i1) {
     EXPECT_EQ(ICmp->getSignedPredicate(), LLVMICmp->getSignedPredicate());
     EXPECT_EQ(ICmp->getUnsignedPredicate(), LLVMICmp->getUnsignedPredicate());
   }
-  auto *NewCmp = sandboxir::CmpInst::create(
-      CmpInst::OtherOps::ICmp, llvm::CmpInst::ICMP_ULE, F.getArg(0),
-      F.getArg(1), Ctx, "", &*BB->begin());
+  auto *NewCmp =
+      sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
+                                 F.getArg(1), Ctx, "", &*BB->begin());
   EXPECT_EQ(NewCmp, &*BB->begin());
 }
 
@@ -4533,14 +4534,13 @@ bb1:
 
   // create with default flags
   auto *NewFCmp = sandboxir::CmpInst::create(
-      CmpInst::OtherOps::FCmp, llvm::CmpInst::FCMP_ONE, F.getArg(0),
-      F.getArg(1), Ctx, "", &*It1);
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), Ctx, "", &*It1);
   FastMathFlags DefaultFMF = NewFCmp->getFastMathFlags();
   EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
   // create with copied flags
   auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
-      CmpInst::OtherOps::FCmp, llvm::CmpInst::FCMP_ONE, F.getArg(0),
-      F.getArg(1), CopyFrom, Ctx, "", &*It1);
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, Ctx, "",
+      &*It1);
   EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
                CopyFrom->getFastMathFlags());
 }

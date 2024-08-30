@@ -64,7 +64,6 @@ class SwitchInst;
 class ConstantInt;
 class ShuffleVectorInst;
 class CmpInst;
-
 /// The base class for IR Change classes.
 class IRChangeBase {
 protected:
@@ -127,20 +126,6 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class CmpSetPredicate : public IRChangeBase {
-  CmpInst *Cmp;
-  llvm::CmpInst::Predicate OldP;
-
-public:
-  CmpSetPredicate(CmpInst *Cmp);
-  void revert(Tracker &Tracker) final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "CmpSetPredicate"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };

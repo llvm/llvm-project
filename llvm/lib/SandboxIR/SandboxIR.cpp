@@ -2710,34 +2710,29 @@ FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
   return cast<FCmpInst>(registerValue(std::move(NewPtr)));
 }
 
-CmpInst *CmpInst::create(OtherOps Op, Predicate P, Value *S1, Value *S2,
-                         Context &Ctx, const Twine &Name,
-                         Instruction *InsertBefore) {
+CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, Context &Ctx,
+                         const Twine &Name, Instruction *InsertBefore) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  if (InsertBefore)
-    Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
   auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
-  if (Op == OtherOps::ICmp)
+  if (dyn_cast<llvm::ICmpInst>(LLVMI))
     return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
-  else {
-    assert(Op == OtherOps::FCmp);
-    return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
-  }
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
 }
 
-CmpInst *CmpInst::createWithCopiedFlags(OtherOps Op, Predicate P, Value *S1,
-                                        Value *S2, const Instruction *F,
-                                        Context &Ctx, const Twine &Name,
+CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                        const Instruction *F, Context &Ctx,
+                                        const Twine &Name,
                                         Instruction *InsertBefore) {
-  CmpInst *Inst = create(Op, P, S1, S2, Ctx, Name, InsertBefore);
+  CmpInst *Inst = create(P, S1, S2, Ctx, Name, InsertBefore);
   cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
   return Inst;
 }
 
 void CmpInst::setPredicate(Predicate P) {
-  auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<CmpSetPredicate>(this));
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
   cast<llvm::CmpInst>(Val)->setPredicate(P);
 }
 
@@ -2749,16 +2744,12 @@ void CmpInst::swapOperands() {
 }
 
 void ICmpInst::swapOperands() {
-  auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<CmpSwapOperands>(this));
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
   cast<llvm::ICmpInst>(Val)->swapOperands();
 }
 
 void FCmpInst::swapOperands() {
-  auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<CmpSwapOperands>(this));
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
   cast<llvm::FCmpInst>(Val)->swapOperands();
 }
 

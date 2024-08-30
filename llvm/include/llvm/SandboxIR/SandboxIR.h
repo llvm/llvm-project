@@ -751,8 +751,6 @@ protected:
   friend class PHINode;            // For getTopmostLLVMInstruction().
   friend class UnreachableInst;    // For getTopmostLLVMInstruction().
   friend class CmpInst;            // For getTopmostLLVMInstruction().
-  friend class ICmpInst;           // For getTopmostLLVMInstruction().
-  friend class FCmpInst;           // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -909,6 +907,7 @@ template <typename LLVMT> class SingleLLVMInstructionImpl : public Instruction {
   friend class UnaryInstruction;
   friend class CallBase;
   friend class FuncletPadInst;
+  friend class CmpInst;
 
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -3128,49 +3127,33 @@ public:
 // Wraps a member function that takes no parameters
 // LLVMValType should be the type of the wrapped class
 #define WRAP_MEMBER(FunctionName)                                              \
-  auto FunctionName() { return cast<LLVMValType>(Val)->FunctionName(); }
+  auto FunctionName() const { return cast<LLVMValType>(Val)->FunctionName(); }
 // Wraps both--a common idiom in the CmpInst classes
 #define WRAP_BOTH(FunctionName)                                                \
   WRAP_STATIC_PREDICATE(FunctionName)                                          \
   WRAP_MEMBER(FunctionName)
 
-class CmpInst : public Instruction {
+class CmpInst : public SingleLLVMInstructionImpl<llvm::CmpInst> {
 protected:
   using LLVMValType = llvm::CmpInst;
   /// Use Context::createCmpInst(). Don't call the constructor directly.
   CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
-      : Instruction(Id, Opc, CI, Ctx) {}
+      : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
-  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
-    return getOperandUseDefault(OpIdx, Verify);
-  }
-  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
-    return {cast<llvm::Instruction>(Val)};
-  }
   static Value *createCommon(Value *Cond, Value *True, Value *False,
                              const Twine &Name, IRBuilder<> &Builder,
                              Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;
-  using PredicateField = llvm::CmpInst::PredicateField;
-  using OtherOps = llvm::Instruction::OtherOps;
 
-  unsigned getUseOperandNo(const Use &Use) const final {
-    return getUseOperandNoDefault(Use);
-  }
-  unsigned getNumOfIRInstrs() const final { return 1u; }
-  static CmpInst *create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
-                         Context &Ctx, const Twine &Name = "",
+  static CmpInst *create(Predicate Pred, Value *S1, Value *S2, Context &Ctx,
+                         const Twine &Name = "",
                          Instruction *InsertBefore = nullptr);
-  static CmpInst *createWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
-                                        Value *S2,
+  static CmpInst *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
                                         const Instruction *FlagsSource,
                                         Context &Ctx, const Twine &Name = "",
                                         Instruction *InsertBefore = nullptr);
-  OtherOps getOpcode() const {
-    return static_cast<OtherOps>(Instruction::getOpcode());
-  }
   void setPredicate(Predicate P);
   void swapOperands();
 
@@ -3223,9 +3206,6 @@ public:
   }
 
 #ifndef NDEBUG
-  void verify() const final {
-    assert(isa<LLVMValType>(Val) && "Expected CmpInst!");
-  }
   void dumpOS(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const;
 #endif

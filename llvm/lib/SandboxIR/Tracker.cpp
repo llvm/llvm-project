@@ -248,16 +248,6 @@ void ShuffleVectorSetMask::dump() const {
 }
 #endif
 
-CmpSetPredicate::CmpSetPredicate(CmpInst *Cmp)
-    : IRChangeBase(), Cmp(Cmp), OldP(Cmp->getPredicate()) {}
-
-void CmpSetPredicate::revert(Tracker &Tracker) { Cmp->setPredicate(OldP); }
-
-void CmpSetPredicate::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-
 CmpSwapOperands::CmpSwapOperands(CmpInst *Cmp) : Cmp(Cmp) {}
 
 void CmpSwapOperands::revert(Tracker &Tracker) { Cmp->swapOperands(); }
