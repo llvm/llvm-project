@@ -47,8 +47,7 @@ define i64 @imm0008000000000fff() {
 ; CHECK-LABEL: imm0008000000000fff:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori $a0, $zero, 4095
-; CHECK-NEXT:    lu32i.d $a0, -524288
-; CHECK-NEXT:    lu52i.d $a0, $a0, 0
+; CHECK-NEXT:    bstrins.d $a0, $a0, 51, 51
 ; CHECK-NEXT:    ret
   ret i64 2251799813689343
 }
@@ -168,9 +167,8 @@ define i64 @imm0008000080000800() {
 define i64 @imm14000000a() {
 ; CHECK-LABEL: imm14000000a:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lu12i.w $a0, 262144
-; CHECK-NEXT:    ori $a0, $a0, 10
-; CHECK-NEXT:    lu32i.d $a0, 1
+; CHECK-NEXT:    ori $a0, $zero, 10
+; CHECK-NEXT:    bstrins.d $a0, $a0, 32, 29
 ; CHECK-NEXT:    ret
   ret i64 5368709130
 }
@@ -179,8 +177,7 @@ define i64 @imm0fff000000000fff() {
 ; CHECK-LABEL: imm0fff000000000fff:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori $a0, $zero, 4095
-; CHECK-NEXT:    lu32i.d $a0, -65536
-; CHECK-NEXT:    lu52i.d $a0, $a0, 255
+; CHECK-NEXT:    bstrins.d $a0, $a0, 59, 48
 ; CHECK-NEXT:    ret
   ret i64 1152640029630140415
 }
@@ -189,8 +186,7 @@ define i64 @immffecffffffffffec() {
 ; CHECK-LABEL: immffecffffffffffec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.w $a0, $zero, -20
-; CHECK-NEXT:    lu32i.d $a0, -196609
-; CHECK-NEXT:    lu52i.d $a0, $a0, -2
+; CHECK-NEXT:    bstrins.d $a0, $a0, 52, 48
 ; CHECK-NEXT:    ret
   ret i64 -5348024557502484
 }
@@ -199,8 +195,7 @@ define i64 @imm1c000000700000() {
 ; CHECK-LABEL: imm1c000000700000:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lu12i.w $a0, 1792
-; CHECK-NEXT:    lu32i.d $a0, -262144
-; CHECK-NEXT:    lu52i.d $a0, $a0, 1
+; CHECK-NEXT:    bstrins.d $a0, $a0, 52, 30
 ; CHECK-NEXT:    ret
   ret i64 7881299355238400
 }
@@ -210,8 +205,7 @@ define i64 @immf0f0f0f0f0f0f0f0() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lu12i.w $a0, -61681
 ; CHECK-NEXT:    ori $a0, $a0, 240
-; CHECK-NEXT:    lu32i.d $a0, 61680
-; CHECK-NEXT:    lu52i.d $a0, $a0, -241
+; CHECK-NEXT:    bstrins.d $a0, $a0, 59, 32
 ; CHECK-NEXT:    ret
   ret i64 -1085102592571150096
 }
@@ -219,10 +213,9 @@ define i64 @immf0f0f0f0f0f0f0f0() {
 define i64 @imm110000014000000a() {
 ; CHECK-LABEL: imm110000014000000a:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lu12i.w $a0, 262144
-; CHECK-NEXT:    ori $a0, $a0, 10
-; CHECK-NEXT:    lu32i.d $a0, 1
+; CHECK-NEXT:    ori $a0, $zero, 10
 ; CHECK-NEXT:    lu52i.d $a0, $a0, 272
+; CHECK-NEXT:    bstrins.d $a0, $a0, 32, 29
 ; CHECK-NEXT:    ret
   ret i64 1224979104013484042
 }
