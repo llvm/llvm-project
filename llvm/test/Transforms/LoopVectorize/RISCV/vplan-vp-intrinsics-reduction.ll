@@ -54,6 +54,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: middle.block:
 ; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result ir<[[RDX_PHI]]>, vp<[[RDX_SELECT]]>
+; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RDX_EXTRACT:%.+]]> = extract-from-end vp<[[RDX]]>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT:   EMIT branch-on-cond ir<true>
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-OUTLOOP-EMPTY:
@@ -63,7 +64,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: scalar.ph:
 ; IF-EVL-OUTLOOP-NEXT: No successors
 ; IF-EVL-OUTLOOP-EMPTY:
-; IF-EVL-OUTLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX]]>
+; IF-EVL-OUTLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX_EXTRACT]]>
 ; IF-EVL-OUTLOOP-NEXT: }
 ;
 

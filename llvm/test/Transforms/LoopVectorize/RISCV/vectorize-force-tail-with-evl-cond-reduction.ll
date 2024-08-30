@@ -294,7 +294,7 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP12:%.*]] = add i64 [[EVL_BASED_IV]], 0
 ; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[EVL_BASED_IV]], i64 0
 ; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP14:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP13]]
 ; IF-EVL-OUTLOOP-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP14]]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP15:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
