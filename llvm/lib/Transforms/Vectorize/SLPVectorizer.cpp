@@ -9796,7 +9796,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     unsigned Opcode = ShuffleOrOp;
     unsigned VecOpcode = Opcode;
     if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
-        (SrcIt != MinBWs.end() || It != MinBWs.end())) {
+        (SrcIt != MinBWs.end() || It != MinBWs.end() ||
+         SrcScalarTy != VL0->getOperand(0)->getType()->getScalarType())) {
       // Check if the values are candidates to demote.
       unsigned SrcBWSz = DL->getTypeSizeInBits(SrcScalarTy->getScalarType());
       if (SrcIt != MinBWs.end()) {
@@ -9818,6 +9819,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(BWSz > SrcBWSz && "Invalid cast!");
         VecOpcode =
             SrcIt->second.second ? Instruction::SExt : Instruction::ZExt;
+      } else {
+        VecOpcode = Instruction::SExt;
       }
     } else if (VecOpcode == Instruction::SIToFP && SrcIt != MinBWs.end() &&
                !SrcIt->second.second) {
@@ -13466,6 +13469,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           assert(BWSz > SrcBWSz && "Invalid cast!");
           VecOpcode =
               SrcIt->second.second ? Instruction::SExt : Instruction::ZExt;
+        } else {
+          VecOpcode = Instruction::SExt;
         }
       } else if (VecOpcode == Instruction::SIToFP && SrcIt != MinBWs.end() &&
                  !SrcIt->second.second) {
@@ -16166,7 +16171,7 @@ void BoUpSLP::computeMinimumValueSizes() {
                  });
     }
 
-    // If the maximum bit width we compute is less than the with of the roots'
+    // If the maximum bit width we compute is less than the width of the roots'
     // type, we can proceed with the narrowing. Otherwise, do nothing.
     if (MaxBitWidth == 0 ||
         MaxBitWidth >=
