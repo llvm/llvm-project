@@ -2710,8 +2710,9 @@ FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
   return cast<FCmpInst>(registerValue(std::move(NewPtr)));
 }
 
-CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, Context &Ctx,
-                         const Twine &Name, Instruction *InsertBefore) {
+CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name) {
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
   auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
@@ -2721,10 +2722,10 @@ CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, Context &Ctx,
 }
 
 CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                        const Instruction *F, Context &Ctx,
-                                        const Twine &Name,
-                                        Instruction *InsertBefore) {
-  CmpInst *Inst = create(P, S1, S2, Ctx, Name, InsertBefore);
+                                        const Instruction *F,
+                                        Instruction *InsertBefore, Context &Ctx,
+                                        const Twine &Name) {
+  CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
   cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
   return Inst;
 }

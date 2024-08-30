@@ -3147,13 +3147,13 @@ protected:
 public:
   using Predicate = llvm::CmpInst::Predicate;
 
-  static CmpInst *create(Predicate Pred, Value *S1, Value *S2, Context &Ctx,
-                         const Twine &Name = "",
-                         Instruction *InsertBefore = nullptr);
+  static CmpInst *create(Predicate Pred, Value *S1, Value *S2,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name = "");
   static CmpInst *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
                                         const Instruction *FlagsSource,
-                                        Context &Ctx, const Twine &Name = "",
-                                        Instruction *InsertBefore = nullptr);
+                                        Instruction *InsertBefore, Context &Ctx,
+                                        const Twine &Name = "");
   void setPredicate(Predicate P);
   void swapOperands();
 
