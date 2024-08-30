@@ -518,6 +518,53 @@ export int B = 44 + M;
   EXPECT_EQ(HSOptsA.PrebuiltModuleFiles, HSOptsB.PrebuiltModuleFiles);
 }
 
+TEST_F(PrerequisiteModulesTests, DeduplicateReusablePrerequisiteModulesTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int M = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int A = 43 + M;
+  )cpp");
+  CDB.addFile("B.cppm", R"cpp(
+export module B;
+import M;
+export int B = 44 + M;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  std::unique_ptr<PrerequisiteModules> AInfo, BInfo;
+
+  // Trying to build A and B at the same time and check we will only build
+  // module M once.
+  AsyncTaskRunner ThreadPool;
+  ThreadPool.runAsync("A Job", [&]() {
+    AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  });
+  ThreadPool.runAsync("B Job", [&]() {
+    BInfo = Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  });
+  ThreadPool.wait();
+
+  EXPECT_TRUE(AInfo);
+  EXPECT_TRUE(BInfo);
+  HeaderSearchOptions HSOptsA(TestDir);
+  HeaderSearchOptions HSOptsB(TestDir);
+  AInfo->adjustHeaderSearchOptions(HSOptsA);
+  BInfo->adjustHeaderSearchOptions(HSOptsB);
+
+  EXPECT_FALSE(HSOptsA.PrebuiltModuleFiles.empty());
+  EXPECT_FALSE(HSOptsB.PrebuiltModuleFiles.empty());
+
+  // Check that we're reusing the module files.
+  EXPECT_EQ(HSOptsA.PrebuiltModuleFiles, HSOptsB.PrebuiltModuleFiles);
+}
+
 } // namespace
 } // namespace clang::clangd
 

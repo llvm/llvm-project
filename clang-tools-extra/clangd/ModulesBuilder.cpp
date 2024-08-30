@@ -327,12 +327,90 @@ private:
                             const ThreadsafeFS &TFS,
                             PrerequisiteModules &BuiltModuleFiles);
 
+  void startBuildingModule(StringRef ModuleName) {
+    std::lock_guard<std::mutex> _(ModulesBuildingMutex);
+    BuildingModules.insert(ModuleName);
+  }
+  void endBuildingModule(StringRef ModuleName) {
+    std::lock_guard<std::mutex> _(ModulesBuildingMutex);
+    BuildingModules.erase(ModuleName);
+  }
+  bool isBuildingModule(StringRef ModuleName) {
+    std::lock_guard<std::mutex> _(ModulesBuildingMutex);
+    return BuildingModules.contains(ModuleName);
+  }
+
   const GlobalCompilationDatabase &CDB;
 
   llvm::StringMap<std::shared_ptr<ModuleFile>> ModuleFiles;
   // Mutex to guard accesses to ModuleFiles.
   std::mutex ModuleFilesMutex;
+
+  // We should only build a unique module at most at the same time.
+  // When we want to build a module, use the mutex to lock it and use the
+  // condition variable to notify other threads the status of the build results.
+  //
+  // Store the mutex and the condition_variable in shared_ptr since they may be
+  // accessed by many threads.
+  llvm::StringMap<std::shared_ptr<std::mutex>> BuildingModuleMutexes;
+  llvm::StringMap<std::shared_ptr<std::condition_variable>> BuildingModuleCVs;
+  // The building modules set. A successed built module or a failed module or
+  // an unbuilt module shouldn't be in this set.
+  // This set is helpful to control the behavior of the condition variables.
+  llvm::StringSet<> BuildingModules;
+  // Lock when we access BuildingModules, BuildingModuleMutexes and
+  // BuildingModuleCVs.
+  std::mutex ModulesBuildingMutex;
+
+  /// An RAII object to guard the process to build a specific module.
+  struct ModuleBuildingSharedOwner {
+  public:
+    ModuleBuildingSharedOwner(StringRef ModuleName,
+                              std::shared_ptr<std::mutex> &Mutex,
+                              std::shared_ptr<std::condition_variable> &CV,
+                              ModuleFileCache &Cache)
+        : ModuleName(ModuleName), Mutex(Mutex), CV(CV), Cache(Cache) {
+      IsFirstTask = (Mutex.use_count() == 2);
+    }
+
+    ~ModuleBuildingSharedOwner();
+
+    bool isUniqueBuildingOwner() { return IsFirstTask; }
+
+    std::mutex &getMutex() { return *Mutex; }
+
+    std::condition_variable &getCV() { return *CV; }
+
+  private:
+    StringRef ModuleName;
+    std::shared_ptr<std::mutex> Mutex;
+    std::shared_ptr<std::condition_variable> CV;
+    ModuleFileCache &Cache;
+    bool IsFirstTask;
+  };
+
+  ModuleBuildingSharedOwner
+  getOrCreateModuleBuildingOwner(StringRef ModuleName);
 };
+
+ModulesBuilder::ModuleFileCache::ModuleBuildingSharedOwner::
+    ~ModuleBuildingSharedOwner() {
+  std::lock_guard<std::mutex> _(Cache.ModulesBuildingMutex);
+
+  Mutex.reset();
+  CV.reset();
+
+  // Try to release the memory in builder if possible.
+  if (auto Iter = Cache.BuildingModuleCVs.find(ModuleName);
+      Iter != Cache.BuildingModuleCVs.end() &&
+      Iter->getValue().use_count() == 1)
+    Cache.BuildingModuleCVs.erase(Iter);
+
+  if (auto Iter = Cache.BuildingModuleMutexes.find(ModuleName);
+      Iter != Cache.BuildingModuleMutexes.end() &&
+      Iter->getValue().use_count() == 1)
+    Cache.BuildingModuleMutexes.erase(Iter);
+}
 
 std::shared_ptr<ModuleFile>
 ModulesBuilder::ModuleFileCache::isValidModuleFileUnlocked(
@@ -374,6 +452,28 @@ std::shared_ptr<ModuleFile> ModulesBuilder::ModuleFileCache::getValidModuleFile(
   return isValidModuleFileUnlocked(ModuleName, MDB, TFS, BuiltModuleFiles);
 }
 
+ModulesBuilder::ModuleFileCache::ModuleBuildingSharedOwner
+ModulesBuilder::ModuleFileCache::getOrCreateModuleBuildingOwner(
+    StringRef ModuleName) {
+  std::lock_guard<std::mutex> _(ModulesBuildingMutex);
+
+  auto MutexIter = BuildingModuleMutexes.find(ModuleName);
+  if (MutexIter == BuildingModuleMutexes.end())
+    MutexIter = BuildingModuleMutexes
+                    .try_emplace(ModuleName, std::make_shared<std::mutex>())
+                    .first;
+
+  auto CVIter = BuildingModuleCVs.find(ModuleName);
+  if (CVIter == BuildingModuleCVs.end())
+    CVIter = BuildingModuleCVs
+                 .try_emplace(ModuleName,
+                              std::make_shared<std::condition_variable>())
+                 .first;
+
+  return ModuleBuildingSharedOwner(ModuleName, MutexIter->getValue(),
+                                   CVIter->getValue(), *this);
+}
+
 llvm::Error ModulesBuilder::ModuleFileCache::getOrBuildModuleFile(
     StringRef ModuleName, const ThreadsafeFS &TFS, ProjectModules &MDB,
     ReusablePrerequisiteModules &BuiltModuleFiles) {
@@ -405,7 +505,40 @@ llvm::Error ModulesBuilder::ModuleFileCache::getOrBuildModuleFile(
     return llvm::Error::success();
   }
 
+  ModuleBuildingSharedOwner ModuleBuildingOwner =
+      getOrCreateModuleBuildingOwner(ModuleName);
+
+  std::condition_variable &CV = ModuleBuildingOwner.getCV();
+  std::unique_lock<std::mutex> lk(ModuleBuildingOwner.getMutex());
+  if (!ModuleBuildingOwner.isUniqueBuildingOwner()) {
+    log("Waiting other task for module {0}", ModuleName);
+    CV.wait(lk, [this, ModuleName] { return !isBuildingModule(ModuleName); });
+
+    // Try to access the built module files from other threads manually.
+    // We don't call getValidModuleFile here since it may be too heavy.
+    std::lock_guard<std::mutex> _(ModuleFilesMutex);
+    auto Iter = ModuleFiles.find(ModuleName);
+    if (Iter != ModuleFiles.end()) {
+      log("Got module file from other task building {0}", ModuleName);
+      BuiltModuleFiles.addModuleFile(Iter->second);
+      return llvm::Error::success();
+    }
+
+    // If the module file is not in the cache, it indicates that the building
+    // from other thread failed, so we give up earlier in this case to avoid
+    // wasting time.
+    return llvm::createStringError(llvm::formatv(
+        "The module file {0} may be failed to build in other thread.",
+        ModuleName));
+  }
+
   log("Building module {0}", ModuleName);
+  startBuildingModule(ModuleName);
+
+  auto _ = llvm::make_scope_exit([&]() {
+    endBuildingModule(ModuleName);
+    CV.notify_all();
+  });
 
   llvm::SmallString<256> ModuleFilesPrefix =
       getUniqueModuleFilesPath(ModuleUnitFileName);
