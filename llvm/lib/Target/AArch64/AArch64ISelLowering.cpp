@@ -29394,12 +29394,14 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   }
   case AArch64ISD::RSHRNB_I: {
     assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operand!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
     EVT VT = N->getValueType(0);
     EVT Op0VT = N->getOperand(0).getValueType();
     EVT Op1VT = N->getOperand(1).getValueType();
-    assert(VT.isVector() && Op0VT.isVector() && VT.isInteger() &&
-           Op0VT.isInteger() && "Expected integer vectors!");
+    assert(VT.isVector() && VT.isInteger() &&
+           "Expected integer vector result type!");
+    assert(Op0VT.isVector() && Op0VT.isInteger() &&
+           "Expected first operand to be an integer vector!");
     assert(VT.getSizeInBits() == Op0VT.getSizeInBits() &&
            "Expected vectors of equal size!");
     assert(VT.getVectorElementCount() == Op0VT.getVectorElementCount() * 2 &&
