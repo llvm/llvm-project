@@ -259,6 +259,45 @@ public:
       lowerToBindAndAnnotateHandle(F);
   }
 
+  void lowerTypedBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = UndefValue::get(Int32Ty);
+      Type *ElTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *RetTy = OpBuilder.getResRetType(ElTy);
+
+      std::array<Value *, 3> Args{Handle, Index0, Index1};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::BufferLoad, Args, RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      // We've switched the return type from an anonymous struct to a named one,
+      // so we need to update the types in the uses.
+      for (Use &U : make_early_inc_range(CI->uses())) {
+        // Uses other than extract value should be impossible at this point, as
+        // we shouldn't be able to call functions with the anonymous struct or
+        // store these directly.
+        auto *EVI = cast<ExtractValueInst>(U.getUser());
+        IRB.SetInsertPoint(EVI);
+        auto *NewEVI = IRB.CreateExtractValue(*OpCall, EVI->getIndices());
+
+        EVI->replaceAllUsesWith(NewEVI);
+        EVI->eraseFromParent();
+      }
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
 
@@ -276,6 +315,10 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
         lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_typedBufferLoad:
+        lowerTypedBufferLoad(F);
+        break;
       }
       Updated = true;
     }
