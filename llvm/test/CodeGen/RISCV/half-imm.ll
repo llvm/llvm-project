@@ -15,10 +15,10 @@
 ; RUN:   -target-abi lp64f < %s | FileCheck -check-prefixes=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
 ; RUN:   -target-abi ilp32 < %s \
-; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN %s
+; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN,RV32IZHINXMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
 ; RUN:   -target-abi lp64 < %s \
-; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN %s
+; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN,RV64IZHINXMIN %s
 
 ; TODO: constant pool shouldn't be necessary for RV32IZfh and RV64IZfh
 define half @half_imm() nounwind {
@@ -45,6 +45,18 @@ define half @half_imm() nounwind {
 ; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI0_0)
 ; CHECKIZFHMIN-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: half_imm:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    lui a0, 4
+; RV32IZHINXMIN-NEXT:    addi a0, a0, 512
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: half_imm:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    lui a0, 4
+; RV64IZHINXMIN-NEXT:    addiw a0, a0, 512
+; RV64IZHINXMIN-NEXT:    ret
   ret half 3.0
 }
 
