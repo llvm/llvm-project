@@ -143,14 +143,8 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.getArch() == Triple::amdgcn) {
-    if (LocalMemorySize == 0)
-      LocalMemorySize = 32768;
-
-    // Do something sensible for unspecified target.
-    if (!HasMovrel && !HasVGPRIndexMode)
-      HasMovrel = true;
-  }
+  if (TT.getArch() == Triple::amdgcn && LocalMemorySize == 0)
+    LocalMemorySize = 32768;
 
   AddressableLocalMemorySize = LocalMemorySize;
 
@@ -366,7 +360,7 @@ bool GCNSubtarget::hasMadF16() const {
 }
 
 bool GCNSubtarget::useVGPRIndexMode() const {
-  return !hasMovrel() || (EnableVGPRIndexMode && hasVGPRIndexMode());
+  return hasVGPRIndexMode() && (!hasMovrel() || EnableVGPRIndexMode);
 }
 
 bool GCNSubtarget::useAA() const { return UseAA; }

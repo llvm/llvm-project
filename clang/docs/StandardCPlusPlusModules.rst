@@ -894,6 +894,9 @@ approach:
 Reducing the duplication from textual includes is what improves compile-time
 performance.
 
+To help users to identify such issues, we add a warning ``-Wdecls-in-multiple-modules``.
+This warning is disabled by default and it needs to be explicitly enabled or by ``-Weverything``.
+
 Transitioning to modules
 ------------------------
 

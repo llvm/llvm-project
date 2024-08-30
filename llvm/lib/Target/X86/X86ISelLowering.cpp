@@ -614,6 +614,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FTAN, VT, Action);
     setOperationAction(ISD::FSQRT, VT, Action);
     setOperationAction(ISD::FPOW, VT, Action);
+    setOperationAction(ISD::FPOWI, VT, Action);
     setOperationAction(ISD::FLOG, VT, Action);
     setOperationAction(ISD::FLOG2, VT, Action);
     setOperationAction(ISD::FLOG10, VT, Action);
@@ -35781,9 +35782,7 @@ X86TargetLowering::EmitLoweredIndirectThunk(MachineInstr &MI,
   // Zero out any registers that are already used.
   for (const auto &MO : MI.operands()) {
     if (MO.isReg() && MO.isUse())
-      for (unsigned &Reg : AvailableRegs)
-        if (Reg == MO.getReg())
-          Reg = 0;
+      llvm::replace(AvailableRegs, static_cast<unsigned>(MO.getReg()), 0U);
   }
 
   // Choose the first remaining non-zero available register.

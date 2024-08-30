@@ -9,16 +9,18 @@
 #ifndef LLVM_FLOAT128
 #define LLVM_FLOAT128
 
-#include <cmath>
-
 namespace llvm {
 
-#ifdef HAS_LOGF128
-#if !defined(__LONG_DOUBLE_IBM128__) && (__SIZEOF_INT128__ == 16)
-typedef decltype(logf128(0.)) float128;
+#if defined(__clang__) && defined(__FLOAT128__) &&                             \
+    defined(__SIZEOF_INT128__) && !defined(__LONG_DOUBLE_IBM128__)
 #define HAS_IEE754_FLOAT128
+typedef __float128 float128;
+#elif defined(__FLOAT128__) && defined(__SIZEOF_INT128__) &&                   \
+    !defined(__LONG_DOUBLE_IBM128__) &&                                        \
+    (defined(__GNUC__) || defined(__GNUG__))
+#define HAS_IEE754_FLOAT128
+typedef _Float128 float128;
 #endif
-#endif // HAS_LOGF128
 
 } // namespace llvm
 #endif // LLVM_FLOAT128

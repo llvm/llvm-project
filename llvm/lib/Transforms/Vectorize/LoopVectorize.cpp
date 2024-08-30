@@ -61,6 +61,7 @@
 #include "VPlanHCFGBuilder.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -4466,7 +4467,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       if (EphemeralRecipes.contains(&R))
         continue;
       // Continue early if the recipe is considered to not produce a vector
-      //  result. Note that this includes VPInstruction where some opcodes may
+      // result. Note that this includes VPInstruction where some opcodes may
       // produce a vector, to preserve existing behavior as VPInstructions model
       // aspects not directly mapped to existing IR instructions.
       switch (R.getVPDefID()) {
@@ -6528,6 +6529,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
+    if (!isa<Constant>(Op2) && PSE.getSE()->isSCEVable(Op2->getType()) &&
+        isa<SCEVConstant>(PSE.getSCEV(Op2))) {
+      Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
+    }
     auto Op2Info = TTI.getOperandInfo(Op2);
     if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
         Legal->isInvariant(Op2))
@@ -7072,13 +7077,10 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
-                                               ElementCount VF) const {
-  InstructionCost Cost = 0;
-  LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
-                        LLVMCtx, CM);
-
+InstructionCost
+LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
+                                          VPCostContext &CostCtx) const {
+  InstructionCost Cost;
   // Cost modeling for inductions is inaccurate in the legacy cost model
   // compared to the recipes that are generated. To match here initially during
   // VPlan cost model bring up directly use the induction costs from the legacy
@@ -7111,7 +7113,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
       IVInsts.push_back(CI);
     }
     for (Instruction *IVInst : IVInsts) {
-      if (!CostCtx.SkipCostComputation.insert(IVInst).second)
+      if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
         continue;
       InstructionCost InductionCost = CostCtx.getLegacyCost(IVInst, VF);
       LLVM_DEBUG({
@@ -7119,6 +7121,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
                << ": induction instruction " << *IVInst << "\n";
       });
       Cost += InductionCost;
+      CostCtx.SkipCostComputation.insert(IVInst);
     }
   }
 
@@ -7218,17 +7221,81 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   // TODO: Compute cost of branches for each replicate region in the VPlan,
   // which is more accurate than the legacy cost model.
   for (BasicBlock *BB : OrigLoop->blocks()) {
-    if (BB == OrigLoop->getLoopLatch())
+    if (CostCtx.skipCostComputation(BB->getTerminator(), VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(BB->getTerminator());
+    if (BB == OrigLoop->getLoopLatch())
+      continue;
     auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
     Cost += BranchCost;
   }
+  return Cost;
+}
+
+InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
+                                               ElementCount VF) const {
+  LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
+                        LLVMCtx, CM);
+  InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
+
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");
   return Cost;
 }
+
+#ifndef NDEBUG
+/// Return true if the original loop \ TheLoop contains any instructions that do
+/// not have corresponding recipes in \p Plan and are not marked to be ignored
+/// in \p CostCtx. This means the VPlan contains simplification that the legacy
+/// cost-model did not account for.
+static bool
+planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
+                                      VPCostContext &CostCtx, Loop *TheLoop,
+                                      LoopVectorizationCostModel &CM) {
+  // First collect all instructions for the recipes in Plan.
+  auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
+    if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
+      return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+    if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
+      return &WidenMem->getIngredient();
+    return nullptr;
+  };
+
+  DenseSet<Instruction *> SeenInstrs;
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (auto *IR = dyn_cast<VPInterleaveRecipe>(&R)) {
+        auto *IG = IR->getInterleaveGroup();
+        unsigned NumMembers = IG->getNumMembers();
+        for (unsigned I = 0; I != NumMembers; ++I) {
+          if (Instruction *M = IG->getMember(I))
+            SeenInstrs.insert(M);
+        }
+        continue;
+      }
+      if (Instruction *UI = GetInstructionForCost(&R))
+        SeenInstrs.insert(UI);
+    }
+  }
+
+  // Return true if the loop contains any instructions that are not also part of
+  // the VPlan or are skipped for VPlan-based cost computations. This indicates
+  // that the VPlan contains extra simplifications.
+  return any_of(
+      TheLoop->blocks(), [&SeenInstrs, VF, &CostCtx, &CM](BasicBlock *BB) {
+        return any_of(*BB, [&SeenInstrs, VF, &CostCtx, &CM](Instruction &I) {
+          if (isa<PHINode>(&I))
+            return false;
+          return !SeenInstrs.contains(&I) &&
+                 !CostCtx.skipCostComputation(&I, true) &&
+                 !CM.canTruncateToMinimalBitwidth(&I, VF);
+        });
+      });
+}
+#endif
 
 VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   if (VPlans.empty())
@@ -7285,7 +7352,20 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // cost-model and will be retired once the VPlan-based cost-model is
   // stabilized.
   VectorizationFactor LegacyVF = selectVectorizationFactor();
-  assert(BestFactor.Width == LegacyVF.Width &&
+  VPlan &BestPlan = getPlanFor(BestFactor.Width);
+
+  // Pre-compute the cost and use it to check if BestPlan contains any
+  // simplifications not accounted for in the legacy cost model. If that's the
+  // case, don't trigger the assertion, as the extra simplifications may cause a
+  // different VF to be picked by the VPlan-based cost model.
+  LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
+                        LLVMCtx, CM);
+  precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
+  assert((BestFactor.Width == LegacyVF.Width ||
+          planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
+                                                BestFactor.Width, CostCtx,
+                                                OrigLoop, CM)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
@@ -7830,11 +7910,7 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
 iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
 VPRecipeBuilder::mapToVPValues(User::op_range Operands) {
   std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-    if (auto *I = dyn_cast<Instruction>(Op)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
-    }
-    return Plan.getOrAddLiveIn(Op);
+    return getVPValueOrAddLiveIn(Op);
   };
   return map_range(Operands, Fn);
 }
@@ -7850,7 +7926,7 @@ void VPRecipeBuilder::createSwitchEdgeMasks(SwitchInst *SI) {
   // Create masks where the terminator in Src is a switch. We create mask for
   // all edges at the same time. This is more efficient, as we can create and
   // collect compares for all cases once.
-  VPValue *Cond = getVPValueOrAddLiveIn(SI->getCondition(), Plan);
+  VPValue *Cond = getVPValueOrAddLiveIn(SI->getCondition());
   BasicBlock *DefaultDst = SI->getDefaultDest();
   MapVector<BasicBlock *, SmallVector<VPValue *>> Dst2Compares;
   for (auto &C : SI->cases()) {
@@ -7861,7 +7937,7 @@ void VPRecipeBuilder::createSwitchEdgeMasks(SwitchInst *SI) {
     if (Dst == DefaultDst)
       continue;
     auto I = Dst2Compares.insert({Dst, {}});
-    VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue(), Plan);
+    VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue());
     I.first->second.push_back(Builder.createICmp(CmpInst::ICMP_EQ, Cond, V));
   }
 
@@ -7924,7 +8000,7 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
   if (OrigLoop->isLoopExiting(Src))
     return EdgeMaskCache[Edge] = SrcMask;
 
-  VPValue *EdgeMask = getVPValueOrAddLiveIn(BI->getCondition(), Plan);
+  VPValue *EdgeMask = getVPValueOrAddLiveIn(BI->getCondition());
   assert(EdgeMask && "No Edge Mask found for condition");
 
   if (BI->getSuccessor(0) != Dst)
@@ -8535,7 +8611,7 @@ static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
   for (PHINode &ExitPhi : ExitBB->phis()) {
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
-    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
+    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
     // Exit values for inductions are computed and updated outside of VPlan and
     // independent of induction recipes.
     // TODO: Compute induction exit values in VPlan, use VPLiveOuts to update
@@ -8577,6 +8653,11 @@ addUsersInExitBlock(VPlan &Plan,
 
   // Introduce VPUsers modeling the exit values.
   for (const auto &[ExitPhi, V] : ExitingValuesToFix) {
+    // Pass live-in values used by exit phis directly through to the live-out.
+    if (V->isLiveIn()) {
+      Plan.addLiveOut(ExitPhi, V);
+      continue;
+    }
     VPValue *Ext = B.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {V, Plan.getOrAddLiveIn(ConstantInt::get(
@@ -8917,35 +8998,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  for (const auto *IG : InterleaveGroups) {
-    auto *Recipe =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
-    SmallVector<VPValue *, 4> StoredValues;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
-        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
-        StoredValues.push_back(StoreR->getStoredValue());
-      }
-
-    bool NeedsMaskForGaps =
-        IG->requiresScalarEpilogue() && !CM.isScalarEpilogueAllowed();
-    assert((!NeedsMaskForGaps || useMaskedInterleavedAccesses(CM.TTI)) &&
-           "masked interleaved groups are not allowed.");
-    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                                        Recipe->getMask(), NeedsMaskForGaps);
-    VPIG->insertBefore(Recipe);
-    unsigned J = 0;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *Member = IG->getMember(i)) {
-        VPRecipeBase *MemberR = RecipeBuilder.getRecipe(Member);
-        if (!Member->getType()->isVoidTy()) {
-          VPValue *OriginalV = MemberR->getVPSingleValue();
-          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
-          J++;
-        }
-        MemberR->eraseFromParent();
-      }
-  }
+  VPlanTransforms::createInterleaveGroups(InterleaveGroups, RecipeBuilder,
+                                          CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -9425,102 +9479,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
-}
-
-/// Use all-true mask for reverse rather than actual mask, as it avoids a
-/// dependence w/o affecting the result.
-static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
-                                     Value *EVL, const Twine &Name) {
-  VectorType *ValTy = cast<VectorType>(Operand->getType());
-  Value *AllTrueMask =
-      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
-  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
-                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
-}
-
-void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
-  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                          "explicit vector length.");
-  auto *LI = cast<LoadInst>(&Ingredient);
-
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGather = !isConsecutive();
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-  CallInst *NewLI;
-  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  Value *Addr = State.get(getAddr(), 0, !CreateGather);
-  Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask()) {
-    Mask = State.get(VPMask, 0);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
-  } else {
-    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  }
-
-  if (CreateGather) {
-    NewLI =
-        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
-                                nullptr, "wide.masked.gather");
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Load, DataTy, Addr, "vp.op.load"));
-  }
-  NewLI->addParamAttr(
-      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-  State.addMetadata(NewLI, LI);
-  Instruction *Res = NewLI;
-  if (isReverse())
-    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
-  State.set(this, Res, 0);
-}
-
-void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
-  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                          "explicit vector length.");
-  auto *SI = cast<StoreInst>(&Ingredient);
-
-  VPValue *StoredValue = getStoredValue();
-  bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-
-  CallInst *NewSI = nullptr;
-  Value *StoredVal = State.get(StoredValue, 0);
-  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  if (isReverse())
-    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
-  Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask()) {
-    Mask = State.get(VPMask, 0);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
-  } else {
-    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  }
-  Value *Addr = State.get(getAddr(), 0, !CreateScatter);
-  if (CreateScatter) {
-    NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
-                                    Intrinsic::vp_scatter,
-                                    {StoredVal, Addr, Mask, EVL});
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Store, Type::getVoidTy(EVL->getContext()),
-        {StoredVal, Addr}));
-  }
-  NewSI->addParamAttr(
-      1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
-  State.addMetadata(NewSI, SI);
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising

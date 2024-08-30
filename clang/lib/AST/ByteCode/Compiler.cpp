@@ -1344,6 +1344,16 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
+  QualType QT = E->getType();
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
+  if (QT->isVoidType()) {
+    if (Inits.size() == 0)
+      return true;
+    return this->emitInvalid(E);
+  }
+
   // Handle discarding first.
   if (DiscardResult) {
     for (const Expr *Init : Inits) {
@@ -1352,13 +1362,6 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     }
     return true;
   }
-
-  QualType QT = E->getType();
-  if (const auto *AT = QT->getAs<AtomicType>())
-    QT = AT->getValueType();
-
-  if (QT->isVoidType())
-    return this->emitInvalid(E);
 
   // Primitive values.
   if (std::optional<PrimType> T = classify(QT)) {
@@ -3262,9 +3265,6 @@ template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
@@ -3275,9 +3275,12 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   if (E->getType().isNull())
     return false;
 
+  if (E->getType()->isVoidType())
+    return this->discard(E);
+
   // Create local variable to hold the return value.
-  if (!E->getType()->isVoidType() && !E->isGLValue() &&
-      !E->getType()->isAnyComplexType() && !classify(E->getType())) {
+  if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
+      !classify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -3297,9 +3300,6 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
-
-  if (E->containsErrors())
-    return this->emitError(E);
 
   if (!this->checkLiteralType(E))
     return false;
@@ -4385,11 +4385,6 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
-  if (IS->isNonNegatedConsteval())
-    return visitStmt(IS->getThen());
-  if (IS->isNegatedConsteval())
-    return IS->getElse() ? visitStmt(IS->getElse()) : true;
-
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -4398,8 +4393,19 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  if (!this->visitBool(IS->getCond()))
-    return false;
+  // Compile condition.
+  if (IS->isNonNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+  } else if (IS->isNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+    if (!this->emitInv(IS))
+      return false;
+  } else {
+    if (!this->visitBool(IS->getCond()))
+      return false;
+  }
 
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
@@ -4985,6 +4991,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
+  if (SubExpr->getType()->isVectorType())
+    return this->VisitVectorUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -5171,7 +5179,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult || E->getType()->isVoidType())
+    if (DiscardResult)
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x
@@ -5303,6 +5311,110 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
     return this->emitInvalid(E);
   }
 
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isVectorType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  auto UnaryOp = E->getOpcode();
+  if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
+      UnaryOp != UO_Not)
+    return this->emitInvalid(E);
+
+  // Nothing to do here.
+  if (UnaryOp == UO_Plus)
+    return this->delegate(SubExpr);
+
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset =
+      this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SubExprOffset, E))
+    return false;
+
+  const auto *VecTy = SubExpr->getType()->getAs<VectorType>();
+  PrimType ElemT = classifyVectorElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (UnaryOp) {
+  case UO_Minus:
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  case UO_LNot: { // !x
+    // In C++, the logic operators !, &&, || are available for vectors. !v is
+    // equivalent to v == 0.
+    //
+    // The result of the comparison is a vector of the same width and number of
+    // elements as the comparison operands with a signed integral element type.
+    //
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    QualType ResultVecTy = E->getType();
+    PrimType ResultVecElemT =
+        classifyPrim(ResultVecTy->getAs<VectorType>()->getElementType());
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitInv(E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (ElemT != ResultVecElemT &&
+          !this->emitPrimCast(ElemT, ResultVecElemT, ResultVecTy, E))
+        return false;
+      if (!this->emitInitElem(ResultVecElemT, I, E))
+        return false;
+    }
+    break;
+  }
+  case UO_Not: // ~x
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (ElemT == PT_Bool) {
+        if (!this->emitInv(E))
+          return false;
+      } else {
+        if (!this->emitComp(ElemT, E))
+          return false;
+      }
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported unary operators should be handled up front");
+  }
   return true;
 }
 

@@ -791,12 +791,7 @@ define float @reduce_fadd_16xi32_prefix5(ptr %p) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 5
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -880,7 +875,7 @@ define float @reduce_fadd_4xi32_non_associative(ptr %p) {
 ; CHECK-NEXT:    vfmv.f.s fa5, v9
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fadd.s fa0, fa4, fa5

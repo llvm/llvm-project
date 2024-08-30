@@ -121,9 +121,7 @@ FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
 
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
                                        CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(TM, OptLevel) {
-  EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
-}
+    : SelectionDAGISel(TM, OptLevel) {}
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();

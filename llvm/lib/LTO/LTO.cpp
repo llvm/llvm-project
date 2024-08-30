@@ -177,7 +177,8 @@ std::string llvm::computeLTOCacheKey(
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is
   // sensitive to link order, so include that as well.
-  using ImportMapIteratorTy = FunctionImporter::ImportMapTy::const_iterator;
+  using ImportMapIteratorTy =
+      FunctionImporter::ImportMapTy::ImportMapTyImpl::const_iterator;
   struct ImportModule {
     ImportMapIteratorTy ModIt;
     const ModuleSummaryIndex::ModuleInfo *ModInfo;
@@ -191,10 +192,10 @@ std::string llvm::computeLTOCacheKey(
   };
 
   std::vector<ImportModule> ImportModulesVector;
-  ImportModulesVector.reserve(ImportList.size());
+  ImportModulesVector.reserve(ImportList.getImportMap().size());
 
-  for (ImportMapIteratorTy It = ImportList.begin(); It != ImportList.end();
-       ++It) {
+  for (ImportMapIteratorTy It = ImportList.getImportMap().begin();
+       It != ImportList.getImportMap().end(); ++It) {
     ImportModulesVector.push_back({It, Index.getModule(It->getFirst())});
   }
   // Order using module hash, to be both independent of module name and
@@ -1398,7 +1399,7 @@ public:
   Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
-    std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
     GVSummaryPtrSet DeclarationSummaries;
 
     std::error_code EC;
@@ -1715,8 +1716,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Synthesize entry counts for functions in the CombinedIndex.
   computeSyntheticCounts(ThinLTO.CombinedIndex);
 
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(
-      ThinLTO.ModuleMap.size());
+  FunctionImporter::ImportListsTy ImportLists(ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(
       ThinLTO.ModuleMap.size());
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;

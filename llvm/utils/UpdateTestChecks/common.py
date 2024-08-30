@@ -636,6 +636,7 @@ def get_triple_from_march(march):
         "amdgcn": "amdgcn",
         "r600": "r600",
         "mips": "mips",
+        "nvptx64": "nvptx64",
         "sparc": "sparc",
         "hexagon": "hexagon",
         "ve": "ve",

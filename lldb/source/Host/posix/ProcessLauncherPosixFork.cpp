@@ -274,8 +274,8 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
   ::pid_t pid = ::fork();
   if (pid == -1) {
     // Fork failed
-    error.SetErrorStringWithFormatv("Fork failed with error message: {0}",
-                                    llvm::sys::StrError());
+    error = Status::FromErrorStringWithFormatv(
+        "Fork failed with error message: {0}", llvm::sys::StrError());
     return HostProcess(LLDB_INVALID_PROCESS_ID);
   }
   if (pid == 0) {
@@ -302,7 +302,7 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (buf.empty())
     return HostProcess(pid); // No error. We're done.
 
-  error.SetErrorString(buf);
+  error = Status(buf.str().str());
 
   llvm::sys::RetryAfterSignal(-1, waitpid, pid, nullptr, 0);
 
