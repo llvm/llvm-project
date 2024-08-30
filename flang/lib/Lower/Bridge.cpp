@@ -2349,8 +2349,11 @@ private:
       fir::IfOp topIfOp, currentIfOp;
       for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
         auto genIfOp = [&](mlir::Value cond) {
-          auto ifOp =
-              builder->create<fir::IfOp>(toLocation(), cond, /*withElse=*/true);
+          Fortran::lower::pft::Evaluation &succ = *e.controlSuccessor;
+          bool hasElse = succ.isA<Fortran::parser::ElseIfStmt>() ||
+                         succ.isA<Fortran::parser::ElseStmt>();
+          auto ifOp = builder->create<fir::IfOp>(toLocation(), cond,
+                                                 /*withElseRegion=*/hasElse);
           builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
           return ifOp;
         };
