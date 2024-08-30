@@ -2864,6 +2864,12 @@ private:
   /// avoid issues with def-use order.
   Value *vectorizeTree(TreeEntry *E, bool PostponedPHIs);
 
+  TreeEntry *getMatchedVectorizedOperand(const TreeEntry *E, unsigned NodeIdx);
+  const TreeEntry *getMatchedVectorizedOperand(const TreeEntry *E,
+                                               unsigned NodeIdx) const {
+    return const_cast<BoUpSLP *>(this)->getMatchedVectorizedOperand(E, NodeIdx);
+  }
+
   /// Vectorize a single entry in the tree, the \p Idx-th operand of the entry
   /// \p E.
   /// \param PostponedPHIs true, if need to postpone emission of phi nodes to
@@ -6964,6 +6970,55 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
   }
 
+  // Check if this is a duplicate of another entry.
+  if (TreeEntry *E = getTreeEntry(S.OpValue)) {
+    LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
+    if (!E->isSame(VL)) {
+      auto It = MultiNodeScalars.find(S.OpValue);
+      if (It != MultiNodeScalars.end()) {
+        auto *TEIt = find_if(It->getSecond(),
+                             [&](TreeEntry *ME) { return ME->isSame(VL); });
+        if (TEIt != It->getSecond().end())
+          E = *TEIt;
+        else
+          E = nullptr;
+      } else {
+        E = nullptr;
+      }
+    }
+    if (!E) {
+      if (!doesNotNeedToBeScheduled(S.OpValue)) {
+        LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
+        if (TryToFindDuplicates(S))
+          newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
+                       ReuseShuffleIndices);
+        return;
+      }
+      SmallPtrSet<const TreeEntry *, 4> Nodes;
+      Nodes.insert(getTreeEntry(S.OpValue));
+      for (const TreeEntry *E : MultiNodeScalars.lookup(S.OpValue))
+        Nodes.insert(E);
+      SmallPtrSet<Value *, 8> Values(VL.begin(), VL.end());
+      if (any_of(Nodes, [&](const TreeEntry *E) {
+            return all_of(E->Scalars,
+                          [&](Value *V) { return Values.contains(V); });
+          })) {
+        LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
+        if (TryToFindDuplicates(S))
+          newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
+                       ReuseShuffleIndices);
+        return;
+      }
+    } else {
+      // Record the reuse of the tree node.  FIXME, currently this is only used
+      // to properly draw the graph rather than for the actual vectorization.
+      E->UserTreeIndices.push_back(UserTreeIdx);
+      LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.OpValue
+                        << ".\n");
+      return;
+    }
+  }
+
   // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
   // a load), in which case peek through to include it in the tree, without
   // ballooning over-budget.
@@ -7094,55 +7149,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // We now know that this is a vector of instructions of the same type from
   // the same block.
-
-  // Check if this is a duplicate of another entry.
-  if (TreeEntry *E = getTreeEntry(S.OpValue)) {
-    LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
-    if (!E->isSame(VL)) {
-      auto It = MultiNodeScalars.find(S.OpValue);
-      if (It != MultiNodeScalars.end()) {
-        auto *TEIt = find_if(It->getSecond(),
-                             [&](TreeEntry *ME) { return ME->isSame(VL); });
-        if (TEIt != It->getSecond().end())
-          E = *TEIt;
-        else
-          E = nullptr;
-      } else {
-        E = nullptr;
-      }
-    }
-    if (!E) {
-      if (!doesNotNeedToBeScheduled(S.OpValue)) {
-        LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
-        if (TryToFindDuplicates(S))
-          newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        return;
-      }
-      SmallPtrSet<const TreeEntry *, 4> Nodes;
-      Nodes.insert(getTreeEntry(S.OpValue));
-      for (const TreeEntry *E : MultiNodeScalars.lookup(S.OpValue))
-        Nodes.insert(E);
-      SmallPtrSet<Value *, 8> Values(VL.begin(), VL.end());
-      if (any_of(Nodes, [&](const TreeEntry *E) {
-            return all_of(E->Scalars,
-                          [&](Value *V) { return Values.contains(V); });
-          })) {
-        LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
-        if (TryToFindDuplicates(S))
-          newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        return;
-      }
-    } else {
-      // Record the reuse of the tree node.  FIXME, currently this is only used
-      // to properly draw the graph rather than for the actual vectorization.
-      E->UserTreeIndices.push_back(UserTreeIdx);
-      LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.OpValue
-                        << ".\n");
-      return;
-    }
-  }
 
   // Check that none of the instructions in the bundle are already in the tree.
   for (Value *V : VL) {
@@ -9362,22 +9368,8 @@ public:
 
 const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
                                                    unsigned Idx) const {
-  Value *Op = E->getOperand(Idx).front();
-  if (const TreeEntry *TE = getTreeEntry(Op)) {
-    if (find_if(TE->UserTreeIndices, [&](const EdgeInfo &EI) {
-          return EI.EdgeIdx == Idx && EI.UserTE == E;
-        }) != TE->UserTreeIndices.end())
-      return TE;
-    auto MIt = MultiNodeScalars.find(Op);
-    if (MIt != MultiNodeScalars.end()) {
-      for (const TreeEntry *TE : MIt->second) {
-        if (find_if(TE->UserTreeIndices, [&](const EdgeInfo &EI) {
-              return EI.EdgeIdx == Idx && EI.UserTE == E;
-            }) != TE->UserTreeIndices.end())
-          return TE;
-      }
-    }
-  }
+  if (const TreeEntry *VE = getMatchedVectorizedOperand(E, Idx))
+    return VE;
   const auto *It =
       find_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() &&
@@ -12521,10 +12513,9 @@ public:
   }
 };
 
-Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
-                                 bool PostponedPHIs) {
-  ValueList &VL = E->getOperand(NodeIdx);
-  const unsigned VF = VL.size();
+BoUpSLP::TreeEntry *BoUpSLP::getMatchedVectorizedOperand(const TreeEntry *E,
+                                                         unsigned NodeIdx) {
+  ArrayRef<Value *> VL = E->getOperand(NodeIdx);
   InstructionsState S = getSameOpcode(VL, *TLI);
   // Special processing for GEPs bundle, which may include non-gep values.
   if (!S.getOpcode() && VL.front()->getType()->isPointerTy()) {
@@ -12532,109 +12523,113 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
     if (It != VL.end())
       S = getSameOpcode(*It, *TLI);
   }
-  if (S.getOpcode()) {
-    auto CheckSameVE = [&](const TreeEntry *VE) {
-      return VE->isSame(VL) &&
-             (any_of(VE->UserTreeIndices,
-                     [E, NodeIdx](const EdgeInfo &EI) {
-                       return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
-                     }) ||
-              any_of(VectorizableTree,
-                     [E, NodeIdx, VE](const std::unique_ptr<TreeEntry> &TE) {
-                       return TE->isOperandGatherNode({E, NodeIdx}) &&
-                              VE->isSame(TE->Scalars);
-                     }));
-    };
-    TreeEntry *VE = getTreeEntry(S.OpValue);
-    bool IsSameVE = VE && CheckSameVE(VE);
-    if (!IsSameVE) {
-      auto It = MultiNodeScalars.find(S.OpValue);
-      if (It != MultiNodeScalars.end()) {
-        auto *I = find_if(It->getSecond(), [&](const TreeEntry *TE) {
-          return TE != VE && CheckSameVE(TE);
-        });
-        if (I != It->getSecond().end()) {
-          VE = *I;
-          IsSameVE = true;
-        }
-      }
-    }
-    if (IsSameVE) {
-      auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
-        // V may be affected by MinBWs.
-        // We want ShuffleInstructionBuilder to correctly support REVEC. The key
-        // factor is the number of elements, not their type.
-        Type *ScalarTy = cast<VectorType>(V->getType())->getElementType();
-        unsigned NumElements = getNumElements(VL.front()->getType());
-        ShuffleInstructionBuilder ShuffleBuilder(
-            NumElements != 1 ? FixedVectorType::get(ScalarTy, NumElements)
-                             : ScalarTy,
-            Builder, *this);
-        ShuffleBuilder.add(V, Mask);
-        SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
-            E->CombinedEntriesWithIndices.size());
-        transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
-                  [&](const auto &P) {
-                    return std::make_pair(VectorizableTree[P.first].get(),
-                                          P.second);
-                  });
-        return ShuffleBuilder.finalize(std::nullopt, SubVectors);
-      };
-      Value *V = vectorizeTree(VE, PostponedPHIs);
-      if (VF * getNumElements(VL[0]->getType()) !=
-          cast<FixedVectorType>(V->getType())->getNumElements()) {
-        if (!VE->ReuseShuffleIndices.empty()) {
-          // Reshuffle to get only unique values.
-          // If some of the scalars are duplicated in the vectorization
-          // tree entry, we do not vectorize them but instead generate a
-          // mask for the reuses. But if there are several users of the
-          // same entry, they may have different vectorization factors.
-          // This is especially important for PHI nodes. In this case, we
-          // need to adapt the resulting instruction for the user
-          // vectorization factor and have to reshuffle it again to take
-          // only unique elements of the vector. Without this code the
-          // function incorrectly returns reduced vector instruction with
-          // the same elements, not with the unique ones.
+  if (!S.getOpcode())
+    return nullptr;
+  auto CheckSameVE = [&](const TreeEntry *VE) {
+    return VE->isSame(VL) &&
+           (any_of(VE->UserTreeIndices,
+                   [E, NodeIdx](const EdgeInfo &EI) {
+                     return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
+                   }) ||
+            any_of(VectorizableTree,
+                   [E, NodeIdx, VE](const std::unique_ptr<TreeEntry> &TE) {
+                     return TE->isOperandGatherNode(
+                                {const_cast<TreeEntry *>(E), NodeIdx}) &&
+                            VE->isSame(TE->Scalars);
+                   }));
+  };
+  TreeEntry *VE = getTreeEntry(S.OpValue);
+  if (VE && CheckSameVE(VE))
+    return VE;
+  auto It = MultiNodeScalars.find(S.OpValue);
+  if (It != MultiNodeScalars.end()) {
+    auto *I = find_if(It->getSecond(), [&](const TreeEntry *TE) {
+      return TE != VE && CheckSameVE(TE);
+    });
+    if (I != It->getSecond().end())
+      return *I;
+  }
+  return nullptr;
+}
 
-          // block:
-          // %phi = phi <2 x > { .., %entry} {%shuffle, %block}
-          // %2 = shuffle <2 x > %phi, poison, <4 x > <1, 1, 0, 0>
-          // ... (use %2)
-          // %shuffle = shuffle <2 x> %2, poison, <2 x> {2, 0}
-          // br %block
-          SmallVector<int> Mask(VF, PoisonMaskElem);
-          for (auto [I, V] : enumerate(VL)) {
-            if (isa<PoisonValue>(V))
-              continue;
-            Mask[I] = VE->findLaneForValue(V);
-          }
-          V = FinalShuffle(V, Mask);
-        } else {
-          assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
-                 "Expected vectorization factor less "
-                 "than original vector size.");
-          SmallVector<int> UniformMask(VF, 0);
-          std::iota(UniformMask.begin(), UniformMask.end(), 0);
-          V = FinalShuffle(V, UniformMask);
+Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
+                                 bool PostponedPHIs) {
+  ValueList &VL = E->getOperand(NodeIdx);
+  const unsigned VF = VL.size();
+  if (TreeEntry *VE = getMatchedVectorizedOperand(E, NodeIdx)) {
+    auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
+      // V may be affected by MinBWs.
+      // We want ShuffleInstructionBuilder to correctly support REVEC. The key
+      // factor is the number of elements, not their type.
+      Type *ScalarTy = cast<VectorType>(V->getType())->getElementType();
+      unsigned NumElements = getNumElements(VL.front()->getType());
+      ShuffleInstructionBuilder ShuffleBuilder(
+          NumElements != 1 ? FixedVectorType::get(ScalarTy, NumElements)
+                           : ScalarTy,
+          Builder, *this);
+      ShuffleBuilder.add(V, Mask);
+      SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
+          E->CombinedEntriesWithIndices.size());
+      transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
+                [&](const auto &P) {
+                  return std::make_pair(VectorizableTree[P.first].get(),
+                                        P.second);
+                });
+      return ShuffleBuilder.finalize(std::nullopt, SubVectors);
+    };
+    Value *V = vectorizeTree(VE, PostponedPHIs);
+    if (VF * getNumElements(VL[0]->getType()) !=
+        cast<FixedVectorType>(V->getType())->getNumElements()) {
+      if (!VE->ReuseShuffleIndices.empty()) {
+        // Reshuffle to get only unique values.
+        // If some of the scalars are duplicated in the vectorization
+        // tree entry, we do not vectorize them but instead generate a
+        // mask for the reuses. But if there are several users of the
+        // same entry, they may have different vectorization factors.
+        // This is especially important for PHI nodes. In this case, we
+        // need to adapt the resulting instruction for the user
+        // vectorization factor and have to reshuffle it again to take
+        // only unique elements of the vector. Without this code the
+        // function incorrectly returns reduced vector instruction with
+        // the same elements, not with the unique ones.
+
+        // block:
+        // %phi = phi <2 x > { .., %entry} {%shuffle, %block}
+        // %2 = shuffle <2 x > %phi, poison, <4 x > <1, 1, 0, 0>
+        // ... (use %2)
+        // %shuffle = shuffle <2 x> %2, poison, <2 x> {2, 0}
+        // br %block
+        SmallVector<int> Mask(VF, PoisonMaskElem);
+        for (auto [I, V] : enumerate(VL)) {
+          if (isa<PoisonValue>(V))
+            continue;
+          Mask[I] = VE->findLaneForValue(V);
         }
+        V = FinalShuffle(V, Mask);
+      } else {
+        assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
+               "Expected vectorization factor less "
+               "than original vector size.");
+        SmallVector<int> UniformMask(VF, 0);
+        std::iota(UniformMask.begin(), UniformMask.end(), 0);
+        V = FinalShuffle(V, UniformMask);
       }
-      // Need to update the operand gather node, if actually the operand is not a
-      // vectorized node, but the buildvector/gather node, which matches one of
-      // the vectorized nodes.
-      if (find_if(VE->UserTreeIndices, [&](const EdgeInfo &EI) {
-            return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
-          }) == VE->UserTreeIndices.end()) {
-        auto *It = find_if(
-            VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-              return TE->isGather() &&
-                     TE->UserTreeIndices.front().UserTE == E &&
-                     TE->UserTreeIndices.front().EdgeIdx == NodeIdx;
-            });
-        assert(It != VectorizableTree.end() && "Expected gather node operand.");
-        (*It)->VectorizedValue = V;
-      }
-      return V;
     }
+    // Need to update the operand gather node, if actually the operand is not a
+    // vectorized node, but the buildvector/gather node, which matches one of
+    // the vectorized nodes.
+    if (find_if(VE->UserTreeIndices, [&](const EdgeInfo &EI) {
+          return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
+        }) == VE->UserTreeIndices.end()) {
+      auto *It =
+          find_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->isGather() && TE->UserTreeIndices.front().UserTE == E &&
+                   TE->UserTreeIndices.front().EdgeIdx == NodeIdx;
+          });
+      assert(It != VectorizableTree.end() && "Expected gather node operand.");
+      (*It)->VectorizedValue = V;
+    }
+    return V;
   }
 
   // Find the corresponding gather entry and vectorize it.
