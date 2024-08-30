@@ -7129,6 +7129,8 @@ public:
     return cast<OpaqueValueExpr>(SubExprs[BaseLValue]);
   }
 
+  /// Return the l-value expression that was written as the argument
+  /// in source.  Everything else here is implicitly generated.
   const Expr *getArgLValue() const {
     return getOpaqueArgLValue()->getSourceExpr();
   }
