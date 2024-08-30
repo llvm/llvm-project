@@ -70,6 +70,7 @@ private:
 
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
+  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
 
   /// Maps uses of V0 to the corresponding def of V0.
   DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
@@ -163,6 +164,9 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
 
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
   if (VL.isIdenticalTo(SrcVL) || !isVLKnownLE(VL, SrcVL))
+    return false;
+
+  if (!ensureDominates(VL, *Src))
     return false;
 
   if (VL.isImm())
@@ -456,6 +460,26 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   return &*I == A;
 }
 
+/// If the register in \p MO doesn't dominate \p Src, try to move \p Src so it
+/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
+/// the same basic block as \Src.
+bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
+                                          MachineInstr &Src) const {
+  assert(MO.getParent()->getParent() == Src.getParent());
+  if (!MO.isReg() || MO.getReg() == RISCV::NoRegister)
+    return true;
+
+  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+  if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
+    if (!isSafeToMove(Src, *Def->getNextNode()))
+      return false;
+    // FIXME: Update V0Defs
+    Src.moveBefore(Def->getNextNode());
+  }
+
+  return true;
+}
+
 /// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
 /// into it.
 ///
@@ -501,15 +525,8 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   // If the new passthru doesn't dominate Src, try to move Src so it does.
-  if (Passthru.getReg() != RISCV::NoRegister) {
-    MachineInstr *PassthruDef = MRI->getVRegDef(Passthru.getReg());
-    if (PassthruDef->getParent() == Src->getParent() &&
-        !dominates(PassthruDef, Src)) {
-      if (!isSafeToMove(*Src, *PassthruDef->getNextNode()))
-        return false;
-      Src->moveBefore(PassthruDef->getNextNode());
-    }
-  }
+  if (!ensureDominates(Passthru, *Src))
+    return false;
 
   if (SrcPassthru.getReg() != Passthru.getReg()) {
     SrcPassthru.setReg(Passthru.getReg());
