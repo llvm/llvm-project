@@ -138,6 +138,8 @@ public:
   const Args::ArgEntry &GetParsedArg() {
     return GetParsedLine()[GetCursorIndex()];
   }
+  
+  size_t GetCursorCharPos() const { return m_cursor_char_position; }
 
   /// Drops the first argument from the argument list.
   void ShiftArguments() {
