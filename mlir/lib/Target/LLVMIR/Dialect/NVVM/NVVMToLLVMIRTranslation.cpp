@@ -152,6 +152,7 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
     }
     llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
   }
+  llvm_unreachable("Unsupported proxy kinds");
 }
 
 namespace {
