@@ -165,7 +165,7 @@ public:
     lldb::SupportFileSP support_file_sp;
     uint32_t line;
     SupportFileAndLine(lldb::SupportFileSP support_file_sp, uint32_t line)
-        : support_file_sp(support_file_sp), line(line){};
+        : support_file_sp(support_file_sp), line(line) {};
   };
 
   std::optional<SupportFileAndLine> GetDefaultFileAndLine();
