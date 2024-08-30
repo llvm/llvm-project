@@ -958,7 +958,7 @@ public:
            ";\n";
   }
 
-  ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param);
+  ACLEIntrinsic(EmitterBase &ME, const Record *R, const Type *Param);
 };
 
 // -----------------------------------------------------------------------------
@@ -1046,7 +1046,7 @@ public:
 
   // Constructor and top-level functions.
 
-  EmitterBase(RecordKeeper &Records);
+  EmitterBase(const RecordKeeper &Records);
   virtual ~EmitterBase() = default;
 
   virtual void EmitHeader(raw_ostream &OS) = 0;
@@ -1328,7 +1328,8 @@ Result::Ptr EmitterBase::getCodeForArg(unsigned ArgNum, const Type *ArgType,
   return V;
 }
 
-ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
+ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
+                             const Type *Param)
     : ReturnType(ME.getType(R->getValueAsDef("ret"), Param)) {
   // Derive the intrinsic's full name, by taking the name of the
   // Tablegen record (or override) and appending the suffix from its
@@ -1464,7 +1465,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
   }
 }
 
-EmitterBase::EmitterBase(RecordKeeper &Records) {
+EmitterBase::EmitterBase(const RecordKeeper &Records) {
   // Construct the whole EmitterBase.
 
   // First, look up all the instances of PrimitiveType. This gives us the list
@@ -1472,12 +1473,12 @@ EmitterBase::EmitterBase(RecordKeeper &Records) {
   // collect all the useful ScalarType instances into a big list so that we can
   // use it for operations such as 'find the unsigned version of this signed
   // integer type'.
-  for (Record *R : Records.getAllDerivedDefinitions("PrimitiveType"))
+  for (const Record *R : Records.getAllDerivedDefinitions("PrimitiveType"))
     ScalarTypes[std::string(R->getName())] = std::make_unique<ScalarType>(R);
 
   // Now go through the instances of Intrinsic, and for each one, iterate
   // through its list of type parameters making an ACLEIntrinsic for each one.
-  for (Record *R : Records.getAllDerivedDefinitions("Intrinsic")) {
+  for (const Record *R : Records.getAllDerivedDefinitions("Intrinsic")) {
     for (Record *RParam : R->getValueAsListOfDefs("params")) {
       const Type *Param = getType(RParam, getVoidType());
       auto Intrinsic = std::make_unique<ACLEIntrinsic>(*this, R, Param);
@@ -1752,7 +1753,7 @@ void EmitterBase::GroupSemaChecks(
 
 class MveEmitter : public EmitterBase {
 public:
-  MveEmitter(RecordKeeper &Records) : EmitterBase(Records){};
+  MveEmitter(const RecordKeeper &Records) : EmitterBase(Records) {}
   void EmitHeader(raw_ostream &OS) override;
   void EmitBuiltinDef(raw_ostream &OS) override;
   void EmitBuiltinSema(raw_ostream &OS) override;
@@ -2010,14 +2011,14 @@ class CdeEmitter : public EmitterBase {
   std::map<StringRef, FunctionMacro> FunctionMacros;
 
 public:
-  CdeEmitter(RecordKeeper &Records);
+  CdeEmitter(const RecordKeeper &Records);
   void EmitHeader(raw_ostream &OS) override;
   void EmitBuiltinDef(raw_ostream &OS) override;
   void EmitBuiltinSema(raw_ostream &OS) override;
 };
 
-CdeEmitter::CdeEmitter(RecordKeeper &Records) : EmitterBase(Records) {
-  for (Record *R : Records.getAllDerivedDefinitions("FunctionMacro"))
+CdeEmitter::CdeEmitter(const RecordKeeper &Records) : EmitterBase(Records) {
+  for (const Record *R : Records.getAllDerivedDefinitions("FunctionMacro"))
     FunctionMacros.emplace(R->getName(), FunctionMacro(*R));
 }
 
@@ -2179,45 +2180,45 @@ namespace clang {
 
 // MVE
 
-void EmitMveHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveHeader(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitHeader(OS);
 }
 
-void EmitMveBuiltinDef(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinDef(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinDef(OS);
 }
 
-void EmitMveBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinSema(OS);
 }
 
-void EmitMveBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinCG(OS);
 }
 
-void EmitMveBuiltinAliases(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinAliases(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinAliases(OS);
 }
 
 // CDE
 
-void EmitCdeHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeHeader(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitHeader(OS);
 }
 
-void EmitCdeBuiltinDef(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinDef(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinDef(OS);
 }
 
-void EmitCdeBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinSema(OS);
 }
 
-void EmitCdeBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinCG(OS);
 }
 
-void EmitCdeBuiltinAliases(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinAliases(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinAliases(OS);
 }
 

@@ -345,7 +345,7 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
 }
 } // namespace
 
-void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
+void clang::EmitClangBuiltins(const llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS) {
   emitSourceFileHeader("List of builtins that Clang recognizes", OS);
 
@@ -371,16 +371,17 @@ void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
 
   // AtomicBuiltins are order dependent
   // emit them first to make manual checking easier
-  for (const auto *Builtin : Records.getAllDerivedDefinitions("AtomicBuiltin"))
+  for (const Record *Builtin :
+       Records.getAllDerivedDefinitions("AtomicBuiltin"))
     EmitBuiltin(OS, Builtin);
 
-  for (const auto *Builtin : Records.getAllDerivedDefinitions("Builtin")) {
+  for (const Record *Builtin : Records.getAllDerivedDefinitions("Builtin")) {
     if (Builtin->isSubClassOf("AtomicBuiltin"))
       continue;
     EmitBuiltin(OS, Builtin);
   }
 
-  for (const auto *Entry : Records.getAllDerivedDefinitions("CustomEntry")) {
+  for (const Record *Entry : Records.getAllDerivedDefinitions("CustomEntry")) {
     OS << Entry->getValueAsString("Entry") << '\n';
   }
 
