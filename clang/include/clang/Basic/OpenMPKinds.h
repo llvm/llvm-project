@@ -392,9 +392,25 @@ bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive can capture variables.
 /// \param DKind Specified directive.
+/// \param OrderedIsStandalone Assume that the "ordered" directive is
+/// standalone (i.e. without a statement). The default association of
+/// "ordered" is "None", which corresponds to the default value of the
+/// parameter.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
+bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind,
+                                bool OrderedIsStandalone = true);
+
+/// Checks if the specified directive has an associated statement.
+/// \param DKind Specified directive.
+/// \param OrderedIsStandalone Assume that the "ordered" directive is
+/// standalone (i.e. without a statement). The default association of
+/// "ordered" is "None", which corresponds to the default value of the
+/// parameter.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPDirectiveWithStatement(OpenMPDirectiveKind DKind,
+                                    bool OrderedIsStandalone = true);
 }
 
 template <>

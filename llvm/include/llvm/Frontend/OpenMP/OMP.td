@@ -1009,6 +1009,7 @@ def OMP_Target : Directive<"target"> {
     VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_Map>,
     VersionedClause<OMPC_OMPX_Attribute>,
+    VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_UsesAllocators, 50>,
   ];

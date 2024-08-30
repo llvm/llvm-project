@@ -45,6 +45,8 @@ class DeclGroupRef;
 class ParsedAttr;
 class Scope;
 
+struct ConstructDecomposition;
+
 class SemaOpenMP : public SemaBase {
 public:
   SemaOpenMP(Sema &S);
@@ -148,6 +150,9 @@ public:
   /// constructs.
   VarDecl *isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo = false,
                                 unsigned StopAt = 0);
+
+  bool shouldCaptureInRegion(ValueDecl *D, unsigned Level,
+                             unsigned OpenMPCaptureLevel) const;
 
   /// The member expression(this->fd) needs to be rebuilt in the template
   /// instantiation to generate private copy for OpenMP when default
@@ -378,7 +383,8 @@ public:
   static int getOpenMPCaptureLevels(OpenMPDirectiveKind Kind);
 
   /// Initialization of captured region for OpenMP region.
-  void ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope);
+  void ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope,
+                              bool HasAssociatedStmt);
 
   /// Called for syntactical loops (ForStmt or CXXForRangeStmt) associated to
   /// an OpenMP loop directive.
@@ -1417,6 +1423,37 @@ public:
 
   void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 
+  struct VariableImplicitInfo {
+    static const unsigned MapKindNum = OMPC_MAP_unknown;
+    static const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
+
+    llvm::SmallVector<Expr *> Privates;
+    llvm::SmallVector<Expr *> Firstprivates;
+    llvm::SmallVector<Expr *> Mappings[DefaultmapKindNum][MapKindNum];
+    llvm::SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
+        MapModifiers[DefaultmapKindNum];
+    llvm::SmallVector<Expr *> ReductionMappings;
+
+    llvm::SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
+        ImplicitMapModifiersLoc[DefaultmapKindNum];
+
+    void addPrivate(Expr *E);
+    void addFirstprivate(Expr *E);
+    void addMapping(Expr *E, unsigned DefKind, unsigned MapKind);
+    void addMapModifier(unsigned MapKind, unsigned DefKind);
+    void addReductionMapping(Expr *E);
+
+    VariableImplicitInfo &include(const VariableImplicitInfo &Other);
+
+  #ifndef NDEBUG
+    bool empty() const;
+  #endif
+
+  private:
+    std::pair<Stmt *, Decl *> getDecl(Expr *E);
+    bool isDeclPresent(ArrayRef<Expr *> Range, Expr *E);
+  };
+
 private:
   void *VarDataSharingAttributesStack;
 
@@ -1432,7 +1469,15 @@ private:
 
   /// Adjusts the function scopes index for the target-based regions.
   void adjustOpenMPTargetScopeIndex(unsigned &FunctionScopesIndex,
-                                    unsigned Level) const;
+                                    unsigned Level,
+                                    unsigned CaptureLevel) const;
+
+  /// Adjusts the function scopes index for regions that privatize
+  /// thread-local globals.
+  void adjustOpenMPGlobalScopeIndex(ValueDecl *VD,
+                                    unsigned &FunctionScopesIndex,
+                                    unsigned Level,
+                                    unsigned CaptureLevel) const;
 
   /// Returns the number of scopes associated with the construct on the given
   /// OpenMP level.

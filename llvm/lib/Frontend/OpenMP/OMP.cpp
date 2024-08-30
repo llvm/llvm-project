@@ -194,6 +194,60 @@ ArrayRef<unsigned> getOpenMPVersions() {
   return Versions;
 }
 
+bool isUniqueClause(Clause C) {
+  switch (C) {
+  case OMPC_affinity:
+  case OMPC_align:
+  case OMPC_allocator:
+  case OMPC_append_args:
+  case OMPC_at:
+  case OMPC_bind:
+  case OMPC_collapse:
+  case OMPC_default:
+  case OMPC_defaultmap:
+  case OMPC_detach:
+  case OMPC_device:
+  case OMPC_device_type:
+  case OMPC_dist_schedule:
+  case OMPC_exclusive:
+  case OMPC_filter:
+  case OMPC_final:
+  case OMPC_full:
+  case OMPC_grainsize:
+  case OMPC_hint:
+  case OMPC_inclusive:
+  case OMPC_indirect:
+  // case OMPC_initializer: present in spec, but not defined in header
+  case OMPC_match:
+  case OMPC_mergeable:
+  case OMPC_message:
+  // case OMPC_nocontext: present in spec, but not defined in header
+  case OMPC_nogroup:
+  case OMPC_novariants:
+  case OMPC_nowait:
+  case OMPC_num_tasks:
+  case OMPC_num_teams:
+  case OMPC_num_threads:
+  case OMPC_order:
+  case OMPC_ordered:
+  // case OMPC_otherwise: present in spec, but not defined in header
+  case OMPC_partial:
+  case OMPC_priority:
+  case OMPC_proc_bind:
+  case OMPC_safelen:
+  case OMPC_schedule:
+  case OMPC_severity:
+  case OMPC_simdlen:
+  case OMPC_sizes:
+  case OMPC_thread_limit:
+  case OMPC_untied:
+  case OMPC_update:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::string prettifyFunctionName(StringRef FunctionName) {
   // Internalized functions have the right name, but simply a suffix.
   if (FunctionName.ends_with(".internalized"))

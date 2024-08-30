@@ -732,7 +732,8 @@ bool clang::isOpenMPInformationalDirective(OpenMPDirectiveKind DKind) {
   return Cat == Category::Informational;
 }
 
-bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
+bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind,
+                                       bool OrderedIsStandalone) {
   if (isOpenMPExecutableDirective(DKind)) {
     switch (DKind) {
     case OMPD_atomic:
@@ -743,13 +744,17 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
     case OMPD_depobj:
     case OMPD_error:
     case OMPD_flush:
+    case OMPD_interop:
     case OMPD_masked:
     case OMPD_master:
+    case OMPD_scan:
     case OMPD_section:
     case OMPD_taskwait:
     case OMPD_taskyield:
     case OMPD_assume:
       return false;
+    case OMPD_ordered:
+      return !OrderedIsStandalone;
     default:
       return !isOpenMPLoopTransformationDirective(DKind);
     }
@@ -768,8 +773,12 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
-  assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
-  assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
+  assert(static_cast<size_t>(DKind) < llvm::omp::Directive_enumSize);
+  assert(isOpenMPCapturingDirective(DKind, /*OrderedIsStandalone=*/false) &&
+         "Expecting capturing directive");
+
+  size_t StartSize = CaptureRegions.size();
+  bool IsComposite = llvm::omp::isCompositeConstruct(DKind);
 
   auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
     assert(isLeafConstruct(LKind) && "Epecting leaf directive");
@@ -805,9 +814,11 @@ void clang::getOpenMPCaptureRegions(
       // bind clause or the parent directive when there is no bind clause.
       // If any of the directives that push regions here are parents of 'loop',
       // assume 'parallel'. Otherwise do nothing.
-      if (!CaptureRegions.empty() &&
+      if (CaptureRegions.size() != StartSize &&
           !llvm::is_contained(CaptureRegions, OMPD_parallel))
         CaptureRegions.push_back(OMPD_parallel);
+      else if (!IsComposite)
+        CaptureRegions.push_back(OMPD_unknown);
       else
         return true;
       break;
@@ -825,7 +836,11 @@ void clang::getOpenMPCaptureRegions(
       // but when they're constituents of a compound directive, and other
       // leafs from that directive have specific regions, then these directives
       // add no additional regions.
-      return true;
+      if (!IsComposite)
+        CaptureRegions.push_back(OMPD_unknown);
+      else
+        return true;
+      break;
     case OMPD_masked:
     case OMPD_master:
       return false;
@@ -837,20 +852,35 @@ void clang::getOpenMPCaptureRegions(
   };
 
   bool MayNeedUnknownRegion = false;
-  for (OpenMPDirectiveKind L : getLeafConstructsOrSelf(DKind))
-    MayNeedUnknownRegion |= GetRegionsForLeaf(L);
+  if (IsComposite) {
+    // If it's a composite directive, look at individual leafs.
+    for (OpenMPDirectiveKind L : getLeafConstructsOrSelf(DKind))
+      MayNeedUnknownRegion |= GetRegionsForLeaf(L);
+  } else {
+    // If it's not a composite construct, look at constituent constructs
+    // which may be leaf or composite.
+    SmallVector<OpenMPDirectiveKind> Parts;
+    for (OpenMPDirectiveKind L : getLeafOrCompositeConstructs(DKind, Parts)) {
+      if (isLeafConstruct(L))
+        MayNeedUnknownRegion |= GetRegionsForLeaf(L);
+      else
+        getOpenMPCaptureRegions(CaptureRegions, L);
+    }
+  }
 
   // We need OMPD_unknown when no regions were added, and specific leaf
   // constructs were present. Push a single OMPD_unknown as the capture
   /// region.
-  if (CaptureRegions.empty() && MayNeedUnknownRegion)
+  if (CaptureRegions.size() == StartSize && MayNeedUnknownRegion)
     CaptureRegions.push_back(OMPD_unknown);
 
   // OMPD_unknown is only expected as the only region. If other regions
   // are present OMPD_unknown should not be present.
-  assert((CaptureRegions[0] == OMPD_unknown ||
-          !llvm::is_contained(CaptureRegions, OMPD_unknown)) &&
-         "Misplaced OMPD_unknown");
+  if (IsComposite) {
+    assert((CaptureRegions[StartSize] == OMPD_unknown ||
+            !llvm::is_contained(CaptureRegions, OMPD_unknown)) &&
+           "Misplaced OMPD_unknown");
+  }
 }
 
 bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
@@ -859,3 +889,21 @@ bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
          FailClauseParameter == llvm::omp::OMPC_seq_cst;
 }
 
+bool clang::isOpenMPDirectiveWithStatement(OpenMPDirectiveKind DKind,
+                                           bool OrderedIsStandalone) {
+  switch (DKind) {
+  // The association of these in the spec is either "none" or "separating",
+  // but they do have an associated statement in clang.
+  case OMPD_section:
+  case OMPD_target_enter_data:
+  case OMPD_target_exit_data:
+  case OMPD_target_update:
+    return true;
+  case OMPD_ordered:
+    return !OrderedIsStandalone;
+  default:
+    break;
+  }
+  Association Assoc = getDirectiveAssociation(DKind);
+  return Assoc != Association::None && Assoc != Association::Separating;
+}

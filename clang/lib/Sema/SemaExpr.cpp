@@ -18633,6 +18633,9 @@ static bool captureInCapturedRegion(
     ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     // Using an LValue reference type is consistent with Lambdas (see below).
+    if (!S.OpenMP().shouldCaptureInRegion(Var, RSI->OpenMPLevel,
+                                          RSI->OpenMPCaptureLevel))
+      return true;
     if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
       bool HasConst = DeclRefType.isConstQualified();
       DeclRefType = DeclRefType.getUnqualifiedType();
@@ -18640,10 +18643,6 @@ static bool captureInCapturedRegion(
       if (HasConst)
         DeclRefType.addConst();
     }
-    // Do not capture firstprivates in tasks.
-    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
-                                       RSI->OpenMPCaptureLevel) != OMPC_unknown)
-      return true;
     ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
                                              RSI->OpenMPCaptureLevel);
   }
@@ -19062,9 +19061,7 @@ bool Sema::tryCaptureVariable(
             QualType QTy = Var->getType();
             if (ParmVarDecl *PVD = dyn_cast_or_null<ParmVarDecl>(Var))
               QTy = PVD->getOriginalType();
-            for (int I = 1,
-                     E = OpenMP().getNumberOfConstructScopes(RSI->OpenMPLevel);
-                 I < E; ++I) {
+            for (int I = 1, E = RSI->OpenMPCaptureLevel + 1; I < E; ++I) {
               auto *OuterRSI = cast<CapturedRegionScopeInfo>(
                   FunctionScopes[FunctionScopesIndex - I]);
               assert(RSI->OpenMPLevel == OuterRSI->OpenMPLevel &&
@@ -19086,8 +19083,8 @@ bool Sema::tryCaptureVariable(
           // target region, therefore we need to propagate the capture from the
           // enclosing region. Therefore, the capture is not initially nested.
           if (IsTargetCap)
-            OpenMP().adjustOpenMPTargetScopeIndex(FunctionScopesIndex,
-                                                  RSI->OpenMPLevel);
+            OpenMP().adjustOpenMPTargetScopeIndex(
+                FunctionScopesIndex, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
 
           if (IsTargetCap || IsOpenMPPrivateDecl == OMPC_private ||
               (IsGlobal && !IsGlobalCap)) {
@@ -19098,6 +19095,10 @@ bool Sema::tryCaptureVariable(
             if (HasConst)
               DeclRefType.addConst();
             CaptureType = Context.getLValueReferenceType(DeclRefType);
+            if (!IsTargetCap)
+              OpenMP().adjustOpenMPGlobalScopeIndex(Var, FunctionScopesIndex,
+                                                    RSI->OpenMPLevel,
+                                                    RSI->OpenMPCaptureLevel);
             break;
           }
         }
