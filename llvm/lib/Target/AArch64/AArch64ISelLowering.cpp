@@ -1790,10 +1790,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::Other,
+      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv4i32,
                          Custom);
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::i8, Custom);
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::i16, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
+                         Custom);
     }
   }
 
@@ -28550,11 +28550,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   assert(CID->getZExtValue() == Intrinsic::experimental_vector_histogram_add &&
          "Unexpected histogram update operation");
 
-  EVT IncVT = Inc.getValueType();
   EVT IndexVT = Index.getValueType();
   LLVMContext &Ctx = *DAG.getContext();
   ElementCount EC = IndexVT.getVectorElementCount();
-  EVT MemVT = EVT::getVectorVT(Ctx, IncVT, EC);
+  EVT MemVT = EVT::getVectorVT(Ctx, HG->getMemoryVT(), EC);
   EVT IncExtVT =
       EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
   EVT IncSplatVT = EVT::getVectorVT(Ctx, IncExtVT, EC);
