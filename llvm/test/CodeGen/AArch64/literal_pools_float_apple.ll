@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=arm64-apple-macosx -mcpu=apple-m1 < %s | FileCheck %s --check-prefix=APPLE
 
-define dso_local float @float_0mov() {
+define float @float_0mov() {
 ; CHECK-LABEL: float_0mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, #1.00000000
@@ -15,7 +15,7 @@ define dso_local float @float_0mov() {
   ret float 1.0
 }
 
-define dso_local float @float_1mov() {
+define float @float_1mov() {
 ; CHECK-LABEL: float_1mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2143289344 // =0x7fc00000
@@ -30,7 +30,7 @@ define dso_local float @float_1mov() {
   ret float 0x7FF8000000000000
 }
 
-define dso_local float @float_2mov() {
+define float @float_2mov() {
 ; CHECK-LABEL: float_2mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #34952 // =0x8888
@@ -47,7 +47,7 @@ define dso_local float @float_2mov() {
   ret float 0x7FF8111100000000
 }
 
-define dso_local double @double_0mov() {
+define double @double_0mov() {
 ; CHECK-LABEL: double_0mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, #1.00000000
@@ -60,7 +60,7 @@ define dso_local double @double_0mov() {
   ret double 1.0
 }
 
-define dso_local double @double_1mov() {
+define double @double_1mov() {
 ; CHECK-LABEL: double_1mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #4096 // =0x1000
@@ -75,7 +75,7 @@ define dso_local double @double_1mov() {
   ret double 0x1000
 }
 
-define dso_local double @double_2mov() {
+define double @double_2mov() {
 ; CHECK-LABEL: double_2mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #4096 // =0x1000
@@ -92,7 +92,7 @@ define dso_local double @double_2mov() {
   ret double 0x20001000
 }
 
-define dso_local double @double_3mov() {
+define double @double_3mov() {
 ; CHECK-LABEL: double_3mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI6_0
@@ -109,7 +109,7 @@ define dso_local double @double_3mov() {
   ret double 0x300020001000
 }
 
-define dso_local double @double_4mov() {
+define double @double_4mov() {
 ; CHECK-LABEL: double_4mov:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI7_0
