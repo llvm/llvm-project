@@ -5784,7 +5784,7 @@ bool AsmParser::parseDirectiveIrpc(SMLoc DirectiveLoc) {
                                                   : A[0][0].getString();
   for (std::size_t I = 0, End = Values.size(); I != End; ++I) {
     MCAsmMacroArgument Arg;
-    Arg.emplace_back(AsmToken::Identifier, Values.slice(I, I + 1));
+    Arg.emplace_back(AsmToken::Identifier, Values.substr(I, 1));
 
     // Note that the AtPseudoVariable is enabled for instantiations of .irpc.
     // This is undocumented, but GAS seems to support it.

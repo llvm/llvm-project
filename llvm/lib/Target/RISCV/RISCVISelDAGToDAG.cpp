@@ -3941,12 +3941,11 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // active elements, like viota.m or vredsum. This transformation is illegal
   // for these if we change the active elements (i.e. mask or VL).
   const MCInstrDesc &TrueBaseMCID = TII->get(RISCV::getRVVMCOpcode(TrueOpc));
-  if (RISCVII::activeElementsAffectResult(TrueBaseMCID.TSFlags)) {
-    if (Mask && !usesAllOnesMask(Mask, Glue))
-      return false;
-    if (TrueVL != VL)
-      return false;
-  }
+  if (RISCVII::elementsDependOnVL(TrueBaseMCID.TSFlags) && (TrueVL != VL))
+    return false;
+  if (RISCVII::elementsDependOnMask(TrueBaseMCID.TSFlags) &&
+      (Mask && !usesAllOnesMask(Mask, Glue)))
+    return false;
 
   // If we end up changing the VL or mask of True, then we need to make sure it
   // doesn't raise any observable fp exceptions, since changing the active

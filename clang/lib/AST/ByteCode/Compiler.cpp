@@ -4991,6 +4991,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
+  if (SubExpr->getType()->isVectorType())
+    return this->VisitVectorUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -5309,6 +5311,110 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
     return this->emitInvalid(E);
   }
 
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isVectorType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  auto UnaryOp = E->getOpcode();
+  if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
+      UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
+    return this->emitInvalid(E);
+
+  // Nothing to do here.
+  if (UnaryOp == UO_Plus || UnaryOp == UO_AddrOf)
+    return this->delegate(SubExpr);
+
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset =
+      this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SubExprOffset, E))
+    return false;
+
+  const auto *VecTy = SubExpr->getType()->getAs<VectorType>();
+  PrimType ElemT = classifyVectorElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (UnaryOp) {
+  case UO_Minus:
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  case UO_LNot: { // !x
+    // In C++, the logic operators !, &&, || are available for vectors. !v is
+    // equivalent to v == 0.
+    //
+    // The result of the comparison is a vector of the same width and number of
+    // elements as the comparison operands with a signed integral element type.
+    //
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    QualType ResultVecTy = E->getType();
+    PrimType ResultVecElemT =
+        classifyPrim(ResultVecTy->getAs<VectorType>()->getElementType());
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitInv(E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (ElemT != ResultVecElemT &&
+          !this->emitPrimCast(ElemT, ResultVecElemT, ResultVecTy, E))
+        return false;
+      if (!this->emitInitElem(ResultVecElemT, I, E))
+        return false;
+    }
+    break;
+  }
+  case UO_Not: // ~x
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (ElemT == PT_Bool) {
+        if (!this->emitInv(E))
+          return false;
+      } else {
+        if (!this->emitComp(ElemT, E))
+          return false;
+      }
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported unary operators should be handled up front");
+  }
   return true;
 }
 

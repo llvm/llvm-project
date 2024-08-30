@@ -42,6 +42,8 @@ protected:
   EXPECT_EQ((FormatTok)->getPrecedence(), Prec) << *(FormatTok)
 #define EXPECT_BRACE_KIND(FormatTok, Kind)                                     \
   EXPECT_EQ(FormatTok->getBlockKind(), Kind) << *(FormatTok)
+#define EXPECT_SPLIT_PENALTY(FormatTok, Penalty)                               \
+  EXPECT_EQ(FormatTok->SplitPenalty, Penalty) << *(FormatTok)
 #define EXPECT_TOKEN(FormatTok, Kind, Type)                                    \
   do {                                                                         \
     EXPECT_TOKEN_KIND(FormatTok, Kind);                                        \
@@ -1717,21 +1719,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_LambdaDefinitionLParen);
-  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[]() -> auto & {}");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_LambdaDefinitionLParen);
-  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[]() -> auto * {}");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_LambdaDefinitionLParen);
-  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] {}");
@@ -1747,20 +1749,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   Tokens = annotate("[] -> auto {}");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
-  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] -> struct S { return {}; }");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
-  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("foo([&](u32 bar) __attribute__((attr)) -> void {});");
   ASSERT_EQ(Tokens.size(), 22u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_LambdaDefinitionLParen);
-  EXPECT_TOKEN(Tokens[15], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[15], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] <typename T> () {}");
@@ -1849,7 +1851,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_LambdaDefinitionLParen);
-  EXPECT_TOKEN(Tokens[10], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[10], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[12], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[16]->ClosesRequiresClause);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
@@ -1918,7 +1920,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
   EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
-  EXPECT_TOKEN(Tokens[11], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[11], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] <typename T> requires Foo<T> (T t) requires Bar<T> {}");
@@ -3238,6 +3240,22 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[8], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+
+  Tokens = annotate("a = class extends goog.a {};",
+                    getGoogleStyle(FormatStyle::LK_JavaScript));
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_ClassLBrace);
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_TOKEN(Tokens[8], tok::r_brace, TT_ClassRBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+
+  Tokens = annotate("#define FOO(X) \\\n"
+                    "  struct X##_tag_ {};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_StructLBrace);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_StructRBrace);
+  EXPECT_BRACE_KIND(Tokens[11], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -3353,7 +3371,7 @@ TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
   EXPECT_TOKEN(Tokens[11], tok::colon, TT_CtorInitializerColon);
   EXPECT_TOKEN(Tokens[14], tok::l_square, TT_LambdaLSquare);
-  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
   EXPECT_TOKEN(Tokens[31], tok::comma, TT_CtorInitializerComma);
   EXPECT_TOKEN(Tokens[36], tok::l_brace, TT_FunctionLBrace);
@@ -3378,6 +3396,20 @@ TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
   auto Tokens = annotate("return 1 <=> 2;", Style);
   ASSERT_EQ(Tokens.size(), 6u);
   EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, SplitPenalty) {
+  auto Style = getLLVMStyle();
+  Style.ColumnLimit = 20;
+
+  auto Tokens = annotate("class foo {\n"
+                         "  auto bar()\n"
+                         "      -> bool;\n"
+                         "};",
+                         Style);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_SPLIT_PENALTY(Tokens[7], 23u);
 }
 
 } // namespace
