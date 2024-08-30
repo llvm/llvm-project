@@ -1,3 +1,4 @@
+// RUN: true
 // DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR_BEFORE
 // DISABLED: FileCheck %s -check-prefix=CIR_AFTER --input-file=%t.cir
 // DISABLED: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm %s -o %t.ll
