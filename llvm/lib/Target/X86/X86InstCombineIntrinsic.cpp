@@ -3020,7 +3020,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Value *V = simplifyX86vpermv(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
-    if (simplifyX86VPERMMask(&II, false, IC))
+    if (simplifyX86VPERMMask(&II, /*IsBinary=*/false, IC))
       return &II;
     break;
 
@@ -3045,7 +3045,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Value *V = simplifyX86vpermv3(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
-    if (simplifyX86VPERMMask(&II, true, IC))
+    if (simplifyX86VPERMMask(&II, /*IsBinary=*/true, IC))
       return &II;
     break;
 
