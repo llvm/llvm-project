@@ -3947,9 +3947,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
         // Called by LegalizeDAG, we need to use XLenVT operations since we
         // can't create illegal types.
         if (auto *C = dyn_cast<ConstantFPSDNode>(Elem)) {
-          // Manually constant fold.
-          // FIXME: Add a constant fold combine for FMV_X_ANYEXTH.
-          // FIXME: We need a load+FMV_X_ANYEXTH combine too.
+          // Manually constant fold so the integer build_vector can be lowered
+          // better. Waiting for DAGCombine will be too late.
           APInt V =
               C->getValueAPF().bitcastToAPInt().sext(XLenVT.getSizeInBits());
           NewOps[I] = DAG.getConstant(V, DL, XLenVT);
