@@ -1913,7 +1913,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     std::vector<CallInfo> AllCalls;
     AllCalls.reserve(Node->MatchingCalls.size() + 1);
     AllCalls.push_back(Node->Call);
-    AllCalls.insert(AllCalls.end(), Node->MatchingCalls.begin(), Node->MatchingCalls.end());
+    AllCalls.insert(AllCalls.end(), Node->MatchingCalls.begin(),
+                    Node->MatchingCalls.end());
     auto It = AllCalls.begin();
     // Iterate through the calls until we find the first that matches.
     for (; It != AllCalls.end(); ++It) {
