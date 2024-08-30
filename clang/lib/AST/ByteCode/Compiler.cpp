@@ -5324,11 +5324,11 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
 
   auto UnaryOp = E->getOpcode();
   if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
-      UnaryOp != UO_Not)
+      UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
     return this->emitInvalid(E);
 
   // Nothing to do here.
-  if (UnaryOp == UO_Plus)
+  if (UnaryOp == UO_Plus || UnaryOp == UO_AddrOf)
     return this->delegate(SubExpr);
 
   if (!Initializing) {
