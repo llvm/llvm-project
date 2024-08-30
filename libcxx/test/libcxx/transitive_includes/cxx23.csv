@@ -517,6 +517,17 @@ future typeinfo
 future version
 initializer_list cstddef
 initializer_list version
+inplace_vector cctype
+inplace_vector compare
+inplace_vector cstddef
+inplace_vector cstdint
+inplace_vector cwchar
+inplace_vector cwctype
+inplace_vector initializer_list
+inplace_vector limits
+inplace_vector new
+inplace_vector stdexcept
+inplace_vector version
 iomanip bitset
 iomanip cctype
 iomanip cerrno

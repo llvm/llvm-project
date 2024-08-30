@@ -97,6 +97,7 @@
 #include <functional>
 #include <future>
 #include <initializer_list>
+#include <inplace_vector>
 #include <inttypes.h>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <iomanip>

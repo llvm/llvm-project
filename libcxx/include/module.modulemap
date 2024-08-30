@@ -140,6 +140,10 @@ module std_initializer_list [system] {
   header "initializer_list"
   export *
 }
+module std_inplace_vector [system] {
+  header "inplace_vector"
+  export *
+}
 module std_iomanip [system] {
   header "iomanip"
   export *
