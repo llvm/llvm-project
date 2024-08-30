@@ -7474,8 +7474,7 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     ContainedTy = getDerived().TransformType(TLB, TL.getContainedLoc());
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      WrappedTy != oldType->getWrappedType() || 
+  if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
       ContainedTy != oldType->getContainedType()) {
     Result = SemaRef.Context.getHLSLAttributedResourceType(
         WrappedTy, ContainedTy, oldType->getAttrs());

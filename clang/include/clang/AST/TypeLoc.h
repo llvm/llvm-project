@@ -952,7 +952,7 @@ class HLSLAttributedResourceTypeLoc
 public:
   TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
 
-  TypeLoc getContainedLoc() const { 
+  TypeLoc getContainedLoc() const {
     return TypeLoc(getTypePtr()->getContainedType(), getNonLocalData());
   }
 
@@ -962,7 +962,9 @@ public:
     setSourceRange(SourceRange());
   }
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
-  unsigned getLocalDataSize() const { return sizeof(HLSLAttributedResourceLocInfo); }
+  unsigned getLocalDataSize() const {
+    return sizeof(HLSLAttributedResourceLocInfo);
+  }
 };
 
 struct ObjCObjectTypeLocInfo {
