@@ -39,7 +39,7 @@
 "`P2401R0 <https://wg21.link/P2401R0>`__","Add a conditional ``noexcept`` specification to ``std::exchange``","2021-10 (Virtual)","|Complete|","14.0",""
 "","","","","",""
 "`P0323R12 <https://wg21.link/P0323R12>`__","``std::expected``","2022-02 (Virtual)","|Complete|","16.0",""
-"`P0533R9 <https://wg21.link/P0533R9>`__","``constexpr`` for ``<cmath>`` and ``<cstdlib>``","2022-02 (Virtual)","|In Progress|","","``isfinite``, ``isinf``, ``isnan``, ``isnormal`` and ``signbit`` are implemented"
+"`P0533R9 <https://wg21.link/P0533R9>`__","``constexpr`` for ``<cmath>`` and ``<cstdlib>``","2022-02 (Virtual)","|In Progress|","","``isfinite``, ``isinf``, ``isnan`` and ``isnormal`` are implemented"
 "`P0627R6 <https://wg21.link/P0627R6>`__","Function to mark unreachable code","2022-02 (Virtual)","|Complete|","15.0",""
 "`P1206R7 <https://wg21.link/P1206R7>`__","``ranges::to``: A function to convert any range to a container","2022-02 (Virtual)","|Complete|","17.0",""
 "`P1413R3 <https://wg21.link/P1413R3>`__","Deprecate ``std::aligned_storage`` and ``std::aligned_union``","2022-02 (Virtual)","|Complete|","","``std::aligned_storage_t`` and ``std::aligned_union_t`` are marked deprecated, but clang doesn't issue a diagnostic for deprecated using template declarations."
