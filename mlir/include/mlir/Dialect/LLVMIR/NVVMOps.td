@@ -19,6 +19,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 
+def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
 
@@ -531,8 +532,10 @@ def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
 def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
 def ProxyAsyncGlobal   : I32EnumAttrCase<"async_global", 2, "async.global">;
 def ProxyAsyncShared   : I32EnumAttrCase<"async_shared", 3, "async.shared">;
+def ProxyTensorMap : I32EnumAttrCase<"TENSORMAP", 4, "tensormap">;
+def ProxyGeneric : I32EnumAttrCase<"GENERIC", 5, "generic">;
 def ProxyKind : I32EnumAttr<"ProxyKind", "Proxy kind",
-  [ProxyAlias, ProxyAsync, ProxyAsyncGlobal, ProxyAsyncShared]> {
+  [ProxyAlias, ProxyAsync, ProxyAsyncGlobal, ProxyAsyncShared, ProxyTensorMap, ProxyGeneric]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -562,6 +565,80 @@ def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
       return ptx;
     }
   }];
+  let hasVerifier = 1;
+}
+
+// Attrs describing the scope of the Memory Operation
+def MemScopeKindCTA      : I32EnumAttrCase<"CTA", 0, "cta">;
+def MemScopeKindCluster  : I32EnumAttrCase<"CLUSTER", 1, "cluster">;
+def MemScopeKindGPU      : I32EnumAttrCase<"GPU", 2, "gpu">;
+def MemScopeKindSYS      : I32EnumAttrCase<"SYS", 3, "sys">;
+
+def MemScopeKind : I32EnumAttr<"MemScopeKind", "NVVM Memory Scope kind",
+  [MemScopeKindCTA, MemScopeKindCluster, MemScopeKindGPU, MemScopeKindSYS]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def MemScopeKindAttr : EnumAttr<NVVM_Dialect, MemScopeKind, "mem_scope"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
+      Arguments<(ins MemScopeKindAttr:$scope, LLVM_PointerGeneric:$addr, I32:$size,
+                     DefaultValuedAttr<ProxyKindAttr,
+                                       "ProxyKind::GENERIC">:$fromProxy,
+                     DefaultValuedAttr<ProxyKindAttr,
+                                       "ProxyKind::TENSORMAP">:$toProxy)> {
+  let summary = "Uni-directional proxy fence operation with acquire semantics";
+  let description = [{
+    `fence.proxy.acquire` is a uni-directional fence used to establish ordering
+    between a prior memory access performed via the generic proxy and a
+    subsequent memory access performed via the tensormap proxy
+
+    The address operand `addr` and the operand `size` together specify the
+    memory range `[addr, addr+size)` on which the ordering guarantees on the
+    memory accesses across the proxies is to be provided. The only supported
+    value for the `size` operand is 128 and must be an immediate. Generic Addressing
+    is used unconditionally, and the address specified by the operand `addr` must
+    fall within the `.global` state space. Otherwise, the behavior is undefined
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+
+  let assemblyFormat = "$scope $addr `,` $size (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
+  let llvmBuilder = [{
+    createIntrinsicCall(
+        builder,
+        getUnidirectionalFenceProxyID($fromProxy, $toProxy, $scope, false),
+        {$addr, $size});
+  }];
+
+  let hasVerifier = 1;
+}
+
+def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
+      Arguments<(ins MemScopeKindAttr:$scope,
+                     DefaultValuedAttr<ProxyKindAttr,
+                                       "ProxyKind::GENERIC">:$fromProxy,
+                     DefaultValuedAttr<ProxyKindAttr,
+                                       "ProxyKind::TENSORMAP">:$toProxy)> {
+  let summary = "Uni-directional proxy fence operation with release semantics";
+  let description = [{
+    `fence.proxy.release` is a uni-directional fence used to establish ordering
+    between a prior memory access performed via the generic proxy and a
+    subsequent memory access performed via the tensormap proxy. `fence.proxy.release`
+    operation can form a release sequence that synchronizes with an acquire
+    sequence that contains the fence.proxy.acquire proxy fence operation
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+
+  let assemblyFormat = "$scope (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, getUnidirectionalFenceProxyID(
+                                     $fromProxy, $toProxy, $scope, true));
+  }];
+
   let hasVerifier = 1;
 }
 
