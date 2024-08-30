@@ -27,6 +27,7 @@ class PointerType;
 class VectorType;
 class FunctionType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
+#define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
 
 /// Just like llvm::Type these are immutable, unique, never get freed and can
@@ -42,7 +43,7 @@ protected:
   friend class ConstantInt;  // For LLVMTy.
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
-  // TODO: Friend DEF_CONST()
+#define DEF_CONST(ID, CLASS) friend class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
   Context &Ctx;
 
