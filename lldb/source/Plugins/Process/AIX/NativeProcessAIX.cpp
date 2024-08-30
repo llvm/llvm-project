@@ -211,12 +211,14 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
+    // error.SetErrorToErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
+    // error.SetErrorToErrno();
     return error;
   }
 
@@ -813,7 +815,7 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
       Status error = ResumeThread(static_cast<NativeThreadAIX &>(*thread),
                                   action->state, signo);
       if (error.Fail())
-        return Status("NativeProcessAIX::%s: failed to resume thread "
+        return Status::FromErrorStringWithFormat("NativeProcessAIX::%s: failed to resume thread "
                       "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
                       __FUNCTION__, GetID(), thread->GetID(),
                       error.AsCString());
@@ -826,7 +828,7 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
       break;
 
     default:
-      return Status("NativeProcessAIX::%s (): unexpected state %s specified "
+      return Status::FromErrorStringWithFormat("NativeProcessAIX::%s (): unexpected state %s specified "
                     "for pid %" PRIu64 ", tid %" PRIu64,
                     __FUNCTION__, StateAsCString(action->state), GetID(),
                     thread->GetID());
@@ -840,7 +842,7 @@ Status NativeProcessAIX::Halt() {
   Status error;
 
   if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -874,7 +876,7 @@ Status NativeProcessAIX::Signal(int signo) {
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -951,7 +953,7 @@ Status NativeProcessAIX::Kill() {
   }
 
   if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -1555,7 +1557,7 @@ Status NativeProcessAIX::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status("Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
+  return Status::FromErrorStringWithFormat("Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
                 module_file_spec.GetFilename().AsCString(), GetID());
 }
 
@@ -2011,7 +2013,7 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   }
 
   if (errno) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     ret = -1;
   }
 

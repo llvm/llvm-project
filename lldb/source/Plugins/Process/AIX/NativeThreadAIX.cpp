@@ -481,7 +481,7 @@ Status NativeThreadAIX::RequestStop() {
   Status err;
   errno = 0;
   if (::kill(pid, SIGSTOP) != 0) {
-    err.SetErrorToErrno();
+    err = Status::FromErrno();
     LLDB_LOGF(log,
               "NativeThreadAIX::%s kill(%" PRIu64 ", SIGSTOP) failed: %s",
               __FUNCTION__, pid, err.AsCString());
