@@ -29,3 +29,15 @@ entry:
   musttail call void @sret_callee(ptr dead_on_unwind writable sret({ double, double }) align 8 %agg.result, i16 noundef signext 20391) #2
   ret void
 }
+
+%struct.Large = type { [60 x i32] }
+
+; Function Attrs: mustprogress noinline optnone
+define dso_local void @large_caller(i64 noundef %0, i64 noundef %1, %struct.Large* noundef byval(%struct.Large) align 4 %2, %struct.Large* noundef byval(%struct.Large) align 4 %3) #0 {
+entry:
+; CHECK: 	b	large_callee
+  musttail call void @large_callee(i64 noundef %0, i64 noundef %1, %struct.Large* noundef byval(%struct.Large) align 4 %2, %struct.Large* noundef byval(%struct.Large) align 4 %3)
+  ret void
+}
+
+declare dso_local void @large_callee(i64 noundef, i64 noundef, %struct.Large* noundef byval(%struct.Large) align 4, %struct.Large* noundef byval(%struct.Large) align 4) #1
