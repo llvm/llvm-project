@@ -135,13 +135,9 @@ inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
 
 #if defined(SCUDO_PAGE_SIZE)
 
-inline constexpr uptr getPageSizeCached() {
-  return SCUDO_PAGE_SIZE;
-}
+inline constexpr uptr getPageSizeCached() { return SCUDO_PAGE_SIZE; }
 
-inline constexpr uptr getPageSizeSlow() {
-  return getPageSizeCached();
-}
+inline constexpr uptr getPageSizeSlow() { return getPageSizeCached(); }
 
 inline constexpr uptr getPageSizeLogCached() {
   return static_cast<uptr>(__builtin_ctzl(SCUDO_PAGE_SIZE));

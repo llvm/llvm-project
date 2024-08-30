@@ -607,8 +607,12 @@ struct PageReleaseContext {
     return true;
   }
 
-  uptr getPageIndex(uptr P) { return (P >> getPageSizeLogCached()) - ReleasePageOffset; }
-  uptr getReleaseOffset() { return ReleasePageOffset << getPageSizeLogCached(); }
+  uptr getPageIndex(uptr P) {
+    return (P >> getPageSizeLogCached()) - ReleasePageOffset;
+  }
+  uptr getReleaseOffset() {
+    return ReleasePageOffset << getPageSizeLogCached();
+  }
 
   uptr BlockSize;
   uptr NumberOfRegions;
