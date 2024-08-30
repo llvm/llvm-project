@@ -203,7 +203,7 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::withRecId(DistinctAttr recId) {
   return DICompositeTypeAttr::get(
-      getContext(), recId, /*isRecSelf=*/false, getTag(), getName(), getFile(),
+      getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
       getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
       getAlignInBits(), getElements(), getDataLocation(), getRank(),
       getAllocated(), getAssociated());
@@ -222,7 +222,7 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 
 DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
   return DISubprogramAttr::get(
-      getContext(), recId, /*isRecSelf=*/false, getId(), getCompileUnit(),
+      getContext(), recId, getIsRecSelf(), getId(), getCompileUnit(),
       getScope(), getName(), getLinkageName(), getFile(), getLine(),
       getScopeLine(), getSubprogramFlags(), getType(), getRetainedNodes());
 }

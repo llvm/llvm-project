@@ -448,7 +448,7 @@ llvm.func @func_debug_directives() {
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
 
 // Recursive type itself.
-#di_struct_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = false>
+#di_struct_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 #di_ptr_inner = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #di_struct_self, sizeInBits = 64>
 #di_subroutine_inner = #llvm.di_subroutine_type<types = #di_null_type, #di_ptr_inner>
 #di_subprogram_inner = #llvm.di_subprogram<
@@ -502,7 +502,7 @@ llvm.func @class_method() {
 
 // Ensures composite types with a recursive scope work.
 
-#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = false>
+#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 #di_file = #llvm.di_file<"test.mlir" in "/">
 #di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
@@ -525,7 +525,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // replaced with the recursive self reference.
 
 #di_file = #llvm.di_file<"test.mlir" in "/">
-#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = false>
+#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 
 #di_subroutine_type_inner = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram_inner = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type_inner>
