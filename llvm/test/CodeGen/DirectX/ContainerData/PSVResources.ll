@@ -12,7 +12,8 @@ define void @main() #0 {
 ; DXC:          LowerBound:      8
 ; DXC:          UpperBound:      8
 ; DXC:          Kind:            RawBuffer
-; DXC:          Flags:           0
+; DXC:          Flags:
+; DXC:            UsedByAtomic64:  false
   %srv0 = call target("dx.RawBuffer", i8, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, i1 false)
@@ -24,7 +25,8 @@ define void @main() #0 {
 ; DXC:          LowerBound:      2
 ; DXC:          UpperBound:      2
 ; DXC:          Kind:            StructuredBuffer
-; DXC:          Flags:           0
+; DXC:          Flags:
+; DXC:            UsedByAtomic64:  false
   %srv1 = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
           i32 4, i32 2, i32 1, i32 0, i1 false)
@@ -35,7 +37,8 @@ define void @main() #0 {
 ; DXC:          LowerBound:      3
 ; DXC:          UpperBound:      26
 ; DXC:          Kind:            TypedBuffer
-; DXC:          Flags:           0
+; DXC:          Flags:
+; DXC:            UsedByAtomic64:  false
   %srv2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
           i32 5, i32 3, i32 24, i32 0, i1 false)
@@ -46,7 +49,8 @@ define void @main() #0 {
 ; DXC:          LowerBound:      7
 ; DXC:          UpperBound:      7
 ; DXC:          Kind:            TypedBuffer
-; DXC:          Flags:           0
+; DXC:          Flags:
+; DXC:            UsedByAtomic64:  false
   %uav0 = call target("dx.TypedBuffer", i32, 1, 0, 1)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
           i32 2, i32 7, i32 1, i32 0, i1 false)
@@ -57,7 +61,8 @@ define void @main() #0 {
 ; DXC:          LowerBound:      5
 ; DXC:          UpperBound:      5
 ; DXC:          Kind:            TypedBuffer
-; DXC:          Flags:           0
+; DXC:          Flags:
+; DXC:            UsedByAtomic64:  false
   %uav1 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
                   i32 3, i32 5, i32 1, i32 0, i1 false)
@@ -68,7 +73,8 @@ define void @main() #0 {
 ; DXC:          LowerBound:      0
 ; DXC:          UpperBound:      9
 ; DXC:          Kind:            TypedBuffer
-; DXC:          Flags:           0
+; DXC:          Flags:
+; DXC:            UsedByAtomic64:  false
   ; RWBuffer<float4> Buf = BufferArray[0]
   %uav2_1 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(

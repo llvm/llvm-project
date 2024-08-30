@@ -187,7 +187,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         static_cast<dxbc::PSV::ResourceKind>(ResInfo.getResourceKind());
     // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
     // with https://github.com/llvm/llvm-project/issues/104392
-    BindInfo.Flags = 0u;
+    BindInfo.Flags.Flags = 0u;
 
     PSV.Resources.emplace_back(BindInfo);
   }
