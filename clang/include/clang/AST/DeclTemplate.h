@@ -781,15 +781,11 @@ protected:
                              EntryType *Entry, void *InsertPos);
 
   struct CommonBase {
-    CommonBase() : InstantiatedFromMember(nullptr, false) {}
+    CommonBase() {}
 
     /// The template from which this was most
     /// directly instantiated (or null).
-    ///
-    /// The boolean value indicates whether this template
-    /// was explicitly specialized.
-    llvm::PointerIntPair<RedeclarableTemplateDecl*, 1, bool>
-      InstantiatedFromMember;
+    RedeclarableTemplateDecl *InstantiatedFromMember = nullptr;
 
     /// If non-null, points to an array of specializations (including
     /// partial specializations) known only by their external declaration IDs.
@@ -903,12 +899,12 @@ public:
   /// void X<T>::f(T, U);
   /// \endcode
   RedeclarableTemplateDecl *getInstantiatedFromMemberTemplate() const {
-    return getCommonPtr()->InstantiatedFromMember.getPointer();
+    return getCommonPtr()->InstantiatedFromMember;
   }
 
   void setInstantiatedFromMemberTemplate(RedeclarableTemplateDecl *TD) {
-    assert(!getCommonPtr()->InstantiatedFromMember.getPointer());
-    getCommonPtr()->InstantiatedFromMember.setPointer(TD);
+    assert(!getCommonPtr()->InstantiatedFromMember);
+    getCommonPtr()->InstantiatedFromMember = TD;
   }
 
   /// Retrieve the "injected" template arguments that correspond to the
