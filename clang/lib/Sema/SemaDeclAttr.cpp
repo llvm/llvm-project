@@ -2999,7 +2999,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Duplicate << None << ParsedAttrs.Duplicate << Target;
     for (const auto &Feature : ParsedAttrs.Features) {
       auto CurFeature = StringRef(Feature);
-      if (!CurFeature.starts_with("+") && !CurFeature.starts_with("-"))
+      if (!CurFeature.starts_with('+') && !CurFeature.starts_with('-'))
         return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << AttrStr << Target;
     }
