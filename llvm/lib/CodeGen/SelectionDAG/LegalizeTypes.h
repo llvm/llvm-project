@@ -567,6 +567,9 @@ private:
   SDValue SoftenFloatRes_FACOS(SDNode *N);
   SDValue SoftenFloatRes_FASIN(SDNode *N);
   SDValue SoftenFloatRes_FATAN(SDNode *N);
+  SDValue SoftenFloatRes_FACOSH(SDNode *N);
+  SDValue SoftenFloatRes_FASINH(SDNode *N);
+  SDValue SoftenFloatRes_FATANH(SDNode *N);
   SDValue SoftenFloatRes_FMINNUM(SDNode *N);
   SDValue SoftenFloatRes_FMAXNUM(SDNode *N);
   SDValue SoftenFloatRes_FMINIMUMNUM(SDNode *N);
@@ -661,6 +664,9 @@ private:
   void ExpandFloatRes_FACOS     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FASIN     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FATAN     (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FACOSH    (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FASINH    (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FATANH    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FMINNUM   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FMAXNUM   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FMINIMUMNUM(SDNode *N, SDValue &Lo, SDValue &Hi);

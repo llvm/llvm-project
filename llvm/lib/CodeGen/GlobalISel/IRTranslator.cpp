@@ -1885,6 +1885,12 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FASIN;
     case Intrinsic::atan:
       return TargetOpcode::G_FATAN;
+    case Intrinsic::acosh:
+      return TargetOpcode::G_FACOSH;
+    case Intrinsic::asinh:
+      return TargetOpcode::G_FASINH;
+    case Intrinsic::atanh:
+      return TargetOpcode::G_FATANH;
     case Intrinsic::bswap:
       return TargetOpcode::G_BSWAP;
     case Intrinsic::bitreverse:

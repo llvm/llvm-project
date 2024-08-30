@@ -411,6 +411,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSINH:
   case ISD::FCOSH:
   case ISD::FTANH:
+  case ISD::FASINH:
+  case ISD::FACOSH:
+  case ISD::FATANH:
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:

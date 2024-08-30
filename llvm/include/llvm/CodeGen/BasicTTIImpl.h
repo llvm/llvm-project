@@ -1996,6 +1996,15 @@ public:
     case Intrinsic::tanh:
       ISD = ISD::FTANH;
       break;
+    case Intrinsic::asinh:
+      ISD = ISD::FASINH;
+      break;
+    case Intrinsic::acosh:
+      ISD = ISD::FACOSH;
+      break;
+    case Intrinsic::atanh:
+      ISD = ISD::FATANH;
+      break;
     case Intrinsic::exp:
       ISD = ISD::FEXP;
       break;
