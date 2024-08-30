@@ -153,9 +153,8 @@ public:
     Invalid
   };
   BinaryExpr(StringRef op, Expr *LHS, Expr *RHS, const std::string loc)
-      : Expr(ExprKind::Binary), LHS(LHS), RHS(RHS), loc_(loc) {
-    opcode = stringToOp(op);
-  }
+      : Expr(ExprKind::Binary), opcode(stringToOp(op)), LHS(LHS), RHS(RHS),
+        loc_(loc) {}
   ExprValue getExprValue() const;
   // Some operations only support one non absolute value. Move the
   // absolute one to the right hand side for convenience.
@@ -261,10 +260,12 @@ struct MemoryRegion {
   uint64_t curPos = 0;
 
   uint64_t getOrigin() const {
-    return origin ? origin->getExprValue().getValue() : 0;
+    assert(origin != nullptr);
+    return origin->getExprValue().getValue();
   }
   uint64_t getLength() const {
-    return length ? length->getExprValue().getValue() : 0;
+    assert(length != nullptr);
+    return length->getExprValue().getValue();
   }
 
   bool compatibleWith(uint32_t secFlags) const {
