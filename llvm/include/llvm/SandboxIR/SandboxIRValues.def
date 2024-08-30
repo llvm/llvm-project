@@ -26,6 +26,7 @@ DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_CONST(Constant, Constant)
 DEF_CONST(ConstantInt, ConstantInt)
+DEF_CONST(ConstantFP, ConstantFP)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
