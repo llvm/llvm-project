@@ -1996,7 +1996,7 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
 
   EVT VT = EVT::getEVT(I->getType());
 
-  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::nxv4i64;
+  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
