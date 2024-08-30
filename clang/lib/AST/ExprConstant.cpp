@@ -14458,7 +14458,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralComplexToFloatingComplex:
   case CK_BuiltinFnToFnPtr:
   case CK_ZeroToOCLOpaqueType:
-  case CK_NonAtomicToAtomic:
   case CK_AddressSpaceConversion:
   case CK_IntToOCLSampler:
   case CK_FloatingToFixedPoint:
@@ -14482,6 +14481,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_UserDefinedConversion:
   case CK_LValueToRValue:
   case CK_AtomicToNonAtomic:
+  case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
