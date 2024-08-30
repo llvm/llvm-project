@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include <cctype>
 #include <string>
 #include <sys/utsname.h>

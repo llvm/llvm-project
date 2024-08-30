@@ -1,3 +1,5 @@
+#include "llvm/Analysis/InlineOrder.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -5,8 +7,6 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "llvm/Analysis/InlineOrder.h"
 
 using namespace llvm;
 

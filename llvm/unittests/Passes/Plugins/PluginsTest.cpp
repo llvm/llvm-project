@@ -9,6 +9,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_PLUGINS
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"

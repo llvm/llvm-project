@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_CURL, LLVM_ENABLE_HTTPLIB
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Debuginfod/HTTPServer.h"
 #include "llvm/Support/Error.h"

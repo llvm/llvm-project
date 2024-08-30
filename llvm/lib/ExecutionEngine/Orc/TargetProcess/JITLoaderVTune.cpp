@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_USE_INTEL_JITEVENTS
 #include "llvm/ExecutionEngine/Orc/Shared/VTuneSharedStructs.h"
 #include <map>
 

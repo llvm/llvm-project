@@ -16,7 +16,7 @@
 #include "lld/Common/Arrays.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB
+#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB, LLVM_ENABLE_ZSTD
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"

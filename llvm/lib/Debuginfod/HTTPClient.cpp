@@ -15,6 +15,7 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_CURL
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"

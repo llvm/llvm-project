@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HAVE_TFLITE
 #if defined(LLVM_HAVE_TFLITE)
 
 #include "llvm/ADT/Twine.h"

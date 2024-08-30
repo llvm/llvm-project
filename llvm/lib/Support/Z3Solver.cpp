@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_WITH_Z3
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/SMTAPI.h"
 

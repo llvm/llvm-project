@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB, LLVM_ENABLE_ZSTD
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 

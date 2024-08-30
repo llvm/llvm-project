@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HAVE_TFLITE
 
 #ifdef LLVM_HAVE_TFLITE
 #include "llvm/Analysis/Utils/TFUtils.h"

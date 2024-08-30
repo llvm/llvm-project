@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #if LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"

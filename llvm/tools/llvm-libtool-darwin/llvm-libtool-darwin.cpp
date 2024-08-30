@@ -13,6 +13,7 @@
 #include "DependencyInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/IRObjectFile.h"

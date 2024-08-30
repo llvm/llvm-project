@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_ERRORHANDLING_H
 #define LLVM_SUPPORT_ERRORHANDLING_H
 
+#include "llvm/Config/llvm-config.h" // for LLVM_UNREACHABLE_OPTIMIZE
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {

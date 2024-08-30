@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_MAJOR
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCSPIRVObjectWriter.h"
 #include "llvm/MC/MCSection.h"

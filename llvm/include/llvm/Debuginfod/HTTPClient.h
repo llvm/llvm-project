@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_CURL
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 

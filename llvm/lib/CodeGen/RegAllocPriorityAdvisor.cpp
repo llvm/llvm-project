@@ -14,6 +14,7 @@
 #include "RegAllocGreedy.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HAVE_TFLITE
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/ExecutionEngine.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_USE_INTEL_JITEVENTS, LLVM_USE_OPROFILE, LLVM_USE_PERF
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
