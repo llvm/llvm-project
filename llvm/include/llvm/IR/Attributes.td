@@ -303,8 +303,8 @@ def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAtt
 /// RealtimeSanitizer is on.
 def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
 
-/// RealtimeSanitizer should error if an realtime_unsafe function is called
-/// during a sanitize_realtime function.
+/// RealtimeSanitizer should error if a real-time unsafe function is invoked
+/// during a real-time sanitized function (see `sanitize_realtime`).
 def SanitizeRealtimeUnsafe : EnumAttr<"sanitize_realtime_unsafe", [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.

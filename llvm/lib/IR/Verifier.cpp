@@ -2224,6 +2224,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           "Attributes 'optdebug and optnone' are incompatible!", V);
   }
 
+  Check(!(Attrs.hasFnAttr(Attribute::SanitizeRealtime) &&
+          Attrs.hasFnAttr(Attribute::SanitizeRealtimeUnsafe)),
+        "Attributes "
+        "'sanitize_realtime and sanitize_realtime_unsafe' are incompatible!",
+        V);
+
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optdebug' are incompatible!", V);
