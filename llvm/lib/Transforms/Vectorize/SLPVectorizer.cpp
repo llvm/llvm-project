@@ -2605,7 +2605,7 @@ public:
       int Score = LookAhead.getScoreAtLevelRec(Candidates[I].first,
                                                Candidates[I].second,
                                                /*U1=*/nullptr, /*U2=*/nullptr,
-                                               /*Level=*/1, std::nullopt);
+                                               /*CurrLevel=*/1, std::nullopt);
       if (Score > BestScore) {
         BestScore = Score;
         Index = I;
