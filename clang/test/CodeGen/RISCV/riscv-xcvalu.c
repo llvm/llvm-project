@@ -46,21 +46,6 @@ int test_alu_sletu(uint32_t a, uint32_t b) {
   return __builtin_riscv_cv_alu_sletu(a, b);
 }
 
-// CHECK-LABEL: @test_alu_min(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.alu.min(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    ret i32 [[TMP2]]
-//
-int test_alu_min(int32_t a, int32_t b) {
-  return __builtin_riscv_cv_alu_min(a, b);
-}
-
 // CHECK-LABEL: @test_alu_minu(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -74,21 +59,6 @@ int test_alu_min(int32_t a, int32_t b) {
 //
 int test_alu_minu(uint32_t a, uint32_t b) {
   return __builtin_riscv_cv_alu_minu(a, b);
-}
-
-// CHECK-LABEL: @test_alu_max(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.alu.max(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    ret i32 [[TMP2]]
-//
-int test_alu_max(int32_t a, int32_t b) {
-  return __builtin_riscv_cv_alu_max(a, b);
 }
 
 // CHECK-LABEL: @test_alu_maxu(

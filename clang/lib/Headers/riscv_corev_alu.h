@@ -34,7 +34,7 @@ __riscv_cv_alu_sletu(unsigned long a, unsigned long b) {
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_min(long a, long b) {
-  return __builtin_riscv_cv_alu_min(a, b);
+  return min(a, b);
 }
 
 static __inline__ unsigned long __DEFAULT_FN_ATTRS
@@ -43,7 +43,7 @@ __riscv_cv_alu_minu(unsigned long a, unsigned long b) {
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_max(long a, long b) {
-  return __builtin_riscv_cv_alu_max(a, b);
+  return max(a, b);
 }
 
 static __inline__ unsigned long __DEFAULT_FN_ATTRS

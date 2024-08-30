@@ -18,7 +18,7 @@ int test_alu_sletu(uint32_t a, uint32_t b) {
 }
 
 // CHECK-LABEL: @test_alu_min
-// CHECK: @llvm.riscv.cv.alu.min
+// CHECK: @min
 int test_alu_min(int32_t a, int32_t b) {
   return __riscv_cv_alu_min(a, b);
 }
@@ -30,7 +30,7 @@ int test_alu_minu(uint32_t a, uint32_t b) {
 }
 
 // CHECK-LABEL: @test_alu_max
-// CHECK: @llvm.riscv.cv.alu.max
+// CHECK: @max
 int test_alu_max(int32_t a, int32_t b) {
   return __riscv_cv_alu_max(a, b);
 }

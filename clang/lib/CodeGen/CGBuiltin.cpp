@@ -22339,15 +22339,63 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+  // XCValu
+  case RISCV::BI__builtin_riscv_cv_alu_addN:
+    ID = Intrinsic::riscv_cv_alu_addN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_addRN:
+    ID = Intrinsic::riscv_cv_alu_addRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_adduN:
+    ID = Intrinsic::riscv_cv_alu_adduN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_adduRN:
+    ID = Intrinsic::riscv_cv_alu_adduRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_clip:
+    ID = Intrinsic::riscv_cv_alu_clip;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_clipu:
+    ID = Intrinsic::riscv_cv_alu_clipu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_extbs:
+    ID = Intrinsic::riscv_cv_alu_extbs;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_extbz:
+    ID = Intrinsic::riscv_cv_alu_extbz;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_exths:
+    ID = Intrinsic::riscv_cv_alu_exths;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_exthz:
+    ID = Intrinsic::riscv_cv_alu_exthz;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_maxu:
+    ID = Intrinsic::riscv_cv_alu_maxu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_minu:
+    ID = Intrinsic::riscv_cv_alu_minu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_slet:
+    ID = Intrinsic::riscv_cv_alu_slet;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_sletu:
+    ID = Intrinsic::riscv_cv_alu_sletu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subN:
+    ID = Intrinsic::riscv_cv_alu_subN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subRN:
+    ID = Intrinsic::riscv_cv_alu_subRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subuN:
+    ID = Intrinsic::riscv_cv_alu_subuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subuRN:
+    ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
 
-// Core-V
-#define BUILTIN(NAME, TYPE, ATTRS)                                             \
-  case RISCVXCV::BI__builtin_riscv_cv_##NAME:                                  \
-    ID = Intrinsic::riscv_cv_##NAME;                                           \
-    return Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
-#include "clang/Basic/BuiltinsRISCVXCV.def"
-
-  // Vector builtins are handled from here.
+    // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
   // SiFive Vector builtins are handled from here.
 #include "clang/Basic/riscv_sifive_vector_builtin_cg.inc"
