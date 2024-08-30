@@ -5339,9 +5339,9 @@ void Sema::DiagnoseMissingFormatAttributes(Stmt *Body,
 
   // Check if there are more than one format type found. In that case do not
   // emit diagnostic.
-  const FormatAttr *FirstAttr = MissingFormatAttributes[0];
+  const clang::IdentifierInfo *AttrType = MissingFormatAttributes[0]->getType();
   if (llvm::any_of(MissingFormatAttributes, [&](const FormatAttr *Attr) {
-        return FirstAttr->getType() != Attr->getType();
+        return AttrType != Attr->getType();
       }))
     return;
 
@@ -5416,14 +5416,17 @@ Sema::GetMissingFormatAttributes(Stmt *Body, const FunctionDecl *FDecl) {
     // If child expression is function, check if it is format function.
     // If it is, check if parent function misses format attributes.
 
+    unsigned int ChildFunctionFormatArgumentIndexOffset =
+        checkIfMethodHasImplicitObjectParameter(ChildFunction) ? 2 : 1;
+
+    if (!ChildFunction->hasAttr<FormatAttr>())
+      continue;
+
     // If child function is format function and format arguments are not
     // relevant to emit diagnostic, save only information about format type
     // (format index and first-to-check argument index are set to -1).
     // Information about format type is later used to determine if there are
     // more than one format type found.
-
-    unsigned int ChildFunctionFormatArgumentIndexOffset =
-        checkIfMethodHasImplicitObjectParameter(ChildFunction) ? 2 : 1;
 
     // Check if function has format attribute with forwarded format string.
     IdentifierInfo *AttrType;
@@ -5465,7 +5468,7 @@ Sema::GetMissingFormatAttributes(Stmt *Body, const FunctionDecl *FDecl) {
       continue;
 
     // Check if format string argument is parent function parameter.
-    unsigned int StringIndex = 0;
+    int StringIndex = 0;
     if (!llvm::any_of(FDecl->parameters(), [&](const ParmVarDecl *Param) {
           if (Param != FormatArg)
             return false;
@@ -5506,16 +5509,13 @@ Sema::GetMissingFormatAttributes(Stmt *Body, const FunctionDecl *FDecl) {
     }
 
     // Get first argument index
-    unsigned FirstToCheck = [&]() -> unsigned {
+    int FirstToCheck = [&]() -> unsigned {
       if (!FDecl->isVariadic())
         return 0;
-      const auto *FirstToCheckArg =
-          dyn_cast<DeclRefExpr>(Args[NumArgs - 1]->IgnoreParenCasts());
-      if (!FirstToCheckArg)
-        return 0;
-
-      if (FirstToCheckArg->getType().getCanonicalType() !=
-          Context.getBuiltinVaListType().getCanonicalType())
+      const auto *FirstToCheckArg = Args[NumArgs - 1]->IgnoreParenCasts();
+      if (!FirstToCheckArg ||
+          FirstToCheckArg->getType().getCanonicalType() !=
+              Context.getBuiltinVaListType().getCanonicalType())
         return 0;
       return NumOfParentFunctionParams + FunctionFormatArgumentIndexOffset;
     }();
