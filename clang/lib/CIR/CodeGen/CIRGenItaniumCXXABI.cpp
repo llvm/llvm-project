@@ -1113,6 +1113,7 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
   // Types added here must also be added to EmitFundamentalRTTIDescriptors.
   switch (Ty->getKind()) {
   case BuiltinType::WasmExternRef:
+  case BuiltinType::HLSLResource:
     llvm_unreachable("NYI");
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
