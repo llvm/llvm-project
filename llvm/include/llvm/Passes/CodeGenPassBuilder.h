@@ -27,6 +27,8 @@
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FinalizeISel.h"
@@ -610,13 +612,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::verifyStartStop(
 
   if (!Started)
     return make_error<StringError>(
-        "Can't find start pass \"" +
-            PIC->getPassNameForClassName(Info.StartPass) + "\".",
+        "Can't find start pass \"" + Info.StartPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
   if (!Stopped)
     return make_error<StringError>(
-        "Can't find stop pass \"" +
-            PIC->getPassNameForClassName(Info.StopPass) + "\".",
+        "Can't find stop pass \"" + Info.StopPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
   return Error::success();
 }
@@ -628,7 +628,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
   if (TM.useEmulatedTLS())
     addPass(LowerEmuTLSPass());
 
-  addPass(PreISelIntrinsicLoweringPass(TM));
+  addPass(PreISelIntrinsicLoweringPass(&TM));
+  addPass(ExpandLargeDivRemPass(&TM));
+  addPass(ExpandLargeFpConvertPass(&TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);

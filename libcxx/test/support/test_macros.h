@@ -184,6 +184,12 @@
 #  define TEST_CONSTEXPR_CXX23
 #endif
 
+#if TEST_STD_VER >= 26
+#  define TEST_CONSTEXPR_CXX26 constexpr
+#else
+#  define TEST_CONSTEXPR_CXX26
+#endif
+
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
@@ -291,17 +297,27 @@ struct is_same<T, T> { enum {value = 1}; };
 // when optimizations are enabled.
 template <class Tp>
 inline Tp const& DoNotOptimize(Tp const& value) {
-    asm volatile("" : : "r,m"(value) : "memory");
-    return value;
+  // The `m` constraint is invalid in the AMDGPU backend.
+#  if defined(__AMDGPU__) || defined(__NVPTX__)
+  asm volatile("" : : "r"(value) : "memory");
+#  else
+  asm volatile("" : : "r,m"(value) : "memory");
+#  endif
+  return value;
 }
 
 template <class Tp>
 inline Tp& DoNotOptimize(Tp& value) {
-#if defined(__clang__)
+  // The `m` and `r` output constraint is invalid in the AMDGPU backend as well
+  // as i8 / i1 arguments, so we just capture the pointer instead.
+#  if defined(__AMDGPU__)
+  Tp* tmp = &value;
+  asm volatile("" : "+v"(tmp) : : "memory");
+#  elif defined(__clang__)
   asm volatile("" : "+r,m"(value) : : "memory");
-#else
+#  else
   asm volatile("" : "+m,r"(value) : : "memory");
-#endif
+#  endif
   return value;
 }
 #else
@@ -485,6 +501,14 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 // Clang-18 has support for deducing this, but it does not set the FTM.
 #ifdef _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
+#endif
+
+// Placement `operator new`/`operator new[]` are not yet constexpr in C++26
+// when using MS ABI, because they are from <vcruntime_new.h>.
+#if defined(__cpp_lib_constexpr_new) && __cpp_lib_constexpr_new >= 202406L
+#  define TEST_CONSTEXPR_OPERATOR_NEW constexpr
+#else
+#  define TEST_CONSTEXPR_OPERATOR_NEW
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

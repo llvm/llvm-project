@@ -17,6 +17,12 @@ set(
 # Making sure ALL_COMPILER_FEATURES is sorted.
 list(SORT ALL_COMPILER_FEATURES)
 
+# Compiler features that are unavailable on GPU targets with the in-tree Clang.
+set(
+  CPU_ONLY_COMPILER_FEATURES
+    "float128"
+)
+
 # Function to check whether the compiler supports the provided set of features.
 # Usage:
 # compiler_supports(
@@ -67,13 +73,26 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
   endif()
 
-  try_compile(
-    has_feature
-    ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
-    SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
-    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compile_options}
-    LINK_OPTIONS ${link_options}
-  )
+  if(LIBC_TARGET_OS_IS_GPU)
+    # CUDA shouldn't be required to build the libc, only to test it, so we can't
+    # try to build CUDA binaries here. Since GPU builds are always compiled with
+    # the in-tree Clang, we just hardcode which compiler features are available
+    # when targeting GPUs.
+    if(feature IN_LIST CPU_ONLY_COMPILER_FEATURES)
+      set(has_feature FALSE)
+    else()
+      set(has_feature TRUE)
+    endif()
+  else()
+    try_compile(
+      has_feature
+      ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
+      SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
+      COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compile_options}
+      LINK_OPTIONS ${link_options}
+    )
+  endif()
+
   if(has_feature)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
     if(${feature} STREQUAL "float16")

@@ -13,10 +13,8 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MLModelRunner.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/PassManager.h"
 
-#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
@@ -25,6 +23,7 @@ namespace llvm {
 class DiagnosticInfoOptimizationBase;
 class Module;
 class MLInlineAdvice;
+class ProfileSummaryInfo;
 
 class MLInlineAdvisor : public InlineAdvisor {
 public:

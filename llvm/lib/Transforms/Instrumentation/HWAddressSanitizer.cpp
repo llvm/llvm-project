@@ -57,6 +57,7 @@
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -455,6 +456,9 @@ private:
 
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_hwaddress module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_hwaddress"))
+    return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   auto TargetTriple = llvm::Triple(M.getTargetTriple());
   if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))
@@ -1528,11 +1532,7 @@ static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
 
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
-  bool Skip = [&]() {
-    if (ClRandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(ClRandomSkipRate);
-      return !D(*Rng);
-    }
+  auto SkipHot = [&]() {
     if (!ClHotPercentileCutoff.getNumOccurrences())
       return false;
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -1544,7 +1544,16 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     }
     return PSI->isFunctionHotInCallGraphNthPercentile(
         ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
-  }();
+  };
+
+  auto SkipRandom = [&]() {
+    if (!ClRandomSkipRate.getNumOccurrences())
+      return false;
+    std::bernoulli_distribution D(ClRandomSkipRate);
+    return !D(*Rng);
+  };
+
+  bool Skip = SkipRandom() || SkipHot();
   emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
   return Skip;
 }

@@ -1481,6 +1481,14 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   }
 
+  // Allow only pointers to be return type for functions with ownership_returns
+  // attribute. This matches with current OwnershipAttr::Takes semantics
+  if (K == OwnershipAttr::Returns &&
+      !getFunctionOrMethodResultType(D)->isPointerType()) {
+    S.Diag(AL.getLoc(), diag::err_ownership_takes_return_type) << AL;
+    return;
+  }
+
   IdentifierInfo *Module = AL.getArgAsIdent(0)->Ident;
 
   StringRef ModuleName = Module->getName();
@@ -3034,9 +3042,6 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
-  if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                             /*IncludeLocallyStreaming=*/false))
-    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
@@ -3133,10 +3138,6 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
-      if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                                 /*IncludeLocallyStreaming=*/false))
-        return Diag(LiteralLoc,
-                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -3407,8 +3408,8 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Otherwise, check for supported formats.
       .Cases("scanf", "printf", "printf0", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
-      .Case("kprintf", SupportedFormat)         // OpenBSD.
-      .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
+      .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
+      .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 
@@ -5897,8 +5898,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
-  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
-  if (S.CheckCountedByAttrOnField(FD, CountExpr, Decls, CountInBytes, OrNull))
+  if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
     return;
 
   QualType CAT = S.BuildCountAttributedArrayOrPointerType(
@@ -5991,7 +5991,7 @@ static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Warn if the return type is not a pointer or reference type.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     QualType RetTy = FD->getReturnType();
-    if (!RetTy->isPointerType() && !RetTy->isReferenceType()) {
+    if (!RetTy->isPointerOrReferenceType()) {
       S.Diag(AL.getLoc(), diag::warn_declspec_allocator_nonpointer)
           << AL.getRange() << RetTy;
       return;
@@ -6878,6 +6878,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_MSConstexpr:
     handleMSConstexprAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_HybridPatchable:
+    handleSimpleAttribute<HybridPatchableAttr>(S, D, AL);
+    break;
 
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
@@ -6885,6 +6888,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+    handleSimpleAttribute<HLSLGroupSharedAddressSpaceAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     S.HLSL().handleSV_DispatchThreadIDAttr(D, AL);
@@ -6897,6 +6903,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLROV:
+    handleSimpleAttribute<HLSLROVAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLResourceClass:
     S.HLSL().handleResourceClassAttr(D, AL);
@@ -7117,6 +7126,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   }
 }
 
+static bool isKernelDecl(Decl *D) {
+  const FunctionType *FnTy = D->getFunctionType();
+  return D->hasAttr<OpenCLKernelAttr>() ||
+         (FnTy && FnTy->getCallConv() == CallingConv::CC_AMDGPUKernelCall) ||
+         D->hasAttr<CUDAGlobalAttr>() || D->getAttr<NVPTXKernelAttr>();
+}
+
 void Sema::ProcessDeclAttributeList(
     Scope *S, Decl *D, const ParsedAttributesView &AttrList,
     const ProcessDeclAttributeOptions &Options) {
@@ -7157,24 +7173,25 @@ void Sema::ProcessDeclAttributeList(
     } else if (const auto *A = D->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
       Diag(D->getLocation(), diag::err_opencl_kernel_attr) << A;
       D->setInvalidDecl();
-    } else if (!D->hasAttr<CUDAGlobalAttr>()) {
-      if (const auto *A = D->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
-        Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
-            << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
-        D->setInvalidDecl();
-      } else if (const auto *A = D->getAttr<AMDGPUWavesPerEUAttr>()) {
-        Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
-            << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
-        D->setInvalidDecl();
-      } else if (const auto *A = D->getAttr<AMDGPUNumSGPRAttr>()) {
-        Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
-            << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
-        D->setInvalidDecl();
-      } else if (const auto *A = D->getAttr<AMDGPUNumVGPRAttr>()) {
-        Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
-            << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
-        D->setInvalidDecl();
-      }
+    }
+  }
+  if (!isKernelDecl(D)) {
+    if (const auto *A = D->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
+      Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
+          << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
+      D->setInvalidDecl();
+    } else if (const auto *A = D->getAttr<AMDGPUWavesPerEUAttr>()) {
+      Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
+          << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
+      D->setInvalidDecl();
+    } else if (const auto *A = D->getAttr<AMDGPUNumSGPRAttr>()) {
+      Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
+          << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
+      D->setInvalidDecl();
+    } else if (const auto *A = D->getAttr<AMDGPUNumVGPRAttr>()) {
+      Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
+          << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
+      D->setInvalidDecl();
     }
   }
 

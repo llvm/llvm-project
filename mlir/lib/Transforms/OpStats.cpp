@@ -55,6 +55,7 @@ void PrintOpStatsPass::runOnOperation() {
     printSummaryInJSON();
   } else
     printSummary();
+  markAllAnalysesPreserved();
 }
 
 void PrintOpStatsPass::printSummary() {

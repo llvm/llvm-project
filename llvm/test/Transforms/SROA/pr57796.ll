@@ -29,13 +29,13 @@ entry:
   %call.i = call align 32 ptr @value_set_type(ptr align 32 %ref.tmp.i)
   %0 = load <32 x i8>, ptr %call.i, align 32
   store <32 x i8> %0, ptr %ref.tmp, align 32
-  %1 = load x86_mmx, ptr %ref.tmp, align 32
-  %2 = call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %1, i8 0)
-  store x86_mmx %2, ptr @A, align 8
+  %1 = load <1 x i64>, ptr %ref.tmp, align 32
+  %2 = call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %1, i8 0)
+  store <1 x i64> %2, ptr @A, align 8
   ret void
 }
 
-declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8 immarg)
+declare <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64>, i8 immarg)
 
 declare dso_local void @value_create(ptr sret(%struct.Value) align 32)
 

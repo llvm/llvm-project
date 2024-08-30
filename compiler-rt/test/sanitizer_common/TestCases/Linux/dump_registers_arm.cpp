@@ -3,7 +3,7 @@
 // RUN: %env_tool_opts=dump_registers=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NODUMP
 // RUN: not %run %t 2>&1 | FileCheck %s --strict-whitespace --check-prefix=CHECK-DUMP
 //
-// REQUIRES: arm-target-arch
+// REQUIRES: arm-target-arch && glibc
 
 #include <signal.h>
 

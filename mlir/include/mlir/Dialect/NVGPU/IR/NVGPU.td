@@ -20,6 +20,7 @@
 #ifndef NVGPU
 #define NVGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -109,10 +110,22 @@ def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
   let cppNamespace = "::mlir::nvgpu";
 }
 
+def RcpApprox : I32EnumAttrCase<"APPROX", 0, "approx">;
+def RcpRN     : I32EnumAttrCase<"RN", 1, "rn">;
+def RcpRZ     : I32EnumAttrCase<"RZ", 2, "rz">;
+def RcpRM     : I32EnumAttrCase<"RM", 3, "rm">;
+def RcpRP     : I32EnumAttrCase<"RP", 4, "rp">;
+def RcpRoundingMode   : I32EnumAttr<"RcpRoundingMode", "Rounding mode of rcp",
+  [RcpApprox, RcpRN, RcpRZ, RcpRM, RcpRP]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
 def TensorMapSwizzleAttr : EnumAttr<NVGPU_Dialect, TensorMapSwizzleKind, "swizzle">;
 def TensorMapL2PromoAttr : EnumAttr<NVGPU_Dialect, TensorMapL2PromoKind, "l2promo">;
 def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
 def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
+def RcpRoundingModeAttr : EnumAttr<NVGPU_Dialect, RcpRoundingMode, "rcp_rounding_mode">;
 
 //===----------------------------------------------------------------------===//
 // NVGPU Type Definitions
@@ -802,4 +815,24 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
   let hasVerifier = 1;
 }
 
+def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
+                                   SameOperandsAndResultType]> {
+  let summary = "The reciprocal calculation for vector types";
+  let description = [{
+    Reciprocal calculation for `vector` types using `nvvm.rcp` OPs.
+
+    Currently, only the `approx` rounding mode and `ftz` are supported, and only for the `f32` type.
+
+    The input and output must be of the same vector type and shape.
+  }];
+  let arguments = (ins VectorOf<[F32]>:$in,
+                       DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
+                       UnitAttr:$ftz);
+  let results = (outs VectorOf<[F32]>:$out);
+  let assemblyFormat = [{
+    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
+    attr-dict `:` type($out)
+  }];
+  let hasVerifier = 1;
+}
 #endif // NVGPU

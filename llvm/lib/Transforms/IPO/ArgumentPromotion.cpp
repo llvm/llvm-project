@@ -371,7 +371,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     append_range(Worklist, Arg.users());
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
-      if (isa<BitCastInst>(V) || isa<GetElementPtrInst>(V)) {
+      if (isa<GetElementPtrInst>(V)) {
         DeadInsts.push_back(cast<Instruction>(V));
         append_range(Worklist, V->users());
         continue;
@@ -608,10 +608,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
     Value *V = U->getUser();
-    if (isa<BitCastInst>(V)) {
-      AppendUses(V);
-      continue;
-    }
 
     if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
       if (!GEP->hasAllConstantIndices())

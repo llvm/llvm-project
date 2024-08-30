@@ -2031,11 +2031,8 @@ define <8 x double> @vfwnmsac_fv_v8f64_v8f16(<8 x double> %va, <8 x half> %vb, h
 define <2 x float> @vfwmacc_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmacc_vf2_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmacc.vf v8, fa5, v10
+; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %cext = fpext half %c to float
   %head = insertelement <2 x float> poison, float %cext, i32 0
@@ -2048,11 +2045,8 @@ define <2 x float> @vfwmacc_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) 
 define <2 x float> @vfwmsac_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmsac_vf2_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmsac.vf v8, fa5, v10
+; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %cext = fpext half %c to float
   %head = insertelement <2 x float> poison, float %cext, i32 0
@@ -2066,11 +2060,8 @@ define <2 x float> @vfwmsac_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) 
 define <2 x float> @vfwnmacc_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_vf2_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfnmacc.vf v8, fa5, v10
+; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %cext = fpext half %c to float
   %head = insertelement <2 x float> poison, float %cext, i32 0
@@ -2085,11 +2076,8 @@ define <2 x float> @vfwnmacc_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c)
 define <2 x float> @vfwnmsac_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_vf2_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfnmsac.vf v8, fa5, v10
+; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %cext = fpext half %c to float
   %head = insertelement <2 x float> poison, float %cext, i32 0

@@ -290,7 +290,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
        State ? State->getActiveModuleMacros(*this, II) : std::nullopt)
     Active.insert(MM);
   llvm::DenseSet<ModuleMacro*> Visited;
-  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf.begin(), Leaf.end());
+  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf);
   while (!Worklist.empty()) {
     auto *MM = Worklist.pop_back_val();
     llvm::errs() << " ModuleMacro " << MM << " "
@@ -1603,6 +1603,16 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
   }
   return false;
 }
+
+#if defined(__sun__) && defined(__svr4__)
+// GCC mangles std::tm as tm for binary compatibility on Solaris (Issue
+// #33114).  We need to match this to allow the std::put_time calls to link
+// (PR #99075).
+asm("_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
+    "RSt8ios_basecPKSt2tmPKcSB_ = "
+    "_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
+    "RSt8ios_basecPK2tmPKcSB_");
+#endif
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.

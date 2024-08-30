@@ -629,11 +629,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
                                Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
 
-  // Skip over the EOF token, flagging end of previous input for incremental
-  // processing
-  if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
-    ConsumeToken();
-
   Result = nullptr;
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:

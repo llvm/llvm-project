@@ -67,7 +67,7 @@ public:
       Valid = isValidAddrOffset(Scale, OffsetVal);
 
       if (Valid) {
-        // If the first operand is a FI, get the TargetFI Node
+        // If the first operand is a FI, get the TargetFI Node.
         if (FrameIndexSDNode *FIN =
                 dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
           Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
@@ -125,11 +125,89 @@ FunctionPass *llvm::createXtensaISelDag(XtensaTargetMachine &TM,
 
 void XtensaDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
 
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     Node->setNodeId(-1);
     return;
+  }
+
+  switch (Node->getOpcode()) {
+  case ISD::SHL: {
+    SDValue N0 = Node->getOperand(0);
+    SDValue N1 = Node->getOperand(1);
+    auto *C = dyn_cast<ConstantSDNode>(N1);
+    // If C is constant in range [1..31] then we can generate SLLI
+    // instruction using pattern matching, otherwise generate SLL.
+    if (!C || C->isZero()) {
+      SDNode *SSL = CurDAG->getMachineNode(Xtensa::SSL, DL, MVT::Glue, N1);
+      SDNode *SLL =
+          CurDAG->getMachineNode(Xtensa::SLL, DL, VT, N0, SDValue(SSL, 0));
+      ReplaceNode(Node, SLL);
+      return;
+    }
+    break;
+  }
+  case ISD::SRL: {
+    SDValue N0 = Node->getOperand(0);
+    SDValue N1 = Node->getOperand(1);
+    auto *C = dyn_cast<ConstantSDNode>(N1);
+
+    // If C is constant then we can generate SRLI
+    // instruction using pattern matching or EXTUI, otherwise generate SRL.
+    if (C) {
+      if (isUInt<4>(C->getZExtValue()))
+        break;
+      unsigned ShAmt = C->getZExtValue();
+      SDNode *EXTUI = CurDAG->getMachineNode(
+          Xtensa::EXTUI, DL, VT, N0, CurDAG->getTargetConstant(ShAmt, DL, VT),
+          CurDAG->getTargetConstant(32 - ShAmt, DL, VT));
+      ReplaceNode(Node, EXTUI);
+      return;
+    }
+
+    SDNode *SSR = CurDAG->getMachineNode(Xtensa::SSR, DL, MVT::Glue, N1);
+    SDNode *SRL =
+        CurDAG->getMachineNode(Xtensa::SRL, DL, VT, N0, SDValue(SSR, 0));
+    ReplaceNode(Node, SRL);
+    return;
+  }
+  case ISD::SRA: {
+    SDValue N0 = Node->getOperand(0);
+    SDValue N1 = Node->getOperand(1);
+    auto *C = dyn_cast<ConstantSDNode>(N1);
+    // If C is constant then we can generate SRAI
+    // instruction using pattern matching, otherwise generate SRA.
+    if (!C) {
+      SDNode *SSR = CurDAG->getMachineNode(Xtensa::SSR, DL, MVT::Glue, N1);
+      SDNode *SRA =
+          CurDAG->getMachineNode(Xtensa::SRA, DL, VT, N0, SDValue(SSR, 0));
+      ReplaceNode(Node, SRA);
+      return;
+    }
+    break;
+  }
+  case XtensaISD::SRCL: {
+    SDValue N0 = Node->getOperand(0);
+    SDValue N1 = Node->getOperand(1);
+    SDValue N2 = Node->getOperand(2);
+    SDNode *SSL = CurDAG->getMachineNode(Xtensa::SSL, DL, MVT::Glue, N2);
+    SDNode *SRC =
+        CurDAG->getMachineNode(Xtensa::SRC, DL, VT, N0, N1, SDValue(SSL, 0));
+    ReplaceNode(Node, SRC);
+    return;
+  }
+  case XtensaISD::SRCR: {
+    SDValue N0 = Node->getOperand(0);
+    SDValue N1 = Node->getOperand(1);
+    SDValue N2 = Node->getOperand(2);
+    SDNode *SSR = CurDAG->getMachineNode(Xtensa::SSR, DL, MVT::Glue, N2);
+    SDNode *SRC =
+        CurDAG->getMachineNode(Xtensa::SRC, DL, VT, N0, N1, SDValue(SSR, 0));
+    ReplaceNode(Node, SRC);
+    return;
+  }
   }
 
   SelectCode(Node);

@@ -1431,6 +1431,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::ObjCAutoreleasePoolStmtClass:
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::OMPAtomicDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPBarrierDirectiveClass:
   case Stmt::OMPCancelDirectiveClass:
   case Stmt::OMPCancellationPointDirectiveClass:

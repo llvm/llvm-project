@@ -502,7 +502,8 @@ enum RVVRequire : uint32_t {
   RVV_REQ_Zvksh = 1 << 15,
   RVV_REQ_Zvfbfwma = 1 << 16,
   RVV_REQ_Zvfbfmin = 1 << 17,
-  RVV_REQ_Experimental = 1 << 18,
+  RVV_REQ_Zvfh = 1 << 18,
+  RVV_REQ_Experimental = 1 << 19,
 
   LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Experimental)
 };

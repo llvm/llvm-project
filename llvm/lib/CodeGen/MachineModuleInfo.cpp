@@ -26,10 +26,7 @@ MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
 
 void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
-  CurCallSite = 0;
   NextFnNum = 0;
-  UsesMSVCFloatingPoint = false;
-  DbgInfoAvailable = false;
 }
 
 void MachineModuleInfo::finalize() {
@@ -47,7 +44,6 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
-  CurCallSite = MMI.CurCallSite;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
@@ -90,7 +86,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
   if (I.second) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
-    MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF = new MachineFunction(F, TM, STI, getContext(), NextFnNum++);
     MF->initTargetMachineFunctionInfo(STI);
 
     // MRI callback for target specific initializations.
@@ -210,7 +206,6 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return false;
 }
 
@@ -235,6 +230,5 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return Result(MMI);
 }

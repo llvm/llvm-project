@@ -210,6 +210,10 @@ static cl::opt<bool> FailOnIncompleteFormat(
     cl::desc("If set, fail with exit code 1 on incomplete format."),
     cl::init(false), cl::cat(ClangFormatCategory));
 
+static cl::opt<bool> ListIgnored("list-ignored",
+                                 cl::desc("List ignored files."),
+                                 cl::cat(ClangFormatCategory), cl::Hidden);
+
 namespace clang {
 namespace format {
 
@@ -364,7 +368,7 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                            : SourceMgr::DiagKind::DK_Warning,
           "code should be clang-formatted [-Wclang-format-violations]");
 
-      Diag.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
+      Diag.print(nullptr, llvm::errs(), ShowColors && !NoShowColors);
       if (ErrorLimit && ++Errors >= ErrorLimit)
         break;
     }
@@ -715,7 +719,13 @@ int main(int argc, const char **argv) {
   unsigned FileNo = 1;
   bool Error = false;
   for (const auto &FileName : FileNames) {
-    if (isIgnored(FileName))
+    const bool Ignored = isIgnored(FileName);
+    if (ListIgnored) {
+      if (Ignored)
+        outs() << FileName << '\n';
+      continue;
+    }
+    if (Ignored)
       continue;
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "

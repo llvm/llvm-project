@@ -166,6 +166,7 @@ public:
   RT_API_ATTRS bool Receive(
       char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS bool BeginReadingRecord(IoErrorHandler &);
   RT_API_ATTRS void FinishReadingRecord(IoErrorHandler &);
   RT_API_ATTRS bool AdvanceRecord(IoErrorHandler &);

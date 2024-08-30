@@ -15,7 +15,7 @@
 ## Verify bug entry bindings again after unreachable code elimination.
 
 # RUN: llvm-bolt %t.out -o %t.out.1 --print-only=_start --print-normalized \
-# RUN:   |& FileCheck --check-prefix=CHECK-REOPT %s
+# RUN:   2>&1 | FileCheck --check-prefix=CHECK-REOPT %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 bug table entries

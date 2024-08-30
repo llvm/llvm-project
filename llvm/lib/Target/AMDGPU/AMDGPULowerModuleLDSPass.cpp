@@ -177,9 +177,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -1128,6 +1128,11 @@ private:
       }
       if (!GV.hasInitializer()) {
         // cuda/hip extern __shared__ variable, leave alignment alone
+        continue;
+      }
+
+      if (GV.isAbsoluteSymbolRef()) {
+        // If the variable is already allocated, don't change the alignment
         continue;
       }
 
