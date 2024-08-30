@@ -482,6 +482,42 @@ void func() {
   EXPECT_EQ(Result.signatures[0].parameters[0].labelString, "int a");
 }
 
+TEST_F(PrerequisiteModulesTests, ReusablePrerequisiteModulesTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int M = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int A = 43 + M;
+  )cpp");
+  CDB.addFile("B.cppm", R"cpp(
+export module B;
+import M;
+export int B = 44 + M;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  EXPECT_TRUE(AInfo);
+  auto BInfo = Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  EXPECT_TRUE(BInfo);
+  HeaderSearchOptions HSOptsA(TestDir);
+  HeaderSearchOptions HSOptsB(TestDir);
+  AInfo->adjustHeaderSearchOptions(HSOptsA);
+  BInfo->adjustHeaderSearchOptions(HSOptsB);
+
+  EXPECT_FALSE(HSOptsA.PrebuiltModuleFiles.empty());
+  EXPECT_FALSE(HSOptsB.PrebuiltModuleFiles.empty());
+
+  // Check that we're reusing the module files.
+  EXPECT_EQ(HSOptsA.PrebuiltModuleFiles, HSOptsB.PrebuiltModuleFiles);
+}
+
 } // namespace
 } // namespace clang::clangd
 
