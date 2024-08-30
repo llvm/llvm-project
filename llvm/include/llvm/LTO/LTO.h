@@ -353,11 +353,10 @@ private:
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
-  std::unique_ptr<llvm::BumpPtrAllocator> Alloc =
-      std::make_unique<BumpPtrAllocator>();
+  std::unique_ptr<llvm::BumpPtrAllocator> Alloc;
 
-  std::unique_ptr<llvm::UniqueStringSaver> UniqueSymbolSaver =
-      std::make_unique<llvm::UniqueStringSaver>(*Alloc);
+  // Symbol saver for global resolution map.
+  std::unique_ptr<llvm::StringSaver> GlobalResolutionSymbolSaver;
 
   // The global resolution for a particular (mangled) symbol name. This is in
   // particular necessary to track whether each symbol can be internalized.
