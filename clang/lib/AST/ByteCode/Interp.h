@@ -986,24 +986,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
-  if (!Pointer::hasSameBase(LHS, RHS)) {
-    if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
-        RHS.getOffset() == 0) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-          << LHS.toDiagnosticString(S.getASTContext());
-      return false;
-    } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-               LHS.getOffset() == 0) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-          << RHS.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-
-    S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
-    return true;
-  } else {
+  if (Pointer::hasSameBase(LHS, RHS)) {
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
 
@@ -1019,6 +1002,35 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
     return true;
   }
+  // Otherwise we need to do a bunch of extra checks before returning Unordered.
+  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
+      RHS.getOffset() == 0) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+        << LHS.toDiagnosticString(S.getASTContext());
+    return false;
+  } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+             LHS.getOffset() == 0) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  bool BothNonNull = !LHS.isZero() && !RHS.isZero();
+  // Reject comparisons to literals.
+  for (const auto &P : {LHS, RHS}) {
+    if (P.isZero())
+      continue;
+    if (BothNonNull && P.pointsToLiteral()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
+      return false;
+    }
+  }
+
+  S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
+  return true;
 }
 
 template <>
@@ -1030,9 +1042,10 @@ inline bool CmpHelperEQ<MemberPointer>(InterpState &S, CodePtr OpPC,
   // If either operand is a pointer to a weak function, the comparison is not
   // constant.
   for (const auto &MP : {LHS, RHS}) {
-    if (const CXXMethodDecl *MD = MP.getMemberFunction(); MD && MD->isWeak()) {
+    if (MP.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_mem_pointer_weak_comparison) << MD;
+      S.FFDiag(Loc, diag::note_constexpr_mem_pointer_weak_comparison)
+          << MP.getMemberFunction();
       return false;
     }
   }
@@ -2288,6 +2301,15 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool Null(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   // Note: Desc can be null.
   S.Stk.push<T>(0, Desc);
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool IsNonNull(InterpState &S, CodePtr OpPC) {
+  const auto &P = S.Stk.pop<T>();
+  if (P.isWeak())
+    return false;
+  S.Stk.push<Boolean>(Boolean::from(!P.isZero()));
   return true;
 }
 
