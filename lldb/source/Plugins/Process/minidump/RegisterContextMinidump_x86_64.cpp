@@ -106,7 +106,8 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
   }
 
   if ((context_flags & LLDBSpecificFlag) == LLDBSpecificFlag) {
-    writeRegister(&context->fs_base, result_base, reg_info[x86_64_with_base::lldb_fs_base]);
+    writeRegister(&context->fs_base, result_base,
+                  reg_info[x86_64_with_base::lldb_fs_base]);
     writeRegister(&context->gs_base, result_base,
                   reg_info[x86_64_with_base::lldb_gs_base]);
   }

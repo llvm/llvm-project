@@ -21,7 +21,7 @@ RegisterContextCorePOSIX_x86_64::RegisterContextCorePOSIX_x86_64(
 
   size = GetGPRSize();
   m_gpregset.reset(new uint8_t[size]);
-  len = 
+  len =
       gpregset.ExtractBytes(0, size, lldb::eByteOrderLittle, m_gpregset.get());
   if (len != size)
     m_gpregset.reset();

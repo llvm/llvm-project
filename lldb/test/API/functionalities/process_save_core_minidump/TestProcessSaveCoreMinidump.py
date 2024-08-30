@@ -72,7 +72,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             for reg in explicit_registers:
                 register = frame_register_list.GetFirstValueByName(reg)
                 self.assertNotEqual(None, register)
-                self.assertEqual(register.GetValueAsUnsigned(), stacks_to_registers_map[thread_id].GetFirstValueByName("fs_base").GetValueAsUnsigned())
+                self.assertEqual(
+                    register.GetValueAsUnsigned(),
+                    stacks_to_registers_map[thread_id]
+                    .GetFirstValueByName("fs_base")
+                    .GetValueAsUnsigned(),
+                )
 
             for x in register_val_list:
                 self.assertEqual(
