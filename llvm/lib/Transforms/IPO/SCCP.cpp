@@ -277,34 +277,12 @@ static bool runIPSCCP(
   // whether other functions are optimizable.
   SmallVector<ReturnInst*, 8> ReturnsToZap;
 
+  Solver.inferReturnAttributes();
   for (const auto &I : Solver.getTrackedRetVals()) {
     Function *F = I.first;
     const ValueLatticeElement &ReturnValue = I.second;
-
-    // If there is a known constant range for the return value, add range
-    // attribute to the return value.
-    if (ReturnValue.isConstantRange() &&
-        !ReturnValue.getConstantRange().isSingleElement()) {
-      // Do not add range metadata if the return value may include undef.
-      if (ReturnValue.isConstantRangeIncludingUndef())
-        continue;
-
-      // Take the intersection of the existing attribute and the inferred range.
-      ConstantRange CR = ReturnValue.getConstantRange();
-      if (F->hasRetAttribute(Attribute::Range))
-        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
-      F->addRangeRetAttr(CR);
-      continue;
-    }
-    // Infer nonnull return attribute.
-    if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
-        ReturnValue.getNotConstant()->isNullValue() &&
-        !F->hasRetAttribute(Attribute::NonNull)) {
-      F->addRetAttr(Attribute::NonNull);
-      continue;
-    }
-    if (F->getReturnType()->isVoidTy())
-      continue;
+    assert(!F->getReturnType()->isVoidTy() &&
+           "should not track void functions");
     if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }

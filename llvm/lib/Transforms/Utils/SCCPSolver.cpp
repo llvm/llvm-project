@@ -354,6 +354,36 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
   return true;
 }
 
+void SCCPSolver::inferReturnAttributes() const {
+  for (const auto &I : getTrackedRetVals()) {
+    Function *F = I.first;
+    const ValueLatticeElement &ReturnValue = I.second;
+
+    // If there is a known constant range for the return value, add range
+    // attribute to the return value.
+    if (ReturnValue.isConstantRange() &&
+        !ReturnValue.getConstantRange().isSingleElement()) {
+      // Do not add range metadata if the return value may include undef.
+      if (ReturnValue.isConstantRangeIncludingUndef())
+        continue;
+
+      // Take the intersection of the existing attribute and the inferred range.
+      ConstantRange CR = ReturnValue.getConstantRange();
+      if (F->hasRetAttribute(Attribute::Range))
+        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
+      F->addRangeRetAttr(CR);
+      continue;
+    }
+    // Infer nonnull return attribute.
+    if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
+        ReturnValue.getNotConstant()->isNullValue() &&
+        !F->hasRetAttribute(Attribute::NonNull)) {
+      F->addRetAttr(Attribute::NonNull);
+      continue;
+    }
+  }
+}
+
 /// Helper class for SCCPSolver. This implements the instruction visitor and
 /// holds all the state.
 class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
@@ -2168,7 +2198,7 @@ const ValueLatticeElement &SCCPSolver::getLatticeValueFor(Value *V) const {
 }
 
 const MapVector<Function *, ValueLatticeElement> &
-SCCPSolver::getTrackedRetVals() {
+SCCPSolver::getTrackedRetVals() const {
   return Visitor->getTrackedRetVals();
 }
 
