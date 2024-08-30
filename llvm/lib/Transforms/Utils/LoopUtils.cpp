@@ -1226,9 +1226,12 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMaximum:
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
-  case RecurKind::FAdd:
-    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
-                                    Src);
+  case RecurKind::FAdd: {
+    bool NSZ = Builder.getFastMathFlags().noSignedZeros();
+    auto *Start = ConstantExpr::getBinOpIdentity(Instruction::FAdd, SrcVecEltTy,
+                                                 false, NSZ);
+    return Builder.CreateFAddReduce(Start, Src);
+  }
   case RecurKind::FMul:
     return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
   default:
