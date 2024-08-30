@@ -62,7 +62,6 @@
 #include <iterator>
 #include <map>
 #include <optional>
-#include <stack>
 #include <vector>
 
 using namespace llvm;
@@ -1766,12 +1765,12 @@ static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
 static bool allPathsGoThroughCold(Function &F) {
   SmallDenseMap<BasicBlock *, bool, 16> ColdPaths;
   ColdPaths[&F.front()] = false;
-  std::stack<BasicBlock *> Jobs;
-  Jobs.push(&F.front());
+  SmallVector<BasicBlock *> Jobs;
+  Jobs.push_back(&F.front());
 
   while (!Jobs.empty()) {
-    BasicBlock *BB = Jobs.top();
-    Jobs.pop();
+    BasicBlock *BB = Jobs.pop_back_val();
+    Jobs.pop_back();
 
     // If block contains a cold callsite this path through the CG is cold.
     // Ignore whether the instructions actually are guaranteed to transfer
@@ -1795,16 +1794,16 @@ static bool allPathsGoThroughCold(Function &F) {
     // Potential TODO: We could use static branch hints to assume certain
     // successor paths are inherently cold, irrespective of if they contain a
     // cold callsite.
-    for (llvm::BasicBlock *Succ : Succs) {
+    for (BasicBlock *Succ : Succs) {
       // Start with false, this is necessary to ensure we don't turn loops into
       // cold.
-      auto [iter, inserted] = ColdPaths.try_emplace(Succ, false);
-      if (!inserted) {
-        if (iter->second)
+      auto [Iter, Inserted] = ColdPaths.try_emplace(Succ, false);
+      if (!Inserted) {
+        if (Iter->second)
           continue;
         return false;
       }
-      Jobs.push(Succ);
+      Jobs.push_back(Succ);
     }
   }
   return true;
