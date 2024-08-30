@@ -340,6 +340,7 @@ expression incrementally and use :program:`clang-query`'s ``let`` command to sav
 matching expressions to simplify your matcher.
 
 .. code-block:: console
+
   clang-query> let c1 cxxRecordDecl()
   clang-query> match c1
 
