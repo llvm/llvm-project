@@ -11,16 +11,16 @@
 ; RUN:   | FileCheck -check-prefix=CHECK-ZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi ilp32f < %s \
-; RUN:   | FileCheck -check-prefix=CHECK-ZFHMIN %s
+; RUN:   | FileCheck -check-prefixes=CHECK-ZFHMIN,CHECK-ZFHMIN-RV32 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi lp64f < %s \
-; RUN:  | FileCheck -check-prefix=CHECK-ZFHMIN %s
+; RUN:  | FileCheck -check-prefixes=CHECK-ZFHMIN,CHECK-ZFHMIN-RV64 %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi ilp32 < %s \
-; RUN:   | FileCheck -check-prefix=CHECK-ZHINXMIN %s
+; RUN:   | FileCheck -check-prefixes=CHECK-ZHINXMIN,CHECK-ZHINXMIN-RV32 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi lp64 < %s \
-; RUN:   | FileCheck -check-prefix=CHECK-ZHINXMIN %s
+; RUN:   | FileCheck -check-prefixes=CHECK-ZHINXMIN,CHECK-ZHINXMIN-RV64 %s
 
 ; FIXME: We can't test without Zfh because soft promote legalization isn't
 ; implemented in SelectionDAG for STRICT nodes.
@@ -239,36 +239,83 @@ define half @fmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINX-NEXT:    fmsub.h a0, a0, a1, a2
 ; CHECK-ZHINX-NEXT:    ret
 ;
-; CHECK-ZFHMIN-LABEL: fmsub_h:
-; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECK-ZFHMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV32-LABEL: fmsub_h:
+; CHECK-ZFHMIN-RV32:       # %bb.0:
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-RV32-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV32-NEXT:    ret
 ;
-; CHECK-ZHINXMIN-LABEL: fmsub_h:
-; CHECK-ZHINXMIN:       # %bb.0:
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fneg.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV64-LABEL: fmsub_h:
+; CHECK-ZFHMIN-RV64:       # %bb.0:
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-RV64-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV64-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV32-LABEL: fmsub_h:
+; CHECK-ZHINXMIN-RV32:       # %bb.0:
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a2, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a2, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a2, a2, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a2, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a2, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV32-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV64-LABEL: fmsub_h:
+; CHECK-ZHINXMIN-RV64:       # %bb.0:
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a2, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a2, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a2, a2, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a2, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a2, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV64-NEXT:    ret
   %c_ = fadd half 0.0, %c ; avoid negation using xor
   %negc = fneg half %c_
   %1 = call half @llvm.experimental.constrained.fma.f16(half %a, half %b, half %negc, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -291,48 +338,115 @@ define half @fnmadd_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINX-NEXT:    fnmadd.h a0, a0, a1, a2
 ; CHECK-ZHINX-NEXT:    ret
 ;
-; CHECK-ZFHMIN-LABEL: fnmadd_h:
-; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
-; CHECK-ZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fneg.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECK-ZFHMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV32-LABEL: fnmadd_h:
+; CHECK-ZFHMIN-RV32:       # %bb.0:
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-RV32-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa4, 8(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fmadd.s fa5, fa4, fa3, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV32-NEXT:    ret
 ;
-; CHECK-ZHINXMIN-LABEL: fnmadd_h:
-; CHECK-ZHINXMIN:       # %bb.0:
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fneg.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fneg.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV64-LABEL: fnmadd_h:
+; CHECK-ZFHMIN-RV64:       # %bb.0:
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-RV64-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 0(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 1(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 1(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa4, 0(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fmadd.s fa5, fa4, fa3, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV64-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV32-LABEL: fnmadd_h:
+; CHECK-ZHINXMIN-RV32:       # %bb.0:
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a0, 8(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a0, 9(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a0, 9(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a0, 8(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a2, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a2, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a2, a2, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a2, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a2, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV32-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV64-LABEL: fnmadd_h:
+; CHECK-ZHINXMIN-RV64:       # %bb.0:
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a0, 0(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a0, 1(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a0, 1(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a0, 0(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a2, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a2, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a2, a2, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a2, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a2, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV64-NEXT:    ret
   %a_ = fadd half 0.0, %a
   %c_ = fadd half 0.0, %c
   %nega = fneg half %a_
@@ -357,48 +471,115 @@ define half @fnmadd_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINX-NEXT:    fnmadd.h a0, a1, a0, a2
 ; CHECK-ZHINX-NEXT:    ret
 ;
-; CHECK-ZFHMIN-LABEL: fnmadd_h_2:
-; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
-; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
-; CHECK-ZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fneg.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECK-ZFHMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV32-LABEL: fnmadd_h_2:
+; CHECK-ZFHMIN-RV32:       # %bb.0:
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-RV32-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa4, 8(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV32-NEXT:    ret
 ;
-; CHECK-ZHINXMIN-LABEL: fnmadd_h_2:
-; CHECK-ZHINXMIN:       # %bb.0:
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fneg.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fneg.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV64-LABEL: fnmadd_h_2:
+; CHECK-ZFHMIN-RV64:       # %bb.0:
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-RV64-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 0(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 1(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 1(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa4, 0(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV64-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV32-LABEL: fnmadd_h_2:
+; CHECK-ZHINXMIN-RV32:       # %bb.0:
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a1, 8(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a1, 9(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a1, a1, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a1, 9(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a1, 8(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a2, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a2, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a2, a2, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a2, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a2, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV32-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV64-LABEL: fnmadd_h_2:
+; CHECK-ZHINXMIN-RV64:       # %bb.0:
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a1, 0(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a1, 1(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a1, a1, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a1, 1(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a1, 0(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a2, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a2, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a2, a2, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a2, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a2, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV64-NEXT:    ret
   %b_ = fadd half 0.0, %b
   %c_ = fadd half 0.0, %c
   %negb = fneg half %b_
@@ -421,36 +602,83 @@ define half @fnmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINX-NEXT:    fnmsub.h a0, a0, a1, a2
 ; CHECK-ZHINX-NEXT:    ret
 ;
-; CHECK-ZFHMIN-LABEL: fnmsub_h:
-; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECK-ZFHMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV32-LABEL: fnmsub_h:
+; CHECK-ZFHMIN-RV32:       # %bb.0:
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-RV32-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV32-NEXT:    ret
 ;
-; CHECK-ZHINXMIN-LABEL: fnmsub_h:
-; CHECK-ZHINXMIN:       # %bb.0:
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fneg.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV64-LABEL: fnmsub_h:
+; CHECK-ZFHMIN-RV64:       # %bb.0:
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-RV64-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV64-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV32-LABEL: fnmsub_h:
+; CHECK-ZHINXMIN-RV32:       # %bb.0:
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a0, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a0, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a0, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a0, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV32-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV64-LABEL: fnmsub_h:
+; CHECK-ZHINXMIN-RV64:       # %bb.0:
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a0, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a0, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a0, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a0, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV64-NEXT:    ret
   %a_ = fadd half 0.0, %a
   %nega = fneg half %a_
   %1 = call half @llvm.experimental.constrained.fma.f16(half %nega, half %b, half %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -471,36 +699,83 @@ define half @fnmsub_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINX-NEXT:    fnmsub.h a0, a1, a0, a2
 ; CHECK-ZHINX-NEXT:    ret
 ;
-; CHECK-ZFHMIN-LABEL: fnmsub_h_2:
-; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
-; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECK-ZFHMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV32-LABEL: fnmsub_h_2:
+; CHECK-ZFHMIN-RV32:       # %bb.0:
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-RV32-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV32-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fsh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    lbu a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV32-NEXT:    sb a0, 13(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    flh fa5, 12(sp)
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-ZFHMIN-RV32-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV32-NEXT:    ret
 ;
-; CHECK-ZHINXMIN-LABEL: fnmsub_h_2:
-; CHECK-ZHINXMIN:       # %bb.0:
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fneg.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    ret
+; CHECK-ZFHMIN-RV64-LABEL: fnmsub_h_2:
+; CHECK-ZFHMIN-RV64:       # %bb.0:
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-RV64-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-RV64-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fsh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    lbu a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    xori a0, a0, 128
+; CHECK-ZFHMIN-RV64-NEXT:    sb a0, 9(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    flh fa5, 8(sp)
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-ZFHMIN-RV64-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-ZFHMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZFHMIN-RV64-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV32-LABEL: fnmsub_h_2:
+; CHECK-ZHINXMIN-RV32:       # %bb.0:
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    sh a1, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lbu a1, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    xori a1, a1, 128
+; CHECK-ZHINXMIN-RV32-NEXT:    sb a1, 13(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    lh a1, 12(sp)
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV32-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV32-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV32-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV32-NEXT:    ret
+;
+; CHECK-ZHINXMIN-RV64-LABEL: fnmsub_h_2:
+; CHECK-ZHINXMIN-RV64:       # %bb.0:
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, -16
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    sh a1, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lbu a1, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    xori a1, a1, 128
+; CHECK-ZHINXMIN-RV64-NEXT:    sb a1, 9(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    lh a1, 8(sp)
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-RV64-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-RV64-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-RV64-NEXT:    addi sp, sp, 16
+; CHECK-ZHINXMIN-RV64-NEXT:    ret
   %b_ = fadd half 0.0, %b
   %negb = fneg half %b_
   %1 = call half @llvm.experimental.constrained.fma.f16(half %a, half %negb, half %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp

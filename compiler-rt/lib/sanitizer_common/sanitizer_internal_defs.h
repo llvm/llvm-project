@@ -143,7 +143,7 @@ namespace __sanitizer {
 typedef unsigned long long uptr;
 typedef signed long long sptr;
 #else
-#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_APPLE || SANITIZER_WINDOWS
+#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_APPLE
 typedef unsigned long uptr;
 typedef signed long sptr;
 #  else
@@ -194,16 +194,7 @@ typedef u64  OFF64_T;
 #ifdef __SIZE_TYPE__
 typedef __SIZE_TYPE__ usize;
 #else
-// Since we use this for operator new, usize must match the real size_t, but on
-// 32-bit Windows the definition of uptr does not actually match uintptr_t or
-// size_t because we are working around typedef mismatches for the (S)SIZE_T
-// types used in interception.h.
-// Until the definition of uptr has been fixed we have to special case Win32.
-#  if SANITIZER_WINDOWS && SANITIZER_WORDSIZE == 32
-typedef unsigned int usize;
-#  else
 typedef uptr usize;
-#  endif
 #endif
 
 typedef u64 tid_t;

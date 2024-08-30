@@ -285,6 +285,13 @@ Bug Fixes in This Version
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
+
+- Clang now allows pointee types of atomic builtin arguments to be complete template types
+  that was not instantiated elsewhere.
+
+- ``__noop`` can now be used in a constant expression. (#GH102064)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -326,6 +333,9 @@ Bug Fixes to C++ Support
 - Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
 - Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
 - Clang now correctly handles direct-list-initialization of a structured bindings from an array. (#GH31813)
+- Mangle placeholders for deduced types as a template-prefix, such that mangling
+  of template template parameters uses the correct production. (#GH106182)
+- Fixed an assertion failure when converting vectors to int/float with invalid expressions. (#GH105486)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

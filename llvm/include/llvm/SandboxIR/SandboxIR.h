@@ -74,6 +74,8 @@
 //                                      |
 //                                      +- ShuffleVectorInst
 //                                      |
+//                                      +- ExtractValueInst
+//                                      |
 //                                      +- InsertValueInst
 //                                      |
 //                                      +- StoreInst
@@ -100,6 +102,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Tracker.h"
+#include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -120,6 +123,7 @@ class SelectInst;
 class ExtractElementInst;
 class InsertElementInst;
 class ShuffleVectorInst;
+class ExtractValueInst;
 class InsertValueInst;
 class BranchInst;
 class UnaryInstruction;
@@ -270,6 +274,7 @@ protected:
   friend class ExtractElementInst;    // For getting `Val`.
   friend class InsertElementInst;     // For getting `Val`.
   friend class ShuffleVectorInst;     // For getting `Val`.
+  friend class ExtractValueInst;      // For getting `Val`.
   friend class InsertValueInst;       // For getting `Val`.
   friend class BranchInst;            // For getting `Val`.
   friend class LoadInst;              // For getting `Val`.
@@ -382,7 +387,7 @@ public:
     return Cnt == Num;
   }
 
-  Type *getType() const { return Val->getType(); }
+  Type *getType() const;
 
   Context &getContext() const { return Ctx; }
 
@@ -570,8 +575,7 @@ class ConstantInt : public Constant {
 public:
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  static ConstantInt *get(Type *Ty, uint64_t V, Context &Ctx,
-                          bool IsSigned = false);
+  static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
   // TODO: Implement missing functions.
 
@@ -710,6 +714,7 @@ protected:
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
   friend class InsertElementInst;  // For getTopmostLLVMInstruction().
   friend class ShuffleVectorInst;  // For getTopmostLLVMInstruction().
+  friend class ExtractValueInst;   // For getTopmostLLVMInstruction().
   friend class InsertValueInst;    // For getTopmostLLVMInstruction().
   friend class BranchInst;         // For getTopmostLLVMInstruction().
   friend class LoadInst;           // For getTopmostLLVMInstruction().
@@ -1019,10 +1024,7 @@ public:
   Value *getIndexOperand() { return getOperand(1); }
   const Value *getVectorOperand() const { return getOperand(0); }
   const Value *getIndexOperand() const { return getOperand(1); }
-
-  VectorType *getVectorOperandType() const {
-    return cast<VectorType>(getVectorOperand()->getType());
-  }
+  VectorType *getVectorOperandType() const;
 };
 
 class ShuffleVectorInst final
@@ -1067,9 +1069,7 @@ public:
   }
 
   /// Overload to return most specific vector type.
-  VectorType *getType() const {
-    return cast<llvm::ShuffleVectorInst>(Val)->getType();
-  }
+  VectorType *getType() const;
 
   /// Return the shuffle mask value of this instruction for the given element
   /// index. Return PoisonMaskElem if the element is undef.
@@ -1095,7 +1095,7 @@ public:
   Constant *getShuffleMaskForBitcode() const;
 
   static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
-                                                Type *ResultTy, Context &Ctx);
+                                                Type *ResultTy);
 
   void setShuffleMask(ArrayRef<int> Mask);
 
@@ -1621,6 +1621,63 @@ public:
   }
 };
 
+class ExtractValueInst : public UnaryInstruction {
+  /// Use Context::createExtractValueInst() instead.
+  ExtractValueInst(llvm::ExtractValueInst *EVI, Context &Ctx)
+      : UnaryInstruction(ClassID::ExtractValue, Opcode::ExtractValue, EVI,
+                         Ctx) {}
+  friend Context; // for ExtractValueInst()
+
+public:
+  static Value *create(Value *Agg, ArrayRef<unsigned> Idxs, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ExtractValue;
+  }
+
+  /// Returns the type of the element that would be extracted
+  /// with an extractvalue instruction with the specified parameters.
+  ///
+  /// Null is returned if the indices are invalid for the specified type.
+  static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs);
+
+  using idx_iterator = llvm::ExtractValueInst::idx_iterator;
+
+  inline idx_iterator idx_begin() const {
+    return cast<llvm::ExtractValueInst>(Val)->idx_begin();
+  }
+  inline idx_iterator idx_end() const {
+    return cast<llvm::ExtractValueInst>(Val)->idx_end();
+  }
+  inline iterator_range<idx_iterator> indices() const {
+    return cast<llvm::ExtractValueInst>(Val)->indices();
+  }
+
+  Value *getAggregateOperand() {
+    return getOperand(getAggregateOperandIndex());
+  }
+  const Value *getAggregateOperand() const {
+    return getOperand(getAggregateOperandIndex());
+  }
+  static unsigned getAggregateOperandIndex() {
+    return llvm::ExtractValueInst::getAggregateOperandIndex();
+  }
+
+  ArrayRef<unsigned> getIndices() const {
+    return cast<llvm::ExtractValueInst>(Val)->getIndices();
+  }
+
+  unsigned getNumIndices() const {
+    return cast<llvm::ExtractValueInst>(Val)->getNumIndices();
+  }
+
+  unsigned hasIndices() const {
+    return cast<llvm::ExtractValueInst>(Val)->hasIndices();
+  }
+};
+
 class VAArgInst : public UnaryInstruction {
   VAArgInst(llvm::VAArgInst *FI, Context &Ctx)
       : UnaryInstruction(ClassID::VAArg, Opcode::VAArg, FI, Ctx) {}
@@ -1779,9 +1836,7 @@ public:
            Opc == Instruction::ClassID::CallBr;
   }
 
-  FunctionType *getFunctionType() const {
-    return cast<llvm::CallBase>(Val)->getFunctionType();
-  }
+  FunctionType *getFunctionType() const;
 
   op_iterator data_operands_begin() { return op_begin(); }
   const_op_iterator data_operands_begin() const {
@@ -2197,12 +2252,8 @@ public:
     return From->getSubclassID() == ClassID::GetElementPtr;
   }
 
-  Type *getSourceElementType() const {
-    return cast<llvm::GetElementPtrInst>(Val)->getSourceElementType();
-  }
-  Type *getResultElementType() const {
-    return cast<llvm::GetElementPtrInst>(Val)->getResultElementType();
-  }
+  Type *getSourceElementType() const;
+  Type *getResultElementType() const;
   unsigned getAddressSpace() const {
     return cast<llvm::GetElementPtrInst>(Val)->getAddressSpace();
   }
@@ -2226,9 +2277,7 @@ public:
   static unsigned getPointerOperandIndex() {
     return llvm::GetElementPtrInst::getPointerOperandIndex();
   }
-  Type *getPointerOperandType() const {
-    return cast<llvm::GetElementPtrInst>(Val)->getPointerOperandType();
-  }
+  Type *getPointerOperandType() const;
   unsigned getPointerAddressSpace() const {
     return cast<llvm::GetElementPtrInst>(Val)->getPointerAddressSpace();
   }
@@ -2779,9 +2828,7 @@ public:
     return const_cast<AllocaInst *>(this)->getArraySize();
   }
   /// Overload to return most specific pointer type.
-  PointerType *getType() const {
-    return cast<llvm::AllocaInst>(Val)->getType();
-  }
+  PointerType *getType() const;
   /// Return the address space for the allocation.
   unsigned getAddressSpace() const {
     return cast<llvm::AllocaInst>(Val)->getAddressSpace();
@@ -2797,9 +2844,7 @@ public:
     return cast<llvm::AllocaInst>(Val)->getAllocationSizeInBits(DL);
   }
   /// Return the type that is being allocated by the instruction.
-  Type *getAllocatedType() const {
-    return cast<llvm::AllocaInst>(Val)->getAllocatedType();
-  }
+  Type *getAllocatedType() const;
   /// for use only in special circumstances that need to generically
   /// transform a whole instruction (eg: IR linking and vectorization).
   void setAllocatedType(Type *Ty);
@@ -2881,8 +2926,8 @@ public:
                        const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
-  Type *getSrcTy() const { return cast<llvm::CastInst>(Val)->getSrcTy(); }
-  Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
+  Type *getSrcTy() const;
+  Type *getDestTy() const;
 };
 
 /// Instruction that can have a nneg flag (zext/uitofp).
@@ -3062,12 +3107,24 @@ public:
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  friend class Type;        // For LLVMCtx.
+  friend class PointerType; // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
   /// SandboxIR objects.
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
       LLVMValueToValueMap;
+
+  /// Type has a protected destructor to prohibit the user from managing the
+  /// lifetime of the Type objects. Context is friend of Type, and this custom
+  /// deleter can destroy Type.
+  struct TypeDeleter {
+    void operator()(Type *Ty) { delete Ty; }
+  };
+  /// Maps LLVM Type to the corresonding sandboxir::Type. Owns all Sandbox IR
+  /// Type objects.
+  DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
@@ -3103,7 +3160,6 @@ protected:
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
-
   friend class BasicBlock; // For getOrCreateValue().
 
   IRBuilder<ConstantFolder> LLVMIRBuilder;
@@ -3123,6 +3179,8 @@ protected:
   friend ExtractElementInst; // For createExtractElementInst()
   ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
   friend ShuffleVectorInst; // For createShuffleVectorInst()
+  ExtractValueInst *createExtractValueInst(llvm::ExtractValueInst *IVI);
+  friend ExtractValueInst; // For createExtractValueInst()
   InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
@@ -3191,6 +3249,17 @@ public:
   const sandboxir::Value *getValue(const llvm::Value *V) const {
     return getValue(const_cast<llvm::Value *>(V));
   }
+
+  Type *getType(llvm::Type *LLVMTy) {
+    if (LLVMTy == nullptr)
+      return nullptr;
+    auto Pair = LLVMTypeToTypeMap.insert({LLVMTy, nullptr});
+    auto It = Pair.first;
+    if (Pair.second)
+      It->second = std::unique_ptr<Type, TypeDeleter>(new Type(LLVMTy, *this));
+    return It->second.get();
+  }
+
   /// Create a sandboxir::Function for an existing LLVM IR \p F, including all
   /// blocks and instructions.
   /// This is the main API function for creating Sandbox IR.
@@ -3237,9 +3306,7 @@ public:
     LLVMBBToBB BBGetter(Ctx);
     return iterator(cast<llvm::Function>(Val)->end(), BBGetter);
   }
-  FunctionType *getFunctionType() const {
-    return cast<llvm::Function>(Val)->getFunctionType();
-  }
+  FunctionType *getFunctionType() const;
 
 #ifndef NDEBUG
   void verify() const final {

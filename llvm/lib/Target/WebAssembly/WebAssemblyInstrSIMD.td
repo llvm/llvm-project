@@ -165,8 +165,9 @@ def F16x8 : Vec {
  let prefix = "f16x8";
 }
 
-// TODO: Include F16x8 here when half precision is better supported.
-defvar AllVecs = [I8x16, I16x8, I32x4, I64x2, F32x4, F64x2];
+// TODO: Remove StdVecs when the F16x8 works every where StdVecs is used.
+defvar StdVecs = [I8x16, I16x8, I32x4, I64x2, F32x4, F64x2];
+defvar AllVecs = !listconcat(StdVecs, [F16x8]);
 defvar IntVecs = [I8x16, I16x8, I32x4, I64x2];
 
 //===----------------------------------------------------------------------===//
@@ -188,7 +189,7 @@ defm LOAD_V128_A64 :
 }
 
 // Def load patterns from WebAssemblyInstrMemory.td for vector types
-foreach vec = AllVecs in {
+foreach vec = StdVecs in {
 defm : LoadPat<vec.vt, load, "LOAD_V128">;
 }
 
@@ -217,7 +218,7 @@ defm "" : SIMDLoadSplat<16, 8>;
 defm "" : SIMDLoadSplat<32, 9>;
 defm "" : SIMDLoadSplat<64, 10>;
 
-foreach vec = AllVecs in {
+foreach vec = StdVecs in {
   defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
   defm : LoadPat<vec.vt,
                  PatFrag<(ops node:$addr), (splat_vector (vec.lane_vt (vec.lane_load node:$addr)))>,
@@ -389,7 +390,7 @@ defm STORE_V128_A64 :
 }
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
-foreach vec = AllVecs in {
+foreach vec = StdVecs in {
 defm : StorePat<vec.vt, store, "STORE_V128">;
 }
 
@@ -513,7 +514,7 @@ defm "" : ConstVec<F64x2,
                   "$i0, $i1">;
 
 // Match splat(x) -> const.v128(x, ..., x)
-foreach vec = AllVecs in {
+foreach vec = StdVecs in {
   defvar numEls = !div(vec.vt.Size, vec.lane_bits);
   defvar isFloat = !or(!eq(vec.lane_vt, f32), !eq(vec.lane_vt, f64));
   defvar immKind = !if(isFloat, fpimm, imm);
@@ -557,7 +558,7 @@ defm SHUFFLE :
 // Shuffles after custom lowering
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
-foreach vec = AllVecs in {
+foreach vec = StdVecs in {
 // The @llvm.wasm.shuffle intrinsic has immediate arguments that become TargetConstants.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 timm:$m0), (i32 timm:$m1),
@@ -627,7 +628,7 @@ defm SPLAT_F16x8 :
                    "f16x8.splat\t$dst, $x", "f16x8.splat", 0x120>;
 
 // scalar_to_vector leaves high lanes undefined, so can be a splat
-foreach vec = AllVecs in
+foreach vec = StdVecs in
 def : Pat<(vec.vt (scalar_to_vector (vec.lane_vt vec.lane_rc:$x))),
           (!cast<Instruction>("SPLAT_"#vec) $x)>;
 
@@ -880,7 +881,7 @@ defm BITSELECT :
   SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins), [],
          "v128.bitselect\t$dst, $v1, $v2, $c", "v128.bitselect", 82>;
 
-foreach vec = AllVecs in
+foreach vec = StdVecs in
 def : Pat<(vec.vt (int_wasm_bitselect
             (vec.vt V128:$v1), (vec.vt V128:$v2), (vec.vt V128:$c))),
           (BITSELECT $v1, $v2, $c)>;
@@ -906,7 +907,7 @@ def : Pat<(vec.vt (xor (and (xor (vec.vt V128:$v1), (vec.vt V128:$v2)),
           (BITSELECT $v2, $v1, $c)>;
 
 // Also implement vselect in terms of bitselect
-foreach vec = AllVecs in
+foreach vec = StdVecs in
 def : Pat<(vec.vt (vselect
             (vec.int_vt V128:$c), (vec.vt V128:$v1), (vec.vt V128:$v2))),
           (BITSELECT $v1, $v2, $c)>;
@@ -916,7 +917,7 @@ defm SELECT_V128 :
   I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, I32:$cond), (outs), (ins), [],
     "v128.select\t$dst, $lhs, $rhs, $cond", "v128.select", 0x1b>;
 
-foreach vec = AllVecs in {
+foreach vec = StdVecs in {
 def : Pat<(select I32:$cond, (vec.vt V128:$lhs), (vec.vt V128:$rhs)),
           (SELECT_V128 $lhs, $rhs, $cond)>;
 
@@ -1369,6 +1370,11 @@ def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i32)>;
 def trunc_u_sat32 : PatFrag<(ops node:$x), (fp_to_uint_sat $x, i32)>;
 def : Pat<(v4i32 (trunc_s_sat32 (v4f32 V128:$src))), (fp_to_sint_I32x4 $src)>;
 def : Pat<(v4i32 (trunc_u_sat32 (v4f32 V128:$src))), (fp_to_uint_I32x4 $src)>;
+
+def trunc_s_sat16 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i16)>;
+def trunc_u_sat16 : PatFrag<(ops node:$x), (fp_to_uint_sat $x, i16)>;
+def : Pat<(v8i16 (trunc_s_sat16 (v8f16 V128:$src))), (fp_to_sint_I16x8 $src)>;
+def : Pat<(v8i16 (trunc_u_sat16 (v8f16 V128:$src))), (fp_to_uint_I16x8 $src)>;
 
 def trunc_sat_zero_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def trunc_sat_zero_s :

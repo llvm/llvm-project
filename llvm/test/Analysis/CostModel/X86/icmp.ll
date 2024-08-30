@@ -2,8 +2,8 @@
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+sse2 | FileCheck %s --check-prefixes=SSE2
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+sse3 | FileCheck %s --check-prefixes=SSE3
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+ssse3 | FileCheck %s --check-prefixes=SSSE3
-; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE41
-; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE42
+; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE4,SSE41
+; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE4,SSE42
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+avx | FileCheck %s --check-prefixes=AVX1
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+avx2 | FileCheck %s --check-prefixes=AVX2
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512F
@@ -12,7 +12,7 @@
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+xop,+avx2 | FileCheck %s -check-prefixes=XOPAVX2
 ;
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=slm | FileCheck %s --check-prefixes=SLM
-; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont | FileCheck %s --check-prefixes=SSE42
+; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont | FileCheck %s --check-prefixes=SSE4,SSE42
 ; RUN: opt < %s -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=btver2 | FileCheck %s --check-prefixes=AVX1
 
 define i32 @cmp_int_eq(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i8> %argv64i8, <128 x i8> %argv128i8, i16 %arg16, <8 x i16> %argv8i16, <16 x i16> %argv16i16, <32 x i16> %argv32i16, <64 x i16> %argv64i16, i32 %arg32, <4 x i32> %argv4i32, <8 x i32> %argv8i32, <16 x i32> %argv16i32, <32 x i32> %argv32i32, i64 %arg64, <2 x i64> %argv2i64, <4 x i64> %argv4i64, <8 x i64> %argv8i64, <16 x i64> %argv16i64) {
@@ -3125,51 +3125,28 @@ define i32 @scmp_int(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = call <16 x i64> @llvm.scmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; SSE41-LABEL: 'scmp_int'
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.scmp.i8.i8(i8 %arg8, i8 %arg8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = call <16 x i8> @llvm.scmp.v16i8.v16i8(<16 x i8> %argv16i8, <16 x i8> %argv16i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I8 = call <32 x i8> @llvm.scmp.v32i8.v32i8(<32 x i8> %argv32i8, <32 x i8> %argv32i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I8 = call <64 x i8> @llvm.scmp.v64i8.v64i8(<64 x i8> %argv64i8, <64 x i8> %argv64i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %V128I8 = call <128 x i8> @llvm.scmp.v128i8.v128i8(<128 x i8> %argv128i8, <128 x i8> %argv128i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.scmp.i16.i16(i16 %arg16, i16 %arg16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I16 = call <8 x i16> @llvm.scmp.v8i16.v8i16(<8 x i16> %argv8i16, <8 x i16> %argv8i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I16 = call <16 x i16> @llvm.scmp.v16i16.v16i16(<16 x i16> %argv16i16, <16 x i16> %argv16i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I16 = call <32 x i16> @llvm.scmp.v32i16.v32i16(<32 x i16> %argv32i16, <32 x i16> %argv32i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I16 = call <64 x i16> @llvm.scmp.v64i16.v64i16(<64 x i16> %argv64i16, <64 x i16> %argv64i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.scmp.i32.i32(i32 %arg32, i32 %arg32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I32 = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %argv4i32, <4 x i32> %argv4i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I32 = call <8 x i32> @llvm.scmp.v8i32.v8i32(<8 x i32> %argv8i32, <8 x i32> %argv8i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = call <16 x i32> @llvm.scmp.v16i32.v16i32(<16 x i32> %argv16i32, <16 x i32> %argv16i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I32 = call <32 x i32> @llvm.scmp.v32i32.v32i32(<32 x i32> %argv32i32, <32 x i32> %argv32i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.scmp.i64.i64(i64 %arg64, i64 %arg64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.scmp.v2i64.v2i64(<2 x i64> %argv2i64, <2 x i64> %argv2i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = call <4 x i64> @llvm.scmp.v4i64.v4i64(<4 x i64> %argv4i64, <4 x i64> %argv4i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = call <8 x i64> @llvm.scmp.v8i64.v8i64(<8 x i64> %argv8i64, <8 x i64> %argv8i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = call <16 x i64> @llvm.scmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; SSE42-LABEL: 'scmp_int'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.scmp.i8.i8(i8 %arg8, i8 %arg8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = call <16 x i8> @llvm.scmp.v16i8.v16i8(<16 x i8> %argv16i8, <16 x i8> %argv16i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I8 = call <32 x i8> @llvm.scmp.v32i8.v32i8(<32 x i8> %argv32i8, <32 x i8> %argv32i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I8 = call <64 x i8> @llvm.scmp.v64i8.v64i8(<64 x i8> %argv64i8, <64 x i8> %argv64i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %V128I8 = call <128 x i8> @llvm.scmp.v128i8.v128i8(<128 x i8> %argv128i8, <128 x i8> %argv128i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.scmp.i16.i16(i16 %arg16, i16 %arg16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I16 = call <8 x i16> @llvm.scmp.v8i16.v8i16(<8 x i16> %argv8i16, <8 x i16> %argv8i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I16 = call <16 x i16> @llvm.scmp.v16i16.v16i16(<16 x i16> %argv16i16, <16 x i16> %argv16i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I16 = call <32 x i16> @llvm.scmp.v32i16.v32i16(<32 x i16> %argv32i16, <32 x i16> %argv32i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I16 = call <64 x i16> @llvm.scmp.v64i16.v64i16(<64 x i16> %argv64i16, <64 x i16> %argv64i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.scmp.i32.i32(i32 %arg32, i32 %arg32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I32 = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %argv4i32, <4 x i32> %argv4i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I32 = call <8 x i32> @llvm.scmp.v8i32.v8i32(<8 x i32> %argv8i32, <8 x i32> %argv8i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = call <16 x i32> @llvm.scmp.v16i32.v16i32(<16 x i32> %argv16i32, <16 x i32> %argv16i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I32 = call <32 x i32> @llvm.scmp.v32i32.v32i32(<32 x i32> %argv32i32, <32 x i32> %argv32i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.scmp.i64.i64(i64 %arg64, i64 %arg64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.scmp.v2i64.v2i64(<2 x i64> %argv2i64, <2 x i64> %argv2i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = call <4 x i64> @llvm.scmp.v4i64.v4i64(<4 x i64> %argv4i64, <4 x i64> %argv4i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = call <8 x i64> @llvm.scmp.v8i64.v8i64(<8 x i64> %argv8i64, <8 x i64> %argv8i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = call <16 x i64> @llvm.scmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE4-LABEL: 'scmp_int'
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.scmp.i8.i8(i8 %arg8, i8 %arg8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = call <16 x i8> @llvm.scmp.v16i8.v16i8(<16 x i8> %argv16i8, <16 x i8> %argv16i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I8 = call <32 x i8> @llvm.scmp.v32i8.v32i8(<32 x i8> %argv32i8, <32 x i8> %argv32i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I8 = call <64 x i8> @llvm.scmp.v64i8.v64i8(<64 x i8> %argv64i8, <64 x i8> %argv64i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %V128I8 = call <128 x i8> @llvm.scmp.v128i8.v128i8(<128 x i8> %argv128i8, <128 x i8> %argv128i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.scmp.i16.i16(i16 %arg16, i16 %arg16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I16 = call <8 x i16> @llvm.scmp.v8i16.v8i16(<8 x i16> %argv8i16, <8 x i16> %argv8i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I16 = call <16 x i16> @llvm.scmp.v16i16.v16i16(<16 x i16> %argv16i16, <16 x i16> %argv16i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I16 = call <32 x i16> @llvm.scmp.v32i16.v32i16(<32 x i16> %argv32i16, <32 x i16> %argv32i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I16 = call <64 x i16> @llvm.scmp.v64i16.v64i16(<64 x i16> %argv64i16, <64 x i16> %argv64i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.scmp.i32.i32(i32 %arg32, i32 %arg32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I32 = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %argv4i32, <4 x i32> %argv4i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I32 = call <8 x i32> @llvm.scmp.v8i32.v8i32(<8 x i32> %argv8i32, <8 x i32> %argv8i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = call <16 x i32> @llvm.scmp.v16i32.v16i32(<16 x i32> %argv16i32, <16 x i32> %argv16i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I32 = call <32 x i32> @llvm.scmp.v32i32.v32i32(<32 x i32> %argv32i32, <32 x i32> %argv32i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.scmp.i64.i64(i64 %arg64, i64 %arg64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.scmp.v2i64.v2i64(<2 x i64> %argv2i64, <2 x i64> %argv2i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = call <4 x i64> @llvm.scmp.v4i64.v4i64(<4 x i64> %argv4i64, <4 x i64> %argv4i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = call <8 x i64> @llvm.scmp.v8i64.v8i64(<8 x i64> %argv8i64, <8 x i64> %argv8i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = call <16 x i64> @llvm.scmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'scmp_int'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.scmp.i8.i8(i8 %arg8, i8 %arg8)
@@ -3429,51 +3406,28 @@ define i32 @ucmp_int(i8 %arg8, <16 x i8> %argv16i8, <32 x i8> %argv32i8, <64 x i
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = call <16 x i64> @llvm.ucmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; SSE41-LABEL: 'ucmp_int'
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.ucmp.i8.i8(i8 %arg8, i8 %arg8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = call <16 x i8> @llvm.ucmp.v16i8.v16i8(<16 x i8> %argv16i8, <16 x i8> %argv16i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I8 = call <32 x i8> @llvm.ucmp.v32i8.v32i8(<32 x i8> %argv32i8, <32 x i8> %argv32i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I8 = call <64 x i8> @llvm.ucmp.v64i8.v64i8(<64 x i8> %argv64i8, <64 x i8> %argv64i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %V128I8 = call <128 x i8> @llvm.ucmp.v128i8.v128i8(<128 x i8> %argv128i8, <128 x i8> %argv128i8)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.ucmp.i16.i16(i16 %arg16, i16 %arg16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I16 = call <8 x i16> @llvm.ucmp.v8i16.v8i16(<8 x i16> %argv8i16, <8 x i16> %argv8i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I16 = call <16 x i16> @llvm.ucmp.v16i16.v16i16(<16 x i16> %argv16i16, <16 x i16> %argv16i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I16 = call <32 x i16> @llvm.ucmp.v32i16.v32i16(<32 x i16> %argv32i16, <32 x i16> %argv32i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I16 = call <64 x i16> @llvm.ucmp.v64i16.v64i16(<64 x i16> %argv64i16, <64 x i16> %argv64i16)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.ucmp.i32.i32(i32 %arg32, i32 %arg32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I32 = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %argv4i32, <4 x i32> %argv4i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I32 = call <8 x i32> @llvm.ucmp.v8i32.v8i32(<8 x i32> %argv8i32, <8 x i32> %argv8i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = call <16 x i32> @llvm.ucmp.v16i32.v16i32(<16 x i32> %argv16i32, <16 x i32> %argv16i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I32 = call <32 x i32> @llvm.ucmp.v32i32.v32i32(<32 x i32> %argv32i32, <32 x i32> %argv32i32)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.ucmp.i64.i64(i64 %arg64, i64 %arg64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.ucmp.v2i64.v2i64(<2 x i64> %argv2i64, <2 x i64> %argv2i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = call <4 x i64> @llvm.ucmp.v4i64.v4i64(<4 x i64> %argv4i64, <4 x i64> %argv4i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = call <8 x i64> @llvm.ucmp.v8i64.v8i64(<8 x i64> %argv8i64, <8 x i64> %argv8i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = call <16 x i64> @llvm.ucmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; SSE42-LABEL: 'ucmp_int'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.ucmp.i8.i8(i8 %arg8, i8 %arg8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = call <16 x i8> @llvm.ucmp.v16i8.v16i8(<16 x i8> %argv16i8, <16 x i8> %argv16i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I8 = call <32 x i8> @llvm.ucmp.v32i8.v32i8(<32 x i8> %argv32i8, <32 x i8> %argv32i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I8 = call <64 x i8> @llvm.ucmp.v64i8.v64i8(<64 x i8> %argv64i8, <64 x i8> %argv64i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %V128I8 = call <128 x i8> @llvm.ucmp.v128i8.v128i8(<128 x i8> %argv128i8, <128 x i8> %argv128i8)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.ucmp.i16.i16(i16 %arg16, i16 %arg16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I16 = call <8 x i16> @llvm.ucmp.v8i16.v8i16(<8 x i16> %argv8i16, <8 x i16> %argv8i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I16 = call <16 x i16> @llvm.ucmp.v16i16.v16i16(<16 x i16> %argv16i16, <16 x i16> %argv16i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I16 = call <32 x i16> @llvm.ucmp.v32i16.v32i16(<32 x i16> %argv32i16, <32 x i16> %argv32i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I16 = call <64 x i16> @llvm.ucmp.v64i16.v64i16(<64 x i16> %argv64i16, <64 x i16> %argv64i16)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.ucmp.i32.i32(i32 %arg32, i32 %arg32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I32 = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %argv4i32, <4 x i32> %argv4i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I32 = call <8 x i32> @llvm.ucmp.v8i32.v8i32(<8 x i32> %argv8i32, <8 x i32> %argv8i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = call <16 x i32> @llvm.ucmp.v16i32.v16i32(<16 x i32> %argv16i32, <16 x i32> %argv16i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I32 = call <32 x i32> @llvm.ucmp.v32i32.v32i32(<32 x i32> %argv32i32, <32 x i32> %argv32i32)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.ucmp.i64.i64(i64 %arg64, i64 %arg64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.ucmp.v2i64.v2i64(<2 x i64> %argv2i64, <2 x i64> %argv2i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = call <4 x i64> @llvm.ucmp.v4i64.v4i64(<4 x i64> %argv4i64, <4 x i64> %argv4i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = call <8 x i64> @llvm.ucmp.v8i64.v8i64(<8 x i64> %argv8i64, <8 x i64> %argv8i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = call <16 x i64> @llvm.ucmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE4-LABEL: 'ucmp_int'
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.ucmp.i8.i8(i8 %arg8, i8 %arg8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = call <16 x i8> @llvm.ucmp.v16i8.v16i8(<16 x i8> %argv16i8, <16 x i8> %argv16i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I8 = call <32 x i8> @llvm.ucmp.v32i8.v32i8(<32 x i8> %argv32i8, <32 x i8> %argv32i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I8 = call <64 x i8> @llvm.ucmp.v64i8.v64i8(<64 x i8> %argv64i8, <64 x i8> %argv64i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %V128I8 = call <128 x i8> @llvm.ucmp.v128i8.v128i8(<128 x i8> %argv128i8, <128 x i8> %argv128i8)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.ucmp.i16.i16(i16 %arg16, i16 %arg16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I16 = call <8 x i16> @llvm.ucmp.v8i16.v8i16(<8 x i16> %argv8i16, <8 x i16> %argv8i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I16 = call <16 x i16> @llvm.ucmp.v16i16.v16i16(<16 x i16> %argv16i16, <16 x i16> %argv16i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I16 = call <32 x i16> @llvm.ucmp.v32i16.v32i16(<32 x i16> %argv32i16, <32 x i16> %argv32i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V64I16 = call <64 x i16> @llvm.ucmp.v64i16.v64i16(<64 x i16> %argv64i16, <64 x i16> %argv64i16)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.ucmp.i32.i32(i32 %arg32, i32 %arg32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I32 = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %argv4i32, <4 x i32> %argv4i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I32 = call <8 x i32> @llvm.ucmp.v8i32.v8i32(<8 x i32> %argv8i32, <8 x i32> %argv8i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = call <16 x i32> @llvm.ucmp.v16i32.v16i32(<16 x i32> %argv16i32, <16 x i32> %argv16i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32I32 = call <32 x i32> @llvm.ucmp.v32i32.v32i32(<32 x i32> %argv32i32, <32 x i32> %argv32i32)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.ucmp.i64.i64(i64 %arg64, i64 %arg64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.ucmp.v2i64.v2i64(<2 x i64> %argv2i64, <2 x i64> %argv2i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = call <4 x i64> @llvm.ucmp.v4i64.v4i64(<4 x i64> %argv4i64, <4 x i64> %argv4i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = call <8 x i64> @llvm.ucmp.v8i64.v8i64(<8 x i64> %argv8i64, <8 x i64> %argv8i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = call <16 x i64> @llvm.ucmp.v16i64.v16i64(<16 x i64> %argv16i64, <16 x i64> %argv16i64)
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'ucmp_int'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call i8 @llvm.ucmp.i8.i8(i8 %arg8, i8 %arg8)
