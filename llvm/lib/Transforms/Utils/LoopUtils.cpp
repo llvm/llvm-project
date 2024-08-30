@@ -1210,6 +1210,11 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
                                          RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
+  auto getIdentity = [&]() {
+    Intrinsic::ID ID = getReductionIntrinsicID(RdxKind);
+    unsigned Opc = getArithmeticReductionInstruction(ID);
+    return ConstantExpr::getBinOpIdentity(Opc, SrcVecEltTy);
+  };
   switch (RdxKind) {
   case RecurKind::Add:
   case RecurKind::Mul:
@@ -1227,10 +1232,9 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
-    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
-                                    Src);
+    return Builder.CreateFAddReduce(getIdentity(), Src);
   case RecurKind::FMul:
-    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
+    return Builder.CreateFMulReduce(getIdentity(), Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
