@@ -118,6 +118,11 @@ test_result = None
 # same base name.
 all_tests = set()
 
+# Force use llvm tools in API tests
+use_llvm_tools = False
+# Path to LLVM tools to be used by tests.
+llvm_tools_dir = None
+
 # LLDB library directory.
 lldb_libs_dir = None
 lldb_obj_root = None

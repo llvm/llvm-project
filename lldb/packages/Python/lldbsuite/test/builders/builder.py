@@ -151,8 +151,7 @@ class Builder:
             cc_dir = cc_path.parent
 
             def getLlvmUtil(util_name):
-                llvm_tools_dir = os.getenv("LLVM_TOOLS_DIR", cc_dir)
-                return os.path.join(llvm_tools_dir, util_name + exe_ext)
+                return os.path.join(configuration.llvm_tools_dir, util_name + exe_ext)
 
             def getToolchainUtil(util_name):
                 return cc_dir / (cc_prefix + util_name + cc_ext)
@@ -175,7 +174,7 @@ class Builder:
                 utils.extend(['LLVM_AR=%s' % llvm_ar])
 
             if not lldbplatformutil.platformIsDarwin():
-                if os.getenv("USE_LLVM_TOOLS"):
+                if configuration.use_llvm_tools:
                     # Use the llvm project tool instead of the system defaults.
                     for var, name in util_names.items():
                         utils.append('%s=%s' % (var, getLlvmUtil("llvm-" + name)))
