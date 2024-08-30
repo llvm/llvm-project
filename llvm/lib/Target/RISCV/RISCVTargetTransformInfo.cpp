@@ -447,21 +447,30 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
 
         InstructionCost Cost = 0;
-        for (unsigned I = 0; I < NumRegs; ++I) {
+        for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
+             I < NumSrcRegs; ++I) {
           bool IsSingleVector = true;
           SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-          transform(Mask.slice(I * SubVF,
-                               I == NumRegs - 1 ? Mask.size() % SubVF : SubVF),
-                    SubMask.begin(), [&](int I) {
-                      bool SingleSubVector = I / VF == 0;
-                      IsSingleVector &= SingleSubVector;
-                      return (SingleSubVector ? 0 : 1) * SubVF + I % VF;
-                    });
+          transform(
+              Mask.slice(I * SubVF,
+                         I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
+              SubMask.begin(), [&](int I) -> int {
+                if (I == PoisonMaskElem)
+                  return PoisonMaskElem;
+                bool SingleSubVector = I / VF == 0;
+                IsSingleVector &= SingleSubVector;
+                return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
+              });
+          if (all_of(enumerate(SubMask), [](auto &&P) {
+                return P.value() == PoisonMaskElem ||
+                       static_cast<unsigned>(P.value()) == P.index();
+              }))
+            continue;
           Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
                                                 : TTI::SK_PermuteTwoSrc,
                                  SubVecTy, SubMask, CostKind, 0, nullptr);
-          return Cost;
         }
+        return Cost;
       }
       break;
     }
@@ -920,7 +929,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   // TODO: add more intrinsic
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     auto LT = getTypeLegalizationCost(RetTy);
     // Legalisation of illegal types involves an `index' instruction plus
     // (LT.first - 1) vector adds.
@@ -1616,9 +1625,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   // For unsupported scalable vector.
   if (LT.second.isScalableVector() && !LT.first.isValid())
     return LT.first;
-
-  if (!isTypeLegal(Val))
-    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
 
   // Mask vector extract/insert is expanded via e8.
   if (Val->getScalarSizeInBits() == 1) {

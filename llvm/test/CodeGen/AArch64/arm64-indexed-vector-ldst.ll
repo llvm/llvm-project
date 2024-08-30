@@ -13417,9 +13417,8 @@ define <8 x i16> @test_v8i16_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <8 x
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
+; CHECK-GI-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
-; CHECK-GI-NEXT:    mov.h v0[1], v1[0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i16, ptr %bar
@@ -13465,12 +13464,11 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4 x
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
-; CHECK-GI-NEXT:    mov.h v0[1], v1[0]
-; CHECK-GI-NEXT:    str x8, [x1]
+; CHECK-GI-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i16, ptr %bar
   %tmp2 = insertelement <4 x i16> %A, i16 %tmp1, i32 1
@@ -13509,9 +13507,8 @@ define <4 x i32> @test_v4i32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4 x
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
+; CHECK-GI-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GI-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i32, ptr %bar
@@ -13557,12 +13554,11 @@ define <2 x i32> @test_v2i32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2 x
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GI-NEXT:    mov.s v0[1], v1[0]
-; CHECK-GI-NEXT:    str x8, [x1]
+; CHECK-GI-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i32, ptr %bar
   %tmp2 = insertelement <2 x i32> %A, i32 %tmp1, i32 1
@@ -13601,9 +13597,8 @@ define <2 x i64> @test_v2i64_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2 x
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    ld1.d { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
-; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %bar
@@ -13643,9 +13638,8 @@ define <4 x float> @test_v4f32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
+; CHECK-GI-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GI-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load float, ptr %bar
@@ -13691,12 +13685,11 @@ define <2 x float> @test_v2f32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GI-NEXT:    mov.s v0[1], v1[0]
-; CHECK-GI-NEXT:    str x8, [x1]
+; CHECK-GI-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load float, ptr %bar
   %tmp2 = insertelement <2 x float> %A, float %tmp1, i32 1
@@ -13735,9 +13728,8 @@ define <2 x double> @test_v2f64_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    ld1.d { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
-; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load double, ptr %bar
@@ -13792,15 +13784,14 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane_forced_narrow(ptr %bar, ptr %ptr, 
 ; CHECK-GI-LABEL: test_v4i16_post_reg_ld1lane_forced_narrow:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
-; CHECK-GI-NEXT:    ldr h1, [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
-; CHECK-GI-NEXT:    mov.h v0[1], v1[0]
-; CHECK-GI-NEXT:    ldr d2, [x3]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    cnt.8b v2, v2
-; CHECK-GI-NEXT:    uaddlp.4h v2, v2
-; CHECK-GI-NEXT:    uaddlp.2s v1, v2
+; CHECK-GI-NEXT:    ldr d1, [x3]
+; CHECK-GI-NEXT:    cnt.8b v1, v1
+; CHECK-GI-NEXT:    uaddlp.4h v1, v1
+; CHECK-GI-NEXT:    uaddlp.2s v1, v1
 ; CHECK-GI-NEXT:    str d1, [x3]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i16, ptr %bar
@@ -13989,24 +13980,14 @@ define void  @test_ld1lane_build_i8(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr 
 }
 
 define <4 x i32> @test_inc_cycle(<4 x i32> %vec, ptr %in) {
-; CHECK-SD-LABEL: test_inc_cycle:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    ld1.s { v0 }[0], [x0]
-; CHECK-SD-NEXT:    adrp x9, _var@PAGE
-; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    add x8, x0, x8, lsl #2
-; CHECK-SD-NEXT:    str x8, [x9, _var@PAGEOFF]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_inc_cycle:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
-; CHECK-GI-NEXT:    adrp x9, _var@PAGE
-; CHECK-GI-NEXT:    mov.s v0[0], v1[0]
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    add x8, x0, x8, lsl #2
-; CHECK-GI-NEXT:    str x8, [x9, _var@PAGEOFF]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_inc_cycle:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ld1.s { v0 }[0], [x0]
+; CHECK-NEXT:    adrp x9, _var@PAGE
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    add x8, x0, x8, lsl #2
+; CHECK-NEXT:    str x8, [x9, _var@PAGEOFF]
+; CHECK-NEXT:    ret
   %elt = load i32, ptr %in
   %newvec = insertelement <4 x i32> %vec, i32 %elt, i32 0
 

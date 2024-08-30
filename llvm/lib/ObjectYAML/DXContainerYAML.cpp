@@ -254,6 +254,24 @@ void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
+void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
+    IO &IO, dxbc::PSV::ResourceType &Value) {
+  for (const auto &E : dxbc::PSV::getResourceTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
+    IO &IO, dxbc::PSV::ResourceKind &Value) {
+  for (const auto &E : dxbc::PSV::getResourceKinds())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ResourceFlag>::enumeration(
+    IO &IO, dxbc::PSV::ResourceFlag &Value) {
+  for (const auto &E : dxbc::PSV::getResourceFlags())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
 void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
     IO &IO, dxbc::D3DSystemValue &Value) {
   for (const auto &E : dxbc::getD3DSystemValues())

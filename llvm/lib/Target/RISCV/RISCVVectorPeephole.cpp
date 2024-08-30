@@ -131,6 +131,9 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
   case RISCV::VMV_V_V:
     SrcIdx = 2;
     break;
+  case RISCV::VMERGE_VVM:
+    SrcIdx = 3; // TODO: We can also handle the false operand.
+    break;
   }
 
   MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
@@ -153,9 +156,9 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
   if (getSEWLMULRatio(MI) != getSEWLMULRatio(*Src))
     return false;
 
-  bool ActiveElementsAffectResult = RISCVII::activeElementsAffectResult(
+  bool ElementsDependOnVL = RISCVII::elementsDependOnVL(
       TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
-  if (ActiveElementsAffectResult || Src->mayRaiseFPException())
+  if (ElementsDependOnVL || Src->mayRaiseFPException())
     return false;
 
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));

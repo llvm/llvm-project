@@ -35,7 +35,7 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
-FunctionPass *createSIFoldOperandsPass();
+FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
@@ -157,11 +157,11 @@ private:
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
-void initializeGCNDPPCombinePass(PassRegistry &);
-extern char &GCNDPPCombineID;
+void initializeGCNDPPCombineLegacyPass(PassRegistry &);
+extern char &GCNDPPCombineLegacyID;
 
-void initializeSIFoldOperandsPass(PassRegistry &);
-extern char &SIFoldOperandsID;
+void initializeSIFoldOperandsLegacyPass(PassRegistry &);
+extern char &SIFoldOperandsLegacyID;
 
 void initializeSIPeepholeSDWAPass(PassRegistry &);
 extern char &SIPeepholeSDWAID;
@@ -266,6 +266,17 @@ struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
 
 private:
   bool GlobalOpt;
+};
+
+void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
+extern char &AMDGPUSwLowerLDSLegacyPassID;
+ModulePass *
+createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+
+struct AMDGPUSwLowerLDSPass : PassInfoMixin<AMDGPUSwLowerLDSPass> {
+  const AMDGPUTargetMachine &TM;
+  AMDGPUSwLowerLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 class AMDGPUCodeGenPreparePass

@@ -1496,7 +1496,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::AVGCEILU, VT, Custom);
 
       if (!Subtarget->isLittleEndian())
-        setOperationAction(ISD::BITCAST, VT, Expand);
+        setOperationAction(ISD::BITCAST, VT, Custom);
 
       if (Subtarget->hasSVE2() ||
           (Subtarget->hasSME() && Subtarget->isStreaming()))
@@ -1510,9 +1510,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
     }
 
-    // Legalize unpacked bitcasts to REINTERPRET_CAST.
-    for (auto VT : {MVT::nxv2i16, MVT::nxv4i16, MVT::nxv2i32, MVT::nxv2bf16,
-                    MVT::nxv4bf16, MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32})
+    // Type legalize unpacked bitcasts.
+    for (auto VT : {MVT::nxv2i16, MVT::nxv4i16, MVT::nxv2i32})
       setOperationAction(ISD::BITCAST, VT, Custom);
 
     for (auto VT :
@@ -1587,6 +1586,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
+      setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
@@ -1658,20 +1658,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setCondCodeAction(ISD::SETUGT, VT, Expand);
       setCondCodeAction(ISD::SETUEQ, VT, Expand);
       setCondCodeAction(ISD::SETONE, VT, Expand);
-
-      if (!Subtarget->isLittleEndian())
-        setOperationAction(ISD::BITCAST, VT, Expand);
     }
 
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+      setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
-
-      if (!Subtarget->isLittleEndian())
-        setOperationAction(ISD::BITCAST, VT, Expand);
     }
 
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
@@ -1795,10 +1790,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::Other,
+      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv4i32,
                          Custom);
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::i8, Custom);
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::i16, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
+                         Custom);
     }
   }
 
@@ -4962,22 +4957,35 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
     return LowerFixedLengthBitcastToSVE(Op, DAG);
 
   if (OpVT.isScalableVector()) {
-    // Bitcasting between unpacked vector types of different element counts is
-    // not a NOP because the live elements are laid out differently.
-    //                01234567
-    // e.g. nxv2i32 = XX??XX??
-    //      nxv4f16 = X?X?X?X?
-    if (OpVT.getVectorElementCount() != ArgVT.getVectorElementCount())
-      return SDValue();
+    assert(isTypeLegal(OpVT) && "Unexpected result type!");
 
-    if (isTypeLegal(OpVT) && !isTypeLegal(ArgVT)) {
+    // Handle type legalisation first.
+    if (!isTypeLegal(ArgVT)) {
       assert(OpVT.isFloatingPoint() && !ArgVT.isFloatingPoint() &&
              "Expected int->fp bitcast!");
+
+      // Bitcasting between unpacked vector types of different element counts is
+      // not a NOP because the live elements are laid out differently.
+      //                01234567
+      // e.g. nxv2i32 = XX??XX??
+      //      nxv4f16 = X?X?X?X?
+      if (OpVT.getVectorElementCount() != ArgVT.getVectorElementCount())
+        return SDValue();
+
       SDValue ExtResult =
           DAG.getNode(ISD::ANY_EXTEND, SDLoc(Op), getSVEContainerType(ArgVT),
                       Op.getOperand(0));
       return getSVESafeBitCast(OpVT, ExtResult, DAG);
     }
+
+    // Bitcasts between legal types with the same element count are legal.
+    if (OpVT.getVectorElementCount() == ArgVT.getVectorElementCount())
+      return Op;
+
+    // getSVESafeBitCast does not support casting between unpacked types.
+    if (!isPackedVectorType(OpVT, DAG))
+      return SDValue();
+
     return getSVESafeBitCast(OpVT, Op.getOperand(0), DAG);
   }
 
@@ -14872,6 +14880,10 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
+    // We can select these directly.
+    if (isTypeLegal(InVT) && Vec0.isUndef())
+      return Op;
+
     // Ensure the subvector is half the size of the main vector.
     if (VT.getVectorElementCount() != (InVT.getVectorElementCount() * 2))
       return SDValue();
@@ -19840,7 +19852,6 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     // This optimization reduces instruction count.
     if (N00Opc == AArch64ISD::VLSHR && N10Opc == AArch64ISD::VLSHR &&
         N00->getOperand(1) == N10->getOperand(1)) {
-
       SDValue N000 = N00->getOperand(0);
       SDValue N100 = N10->getOperand(0);
       uint64_t N001ConstVal = N00->getConstantOperandVal(1),
@@ -19848,7 +19859,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
                NScalarSize = N->getValueType(0).getScalarSizeInBits();
 
       if (N001ConstVal == N101ConstVal && N001ConstVal > NScalarSize) {
-
+        N000 = DAG.getNode(AArch64ISD::NVCAST, dl, VT, N000);
+        N100 = DAG.getNode(AArch64ISD::NVCAST, dl, VT, N100);
         SDValue Uzp = DAG.getNode(AArch64ISD::UZP2, dl, VT, N000, N100);
         SDValue NewShiftConstant =
             DAG.getConstant(N001ConstVal - NScalarSize, dl, MVT::i32);
@@ -27084,20 +27096,36 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
                              : AtomicExpansionKind::LLSC;
 }
 
+// Return true if the atomic operation expansion will lower to use a library
+// call, and is thus ineligible to use an LLSC expansion.
+static bool rmwOpMayLowerToLibcall(const AArch64Subtarget &Subtarget,
+                                   const AtomicRMWInst *RMW) {
+  if (!RMW->isFloatingPointOperation())
+    return false;
+  switch (RMW->getType()->getScalarType()->getTypeID()) {
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
+  case Type::HalfTyID:
+  case Type::BFloatTyID:
+    // Will use soft float
+    return !Subtarget.hasFPARMv8();
+  default:
+    // fp128 will emit library calls.
+    return true;
+  }
+
+  llvm_unreachable("covered type switch");
+}
+
 // The "default" for integer RMW operations is to expand to an LL/SC loop.
 // However, with the LSE instructions (or outline-atomics mode, which provides
 // library routines in place of the LSE-instructions), we can directly emit many
 // operations instead.
-//
-// Floating-point operations are always emitted to a cmpxchg loop, because they
-// may trigger a trap which aborts an LLSC sequence.
 TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
-  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
+  Type *Ty = AI->getType();
+  unsigned Size = Ty->getPrimitiveSizeInBits();
   assert(Size <= 128 && "AtomicExpandPass should've handled larger sizes.");
-
-  if (AI->isFloatingPointOperation())
-    return AtomicExpansionKind::CmpXChg;
 
   bool CanUseLSE128 = Subtarget->hasLSE128() && Size == 128 &&
                       (AI->getOperation() == AtomicRMWInst::Xchg ||
@@ -27108,7 +27136,8 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   // Nand is not supported in LSE.
   // Leave 128 bits to LLSC or CmpXChg.
-  if (AI->getOperation() != AtomicRMWInst::Nand && Size < 128) {
+  if (AI->getOperation() != AtomicRMWInst::Nand && Size < 128 &&
+      !AI->isFloatingPointOperation()) {
     if (Subtarget->hasLSE())
       return AtomicExpansionKind::None;
     if (Subtarget->outlineAtomics()) {
@@ -27134,7 +27163,7 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // succeed. So at -O0 lower this operation to a CAS loop. Also worthwhile if
   // we have a single CAS instruction that can replace the loop.
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None ||
-      Subtarget->hasLSE())
+      Subtarget->hasLSE() || rmwOpMayLowerToLibcall(*Subtarget, AI))
     return AtomicExpansionKind::CmpXChg;
 
   return AtomicExpansionKind::LLSC;
@@ -27181,10 +27210,14 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
-    Lo = Builder.CreateZExt(Lo, ValueTy, "lo64");
-    Hi = Builder.CreateZExt(Hi, ValueTy, "hi64");
-    return Builder.CreateOr(
-        Lo, Builder.CreateShl(Hi, ConstantInt::get(ValueTy, 64)), "val64");
+
+    auto *Int128Ty = Type::getInt128Ty(Builder.getContext());
+    Lo = Builder.CreateZExt(Lo, Int128Ty, "lo64");
+    Hi = Builder.CreateZExt(Hi, Int128Ty, "hi64");
+
+    Value *Or = Builder.CreateOr(
+        Lo, Builder.CreateShl(Hi, ConstantInt::get(Int128Ty, 64)), "val64");
+    return Builder.CreateBitCast(Or, ValueTy);
   }
 
   Type *Tys[] = { Addr->getType() };
@@ -27195,8 +27228,8 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
   const DataLayout &DL = M->getDataLayout();
   IntegerType *IntEltTy = Builder.getIntNTy(DL.getTypeSizeInBits(ValueTy));
   CallInst *CI = Builder.CreateCall(Ldxr, Addr);
-  CI->addParamAttr(
-      0, Attribute::get(Builder.getContext(), Attribute::ElementType, ValueTy));
+  CI->addParamAttr(0, Attribute::get(Builder.getContext(),
+                                     Attribute::ElementType, IntEltTy));
   Value *Trunc = Builder.CreateTrunc(CI, IntEltTy);
 
   return Builder.CreateBitCast(Trunc, ValueTy);
@@ -27222,9 +27255,13 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
         IsRelease ? Intrinsic::aarch64_stlxp : Intrinsic::aarch64_stxp;
     Function *Stxr = Intrinsic::getDeclaration(M, Int);
     Type *Int64Ty = Type::getInt64Ty(M->getContext());
+    Type *Int128Ty = Type::getInt128Ty(M->getContext());
 
-    Value *Lo = Builder.CreateTrunc(Val, Int64Ty, "lo");
-    Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 64), Int64Ty, "hi");
+    Value *CastVal = Builder.CreateBitCast(Val, Int128Ty);
+
+    Value *Lo = Builder.CreateTrunc(CastVal, Int64Ty, "lo");
+    Value *Hi =
+        Builder.CreateTrunc(Builder.CreateLShr(CastVal, 64), Int64Ty, "hi");
     return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
   }
 
@@ -28513,11 +28550,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   assert(CID->getZExtValue() == Intrinsic::experimental_vector_histogram_add &&
          "Unexpected histogram update operation");
 
-  EVT IncVT = Inc.getValueType();
   EVT IndexVT = Index.getValueType();
   LLVMContext &Ctx = *DAG.getContext();
   ElementCount EC = IndexVT.getVectorElementCount();
-  EVT MemVT = EVT::getVectorVT(Ctx, IncVT, EC);
+  EVT MemVT = EVT::getVectorVT(Ctx, HG->getMemoryVT(), EC);
   EVT IncExtVT =
       EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
   EVT IncSplatVT = EVT::getVectorVT(Ctx, IncExtVT, EC);
@@ -28906,7 +28942,22 @@ SDValue AArch64TargetLowering::getSVESafeBitCast(EVT VT, SDValue Op,
   if (InVT != PackedInVT)
     Op = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedInVT, Op);
 
-  Op = DAG.getNode(ISD::BITCAST, DL, PackedVT, Op);
+  if (Subtarget->isLittleEndian() ||
+      PackedVT.getScalarSizeInBits() == PackedInVT.getScalarSizeInBits())
+    Op = DAG.getNode(ISD::BITCAST, DL, PackedVT, Op);
+  else {
+    EVT PackedVTAsInt = PackedVT.changeTypeToInteger();
+    EVT PackedInVTAsInt = PackedInVT.changeTypeToInteger();
+
+    // Simulate the effect of casting through memory.
+    Op = DAG.getNode(ISD::BITCAST, DL, PackedInVTAsInt, Op);
+    if (PackedInVTAsInt.getScalarSizeInBits() != 8)
+      Op = DAG.getNode(ISD::BSWAP, DL, PackedInVTAsInt, Op);
+    Op = DAG.getNode(AArch64ISD::NVCAST, DL, PackedVTAsInt, Op);
+    if (PackedVTAsInt.getScalarSizeInBits() != 8)
+      Op = DAG.getNode(ISD::BSWAP, DL, PackedVTAsInt, Op);
+    Op = DAG.getNode(ISD::BITCAST, DL, PackedVT, Op);
+  }
 
   // Unpack result if required.
   if (VT != PackedVT)
@@ -29293,8 +29344,10 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
     assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
            "Expected vectors of equal size!");
     // TODO: Enable assert once bogus creations have been fixed.
-    // assert(OpVT.getVectorElementCount() == VT.getVectorElementCount()*2 &&
-    //       "Expected result vector with half the lanes of its input!");
+    if (VT.isScalableVector())
+      break;
+    assert(OpVT.getVectorElementCount() == VT.getVectorElementCount() * 2 &&
+           "Expected result vector with half the lanes of its input!");
     break;
   }
   case AArch64ISD::TRN1:
@@ -29311,7 +29364,9 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
     assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
            "Expected vectors!");
     // TODO: Enable assert once bogus creations have been fixed.
-    // assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
+    if (VT.isScalableVector())
+      break;
+    assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
     break;
   }
   }

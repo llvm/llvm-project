@@ -247,7 +247,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   }
 
   // Map of register aliases registers via the .req directive.
-  StringMap<unsigned> RegisterReqs;
+  StringMap<MCRegister> RegisterReqs;
 
   bool NextSymbolIsThumb;
 
@@ -4253,7 +4253,7 @@ int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
     // Check for aliases registered via .req. Canonicalize to lower case.
     // That's more consistent since register names are case insensitive, and
     // it's how the original entry was passed in from MC/MCParser/AsmParser.
-    StringMap<unsigned>::const_iterator Entry = RegisterReqs.find(lowerCase);
+    auto Entry = RegisterReqs.find(lowerCase);
     // If no match, return failure.
     if (Entry == RegisterReqs.end())
       return -1;
@@ -5251,7 +5251,7 @@ ParseStatus ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   StringRef Flags = "";
   std::string SpecReg = Mask.slice(Start, Next).lower();
   if (Next != StringRef::npos)
-    Flags = Mask.slice(Next+1, Mask.size());
+    Flags = Mask.substr(Next + 1);
 
   // FlagsVal contains the complete mask:
   // 3-0: Mask
@@ -6648,15 +6648,15 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
 
   // The "it" instruction has the condition mask on the end of the mnemonic.
   if (Mnemonic.starts_with("it")) {
-    ITMask = Mnemonic.slice(2, Mnemonic.size());
+    ITMask = Mnemonic.substr(2);
     Mnemonic = Mnemonic.slice(0, 2);
   }
 
   if (Mnemonic.starts_with("vpst")) {
-    ITMask = Mnemonic.slice(4, Mnemonic.size());
+    ITMask = Mnemonic.substr(4);
     Mnemonic = Mnemonic.slice(0, 4);
   } else if (Mnemonic.starts_with("vpt")) {
-    ITMask = Mnemonic.slice(3, Mnemonic.size());
+    ITMask = Mnemonic.substr(3);
     Mnemonic = Mnemonic.slice(0, 3);
   }
 
