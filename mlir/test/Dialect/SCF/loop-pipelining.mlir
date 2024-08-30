@@ -767,40 +767,38 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: 
 // Check for predicated epilogue for dynamic loop.
 // CHECK-LABEL: dynamic_loop(
 //        CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
-//        CHECK:       memref.store %[[ARG6]], %{{.*}}[%[[ARG5]]] 
-//        CHECK:       %[[ADDF_26:.*]] = arith.addf %[[ARG7]], %{{.*}} 
-//        CHECK:       %[[MULI_27:.*]] = arith.muli %{{.*}}, %{{.*}} 
-//        CHECK:       %[[ADDI_28:.*]] = arith.addi %[[ARG5]], %[[MULI_27]] 
-//        CHECK:       %[[LOAD_29:.*]] = memref.load %{{.*}}[%[[ADDI_28]]] 
-//        CHECK:       scf.yield %[[ADDF_26]], %[[LOAD_29]] 
+//        CHECK:       memref.store %[[ARG6]], %{{.*}}[%[[ARG5]]]
+//        CHECK:       %[[ADDF_24:.*]] = arith.addf %[[ARG7]], %{{.*}}
+//        CHECK:       %[[MULI_25:.*]] = arith.muli %{{.*}}, %{{.*}}
+//        CHECK:       %[[ADDI_26:.*]] = arith.addi %[[ARG5]], %[[MULI_25]]
+//        CHECK:       %[[LOAD_27:.*]] = memref.load %{{.*}}[%[[ADDI_26]]]
+//        CHECK:       scf.yield %[[ADDF_24]], %[[LOAD_27]]
 //        CHECK:   }
-//        CHECK:   %[[SUBI_10:.*]] = arith.subi %{{.*}}, %{{.*}} 
-//        CHECK:   %[[REMUI_11:.*]] = arith.remui %[[SUBI_10]], %{{.*}} 
-//        CHECK:   %[[CMPI_12:.*]] = arith.cmpi ne, %[[REMUI_11]], %{{.*}} 
-//        CHECK:   %[[SELECT_13:.*]] = arith.select %[[CMPI_12]], %{{.*}}, %{{.*}} 
-//        CHECK:   %[[DIVUI_14:.*]] = arith.divui %[[SUBI_10]], %{{.*}} 
-//        CHECK:   %[[ADDI_15:.*]] = arith.addi %[[DIVUI_14]], %[[SELECT_13]] 
-//        CHECK:   %[[ADDI_16:.*]] = arith.addi %[[ADDI_15]], %{{.*}}-1 
-//        CHECK:   %[[MULI_17:.*]] = arith.muli %{{.*}}, %[[ADDI_16]] 
-//        CHECK:   %[[ADDI_18:.*]] = arith.addi %{{.*}}, %[[MULI_17]] 
-//        CHECK:   %[[CMPI_19:.*]] = arith.cmpi sge, %[[ADDI_16]], %{{.*}} 
-//        CHECK:   %[[ADDI_20:.*]] = arith.addi %[[ADDI_15]], %{{.*}}-1 
-//        CHECK:   %[[ADDI_21:.*]] = arith.addi %[[ADDI_20]], %{{.*}}-1 
-//        CHECK:   %[[MULI_22:.*]] = arith.muli %{{.*}}, %[[ADDI_21]] 
-//        CHECK:   %[[ADDI_23:.*]] = arith.addi %{{.*}}, %[[MULI_22]] 
-//        CHECK:   %[[CMPI_24:.*]] = arith.cmpi sge, %[[ADDI_21]], %{{.*}} 
-//        CHECK:   scf.if %[[CMPI_19]] {
-//        CHECK:     memref.store %{{.*}}#0, %{{.*}}[%[[ADDI_23]]] 
+//        CHECK:   %[[SUBI_10:.*]] = arith.subi %{{.*}}, %{{.*}}
+//        CHECK:   %[[ADDI_11:.*]] = arith.addi %[[SUBI_10]], %{{.*}}
+//        CHECK:   %[[ADDI_12:.*]] = arith.addi %[[ADDI_11]], %{{.*}}-1
+//        CHECK:   %[[DIVUI_13:.*]] = arith.divui %[[ADDI_12]], %{{.*}}
+//        CHECK:   %[[ADDI_14:.*]] = arith.addi %[[DIVUI_13]], %{{.*}}-1
+//        CHECK:   %[[MULI_15:.*]] = arith.muli %{{.*}}, %[[ADDI_14]]
+//        CHECK:   %[[ADDI_16:.*]] = arith.addi %{{.*}}, %[[MULI_15]]
+//        CHECK:   %[[CMPI_17:.*]] = arith.cmpi sge, %[[ADDI_14]], %{{.*}}
+//        CHECK:   %[[ADDI_18:.*]] = arith.addi %[[DIVUI_13]], %{{.*}}-1
+//        CHECK:   %[[ADDI_19:.*]] = arith.addi %[[ADDI_18]], %{{.*}}-1
+//        CHECK:   %[[MULI_20:.*]] = arith.muli %{{.*}}, %[[ADDI_19]]
+//        CHECK:   %[[ADDI_21:.*]] = arith.addi %{{.*}}, %[[MULI_20]]
+//        CHECK:   %[[CMPI_22:.*]] = arith.cmpi sge, %[[ADDI_19]], %{{.*}}
+//        CHECK:   scf.if %[[CMPI_17]] {
+//        CHECK:     memref.store %{{.*}}#0, %{{.*}}[%[[ADDI_21]]]
 //        CHECK:   } else {
 //        CHECK:   }
-//        CHECK:   %[[IF_25:.*]] = scf.if %[[CMPI_24]] -> (f32) {
-//        CHECK:     %[[ADDF_26:.*]] = arith.addf %{{.*}}#1, %{{.*}} 
-//        CHECK:     scf.yield %[[ADDF_26]] 
+//        CHECK:   %[[IF_23:.*]] = scf.if %[[CMPI_22]] -> (f32) {
+//        CHECK:     %[[ADDF_24:.*]] = arith.addf %{{.*}}#1, %{{.*}}
+//        CHECK:     scf.yield %[[ADDF_24]]
 //        CHECK:   } else {
-//        CHECK:     scf.yield %{{.*}} 
+//        CHECK:     scf.yield %{{.*}}
 //        CHECK:   }
-//        CHECK:   scf.if %[[CMPI_24]] {
-//        CHECK:     memref.store %[[IF_25]], %{{.*}}[%[[ADDI_18]]] 
+//        CHECK:   scf.if %[[CMPI_22]] {
+//        CHECK:     memref.store %[[IF_23]], %{{.*}}[%[[ADDI_16]]]
 //        CHECK:   } else {
 //        CHECK:   }
 //        CHECK:   return

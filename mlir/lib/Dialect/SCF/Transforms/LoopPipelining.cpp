@@ -644,24 +644,14 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   // removed by dead code if not used.
 
   // bounds_range = ub - lb
-  // total_iterations = bounds_range / step + (bounds_range % step ? 1 : 0)
+  // total_iterations = (bounds_range + step - 1) / step
   Type t = lb.getType();
   Value minus1 =
       rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, -1));
-
-  Value const_0 =
-      rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, 0));
-  Value const_1 =
-      rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, 1));
   Value boundsRange = rewriter.create<arith::SubIOp>(loc, ub, lb);
-  Value boundsRem = rewriter.create<arith::RemUIOp>(loc, boundsRange, step);
-  Value hasRem = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
-                                                boundsRem, const_0);
-  Value selRem =
-      rewriter.create<arith::SelectOp>(loc, hasRem, const_1, const_0);
-  Value boundsDiv = rewriter.create<arith::DivUIOp>(loc, boundsRange, step);
-  Value totalIterations =
-      rewriter.create<arith::AddIOp>(loc, boundsDiv, selRem);
+  Value rangeIncr = rewriter.create<arith::AddIOp>(loc, boundsRange, step);
+  Value rangeDecr = rewriter.create<arith::AddIOp>(loc, rangeIncr, minus1);
+  Value totalIterations = rewriter.create<arith::DivUIOp>(loc, rangeDecr, step);
 
   SmallVector<Value> predicates(maxStage + 1);
   for (int64_t i = 0; i < maxStage; i++) {
