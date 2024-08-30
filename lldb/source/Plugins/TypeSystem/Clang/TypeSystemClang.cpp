@@ -4242,6 +4242,10 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::PackIndexing:
     break;
   }
+
+  case clang::Type::HLSLAttributedResource:
+    break;
+  
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
 }
