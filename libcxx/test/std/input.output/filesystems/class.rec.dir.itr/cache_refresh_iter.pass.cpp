@@ -23,7 +23,6 @@
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
 namespace fs = std::filesystem;
-using namespace fs;
 
 #if defined(_WIN32)
 static void set_last_write_time_in_iteration(const fs::path& dir) {
@@ -32,16 +31,16 @@ static void set_last_write_time_in_iteration(const fs::path& dir) {
   // See
   // https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times
   // To force updating file entries calls "last_write_time" with own value.
-  const recursive_directory_iterator end_it{};
+  const fs::recursive_directory_iterator end_it{};
 
   std::error_code ec;
-  recursive_directory_iterator it(dir, ec);
+  fs::recursive_directory_iterator it(dir, ec);
   assert(!ec);
 
-  file_time_type now_time = file_time_type::clock::now();
+  fs::file_time_type now_time = fs::file_time_type::clock::now();
   for (; it != end_it; ++it) {
-    const path entry = *it;
-    last_write_time(entry, now_time, ec);
+    const fs::path entry = *it;
+    fs::last_write_time(entry, now_time, ec);
     assert(!ec);
   }
 
@@ -49,26 +48,27 @@ static void set_last_write_time_in_iteration(const fs::path& dir) {
 }
 
 struct directory_entry_and_values {
-  directory_entry entry;
+  fs::directory_entry entry;
 
-  file_status symlink_status;
-  file_status status;
+  fs::file_status symlink_status;
+  fs::file_status status;
   std::uintmax_t file_size;
-  file_time_type last_write_time;
+  fs::file_time_type last_write_time;
 };
 
-std::vector<directory_entry_and_values> get_directory_entries_for(const path& dir, const std::set<path>& dir_contents) {
-  const recursive_directory_iterator end_it{};
+std::vector<directory_entry_and_values>
+get_directory_entries_for(const fs::path& dir, const std::set<fs::path>& dir_contents) {
+  const fs::recursive_directory_iterator end_it{};
 
   std::error_code ec;
-  recursive_directory_iterator it(dir, ec);
+  fs::recursive_directory_iterator it(dir, ec);
   assert(!ec);
 
   std::vector<directory_entry_and_values> dir_entries;
-  std::set<path> unseen_entries = dir_contents;
+  std::set<fs::path> unseen_entries = dir_contents;
   while (!unseen_entries.empty()) {
     assert(it != end_it);
-    const directory_entry& entry = *it;
+    const fs::directory_entry& entry = *it;
 
     assert(unseen_entries.erase(entry.path()) == 1);
 
@@ -79,13 +79,13 @@ std::vector<directory_entry_and_values> get_directory_entries_for(const path& di
         .file_size       = entry.is_regular_file() ? entry.file_size() : 0,
         .last_write_time = entry.last_write_time()});
 
-    recursive_directory_iterator& it_ref = it.increment(ec);
+    fs::recursive_directory_iterator& it_ref = it.increment(ec);
     assert(!ec);
     assert(&it_ref == &it);
   }
   return dir_entries;
 }
-#endif
+#endif // _WIN32
 
 // Checks that the directory_entry properties will be the same before and after
 // calling "refresh" in case of iteration.
@@ -93,42 +93,42 @@ std::vector<directory_entry_and_values> get_directory_entries_for(const path& di
 // iteration.
 static void test_cache_and_refresh_in_iteration() {
   static_test_env static_env;
-  const path test_dir = static_env.Dir;
+  const fs::path test_dir = static_env.Dir;
 #if defined(_WIN32)
   set_last_write_time_in_iteration(test_dir);
 #endif
-  const std::set<path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
-  const recursive_directory_iterator end_it{};
+  const std::set<fs::path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
+  const fs::recursive_directory_iterator end_it{};
 
   std::error_code ec;
-  recursive_directory_iterator it(test_dir, ec);
+  fs::recursive_directory_iterator it(test_dir, ec);
   assert(!ec);
 
-  std::set<path> unseen_entries = dir_contents;
+  std::set<fs::path> unseen_entries = dir_contents;
   while (!unseen_entries.empty()) {
     assert(it != end_it);
-    const directory_entry& entry = *it;
+    const fs::directory_entry& entry = *it;
 
     assert(unseen_entries.erase(entry.path()) == 1);
 
-    file_status symlink_status     = entry.symlink_status();
-    file_status status             = entry.status();
-    std::uintmax_t file_size       = entry.is_regular_file() ? entry.file_size() : 0;
-    file_time_type last_write_time = entry.last_write_time();
+    fs::file_status symlink_status     = entry.symlink_status();
+    fs::file_status status             = entry.status();
+    std::uintmax_t file_size           = entry.is_regular_file() ? entry.file_size() : 0;
+    fs::file_time_type last_write_time = entry.last_write_time();
 
-    directory_entry mutable_entry = *it;
+    fs::directory_entry mutable_entry = *it;
     mutable_entry.refresh();
-    file_status upd_symlink_status     = mutable_entry.symlink_status();
-    file_status upd_status             = mutable_entry.status();
-    std::uintmax_t upd_file_size       = mutable_entry.is_regular_file() ? mutable_entry.file_size() : 0;
-    file_time_type upd_last_write_time = mutable_entry.last_write_time();
+    fs::file_status upd_symlink_status     = mutable_entry.symlink_status();
+    fs::file_status upd_status             = mutable_entry.status();
+    std::uintmax_t upd_file_size           = mutable_entry.is_regular_file() ? mutable_entry.file_size() : 0;
+    fs::file_time_type upd_last_write_time = mutable_entry.last_write_time();
     assert(upd_symlink_status.type() == symlink_status.type() &&
            upd_symlink_status.permissions() == symlink_status.permissions());
     assert(upd_status.type() == status.type() && upd_status.permissions() == status.permissions());
     assert(upd_file_size == file_size);
     assert(upd_last_write_time == last_write_time);
 
-    recursive_directory_iterator& it_ref = it.increment(ec);
+    fs::recursive_directory_iterator& it_ref = it.increment(ec);
     assert(!ec);
     assert(&it_ref == &it);
   }
@@ -142,9 +142,9 @@ static void test_cached_values_in_iteration() {
   std::vector<directory_entry_and_values> dir_entries;
   {
     static_test_env static_env;
-    const path testDir = static_env.Dir;
+    const fs::path testDir = static_env.Dir;
     set_last_write_time_in_iteration(testDir);
-    const std::set<path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
+    const std::set<fs::path> dir_contents(static_env.RecDirIterationList.begin(), static_env.RecDirIterationList.end());
     dir_entries = get_directory_entries_for(testDir, dir_contents);
   }
   // Testing folder should be deleted after destoying static_test_env.
@@ -159,23 +159,23 @@ static void test_cached_values_in_iteration() {
       // Check that entry uses cached value about existing file.
       assert(dir_entry.entry.exists());
     }
-    file_status symlink_status = dir_entry.entry.symlink_status();
+    fs::file_status symlink_status = dir_entry.entry.symlink_status();
     assert(dir_entry.symlink_status.type() == symlink_status.type() &&
            dir_entry.symlink_status.permissions() == symlink_status.permissions());
 
     if (!dir_entry.entry.is_symlink()) {
-      file_status status = dir_entry.entry.status();
+      fs::file_status status = dir_entry.entry.status();
       assert(dir_entry.status.type() == status.type() && dir_entry.status.permissions() == status.permissions());
 
       std::uintmax_t file_size = dir_entry.entry.is_regular_file() ? dir_entry.entry.file_size() : 0;
       assert(dir_entry.file_size == file_size);
 
-      file_time_type last_write_time = dir_entry.entry.last_write_time();
+      fs::file_time_type last_write_time = dir_entry.entry.last_write_time();
       assert(dir_entry.last_write_time == last_write_time);
     }
   }
 }
-#endif
+#endif // _WIN32
 
 int main(int, char**) {
   test_cache_and_refresh_in_iteration();
