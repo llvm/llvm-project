@@ -480,8 +480,7 @@ Value *DbgVariableRecord::getAddress() const {
   // We can also convert the address to a DIArgList if an address computation
   // gets salvaged; this is a legal salvage that we can't recover any
   // assignment-tracking information from.
-  assert(!MD ||
-         isa<DIArgList>(MD) ||
+  assert(!MD || isa<DIArgList>(MD) ||
          !cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
   return nullptr;
 }
