@@ -10131,6 +10131,10 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   const VectorType *RHSVecType = RHSType->getAs<VectorType>();
   assert(LHSVecType || RHSVecType);
 
+  if (getLangOpts().HLSL)
+    return HLSL().handleVectorBinOpConversion(LHS, RHS, LHSType, RHSType,
+                                              IsCompAssign);
+
   // AltiVec-style "vector bool op vector bool" combinations are allowed
   // for some operators but not others.
   if (!AllowBothBool && LHSVecType &&
@@ -12861,7 +12865,8 @@ static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
 }
 
 QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
-                                          SourceLocation Loc) {
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
   // Ensure that either both operands are of the same vector type, or
   // one operand is of a vector type and the other is of its element type.
   QualType vType = CheckVectorOperands(LHS, RHS, Loc, false,
@@ -12881,6 +12886,12 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (!getLangOpts().CPlusPlus &&
       !(isa<ExtVectorType>(vType->getAs<VectorType>())))
     return InvalidLogicalVectorOperands(Loc, LHS, RHS);
+  if (getLangOpts().HLSL &&
+      getLangOpts().getHLSLVersion() >= LangOptionsBase::HLSL_2021) {
+    (void)InvalidOperands(Loc, LHS, RHS);
+    HLSL().emitLogicalOperatorFixIt(LHS.get(), RHS.get(), Opc);
+    return QualType();
+  }
 
   return GetSignedVectorType(LHS.get()->getType());
 }
@@ -13052,7 +13063,7 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // Check vector operands differently.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
-    return CheckVectorLogicalOperands(LHS, RHS, Loc);
+    return CheckVectorLogicalOperands(LHS, RHS, Loc, Opc);
 
   bool EnumConstantInBoolContext = false;
   for (const ExprResult &HS : {LHS, RHS}) {
