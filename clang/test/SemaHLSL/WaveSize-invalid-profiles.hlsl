@@ -5,16 +5,16 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.8-domain -x hlsl %s  -verify
 
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
-// expected-error@+10 {{attribute 'WaveSize' is unsupported in 'pixel' shaders, requires one of the following: compute, amplification, mesh}}
+// expected-error@#WaveSize {{attribute 'WaveSize' is unsupported in 'pixel' shaders, requires one of the following: compute, amplification, mesh}}
 #elif __SHADER_TARGET_STAGE == __SHADER_STAGE_VERTEX
-// expected-error@+8 {{attribute 'WaveSize' is unsupported in 'vertex' shaders, requires one of the following: compute, amplification, mesh}}
+// expected-error@#WaveSize {{attribute 'WaveSize' is unsupported in 'vertex' shaders, requires one of the following: compute, amplification, mesh}}
 #elif __SHADER_TARGET_STAGE == __SHADER_STAGE_GEOMETRY
-// expected-error@+6 {{attribute 'WaveSize' is unsupported in 'geometry' shaders, requires one of the following: compute, amplification, mesh}}
+// expected-error@#WaveSize {{attribute 'WaveSize' is unsupported in 'geometry' shaders, requires one of the following: compute, amplification, mesh}}
 #elif __SHADER_TARGET_STAGE == __SHADER_STAGE_HULL
-// expected-error@+4 {{attribute 'WaveSize' is unsupported in 'hull' shaders, requires one of the following: compute, amplification, mesh}}
+// expected-error@#WaveSize {{attribute 'WaveSize' is unsupported in 'hull' shaders, requires one of the following: compute, amplification, mesh}}
 #elif __SHADER_TARGET_STAGE == __SHADER_STAGE_DOMAIN
-// expected-error@+2 {{attribute 'WaveSize' is unsupported in 'domain' shaders, requires one of the following: compute, amplification, mesh}}
+// expected-error@#WaveSize {{attribute 'WaveSize' is unsupported in 'domain' shaders, requires one of the following: compute, amplification, mesh}}
 #endif
-[WaveSize(16)]
+[WaveSize(16)] // #WaveSize
 void main() {
 }

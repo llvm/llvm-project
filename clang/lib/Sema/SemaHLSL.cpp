@@ -399,7 +399,7 @@ void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 static bool isValidWaveSizeValue(unsigned Value) {
-  return (Value >= 4 && Value <= 128 && ((Value & (Value - 1)) == 0));
+  return llvm::isPowerOf2_32(Value) && Value >= 4 && Value <= 128;
 }
 
 void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
