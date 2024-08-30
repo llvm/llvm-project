@@ -130,11 +130,12 @@ So you have an idea of a useful check for :program:`clang-tidy`.
 First, if you're not familiar with LLVM development, read through the `Getting
 Started with LLVM`_ document for instructions on setting up your workflow and
 the `LLVM Coding Standards`_ document to familiarize yourself with the coding
-style used in the project. For code reviews we mostly use `LLVM Phabricator`_.
+style used in the project. For code reviews we currently use `LLVM Github`_,
+though historically we used Phabricator.
 
 .. _Getting Started with LLVM: https://llvm.org/docs/GettingStarted.html
 .. _LLVM Coding Standards: https://llvm.org/docs/CodingStandards.html
-.. _LLVM Phabricator: https://llvm.org/docs/Phabricator.html
+.. _LLVM Github: https://github.com/llvm/llvm-project
 
 Next, you need to decide which module the check belongs to. Modules
 are located in subdirectories of `clang-tidy/
@@ -690,8 +691,8 @@ warnings and errors. The script provides multiple configuration flags.
   that the file names are matched against.
   ``run-clang-tidy.py clang-tidy/.*Check\.cpp`` will only analyze clang-tidy
   checks. It may also be necessary to restrict the header files that warnings
-  are displayed from using the ``-header-filter`` flag. It has the same behavior
-  as the corresponding :program:`clang-tidy` flag.
+  are displayed from using the ``-exclude-header-filter`` flag. It has the same 
+  behavior as the corresponding :program:`clang-tidy` flag.
 
 * To apply suggested fixes ``-fix`` can be passed as an argument. This gathers
   all changes in a temporary directory and applies them. Passing ``-format``
