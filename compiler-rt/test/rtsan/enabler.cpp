@@ -1,6 +1,6 @@
-// RUN: %clangxx -fsanitize=realtime %s -o %t
+// RUN: %clangxx -DRTSAN_ENABLED -fsanitize=realtime %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx %s -fsanitize=realtime -o - -S -emit-llvm | FileCheck %s --check-prefix=CHECK-ENABLED-IR
+// RUN: %clangxx %s -DRTSAN_ENABLED -o - -S -emit-llvm | FileCheck %s --check-prefix=CHECK-ENABLED-IR
 // RUN: %clangxx %s -o - -S -emit-llvm | FileCheck %s --check-prefix=CHECK-DISABLED-IR
 // UNSUPPORTED: ios
 
@@ -21,6 +21,7 @@ void violation() {
 }
 
 int main() {
+  __rtsan::Initialize();
   violation();
   return 0;
   // CHECK: {{.*Real-time violation.*}}
@@ -28,8 +29,10 @@ int main() {
   // CHECK: {{.*free*}}
 }
 
+// CHECK-ENABLED-IR: {{.*__rtsan_ensure_initialized.*}}
 // CHECK-ENABLED-IR: {{.*@__rtsan_realtime_enter.*}}
 // CHECK-ENABLED-IR: {{.*@__rtsan_realtime_exit.*}}
 
+// CHECK-DISABLED-IR-NOT: {{.*__rtsan_ensure_initialized.*}}
 // CHECK-DISABLED-IR-NOT: {{.*__rtsan_realtime_enter.*}}
 // CHECK-DISABLED-IR-NOT: {{.*__rtsan_realtime_exit.*}}

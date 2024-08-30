@@ -56,7 +56,8 @@ __rtsan_expect_not_realtime(const char *intercepted_function_name);
 } // extern "C"
 
 namespace __rtsan {
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#if (defined(__has_feature) && __has_feature(realtime_sanitizer)) ||           \
+    defined(RTSAN_ENABLED)
 
 void Initialize() { __rtsan_ensure_initialized(); }
 
@@ -108,7 +109,8 @@ public:
   ScopedDisabler() {}
 };
 
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer) ||
+       // defined(RTSAN_ENABLED)
 } // namespace __rtsan
 #endif // __cplusplus
 
