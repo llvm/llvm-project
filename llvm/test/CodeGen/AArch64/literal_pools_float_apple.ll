@@ -118,11 +118,11 @@ define dso_local double @double_4mov() {
 ;
 ; APPLE-LABEL: double_4mov:
 ; APPLE:       ; %bb.0:
-; APPLE-NEXT:    mov x8, #4096 ; =0x1000
-; APPLE-NEXT:    movk x8, #8192, lsl #16
-; APPLE-NEXT:    movk x8, #12288, lsl #32
-; APPLE-NEXT:    movk x8, #16384, lsl #48
-; APPLE-NEXT:    fmov d0, x8
+; APPLE-NEXT:  Lloh0:
+; APPLE-NEXT:    adrp x8, lCPI7_0@PAGE
+; APPLE-NEXT:  Lloh1:
+; APPLE-NEXT:    ldr d0, [x8, lCPI7_0@PAGEOFF]
 ; APPLE-NEXT:    ret
+; APPLE-NEXT:    .loh AdrpLdr Lloh0, Lloh1
   ret double 0x4000300020001000
 }

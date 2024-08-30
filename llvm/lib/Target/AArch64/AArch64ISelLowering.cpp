@@ -11458,14 +11458,17 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (!IsLegal && (VT == MVT::f64 || VT == MVT::f32)) {
     // The cost is actually exactly the same for mov+fmov vs. adrp+ldr;
     // however the mov+fmov sequence is always better because of the reduced
-    // cache pressure. The timings are still the same if you consider
-    // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
-    // movw+movk is fused). So we limit up to 2 instrdduction at most.
+    // cache pressure. Where targets allow, longer sequences may be possible.
+    // For example, movw+movk+fmov may be comparable to adrp+ldr if the
+    // movw+movk is fused.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
            "Should be able to build any value with at most 4 moves");
-    unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 4 : 2));
+    unsigned Limit = (OptForSize ? 1
+                                 : (Subtarget->hasFuseLiterals()
+                                        ? Subtarget->getFuseLiteralsLimit()
+                                        : 2));
     IsLegal = Insn.size() <= Limit;
   }
 
