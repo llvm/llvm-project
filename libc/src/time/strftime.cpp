@@ -9,6 +9,7 @@
 #include "src/time/strftime.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/errno/libc_errno.h"
 #include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -19,7 +20,7 @@ LLVM_LIBC_FUNCTION(size_t, strftime,
                    (char *__restrict, size_t, const char *__restrict,
                     const struct tm *)) {
   // TODO: Implement this for the default locale.
-  return 0;
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

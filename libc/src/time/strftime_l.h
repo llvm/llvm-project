@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_STRFTIME_L_H
 #define LLVM_LIBC_SRC_TIME_STRFTIME_L_H
 
-#include "include/llvm-libc-types/locale_t.h"
+#include "hdr/types/locale_t.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 #include <time.h>
