@@ -27,24 +27,25 @@ namespace __math {
 
 // signbit
 
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline
 // TODO(LLVM 22): Remove conditional once support for Clang 19 is dropped.
 #if defined(_LIBCPP_COMPILER_GCC) || __has_constexpr_builtin(__builtin_signbit)
-    _LIBCPP_CONSTEXPR_SINCE_CXX23
+#  define _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_CONSTEXPR_SINCE_CXX23
+#else
+#  define _LIBCPP_SIGNBIT_CONSTEXPR
 #endif
-    _LIBCPP_HIDE_FROM_ABI bool
-    signbit(_A1 __x) _NOEXCEPT {
+
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value && is_signed<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value && !is_signed<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
   return false;
 }
 
