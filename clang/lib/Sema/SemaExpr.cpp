@@ -5927,11 +5927,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
           ProtoArgType->isBlockPointerType())
         if (auto *BE = dyn_cast<BlockExpr>(Arg->IgnoreParenNoopCasts(Context)))
           BE->getBlockDecl()->setDoesNotEscape();
-      // During template instantiation it is possible that we already created
-      // the HLSLOutArgExpr if it was produced during tree transformation.
       if ((Proto->getExtParameterInfo(i).getABI() == ParameterABI::HLSLOut ||
-           Proto->getExtParameterInfo(i).getABI() == ParameterABI::HLSLInOut) &&
-          !isa<HLSLOutArgExpr>(Arg)) {
+           Proto->getExtParameterInfo(i).getABI() == ParameterABI::HLSLInOut)) {
         ExprResult ArgExpr = HLSL().ActOnOutParamExpr(Param, Arg);
         if (ArgExpr.isInvalid())
           return true;
