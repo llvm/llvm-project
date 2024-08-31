@@ -125,6 +125,7 @@ struct BuiltinTypeDeclBuilder {
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
     Attr *ROVAttr =
         IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr;
+
     addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
                       Access);
 

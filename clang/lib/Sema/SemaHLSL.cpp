@@ -929,6 +929,38 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handleTextureDimensionAttr(Decl *D, const ParsedAttr &AL) {
+  Expr *E = AL.getArgAsExpr(0);
+  if (!E) {
+    Diag(AL.getLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentConstantExpr;
+    return;
+  }
+
+  std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(getASTContext());
+
+  int arg0;
+  if (I.has_value())
+    arg0 = I->getZExtValue();
+  else {
+    Diag(E->getExprLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentIntegerConstant;
+    return;
+  }
+
+  if (arg0 < 1 || arg0 > 3) {
+    Diag(E->getExprLoc(), diag::warn_attribute_type_not_supported)
+        << "TextureDimension" << arg0;
+    return;
+  }
+
+  HLSLTextureDimensionAttr *NewAttr =
+      HLSLTextureDimensionAttr::Create(getASTContext(), arg0, E->getExprLoc());
+
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
 namespace {
 
 /// This class implements HLSL availability diagnostics for default

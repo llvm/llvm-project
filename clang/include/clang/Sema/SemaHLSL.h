@@ -58,6 +58,7 @@ public:
   void handleROVAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceClassAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleTextureDimensionAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(const ParsedAttr &AL);
 
