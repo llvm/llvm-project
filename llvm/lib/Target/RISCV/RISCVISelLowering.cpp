@@ -18976,9 +18976,10 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   return false;
 }
 
-static unsigned allocateRVVReg(MVT ValVT, unsigned ValNo,
-                               std::optional<unsigned> FirstMaskArgument,
-                               CCState &State, const RISCVTargetLowering &TLI) {
+static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo,
+                                 std::optional<unsigned> FirstMaskArgument,
+                                 CCState &State,
+                                 const RISCVTargetLowering &TLI) {
   const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
   if (RC == &RISCV::VRRegClass) {
     // Assign the first mask argument to V0.
@@ -19572,7 +19573,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
   }
 
   if (LocVT.isVector()) {
-    if (unsigned Reg =
+    if (MCRegister Reg =
             allocateRVVReg(ValVT, ValNo, FirstMaskArgument, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
