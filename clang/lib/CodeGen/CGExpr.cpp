@@ -299,6 +299,29 @@ void CodeGenFunction::EmitAnyExprToMem(const Expr *E,
   llvm_unreachable("bad evaluation kind");
 }
 
+void CodeGenFunction::EmitInitializationToLValue(
+    const Expr *E, LValue LV, AggValueSlot::IsZeroed_t IsZeroed) {
+  QualType Type = LV.getType();
+  switch (getEvaluationKind(Type)) {
+  case TEK_Complex:
+    EmitComplexExprIntoLValue(E, LV, /*isInit*/ true);
+    return;
+  case TEK_Aggregate:
+    EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsDestructed,
+                                           AggValueSlot::DoesNotNeedGCBarriers,
+                                           AggValueSlot::IsNotAliased,
+                                           AggValueSlot::MayOverlap, IsZeroed));
+    return;
+  case TEK_Scalar:
+    if (LV.isSimple())
+      EmitScalarInit(E, /*D=*/nullptr, LV, /*Captured=*/false);
+    else
+      EmitStoreThroughLValue(RValue::get(EmitScalarExpr(E)), LV);
+    return;
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
 static void
 pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
                      const Expr *E, Address ReferenceTemporary) {
@@ -5445,24 +5468,9 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
   Address OutTemp = CreateIRTemp(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
-  if (E->isInOut()) {
-    Expr *TempExpr = E->getCastedTemporary()->getSourceExpr();
-    auto ExprEvalKind = getEvaluationKind(ExprTy);
-    assert(ExprEvalKind != TEK_Complex &&
-           "HLSL does not support complex values in output expressions.");
-    if (ExprEvalKind == TEK_Aggregate) {
-      EmitAggExpr(TempExpr,
-                  AggValueSlot::forLValue(TempLV, AggValueSlot::IsDestructed,
-                                          AggValueSlot::DoesNotNeedGCBarriers,
-                                          AggValueSlot::IsNotAliased,
-                                          AggValueSlot::MayOverlap));
-    } else {
-      if (TempLV.isSimple())
-        EmitScalarInit(TempExpr, /*D=*/nullptr, TempLV, /*Captured=*/false);
-      else
-        EmitStoreThroughLValue(RValue::get(EmitScalarExpr(TempExpr)), TempLV);
-    }
-  }
+  if (E->isInOut())
+    EmitInitializationToLValue(E->getCastedTemporary()->getSourceExpr(),
+                               TempLV);
 
   OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
 
