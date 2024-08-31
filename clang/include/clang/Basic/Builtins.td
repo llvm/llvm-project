@@ -4793,41 +4793,41 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
 def LStrLenA : LibBuiltin<"WinBase.h"> {
   let Spellings = ["lstrlenA"];
   let Attributes = [NoThrow, Constexpr];
-  let Prototype = "int(const char*)";
+  let Prototype = "int(char const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def LStrLenW : LibBuiltin<"WinBase.h"> {
   let Spellings = ["lstrlenW"];
   let Attributes = [NoThrow, Constexpr];
-  let Prototype = "int(const wchar_t*)";
+  let Prototype = "int(wchar_t const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def LStrCpyA : LibBuiltin<"WinBase.h"> {
   let Spellings = ["lstrcpyA"];
   let Attributes = [NoThrow];
-  let Prototype = "char*(char*, const char*)";
+  let Prototype = "char*(char*, char const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def LStrCpyW : LibBuiltin<"WinBase.h"> {
   let Spellings = ["lstrcpyW"];
   let Attributes = [NoThrow];
-  let Prototype = "wchar_t*(wchar_t*, const wchar_t*)";
+  let Prototype = "wchar_t*(wchar_t*, wchar_t const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def LStrCatA : LibBuiltin<"WinBase.h"> {
   let Spellings = ["lstrcatA"];
   let Attributes = [NoThrow];
-  let Prototype = "char*(char*, const char*)";
+  let Prototype = "char*(char*, char const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
 
 def LStrCatW : LibBuiltin<"WinBase.h"> {
   let Spellings = ["lstrcatW"];
   let Attributes = [NoThrow];
-  let Prototype = "wchar_t*(wchar_t*, const wchar_t*)";
+  let Prototype = "wchar_t*(wchar_t*, wchar_t const*)";
   let AddBuiltinPrefixedAlias = 1;
 }
