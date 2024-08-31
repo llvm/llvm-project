@@ -2764,20 +2764,27 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
-  MaybeAlign Alignment =
-      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
+  SDValue Alignment = Op.getOperand(2); // Legalize the alignment.
+  MaybeAlign MaybeAlignment =
+      cast<ConstantSDNode>(Alignment)->getMaybeAlignValue();
   Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
-  // TODO: implement over-aligned alloca. (Note: also implies
-  // supporting support for overaligned function frames + dynamic
-  // allocations, at all, which currently isn't supported)
-  if (Alignment && *Alignment > StackAlign) {
-    const MachineFunction &MF = DAG.getMachineFunction();
-    report_fatal_error("Function \"" + Twine(MF.getName()) + "\": "
-                       "over-aligned dynamic alloca not supported.");
-  }
+  int64_t Bias = Subtarget->getStackPointerBias();
+  unsigned SPReg = SP::O6;
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
+  SDValue AlignedPtr = SP;
+
+  bool IsOveraligned = MaybeAlignment && *MaybeAlignment > StackAlign;
+  if (IsOveraligned)
+    AlignedPtr = DAG.getNode(
+        ISD::AND, dl, VT,
+        DAG.getNode(
+            ISD::SUB, dl, VT,
+            DAG.getNode(ISD::ADD, dl, VT, SP, DAG.getConstant(Bias, dl, VT)),
+            Alignment),
+        DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), Alignment));
 
   // The resultant pointer needs to be above the register spill area
   // at the bottom of the stack.
@@ -2811,12 +2818,17 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
     regSpillArea = 96;
   }
 
-  unsigned SPReg = SP::O6;
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
-  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);    // Output chain
+  AlignedPtr = DAG.getNode(ISD::SUB, dl, VT, AlignedPtr, Size);
 
-  regSpillArea += Subtarget->getStackPointerBias();
+  // If we are allocating overaligned memory then the bias is already accounted
+  // for in AlignedPtr calculation, so:
+  // - We do not need to adjust the regSpillArea; but
+  // - We do need to decrement AlignedPtr by bias to obtain the new SP.
+  regSpillArea += IsOveraligned ? 0 : Bias;
+  SDValue NewSP =
+      DAG.getNode(ISD::SUB, dl, VT, AlignedPtr,
+                  DAG.getConstant(IsOveraligned ? Bias : 0, dl, VT));
+  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);
 
   SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
                                DAG.getConstant(regSpillArea, dl, VT));
