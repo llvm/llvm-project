@@ -17,6 +17,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 
 using namespace llvm;
@@ -53,7 +54,7 @@ static PreservedAnalyses rtsanPreservedCFGAnalyses() {
 
 static void insertExpectNotRealtimeAtFunctionEntryPoint(Function &F) {
   IRBuilder<> Builder(&F.front().front());
-  Value *NameArg = Builder.CreateGlobalString(F.getName());
+  Value *NameArg = Builder.CreateGlobalString(demangle(F.getName()));
 
   FunctionType *FuncType =
       FunctionType::get(Type::getVoidTy(F.getContext()),
