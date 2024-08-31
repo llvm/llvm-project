@@ -71,13 +71,13 @@ void __rtsan::Context::BypassPush() { bypass_depth++; }
 
 void __rtsan::Context::BypassPop() { bypass_depth--; }
 
-void __rtsan::Context::ExpectNotRealtime(
-    const char *intercepted_function_name) {
-  if (InRealtimeContext() && !IsBypassed()) {
-    BypassPush();
+void __rtsan::ExpectNotRealtime(Context &context,
+                                const char *intercepted_function_name) {
+  if (context.InRealtimeContext() && !context.IsBypassed()) {
+    context.BypassPush();
     PrintDiagnostics(intercepted_function_name);
     InvokeViolationDetectedAction();
-    BypassPop();
+    context.BypassPop();
   }
 }
 
@@ -85,7 +85,7 @@ bool __rtsan::Context::InRealtimeContext() const { return realtime_depth > 0; }
 
 bool __rtsan::Context::IsBypassed() const { return bypass_depth > 0; }
 
-void __rtsan::Context::PrintDiagnostics(const char *intercepted_function_name) {
+void __rtsan::PrintDiagnostics(const char *intercepted_function_name) {
   fprintf(stderr,
           "Real-time violation: intercepted call to real-time unsafe function "
           "`%s` in real-time context! Stack trace:\n",
