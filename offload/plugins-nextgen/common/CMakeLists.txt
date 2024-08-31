@@ -52,7 +52,11 @@ target_compile_definitions(PluginCommon PRIVATE
 
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
-target_link_libraries(PluginCommon PRIVATE LLVMProfileData)
+if (LLVM_LINK_LLVM_DYLIB)
+  target_link_libraries(PluginCommon PRIVATE LLVM)
+else()
+  target_link_libraries(PluginCommon PRIVATE LLVMProfileData)
+endif()
 
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include

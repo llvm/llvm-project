@@ -116,3 +116,65 @@ set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+
+#===============================================================================
+# Ensure that omptarget does not contain a mixture of static and dynamically
+# linked LLVM libs.
+#===============================================================================
+if (LLVM_LINK_LLVM_DYLIB)
+  if(LLVM_AVAILABLE_LIBS)
+    set(llvm_libs ${LLVM_AVAILABLE_LIBS})
+  else()
+    # Inside LLVM itself available libs are in a global property.
+    get_property(llvm_libs GLOBAL PROPERTY LLVM_LIBS)
+  endif()
+
+  #-----------------------------------------------------------------------------
+  # Helper function to recursively get the llvm targets that 'tgt' links against
+  #-----------------------------------------------------------------------------
+  function(get_llvm_link_targets var tgt visited)
+    if(${tgt} IN_LIST visited)
+      return()
+    endif()
+    list(APPEND visited ${tgt})
+
+    get_target_property(link_libs ${tgt} LINK_LIBRARIES)
+    if(NOT link_libs)
+      set(link_libs "")
+    endif()
+    get_target_property(i_link_libs ${tgt} INTERFACE_LINK_LIBRARIES)
+    if(i_link_libs)
+      list(APPEND link_libs ${i_link_libs})
+    endif()
+    if(NOT link_libs)
+      return()
+    endif()
+    list(REMOVE_DUPLICATES link_libs)
+
+    foreach(lib ${link_libs})
+      if(${lib} IN_LIST llvm_libs)
+        list(APPEND rv ${lib})
+      endif()
+      if(TARGET ${lib})
+        get_llvm_link_targets(indirect ${lib} visited)
+        list(APPEND rv ${indirect})
+        list(REMOVE_DUPLICATES rv)
+      endif()
+    endforeach()
+
+    set(${var} ${rv} PARENT_SCOPE)
+  endfunction()
+
+  #-----------------------------------------------------------------------------
+  # Check for extraneous libs
+  #-----------------------------------------------------------------------------
+  get_llvm_link_targets(llvm_link_targets omptarget "")
+  list(REMOVE_ITEM llvm_link_targets "LLVM")
+  if(llvm_link_targets)
+    list(JOIN llvm_link_targets " " pp_list)
+    message(
+      FATAL_ERROR
+      "'omptarget' should only link against 'LLVM' when 'LLVM_LINK_LLVM_DYLIB' "
+      "is on. Extraneous LLVM Libraries: ${pp_list}")
+  endif()
+endif()
