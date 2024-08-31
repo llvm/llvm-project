@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// These compilers don't support __builtin_is_implicit_lifetime yet.
+// UNSUPPORTED: clang-17, clang-18, clang-19, gcc-14, apple-clang-16, apple-clang-17
+// XFAIL: apple-clang
+
 // <type_traits>
 
 // template<class T> struct is_implicit_lifetime;
@@ -106,10 +110,8 @@ struct StructWithZeroSizedArray {
 };
 
 #ifdef TEST_COMPILER_CLANG
-// typedef int *align_value_int __attribute__((align_value(16)));
 using AlignValueInt = int* __attribute__((align_value(16)));
-// typedef float float4 __attribute__((ext_vector_type(4)));
-using Float4 = float __attribute__((ext_vector_type(4)));
+using Float4        = float __attribute__((ext_vector_type(4)));
 
 struct [[clang::enforce_read_only_placement]] EnforceReadOnlyPlacement {};
 struct [[clang::type_visibility("hidden")]] TypeVisibility {};
@@ -146,22 +148,6 @@ constexpr void test_is_implicit_lifetime() {
   test_is_implicit_lifetime<T[94], true>();
 }
 
-// #ifdef TEST_COMPILER_CLANG
-// // Test language extensions: attributes
-// template <typename T>
-// constexpr void test_is_implicit_lifetime_with_attributes() {
-//   test_is_implicit_lifetime<T [[clang::annotate_type("category2")]]*, true>();
-//   test_is_implicit_lifetime<T __attribute__((btf_type_tag("user")))*, true>();
-//   static_assert(__builtin_is_implicit_lifetime(int __attribute__((btf_type_tag("user"))) *));
-
-//   test_is_implicit_lifetime<T __attribute__((noderef))*, true>();
-
-//   test_is_implicit_lifetime<T* _Nonnull, true>();
-//   test_is_implicit_lifetime<T* _Null_unspecified, true>();
-//   test_is_implicit_lifetime<T* _Nullable, true>();
-// }
-// #endif // TEST_COMPILER_CLANG
-
 constexpr bool test() {
   // Standard fundamental C++ types
 
@@ -188,14 +174,6 @@ constexpr bool test() {
   test_is_implicit_lifetime<char16_t>();
   test_is_implicit_lifetime<char32_t>();
 
-  // test_is_implicit_lifetime<int, true>();
-  // test_is_implicit_lifetime<int&, false>();
-  // test_is_implicit_lifetime<int&&, false>();
-
-  // test_is_implicit_lifetime<int*, true>();
-  // test_is_implicit_lifetime<int[], true>();
-  // test_is_implicit_lifetime<int[0], true>();
-  // test_is_implicit_lifetime<int[94], true>();
   test_is_implicit_lifetime<short>();
   test_is_implicit_lifetime<short int>();
   test_is_implicit_lifetime<signed short>();
@@ -237,12 +215,6 @@ constexpr bool test() {
   test_is_implicit_lifetime<void() const, false>();
   test_is_implicit_lifetime<void (&)(), false>();
   test_is_implicit_lifetime<void (*)(), true>();
-
-  // test_is_implicit_lifetime<int UserDeclaredDestructor::*, true>();
-  // test_is_implicit_lifetime<int (UserDeclaredDestructor::*)(), true>();
-  // test_is_implicit_lifetime<int (UserDeclaredDestructor::*)() const, true>();
-  // test_is_implicit_lifetime<int (UserDeclaredDestructor::*)()&, true>();
-  // test_is_implicit_lifetime<int (UserDeclaredDestructor::*)()&&, true>();
 
   // Implicit-lifetime class types
 
@@ -301,10 +273,6 @@ constexpr bool test() {
   test_is_implicit_lifetime<_Complex double>();
   test_is_implicit_lifetime<_Complex long double>();
 
-  // test_is_implicit_lifetime<_Imaginary float>();
-  // test_is_implicit_lifetime<_Imaginary double>();
-  // test_is_implicit_lifetime<_Imaginary long double>();
-
   // Standard C23 types
 
 #ifdef TEST_COMPILER_CLANG
@@ -318,9 +286,6 @@ constexpr bool test() {
   test_is_implicit_lifetime<__int128_t>();
   test_is_implicit_lifetime<__uint128_t>();
 #endif
-
-  // #if  __STDC_VERSION__ >= 20
-  // #endif
 
 #ifdef TEST_COMPILER_CLANG
   // https://clang.llvm.org/docs/LanguageExtensions.html#half-precision-floating-point
@@ -336,9 +301,6 @@ constexpr bool test() {
 
   test_is_implicit_lifetime<EnforceReadOnlyPlacement, true>();
   test_is_implicit_lifetime<TypeVisibility, true>();
-
-  // test_is_implicit_lifetime_with_attributes<int>();
-  // test_is_implicit_lifetime_with_attributes<float>();
 
   test_is_implicit_lifetime<int [[clang::annotate_type("category2")]]*, true>();
   test_is_implicit_lifetime<int __attribute__((btf_type_tag("user")))*, true>();

@@ -27,21 +27,6 @@ struct _LIBCPP_TEMPLATE_VIS is_implicit_lifetime : public bool_constant<__builti
 template <class _Tp>
 inline constexpr bool is_implicit_lifetime_v = __builtin_is_implicit_lifetime(_Tp);
 
-#  else
-
-template <typename _Tp>
-struct is_implicit_lifetime
-    : std::disjunction< std::is_scalar<_Tp>,
-                        std::is_array<_Tp>,
-                        std::is_aggregate<_Tp>,
-                        std::conjunction< std::is_trivially_destructible<_Tp>,
-                                          std::disjunction< std::is_trivially_default_constructible<_Tp>,
-                                                            std::is_trivially_copy_constructible<_Tp>,
-                                                            std::is_trivially_move_constructible<_Tp>>>> {};
-
-template <class _Tp>
-inline constexpr bool is_implicit_lifetime_v = is_implicit_lifetime<_Tp>::value;
-
 #  endif
 #endif
 

@@ -113,7 +113,7 @@
 "`P2572R1 <https://wg21.link/P2572R1>`__","``std::format`` fill character allowances","2023-02 (Issaquah)","|Complete|","17.0",""
 "`P2693R1 <https://wg21.link/P2693R1>`__","Formatting ``thread::id`` and ``stacktrace``","2023-02 (Issaquah)","|Partial|","","The formatter for ``stacktrace`` is not implemented, since ``stacktrace`` is not implemented yet"
 "`P2679R2 <https://wg21.link/P2679R2>`__","Fixing ``std::start_lifetime_as`` for arrays","2023-02 (Issaquah)","","",""
-"`P2674R1 <https://wg21.link/P2674R1>`__","A trait for implicit lifetime types","2023-02 (Issaquah)","","",""
+"`P2674R1 <https://wg21.link/P2674R1>`__","A trait for implicit lifetime types","2023-02 (Issaquah)","|Complete|","20.0",""
 "`P2655R3 <https://wg21.link/P2655R3>`__","``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type","2023-02 (Issaquah)","","",""
 "`P2652R2 <https://wg21.link/P2652R2>`__","Disallow User Specialization of ``allocator_traits``","2023-02 (Issaquah)","|Complete|","19.0",""
 "`P2787R1 <https://wg21.link/P2787R1>`__","``pmr::generator`` - Promise Types are not Values","2023-02 (Issaquah)","","",""

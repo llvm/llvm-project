@@ -1944,6 +1944,7 @@ module std_private_type_traits_is_final                                  [system
 module std_private_type_traits_is_floating_point                         [system] { header "__type_traits/is_floating_point.h" }
 module std_private_type_traits_is_function                               [system] { header "__type_traits/is_function.h" }
 module std_private_type_traits_is_fundamental                            [system] { header "__type_traits/is_fundamental.h" }
+module std_private_type_traits_is_implicit_lifetime                      [system] { header "__type_traits/is_implicit_lifetime.h" }
 module std_private_type_traits_is_implicitly_default_constructible       [system] {
   header "__type_traits/is_implicitly_default_constructible.h"
   export std_private_type_traits_integral_constant
