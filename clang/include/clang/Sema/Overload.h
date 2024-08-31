@@ -228,9 +228,6 @@ class Sema;
     /// Conversion
     ICR_Conversion,
 
-    /// HLSL Matching Dimension Reduction
-    ICR_HLSL_Dimension_Reduction,
-
     /// OpenCL Scalar Widening
     ICR_OCL_Scalar_Widening,
 
@@ -249,6 +246,9 @@ class Sema;
     /// Conversion not allowed by the C standard, but that we accept as an
     /// extension anyway.
     ICR_C_Conversion_Extension,
+
+    /// HLSL Matching Dimension Reduction
+    ICR_HLSL_Dimension_Reduction,
 
     /// HLSL Dimension reduction with promotion
     ICR_HLSL_Dimension_Reduction_Promotion,
