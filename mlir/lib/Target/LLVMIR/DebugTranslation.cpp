@@ -96,17 +96,6 @@ llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
   return llvm::MDString::get(llvmCtx, stringAttr);
 }
 
-llvm::MDTuple *
-DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
-  if (elements.empty())
-    return nullptr;
-  SmallVector<llvm::Metadata *> llvmElements = llvm::to_vector(
-      llvm::map_range(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
-        return translate(attr);
-      }));
-  return llvm::MDNode::get(llvmCtx, llvmElements);
-}
-
 llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
   return llvm::DIBasicType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
@@ -149,17 +138,6 @@ DebugTranslation::translateTemporaryImpl(DICompositeTypeAttr attr) {
       /*VTableHolder=*/nullptr);
 }
 
-llvm::TempDISubprogram
-DebugTranslation::translateTemporaryImpl(DISubprogramAttr attr) {
-  return llvm::DISubprogram::getTemporary(
-      llvmCtx, /*Scope=*/nullptr, /*Name=*/{}, /*LinkageName=*/{},
-      /*File=*/nullptr, attr.getLine(), /*Type=*/nullptr,
-      /*ScopeLine=*/0, /*ContainingType=*/nullptr, /*VirtualIndex=*/0,
-      /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
-      static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
-      /*Unit=*/nullptr);
-}
-
 llvm::DICompositeType *
 DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   // TODO: Use distinct attributes to model this, once they have landed.
@@ -173,6 +151,10 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
     isDistinct = true;
   }
 
+  SmallVector<llvm::Metadata *> elements;
+  for (DINodeAttr member : attr.getElements())
+    elements.push_back(translate(member));
+
   return getDistinctOrUnique<llvm::DICompositeType>(
       isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
@@ -180,7 +162,7 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      getMDTupleOrNull(attr.getElements()),
+      llvm::MDNode::get(llvmCtx, elements),
       /*RuntimeLang=*/0, /*VTableHolder=*/nullptr,
       /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
       /*Discriminator=*/nullptr,
@@ -260,31 +242,23 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
       attr.getIsDefined(), nullptr, nullptr, attr.getAlignInBits(), nullptr);
 }
 
-llvm::DINode *
+llvm::DIType *
 DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   DistinctAttr recursiveId = attr.getRecId();
-  if (auto *iter = recursiveNodeMap.find(recursiveId);
-      iter != recursiveNodeMap.end()) {
+  if (auto *iter = recursiveTypeMap.find(recursiveId);
+      iter != recursiveTypeMap.end()) {
     return iter->second;
+  } else {
+    assert(!attr.isRecSelf() && "unbound DI recursive self type");
   }
-  assert(!attr.getIsRecSelf() && "unbound DI recursive self reference");
 
-  auto setRecursivePlaceholder = [&](llvm::DINode *placeholder) {
-    recursiveNodeMap.try_emplace(recursiveId, placeholder);
+  auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
+    recursiveTypeMap.try_emplace(recursiveId, placeholder);
   };
 
-  llvm::DINode *result =
-      TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DINode *>(attr)
+  llvm::DIType *result =
+      TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DIType *>(attr)
           .Case<DICompositeTypeAttr>([&](auto attr) {
-            auto temporary = translateTemporaryImpl(attr);
-            setRecursivePlaceholder(temporary.get());
-            // Must call `translateImpl` directly instead of `translate` to
-            // avoid handling the recursive interface again.
-            auto *concrete = translateImpl(attr);
-            temporary->replaceAllUsesWith(concrete);
-            return concrete;
-          })
-          .Case<DISubprogramAttr>([&](auto attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
@@ -294,9 +268,9 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
             return concrete;
           });
 
-  assert(recursiveNodeMap.back().first == recursiveId &&
+  assert(recursiveTypeMap.back().first == recursiveId &&
          "internal inconsistency: unexpected recursive translation stack");
-  recursiveNodeMap.pop_back();
+  recursiveTypeMap.pop_back();
 
   return result;
 }
@@ -323,7 +297,6 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
 
   bool isDefinition = static_cast<bool>(attr.getSubprogramFlags() &
                                         LLVM::DISubprogramFlags::Definition);
-
   llvm::DISubprogram *node = getDistinctOrUnique<llvm::DISubprogram>(
       isDefinition, llvmCtx, scope, getMDStringOrNull(attr.getName()),
       getMDStringOrNull(attr.getLinkageName()), file, attr.getLine(), type,
@@ -331,8 +304,21 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       /*ContainingType=*/nullptr, /*VirtualIndex=*/0,
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
-      compileUnit, /*TemplateParams=*/nullptr, /*Declaration=*/nullptr,
-      getMDTupleOrNull(attr.getRetainedNodes()));
+      compileUnit);
+
+  // DIImportedEntity requires scope information which DIImportedEntityAttr does
+  // not have. This is why we translate DIImportedEntityAttr after we have
+  // created DISubprogram as we can use it as the scope.
+  SmallVector<llvm::Metadata *> retainedNodes;
+  for (DINodeAttr nodeAttr : attr.getRetainedNodes()) {
+    if (auto importedAttr = dyn_cast<DIImportedEntityAttr>(nodeAttr)) {
+      llvm::DINode *dn = translate(importedAttr, node);
+      retainedNodes.push_back(dn);
+    }
+  }
+  if (!retainedNodes.empty())
+    node->replaceRetainedNodes(llvm::MDTuple::get(llvmCtx, retainedNodes));
+
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);
   return node;
@@ -353,12 +339,16 @@ llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
                                 attr.getExportSymbols());
 }
 
-llvm::DIImportedEntity *
-DebugTranslation::translateImpl(DIImportedEntityAttr attr) {
+llvm::DIImportedEntity *DebugTranslation::translate(DIImportedEntityAttr attr,
+                                                    llvm::DIScope *scope) {
+  SmallVector<llvm::Metadata *> elements;
+  for (DINodeAttr member : attr.getElements())
+    elements.push_back(translate(member));
+
   return llvm::DIImportedEntity::get(
-      llvmCtx, attr.getTag(), translate(attr.getScope()),
-      translate(attr.getEntity()), translate(attr.getFile()), attr.getLine(),
-      getMDStringOrNull(attr.getName()), getMDTupleOrNull(attr.getElements()));
+      llvmCtx, attr.getTag(), scope, translate(attr.getEntity()),
+      translate(attr.getFile()), attr.getLine(),
+      getMDStringOrNull(attr.getName()), llvm::MDNode::get(llvmCtx, elements));
 }
 
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
@@ -423,10 +413,10 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
     node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
                .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                      DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                     DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
-                     DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-                     DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
-                     DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+                     DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                     DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
+                     DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
+                     DISubrangeAttr, DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
   if (node && !node->isTemporary())
