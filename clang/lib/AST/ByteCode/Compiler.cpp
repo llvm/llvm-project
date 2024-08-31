@@ -505,14 +505,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_MemberPointerToBoolean: {
     PrimType PtrT = classifyPrim(SubExpr->getType());
 
-    // Just emit p != nullptr for this.
     if (!this->visit(SubExpr))
       return false;
-
-    if (!this->emitNull(PtrT, nullptr, CE))
-      return false;
-
-    return this->emitNE(PtrT, CE);
+    return this->emitIsNonNull(PtrT, CE);
   }
 
   case CK_IntegralComplexToBoolean:
@@ -2323,8 +2318,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(
-        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+                                                 /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
