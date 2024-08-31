@@ -165,6 +165,6 @@ namespace caas { namespace runtime {                                    \
     }                                                                   \
   }}
 MyDate{2024, 8, 23}
-// CHECK-NEXT: (MyType) My pretty printer!
+// CHECK-NEXT: (MyDate) 2024-Aug-23
 %quit
 

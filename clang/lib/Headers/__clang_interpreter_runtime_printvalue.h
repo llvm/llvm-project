@@ -60,20 +60,20 @@ __DECL_PRINT_VALUE_RUNTIME(void);        //
 __DECL_PRINT_VALUE_RUNTIME(void *);      //
 __DECL_PRINT_VALUE_RUNTIME(char *const); //
 __DECL_PRINT_VALUE_RUNTIME(char *);      //
-__DECL_PRINT_VALUE_RUNTIME(bool);
-__DECL_PRINT_VALUE_RUNTIME(char);
-__DECL_PRINT_VALUE_RUNTIME(signed char);
-__DECL_PRINT_VALUE_RUNTIME(short);
-__DECL_PRINT_VALUE_RUNTIME(unsigned short);
-__DECL_PRINT_VALUE_RUNTIME(int);
-__DECL_PRINT_VALUE_RUNTIME(unsigned int);
-__DECL_PRINT_VALUE_RUNTIME(long);
-__DECL_PRINT_VALUE_RUNTIME(unsigned long);
-__DECL_PRINT_VALUE_RUNTIME(long long);
-__DECL_PRINT_VALUE_RUNTIME(unsigned long long);
-__DECL_PRINT_VALUE_RUNTIME(float);
-__DECL_PRINT_VALUE_RUNTIME(double);
-__DECL_PRINT_VALUE_RUNTIME(long double);
+// __DECL_PRINT_VALUE_RUNTIME(bool);
+// __DECL_PRINT_VALUE_RUNTIME(char);
+// __DECL_PRINT_VALUE_RUNTIME(signed char);
+// __DECL_PRINT_VALUE_RUNTIME(short);
+// __DECL_PRINT_VALUE_RUNTIME(unsigned short);
+// __DECL_PRINT_VALUE_RUNTIME(int);
+// __DECL_PRINT_VALUE_RUNTIME(unsigned int);
+// __DECL_PRINT_VALUE_RUNTIME(long);
+// __DECL_PRINT_VALUE_RUNTIME(unsigned long);
+// __DECL_PRINT_VALUE_RUNTIME(long long);
+// __DECL_PRINT_VALUE_RUNTIME(unsigned long long);
+// __DECL_PRINT_VALUE_RUNTIME(float);
+// __DECL_PRINT_VALUE_RUNTIME(double);
+// __DECL_PRINT_VALUE_RUNTIME(long double);
 #endif
 
 namespace __repl_runtime_detail {

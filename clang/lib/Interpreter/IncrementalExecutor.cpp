@@ -118,4 +118,4 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
   return SymOrErr->getAddress();
 }
 
-} // namespace clang
+} // end namespace clang

@@ -187,7 +187,7 @@ private:
   std::string ValueDataToString(const Value &V);
   std::string ValueTypeToString(const Value &V) const;
 
-  llvm::Expected<Expr *> AttachValuePrinting(Expr *E);
+  llvm::Expected<Expr *> convertExprToValue(Expr *E);
 
   // When we deallocate clang::Value we need to run the destructor of the type.
   // This function forces emission of the needed dtor.

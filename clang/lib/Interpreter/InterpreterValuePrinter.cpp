@@ -14,6 +14,7 @@
 #include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/Type.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/Interpreter.h"
@@ -26,7 +27,10 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#include <cstdarg>
 #include <string>
+
+#define DEBUG_TYPE "interp-value"
 
 using namespace clang;
 
@@ -202,20 +206,11 @@ static std::string PrintString(const char *const *Ptr, size_t N = 10000) {
 }
 
 // Build the CallExpr to `PrintValueRuntime`.
-static void BuildWrapperBody(Interpreter &Interp, Sema &S, ASTContext &Ctx,
-                             FunctionDecl *WrapperFD, QualType QT,
-                             const void *ValPtr) {
+static llvm::Error BuildWrapperBody(LookupResult &R, Sema &S,
+                                    ASTContext &Ctx, FunctionDecl *WrapperFD,
+                                    QualType QT, const void *ValPtr) {
   Sema::SynthesizedFunctionScope SemaFScope(S, WrapperFD);
   clang::DeclarationName RuntimeCallName;
-  if (Ctx.getLangOpts().CPlusPlus)
-    RuntimeCallName = S.PP.getIdentifierInfo("PrintValueRuntime");
-  else
-    RuntimeCallName =
-        S.PP.getIdentifierInfo("caas__runtime__PrintValueRuntime");
-
-  clang::LookupResult R(S, RuntimeCallName, SourceLocation(),
-                        clang::Sema::LookupOrdinaryName);
-  S.LookupName(R, S.getCurScope());
 
   Expr *OverldExpr = UnresolvedLookupExpr::Create(
       Ctx, /*NamingClass=*/nullptr, NestedNameSpecifierLoc(),
@@ -254,22 +249,33 @@ static void BuildWrapperBody(Interpreter &Interp, Sema &S, ASTContext &Ctx,
   ExprResult RuntimeCall =
       S.ActOnCallExpr(S.getCurScope(), OverldExpr, SourceLocation(), CallArgs,
                       SourceLocation());
-  assert(!RuntimeCall.isInvalid() && "Cannot create call to PrintValueRuntime");
+  if (RuntimeCall.isInvalid()) {
+    std::string Name = R.getLookupName().getAsString();
+    return llvm::make_error<llvm::StringError>(
+                                               "Cannot create call to " + Name, llvm::inconvertibleErrorCode());
+  }
 
   // Create the ReturnStmt.
   StmtResult RetStmt =
       S.ActOnReturnStmt(SourceLocation(), RuntimeCall.get(), S.getCurScope());
-  assert(!RetStmt.isInvalid() && "Cannot create ReturnStmt");
+
+  if (RetStmt.isInvalid())
+    return llvm::make_error<llvm::StringError>("Cannot create a return stmt",
+                                               llvm::inconvertibleErrorCode());
 
   // Create the CompoundStmt.
   StmtResult Body =
       CompoundStmt::Create(Ctx, {RetStmt.get()}, FPOptionsOverride(),
                            SourceLocation(), SourceLocation());
-  assert(!Body.isInvalid() && "Cannot create function body");
+  if (Body.isInvalid())
+    return llvm::make_error<llvm::StringError>("Cannot create function body",
+                                               llvm::inconvertibleErrorCode());
 
   WrapperFD->setBody(Body.get());
   // Add attribute `__attribute__((used))`.
   WrapperFD->addAttr(UsedAttr::CreateImplicit(Ctx));
+
+  return llvm::Error::success();
 }
 
 static constexpr const char *const WrapperName = "__InterpreterCallPrint";
@@ -423,21 +429,42 @@ REPL_EXTERNAL_VISIBILITY std::string PrintValueRuntime(const char **Val) {
   return PrintString(Val);
 }
 
+// Check if the user has implemented a function that avoids fallback to
+// defaults.
+static clang::LookupResult LookupUserDefined(Sema &S, QualType QT) {
+  PrintingPolicy Policy = S.getASTContext().getPrintingPolicy();
+  Policy.SuppressElaboration = 1;
+  Policy.SuppressTagKeyword = 1;
+  Policy.FullyQualifiedName = 1;
+  std::string TypeStr = QT.getAsString(Policy);
+  DeclarationName Name = S.PP.getIdentifierInfo("caas_runtime_to_string_" + TypeStr);
+
+  LLVM_DEBUG(llvm::dbgs() << "Looking for user-defined '" << Name <<"'");
+
+  LookupResult R(S, Name, SourceLocation(),Sema::LookupOrdinaryName);
+  S.LookupName(R, S.getCurScope());
+  return R;
+}
+
 namespace clang {
+
 std::string Interpreter::ValueDataToString(const Value &V) {
+  Sema &S = getCompilerInstance()->getSema();
+  ASTContext &Ctx = S.getASTContext();
+
   QualType QT = V.getType();
-  QualType DesugaredTy = QT.getDesugaredType(V.getASTContext());
+  QualType DesugaredTy = QT.getDesugaredType(Ctx);
   QualType NonRefTy = DesugaredTy.getNonReferenceType();
-
-  if (NonRefTy->isEnumeralType())
-    return PrintEnum(V);
-
-  if (NonRefTy->isFunctionType())
-    return PrintFunction(V, &V);
 
   if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
       NonRefTy->getPointeeType()->isFunctionProtoType())
     return PrintFunction(V, V.getPtr());
+
+  if (NonRefTy->isFunctionType())
+    return PrintFunction(V, &V);
+
+  if (NonRefTy->isEnumeralType())
+    return PrintEnum(V);
 
   if (NonRefTy->isNullPtrType())
     return "nullptr\n";
@@ -446,45 +473,51 @@ std::string Interpreter::ValueDataToString(const Value &V) {
   if (auto *BT = DesugaredTy.getCanonicalType()->getAs<BuiltinType>()) {
     switch (BT->getKind()) {
     default:
-      return "{ unknown builtin type: }" + std::to_string(BT->getKind());
-#define X(type, name)                                                          \
-  case clang::BuiltinType::name: {                                             \
-    type val = V.get##name();                                                  \
-    return PrintValueRuntime(&val);                                            \
-  }
-      REPL_BUILTIN_TYPES
-#undef X
+      return "{ error: unknown builtin type '" + std::to_string(BT->getKind()) +" '}";
+    case clang::BuiltinType::Bool: { bool val = V.getBool(); return PrintValueRuntime(&val); } case clang::BuiltinType::Char_S: { char val = V.getChar_S(); return PrintValueRuntime(&val); } case clang::BuiltinType::SChar: { signed char val = V.getSChar(); return PrintValueRuntime(&val); } case clang::BuiltinType::Char_U: { unsigned char val = V.getChar_U(); return PrintValueRuntime(&val); } case clang::BuiltinType::UChar: { unsigned char val = V.getUChar(); return PrintValueRuntime(&val); } case clang::BuiltinType::Short: { short val = V.getShort(); return PrintValueRuntime(&val); } case clang::BuiltinType::UShort: { unsigned short val = V.getUShort(); return PrintValueRuntime(&val); } case clang::BuiltinType::Int: { int val = V.getInt(); return PrintValueRuntime(&val); } case clang::BuiltinType::UInt: { unsigned int val = V.getUInt(); return PrintValueRuntime(&val); } case clang::BuiltinType::Long: { long val = V.getLong(); return PrintValueRuntime(&val); } case clang::BuiltinType::ULong: { unsigned long val = V.getULong(); return PrintValueRuntime(&val); } case clang::BuiltinType::LongLong: { long long val = V.getLongLong(); return PrintValueRuntime(&val); } case clang::BuiltinType::ULongLong: { unsigned long long val = V.getULongLong(); return PrintValueRuntime(&val); } case clang::BuiltinType::Float: { float val = V.getFloat(); return PrintValueRuntime(&val); } case clang::BuiltinType::Double: { double val = V.getDouble(); return PrintValueRuntime(&val); } case clang::BuiltinType::LongDouble: { long double val = V.getLongDouble(); return PrintValueRuntime(&val); }
     }
   }
   if (auto *CXXRD = NonRefTy->getAsCXXRecordDecl())
     if (CXXRD->isLambda())
       return PrintAddress(V.getPtr(), '@');
 
-  // All fails then generate a runtime call, this is slow.
-  Sema &S = getCompilerInstance()->getSema();
-  ASTContext &Ctx = S.getASTContext();
-
-  QualType RetTy;
-  if (Ctx.getLangOpts().CPlusPlus && !StdString) {
-
-    // Only include the header on demand because it's very heavy.
-    if (llvm::Error E = ParseAndExecute(
-            "#include <__clang_interpreter_runtime_printvalue.h>")) {
-      llvm::logAllUnhandledErrors(std::move(E), llvm::errs(), "Parsing failed");
-      return "{Internal error}";
-    }
-
-    // Find and cache std::string.
-    NamespaceDecl *Std = LookupNamespace(S, "std");
-    assert(Std && "Cannot find namespace std");
-    Decl *StdStringDecl = LookupNamed(S, "string", Std);
-    assert(StdStringDecl && "Cannot find std::string");
-    const auto *StdStringTyDecl = llvm::dyn_cast<TypeDecl>(StdStringDecl);
-    assert(StdStringTyDecl && "Cannot find type of std::string");
-    RetTy = QualType(StdStringTyDecl->getTypeForDecl(), /*Quals=*/0);
-  } else {
-    RetTy = Ctx.getPointerType(Ctx.CharTy.withConst());
+  // FIXME: Add support for custom printers in C.
+  if (NonRefTy->isPointerType()) {
+    if (NonRefTy->getPointeeType()->isCharType())
+      return PrintValueRuntime((const char**)V.getPtrAddress());
+    return PrintValueRuntime(V.getPtr());
   }
+
+  QualType RetTy = Ctx.getPointerType(Ctx.CharTy.withConst());
+
+  LookupResult R = LookupUserDefined(S, QT);
+  if (!R.isSingleResult())
+    return "{error: multiple results for '" + R.getLookupName().getAsString() + "'}";
+
+  if (R.empty()) {
+
+    if (!Ctx.getLangOpts().CPlusPlus)
+      return PrintValueRuntime(V.getPtr());
+
+    if (S.StdNamespace && !StdString) {
+
+      // Only include the header on demand because it's very heavy.
+      auto TUorE = Parse("#include <__clang_interpreter_runtime_printvalue.h>");
+      if (llvm::Error E = TUorE.takeError() ) {
+        llvm::logAllUnhandledErrors(std::move(E), llvm::errs(), "Parsing failed");
+        return "{error: cannot parse system header}";
+      }
+
+      // Find and cache std::string.
+      Decl *StdStringDecl = LookupNamed(S, "string", S.getStdNamespace());
+      assert(StdStringDecl && "Cannot find std::string");
+      const auto *StdStringTyDecl = llvm::dyn_cast<TypeDecl>(StdStringDecl);
+      assert(StdStringTyDecl && "Cannot find type of std::string");
+      RetTy = QualType(StdStringTyDecl->getTypeForDecl(), /*Quals=*/0);
+    }
+  }
+
+  // All fails then generate a runtime call, this is slow.
 
   // Create the wrapper function.
   DeclarationName DeclName = &Ctx.Idents.get(CreateUniqName(WrapperName));
@@ -501,7 +534,30 @@ std::string Interpreter::ValueDataToString(const Value &V) {
   if (!V.isManuallyAlloc())
     ValPtr = V.getPtrAddress();
 
-  BuildWrapperBody(*this, S, Ctx, WrapperFD, V.getType(), ValPtr);
+  // // Check if the user has implemented a function that avoids fallback to
+  // // defaults.
+  // if (Ctx.getLangOpts().CPlusPlus) {
+  //   RuntimeCallName = S.PP.getIdentifierInfo("PrintValueRuntime");
+  // } else {
+  //   PrintingPolicy Policy = Ctx.getPrintingPolicy();
+  //   Policy.SuppressElaboration = 1;
+  //   Policy.SuppressTagKeyword = 1;
+  //   Policy.FullyQualifiedName = 1;
+  //   std::string TypeStr = QT.getAsString(Policy);
+  //   printf("KKK %s\n", TypeStr.c_str());
+  //   //      clang::TypeName::getFullyQualifiedName(QT, Ctx, Policy);
+  //   RuntimeCallName =
+  //     S.PP.getIdentifierInfo("caas__runtime__PrintValueRuntime__" + TypeStr);
+  // }
+
+  // LookupResult R(S, RuntimeCallName, SourceLocation(),Sema::LookupOrdinaryName);
+  // S.LookupName(R, S.getCurScope());
+
+  if (llvm::Error E = BuildWrapperBody(R, S, Ctx, WrapperFD, V.getType(), ValPtr)) {
+    llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
+                                "Fail to build a wrapper function");
+    return "{Unable to print the value!}";
+  }
 
   auto AddrOrErr = CompileDecl(*this, WrapperFD);
   if (!AddrOrErr)
@@ -509,7 +565,7 @@ std::string Interpreter::ValueDataToString(const Value &V) {
                                 "Fail to get symbol address");
   if (auto *Main = AddrOrErr->toPtr<std::string (*)()>())
     return (*Main)();
-  return "Unable to print the value!";
+  return "{Unable to print the value!}";
 }
 
 std::string Interpreter::ValueTypeToString(const Value &V) const {
@@ -564,7 +620,12 @@ public:
   }
 
   InterfaceKind VisitRecordType(const RecordType *Ty) {
-    return InterfaceKind::WithAlloc;
+    if (S.getLangOpts().CPlusPlus)
+      return InterfaceKind::WithAlloc;
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E->IgnoreImpCasts());
+    assert(!AddrOfE.isInvalid() && "Can not create unary expression");
+    Args.push_back(AddrOfE.get());
+    return InterfaceKind::NoAlloc;
   }
 
   InterfaceKind VisitMemberPointerType(const MemberPointerType *Ty) {
@@ -635,9 +696,14 @@ private:
   }
 };
 
+static constexpr llvm::StringRef VPName[] = {
+  "__clang_Interpreter_SetValueNoAlloc",
+  "__clang_Interpreter_SetValueWithAlloc",
+  "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
+
 // This synthesizes a call expression to a speciall
 // function that is responsible for generating the Value.
-// In general, we transform:
+// In general, we transform c++:
 //   clang-repl> x
 // To:
 //   // 1. If x is a built-in type like int, float.
@@ -648,7 +714,7 @@ private:
 //   // 3. If x is a struct, but a rvalue.
 //   new (__clang_Interpreter_SetValueWithAlloc(ThisInterp, OpaqueValue,
 //   xQualType)) (x);
-llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
+llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
@@ -670,23 +736,19 @@ llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
       Interface = S.BuildDeclarationNameExpr(CSS, R, /*ADL=*/false).get();
       return llvm::Error::success();
     };
-    static constexpr llvm::StringRef Builtin[] = {
-        "__clang_Interpreter_SetValueNoAlloc",
-        "__clang_Interpreter_SetValueWithAlloc",
-        "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
     if (llvm::Error Err =
-            LookupInterface(ValuePrintingInfo[NoAlloc], Builtin[NoAlloc]))
+            LookupInterface(ValuePrintingInfo[NoAlloc], VPName[NoAlloc]))
       return std::move(Err);
 
     if (Ctx.getLangOpts().CPlusPlus) {
       if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[WithAlloc], Builtin[WithAlloc]))
+              LookupInterface(ValuePrintingInfo[WithAlloc], VPName[WithAlloc]))
         return std::move(Err);
       if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[CopyArray], Builtin[CopyArray]))
+              LookupInterface(ValuePrintingInfo[CopyArray], VPName[CopyArray]))
         return std::move(Err);
       if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[NewTag], Builtin[NewTag]))
+              LookupInterface(ValuePrintingInfo[NewTag], VPName[NewTag]))
         return std::move(Err);
     }
   }
@@ -725,6 +787,8 @@ llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
   Scope *Scope = nullptr;
   ExprResult SetValueE;
   InterfaceKind Kind = V.computeInterfaceKind(DesugaredTy);
+  if (!Ctx.getLangOpts().CPlusPlus && Kind == InterfaceKind::WithAlloc)
+    Kind = InterfaceKind::NoAlloc;
   switch (Kind) {
   case InterfaceKind::WithAlloc:
     LLVM_FALLTHROUGH;
@@ -733,7 +797,9 @@ llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
     ExprResult AllocCall =
         S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::WithAlloc],
                         E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
-    assert(!AllocCall.isInvalid() && "Can't create runtime interface call!");
+    if (AllocCall.isInvalid())
+      return llvm::make_error<llvm::StringError>("Cannot call to " + VPName[WithAlloc],
+                          llvm::inconvertibleErrorCode());
 
     TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
 
@@ -755,6 +821,11 @@ llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
       SetValueE =
           S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::CopyArray],
                           SourceLocation(), Args, SourceLocation());
+      if (SetValueE.isInvalid())
+        return llvm::make_error<llvm::StringError>("Cannot call to " + VPName[CopyArray],
+                                                   llvm::inconvertibleErrorCode());
+      break;
+      //return SetValueE.get();
     }
     Expr *Args[] = {AllocCall.get(), ValuePrintingInfo[InterfaceKind::NewTag]};
     ExprResult CXXNewCall = S.BuildCXXNew(
@@ -764,8 +835,10 @@ llvm::Expected<Expr *> Interpreter::AttachValuePrinting(Expr *E) {
         /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
         E->getSourceRange(), E);
 
-    assert(!CXXNewCall.isInvalid() &&
-           "Can't create runtime placement new call!");
+    if (CXXNewCall.isInvalid())
+      return llvm::make_error<llvm::StringError>(
+                          "Cannot build a call to placement new",
+                          llvm::inconvertibleErrorCode());
 
     SetValueE = S.ActOnFinishFullExpr(CXXNewCall.get(),
                                       /*DiscardedValue=*/false);

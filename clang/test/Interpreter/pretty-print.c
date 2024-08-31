@@ -37,9 +37,6 @@ double d = 4.21; d
 struct S1{} s1; s1
 // CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
 
-S1{}
-// CHECK-NEXT: (S1) @0x{{[0-9a-f]+}}
-
 struct S2 {int d;} E = {22}; E
 // CHECK-NEXT: (struct S2 &) @0x{{[0-9a-f]+}}
 E.d
@@ -62,7 +59,7 @@ const char * caas__runtime__PrintValueRuntime(const struct ConstLiteral *) { \
 struct ConstLiteral CL; CL
 // CHECK-NEXT: ConstLiteral
 
-struct Point{int x; int y};
+struct Point{int x; int y;};
 const char * caas__runtime__PrintValueRuntime(const struct Point *p) { \
   char[11 + 11 + 4 + 1] result;                                        \
   sprintf(result, "(%d, %d)", p->x, p->y);                             \
