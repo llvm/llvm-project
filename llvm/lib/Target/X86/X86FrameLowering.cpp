@@ -1094,8 +1094,6 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
 
   // Now that the probing is done, add code to continueMBB to update
   // the stack pointer for real.
-  if (InProlog)
-    ContinueMBB->addLiveIn(SizeReg);
   BuildMI(*ContinueMBB, ContinueMBBI, DL, TII.get(X86::SUB64rr), X86::RSP)
       .addReg(X86::RSP)
       .addReg(SizeReg);
@@ -1106,6 +1104,11 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
   RoundMBB->addSuccessor(LoopMBB);
   LoopMBB->addSuccessor(ContinueMBB);
   LoopMBB->addSuccessor(LoopMBB);
+
+  if (InProlog) {
+    LivePhysRegs LiveRegs;
+    computeAndAddLiveIns(LiveRegs, *ContinueMBB);
+  }
 
   // Mark all the instructions added to the prolog as frame setup.
   if (InProlog) {
