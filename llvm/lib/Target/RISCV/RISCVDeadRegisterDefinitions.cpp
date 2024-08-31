@@ -93,14 +93,19 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
+        Register X0Reg;
         const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
-        if (!(RC && RC->contains(RISCV::X0))) {
+        if (RC && RC->contains(RISCV::X0)) {
+          X0Reg = RISCV::X0;
+        } else if (RC && RC->contains(RISCV::X0_H)) {
+          X0Reg = RISCV::X0_H;
+        } else {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;
         }
         assert(LIS.hasInterval(Reg));
         LIS.removeInterval(Reg);
-        MO.setReg(RISCV::X0);
+        MO.setReg(X0Reg);
         LLVM_DEBUG(dbgs() << "    Replacing with zero register. New:\n      ";
                    MI.print(dbgs()));
         ++NumDeadDefsReplaced;
