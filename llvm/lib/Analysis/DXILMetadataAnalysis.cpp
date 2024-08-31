@@ -77,7 +77,7 @@ void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Target Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
-  for (const auto EP : EntryPropertyVec) {
+  for (const auto &EP : EntryPropertyVec) {
     OS << " " << EP.Entry->getName() << "\n";
     OS << "  Function Shader Stage : "
        << Triple::getEnvironmentTypeName(EP.ShaderStage) << "\n";
