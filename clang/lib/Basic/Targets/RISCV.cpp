@@ -255,25 +255,6 @@ bool RISCVTargetInfo::initFeatureMap(
     Features["32bit"] = true;
   }
 
-  // If a target attribute specified a full arch string, override all the ISA
-  // extension target features.
-  const auto I = llvm::find(FeaturesVec, "__RISCV_TargetAttrNeedOverride");
-  if (I != FeaturesVec.end()) {
-    std::vector<std::string> OverrideFeatures(std::next(I), FeaturesVec.end());
-
-    // Add back any non ISA extension features, e.g. +relax.
-    auto IsNonISAExtFeature = [](StringRef Feature) {
-      assert(Feature.size() > 1 && (Feature[0] == '+' || Feature[0] == '-'));
-      StringRef Ext = Feature.substr(1); // drop the +/-
-      return !llvm::RISCVISAInfo::isSupportedExtensionFeature(Ext);
-    };
-    llvm::copy_if(llvm::make_range(FeaturesVec.begin(), I),
-                  std::back_inserter(OverrideFeatures), IsNonISAExtFeature);
-
-    return TargetInfo::initFeatureMap(Features, Diags, CPU, OverrideFeatures);
-  }
-
-  // Otherwise, parse the features and add any implied extensions.
   std::vector<std::string> AllFeatures = FeaturesVec;
   auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesVec);
   if (!ParseResult) {
@@ -389,9 +370,20 @@ void RISCVTargetInfo::fillValidTuneCPUList(
   llvm::RISCV::fillValidTuneCPUArchList(Values, Is64Bit);
 }
 
+static void populateNegativeRISCVFeatures(std::vector<std::string> &Features) {
+  auto RII = llvm::RISCVISAInfo::parseArchString(
+      "rv64i", /* EnableExperimentalExtension */ true);
+
+  if (llvm::errorToBool(RII.takeError()))
+    llvm_unreachable("unsupport rv64i");
+
+  std::vector<std::string> FeatStrings =
+      (*RII)->toFeatures(/* AddAllExtensions */ true);
+  Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+}
+
 static void handleFullArchString(StringRef FullArchStr,
                                  std::vector<std::string> &Features) {
-  Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
   if (llvm::errorToBool(RII.takeError())) {
@@ -400,6 +392,7 @@ static void handleFullArchString(StringRef FullArchStr,
   } else {
     // Append a full list of features, including any negative extensions so that
     // we override the CPU's features.
+    populateNegativeRISCVFeatures(Features);
     std::vector<std::string> FeatStrings =
         (*RII)->toFeatures(/* AddAllExtensions */ true);
     Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
