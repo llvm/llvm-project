@@ -113,6 +113,7 @@ namespace sandboxir {
 
 class BasicBlock;
 class ConstantInt;
+class ConstantFP;
 class Context;
 class Function;
 class Instruction;
@@ -589,6 +590,94 @@ public:
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::ConstantInt>(Val) && "Expected a ConstantInst!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantFP final : public Constant {
+  ConstantFP(llvm::ConstantFP *C, Context &Ctx)
+      : Constant(ClassID::ConstantFP, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// This returns a ConstantFP, or a vector containing a splat of a ConstantFP,
+  /// for the specified value in the specified type. This should only be used
+  /// for simple constant values like 2.0/1.0 etc, that are known-valid both as
+  /// host double and as the target format.
+  static Constant *get(Type *Ty, double V);
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantFP for the given value.
+  static Constant *get(Type *Ty, const APFloat &V);
+
+  static Constant *get(Type *Ty, StringRef Str);
+
+  static ConstantFP *get(const APFloat &V, Context &Ctx);
+
+  static Constant *getNaN(Type *Ty, bool Negative = false,
+                          uint64_t Payload = 0);
+  static Constant *getQNaN(Type *Ty, bool Negative = false,
+                           APInt *Payload = nullptr);
+  static Constant *getSNaN(Type *Ty, bool Negative = false,
+                           APInt *Payload = nullptr);
+  static Constant *getZero(Type *Ty, bool Negative = false);
+
+  static Constant *getNegativeZero(Type *Ty);
+  static Constant *getInfinity(Type *Ty, bool Negative = false);
+
+  /// Return true if Ty is big enough to represent V.
+  static bool isValueValidForType(Type *Ty, const APFloat &V);
+
+  inline const APFloat &getValueAPF() const {
+    return cast<llvm::ConstantFP>(Val)->getValueAPF();
+  }
+  inline const APFloat &getValue() const {
+    return cast<llvm::ConstantFP>(Val)->getValue();
+  }
+
+  /// Return true if the value is positive or negative zero.
+  bool isZero() const { return cast<llvm::ConstantFP>(Val)->isZero(); }
+
+  /// Return true if the sign bit is set.
+  bool isNegative() const { return cast<llvm::ConstantFP>(Val)->isNegative(); }
+
+  /// Return true if the value is infinity
+  bool isInfinity() const { return cast<llvm::ConstantFP>(Val)->isInfinity(); }
+
+  /// Return true if the value is a NaN.
+  bool isNaN() const { return cast<llvm::ConstantFP>(Val)->isNaN(); }
+
+  /// We don't rely on operator== working on double values, as it returns true
+  /// for things that are clearly not equal, like -0.0 and 0.0.
+  /// As such, this method can be used to do an exact bit-for-bit comparison of
+  /// two floating point values.  The version with a double operand is retained
+  /// because it's so convenient to write isExactlyValue(2.0), but please use
+  /// it only for simple constants.
+  bool isExactlyValue(const APFloat &V) const {
+    return cast<llvm::ConstantFP>(Val)->isExactlyValue(V);
+  }
+
+  bool isExactlyValue(double V) const {
+    return cast<llvm::ConstantFP>(Val)->isExactlyValue(V);
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantFP;
+  }
+
+  // TODO: Better name: getOperandNo(const Use&). Should be private.
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantFP has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantFP>(Val) && "Expected a ConstantFP!");
   }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
@@ -3156,7 +3245,10 @@ protected:
   Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
     return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
   }
-  friend class ConstantInt; // For getOrCreateConstant().
+  // Friends for getOrCreateConstant().
+#define DEF_CONST(ID, CLASS) friend class CLASS;
+#include "llvm/SandboxIR/SandboxIRValues.def"
+
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);

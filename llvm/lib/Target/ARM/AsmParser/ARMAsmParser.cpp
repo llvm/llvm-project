@@ -79,7 +79,7 @@ enum class ImplicitItModeTy { Always, Never, ARMOnly, ThumbOnly };
 
 static cl::opt<ImplicitItModeTy> ImplicitItMode(
     "arm-implicit-it", cl::init(ImplicitItModeTy::ARMOnly),
-    cl::desc("Allow conditional instructions outdside of an IT block"),
+    cl::desc("Allow conditional instructions outside of an IT block"),
     cl::values(clEnumValN(ImplicitItModeTy::Always, "always",
                           "Accept in both ISAs, emit implicit ITs in Thumb"),
                clEnumValN(ImplicitItModeTy::Never, "never",
