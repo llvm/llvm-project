@@ -1,7 +1,7 @@
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefix=CHECK-AVX-VF2
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefix=CHECK-AVX512-VF8
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=16 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefix=CHECK-AVX512-VF16
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF4
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF2
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF8
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=16 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF16
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -77,12 +77,11 @@ declare float @llvm.exp2.f32(float) #0
 
 define void @sin_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_sin(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @sin_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_sin(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_sin(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_sin(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_sin(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.sin.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -104,12 +103,11 @@ for.end:
 
 define void @sin_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @sin_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_sinf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_sinf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_sinf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -131,12 +129,11 @@ for.end:
 
 define void @sin_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_sin(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @sin_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_sin(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_sin(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_sin(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_sin(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.sin.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -158,12 +155,11 @@ for.end:
 
 define void @sin_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @sin_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_sinf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_sinf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_sinf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -185,12 +181,11 @@ for.end:
 
 define void @cos_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cos(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @cos_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cos(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cos(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cos(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cos(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.cos.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -212,12 +207,11 @@ for.end:
 
 define void @cos_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @cos_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_cosf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_cosf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_cosf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -239,12 +233,11 @@ for.end:
 
 define void @cos_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cos(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @cos_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cos(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cos(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cos(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cos(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.cos.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -266,12 +259,11 @@ for.end:
 
 define void @cos_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @cos_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_cosf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_cosf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_cosf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -293,16 +285,11 @@ for.end:
 
 define void @tan_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_tan(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX-VF2-LABEL: @tan_f64(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_tan(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @tan_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_tan(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_tan(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_tan(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_tan(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.tan.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -324,12 +311,11 @@ for.end:
 
 define void @tan_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @tan_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.tan.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_tanf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -351,16 +337,11 @@ for.end:
 
 define void @tan_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_tan(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX-VF2-LABEL: @tan_f64_intrinsic(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_tan(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @tan_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_tan(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_tan(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_tan(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_tan(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.tan.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -382,12 +363,11 @@ for.end:
 
 define void @tan_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @tan_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.tan.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_tanf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -409,12 +389,10 @@ for.end:
 
 define void @acos_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @acos_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_acosf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @acos_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_acosf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_acosf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_acosf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_acosf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -436,12 +414,11 @@ for.end:
 
 define void @acos_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @acos_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_acosf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @acos_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_acosf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_acosf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_acosf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_acosf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -462,9 +439,9 @@ for.end:
 }
 
 define void @asin_f64(ptr nocapture %varray) {
-; CHECK-AVX512-VF8-LABEL: @asin_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_asin(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-LABEL: @asin_f64(
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_asin(<8 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -486,12 +463,10 @@ for.end:
 
 define void @asin_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @asin_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_asinf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @asin_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_asinf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_asinf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_asinf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_asinf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -512,9 +487,12 @@ for.end:
 }
 
 define void @asin_f64_intrinsic(ptr nocapture %varray) {
-; CHECK-AVX512-VF8-LABEL: @asin_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_asin(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-LABEL: @asin_f64_intrinsic(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @llvm.asin.v2f64(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @llvm.asin.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_asin(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.asin.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -536,12 +514,11 @@ for.end:
 
 define void @asin_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @asin_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_asinf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @asin_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_asinf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_asinf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_asinf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_asinf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -563,16 +540,10 @@ for.end:
 
 define void @atan_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @atan_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_atan(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX-VF2-LABEL: @atan_f64(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_atan(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @atan_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_atan(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_atan(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_atan(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_atan(<8 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -594,12 +565,10 @@ for.end:
 
 define void @atan_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @atan_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_atanf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @atan_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_atanf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_atanf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_atanf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_atanf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -621,16 +590,11 @@ for.end:
 
 define void @atan_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @atan_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_atan(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX-VF2-LABEL: @atan_f64_intrinsic(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_atan(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @atan_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_atan(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_atan(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_atan(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_atan(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.atan.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -652,12 +616,11 @@ for.end:
 
 define void @atan_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @atan_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_atanf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @atan_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_atanf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_atanf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_atanf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_atanf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -678,9 +641,9 @@ for.end:
 }
 
 define void @cosh_f64(ptr nocapture %varray) {
-; CHECK-AVX-VF2-LABEL: @cosh_f64(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cosh(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
+; CHECK-LABEL: @cosh_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cosh(<2 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -702,8 +665,9 @@ for.end:
 
 define void @cosh_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @cosh_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_coshf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_coshf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_coshf(<8 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -724,9 +688,12 @@ for.end:
 }
 
 define void @cosh_f64_intrinsic(ptr nocapture %varray) {
-; CHECK-AVX-VF2-LABEL: @cosh_f64_intrinsic(
-; CHECK-AVX-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cosh(<2 x double> [[TMP4:%.*]])
-; CHECK-AVX-VF2:    ret void
+; CHECK-LABEL: @cosh_f64_intrinsic(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cosh(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @llvm.cosh.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @llvm.cosh.v8f64(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.cosh.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -748,8 +715,11 @@ for.end:
 
 define void @cosh_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @cosh_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_coshf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_coshf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_coshf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @llvm.cosh.v16f32(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -771,12 +741,10 @@ for.end:
 
 define void @tanh_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @tanh_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanhf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @tanh_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanhf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanhf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_tanhf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanhf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -798,12 +766,11 @@ for.end:
 
 define void @tanh_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @tanh_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanhf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @tanh_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanhf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_tanhf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_tanhf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_tanhf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -825,12 +792,11 @@ for.end:
 
 define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f64(
-; CHECK:    [[TMP8:%.*]] = call <4 x double> @amd_vrd4_pow(<4 x double> [[TMP4:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @pow_f64(
-; CHECK-AVX512-VF8:    [[TMP8:%.*]] = call <8 x double> @amd_vrd8_pow(<8 x double> [[TMP4:%.*]], <8 x double> [[WIDE_LOAD:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP8:%.*]] = call <2 x double> @amd_vrd2_pow(<2 x double> [[TMP4:%.*]], <2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[TMP8:%.*]] = call <4 x double> @amd_vrd4_pow(<4 x double> [[TMP4:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[TMP8:%.*]] = call <8 x double> @amd_vrd8_pow(<8 x double> [[TMP4:%.*]], <8 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF16:   [[TMP8:%.*]] = call <16 x double> @llvm.pow.v16f64(<16 x double> [[TMP4:%.*]], <16 x double> [[WIDE_LOAD:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -854,12 +820,11 @@ for.end:
 
 define void @pow_f64_intrinsic(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f64_intrinsic(
-; CHECK:    [[TMP8:%.*]] = call <4 x double> @amd_vrd4_pow(<4 x double> [[TMP4:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @pow_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP8:%.*]] = call <8 x double> @amd_vrd8_pow(<8 x double> [[TMP4:%.*]], <8 x double> [[WIDE_LOAD:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP8:%.*]] = call <2 x double> @amd_vrd2_pow(<2 x double> [[TMP4:%.*]], <2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[TMP8:%.*]] = call <4 x double> @amd_vrd4_pow(<4 x double> [[TMP4:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[TMP8:%.*]] = call <8 x double> @amd_vrd8_pow(<8 x double> [[TMP4:%.*]], <8 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF16:   [[TMP8:%.*]] = call <16 x double> @llvm.pow.v16f64(<16 x double> [[TMP4:%.*]], <16 x double> [[WIDE_LOAD:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -883,12 +848,11 @@ for.end:
 
 define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32(
-; CHECK:    [[TMP8:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[TMP4:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @pow_f32(
-; CHECK-AVX512-VF16:    [[TMP8:%.*]] = call <16 x float> @amd_vrs16_powf(<16 x float> [[TMP4:%.*]], <16 x float> [[WIDE_LOAD:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP8:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[TMP4:%.*]], <2 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[TMP8:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[TMP4:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[TMP8:%.*]] = call <8 x float> @amd_vrs8_powf(<8 x float> [[TMP4:%.*]], <8 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF16:   [[TMP8:%.*]] = call <16 x float> @amd_vrs16_powf(<16 x float> [[TMP4:%.*]], <16 x float> [[WIDE_LOAD:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -912,12 +876,11 @@ for.end:
 
 define void @pow_f32_intrinsic(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32_intrinsic(
-; CHECK:    [[TMP8:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[TMP4:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @pow_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP8:%.*]] = call <16 x float> @amd_vrs16_powf(<16 x float> [[TMP4:%.*]], <16 x float> [[WIDE_LOAD:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP8:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[TMP4:%.*]], <2 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[TMP8:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[TMP4:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[TMP8:%.*]] = call <8 x float> @amd_vrs8_powf(<8 x float> [[TMP4:%.*]], <8 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF16:   [[TMP8:%.*]] = call <16 x float> @amd_vrs16_powf(<16 x float> [[TMP4:%.*]], <16 x float> [[WIDE_LOAD:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -941,12 +904,11 @@ for.end:
 
 define void @exp_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @exp_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_exp(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.exp.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -968,12 +930,11 @@ for.end:
 
 define void @exp_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_expf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @exp_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_expf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_expf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_expf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_expf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -995,12 +956,11 @@ for.end:
 
 define void @exp_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @exp_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_exp(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.exp.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1022,12 +982,11 @@ for.end:
 
 define void @exp_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_expf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @exp_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_expf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_expf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_expf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_expf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1049,12 +1008,11 @@ for.end:
 
 define void @log_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @log_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_log(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.log.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1076,12 +1034,11 @@ for.end:
 
 define void @log_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @log_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_logf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.log.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_logf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_logf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1103,12 +1060,11 @@ for.end:
 
 define void @log_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @log_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_log(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.log.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1130,12 +1086,11 @@ for.end:
 
 define void @log_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @log_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_logf(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.log.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_logf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_logf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1157,12 +1112,11 @@ for.end:
 
 define void @log2_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log2_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log2(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @log2_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log2(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_log2(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log2(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log2(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.log2.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1184,12 +1138,11 @@ for.end:
 
 define void @log2_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log2_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log2f(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @log2_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log2f(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log2f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_log2f(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log2f(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1211,12 +1164,11 @@ for.end:
 
 define void @log2_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @log2_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log2(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @log2_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log2(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_log2(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_log2(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_log2(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.log2.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1238,12 +1190,11 @@ for.end:
 
 define void @log2_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @log2_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log2f(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @log2_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log2f(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log2f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_log2f(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log2f(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1265,12 +1216,11 @@ for.end:
 
 define void @log10_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log10_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log10f(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @log10_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log10f(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.log10.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log10f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_log10f(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log10f(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1292,12 +1242,11 @@ for.end:
 
 define void @log10_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @log10_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log10f(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @log10_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log10f(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.log10.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_log10f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_log10f(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_log10f(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1319,12 +1268,11 @@ for.end:
 
 define void @exp2_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp2_f64(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp2(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @exp2_f64(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp2(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_exp2(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp2(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp2(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.exp2.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1346,12 +1294,11 @@ for.end:
 
 define void @exp2_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp2_f32(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @exp2_f32(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_exp2f(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_exp2f(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_exp2f(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1373,12 +1320,11 @@ for.end:
 
 define void @exp2_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp2_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp2(<4 x double> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF8-LABEL: @exp2_f64_intrinsic(
-; CHECK-AVX512-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp2(<8 x double> [[TMP4:%.*]])
-; CHECK-AVX512-VF8:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_exp2(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_exp2(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_exp2(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.exp2.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
@@ -1400,12 +1346,11 @@ for.end:
 
 define void @exp2_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp2_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[TMP4:%.*]])
-; CHECK:    ret void
-;
-; CHECK-AVX512-VF16-LABEL: @exp2_f32_intrinsic(
-; CHECK-AVX512-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_exp2f(<16 x float> [[TMP4:%.*]])
-; CHECK-AVX512-VF16:    ret void
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_exp2f(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_exp2f(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
 ;
 entry:
   br label %for.body
