@@ -95,24 +95,28 @@ template <> struct MappingTraits<bolt::SuccessorInfo> {
 
 namespace bolt {
 struct PseudoProbeInfo {
-  llvm::yaml::Hex64 GUID;
   uint64_t Index;
+  uint32_t InlineTreeIndex;
+  llvm::yaml::Hex32 Offset{0};
   uint8_t Type;
 
   bool operator==(const PseudoProbeInfo &Other) const {
-    return GUID == Other.GUID && Index == Other.Index;
+    return InlineTreeIndex == Other.InlineTreeIndex && Index == Other.Index;
   }
-  bool operator!=(const PseudoProbeInfo &Other) const {
-    return !(*this == Other);
+  bool operator<(const PseudoProbeInfo &Other) const {
+    if (InlineTreeIndex == Other.InlineTreeIndex)
+      return Index < Other.Index;
+    return InlineTreeIndex < Other.InlineTreeIndex;
   }
 };
 } // end namespace bolt
 
 template <> struct MappingTraits<bolt::PseudoProbeInfo> {
   static void mapping(IO &YamlIO, bolt::PseudoProbeInfo &PI) {
-    YamlIO.mapRequired("guid", PI.GUID);
     YamlIO.mapRequired("id", PI.Index);
     YamlIO.mapRequired("type", PI.Type);
+    YamlIO.mapOptional("inline_tree_id", PI.InlineTreeIndex, (uint32_t)0);
+    YamlIO.mapOptional("offset", PI.Offset, (uint32_t)0);
   }
 
   static const bool flow = true;
@@ -122,7 +126,7 @@ template <> struct MappingTraits<bolt::PseudoProbeInfo> {
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::CallSiteInfo)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::SuccessorInfo)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::PseudoProbeInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::bolt::PseudoProbeInfo)
 
 namespace llvm {
 namespace yaml {
@@ -163,10 +167,35 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
   }
 };
 
+namespace bolt {
+struct InlineTreeInfo {
+  uint32_t Index;
+  uint32_t ParentIndex;
+  uint32_t CallSiteProbe;
+  llvm::yaml::Hex64 GUID;
+  llvm::yaml::Hex64 Hash;
+  bool operator==(const InlineTreeInfo &Other) const {
+    return Index == Other.Index;
+  }
+};
+} // end namespace bolt
+
+template <> struct MappingTraits<bolt::InlineTreeInfo> {
+  static void mapping(IO &YamlIO, bolt::InlineTreeInfo &ITI) {
+    YamlIO.mapRequired("guid", ITI.GUID);
+    YamlIO.mapRequired("hash", ITI.Hash);
+    YamlIO.mapRequired("id", ITI.Index);
+    YamlIO.mapOptional("parent", ITI.ParentIndex, (uint32_t)0);
+    YamlIO.mapOptional("callsite", ITI.CallSiteProbe, 0);
+  }
+
+  static const bool flow = true;
+};
 } // end namespace yaml
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::bolt::BinaryBasicBlockProfile)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::bolt::InlineTreeInfo)
 
 namespace llvm {
 namespace yaml {
@@ -179,8 +208,7 @@ struct BinaryFunctionProfile {
   llvm::yaml::Hex64 Hash{0};
   uint64_t ExecCount{0};
   std::vector<BinaryBasicBlockProfile> Blocks;
-  llvm::yaml::Hex64 GUID{0};
-  llvm::yaml::Hex64 PseudoProbeDescHash{0};
+  std::vector<InlineTreeInfo> InlineTree;
   bool Used{false};
 };
 } // end namespace bolt
@@ -194,9 +222,8 @@ template <> struct MappingTraits<bolt::BinaryFunctionProfile> {
     YamlIO.mapRequired("nblocks", BFP.NumBasicBlocks);
     YamlIO.mapOptional("blocks", BFP.Blocks,
                        std::vector<bolt::BinaryBasicBlockProfile>());
-    YamlIO.mapOptional("guid", BFP.GUID, (uint64_t)0);
-    YamlIO.mapOptional("pseudo_probe_desc_hash", BFP.PseudoProbeDescHash,
-                       (uint64_t)0);
+    YamlIO.mapOptional("inline_tree", BFP.InlineTree,
+                       std::vector<bolt::InlineTreeInfo>());
   }
 };
 

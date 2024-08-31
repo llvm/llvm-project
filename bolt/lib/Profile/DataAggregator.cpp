@@ -34,6 +34,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <optional>
+#include <queue>
 #include <unordered_map>
 #include <utility>
 
@@ -2402,12 +2403,43 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
-      if (PseudoProbeDecoder) {
-        if ((YamlBF.GUID = BF->getGUID())) {
-          const MCPseudoProbeFuncDesc *FuncDesc =
-              PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
-          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+      DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
+          InlineTreeNodeId;
+      if (PseudoProbeDecoder && BF->getGUID()) {
+        std::queue<const MCDecodedPseudoProbeInlineTree *> ITWorklist;
+        // FIXME: faster inline tree lookup by top-level GUID
+        if (const MCDecodedPseudoProbeInlineTree *InlineTree = llvm::find_if(
+                PseudoProbeDecoder->getDummyInlineRoot().getChildren(),
+                [&](const auto &InlineTree) {
+                  return InlineTree.Guid == BF->getGUID();
+                })) {
+          ITWorklist.push(InlineTree);
+          InlineTreeNodeId[InlineTree] = 0;
+          auto Hash =
+              PseudoProbeDecoder->getFuncDescForGUID(BF->getGUID())->FuncHash;
+          YamlBF.InlineTree.emplace_back(
+              yaml::bolt::InlineTreeInfo{0, 0, 0, BF->getGUID(), Hash});
         }
+        uint32_t ParentId = 0;
+        uint32_t NodeId = 1;
+        while (!ITWorklist.empty()) {
+          const MCDecodedPseudoProbeInlineTree *Cur = ITWorklist.front();
+          for (const MCDecodedPseudoProbeInlineTree &Child :
+               Cur->getChildren()) {
+            InlineTreeNodeId[&Child] = NodeId;
+            auto Hash =
+                PseudoProbeDecoder->getFuncDescForGUID(Child.Guid)->FuncHash;
+            YamlBF.InlineTree.emplace_back(yaml::bolt::InlineTreeInfo{
+                NodeId++, ParentId, std::get<1>(Child.getInlineSite()),
+                Child.Guid, Hash});
+            ITWorklist.push(&Child);
+          }
+          ITWorklist.pop();
+          ++ParentId;
+        }
+      }
+
+      if (PseudoProbeDecoder) {
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();
@@ -2420,11 +2452,18 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
-            const unsigned BlockIndex = getBlock(InputOffset).second;
+            const auto [BlockOffset, BlockIndex] = getBlock(InputOffset);
+            uint32_t NodeId = InlineTreeNodeId[Probe.getInlineTreeNode()];
+            uint32_t Offset = InputOffset - BlockOffset;
             YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
-                yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
+                yaml::bolt::PseudoProbeInfo{Probe.getIndex(), NodeId, Offset,
                                             Probe.getType()});
           }
+        }
+        for (yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
+          llvm::sort(YamlBB.PseudoProbes);
+          YamlBB.PseudoProbes.erase(llvm::unique(YamlBB.PseudoProbes),
+                                    YamlBB.PseudoProbes.end());
         }
       }
       // Drop blocks without a hash, won't be useful for stale matching.
