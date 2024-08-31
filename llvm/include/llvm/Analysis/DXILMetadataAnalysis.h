@@ -28,7 +28,7 @@ struct EntryProperties {
   unsigned NumThreadsY{0}; // Y component
   unsigned NumThreadsZ{0}; // Z component
 
-  EntryProperties(const Function &Fn) : Entry(&Fn){};
+  EntryProperties(const Function &Fn) : Entry(&Fn) {};
 };
 
 struct ModuleMetadataInfo {
