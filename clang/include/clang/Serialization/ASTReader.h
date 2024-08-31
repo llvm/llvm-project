@@ -648,6 +648,12 @@ private:
   /// performed deduplication.
   llvm::SetVector<NamedDecl *> PendingMergedDefinitionsToDeduplicate;
 
+  /// The duplicated definitions in module units which are pending to be warned.
+  /// We need to delay it to wait for the loading of definitions since we don't
+  /// want to warn for forward declarations.
+  llvm::SmallVector<std::pair<Decl *, Decl *>>
+      PendingWarningForDuplicatedDefsInModuleUnits;
+
   /// Read the record that describes the lexical contents of a DC.
   bool ReadLexicalDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
@@ -2143,7 +2149,7 @@ public:
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
 
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);

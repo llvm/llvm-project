@@ -234,6 +234,20 @@ void CreateAndInsertInst::dump() const {
 }
 #endif
 
+ShuffleVectorSetMask::ShuffleVectorSetMask(ShuffleVectorInst *SVI)
+    : SVI(SVI), PrevMask(SVI->getShuffleMask()) {}
+
+void ShuffleVectorSetMask::revert(Tracker &Tracker) {
+  SVI->setShuffleMask(PrevMask);
+}
+
+#ifndef NDEBUG
+void ShuffleVectorSetMask::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 void Tracker::save() { State = TrackerState::Record; }
 
 void Tracker::revert() {

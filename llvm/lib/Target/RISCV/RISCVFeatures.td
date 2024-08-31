@@ -1054,6 +1054,19 @@ def FeatureStdExtSupm
     : RISCVExperimentalExtension<"supm", 1, 0,
                                  "'Supm' (Indicates User-mode Pointer Masking)">;
 
+def FeatureStdExtSmctr
+    : RISCVExperimentalExtension<"smctr", 1, 0,
+                                 "'Smctr' (Control Transfer Records Machine Level)",
+                                 [FeatureStdExtSscsrind]>;
+def FeatureStdExtSsctr
+    : RISCVExperimentalExtension<"ssctr" ,1, 0,
+                                 "'Ssctr' (Control Transfer Records Supervisor Level)",
+                                 [FeatureStdExtSscsrind]>;
+def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
+                            AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
+                               "'Smctr' (Control Transfer Records Machine Level) or "
+                               "'Ssctr' (Control Transfer Records Supervisor Level)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//

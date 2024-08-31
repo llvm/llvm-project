@@ -1,11 +1,11 @@
+.. _testing:
+
 ==============
 Testing libc++
 ==============
 
 .. contents::
   :local:
-
-.. _testing:
 
 Getting Started
 ===============
@@ -458,11 +458,6 @@ An example build would look like:
 This will build all of the benchmarks under ``<libcxx>/test/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
 ``build/libcxx/test/benchmarks``.
-
-Also See:
-
-  * :ref:`Building Libc++ <build instructions>`
-  * :ref:`CMake Options`
 
 Running Benchmarks
 ------------------

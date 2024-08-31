@@ -136,8 +136,16 @@ public:
   APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
   bool isZero() const { return V.isZero(); }
-  bool isPositive() const { return V.isNonNegative(); }
-  bool isNegative() const { return !V.isNonNegative(); }
+  bool isPositive() const {
+    if constexpr (Signed)
+      return V.isNonNegative();
+    return true;
+  }
+  bool isNegative() const {
+    if constexpr (Signed)
+      return !V.isNonNegative();
+    return false;
+  }
   bool isMin() const { return V.isMinValue(); }
   bool isMax() const { return V.isMaxValue(); }
   static constexpr bool isSigned() { return Signed; }
@@ -145,7 +153,7 @@ public:
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
 
-  void print(llvm::raw_ostream &OS) const { OS << V; }
+  void print(llvm::raw_ostream &OS) const { V.print(OS, Signed);}
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);

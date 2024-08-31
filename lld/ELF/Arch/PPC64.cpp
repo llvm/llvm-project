@@ -409,8 +409,8 @@ static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
     return false;
 
   // Add PPC64TocOffset that will be subtracted by PPC64::relocate().
-  static_cast<const PPC64 &>(*target).relaxGot(bufLoc, rel,
-                                               tocRelative + ppc64TocOffset);
+  static_cast<const PPC64 &>(*ctx.target)
+      .relaxGot(bufLoc, rel, tocRelative + ppc64TocOffset);
   return true;
 }
 

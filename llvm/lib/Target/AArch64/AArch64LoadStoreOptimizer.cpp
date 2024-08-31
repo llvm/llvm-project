@@ -509,12 +509,38 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
 }
 
 static unsigned getBaseAddressOpcode(unsigned Opc) {
-  // TODO: Add more index address loads/stores.
+  // TODO: Add more index address stores.
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no base address equivalent!");
+  case AArch64::LDRBroX:
+    return AArch64::LDRBui;
   case AArch64::LDRBBroX:
     return AArch64::LDRBBui;
+  case AArch64::LDRSBXroX:
+    return AArch64::LDRSBXui;
+  case AArch64::LDRSBWroX:
+    return AArch64::LDRSBWui;
+  case AArch64::LDRHroX:
+    return AArch64::LDRHui;
+  case AArch64::LDRHHroX:
+    return AArch64::LDRHHui;
+  case AArch64::LDRSHXroX:
+    return AArch64::LDRSHXui;
+  case AArch64::LDRSHWroX:
+    return AArch64::LDRSHWui;
+  case AArch64::LDRWroX:
+    return AArch64::LDRWui;
+  case AArch64::LDRSroX:
+    return AArch64::LDRSui;
+  case AArch64::LDRSWroX:
+    return AArch64::LDRSWui;
+  case AArch64::LDRDroX:
+    return AArch64::LDRDui;
+  case AArch64::LDRXroX:
+    return AArch64::LDRXui;
+  case AArch64::LDRQroX:
+    return AArch64::LDRQui;
   }
 }
 
@@ -766,9 +792,30 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   default:
     return false;
   // Scaled instructions.
-  // TODO: Add more index address loads/stores.
+  // TODO: Add more index address stores.
+  case AArch64::LDRBroX:
   case AArch64::LDRBBroX:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSBWroX:
     Scale = 1;
+    return true;
+  case AArch64::LDRHroX:
+  case AArch64::LDRHHroX:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSHWroX:
+    Scale = 2;
+    return true;
+  case AArch64::LDRWroX:
+  case AArch64::LDRSroX:
+  case AArch64::LDRSWroX:
+    Scale = 4;
+    return true;
+  case AArch64::LDRDroX:
+  case AArch64::LDRXroX:
+    Scale = 8;
+    return true;
+  case AArch64::LDRQroX:
+    Scale = 16;
     return true;
   }
 }
@@ -2223,7 +2270,9 @@ bool AArch64LoadStoreOpt::isMatchingMovConstInsn(MachineInstr &MemMI,
       return false;
     MBBI = prev_nodbg(MBBI, B);
     MachineInstr &MovzMI = *MBBI;
-    if (MovzMI.getOpcode() == AArch64::MOVZWi) {
+    // Make sure the MOVKWi and MOVZWi set the same register.
+    if (MovzMI.getOpcode() == AArch64::MOVZWi &&
+        MovzMI.getOperand(0).getReg() == MI.getOperand(0).getReg()) {
       unsigned Low = MovzMI.getOperand(1).getImm();
       unsigned High = MI.getOperand(2).getImm() << MI.getOperand(3).getImm();
       Offset = High + Low;
