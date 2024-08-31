@@ -35,11 +35,9 @@ if (CAN_USE_ASSEMBLER)
         blake3_avx512_x86-64_windows_msvc.asm
       )
       list(APPEND LLVM_BLAKE3_FILES ${LLVM_BLAKE3_ASM_FILES})
-      # Supress the copyright message and 'Assembling...' message.
-      foreach(LLVM_BLAKE3_ASM_FILE ${LLVM_BLAKE3_ASM_FILES})
-        set_source_files_properties(${LLVM_BLAKE3_ASM_FILE}
-          PROPERTIES COMPILE_OPTIONS "/nologo")
-      endforeach()
+      # Supress the copyright message.
+      set_source_files_properties(${LLVM_BLAKE3_ASM_FILES}
+        PROPERTIES COMPILE_OPTIONS "/nologo")
     else()
       disable_blake3_x86_simd()
     endif()
