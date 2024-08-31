@@ -155,21 +155,34 @@ namespace SearchClassBetweenTemplateParameterLists {
 
   int CC;
   template <typename> struct C;
-#if __cplusplus >= 202003L
-  template <typename> struct D;
-  template <class> concept True = true;
+  template <template<typename> typename> struct D;
+#if __cplusplus >= 202002L
+  template <bool CC> requires (CC) struct E;
+  template <typename> struct F;
+  template <typename> concept True = true;
 #endif
 }
 
 template <typename CC>
 struct SearchClassBetweenTemplateParameterLists::C {
-  void foo(CC) {} // This should find the template type parameter.
+  void foo(CC); // This should find the template type parameter.
 };
 
-#if __cplusplus >= 202003L
+template <template<typename> typename CC>
+struct SearchClassBetweenTemplateParameterLists::D {
+  template <typename AA>
+  CC<AA> foo(CC<AA>);
+};
 
-template <True CC>
-struct SearchClassBetweenTemplateParameterLists::D<CC> {
+#if __cplusplus >= 202002L
+
+template <bool CC> requires (CC)
+struct SearchClassBetweenTemplateParameterLists::E {
+  void foo() requires (CC);
+};
+
+template <SearchClassBetweenTemplateParameterLists::True CC>
+struct SearchClassBetweenTemplateParameterLists::F<CC> {
   void foo(CC);
 };
 
