@@ -851,8 +851,7 @@ static ICFLevel getICFLevel(const ArgList &args) {
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
 
-  if (icfLevel == ICFLevel::safe_thunks &&
-      !is_contained({AK_x86_64h, AK_arm64}, config->arch())) {
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
     error("--icf=safe_thunks is only supported on arm64 targets");
   }
 

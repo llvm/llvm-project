@@ -10,9 +10,7 @@
 ; CHECK-ARM64-NEXT:        mov {{.*}}, #0x1
 ;
 ; CHECK-ARM64:        _func_unique_2_canmerge:
-; CHECK-ARM64-NEXT:        mov {{.*}}, #0x2
-;
-; CHECK-ARM64:        _func_2identical_v1:
+; CHECK-ARM64-NEXT:   _func_2identical_v1:
 ; CHECK-ARM64-NEXT:        mov {{.*}}, #0x2
 ;
 ; CHECK-ARM64:        _func_3identical_v1:
@@ -30,7 +28,7 @@
 ; CHECK-ARM64-NEXT:        adr
 ;
 ; CHECK-ARM64:        _func_2identical_v2:
-; CHECK-ARM64-NEXT:        b  _func_unique_2_canmerge
+; CHECK-ARM64-NEXT:        b  _func_2identical_v1
 ; CHECK-ARM64-NEXT:   _func_3identical_v2:
 ; CHECK-ARM64-NEXT:        b  _func_3identical_v1
 ; CHECK-ARM64-NEXT:   _func_3identical_v3:

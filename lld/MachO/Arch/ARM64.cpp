@@ -42,9 +42,9 @@ struct ARM64 : ARM64Common {
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
   void applyOptimizationHints(uint8_t *, const ObjFile &) const override;
 
-  virtual void initICFSafeThunkBody(InputSection *thunk,
-                                    InputSection *branchTarget) const override;
-  virtual uint32_t getICFSafeThunkSize() const override;
+  void initICFSafeThunkBody(InputSection *thunk,
+                            InputSection *branchTarget) const override;
+  uint32_t getICFSafeThunkSize() const override;
 };
 
 } // namespace

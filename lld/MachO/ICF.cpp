@@ -252,59 +252,69 @@ void ICF::forEachClassRange(size_t begin, size_t end,
   }
 }
 
-// Given a range of identical icfInputs's, replace address significant functions
+// Given a range of identical icfInputs, replace address significant functions
 // with a thunk that is just a direct branch to the first function in the
-// series. This way we end up we keep only one main body of the function but we
-// still retain address uniqueness of rellevant functions by having them be a
-// direct branch thunk rather than contain a full copy of the actual function
+// series. This way we keep only one main body of the function but we still
+// retain the address uniqueness of relevant functions by having them be a
+// direct branch thunk rather than containing a full copy of the actual function
 // body.
 void ICF::applySafeThunksToRange(size_t begin, size_t end) {
-  // If we need to create a unique ICF thunk, use the first section as the
-  // section that all thunks will branch to.
-  ConcatInputSection *masterIsec = icfInputs[begin];
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
   uint32_t thunkSize = target->getICFSafeThunkSize();
-  static std::mutex thunkInsertionMutex;
+  if (icfInputs[begin]->data.size() <= thunkSize)
+    return;
 
-  uint32_t keepUniqueCount = masterIsec->keepUnique ? 1 : 0;
+  // The standard ICF algorithm will merge all functions in the [begin + 1, end)
+  // range into icfInputs[begin].So, the body of the first function is always
+  // kept, even if it is not keepUnique. To make safe_thunks nicely play with
+  // this behavior, we ensure that the first function in the range is keepUnique.
+  if (!icfInputs[begin]->keepUnique) {
+    bool haveKeepUnique = false;
+    for (size_t i = begin + 1; i < end; ++i) {
+      if (icfInputs[i]->keepUnique) {
+        std::swap(icfInputs[begin], icfInputs[i]);
+        haveKeepUnique = true;
+        break;
+      }
+    }
+    // If we don't have keepUnique funcs, we can just return
+    if (!haveKeepUnique)
+      return;
+  }
+
+  // When creating a unique ICF thunk, use the first section as the section that
+  // all thunks will branch to.
+  ConcatInputSection *masterIsec = icfInputs[begin];
+
+  static std::mutex thunkInsertionMutex;
   for (size_t i = begin + 1; i < end; ++i) {
     ConcatInputSection *isec = icfInputs[i];
-    if (isec->keepUnique)
-      ++keepUniqueCount;
+    if (!isec->keepUnique)
+      continue;
 
-    // We create thunks for the 2nd, 3rd, ... keepUnique sections. The first
-    // keepUnique section we leave as is - as it will not end up sharing an
-    // address with any other keepUnique section.
-    if (keepUniqueCount >= 2 && isec->keepUnique) {
-      // If the target to be folded is smaller than the thunk size, then just
-      // leave it as-is - creating the thunk would be a net loss.
-      if (isec->data.size() <= thunkSize)
-        return;
+    // applySafeThunksToRange is called from multiple threads, but
+    // `makeSyntheticInputSection` and `addInputSection` are not thread safe. So
+    // we need to guard them with a mutex.
+    ConcatInputSection *thunk;
+    {
+      std::lock_guard<std::mutex> lock(thunkInsertionMutex);
+      thunk = makeSyntheticInputSection(isec->getSegName(), isec->getName());
+      addInputSection(thunk);
+    }
 
-      // applySafeThunksToRange is called from multiple threads, but
-      // `makeSyntheticInputSection` and `addInputSection` are not thread safe.
-      // So we need to guard them with a mutex.
-      ConcatInputSection *thunk;
-      {
-        std::lock_guard<std::mutex> lock(thunkInsertionMutex);
-        thunk = makeSyntheticInputSection(isec->getSegName(), isec->getName());
-        addInputSection(thunk);
-      }
+    target->initICFSafeThunkBody(thunk, masterIsec);
+    thunk->foldIdentical(isec);
 
-      target->initICFSafeThunkBody(thunk, masterIsec);
-      thunk->foldIdentical(isec);
-
-      // Since we're folding the target function into a thunk, we need to adjust
-      // the symbols that now got relocated from the target function to the
-      // thunk.
-      // Since the thunk is only one branch, we move all symbols to offset 0 and
-      // make sure that the size of all non-zero-size symbols is equal to the
-      // size of the branch.
-      for (auto *sym : isec->symbols) {
-        if (sym->value != 0)
-          sym->value = 0;
-        if (sym->size != 0)
-          sym->size = thunkSize;
-      }
+    // Since we're folding the target function into a thunk, we need to adjust
+    // the symbols that now got relocated from the target function to the thunk.
+    // Since the thunk is only one branch, we move all symbols to offset 0 and
+    // make sure that the size of all non-zero-size symbols is equal to the size
+    // of the branch.
+    for (auto *sym : isec->symbols) {
+      sym->value = 0;
+      if (sym->size != 0)
+        sym->size = thunkSize;
     }
   }
 }
