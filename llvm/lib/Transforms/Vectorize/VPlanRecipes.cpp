@@ -1840,8 +1840,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind))
         Start = RdxDesc.getRecurrenceStartValue();
       else
-        Start = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
-                                              RdxDesc.getFastMathFlags());
+        Start = llvm::getRecurrenceIdentity(Kind, ElementTy,
+                                            RdxDesc.getFastMathFlags());
       if (State.VF.isVector())
         Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(),
                                                 Start);
@@ -3010,8 +3010,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
           Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
     }
   } else {
-    Iden = RdxDesc.getRecurrenceIdentity(RK, VecTy->getScalarType(),
-                                         RdxDesc.getFastMathFlags());
+    Iden = llvm::getRecurrenceIdentity(RK, VecTy->getScalarType(),
+                                       RdxDesc.getFastMathFlags());
 
     if (!ScalarPHI) {
       Iden = Builder.CreateVectorSplat(State.VF, Iden);
