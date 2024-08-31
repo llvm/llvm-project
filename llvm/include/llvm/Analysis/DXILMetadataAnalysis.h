@@ -10,15 +10,14 @@
 #define LLVM_ANALYSIS_DXILMETADATA_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
-#include <memory>
 
 namespace llvm {
 
+class Function;
 namespace dxil {
 
 struct EntryProperties {
@@ -37,7 +36,7 @@ struct ModuleMetadataInfo {
   VersionTuple ShaderModelVersion{};
   Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
   VersionTuple ValidatorVersion{};
-  SmallVector<EntryProperties, 4> EntryPropertyVec{};
+  SmallVector<EntryProperties> EntryPropertyVec{};
   void print(raw_ostream &OS) const;
 };
 

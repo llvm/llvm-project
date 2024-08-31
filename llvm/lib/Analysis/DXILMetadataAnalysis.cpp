@@ -16,8 +16,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <memory>
-#include <utility>
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
 
@@ -60,7 +58,8 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
       NumThreadsStr.split(NumThreadsVec, ',');
       assert(NumThreadsVec.size() == 3 && "Invalid numthreads specified");
       // Read in the three component values of numthreads
-      bool Success = llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10);
+      [[maybe_unused]] bool Success =
+          llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10);
       assert(Success && "Failed to parse X component of numthreads");
       Success = llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10);
       assert(Success && "Failed to parse Y component of numthreads");
@@ -78,11 +77,12 @@ void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Target Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
-  for (const auto [Ent, SS, NX, NY, NZ] : EntryPropertyVec) {
-    OS << " " << Ent->getName() << "\n";
-    OS << "  Function Shader Stage : " << Triple::getEnvironmentTypeName(SS)
-       << "\n";
-    OS << "  NumThreads: " << NX << "," << NY << "," << NZ << "\n";
+  for (const auto EP : EntryPropertyVec) {
+    OS << " " << EP.Entry->getName() << "\n";
+    OS << "  Function Shader Stage : "
+       << Triple::getEnvironmentTypeName(EP.ShaderStage) << "\n";
+    OS << "  NumThreads: " << EP.NumThreadsX << "," << EP.NumThreadsY << ","
+       << EP.NumThreadsZ << "\n";
   }
 }
 
