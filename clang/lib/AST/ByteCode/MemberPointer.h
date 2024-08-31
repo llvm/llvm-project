@@ -84,6 +84,11 @@ public:
 
   bool isZero() const { return Base.isZero() && !Dcl; }
   bool hasBase() const { return !Base.isZero(); }
+  bool isWeak() const {
+    if (const auto *MF = getMemberFunction())
+      return MF->isWeak();
+    return false;
+  }
 
   void print(llvm::raw_ostream &OS) const {
     OS << "MemberPtr(" << Base << " " << (const void *)Dcl << " + " << PtrOffset
