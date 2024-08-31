@@ -32,7 +32,7 @@ class ToolOutputFile;
 class LLVMContext;
 class MIRParser;
 
-enum class VerifierKind { NoVerifier, VerifyOut, VerifyEachPass };
+enum class VerifierKind { None, InputOutput, EachPass };
 
 struct LLCDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override;

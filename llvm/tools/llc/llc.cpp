@@ -650,11 +650,11 @@ static int compileModule(char **argv, LLVMContext &Context) {
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
 
-  VerifierKind VK = VerifierKind::VerifyOut;
+  VerifierKind VK = VerifierKind::InputOutput;
   if (NoVerify)
-    VK = VerifierKind::NoVerifier;
+    VK = VerifierKind::None;
   else if (VerifyEach)
-    VK = VerifierKind::VerifyEachPass;
+    VK = VerifierKind::EachPass;
 
   if (EnableNewPassManager || !PassPipeline.empty()) {
     return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
