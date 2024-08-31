@@ -4,15 +4,11 @@
 define i64 @test(ptr %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[ARRAYIDX_4]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v4i64(<8 x i64> [[TMP2]], <4 x i64> [[TMP0]], i64 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v2i64(<8 x i64> [[TMP3]], <2 x i64> [[TMP1]], i64 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i64> [[TMP4]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <6 x i64>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i64> [[TMP0]], <6 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i64> [[TMP1]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP2]])
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
 entry:
   %arrayidx.1 = getelementptr inbounds i64, ptr %p, i64 1
