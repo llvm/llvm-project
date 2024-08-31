@@ -62,7 +62,7 @@ def ArgExpr : ArgType { let Name = "const Expr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
-def ArgDecl : ArgType { let Name = "const Decl*"; }
+def ArgValueDecl : ArgType { let Name = "const ValueDecl*"; }
 def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
@@ -597,6 +597,11 @@ def Comp: Opcode {
   let HasGroup = 1;
 }
 
+def IsNonNull : Opcode {
+  let Types = [PtrTypeClass];
+  let HasGroup = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP.
 //===----------------------------------------------------------------------===//
@@ -751,7 +756,7 @@ def Memcpy : Opcode;
 def ToMemberPtr : Opcode;
 def CastMemberPtrPtr : Opcode;
 def GetMemberPtr : Opcode {
-  let Args = [ArgDecl];
+  let Args = [ArgValueDecl];
 }
 def GetMemberPtrBase : Opcode;
 def GetMemberPtrDecl : Opcode;

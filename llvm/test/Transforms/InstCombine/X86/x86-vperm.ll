@@ -91,8 +91,7 @@ define <8 x i32> @undef_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passt
 
 define <8 x i32> @demandedbit_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_si_256_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <8 x i32> [[A1:%.*]], <i32 0, i32 8, i32 -8, i32 16, i32 -16, i32 32, i32 -32, i32 64>
-; CHECK-NEXT:    [[S:%.*]] = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> [[A0:%.*]], <8 x i32> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    ret <8 x i32> [[S]]
 ;
   %m = or <8 x i32> %a1, <i32 0, i32 8, i32 -8, i32 16, i32 -16, i32 32, i32 -32, i32 64>
@@ -190,8 +189,7 @@ define <8 x float> @undef_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> 
 
 define <8 x float> @demandedbit_test_permvar_sf_256_mask(<8 x float> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_sf_256_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <8 x i32> [[A1:%.*]], <i32 0, i32 8, i32 -8, i32 16, i32 -16, i32 32, i32 -32, i32 64>
-; CHECK-NEXT:    [[S:%.*]] = call <8 x float> @llvm.x86.avx2.permps(<8 x float> [[A0:%.*]], <8 x i32> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <8 x float> @llvm.x86.avx2.permps(<8 x float> [[A0:%.*]], <8 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[S]]
 ;
   %m = or <8 x i32> %a1, <i32 0, i32 8, i32 -8, i32 16, i32 -16, i32 32, i32 -32, i32 64>
@@ -297,8 +295,7 @@ define <4 x i64> @undef_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passt
 
 define <4 x i64> @demandedbits_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: @demandedbits_test_permvar_di_256_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <4 x i64> [[A1:%.*]], <i64 0, i64 4, i64 -4, i64 8>
-; CHECK-NEXT:    [[S:%.*]] = call <4 x i64> @llvm.x86.avx512.permvar.di.256(<4 x i64> [[A0:%.*]], <4 x i64> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i64> @llvm.x86.avx512.permvar.di.256(<4 x i64> [[A0:%.*]], <4 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    ret <4 x i64> [[S]]
 ;
   %m = or <4 x i64> %a1, <i64 0, i64 4, i64 -4, i64 8>
@@ -404,8 +401,7 @@ define <4 x double> @undef_test_permvar_df_256_mask(<4 x double> %a0, <4 x doubl
 
 define <4 x double> @demandedbits_test_permvar_df_256_mask(<4 x double> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: @demandedbits_test_permvar_df_256_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <4 x i64> [[A1:%.*]], <i64 0, i64 4, i64 -4, i64 8>
-; CHECK-NEXT:    [[S:%.*]] = call <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double> [[A0:%.*]], <4 x i64> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double> [[A0:%.*]], <4 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[S]]
 ;
   %m = or <4 x i64> %a1, <i64 0, i64 4, i64 -4, i64 8>
@@ -503,8 +499,7 @@ define <16 x i32> @undef_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %pa
 
 define <16 x i32> @demandedbit_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_si_512_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <16 x i32> [[A1:%.*]], <i32 0, i32 16, i32 -16, i32 32, i32 -32, i32 64, i32 -64, i32 128, i32 -128, i32 256, i32 -256, i32 512, i32 -512, i32 1024, i32 -1024, i32 2048>
-; CHECK-NEXT:    [[S:%.*]] = call <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32> [[A0:%.*]], <16 x i32> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32> [[A0:%.*]], <16 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    ret <16 x i32> [[S]]
 ;
   %m = or <16 x i32> %a1, <i32 0, i32 16, i32 -16, i32 32, i32 -32, i32 64, i32 -64, i32 128, i32 -128, i32 256, i32 -256, i32 512, i32 -512, i32 1024, i32 -1024, i32 2048>
@@ -602,8 +597,7 @@ define <16 x float> @undef_test_permvar_sf_512_mask(<16 x float> %a0, <16 x floa
 
 define <16 x float> @demandedbit_test_permvar_sf_512_mask(<16 x float> %a0, <16 x i32> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_sf_512_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <16 x i32> [[A1:%.*]], <i32 0, i32 16, i32 -16, i32 32, i32 -32, i32 64, i32 -64, i32 128, i32 -128, i32 256, i32 -256, i32 512, i32 -512, i32 1024, i32 -1024, i32 2048>
-; CHECK-NEXT:    [[S:%.*]] = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> [[A0:%.*]], <16 x i32> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> [[A0:%.*]], <16 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    ret <16 x float> [[S]]
 ;
   %m = or <16 x i32> %a1, <i32 0, i32 16, i32 -16, i32 32, i32 -32, i32 64, i32 -64, i32 128, i32 -128, i32 256, i32 -256, i32 512, i32 -512, i32 1024, i32 -1024, i32 2048>
@@ -701,8 +695,7 @@ define <8 x i64> @undef_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passt
 
 define <8 x i64> @demandedbit_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_di_512_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <8 x i64> [[A1:%.*]], <i64 0, i64 8, i64 -8, i64 16, i64 -16, i64 32, i64 -32, i64 64>
-; CHECK-NEXT:    [[S:%.*]] = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> [[A0:%.*]], <8 x i64> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> [[A0:%.*]], <8 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    ret <8 x i64> [[S]]
 ;
   %m = or <8 x i64> %a1, <i64 0, i64 8, i64 -8, i64 16, i64 -16, i64 32, i64 -32, i64 64>
@@ -800,8 +793,7 @@ define <8 x double> @undef_test_permvar_df_512_mask(<8 x double> %a0, <8 x doubl
 
 define <8 x double> @demandedbit_test_permvar_df_512_mask(<8 x double> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_df_512_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <8 x i64> [[A1:%.*]], <i64 0, i64 8, i64 -8, i64 16, i64 -16, i64 32, i64 -32, i64 64>
-; CHECK-NEXT:    [[S:%.*]] = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> [[A0:%.*]], <8 x i64> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> [[A0:%.*]], <8 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    ret <8 x double> [[S]]
 ;
   %m = or <8 x i64> %a1, <i64 0, i64 8, i64 -8, i64 16, i64 -16, i64 32, i64 -32, i64 64>
@@ -899,8 +891,7 @@ define <8 x i16> @undef_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passt
 
 define <8 x i16> @demandedbit_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_hi_128_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <8 x i16> [[A1:%.*]], <i16 0, i16 8, i16 -8, i16 16, i16 -16, i16 32, i16 -32, i16 64>
-; CHECK-NEXT:    [[S:%.*]] = call <8 x i16> @llvm.x86.avx512.permvar.hi.128(<8 x i16> [[A0:%.*]], <8 x i16> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <8 x i16> @llvm.x86.avx512.permvar.hi.128(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    ret <8 x i16> [[S]]
 ;
   %m = or <8 x i16> %a1, <i16 0, i16 8, i16 -8, i16 16, i16 -16, i16 32, i16 -32, i16 64>
@@ -998,8 +989,7 @@ define <16 x i16> @undef_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %pa
 
 define <16 x i16> @demandedbit_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_hi_256_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <16 x i16> [[A1:%.*]], <i16 0, i16 16, i16 -16, i16 32, i16 -32, i16 64, i16 -64, i16 128, i16 -128, i16 256, i16 -256, i16 512, i16 -512, i16 1024, i16 -1024, i16 2048>
-; CHECK-NEXT:    [[S:%.*]] = call <16 x i16> @llvm.x86.avx512.permvar.hi.256(<16 x i16> [[A0:%.*]], <16 x i16> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <16 x i16> @llvm.x86.avx512.permvar.hi.256(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    ret <16 x i16> [[S]]
 ;
   %m = or <16 x i16> %a1, <i16 0, i16 16, i16 -16, i16 32, i16 -32, i16 64, i16 -64, i16 128, i16 -128, i16 256, i16 -256, i16 512, i16 -512, i16 1024, i16 -1024, i16 2048>
@@ -1097,8 +1087,7 @@ define <32 x i16> @undef_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %pa
 
 define <32 x i16> @demandedbit_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_hi_512_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <32 x i16> [[A1:%.*]], <i16 0, i16 32, i16 -32, i16 64, i16 -64, i16 128, i16 -128, i16 256, i16 -256, i16 512, i16 -512, i16 1024, i16 -1024, i16 2048, i16 -2048, i16 4096, i16 0, i16 32, i16 -32, i16 64, i16 -64, i16 128, i16 -128, i16 256, i16 -256, i16 512, i16 -512, i16 1024, i16 -1024, i16 2048, i16 -2048, i16 4096>
-; CHECK-NEXT:    [[S:%.*]] = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> [[A0:%.*]], <32 x i16> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> [[A0:%.*]], <32 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    ret <32 x i16> [[S]]
 ;
   %m = or <32 x i16> %a1, <i16 0, i16 32, i16 -32, i16 64, i16 -64, i16 128, i16 -128, i16 256, i16 -256, i16 512, i16 -512, i16 1024, i16 -1024, i16 2048, i16 -2048, i16 4096, i16 0, i16 32, i16 -32, i16 64, i16 -64, i16 128, i16 -128, i16 256, i16 -256, i16 512, i16 -512, i16 1024, i16 -1024, i16 2048, i16 -2048, i16 4096>
@@ -1196,8 +1185,7 @@ define <16 x i8> @undef_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passt
 
 define <16 x i8> @demandedbit_test_permvar_qi_129_mask(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_qi_129_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <16 x i8> [[A1:%.*]], <i8 0, i8 16, i8 -16, i8 32, i8 -32, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 16, i8 -16, i8 32, i8 -32, i8 64, i8 -64>
-; CHECK-NEXT:    [[S:%.*]] = call <16 x i8> @llvm.x86.avx512.permvar.qi.128(<16 x i8> [[A0:%.*]], <16 x i8> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <16 x i8> @llvm.x86.avx512.permvar.qi.128(<16 x i8> [[A0:%.*]], <16 x i8> [[A1:%.*]])
 ; CHECK-NEXT:    ret <16 x i8> [[S]]
 ;
   %m = or <16 x i8> %a1, <i8 0, i8 16, i8 -16, i8 32, i8 -32, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 16, i8 -16, i8 32, i8 -32, i8 64, i8 -64>
@@ -1295,8 +1283,7 @@ define <32 x i8> @undef_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passt
 
 define <32 x i8> @demandedbit_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_qi_256_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <32 x i8> [[A1:%.*]], <i8 0, i8 32, i8 -32, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 32, i8 -32, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
-; CHECK-NEXT:    [[S:%.*]] = call <32 x i8> @llvm.x86.avx512.permvar.qi.256(<32 x i8> [[A0:%.*]], <32 x i8> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <32 x i8> @llvm.x86.avx512.permvar.qi.256(<32 x i8> [[A0:%.*]], <32 x i8> [[A1:%.*]])
 ; CHECK-NEXT:    ret <32 x i8> [[S]]
 ;
   %m = or <32 x i8> %a1, <i8 0, i8 32, i8 -32, i8 64, i8 -64, i8 128, i8 -128, i8 256, i8 -256, i8 512, i8 -512, i8 1024, i8 -1024, i8 2048, i8 -2048, i8 4096, i8 0, i8 32, i8 -32, i8 64, i8 -64, i8 128, i8 -128, i8 256, i8 -256, i8 512, i8 -512, i8 1024, i8 -1024, i8 2048, i8 -2048, i8 4096>
@@ -1394,8 +1381,7 @@ define <64 x i8> @undef_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passt
 
 define <64 x i8> @demandedbit_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %a1) {
 ; CHECK-LABEL: @demandedbit_test_permvar_qi_512_mask(
-; CHECK-NEXT:    [[M:%.*]] = or <64 x i8> [[A1:%.*]], <i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128, i8 -128, i8 0, i8 64, i8 -64, i8 -128>
-; CHECK-NEXT:    [[S:%.*]] = call <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8> [[A0:%.*]], <64 x i8> [[M]])
+; CHECK-NEXT:    [[S:%.*]] = call <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8> [[A0:%.*]], <64 x i8> [[A1:%.*]])
 ; CHECK-NEXT:    ret <64 x i8> [[S]]
 ;
   %m = or <64 x i8> %a1, <i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128, i8 -128, i8 0, i8 64, i8 -64, i8 128>
