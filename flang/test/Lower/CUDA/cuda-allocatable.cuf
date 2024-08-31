@@ -2,6 +2,21 @@
 
 ! Test lowering of CUDA allocatable allocate/deallocate statements.
 
+module globals
+  real, device, allocatable :: a_device(:)
+  real, managed, allocatable :: a_managed(:)
+  real, pinned, allocatable :: a_pinned(:)
+end module
+
+! CHECK-LABEL: fir.global @_QMglobalsEa_device {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: %{{.*}} = fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+! CHECK-LABEL: fir.global @_QMglobalsEa_managed {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: %{{.*}} = fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+! CHECK-LABEL: fir.global @_QMglobalsEa_pinned {data_attr = #cuf.cuda<pinned>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: %{{.*}} = fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 1 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+
 subroutine sub1()
   real, allocatable, device :: a(:)
   allocate(a(10))

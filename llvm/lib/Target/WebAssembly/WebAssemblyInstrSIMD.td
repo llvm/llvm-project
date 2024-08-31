@@ -763,7 +763,7 @@ multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
 multiclass SIMDConditionFP<string name, CondCode cond, bits<32> baseInst> {
   defm "" : SIMDCondition<F32x4, name, cond, baseInst>;
   defm "" : SIMDCondition<F64x2, name, cond, !add(baseInst, 6)>;
-  defm "" : HalfPrecisionCondition<F16x8, name, cond, !add(baseInst, 255)>;
+  defm "" : HalfPrecisionCondition<F16x8, name, cond, !add(baseInst, 246)>;
 }
 
 // Equality: eq
@@ -1218,7 +1218,7 @@ multiclass SIMDUnaryFP<SDNode node, string name, bits<32> baseInst> {
   // Unlike F32x4 and F64x2 there's not a gap in the opcodes between "neg" and
   // "sqrt" so subtract one from the offset.
   defm "" : HalfPrecisionUnary<F16x8, node, name,
-                               !add(baseInst,!if(!eq(name, "sqrt"), 80, 81))>;
+                               !add(baseInst,!if(!eq(name, "sqrt"), 79, 80))>;
 }
 
 // Absolute value: abs
@@ -1239,10 +1239,10 @@ defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
 defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
-defm CEIL : HalfPrecisionUnary<F16x8, fceil, "ceil", 0x13c>;
-defm FLOOR : HalfPrecisionUnary<F16x8, ffloor, "floor", 0x13d>;
-defm TRUNC : HalfPrecisionUnary<F16x8, ftrunc, "trunc", 0x13e>;
-defm NEAREST : HalfPrecisionUnary<F16x8, fnearbyint, "nearest", 0x13f>;
+defm CEIL : HalfPrecisionUnary<F16x8, fceil, "ceil", 0x133>;
+defm FLOOR : HalfPrecisionUnary<F16x8, ffloor, "floor", 0x134>;
+defm TRUNC : HalfPrecisionUnary<F16x8, ftrunc, "trunc", 0x135>;
+defm NEAREST : HalfPrecisionUnary<F16x8, fnearbyint, "nearest", 0x136>;
 
 // WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
 def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
@@ -1261,7 +1261,7 @@ def : Pat<(v8f16 (froundeven (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 multiclass SIMDBinaryFP<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<F32x4, node, name, baseInst>;
   defm "" : SIMDBinary<F64x2, node, name, !add(baseInst, 12)>;
-  defm "" : HalfPrecisionBinary<F16x8, node, name, !add(baseInst, 80)>;
+  defm "" : HalfPrecisionBinary<F16x8, node, name, !add(baseInst, 89)>;
 }
 
 // Addition: add
@@ -1362,8 +1362,8 @@ multiclass HalfPrecisionConvert<Vec vec, Vec arg, SDPatternOperator op,
 // Floating point to integer with saturation: trunc_sat
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
-defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_sint, "trunc_sat_f16x8_s", 0x148>;
-defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_uint, "trunc_sat_f16x8_u", 0x149>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_sint, "trunc_sat_f16x8_s", 0x145>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_uint, "trunc_sat_f16x8_u", 0x146>;
 
 // Support the saturating variety as well.
 def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i32)>;
@@ -1394,8 +1394,8 @@ defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
 defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
-defm "" : HalfPrecisionConvert<F16x8, I16x8, sint_to_fp, "convert_i16x8_s", 0x14a>;
-defm "" : HalfPrecisionConvert<F16x8, I16x8, uint_to_fp, "convert_i16x8_u", 0x14b>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, sint_to_fp, "convert_i16x8_s", 0x147>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, uint_to_fp, "convert_i16x8_u", 0x148>;
 
 // Extending operations
 // TODO: refactor this to be uniform for i64x2 if the numbering is not changed.
@@ -1538,7 +1538,7 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasFP16]>;
+defm "" : SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect

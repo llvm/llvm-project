@@ -234,12 +234,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
   foreach Index = 0-31 in {
     def F#Index#_F : RISCVReg32<!cast<RISCVReg16>("F"#Index#"_H")>,
-      DwarfRegNum<[!add(Index, 32)]>;
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 
   foreach Index = 0-31 in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
-      DwarfRegNum<[!add(Index, 32)]>;
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 }
 
