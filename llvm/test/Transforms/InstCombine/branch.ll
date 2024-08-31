@@ -247,8 +247,7 @@ define i32 @dom_true(i1 %cmp) {
 ; CHECK-LABEL: @dom_true(
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    ret i32 [[ZEXT]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -266,8 +265,7 @@ define i32 @dom_false(i1 %cmp) {
 ; CHECK-LABEL: @dom_false(
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    ret i32 [[ZEXT]]
+; CHECK-NEXT:    ret i32 0
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -289,8 +287,7 @@ define i32 @dom_true_phi(i1 %cmp) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[IF_THEN]] ], [ [[CMP]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[PHI]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[ZEXT]]
 ;
   br i1 %cmp, label %if.then, label %if.else

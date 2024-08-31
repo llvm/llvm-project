@@ -8,54 +8,42 @@ define void @test(i1 %c, ptr %p) {
 ; CHECK-NEXT:  bb16:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB17:%.*]], label [[BB24:%.*]]
 ; CHECK:       bb17:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[DOTIN1:%.*]], [[BB47:%.*]] ], [ undef, [[BB16:%.*]] ]
-; CHECK-NEXT:    store ptr [[I]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb24:
-; CHECK-NEXT:    br i1 [[C]], label [[BB44:%.*]], label [[BB49:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB44:%.*]], label [[BB49:%.*]]
 ; CHECK:       bb44:
-; CHECK-NEXT:    [[TMP46:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
-; CHECK-NEXT:    br label [[BB47]]
+; CHECK-NEXT:    br label [[BB47:%.*]]
 ; CHECK:       bb47:
-; CHECK-NEXT:    [[DOTIN1]] = phi ptr [ [[DOTIN:%.*]], [[BB150:%.*]] ], [ [[TMP122:%.*]], [[BB119:%.*]] ], [ [[TMP103:%.*]], [[BB101:%.*]] ], [ [[TMP93:%.*]], [[BB91:%.*]] ], [ [[TMP83:%.*]], [[BB81:%.*]] ], [ [[TMP70:%.*]], [[BB67:%.*]] ], [ [[TMP58:%.*]], [[BB56:%.*]] ], [ [[TMP46]], [[BB44]] ]
 ; CHECK-NEXT:    br label [[BB17]]
 ; CHECK:       bb49:
-; CHECK-NEXT:    br i1 [[C]], label [[BB56]], label [[BB59:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB56:%.*]], label [[BB59:%.*]]
 ; CHECK:       bb56:
-; CHECK-NEXT:    [[TMP58]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb59:
-; CHECK-NEXT:    br i1 [[C]], label [[BB67]], label [[BB71:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB67:%.*]], label [[BB71:%.*]]
 ; CHECK:       bb67:
-; CHECK-NEXT:    [[TMP70]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb71:
-; CHECK-NEXT:    br i1 [[C]], label [[BB81]], label [[BB84:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB81:%.*]], label [[BB84:%.*]]
 ; CHECK:       bb81:
-; CHECK-NEXT:    [[TMP83]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb84:
-; CHECK-NEXT:    br i1 [[C]], label [[BB91]], label [[BB94:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB91:%.*]], label [[BB94:%.*]]
 ; CHECK:       bb91:
-; CHECK-NEXT:    [[TMP93]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb94:
-; CHECK-NEXT:    br i1 [[C]], label [[BB101]], label [[BB104:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB101:%.*]], label [[BB104:%.*]]
 ; CHECK:       bb101:
-; CHECK-NEXT:    [[TMP103]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb104:
-; CHECK-NEXT:    br i1 [[C]], label [[BB119]], label [[BB123:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB119:%.*]], label [[BB123:%.*]]
 ; CHECK:       bb119:
-; CHECK-NEXT:    [[TMP122]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb123:
-; CHECK-NEXT:    br i1 [[C]], label [[BB147:%.*]], label [[BB152:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB147:%.*]], label [[BB152:%.*]]
 ; CHECK:       bb147:
-; CHECK-NEXT:    [[TMP149:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
-; CHECK-NEXT:    br label [[BB150]]
+; CHECK-NEXT:    br label [[BB150:%.*]]
 ; CHECK:       bb150:
-; CHECK-NEXT:    [[DOTIN]] = phi ptr [ poison, [[BB152]] ], [ [[TMP149]], [[BB147]] ]
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb152:
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
