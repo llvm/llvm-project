@@ -594,7 +594,7 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
 static bool onlyReadsArgMemory(const Function &F) {
   return F.onlyAccessesArgMemory() && llvm::all_of(F.args(), [](const auto &A) {
            return A.onlyReadsMemory();
-  });
+         });
 }
 
 /// Module-level initialization.
