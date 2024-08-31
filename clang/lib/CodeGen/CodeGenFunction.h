@@ -2927,6 +2927,7 @@ public:
 
   void EmitAnyExprToExn(const Expr *E, Address Addr);
 
+  /// EmitInitializationToLValue - Emit an initializer to an LValue.
   void EmitInitializationToLValue(
       const Expr *E, LValue LV,
       AggValueSlot::IsZeroed_t IsZeroed = AggValueSlot::IsNotZeroed);
