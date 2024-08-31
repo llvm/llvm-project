@@ -8112,6 +8112,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
   if (S->isTemplateParamScope())
     EnterTemplatedContext(S, ClassTemplate->getTemplatedDecl());
+
   DeclContext *DC = ClassTemplate->getDeclContext();
 
   bool isMemberSpecialization = false;
