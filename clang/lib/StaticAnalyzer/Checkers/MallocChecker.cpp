@@ -3551,12 +3551,13 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
 
   const LocationContext *CurrentLC = N->getLocationContext();
 
-  // If we find an atomic fetch_add or fetch_sub within the destructor in which
-  // the pointer was released (before the release), this is likely a destructor
-  // of a shared pointer.
+  // If we find an atomic fetch_add or fetch_sub within the function in which
+  // the pointer was released (before the release), this is likely a release point
+  // of reference-counted object (like shared pointer).
+  //
   // Because we don't model atomics, and also because we don't know that the
   // original reference count is positive, we should not report use-after-frees
-  // on objects deleted in such destructors. This can probably be improved
+  // on objects deleted in such functions. This can probably be improved
   // through better shared pointer modeling.
   if (ReleaseFunctionLC && (ReleaseFunctionLC == CurrentLC ||
                             ReleaseFunctionLC->isParentOf(CurrentLC))) {
@@ -3566,6 +3567,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
       if (Op == AtomicExpr::AO__c11_atomic_fetch_add ||
           Op == AtomicExpr::AO__c11_atomic_fetch_sub) {
         BR.markInvalid(getTag(), S);
+        // After report is considered invalid there is no need to proceed futher.
+        return nullptr;
       }
     } else if (const auto *CE = dyn_cast<CallExpr>(S)) {
       // Check for `std::atomic` and such. This covers both regular method calls
@@ -3648,10 +3651,13 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
           return nullptr;
         }
 
-        // See if we're releasing memory while inlining a destructor or
-        // functions that decrement reference counters (or one of its callees).
+        // Save the first destructor/function as release point.
+        assert(!ReleaseFunctionLC && "There should be only one release point");
+        ReleaseFunctionLC = CurrentLC->getStackFrame();
+
+        // See if we're releasing memory while inlining a destructor that
+        // decrement reference counters (or one of its callees).
         // This turns on various common false positive suppressions.
-        bool FoundAnyReleaseFunction = false;
         for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
           if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
@@ -3659,27 +3665,37 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
               // We're bad at guessing the original reference count of the
               // object, so suppress the report for now.
               BR.markInvalid(getTag(), DD);
-              continue;
-            }
-          }
 
-          if (!FoundAnyReleaseFunction) {
-            assert(!ReleaseFunctionLC &&
-                   "There can be only one release point!");
-            // Suspect that it's a reference counting pointer
-            // destructor/function. On one of the next nodes might find out that
-            // it has atomic reference counting operations within it (see the
-            // code above), and if so, we'd conclude that it likely is a
-            // reference counting pointer destructor.
+              // After report is considered invalid there is no need to proceed futher.
+              return nullptr;
+            }
+
+            // Switch suspection to outer destructor to catch patterns like:
+            //
+            // SmartPointr::~SmartPointr() {
+            //  if (__c11_atomic_fetch_sub(refcount, 1, memory_order_relaxed) == 1)
+            //    release_resources();
+            // }
+            // void SmartPointr::release_resources() {
+            //   free(buffer);
+            // }
+            //
+            // This way ReleaseFunctionLC will point to outermost destructor and
+            // it would be possible to catch wider range of FP.
+            //
+            // NOTE: it would be great to support smth like that in C, since currently
+            // patterns like following won't be supressed:
+	    //
+	    // void doFree(struct Data *data) { free(data); }
+	    // void putData(struct Data *data)
+	    // {
+	    //   if (refPut(data))
+	    //     doFree(data);
+	    // }
             ReleaseFunctionLC = LC->getStackFrame();
-            // It is unlikely that releasing memory is delegated to a destructor
-            // inside a destructor of a shared pointer, because it's fairly hard
-            // to pass the information that the pointer indeed needs to be
-            // released into it. So we're only interested in the innermost
-            // destructor or function.
-            FoundAnyReleaseFunction = true;
           }
         }
+
     } else if (isRelinquished(RSCurr, RSPrev, S)) {
       Msg = "Memory ownership is transferred";
       StackHint = std::make_unique<StackHintGeneratorForSymbol>(Sym, "");
