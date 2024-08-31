@@ -2828,7 +2828,7 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   return true;
 }
 
-inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const Decl *D) {
+inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
   S.Stk.push<MemberPointer>(D);
   return true;
 }
