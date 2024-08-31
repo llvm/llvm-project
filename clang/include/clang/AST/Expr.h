@@ -7087,9 +7087,8 @@ private:
 ///  - An OpaqueValueExpr with a source that is the argument lvalue expression.
 ///  - An OpaqueValueExpr with a source that is an implicit conversion
 ///    sequence from the source lvalue to the argument type.
-///  - A BinaryOperatorExpr that assigns the first sub-expression with the
-///    value from an implict conversion sequence from the second expression to
-///    the argument expression's type.
+///  - An expression that assigns the second expression into the first,
+///    performing any necessary conversions.
 class HLSLOutArgExpr : public Expr {
   friend class ASTStmtReader;
 
