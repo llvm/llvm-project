@@ -3552,8 +3552,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   const LocationContext *CurrentLC = N->getLocationContext();
 
   // If we find an atomic fetch_add or fetch_sub within the function in which
-  // the pointer was released (before the release), this is likely a release point
-  // of reference-counted object (like shared pointer).
+  // the pointer was released (before the release), this is likely a release
+  // point of reference-counted object (like shared pointer).
   //
   // Because we don't model atomics, and also because we don't know that the
   // original reference count is positive, we should not report use-after-frees
@@ -3567,7 +3567,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
       if (Op == AtomicExpr::AO__c11_atomic_fetch_add ||
           Op == AtomicExpr::AO__c11_atomic_fetch_sub) {
         BR.markInvalid(getTag(), S);
-        // After report is considered invalid there is no need to proceed futher.
+        // After report is considered invalid there is no need to proceed
+        // futher.
         return nullptr;
       }
     } else if (const auto *CE = dyn_cast<CallExpr>(S)) {
@@ -3666,14 +3667,16 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
               // object, so suppress the report for now.
               BR.markInvalid(getTag(), DD);
 
-              // After report is considered invalid there is no need to proceed futher.
+              // After report is considered invalid there is no need to proceed
+              // futher.
               return nullptr;
             }
 
             // Switch suspection to outer destructor to catch patterns like:
             //
             // SmartPointr::~SmartPointr() {
-            //  if (__c11_atomic_fetch_sub(refcount, 1, memory_order_relaxed) == 1)
+            //  if (__c11_atomic_fetch_sub(refcount, 1, memory_order_relaxed) ==
+            //  1)
             //    release_resources();
             // }
             // void SmartPointr::release_resources() {
@@ -3683,15 +3686,15 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             // This way ReleaseFunctionLC will point to outermost destructor and
             // it would be possible to catch wider range of FP.
             //
-            // NOTE: it would be great to support smth like that in C, since currently
-            // patterns like following won't be supressed:
-	    //
-	    // void doFree(struct Data *data) { free(data); }
-	    // void putData(struct Data *data)
-	    // {
-	    //   if (refPut(data))
-	    //     doFree(data);
-	    // }
+            // NOTE: it would be great to support smth like that in C, since
+            // currently patterns like following won't be supressed:
+            //
+            // void doFree(struct Data *data) { free(data); }
+            // void putData(struct Data *data)
+            // {
+            //   if (refPut(data))
+            //     doFree(data);
+            // }
             ReleaseFunctionLC = LC->getStackFrame();
           }
         }
