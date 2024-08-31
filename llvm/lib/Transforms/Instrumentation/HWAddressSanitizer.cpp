@@ -591,12 +591,40 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
+static bool onlyReadsArgMemory(const Function &F) {
+  return F.onlyAccessesArgMemory() && llvm::all_of(F.args(), [](const auto &A) {
+           return A.onlyReadsMemory();
+  });
+}
+
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
+
+  for (auto &F : M.functions()) {
+    // Remove memory attributes that are invalid with HWASan.
+    // HWASan checks read from shadow, which invalidates memory(argmem: *)
+    // Short granule checks on function arguments read from the argument memory
+    // (last byte of the granule), which invalidates writeonly.
+    //
+    // This is not only true for sanitized functions, because AttrInfer can
+    // infer those attributes on libc functions, which is not true if those
+    // are instrumented (Android) or intercepted.
+
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    if (F.doesNotAccessMemory() || F.onlyReadsMemory() || onlyReadsArgMemory(F))
+      continue;
+    F.addFnAttr(llvm::Attribute::NoBuiltin);
+    F.removeFnAttr(llvm::Attribute::Memory);
+    // F.setMemoryEffects(F.getMemoryEffects() | MemoryEffects::writeOnly() |
+    // MemoryEffects::readOnly());
+    for (auto &A : F.args())
+      A.removeAttr(llvm::Attribute::WriteOnly);
+  }
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
