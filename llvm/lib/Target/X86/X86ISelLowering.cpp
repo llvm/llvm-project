@@ -17809,26 +17809,23 @@ static SDValue lowerVECTOR_COMPRESS(SDValue Op, const X86Subtarget &Subtarget,
 
   if (NumElementBits == 32 || NumElementBits == 64) {
     unsigned NumLargeElements = 512 / NumElementBits;
-    EVT LargeVecVT =
+    MVT LargeVecVT =
         MVT::getVectorVT(ElementVT.getSimpleVT(), NumLargeElements);
-    EVT LargeMaskVT = MVT::getVectorVT(MVT::i1, NumLargeElements);
+    MVT LargeMaskVT = MVT::getVectorVT(MVT::i1, NumLargeElements);
 
-    SDValue InsertPos = DAG.getConstant(0, DL, MVT::i64);
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, LargeVecVT,
-                      DAG.getUNDEF(LargeVecVT), Vec, InsertPos);
-    Mask = DAG.getNode(
-        ISD::INSERT_SUBVECTOR, DL, LargeMaskVT,
-        DAG.getSplatVector(LargeMaskVT, DL, DAG.getConstant(0, DL, MVT::i1)),
-        Mask, InsertPos);
-    Passthru = Passthru.isUndef()
-                   ? DAG.getUNDEF(LargeVecVT)
-                   : DAG.getNode(ISD::INSERT_SUBVECTOR, DL, LargeVecVT,
-                                 DAG.getUNDEF(LargeVecVT), Passthru, InsertPos);
+    Vec = widenSubVector(LargeVecVT, Vec, /*ZeroNewElements=*/false, Subtarget,
+                         DAG, DL);
+    Mask = widenSubVector(LargeMaskVT, Mask, /*ZeroNewElements=*/true,
+                          Subtarget, DAG, DL);
+    Passthru = Passthru.isUndef() ? DAG.getUNDEF(LargeVecVT)
+                                  : widenSubVector(LargeVecVT, Passthru,
+                                                   /*ZeroNewElements=*/false,
+                                                   Subtarget, DAG, DL);
 
     SDValue Compressed =
         DAG.getNode(ISD::VECTOR_COMPRESS, DL, LargeVecVT, Vec, Mask, Passthru);
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, Compressed,
-                       InsertPos);
+                       DAG.getConstant(0, DL, MVT::i64));
   }
 
   if (VecVT == MVT::v8i16 || VecVT == MVT::v8i8 || VecVT == MVT::v16i8 ||
