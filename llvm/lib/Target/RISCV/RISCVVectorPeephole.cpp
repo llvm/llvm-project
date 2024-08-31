@@ -66,6 +66,7 @@ private:
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
+  bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
 
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
@@ -472,6 +473,20 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
   return true;
 }
 
+/// If a PseudoVMV_V_V's passthru is undef then we can replace it with its input
+bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
+    return false;
+
+  if (MI.getOperand(1).getReg() != RISCV::NoRegister)
+    return false;
+
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
+  MI.eraseFromParent();
+  V0Defs.erase(&MI);
+  return true;
+}
+
 /// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
 /// into it.
 ///
@@ -581,6 +596,7 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
       Changed |= convertVMergeToVMv(MI);
+      Changed |= foldUndefPassthruVMV_V_V(MI);
       Changed |= foldVMV_V_V(MI);
     }
   }

@@ -198,8 +198,6 @@ define <vscale x 2 x i32> @unfoldable_mismatched_sew(<vscale x 2 x i32> %passthr
 define <vscale x 1 x i64> @undef_passthru(<vscale x 1 x i64> %v, iXLen %avl) {
 ; CHECK-LABEL: undef_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.v v8, v8
 ; CHECK-NEXT:    ret
   %x = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.vnxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %v, iXLen %avl)
   ret <vscale x 1 x i64> %x
