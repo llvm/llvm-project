@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <iterator>
@@ -153,6 +154,25 @@ HLSLNumThreadsAttr *SemaHLSL::mergeNumThreadsAttr(Decl *D,
       HLSLNumThreadsAttr(getASTContext(), AL, X, Y, Z);
 }
 
+HLSLWaveSizeAttr *SemaHLSL::mergeWaveSizeAttr(Decl *D,
+                                              const AttributeCommonInfo &AL,
+                                              int Min, int Max, int Preferred,
+                                              int SpelledArgsCount) {
+  if (HLSLWaveSizeAttr *WS = D->getAttr<HLSLWaveSizeAttr>()) {
+    if (WS->getMin() != Min || WS->getMax() != Max ||
+        WS->getPreferred() != Preferred ||
+        WS->getSpelledArgsCount() != SpelledArgsCount) {
+      Diag(WS->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
+      Diag(AL.getLoc(), diag::note_conflicting_attribute);
+    }
+    return nullptr;
+  }
+  HLSLWaveSizeAttr *Result = ::new (getASTContext())
+      HLSLWaveSizeAttr(getASTContext(), AL, Min, Max, Preferred);
+  Result->setSpelledArgsCount(SpelledArgsCount);
+  return Result;
+}
+
 HLSLShaderAttr *
 SemaHLSL::mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                           llvm::Triple::EnvironmentType ShaderType) {
@@ -224,7 +244,8 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
-
+  auto &TargetInfo = getASTContext().getTargetInfo();
+  VersionTuple Ver = TargetInfo.getTriple().getOSVersion();
   switch (ST) {
   case llvm::Triple::Pixel:
   case llvm::Triple::Vertex:
@@ -244,6 +265,13 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
                                  llvm::Triple::Mesh});
       FD->setInvalidDecl();
     }
+    if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
+      DiagnoseAttrStageMismatch(WS, ST,
+                                {llvm::Triple::Compute,
+                                 llvm::Triple::Amplification,
+                                 llvm::Triple::Mesh});
+      FD->setInvalidDecl();
+    }
     break;
 
   case llvm::Triple::Compute:
@@ -253,6 +281,19 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       Diag(FD->getLocation(), diag::err_hlsl_missing_numthreads)
           << llvm::Triple::getEnvironmentTypeName(ST);
       FD->setInvalidDecl();
+    }
+    if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
+      if (Ver < VersionTuple(6, 6)) {
+        Diag(WS->getLocation(), diag::err_hlsl_attribute_in_wrong_shader_model)
+            << WS << "6.6";
+        FD->setInvalidDecl();
+      } else if (WS->getSpelledArgsCount() > 1 && Ver < VersionTuple(6, 8)) {
+        Diag(
+            WS->getLocation(),
+            diag::err_hlsl_attribute_number_arguments_insufficient_shader_model)
+            << WS << WS->getSpelledArgsCount() << "6.8";
+        FD->setInvalidDecl();
+      }
     }
     break;
   default:
@@ -353,6 +394,74 @@ void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   HLSLNumThreadsAttr *NewAttr = mergeNumThreadsAttr(D, AL, X, Y, Z);
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
+static bool isValidWaveSizeValue(unsigned Value) {
+  return llvm::isPowerOf2_32(Value) && Value >= 4 && Value <= 128;
+}
+
+void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
+  // validate that the wavesize argument is a power of 2 between 4 and 128
+  // inclusive
+  unsigned SpelledArgsCount = AL.getNumArgs();
+  if (SpelledArgsCount == 0 || SpelledArgsCount > 3)
+    return;
+
+  uint32_t Min;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Min))
+    return;
+
+  uint32_t Max = 0;
+  if (SpelledArgsCount > 1 &&
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), Max))
+    return;
+
+  uint32_t Preferred = 0;
+  if (SpelledArgsCount > 2 &&
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(2), Preferred))
+    return;
+
+  if (SpelledArgsCount > 2) {
+    if (!isValidWaveSizeValue(Preferred)) {
+      Diag(AL.getArgAsExpr(2)->getExprLoc(),
+           diag::err_attribute_power_of_two_in_range)
+          << AL << llvm::dxil::MinWaveSize << llvm::dxil::MaxWaveSize
+          << Preferred;
+      return;
+    }
+    // Preferred not in range.
+    if (Preferred < Min || Preferred > Max) {
+      Diag(AL.getArgAsExpr(2)->getExprLoc(),
+           diag::err_attribute_power_of_two_in_range)
+          << AL << Min << Max << Preferred;
+      return;
+    }
+  } else if (SpelledArgsCount > 1) {
+    if (!isValidWaveSizeValue(Max)) {
+      Diag(AL.getArgAsExpr(1)->getExprLoc(),
+           diag::err_attribute_power_of_two_in_range)
+          << AL << llvm::dxil::MinWaveSize << llvm::dxil::MaxWaveSize << Max;
+      return;
+    }
+    if (Max < Min) {
+      Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 1;
+      return;
+    } else if (Max == Min) {
+      Diag(AL.getLoc(), diag::warn_attr_min_eq_max) << AL;
+    }
+  } else {
+    if (!isValidWaveSizeValue(Min)) {
+      Diag(AL.getArgAsExpr(0)->getExprLoc(),
+           diag::err_attribute_power_of_two_in_range)
+          << AL << llvm::dxil::MinWaveSize << llvm::dxil::MaxWaveSize << Min;
+      return;
+    }
+  }
+
+  HLSLWaveSizeAttr *NewAttr =
+      mergeWaveSizeAttr(D, AL, Min, Max, Preferred, SpelledArgsCount);
   if (NewAttr)
     D->addAttr(NewAttr);
 }
