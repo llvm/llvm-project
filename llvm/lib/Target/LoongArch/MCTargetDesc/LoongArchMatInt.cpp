@@ -82,9 +82,9 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
       TmpVal1 = Insts[1].Imm;
       if (N == 3)
         break;
-      TmpVal2 = Insts[3].Imm << 52 | TmpVal1;
+      TmpVal2 = static_cast<uint64_t>(Insts[3].Imm) << 52 | TmpVal1;
     }
-    TmpVal1 |= Insts[0].Imm << 12;
+    TmpVal1 |= static_cast<uint64_t>(Insts[0].Imm) << 12;
     break;
   case LoongArch::ORI:
   case LoongArch::ADDI_W:
