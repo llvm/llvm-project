@@ -12721,7 +12721,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__noop:
     // __noop always evaluates successfully
-    return false;
+    return ZeroInitialization(E);
 
   case Builtin::BI__builtin_is_constant_evaluated: {
     const auto *Callee = Info.CurrentCall->getCallee();
