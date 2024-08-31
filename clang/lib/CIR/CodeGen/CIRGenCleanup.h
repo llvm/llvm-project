@@ -621,12 +621,12 @@ EHScopeStack::stabilize(iterator ir) const {
 
 /// The exceptions personality for a function.
 struct EHPersonality {
-  const char *PersonalityFn;
+  const char *PersonalityFn = nullptr;
 
   // If this is non-null, this personality requires a non-standard
   // function for rethrowing an exception after a catchall cleanup.
   // This function must have prototype void(void*).
-  const char *CatchallRethrowFn;
+  const char *CatchallRethrowFn = nullptr;
 
   static const EHPersonality &get(CIRGenModule &CGM,
                                   const clang::FunctionDecl *FD);
