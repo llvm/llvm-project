@@ -4136,8 +4136,8 @@ static void emitWriteback(CodeGenFunction &CGF,
   assert(!isProvablyNull(srcAddr.getBasePointer()) &&
          "shouldn't have writeback for provably null argument");
 
-  if (CGF.getLangOpts().HLSL) {
-    CGF.EmitIgnoredExpr(writeback.CastExpr);
+  if (writeback.WritebackExpr) {
+    CGF.EmitIgnoredExpr(writeback.WritebackExpr);
 
     if (writeback.LifetimeSz)
       CGF.EmitLifetimeEnd(writeback.LifetimeSz,

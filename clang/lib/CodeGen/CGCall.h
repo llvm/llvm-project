@@ -286,9 +286,9 @@ public:
     /// A value to "use" after the writeback, or null.
     llvm::Value *ToUse;
 
-    /// An Expression representing a cast from the temporary's type to the
-    /// source l-value's type.
-    const Expr *CastExpr;
+    /// An Expression (optional) that performs the writeback with any required
+    /// casting.
+    const Expr *WritebackExpr;
 
     // Size for optional lifetime end on the temporary.
     llvm::Value *LifetimeSz;
@@ -324,9 +324,9 @@ public:
   }
 
   void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse,
-                    const Expr *castExpr = nullptr,
+                    const Expr *writebackExpr = nullptr,
                     llvm::Value *lifetimeSz = nullptr) {
-    Writeback writeback = {srcLV, temporary, toUse, castExpr, lifetimeSz};
+    Writeback writeback = {srcLV, temporary, toUse, writebackExpr, lifetimeSz};
     Writebacks.push_back(writeback);
   }
 
