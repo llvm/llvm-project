@@ -178,4 +178,5 @@ static void __builtin_cpu_init(); // expected-error {{static declaration of '__b
 
 #ifdef _MSC_VER
 constexpr int x = []{ __noop; return 0; }(); // expected-no-diagnostics
+static_assert([] { return __noop; }() == 0);
 #endif
