@@ -480,8 +480,5 @@ bool RISCVTargetInfo::validateCpuSupports(StringRef Feature) const {
 }
 
 bool RISCVTargetInfo::isValidFeatureName(StringRef Name) const {
-  if (Name == "__RISCV_TargetAttrNeedOverride")
-    return true;
-
   return llvm::RISCVISAInfo::isSupportedExtensionFeature(Name);
 }
