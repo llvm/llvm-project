@@ -268,7 +268,8 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
   // The standard ICF algorithm will merge all functions in the [begin + 1, end)
   // range into icfInputs[begin].So, the body of the first function is always
   // kept, even if it is not keepUnique. To make safe_thunks nicely play with
-  // this behavior, we ensure that the first function in the range is keepUnique.
+  // this behavior, we ensure that the first function in the range is
+  // keepUnique.
   if (!icfInputs[begin]->keepUnique) {
     bool haveKeepUnique = false;
     for (size_t i = begin + 1; i < end; ++i) {
