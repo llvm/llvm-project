@@ -200,6 +200,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__config>
+#include <__flat_map/container_traits.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>

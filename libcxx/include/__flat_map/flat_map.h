@@ -20,6 +20,7 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__flat_map/container_traits.h>
 #include <__flat_map/sorted_unique.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
@@ -604,30 +605,17 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI containers extract() && {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      return std::move(__containers_);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (...) {
-      clear();
-      throw;
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+    auto __guard = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    auto __ret   = std::move(__containers_);
+    __guard.__complete();
+    return __ret;
   }
 
   _LIBCPP_HIDE_FROM_ABI void replace(key_container_type&& __key_cont, mapped_container_type&& __mapped_cont) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      __containers_.keys   = std::move(__key_cont);
-      __containers_.values = std::move(__mapped_cont);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (...) {
-      clear();
-      throw;
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+    auto __guard         = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    __containers_.keys   = std::move(__key_cont);
+    __containers_.values = std::move(__mapped_cont);
+    __guard.__complete();
   }
 
   template <class... _Args>
@@ -734,44 +722,23 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      auto __key_it    = __containers_.keys.erase(__first.__key_iter_, __last.__key_iter_);
-      auto __mapped_it = __containers_.values.erase(__first.__mapped_iter_, __last.__mapped_iter_);
-      return iterator(std::move(__key_it), std::move(__mapped_it));
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (const exception& __ex) {
-      clear();
-      throw __flat_map_restore_error(
-          std::string("flat_map::erase: "
-                      "Unable to restore flat_map to previous state. Clear out the containers to make the two "
-                      "containers consistent. Reason: ") +
-          __ex.what());
-    } catch (...) {
-      clear();
-      throw __flat_map_restore_error(
-          "flat_map::erase: "
-          "Unable to restore flat_map to previous state. Clear out the containers to make the two "
-          "containers consistent.");
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+    auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    auto __key_it     = __containers_.keys.erase(__first.__key_iter_, __last.__key_iter_);
+    auto __mapped_it  = __containers_.values.erase(__first.__mapped_iter_, __last.__mapped_iter_);
+    __on_failure.__complete();
+    return iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __y) noexcept {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      using std::swap;
-      swap(__compare_, __y.__compare_);
-      swap(__containers_.keys, __y.__containers_.keys);
-      swap(__containers_.values, __y.__containers_.values);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (...) {
-      clear();
-      __y.clear();
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+    auto __guard = std::__make_exception_guard([&]() noexcept {
+      clear() /* noexcept */;
+      __y.clear(); /*noexcept*/
+    });
+    using std::swap;
+    swap(__compare_, __y.__compare_);
+    swap(__containers_.keys, __y.__containers_.keys);
+    swap(__containers_.values, __y.__containers_.values);
+    __guard.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI void clear() noexcept {
@@ -1050,118 +1017,43 @@ private:
     }
   }
 
-  template <class _Container>
-  static consteval bool __emplacement_has_strong_exception_safety_guarantee() {
-    // [container.reqmts] If an exception is thrown by an insert() or emplace() function while inserting a single
-    // element, that function has no effects. Except it is specified otherwise in the container...
-
-    // according to http://eel.is/c++draft/deque.modifiers#3 and http://eel.is/c++draft/vector.modifiers#2,
-    // the only exceptions that can cause side effects on single emplacement are by move constructors of
-    // non-Cpp17CopyInsertable T
-
-    using _Element = typename _Container::value_type;
-    if constexpr (is_nothrow_move_constructible_v<_Element>) {
-      return false;
-    } else {
-      if constexpr (requires { typename _Container::allocator_type; }) {
-        return !__is_cpp17_copy_insertable<typename _Container::allocator_type>::value;
-      } else {
-        return !__is_cpp17_copy_insertable<std::allocator<_Element>>::value;
-      }
-    }
-  }
-
-  struct __flat_map_restore_error : runtime_error {
-    using runtime_error::runtime_error;
-  };
-
-  template <class _Container, class _Iter, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI ranges::iterator_t<_Container>
-  __safe_emplace(_Container& __container, _Iter&& __iter, _Args&&... __args) {
-    if constexpr (__emplacement_has_strong_exception_safety_guarantee<_Container>()) {
-      // just let the exception be thrown as the container is still in its original state on exception
-      return __container.emplace(__iter, std::forward<_Args>(__args)...);
-    } else {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-      try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-        return __container.emplace(__iter, std::forward<_Args>(__args)...);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-      } catch (const exception& __ex) {
-        // The container might be in some unknown state and we can't get flat_map into consistent state
-        // because we have two containers. The only possible solution is to clear them out
-        clear();
-        throw __flat_map_restore_error(
-            std::string("flat_map::emplace: Emplacement on the underlying container has failed and has side effect. "
-                        "Unable to restore flat_map to previous state. Clear out the containers to make the two "
-                        "containers consistent. Reason: ") +
-            __ex.what());
-      } catch (...) {
-        // The container might be in some unknown state and we can't get flat_map into consistent state
-        // because we have two containers. The only possible solution is to clear them out
-        clear();
-        throw __flat_map_restore_error(
-            "flat_map::emplace: Emplacement on the underlying container has failed and has side effect. "
-            "Unable to restore flat_map to previous state. Clear out the containers to make the two "
-            "containers consistent.");
-      }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-    }
-  }
-
-  template <class _Container, class _Iter>
-  _LIBCPP_HIDE_FROM_ABI auto __safe_erase(_Container& __container, _Iter&& __iter) {
-    // [container.reqmts] No erase(), clear(), pop_back() or pop_front() function throws an exception,
-    // except that there are exceptional cases
-
-    // http://eel.is/c++draft/deque.modifiers#5
-    // http://eel.is/c++draft/vector.modifiers#4
-
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      return __container.erase(__iter);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (const exception& __ex) {
-      // The container might be in some unknown state and we can't get flat_map into consistent state
-      // because we have two containers. The only possible solution is to clear them out
-      clear();
-      throw __flat_map_restore_error(
-          std::string("flat_map: Erasing on the underlying container has failed. "
-                      "Unable to restore flat_map to previous state. Clear out the containers to make the two "
-                      "containers consistent. Reason: ") +
-          __ex.what());
-    } catch (...) {
-      // The container might be in some unknown state and we can't get flat_map into consistent state
-      // because we have two containers. The only possible solution is to clear them out
-      clear();
-      throw __flat_map_restore_error(
-          "flat_map: Erasing on the underlying container has failed. "
-          "Unable to restore flat_map to previous state. Clear out the containers to make the two "
-          "containers consistent.");
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-  }
-
   template <class _IterK, class _IterM, class _KeyArg, class... _MArgs>
   _LIBCPP_HIDE_FROM_ABI iterator
   __try_emplace_impl(_IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
-    auto __key_it = __safe_emplace(__containers_.keys, __it_key, std::forward<_KeyArg>(__key));
+    auto __on_key_failed = std::__make_exception_guard([&]() noexcept {
+      if constexpr (__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
+        // Nothing to roll back!
+      } else {
+        // we need to clear both because we don't know the state of our keys anymore
+        clear() /* noexcept */;
+      }
+    });
+    auto __key_it        = __containers_.keys.emplace(__it_key, std::forward<_KeyArg>(__key));
+    __on_key_failed.__complete();
 
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      auto __mapped_it = __safe_emplace(__containers_.values, __it_mapped, std::forward<_MArgs>(__mapped_args)...);
-      return iterator(std::move(__key_it), std::move(__mapped_it));
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (const __flat_map_restore_error&) {
-      // both containers already cleared out
-      throw;
-    } catch (...) {
-      // If the second emplace throws and it has no effects on `values`, we need to erase the emplaced key.
-      __safe_erase(__containers_.keys, __key_it);
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+    auto __on_value_failed = std::__make_exception_guard([&]() noexcept {
+      if constexpr (!__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
+        // we need to clear both because we don't know the state of our values anymore
+        clear() /* noexcept */;
+      } else {
+        // In this case, we know the values are just like before we attempted emplacement,
+        // and we also know that the keys have been emplaced successfully. Just roll back the keys.
+        try {
+          __containers_.keys.erase(__key_it);
+        } catch (...) {
+          // Now things are funky for real. We're failing to rollback the keys.
+          // Just give up and clear the whole thing.
+          //
+          // Also, swallow the exception that happened during the rollback and let the
+          // original value-emplacement exception propagate normally.
+          clear() /* noexcept */;
+        }
+      }
+    });
+    auto __mapped_it = __containers_.values.emplace(__it_mapped, std::forward<_MArgs>(__mapped_args)...);
+    __on_value_failed.__complete();
+
+    return iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
   template <class _Kp, class _Mapped, class... _Hint>
@@ -1184,25 +1076,12 @@ private:
   }
 
   template <class _KIter, class _MIter>
-  _LIBCPP_HIDE_FROM_ABI iterator __erase_impl(_KIter __k_iter, _MIter __m_iter) {
-    auto __key_iter = __safe_erase(__containers_.keys, __k_iter);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      auto __mapped_iter = __safe_erase(__containers_.values, __m_iter);
-      return iterator(std::move(__key_iter), std::move(__mapped_iter));
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (const __flat_map_restore_error&) {
-      // both containers already cleared out
-      throw;
-    } catch (...) {
-      // If the second erase throws, the first erase already happened. The flat_map is inconsistent.
-      clear();
-      throw __flat_map_restore_error(
-          "flat_map::erase: Key has been erased but exception thrown on erasing mapped value. To make flat_map in "
-          "consistent state, clear out the flat_map");
-    }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+  _LIBCPP_HIDE_FROM_ABI iterator __erase_impl(_KIter __key_iter_to_remove, _MIter __mapped_iter_to_remove) {
+    auto __on_failure  = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    auto __key_iter    = __containers_.keys.erase(__key_iter_to_remove);
+    auto __mapped_iter = __containers_.values.erase(__mapped_iter_to_remove);
+    __on_failure.__complete();
+    return iterator(std::move(__key_iter), std::move(__mapped_iter));
   }
 
   template <class _Key2, class _Tp2, class _Compare2, class _KeyContainer2, class _MappedContainer2, class _Predicate>

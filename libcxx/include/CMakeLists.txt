@@ -358,6 +358,7 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __flat_map/container_traits.h
   __flat_map/flat_map.h
   __flat_map/sorted_unique.h
   __format/buffer.h
