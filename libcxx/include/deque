@@ -191,6 +191,7 @@ template <class T, class Allocator, class Predicate>
 #include <__assert>
 #include <__config>
 #include <__debug_utils/sanitizers.h>
+#include <__flat_map/container_traits.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/deque.h>
 #include <__iterator/distance.h>
@@ -2567,6 +2568,25 @@ inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
 #  endif
 
 #endif // _LIBCPP_STD_VER >= 20
+
+#if _LIBCPP_STD_VER >= 23
+
+template <class _Tp, class _Allocator>
+inline constexpr bool __is_stl_container<deque<_Tp, _Allocator>> = true;
+
+template <class _Tp, class _Allocator>
+struct __container_traits<deque<_Tp, _Allocator>> {
+  // http://eel.is/c++draft/deque.modifiers#3
+  //  If an exception is thrown other than by the copy constructor, move constructor, assignment operator, or move
+  //  assignment operator of T, there are no effects. If an exception is thrown while inserting a single element at
+  //  either end, there are no effects. Otherwise, if an exception is thrown by the move constructor of a
+  //  non-Cpp17CopyInsertable T, the effects are unspecified.
+  static constexpr bool __emplacement_has_strong_exception_safety_guarantee =
+      is_nothrow_move_constructible_v<_Tp> ||
+      __is_cpp17_copy_insertable<typename deque<_Tp, _Allocator>::allocator_type>::value;
+};
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -80,7 +80,7 @@ module std_filesystem [system] {
   export *
 }
 module std_flat_map [system] {
-  head "flat_map"
+  header "flat_map"
   export *
 }
 module std_format [system] {
@@ -1280,6 +1280,7 @@ module std_private_filesystem_recursive_directory_iterator [system] {
 module std_private_filesystem_space_info                   [system] { header "__filesystem/space_info.h" }
 module std_private_filesystem_u8path                       [system] { header "__filesystem/u8path.h" }
 
+module std_private_flat_map_container_traits              [system] { header "__flat_map/container_traits.h" }
 module std_private_flat_map_flat_map                      [system] { header "__flat_map/flat_map.h" }
 module std_private_flat_map_sorted_unique                 [system] { header "__flat_map/sorted_unique.h" }
 

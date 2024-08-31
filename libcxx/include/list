@@ -204,6 +204,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
+#include <__flat_map/container_traits.h>
 #include <__format/enable_insertable.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -1712,6 +1713,13 @@ inline constexpr bool __format::__enable_insertable<std::list<wchar_t>> = true;
 #  endif
 
 #endif // _LIBCPP_STD_VER >= 20
+
+#if _LIBCPP_STD_VER >= 23
+
+template <class _Tp, class _Allocator>
+inline constexpr bool __is_stl_container<list<_Tp, _Allocator>> = true;
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -200,6 +200,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__config>
+#include <__flat_map/container_traits.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -1542,6 +1543,13 @@ erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
   return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
 }
 #endif
+
+#if _LIBCPP_STD_VER >= 23
+
+template <class _Tp, class _Allocator>
+inline constexpr bool __is_stl_container<forward_list<_Tp, _Allocator>> = true;
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 
