@@ -226,7 +226,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
 
   // Some builtin functions require us to only look at the call site, since
   // the classified parameter types do not match.
-  if (CurFunc->isBuiltin()) {
+  if (unsigned BID = CurFunc->getBuiltinID();
+      BID && S.getASTContext().BuiltinInfo.hasCustomTypechecking(BID)) {
     const auto *CE =
         cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
     for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
