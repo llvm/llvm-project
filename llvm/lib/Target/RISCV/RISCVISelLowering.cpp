@@ -21555,10 +21555,10 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
 
   if (ValueVT.isRISCVVectorTuple() && PartVT.isRISCVVectorTuple()) {
     unsigned ValNF = ValueVT.getRISCVVectorTupleNumFields();
-    unsigned ValLMUL =
+    [[maybe_unused]] unsigned ValLMUL =
         divideCeil(ValueVT.getSizeInBits(), ValNF * RISCV::RVVBitsPerBlock);
     unsigned PartNF = PartVT.getRISCVVectorTupleNumFields();
-    unsigned PartLMUL =
+    [[maybe_unused]] unsigned PartLMUL =
         divideCeil(PartVT.getSizeInBits(), PartNF * RISCV::RVVBitsPerBlock);
     assert(ValNF == PartNF && ValLMUL == PartLMUL &&
            "RISC-V vector tuple type only accepts same register class type "
