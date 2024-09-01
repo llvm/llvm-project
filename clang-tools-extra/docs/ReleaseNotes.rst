@@ -104,6 +104,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Add option to :doc:`cppcoreguidelines-pro-type-reinterpret-cast
+  <clang-tidy/checks/cppcoreguidelines/pro-type-reinterpret-cast>` to allow
+  casting an object to its byte representation.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
