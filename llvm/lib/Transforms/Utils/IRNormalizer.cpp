@@ -539,8 +539,7 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) const {
     if (auto *V = dyn_cast<Value>(Op)) {
       if (isa<Instruction>(V)) {
         // This is an an instruction.
-        Operands.push_back(
-            std::pair<std::string, Value *>(V->getName(), V));
+        Operands.push_back(std::pair<std::string, Value *>(V->getName(), V));
       } else {
         std::string TextRepresentation;
         raw_string_ostream Stream(TextRepresentation);
