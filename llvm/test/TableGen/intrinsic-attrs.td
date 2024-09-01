@@ -1,6 +1,6 @@
 // RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s | FileCheck %s
 
-// Get the minimum blurb necessary to process ...
+// Get the minimum blurb necessary to process.
 include "llvm/CodeGen/ValueTypes.td"
 include "llvm/CodeGen/SDNodeProperties.td"
 
@@ -32,28 +32,23 @@ class Dereferenceable<AttrIndex idx, int bytes> : IntrinsicProperty {
 }
 
 class Intrinsic<list<LLVMType> ret_types,
-                list<LLVMType> param_types = [],
-                list<IntrinsicProperty> intr_properties = [],
-                string name = "",
-                list<SDNodeProperty> sd_properties = [],
-                bit disable_default_attributes = 0> : SDPatternOperator {
-  string LLVMName = name;
+                list<IntrinsicProperty> intr_properties = []>
+               : SDPatternOperator {
+  string LLVMName = "";
   string TargetPrefix = "";
   list<LLVMType> RetTypes = ret_types;
-  list<LLVMType> ParamTypes = param_types;
+  list<LLVMType> ParamTypes = [];
   list<IntrinsicProperty> IntrProperties = intr_properties;
-  let Properties = sd_properties;
-  bit DisableDefaultAttributes = 1;
-
-
+  let Properties = [];
   bit isTarget = 0;
-  bit DisableDefaultAttributes = disable_default_attributes;
+  bit DisableDefaultAttributes = 0;
+  list<list<int>> TypeSig = [[]];
 }
 
 // ... this intrinsic.
-def int_random_gen   : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
+def int_random_gen   : Intrinsic<[llvm_i32_ty], [IntrNoMem, IntrHasSideEffects]>;
 
-def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 16>]>;
+def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [Dereferenceable<RetIndex, 16>]>;
 
 // CHECK: static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
 // CHECK-NEXT:   switch (ID) {
