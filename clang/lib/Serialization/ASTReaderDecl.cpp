@@ -3505,7 +3505,8 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   // same template specialization into the same CXXRecordDecl.
   auto MergedDCIt = Reader.MergedDeclContexts.find(D->getLexicalDeclContext());
   if (MergedDCIt != Reader.MergedDeclContexts.end() &&
-      !shouldSkipCheckingODR(D) && MergedDCIt->second == D->getDeclContext())
+      !shouldSkipCheckingODR(D) && MergedDCIt->second == D->getDeclContext() &&
+      !shouldSkipCheckingODR(cast<Decl>(D->getDeclContext())))
     Reader.PendingOdrMergeChecks.push_back(D);
 
   return FindExistingResult(Reader, D, /*Existing=*/nullptr,

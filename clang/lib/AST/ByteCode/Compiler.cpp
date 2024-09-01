@@ -505,14 +505,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_MemberPointerToBoolean: {
     PrimType PtrT = classifyPrim(SubExpr->getType());
 
-    // Just emit p != nullptr for this.
     if (!this->visit(SubExpr))
       return false;
-
-    if (!this->emitNull(PtrT, nullptr, CE))
-      return false;
-
-    return this->emitNE(PtrT, CE);
+    return this->emitIsNonNull(PtrT, CE);
   }
 
   case CK_IntegralComplexToBoolean:
@@ -2323,8 +2318,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(
-        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+                                                 /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -5324,11 +5319,11 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
 
   auto UnaryOp = E->getOpcode();
   if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
-      UnaryOp != UO_Not)
+      UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
     return this->emitInvalid(E);
 
   // Nothing to do here.
-  if (UnaryOp == UO_Plus)
+  if (UnaryOp == UO_Plus || UnaryOp == UO_AddrOf)
     return this->delegate(SubExpr);
 
   if (!Initializing) {

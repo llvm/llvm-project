@@ -1567,26 +1567,7 @@ AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     return CGF.EmitStoreThroughLValue(RV, LV);
   }
 
-  switch (CGF.getEvaluationKind(type)) {
-  case TEK_Complex:
-    CGF.EmitComplexExprIntoLValue(E, LV, /*isInit*/ true);
-    return;
-  case TEK_Aggregate:
-    CGF.EmitAggExpr(
-        E, AggValueSlot::forLValue(LV, AggValueSlot::IsDestructed,
-                                   AggValueSlot::DoesNotNeedGCBarriers,
-                                   AggValueSlot::IsNotAliased,
-                                   AggValueSlot::MayOverlap, Dest.isZeroed()));
-    return;
-  case TEK_Scalar:
-    if (LV.isSimple()) {
-      CGF.EmitScalarInit(E, /*D=*/nullptr, LV, /*Captured=*/false);
-    } else {
-      CGF.EmitStoreThroughLValue(RValue::get(CGF.EmitScalarExpr(E)), LV);
-    }
-    return;
-  }
-  llvm_unreachable("bad evaluation kind");
+  CGF.EmitInitializationToLValue(E, LV, Dest.isZeroed());
 }
 
 void AggExprEmitter::EmitNullInitializationToLValue(LValue lv) {

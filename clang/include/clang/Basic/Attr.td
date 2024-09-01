@@ -4639,16 +4639,31 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
 }
 
-def HLSLParamModifier : TypeAttr {
+def HLSLParamModifier : ParameterABIAttr {
   let Spellings = [CustomKeyword<"in">, CustomKeyword<"inout">, CustomKeyword<"out">];
   let Accessors = [Accessor<"isIn", [CustomKeyword<"in">]>,
                    Accessor<"isInOut", [CustomKeyword<"inout">]>,
                    Accessor<"isOut", [CustomKeyword<"out">]>,
                    Accessor<"isAnyOut", [CustomKeyword<"out">, CustomKeyword<"inout">]>,
                    Accessor<"isAnyIn", [CustomKeyword<"in">, CustomKeyword<"inout">]>];
-  let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [HLSLParamQualifierDocs];
   let Args = [DefaultBoolArgument<"MergedSpelling", /*default*/0, /*fake*/1>];
+}
+
+def HLSLWaveSize: InheritableAttr {
+  let Spellings = [Microsoft<"WaveSize">];
+  let Args = [IntArgument<"Min">, DefaultIntArgument<"Max", 0>, DefaultIntArgument<"Preferred", 0>];
+  let Subjects = SubjectList<[HLSLEntry]>;
+  let LangOpts = [HLSL];
+  let AdditionalMembers = [{
+    private:
+      int SpelledArgsCount = 0;
+
+    public:
+      void setSpelledArgsCount(int C) { SpelledArgsCount = C; }
+      int getSpelledArgsCount() const { return SpelledArgsCount; }
+  }];
+  let Documentation = [WaveSizeDocs];
 }
 
 def RandomizeLayout : InheritableAttr {
