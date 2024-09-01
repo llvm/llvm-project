@@ -83,7 +83,8 @@ private:
 
   /// \name Utility methods.
   /// @{
-  template <typename T> void sortCommutativeOperands(Instruction *I, T &Operands) const;
+  template <typename T>
+  void sortCommutativeOperands(Instruction *I, T &Operands) const;
   SmallVector<Instruction *, 16> collectOutputInstructions(Function &F) const;
   bool isOutput(const Instruction *I) const;
   bool isInitialInstruction(const Instruction *I) const;
