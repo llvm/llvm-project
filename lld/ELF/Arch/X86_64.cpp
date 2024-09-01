@@ -901,6 +901,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
 static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
                           uint8_t modRm) {
   const uint8_t rex = loc[-3];
+  const bool isRex2 = loc[-4] == 0xd5;
   // Convert "test %reg, foo@GOTPCREL(%rip)" to "test $foo, %reg".
   if (op == 0x85) {
     // See "TEST-Logical Compare" (4-428 Vol. 2B),
@@ -925,7 +926,7 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
     // See "TEST-Logical Compare" (4-428 Vol. 2B).
     loc[-2] = 0xf7;
 
-    // Move R bit to the B bit in REX byte.
+    // Move R bit to the B bit in REX/REX2 byte.
     // REX byte is encoded as 0100WRXB, where
     // 0100 is 4bit fixed pattern.
     // REX.W When 1, a 64-bit operand size is used. Otherwise, when 0, the
@@ -936,7 +937,18 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
     // REX.B This 1-bit value is an extension to the MODRM.rm field or the
     // SIB.base field.
     // See "2.2.1.2 More on REX Prefix Fields " (2-8 Vol. 2A).
-    loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
+    //
+    // REX2 prefix is encoded as 0xd5|M|R2|X2|B2|WRXB, where
+    // 0xd5 is 1byte fixed pattern.
+    // REX2's [W,R,X,B] have the same meanings as REX's.
+    // REX2.M encodes the map id.
+    // R2/X2/B2 provides the fifth and most siginicant bits of the R/X/B
+    // register identifiers, each of which can now address all 32 GPRs.
+    // TODO: Add the section number here after APX SPEC is merged into SDM.
+    if (isRex2)
+      loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
+    else
+      loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
     write32le(loc, val);
     return;
   }
@@ -957,7 +969,10 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
   // "INSTRUCTION SET REFERENCE, N-Z" (Vol. 2B 4-1) for
   // descriptions about each operation.
   loc[-2] = 0x81;
-  loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
+  if (isRex2)
+    loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
+  else
+    loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
   write32le(loc, val);
 }
 
