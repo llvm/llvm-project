@@ -136,6 +136,31 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+std::unordered_map<std::string, std::string>
+GetStringMap(const llvm::json::Object &obj, llvm::StringRef key) {
+  std::unordered_map<std::string, std::string> strs;
+  const auto *const json_object = obj.getObject(key);
+  if (!json_object)
+    return strs;
+
+  for (const auto &[key, value] : *json_object) {
+    switch (value.kind()) {
+    case llvm::json::Value::String:
+      strs.emplace(key.str(), value.getAsString()->str());
+      break;
+    case llvm::json::Value::Number:
+    case llvm::json::Value::Boolean:
+      strs.emplace(key.str(), llvm::to_string(value));
+      break;
+    case llvm::json::Value::Null:
+    case llvm::json::Value::Object:
+    case llvm::json::Value::Array:
+      break;
+    }
+  }
+  return strs;
+}
+
 static bool IsClassStructOrUnionType(lldb::SBType t) {
   return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
                               lldb::eTypeClassArray)) != 0;
@@ -1370,13 +1395,16 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
-  // We need to convert the input list of environments variables into a
-  // dictionary
-  std::vector<std::string> envs = GetStrings(launch_request_arguments, "env");
+  std::unordered_map<std::string, std::string> envMap =
+      GetStringMap(*launch_request_arguments, "env");
   llvm::json::Object environment;
-  for (const std::string &env : envs) {
-    size_t index = env.find('=');
-    environment.try_emplace(env.substr(0, index), env.substr(index + 1));
+  for (const auto &[key, value] : envMap) {
+    if (key.empty())
+      g_dap.SendOutput(OutputType::Stderr,
+                       "empty environment variable for value: \"" + value +
+                           '\"');
+    else
+      environment.try_emplace(key, value);
   }
   run_in_terminal_args.try_emplace("env",
                                    llvm::json::Value(std::move(environment)));

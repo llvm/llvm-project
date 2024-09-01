@@ -1831,7 +1831,13 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
-  auto envs = GetStrings(arguments, "env");
+  auto envMap = GetStringMap(*arguments, "env");
+  std::vector<std::string> envs;
+  envs.reserve(envMap.size());
+  for (const auto &[key, value] : envMap) {
+    envs.emplace_back(key + '=' + value);
+  }
+
   if (!envs.empty())
     launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
 
