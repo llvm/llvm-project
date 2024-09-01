@@ -78,12 +78,12 @@ private:
                          std::stack<Instruction *> &TopologicalSort,
                          SmallPtrSet<const Instruction *, 32> &Visited) const;
   void reorderInstructionOperandsByNames(Instruction *I) const;
-  void reorderPHIIncomingValues(PHINode *PN) const;
+  void reorderPHIIncomingValues(PHINode *Phi) const;
   /// @}
 
   /// \name Utility methods.
   /// @{
-  template <typename T> void sortCommutativeOperands(T &Operands) const;
+  template <typename T> void sortCommutativeOperands(Instruction *I, T &Operands) const;
   SmallVector<Instruction *, 16> collectOutputInstructions(Function &F) const;
   bool isOutput(const Instruction *I) const;
   bool isInitialInstruction(const Instruction *I) const;
@@ -127,13 +127,12 @@ bool IRNormalizer::runOnFunction(Function &F) {
 
   for (auto &I : instructions(F)) {
     if (!PreserveOrder) {
-      if (ReorderOperands && I.isCommutative())
+      if (ReorderOperands)
         reorderInstructionOperandsByNames(&I);
 
-      if (auto *PN = dyn_cast<PHINode>(&I))
-        reorderPHIIncomingValues(PN);
+      if (auto *Phi = dyn_cast<PHINode>(&I))
+        reorderPHIIncomingValues(Phi);
     }
-
     foldInstructionName(&I);
   }
 
@@ -195,8 +194,8 @@ void IRNormalizer::nameInstruction(Instruction *I) {
 }
 
 template <typename T>
-void IRNormalizer::sortCommutativeOperands(T &Operands) const {
-  if (Operands.size() < 2)
+void IRNormalizer::sortCommutativeOperands(Instruction *I, T &Operands) const {
+  if (!(I->isCommutative() && Operands.size() >= 2))
     return;
   auto CommutativeEnd = Operands.begin();
   std::advance(CommutativeEnd, 2);
@@ -234,8 +233,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
     }
   }
 
-  if (I->isCommutative())
-    sortCommutativeOperands(Operands);
+  sortCommutativeOperands(I, Operands);
 
   // Initialize to a magic constant, so the state isn't zero.
   uint64_t Hash = MagicHashConstant;
@@ -264,7 +262,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
   }
 
   Name.append("(");
-  for (int i = 0; i < Operands.size(); ++i) {
+  for (size_t i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
@@ -318,8 +316,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
     }
   }
 
-  if (I->isCommutative())
-    sortCommutativeOperands(Operands);
+  sortCommutativeOperands(I, Operands);
 
   // Initialize to a magic constant, so the state isn't zero.
   uint64_t Hash = MagicHashConstant;
@@ -335,8 +332,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
     if (auto *I = dyn_cast<Instruction>(Op))
       OperandsOpcodes.push_back(I->getOpcode());
 
-  if (I->isCommutative())
-    sortCommutativeOperands(OperandsOpcodes);
+  sortCommutativeOperands(I, OperandsOpcodes);
 
   // Consider operand opcodes in the hash.
   for (const int Code : OperandsOpcodes)
@@ -352,7 +348,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
       Name.append(F->getName());
 
   Name.append("(");
-  for (int i = 0; i < Operands.size(); ++i) {
+  for (size_t i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
@@ -405,14 +401,13 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
     }
   }
 
-  if (I->isCommutative())
-    sortCommutativeOperands(Operands);
+  sortCommutativeOperands(I, Operands);
 
   SmallString<256> Name;
   Name.append(I->getName().substr(0, 7));
 
   Name.append("(");
-  for (int i = 0; i < Operands.size(); ++i) {
+  for (size_t i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
@@ -550,7 +545,7 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) const {
   }
 
   // Sort operands.
-  sortCommutativeOperands(Operands);
+  sortCommutativeOperands(I, Operands);
 
   // Reorder operands.
   unsigned Position = 0;
@@ -563,14 +558,14 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) const {
 /// Reorders PHI node's values according to the names of corresponding basic
 /// blocks.
 ///
-/// \param PN PHI node to normalize.
-void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) const {
+/// \param Phi PHI node to normalize.
+void IRNormalizer::reorderPHIIncomingValues(PHINode *Phi) const {
   // Values for further sorting.
   SmallVector<std::pair<Value *, BasicBlock *>, 2> Values;
 
   // Collect blocks and corresponding values.
-  for (auto &BB : PN->blocks()) {
-    Value *V = PN->getIncomingValueForBlock(BB);
+  for (auto &BB : Phi->blocks()) {
+    Value *V = Phi->getIncomingValueForBlock(BB);
     Values.push_back(std::pair<Value *, BasicBlock *>(V, BB));
   }
 
@@ -582,8 +577,8 @@ void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) const {
 
   // Swap.
   for (unsigned i = 0; i < Values.size(); ++i) {
-    PN->setIncomingBlock(i, Values[i].second);
-    PN->setIncomingValue(i, Values[i].first);
+    Phi->setIncomingBlock(i, Values[i].second);
+    Phi->setIncomingValue(i, Values[i].first);
   }
 }
 
