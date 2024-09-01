@@ -239,6 +239,7 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
+#if !defined(__MINGW32__)
   typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
   proc ThreadNameProc = reinterpret_cast<proc>(
@@ -253,6 +254,9 @@ void SetThreadName(std::thread &thread, const std::string &name) {
       }
     }
   }
+#else
+  (void)pthread_setname_np(thread.native_handle(), name.c_str());
+#endif
 }
 
 } // namespace fuzzer
