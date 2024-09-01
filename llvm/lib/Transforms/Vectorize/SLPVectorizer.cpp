@@ -10198,7 +10198,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           GetScalarCost, [&](InstructionCost) -> InstructionCost {
             // If a group uses mask in order, the shufflevector can be
             // eliminated by instcombine. Then the cost is 0.
-            bool IsIdentity = true;
             assert(isa<ShuffleVectorInst>(VL.front()) &&
                    "Not supported shufflevector usage.");
             auto *SV = cast<ShuffleVectorInst>(VL.front());
@@ -10206,7 +10205,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                 cast<FixedVectorType>(SV->getOperand(0)->getType())
                     ->getNumElements();
             unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
-            for (size_t I = 0, E = VL.size(); I != E; I += GroupSize) {
+            for (size_t I = 0, End = VL.size(); I != End; I += GroupSize) {
               ArrayRef<Value *> Group = VL.slice(I, GroupSize);
               int NextIndex = 0;
               if (!all_of(Group, [&](Value *V) {
@@ -10223,15 +10222,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                     NextIndex += SV->getShuffleMask().size();
                     return true;
                   })) {
-                IsIdentity = false;
-                break;
+                return ::getShuffleCost(
+                    *TTI, TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
+                    calculateShufflevectorMask(E->Scalars));
               }
             }
-            return IsIdentity
-                       ? TTI::TCC_Free
-                       : ::getShuffleCost(
-                             *TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                             VecTy, calculateShufflevectorMask(E->Scalars));
+            return TTI::TCC_Free;
           });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
