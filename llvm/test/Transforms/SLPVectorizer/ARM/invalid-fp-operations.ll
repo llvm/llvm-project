@@ -4,10 +4,31 @@
 define void @test(ptr %a, ptr %b, ptr %r) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[R]], align 4
+; CHECK-NEXT:    [[V_A_0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[V_A_1:%.*]] = load float, ptr [[A_1]], align 4
+; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[V_A_2:%.*]] = load float, ptr [[A_2]], align 4
+; CHECK-NEXT:    [[A_3:%.*]] = getelementptr i8, ptr [[A]], i64 12
+; CHECK-NEXT:    [[V_A_3:%.*]] = load float, ptr [[A_3]], align 4
+; CHECK-NEXT:    [[V_B_0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[B_1:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; CHECK-NEXT:    [[V_B_1:%.*]] = load float, ptr [[B_1]], align 4
+; CHECK-NEXT:    [[B_2:%.*]] = getelementptr i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[V_B_2:%.*]] = load float, ptr [[B_2]], align 4
+; CHECK-NEXT:    [[B_3:%.*]] = getelementptr i8, ptr [[B]], i64 12
+; CHECK-NEXT:    [[V_B_3:%.*]] = load float, ptr [[B_3]], align 4
+; CHECK-NEXT:    [[V_R_0:%.*]] = fadd float [[V_A_0]], [[V_B_0]]
+; CHECK-NEXT:    [[V_R_1:%.*]] = fadd float [[V_A_1]], [[V_B_1]]
+; CHECK-NEXT:    [[V_R_2:%.*]] = fadd float [[V_A_2]], [[V_B_2]]
+; CHECK-NEXT:    [[V_R_3:%.*]] = fadd float [[V_A_3]], [[V_B_3]]
+; CHECK-NEXT:    store float [[V_R_0]], ptr [[R]], align 4
+; CHECK-NEXT:    [[R_1:%.*]] = getelementptr i8, ptr [[R]], i64 4
+; CHECK-NEXT:    store float [[V_R_1]], ptr [[R_1]], align 4
+; CHECK-NEXT:    [[R_2:%.*]] = getelementptr i8, ptr [[R]], i64 8
+; CHECK-NEXT:    store float [[V_R_2]], ptr [[R_2]], align 4
+; CHECK-NEXT:    [[R_3:%.*]] = getelementptr i8, ptr [[R]], i64 12
+; CHECK-NEXT:    store float [[V_R_3]], ptr [[R_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v.a.0 = load float, ptr %a
