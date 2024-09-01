@@ -309,8 +309,7 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
     auto *SV = cast<ShuffleVectorInst>(VL[I]);
     Value *Src = SV->getOperand(0);
     ArrayRef<Value *> Group = VL.slice(I, GroupSize);
-    SmallVector<int> ExpectedIndex(
-        createStrideMask(0, ShuffleMaskSize, GroupSize));
+    SmallBitVector ExpectedIndex(GroupSize);
     if (!all_of(Group, [&](Value *V) {
           auto *SV = cast<ShuffleVectorInst>(V);
           // From the same source.
@@ -319,14 +318,11 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
           int Index;
           if (!SV->isExtractSubvectorMask(Index))
             return false;
-          auto It = find(ExpectedIndex, Index);
-          if (It == ExpectedIndex.end())
-            return false;
-          ExpectedIndex.erase(It);
+          ExpectedIndex.set(Index / ShuffleMaskSize);
           return true;
         }))
       return 0;
-    if (!ExpectedIndex.empty())
+    if (!ExpectedIndex.all())
       return 0;
     ++NumGroup;
   }
