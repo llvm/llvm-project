@@ -148,7 +148,7 @@ void IRNormalizer::nameFunctionArguments(Function &F) const {
   for (auto &A : F.args()) {
     if (RenameAll || A.getName().empty()) {
       A.setName("a" + Twine(ArgumentCounter));
-      ++ArgumentCounter;
+      ArgumentCounter += 1;
     }
   }
 }
@@ -556,7 +556,7 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) const {
   unsigned Position = 0;
   for (auto &Op : I->operands()) {
     Op.set(Operands[Position].second);
-    Position++;
+    Position += 1;
   }
 }
 
@@ -634,7 +634,6 @@ bool IRNormalizer::hasOnlyImmediateOperands(const Instruction *I) const {
   for (const auto &Op : I->operands())
     if (isa<Instruction>(Op))
       return false; // Found non-immediate operand (instruction).
-
   return true;
 }
 
@@ -664,7 +663,7 @@ SetVector<int> IRNormalizer::getOutputFootprint(
         for (const auto &E : B) {
           if (&E == I)
             Outputs.insert(Count);
-          Count++;
+          Count += 1;
         }
       }
 
