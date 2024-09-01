@@ -84,8 +84,6 @@ private:
   /// \name Utility methods.
   /// @{
   template <typename T> void sortCommutativeOperands(T &Operands) const;
-  template <typename T, typename Compare>
-  void sortCommutativeOperands(T &Operands, Compare Comp) const;
   SmallVector<Instruction *, 16> collectOutputInstructions(Function &F) const;
   bool isOutput(const Instruction *I) const;
   bool isInitialInstruction(const Instruction *I) const;
@@ -205,15 +203,6 @@ void IRNormalizer::sortCommutativeOperands(T &Operands) const {
   llvm::sort(Operands.begin(), CommutativeEnd);
 }
 
-template <typename T, typename Compare>
-void IRNormalizer::sortCommutativeOperands(T &Operands, Compare Comp) const {
-  if (Operands.size() < 2)
-    return;
-  auto CommutativeEnd = Operands.begin();
-  std::advance(CommutativeEnd, 2);
-  llvm::sort(Operands.begin(), CommutativeEnd, Comp);
-}
-
 /// Names instruction following the scheme:
 /// vl00000Callee(Operands)
 ///
@@ -236,11 +225,11 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
   SmallVector<SmallString<64>, 4> Operands;
 
   // Collect operands.
-  for (auto &OP : I->operands()) {
-    if (!isa<Function>(OP)) {
+  for (auto &Op : I->operands()) {
+    if (!isa<Function>(Op)) {
       std::string TextRepresentation;
       raw_string_ostream Stream(TextRepresentation);
-      OP->printAsOperand(Stream, false);
+      Op->printAsOperand(Stream, false);
       Operands.push_back(StringRef(Stream.str()));
     }
   }
@@ -315,16 +304,16 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   // walk.
 
   // Collect operands.
-  for (auto &OP : I->operands()) {
-    if (auto *IOP = dyn_cast<Instruction>(OP)) {
+  for (auto &Op : I->operands()) {
+    if (auto *I = dyn_cast<Instruction>(Op)) {
       // Walk down the use-def chain.
-      nameInstruction(IOP);
-      Operands.push_back(IOP->getName());
-    } else if (!isa<Function>(OP)) {
+      nameInstruction(I);
+      Operands.push_back(I->getName());
+    } else if (!isa<Function>(Op)) {
       // This must be an immediate value.
       std::string TextRepresentation;
       raw_string_ostream Stream(TextRepresentation);
-      OP->printAsOperand(Stream, false);
+      Op->printAsOperand(Stream, false);
       Operands.push_back(StringRef(Stream.str()));
     }
   }
@@ -342,9 +331,9 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   SmallVector<int, 4> OperandsOpcodes;
 
   // Collect operand opcodes for hashing.
-  for (auto &OP : I->operands())
-    if (auto *IOP = dyn_cast<Instruction>(OP))
-      OperandsOpcodes.push_back(IOP->getOpcode());
+  for (auto &Op : I->operands())
+    if (auto *I = dyn_cast<Instruction>(Op))
+      OperandsOpcodes.push_back(I->getOpcode());
 
   if (I->isCommutative())
     sortCommutativeOperands(OperandsOpcodes);
@@ -406,13 +395,13 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   // Instruction operands.
   SmallVector<SmallString<64>, 4> Operands;
 
-  for (auto &OP : I->operands()) {
-    if (const auto *IOP = dyn_cast<Instruction>(OP)) {
+  for (auto &Op : I->operands()) {
+    if (const auto *I = dyn_cast<Instruction>(Op)) {
       bool HasNormalName = I->getName().substr(0, 2) == "op" ||
                            I->getName().substr(0, 2) == "vl";
 
-      Operands.push_back(HasNormalName ? IOP->getName().substr(0, 7)
-                                       : IOP->getName());
+      Operands.push_back(HasNormalName ? I->getName().substr(0, 7)
+                                       : I->getName());
     }
   }
 
@@ -546,28 +535,28 @@ void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) const {
   SmallVector<std::pair<std::string, Value *>, 4> Operands;
 
   // Collect operands.
-  for (auto &OP : I->operands()) {
-    if (auto *VOP = dyn_cast<Value>(OP)) {
-      if (isa<Instruction>(VOP)) {
+  for (auto &Op : I->operands()) {
+    if (auto *V = dyn_cast<Value>(Op)) {
+      if (isa<Instruction>(V)) {
         // This is an an instruction.
         Operands.push_back(
-            std::pair<std::string, Value *>(VOP->getName(), VOP));
+            std::pair<std::string, Value *>(V->getName(), V));
       } else {
         std::string TextRepresentation;
         raw_string_ostream Stream(TextRepresentation);
-        OP->printAsOperand(Stream, false);
-        Operands.push_back(std::pair<std::string, Value *>(Stream.str(), VOP));
+        Op->printAsOperand(Stream, false);
+        Operands.push_back(std::pair<std::string, Value *>(Stream.str(), V));
       }
     }
   }
 
   // Sort operands.
-  sortCommutativeOperands(Operands, llvm::less_first());
+  sortCommutativeOperands(Operands);
 
   // Reorder operands.
   unsigned Position = 0;
-  for (auto &OP : I->operands()) {
-    OP.set(Operands[Position].second);
+  for (auto &Op : I->operands()) {
+    Op.set(Operands[Position].second);
     Position++;
   }
 }
@@ -643,8 +632,8 @@ bool IRNormalizer::isInitialInstruction(const Instruction *I) const {
 ///
 /// \param I Considered instruction.
 bool IRNormalizer::hasOnlyImmediateOperands(const Instruction *I) const {
-  for (const auto &OP : I->operands())
-    if (isa<Instruction>(OP))
+  for (const auto &Op : I->operands())
+    if (isa<Instruction>(Op))
       return false; // Found non-immediate operand (instruction).
 
   return true;
