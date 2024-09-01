@@ -217,7 +217,9 @@ void IRNormalizer::sortCommutativeOperands(Instruction *I, T &Operands) const {
 /// \see getOutputFootprint()
 /// \param I Instruction to be renamed.
 void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
-  if (I->getType()->isVoidTy() || (!I->getName().empty() && !RenameAll))
+  if (I->getType()->isVoidTy())
+    return;
+  if (!(I->getName().empty() || RenameAll))
     return;
   LLVM_DEBUG(dbgs() << "Naming initial instruction: " << *I << "\n");
 
