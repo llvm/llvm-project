@@ -26,11 +26,11 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct __sized_temporary_buffer_deleter {
+struct __temporary_buffer_deleter {
   ptrdiff_t __count_; // ignored in non-constant evaluation
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __sized_temporary_buffer_deleter() _NOEXCEPT : __count_(0) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __sized_temporary_buffer_deleter(ptrdiff_t __count) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __temporary_buffer_deleter() _NOEXCEPT : __count_(0) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __temporary_buffer_deleter(ptrdiff_t __count) _NOEXCEPT
       : __count_(__count) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Tp* __ptr) _NOEXCEPT {
@@ -44,10 +44,10 @@ struct __sized_temporary_buffer_deleter {
 };
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp, __sized_temporary_buffer_deleter<_Tp> >
-__make_unique_sized_temporary_buffer(ptrdiff_t __count) {
-  typedef __sized_temporary_buffer_deleter<_Tp> __deleter_type;
-  typedef unique_ptr<_Tp, __deleter_type> __unique_buffer_type;
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp, __temporary_buffer_deleter<_Tp> >
+__allocate_unique_temporary_buffer(ptrdiff_t __count) {
+  using __deleter_type       = __temporary_buffer_deleter<_Tp>;
+  using __unique_buffer_type = unique_ptr<_Tp, __deleter_type>;
 
   if (__libcpp_is_constant_evaluated()) {
     return __unique_buffer_type(allocator<_Tp>().allocate(__count), __deleter_type(__count));
