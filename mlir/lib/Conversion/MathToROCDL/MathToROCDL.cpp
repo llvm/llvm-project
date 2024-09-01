@@ -86,12 +86,14 @@ void mlir::populateMathToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                    "__ocml_cosh_f64");
   populateOpPatterns<math::SinhOp>(converter, patterns, "__ocml_sinh_f32",
                                    "__ocml_sinh_f64");
+  populateOpPatterns<math::ExpOp>(converter, patterns, "", "__ocml_exp_f64");
   populateOpPatterns<math::Exp2Op>(converter, patterns, "__ocml_exp2_f32",
                                    "__ocml_exp2_f64");
   populateOpPatterns<math::ExpM1Op>(converter, patterns, "__ocml_expm1_f32",
                                     "__ocml_expm1_f64");
   populateOpPatterns<math::FloorOp>(converter, patterns, "__ocml_floor_f32",
                                     "__ocml_floor_f64");
+  populateOpPatterns<math::LogOp>(converter, patterns, "", "__ocml_log_f64");
   populateOpPatterns<math::Log10Op>(converter, patterns, "__ocml_log10_f32",
                                     "__ocml_log10_f64");
   populateOpPatterns<math::Log1pOp>(converter, patterns, "__ocml_log1p_f32",
