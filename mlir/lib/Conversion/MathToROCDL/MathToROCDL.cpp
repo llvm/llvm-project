@@ -53,9 +53,9 @@ void mlir::populateMathToROCDLConversionPatterns(LLVMTypeConverter &converter,
   // Handled by mathToLLVM: math::CountLeadingZerosOp
   // Handled by mathToLLVM: math::CountTrailingZerosOp
   // Handled by mathToLLVM: math::CgPopOp
-  // Handled by mathToLLVM: math::ExpOp
+  // Handled by mathToLLVM: math::ExpOp (32-bit only)
   // Handled by mathToLLVM: math::FmaOp
-  // Handled by mathToLLVM: math::LogOp
+  // Handled by mathToLLVM: math::LogOp (32-bit only)
   // FIXME: math::IPowIOp
   // FIXME: math::FPowIOp
   // Handled by mathToLLVM: math::RoundEvenOp
