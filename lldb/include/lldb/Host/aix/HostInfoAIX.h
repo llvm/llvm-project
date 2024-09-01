@@ -38,6 +38,6 @@ protected:
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                              ArchSpec &arch_64);
 };
-}
+} // namespace lldb_private
 
 #endif

@@ -20,6 +20,6 @@ protected:
   size_t GetNameOffset() const override;
   void DeleteSocketFile(llvm::StringRef name) override;
 };
-}
+} // namespace lldb_private
 
 #endif // ifndef liblldb_AbstractSocket_h_
