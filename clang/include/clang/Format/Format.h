@@ -5057,6 +5057,43 @@ struct FormatStyle {
   /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
 
+  /// Different styles for modify number of empty lines in
+  /// the beginning and at the of end of namespaces.
+  enum WrapNamespaceBodyWithEmptyLinesStyle : int8_t {
+    /// Removes all empty lines at the beginning and at the end of
+    /// namespace definition.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2
+    ///     function();
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Never,
+    /// Always adds an empty line at the beginning and at the end of
+    /// namespace definition. MaxEmptyLinesToKeep is also applied, but
+    /// empty lines between consecutive namespace declarations are
+    /// always removed.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2 {
+    ///
+    ///     function();
+    ///
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Always,
+    /// Keeps existing newlines at the beginning and at the end of
+    /// namespace definition using MaxEmptyLinesToKeep for formatting.
+    WNBWELS_Leave
+  };
+
+  /// Controls number of empty lines at the begging and at the end of
+  /// namespace definition.
+  /// \version 19
+  WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
+
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
@@ -5234,7 +5271,8 @@ struct FormatStyle {
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
+           WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
