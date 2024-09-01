@@ -624,9 +624,9 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
         // element (i.e. 0-D subset) at the coordinates triple in %source.
         //
         %out = tensor.gather %source[%indices] gather_dims([0, 1, 2]) :
-          (tensor<4x4x4xf32>, tensor<1x2x 3xindex>) -> tensor<1x2x 1x1x1xf32>
+          (tensor<4x4x4xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
 
-        // Note: result type may be further rank-reduced to tensor<1x2x f32>.
+        // Note: result type may be further rank-reduced to tensor<1x2xf32>.
     ```
 
     A slice variant is provided to allow specifying whole slices of the source
@@ -640,9 +640,9 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
         // corresponding to the `gather_dims` attribute specified by %indices.
         //
         %out = tensor.gather %source[%indices] gather_dims([1]) :
-          (tensor<3x4x5xf32>, tensor<6x7x 1xindex>) -> tensor<6x7x 3x1x5xf32>
+          (tensor<3x4x5xf32>, tensor<6x7x1xindex>) -> tensor<6x7x3x1x5xf32>
 
-        // Note: result type may be further rank-reduced to tensor<6x7x 3x5xf32>.
+        // Note: result type may be further rank-reduced to tensor<6x7x3x5xf32>.
     ```
 
     The dimensions specified in the gather_dims attribute are ones for which the
@@ -682,12 +682,12 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
         // memref<?x4x1xf32> is a contiguous buffer of ?x4x1 elements.
         // gather from random source slices must copy to the contiguous output.
         %out = memref.gather %source[%indices] gather_dims([1]) :
-          (memref<4x4xf32>, memref<?x 1xindex>) -> memref<?x 4x1xf32>
+          (memref<4x4xf32>, memref<?x1xindex>) -> memref<?x4x1xf32>
 
         // Nested buffer support would allow gather to directly index into the
         // source buffer (i.e. represent a jagged view into the source).
         %out = memref.gather %source[%indices] gather_dims([1]) :
-          (memref<4x4xf32>, memref<?x 1xindex>) -> memref<? x memref<4x1xf32>>
+          (memref<4x4xf32>, memref<?x1xindex>) -> memref<?x memref<4x1xf32>>
     ```
   }];
 
