@@ -9,7 +9,7 @@
 ## Create our main testing dylib - linking against the fake dylib above
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal.o merge_cat_minimal.s
 # RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_no_merge.dylib a64_fakedylib.dylib merge_cat_minimal.o
-# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
+# RUN: %lld -objc_relative_method_lists -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
 
 ## Now verify that the flag caused category merging to happen appropriatelly
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_no_merge.dylib | FileCheck %s --check-prefixes=NO_MERGE_CATS
@@ -17,7 +17,7 @@
 
 ############ Test merging multiple categories into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_minimal.o merge_base_class_minimal.s
-# RUN: %lld -arch arm64 -dylib -o merge_base_class_minimal_yes_merge.dylib -objc_category_merging merge_base_class_minimal.o merge_cat_minimal.o
+# RUN: %lld -arch arm64 -dylib -objc_relative_method_lists -o merge_base_class_minimal_yes_merge.dylib -objc_category_merging merge_base_class_minimal.o merge_cat_minimal.o
 # RUN: %lld -arch arm64 -dylib -o merge_base_class_minimal_no_merge.dylib merge_base_class_minimal.o merge_cat_minimal.o
 
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_minimal_no_merge.dylib  | FileCheck %s --check-prefixes=NO_MERGE_INTO_BASE
@@ -37,14 +37,14 @@ MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass(Category01|Category02)
 MERGE_CATS-NEXT:   name {{.*}} Category01|Category02
 MERGE_CATS:       instanceMethods
-MERGE_CATS-NEXT:  24
-MERGE_CATS-NEXT:  2
+MERGE_CATS-NEXT:  entsize 12 (relative)
+MERGE_CATS-NEXT:  count 2
 MERGE_CATS-NEXT:   name {{.*}} cat01_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
-MERGE_CATS-NEXT:    imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category01) cat01_InstanceMethod]
 MERGE_CATS-NEXT:   name {{.*}} cat02_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
-MERGE_CATS-NEXT:    imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 MERGE_CATS-NEXT:         classMethods 0x0
 MERGE_CATS-NEXT:            protocols 0x0
 MERGE_CATS-NEXT:   instanceProperties 0x0
@@ -69,17 +69,17 @@ YES_MERGE_INTO_BASE-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 YES_MERGE_INTO_BASE: _OBJC_CLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE-NEXT: _OBJC_METACLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE: baseMethods
-YES_MERGE_INTO_BASE-NEXT: entsize 24
+YES_MERGE_INTO_BASE-NEXT: entsize 12 (relative)
 YES_MERGE_INTO_BASE-NEXT: count 3
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat01_InstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass(Category01) cat01_InstanceMethod]
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat02_InstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} baseInstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass baseInstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass baseInstanceMethod]
 
 
 #### Check merge swift category into base class ###

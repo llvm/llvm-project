@@ -873,7 +873,6 @@ Defined *ObjcCategoryMerger::emitAndLinkProtocolList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -889,6 +888,7 @@ Defined *ObjcCategoryMerger::emitAndLinkProtocolList(
 
   ptrListSym->used = true;
   parentSym->getObjectFile()->symbols.push_back(ptrListSym);
+  addInputSection(listSec);
 
   createSymbolReference(parentSym, ptrListSym, linkAtOffset,
                         infoCategoryWriter.catBodyInfo.relocTemplate);
@@ -933,7 +933,6 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -949,6 +948,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
 
   ptrListSym->used = true;
   parentSym->getObjectFile()->symbols.push_back(ptrListSym);
+  addInputSection(listSec);
 
   createSymbolReference(parentSym, ptrListSym, linkAtOffset,
                         infoCategoryWriter.catBodyInfo.relocTemplate);
@@ -974,7 +974,6 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCategoryName,
                                bodyData, infoCategoryWriter.catListInfo.align);
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
   newCatList->live = true;
-  addInputSection(newCatList);
 
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
@@ -990,6 +989,7 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCategoryName,
 
   catListSym->used = true;
   objFile->symbols.push_back(catListSym);
+  addInputSection(newCatList);
   return catListSym;
 }
 
@@ -1012,7 +1012,6 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                bodyData, infoCategoryWriter.catBodyInfo.align);
   newBodySec->parent = infoCategoryWriter.catBodyInfo.outputSection;
   newBodySec->live = true;
-  addInputSection(newBodySec);
 
   std::string symName =
       objc::symbol_names::category + baseClassName + "(" + name + ")";
@@ -1025,6 +1024,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
 
   catBodySym->used = true;
   objFile->symbols.push_back(catBodySym);
+  addInputSection(newBodySec);
 
   createSymbolReference(catBodySym, nameSym, catLayout.nameOffset,
                         infoCategoryWriter.catBodyInfo.relocTemplate);
@@ -1245,7 +1245,6 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
           infoCategoryWriter.catListInfo.align);
       listSec->parent = infoCategoryWriter.catListInfo.outputSection;
       listSec->live = true;
-      addInputSection(listSec);
 
       std::string slotSymName = "<__objc_catlist slot for category ";
       slotSymName += nonErasedCatBody->getName();
@@ -1260,6 +1259,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
 
       catListSlotSym->used = true;
       objFile->symbols.push_back(catListSlotSym);
+      addInputSection(listSec);
 
       // Now link the category body into the newly created slot
       createSymbolReference(catListSlotSym, nonErasedCatBody, 0,
