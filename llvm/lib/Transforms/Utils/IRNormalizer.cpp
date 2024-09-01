@@ -456,7 +456,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     SmallPtrSet<const Instruction *, 32> Visited;
     for (auto &I : BB) {
       // First process side effecting and terminating instructions.
-      if (!isOutput(&I) && !I.isTerminator())
+      if (!(isOutput(&I) || I.isTerminator()))
         continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: ";
                  I.dump());
