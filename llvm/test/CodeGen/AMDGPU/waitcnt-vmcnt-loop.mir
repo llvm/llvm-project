@@ -297,7 +297,7 @@ body:             |
 # GFX12: BUFFER_LOAD_FORMAT_X_IDXEN
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.1:
-# GFX12-NOT: S_WAIT_LOADCNT 0
+# GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2
 body:             |
@@ -344,7 +344,7 @@ body:             |
 # GFX12: BUFFER_LOAD_FORMAT_X_IDXEN
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.1:
-# GFX12-NOT: S_WAIT_LOADCNT 0
+# GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_store
 body:             |
@@ -445,7 +445,7 @@ body:             |
 # GFX12-LABEL: bb.1:
 # GFX12-NOT: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
-# GFX12-NOT: S_WAIT_LOADCNT 0
+# GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.3:
 name:            waitcnt_vm_loop2_nowait
 body:             |
@@ -602,7 +602,7 @@ body:             |
 # GFX12: BUFFER_LOAD_FORMAT_X_IDXEN
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.1:
-# GFX12-NOT: S_WAIT_LOADCNT 0
+# GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_zero

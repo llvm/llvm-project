@@ -1255,6 +1255,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall(ptr a
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b64 v[13:14], v4, s[4:7], null offen offset:2048
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -2449,6 +2450,7 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall(ptr add
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b32 v6, v8, s[4:7], null offen
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
@@ -3949,6 +3951,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fmax_ret_bf16__offset__waterfall(ptr 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b32 v6, v8, s[4:7], null offen
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB11_1
@@ -5319,6 +5322,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fmax_ret_v2f16__offset__waterfall
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b32 v6, v4, s[4:7], null offen offset:1024
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -6812,6 +6816,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b32 v6, v4, s[4:7], null offen offset:1024
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
