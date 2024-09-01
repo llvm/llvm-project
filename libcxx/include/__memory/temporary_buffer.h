@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_DEPRECATED_IN_CXX17 pair<_Tp*, ptrdiff_t>
 get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
-  unique_ptr<_Tp, __temporary_buffer_deleter<_Tp> > __unique_buf = std::__allocate_unique_temporary_buffer<_Tp>(__n);
+  __unique_temporary_buffer<_Tp> __unique_buf = std::__allocate_unique_temporary_buffer<_Tp>(__n);
   pair<_Tp*, ptrdiff_t> __result(__unique_buf.get(), __unique_buf.get_deleter().__count_);
   __unique_buf.release();
   return __result;
@@ -35,7 +35,7 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 void return_temporary_buffer(_Tp* __p) _NOEXCEPT {
-  unique_ptr<_Tp, __temporary_buffer_deleter<_Tp> > __unique_buf(__p);
+  __unique_temporary_buffer<_Tp> __unique_buf(__p);
   (void)__unique_buf;
 }
 

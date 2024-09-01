@@ -241,7 +241,7 @@ __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, 
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
 
   difference_type __len = __last - __first;
-  unique_ptr<value_type, __temporary_buffer_deleter<value_type> > __unique_buf;
+  __unique_temporary_buffer<value_type> __unique_buf;
   pair<value_type*, ptrdiff_t> __buf(0, 0);
   if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value)) {
     __unique_buf = std::__allocate_unique_temporary_buffer<value_type>(__len);

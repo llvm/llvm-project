@@ -44,10 +44,13 @@ struct __temporary_buffer_deleter {
 };
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp, __temporary_buffer_deleter<_Tp> >
+using __unique_temporary_buffer = unique_ptr<_Tp, __temporary_buffer_deleter<_Tp> >;
+
+template <class _Tp>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __unique_temporary_buffer<_Tp>
 __allocate_unique_temporary_buffer(ptrdiff_t __count) {
   using __deleter_type       = __temporary_buffer_deleter<_Tp>;
-  using __unique_buffer_type = unique_ptr<_Tp, __deleter_type>;
+  using __unique_buffer_type = __unique_temporary_buffer<_Tp>;
 
   if (__libcpp_is_constant_evaluated()) {
     return __unique_buffer_type(allocator<_Tp>().allocate(__count), __deleter_type(__count));

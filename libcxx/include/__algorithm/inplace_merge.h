@@ -208,11 +208,10 @@ _LIBCPP_HIDE_FROM_ABI void __inplace_merge(
     _BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last, _Compare&& __comp) {
   typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
   typedef typename iterator_traits<_BidirectionalIterator>::difference_type difference_type;
-  difference_type __len1     = _IterOps<_AlgPolicy>::distance(__first, __middle);
-  difference_type __len2     = _IterOps<_AlgPolicy>::distance(__middle, __last);
-  difference_type __buf_size = std::min(__len1, __len2);
-  unique_ptr<value_type, __temporary_buffer_deleter<value_type> > __unique_buf =
-      std::__allocate_unique_temporary_buffer<value_type>(__buf_size);
+  difference_type __len1                             = _IterOps<_AlgPolicy>::distance(__first, __middle);
+  difference_type __len2                             = _IterOps<_AlgPolicy>::distance(__middle, __last);
+  difference_type __buf_size                         = std::min(__len1, __len2);
+  __unique_temporary_buffer<value_type> __unique_buf = std::__allocate_unique_temporary_buffer<value_type>(__buf_size);
   return std::__inplace_merge<_AlgPolicy>(
       std::move(__first),
       std::move(__middle),
