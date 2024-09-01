@@ -232,8 +232,11 @@ bool WindowScheduler::initialize() {
       return false;
     }
     for (auto &Def : MI.all_defs())
-      if (Def.isReg() && Def.getReg().isPhysical())
+      if (Def.isReg() && Def.getReg().isPhysical()) {
+        LLVM_DEBUG(dbgs() << "Physical registers are not supported in "
+                             "window scheduling!\n");
         return false;
+      }
   }
   if (SchedInstrNum <= WindowRegionLimit) {
     LLVM_DEBUG(dbgs() << "There are too few MIs in the window region!\n");
