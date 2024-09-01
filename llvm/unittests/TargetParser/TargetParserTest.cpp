@@ -1638,7 +1638,7 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
              AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON, AArch64::AEK_HCX,
              AArch64::AEK_SSBS}),
-        AArch64CPUTestParams("apple-m4", "armv9.2-a",
+        AArch64CPUTestParams("apple-m4", "armv8.7-a",
                              {AArch64::AEK_CRC,       AArch64::AEK_AES,
                               AArch64::AEK_SHA2,      AArch64::AEK_SHA3,
                               AArch64::AEK_FP,        AArch64::AEK_SIMD,
