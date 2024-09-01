@@ -24,8 +24,8 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/destruct_n.h>
-#include <__memory/scoped_temporary_buffer.h>
 #include <__memory/unique_ptr.h>
+#include <__memory/unique_temporary_buffer.h>
 #include <__utility/pair.h>
 #include <new>
 
@@ -211,8 +211,8 @@ _LIBCPP_HIDE_FROM_ABI void __inplace_merge(
   difference_type __len1     = _IterOps<_AlgPolicy>::distance(__first, __middle);
   difference_type __len2     = _IterOps<_AlgPolicy>::distance(__middle, __last);
   difference_type __buf_size = std::min(__len1, __len2);
-  __scoped_temporary_buffer<value_type> __scoped_buf(__buf_size);
-  __temporary_allocation_result<value_type> __buf_state = __scoped_buf.__get();
+  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type>> __unique_buf =
+      std::__make_unique_sized_temporary_buffer<value_type>(__buf_size);
   return std::__inplace_merge<_AlgPolicy>(
       std::move(__first),
       std::move(__middle),
@@ -220,8 +220,8 @@ _LIBCPP_HIDE_FROM_ABI void __inplace_merge(
       __comp,
       __len1,
       __len2,
-      __buf_state.__ptr,
-      __buf_state.__count);
+      __unique_buf.get(),
+      __unique_buf.get_deleter().__count_);
 }
 
 template <class _BidirectionalIterator, class _Compare>

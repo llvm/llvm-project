@@ -18,8 +18,8 @@
 #include <__debug_utils/strict_weak_ordering_check.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
-#include <__memory/scoped_temporary_buffer.h>
 #include <__memory/unique_ptr.h>
+#include <__memory/unique_temporary_buffer.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -241,13 +241,12 @@ __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, 
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
 
   difference_type __len = __last - __first;
-  __scoped_temporary_buffer<value_type> __scoped_buf;
+  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type>> __unique_buf;
   pair<value_type*, ptrdiff_t> __buf(0, 0);
   if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value)) {
-    __scoped_buf.__try_allocate(__len);
-    __temporary_allocation_result<value_type> __buf_state = __scoped_buf.__get();
-    __buf.first                                           = __buf_state.__ptr;
-    __buf.second                                          = __buf_state.__count;
+    __unique_buf = std::__make_unique_sized_temporary_buffer<value_type>(__len);
+    __p.first    = __unique_buf.get();
+    __p.second   = __unique_buf.get_deleter().__count_;
   }
 
   std::__stable_sort<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __last, __comp, __len, __buf.first, __buf.second);

@@ -11,7 +11,7 @@
 #define _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
 
 #include <__config>
-#include <__memory/scoped_temporary_buffer.h>
+#include <__memory/unique_temporary_buffer.h>
 #include <__utility/pair.h>
 #include <cstddef>
 #include <new>
@@ -27,15 +27,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_DEPRECATED_IN_CXX17 pair<_Tp*, ptrdiff_t>
 get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
-  __scoped_temporary_buffer<_Tp> __scoped_buf(__n);
-  __temporary_allocation_result<_Tp> __result = __scoped_buf.__release_to_raw();
-  return pair<_Tp*, ptrdiff_t>(__result.__ptr, __result.__count);
+  unique_ptr<_Tp, __sized_temporary_buffer_deleter<_Tp>> __unique_buf =
+      std::__make_unique_sized_temporary_buffer<_Tp>(__n);
+  pair<_Tp*, ptrdiff_t> __result(__unique_buf.get(), __unique_buf.get_deleter().__count_);
+  __unique_buf.release();
+  return __result;
 }
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 void return_temporary_buffer(_Tp* __p) _NOEXCEPT {
-  __scoped_temporary_buffer<_Tp> __scoped_buf(__p);
-  (void)__scoped_buf;
+  unique_ptr<_Tp, __sized_temporary_buffer_deleter<_Tp>> __unique_buf(__p, 0);
+  (void)__unique_buf;
 }
 
 _LIBCPP_END_NAMESPACE_STD

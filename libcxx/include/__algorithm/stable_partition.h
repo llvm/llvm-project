@@ -16,8 +16,8 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
-#include <__memory/scoped_temporary_buffer.h>
 #include <__memory/unique_ptr.h>
+#include <__memory/unique_temporary_buffer.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <new>
@@ -132,13 +132,12 @@ __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Pred
   // We now have a reduced range [__first, __last)
   // *__first is known to be false
   difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last);
-  __scoped_temporary_buffer<value_type> __scoped_buf;
+  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type>> __unique_buf;
   pair<value_type*, ptrdiff_t> __p(0, 0);
   if (__len >= __alloc_limit) {
-    __scoped_buf.__try_allocate(__len);
-    __temporary_allocation_result<value_type> __buf_state = __scoped_buf.__get();
-    __p.first                                             = __buf_state.__ptr;
-    __p.second                                            = __buf_state.__count;
+    __unique_buf = std::__make_unique_sized_temporary_buffer<value_type>(__len);
+    __p.first    = __unique_buf.get();
+    __p.second   = __unique_buf.get_deleter().__count_;
   }
   return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
       std::move(__first), std::move(__last), __pred, __len, __p, forward_iterator_tag());
@@ -271,13 +270,12 @@ _LIBCPP_HIDE_FROM_ABI _BidirectionalIterator __stable_partition_impl(
   // *__last is known to be true
   // __len >= 2
   difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last) + 1;
-  __scoped_temporary_buffer<value_type> __scoped_buf;
+  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type>> __unique_buf;
   pair<value_type*, ptrdiff_t> __p(0, 0);
   if (__len >= __alloc_limit) {
-    __scoped_buf.__try_allocate(__len);
-    __temporary_allocation_result<value_type> __buf_state = __scoped_buf.__get();
-    __p.first                                             = __buf_state.__ptr;
-    __p.second                                            = __buf_state.__count;
+    __unique_buf = std::__make_unique_sized_temporary_buffer<value_type>(__len);
+    __p.first    = __unique_buf.get();
+    __p.second   = __unique_buf.get_deleter().__count_;
   }
   return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
       std::move(__first), std::move(__last), __pred, __len, __p, bidirectional_iterator_tag());

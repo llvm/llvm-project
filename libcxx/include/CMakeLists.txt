@@ -541,13 +541,13 @@ set(files
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
-  __memory/scoped_temporary_buffer.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
+  __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
   __memory/voidify.h
