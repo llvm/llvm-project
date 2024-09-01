@@ -3,9 +3,6 @@
 // FIXME: TSAN does not use DlsymAlloc.
 // UNSUPPORTED: tsan
 
-// FIXME: https://github.com/llvm/llvm-project/pull/106912
-// XFAIL: lsan
-
 #include <stdlib.h>
 
 const char *test() __attribute__((disable_sanitizer_instrumentation)) {
