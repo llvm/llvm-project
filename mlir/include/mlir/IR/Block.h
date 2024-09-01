@@ -27,8 +27,8 @@ template <typename ValueRangeT>
 class ValueTypeRange;
 
 /// `Block` represents an ordered list of `Operation`s.
-class Block : public IRObjectWithUseList<BlockOperand>,
-              public llvm::ilist_node_with_parent<Block, Region> {
+class alignas(8) Block : public IRObjectWithUseList<BlockOperand>,
+                         public llvm::ilist_node_with_parent<Block, Region> {
 public:
   explicit Block() = default;
   ~Block();
