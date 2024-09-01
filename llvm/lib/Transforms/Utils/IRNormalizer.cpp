@@ -264,7 +264,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
   }
 
   Name.append("(");
-  for (unsigned long i = 0; i < Operands.size(); ++i) {
+  for (int i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
@@ -352,7 +352,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
       Name.append(F->getName());
 
   Name.append("(");
-  for (unsigned long i = 0; i < Operands.size(); ++i) {
+  for (int i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
@@ -412,7 +412,7 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   Name.append(I->getName().substr(0, 7));
 
   Name.append("(");
-  for (unsigned long i = 0; i < Operands.size(); ++i) {
+  for (int i = 0; i < Operands.size(); ++i) {
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
