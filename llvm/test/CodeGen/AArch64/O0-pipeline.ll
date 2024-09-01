@@ -9,8 +9,8 @@
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
-; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
+; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
@@ -27,6 +27,11 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:     AArch64 Globals Tagging
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       SME ABI Pass
 ; CHECK-NEXT:       Exception handling preparation

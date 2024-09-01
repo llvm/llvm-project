@@ -1802,18 +1802,18 @@ void VPReductionRecipe::execute(VPTransformState &State) {
             (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), PrevInChain,
             NewVecOp);
       PrevInChain = NewRed;
+      NextInChain = NewRed;
     } else {
       PrevInChain = State.get(getChainOp(), Part, /*IsScalar*/ true);
       NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
+        NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
+                                     NewRed, PrevInChain);
+      else
+        NextInChain = State.Builder.CreateBinOp(
+            (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed,
+            PrevInChain);
     }
-    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
-      NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
-                                   NewRed, PrevInChain);
-    } else if (IsOrdered)
-      NextInChain = NewRed;
-    else
-      NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
     State.set(this, NextInChain, Part, /*IsScalar*/ true);
   }
 }

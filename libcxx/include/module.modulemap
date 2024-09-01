@@ -245,8 +245,15 @@ module std_stdexcept [system] {
   header "stdexcept"
   export *
 }
-module std_stop_token {
+module std_stop_token [system] {
   header "stop_token"
+  private header "__stop_token/atomic_unique_lock.h"
+  private header "__stop_token/intrusive_list_view.h"
+  private header "__stop_token/intrusive_shared_ptr.h"
+  private header "__stop_token/stop_callback.h"
+  private header "__stop_token/stop_source.h"
+  private header "__stop_token/stop_state.h"
+  private header "__stop_token/stop_token.h"
   export *
 }
 module std_streambuf [system] {
@@ -1592,41 +1599,25 @@ module std_private_numeric_transform_exclusive_scan [system] { header "__numeric
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
 
-module std_private_pstl_backend                    [system] {
+module std_private_pstl [system] {
   header "__pstl/backend.h"
-  export *
-}
-module std_private_pstl_backend_fwd                [system] {
   header "__pstl/backend_fwd.h"
-  export *
-}
-module std_private_pstl_backends_default           [system] {
   header "__pstl/backends/default.h"
-  export *
-}
-module std_private_pstl_backends_libdispatch       [system] {
   header "__pstl/backends/libdispatch.h"
-  export *
-}
-module std_private_pstl_backends_serial            [system] {
   header "__pstl/backends/serial.h"
-  export *
-}
-module std_private_pstl_backends_std_thread        [system] {
   header "__pstl/backends/std_thread.h"
-  export *
+  header "__pstl/cpu_algos/any_of.h"
+  header "__pstl/cpu_algos/cpu_traits.h"
+  header "__pstl/cpu_algos/fill.h"
+  header "__pstl/cpu_algos/find_if.h"
+  header "__pstl/cpu_algos/for_each.h"
+  header "__pstl/cpu_algos/merge.h"
+  header "__pstl/cpu_algos/stable_sort.h"
+  header "__pstl/cpu_algos/transform.h"
+  header "__pstl/cpu_algos/transform_reduce.h"
+  header "__pstl/dispatch.h"
+  header "__pstl/handle_exception.h"
 }
-module std_private_pstl_cpu_algos_any_of           [system] { header "__pstl/cpu_algos/any_of.h" }
-module std_private_pstl_cpu_algos_cpu_traits       [system] { header "__pstl/cpu_algos/cpu_traits.h" }
-module std_private_pstl_cpu_algos_fill             [system] { header "__pstl/cpu_algos/fill.h" }
-module std_private_pstl_cpu_algos_find_if          [system] { header "__pstl/cpu_algos/find_if.h" }
-module std_private_pstl_cpu_algos_for_each         [system] { header "__pstl/cpu_algos/for_each.h" }
-module std_private_pstl_cpu_algos_merge            [system] { header "__pstl/cpu_algos/merge.h" }
-module std_private_pstl_cpu_algos_stable_sort      [system] { header "__pstl/cpu_algos/stable_sort.h" }
-module std_private_pstl_cpu_algos_transform        [system] { header "__pstl/cpu_algos/transform.h" }
-module std_private_pstl_cpu_algos_transform_reduce [system] { header "__pstl/cpu_algos/transform_reduce.h" }
-module std_private_pstl_dispatch                   [system] { header "__pstl/dispatch.h" }
-module std_private_pstl_handle_exception           [system] { header "__pstl/handle_exception.h" }
 
 module std_private_queue_fwd [system] { header "__fwd/queue.h" }
 
@@ -1780,23 +1771,6 @@ module std_private_ranges_zip_view                   [system] {
 module std_private_span_span_fwd [system] { header "__fwd/span.h" }
 
 module std_private_stack_fwd [system] { header "__fwd/stack.h" }
-
-module std_private_stop_token_atomic_unique_lock   [system] { header "__stop_token/atomic_unique_lock.h" }
-module std_private_stop_token_intrusive_list_view  [system] { header "__stop_token/intrusive_list_view.h" }
-module std_private_stop_token_intrusive_shared_ptr [system] { header "__stop_token/intrusive_shared_ptr.h" }
-module std_private_stop_token_stop_callback        [system] { header "__stop_token/stop_callback.h" }
-module std_private_stop_token_stop_source          [system] {
-  header "__stop_token/stop_source.h"
-  export *
-}
-module std_private_stop_token_stop_state           [system] {
-  header "__stop_token/stop_state.h"
-  export *
-}
-module std_private_stop_token_stop_token           [system] {
-  header "__stop_token/stop_token.h"
-  export *
-}
 
 module std_private_string_char_traits           [system] {
   header "__string/char_traits.h"
