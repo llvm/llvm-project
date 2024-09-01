@@ -338,6 +338,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure when converting vectors to int/float with invalid expressions. (#GH105486)
 - Template parameter names are considered in the name lookup of out-of-line class template
   specialization right before its declaration context. (#GH64082)
+- Fixed a constraint comparison bug for friend declarations. (#GH78101)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
