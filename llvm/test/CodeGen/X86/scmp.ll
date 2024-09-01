@@ -437,48 +437,11 @@ define i41 @scmp_uncommon_types(i7 %x, i7 %y) nounwind {
 define <4 x i32> @scmp_normal_vectors(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-LABEL: scmp_normal_vectors:
 ; X64:       # %bb.0:
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; X64-NEXT:    movd %xmm2, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; X64-NEXT:    movd %xmm2, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; X64-NEXT:    movd %xmm3, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-NEXT:    movd %xmm3, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm3
-; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    movd %xmm0, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X64-NEXT:    movdqa %xmm2, %xmm0
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pcmpgtd %xmm1, %xmm2
+; X64-NEXT:    pcmpgtd %xmm0, %xmm1
+; X64-NEXT:    psubd %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: scmp_normal_vectors:
@@ -613,50 +576,14 @@ define <4 x i32> @scmp_narrow_vec_op(<4 x i8> %x, <4 x i8> %y) nounwind {
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; X64-NEXT:    psrad $24, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; X64-NEXT:    movd %xmm2, %eax
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; X64-NEXT:    psrad $24, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[3,3,3,3]
-; X64-NEXT:    movd %xmm0, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; X64-NEXT:    movd %xmm3, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
-; X64-NEXT:    movd %xmm3, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm3
-; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    movd %xmm2, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,1,1]
-; X64-NEXT:    movd %xmm1, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X64-NEXT:    psrad $24, %xmm0
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pcmpgtd %xmm1, %xmm2
+; X64-NEXT:    pcmpgtd %xmm0, %xmm1
+; X64-NEXT:    psubd %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: scmp_narrow_vec_op:
@@ -704,192 +631,44 @@ define <4 x i32> @scmp_narrow_vec_op(<4 x i8> %x, <4 x i8> %y) nounwind {
 define <16 x i32> @scmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-LABEL: scmp_wide_vec_result:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    movdqa %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm0, %xmm3
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1],xmm5[2],xmm1[2],xmm5[3],xmm1[3]
+; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    psrad $24, %xmm0
+; X64-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; X64-NEXT:    psrad $24, %xmm5
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[3,3,3,3]
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3],xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm4[0],xmm6[1],xmm4[1],xmm6[2],xmm4[2],xmm6[3],xmm4[3]
-; X64-NEXT:    psrad $24, %xmm6
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[3,3,3,3]
-; X64-NEXT:    movd %xmm0, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,2,3]
-; X64-NEXT:    movd %xmm7, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,2,3]
-; X64-NEXT:    movd %xmm7, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm7
-; X64-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm0[0],xmm7[1],xmm0[1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    movd %xmm6, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[1,1,1,1]
-; X64-NEXT:    movd %xmm5, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm5
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm7[0]
-; X64-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm1[4],xmm5[5],xmm1[5],xmm5[6],xmm1[6],xmm5[7],xmm1[7]
-; X64-NEXT:    psrad $24, %xmm5
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[3,3,3,3]
-; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    movdqa %xmm5, %xmm6
+; X64-NEXT:    pcmpgtd %xmm0, %xmm6
+; X64-NEXT:    pcmpgtd %xmm5, %xmm0
+; X64-NEXT:    psubd %xmm6, %xmm0
+; X64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; X64-NEXT:    psrad $24, %xmm1
 ; X64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
 ; X64-NEXT:    psrad $24, %xmm4
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[3,3,3,3]
-; X64-NEXT:    movd %xmm1, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[2,3,2,3]
-; X64-NEXT:    movd %xmm6, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,2,3]
-; X64-NEXT:    movd %xmm6, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm6
-; X64-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm1[0],xmm6[1],xmm1[1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    movd %xmm4, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
-; X64-NEXT:    movd %xmm4, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm4
-; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm6[0]
-; X64-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
-; X64-NEXT:    psrad $24, %xmm5
-; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[3,3,3,3]
-; X64-NEXT:    movd %xmm4, %eax
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pcmpgtd %xmm1, %xmm5
+; X64-NEXT:    pcmpgtd %xmm4, %xmm1
+; X64-NEXT:    psubd %xmm5, %xmm1
 ; X64-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm4[0],xmm6[1],xmm4[1],xmm6[2],xmm4[2],xmm6[3],xmm4[3]
-; X64-NEXT:    psrad $24, %xmm6
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[3,3,3,3]
-; X64-NEXT:    movd %xmm2, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,2,3]
-; X64-NEXT:    movd %xmm7, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,2,3]
-; X64-NEXT:    movd %xmm7, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm7
-; X64-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    movd %xmm6, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[1,1,1,1]
-; X64-NEXT:    movd %xmm5, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm5
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm7[0]
-; X64-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm3[4],xmm5[5],xmm3[5],xmm5[6],xmm3[6],xmm5[7],xmm3[7]
-; X64-NEXT:    psrad $24, %xmm5
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[3,3,3,3]
-; X64-NEXT:    movd %xmm3, %eax
-; X64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
+; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; X64-NEXT:    psrad $24, %xmm2
+; X64-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm3[8],xmm5[9],xmm3[9],xmm5[10],xmm3[10],xmm5[11],xmm3[11],xmm5[12],xmm3[12],xmm5[13],xmm3[13],xmm5[14],xmm3[14],xmm5[15],xmm3[15]
+; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
+; X64-NEXT:    psrad $24, %xmm3
+; X64-NEXT:    movdqa %xmm3, %xmm6
+; X64-NEXT:    pcmpgtd %xmm2, %xmm6
+; X64-NEXT:    pcmpgtd %xmm3, %xmm2
+; X64-NEXT:    psubd %xmm6, %xmm2
+; X64-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; X64-NEXT:    psrad $24, %xmm3
+; X64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
 ; X64-NEXT:    psrad $24, %xmm4
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[3,3,3,3]
-; X64-NEXT:    movd %xmm3, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[2,3,2,3]
-; X64-NEXT:    movd %xmm6, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,2,3]
-; X64-NEXT:    movd %xmm6, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm6
-; X64-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    movd %xmm4, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
-; X64-NEXT:    movd %xmm5, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
-; X64-NEXT:    movd %xmm4, %ecx
-; X64-NEXT:    cmpl %eax, %ecx
-; X64-NEXT:    setl %al
-; X64-NEXT:    setg %cl
-; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    movsbl %cl, %eax
-; X64-NEXT:    movd %eax, %xmm4
-; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm6[0]
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pcmpgtd %xmm3, %xmm5
+; X64-NEXT:    pcmpgtd %xmm4, %xmm3
+; X64-NEXT:    psubd %xmm5, %xmm3
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: scmp_wide_vec_result:
