@@ -61,6 +61,8 @@ Diagnostics
 Semantic Highlighting
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Improved semantic token coverage in some edge cases, e.g. IndirectFieldDecl
+
 Compile flags
 ^^^^^^^^^^^^^
 
@@ -70,24 +72,57 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- ``--function-arg-placeholders=0`` is now respected for variable template argument lists
+   as well
+- Macro proposals now use the completion item kind ``Constant`` (for object-like macros)
+  or ``Function`` (for function-style macros) even for proposals coming from the index
+
 Code actions
 ^^^^^^^^^^^^
 
+- The "extract variable" tweak is no longer offered for the initializer expression of a
+  declaration
 - The tweak for turning unscoped into scoped enums now removes redundant prefixes
   from the enum values.
+- Support "move function body out-of-line" in non-header files as well
 
 Signature help
 ^^^^^^^^^^^^^^
 
+- Signature help now shows function argument names for calls through pointers to
+  functions in struct fields
+
 Cross-references
 ^^^^^^^^^^^^^^^^
+
+- Improve go-to-definition for some concept references
+
+Document outline
+^^^^^^^^^^^^^^^^
+
+- Improved precision of document outline information for symbols whose definitions
+  involve macro expansions
+
+Clang-tidy integration
+^^^^^^^^^^^^^^^^^^^^^^
+
+- The quick fix for clang-tidy's ``readability-identifier-naming`` diagnostic is now
+  hooked to invoke ``textDocument/rename``, renaming the identifier across the whole
+  project rather than just the translation unit of the diagnostic
+- ``misc-const-correctness`` can now be enabled with ``FastCheckFilter: None``
+  (previously clangd would force it off unconditionally due to its run time)
 
 Objective-C
 ^^^^^^^^^^^
 
+- Added support for renaming Objective-C methods
+
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Worked around a clang-format bug that caused memory exhaustion when opening some large
+  ``.h`` files due to the formatter's language guessing heuristic (#GH85703)
+- Various other stability improvements, e.g. crash fixes
 - Added a boolean option `AnalyzeAngledIncludes` to `Includes` config section,
   which allows to enable unused includes detection for all angled ("system") headers.
   At this moment umbrella headers are not supported, so enabling this option
