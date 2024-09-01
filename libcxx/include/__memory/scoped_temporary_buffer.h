@@ -10,7 +10,9 @@
 #ifndef _LIBCPP___MEMORY_SCOPED_TEMPORARY_BUFFER_H
 #define _LIBCPP___MEMORY_SCOPED_TEMPORARY_BUFFER_H
 
+#include <__assert>
 #include <__config>
+
 #include <__memory/allocator.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <cstddef>
@@ -32,11 +34,11 @@ template <class _Tp>
 class __scoped_temporary_buffer {
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __scoped_temporary_buffer() _NOEXCEPT
-      : __ptr_(NULL),
+      : __ptr_(nullptr),
         __count_(0) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __scoped_temporary_buffer(ptrdiff_t __count) _NOEXCEPT
-      : __ptr_(NULL),
+      : __ptr_(nullptr),
         __count_(0) {
     __try_allocate(__count);
   }
@@ -61,6 +63,9 @@ public:
 
   // pre: __ptr_ == nullptr && __count_ == 0
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __try_allocate(ptrdiff_t __count) _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__ptr_ == nullptr && __count_ == 0,
+                            "There must be no dynamically allocator buffer before calling __try_allocate().");
+
     if (__libcpp_is_constant_evaluated()) {
       __ptr_   = allocator<_Tp>().allocate(__count);
       __count_ = __count;
@@ -106,7 +111,7 @@ public:
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __temporary_allocation_result<_Tp> __release_to_raw() _NOEXCEPT {
     __temporary_allocation_result<_Tp> __result = {__ptr_, __count_};
 
-    __ptr_   = NULL;
+    __ptr_   = nullptr;
     __count_ = 0;
 
     return __result;
