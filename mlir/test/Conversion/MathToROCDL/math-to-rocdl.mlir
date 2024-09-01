@@ -196,6 +196,18 @@ module @test_module {
 // -----
 
 module @test_module {
+  // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
+  // CHECK-LABEL: func @math_exp
+  func.func @math_exp(%arg_f64 : f64) -> (f64) {
+    %result64 = math.exp %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
+    func.return %result64 : f64
+  }
+}
+
+// -----
+
+module @test_module {
   // CHECK: llvm.func @__ocml_exp2_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_exp2_f64(f64) -> f64
   // CHECK-LABEL: func @math_exp2
@@ -235,6 +247,18 @@ module @test_module {
     %result64 = math.floor %arg_f64 : f64
     // CHECK: llvm.call @__ocml_floor_f64(%{{.*}}) : (f64) -> f64
     func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_log_f64(f64) -> f64
+  // CHECK-LABEL: func @math_log
+  func.func @math_log(%arg_f64 : f64) -> (f64) {
+    %result64 = math.log %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (f64) -> f64
+    func.return %result64 : f64
   }
 }
 
