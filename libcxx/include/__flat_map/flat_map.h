@@ -234,6 +234,25 @@ public:
       is_nothrow_default_constructible_v<_Compare>)
       : __containers_(), __compare_() {}
 
+  // copy/move constructors are not specified in the spec (defaulted)
+  // but move constructor can potentially leave moved from object in an inconsistent
+  // state if an exception is thrown
+  _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
+
+#  if defined(_LIBCPP_HAS_NO_EXCEPTIONS)
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&&) = default;
+#  else // defined(_LIBCPP_HAS_NO_EXCEPTIONS)
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept(
+      is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
+      is_nothrow_move_constructible_v<_Compare>) try
+      : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
+  } catch (...) {
+    __other.clear();
+    throw;
+  }
+
+#  endif // defined(_LIBCPP_HAS_NO_EXCEPTIONS)
+
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map& __other, const _Allocator& __alloc)
@@ -417,6 +436,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI flat_map& operator=(initializer_list<value_type> __il) {
     clear();
     insert(__il);
+    return *this;
+  }
+
+  // copy/move assignment are not specified in the spec (defaulted)
+  // but move assignment can potentially leave moved from object in an inconsistent
+  // state if an exception is thrown
+  _LIBCPP_HIDE_FROM_ABI flat_map& operator=(const flat_map&) = default;
+
+  _LIBCPP_HIDE_FROM_ABI flat_map& operator=(flat_map&& __other) noexcept(
+      is_nothrow_move_assignable_v<_KeyContainer> && is_nothrow_move_assignable_v<_MappedContainer> &&
+      is_nothrow_move_assignable_v<_Compare>) {
+    auto __guard  = std::__make_exception_guard([&]() noexcept { __other.clear() /* noexcept */; });
+    __containers_ = std::move(__other.__containers_);
+    __compare_    = std::move(__other.__compare_);
+    __guard.__complete();
     return *this;
   }
 
