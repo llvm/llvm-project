@@ -2363,11 +2363,13 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
-  if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
-      (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-       DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS && (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
+                                          DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+                                          DestAS == AMDGPUAS::LANE_SHARED)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
-      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS && ST.hasGloballyAddressableScratch()) {
+      if ((DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+           DestAS == AMDGPUAS::LANE_SHARED) &&
+          ST.hasGloballyAddressableScratch()) {
         // flat -> private with globally addressable scratch: subtract
         // src_flat_scratch_base_lo.
         const LLT S32 = LLT::scalar(32);
@@ -2410,14 +2412,15 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   }
 
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
-      (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-       SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+      (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
+       SrcAS == AMDGPUAS::LANE_SHARED)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
       // Coerce the type of the low half of the result so we can use
       // merge_values.
       Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
-      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+      if ((SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
+           SrcAS == AMDGPUAS::LANE_SHARED) &&
           ST.hasGloballyAddressableScratch()) {
         // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
         // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr

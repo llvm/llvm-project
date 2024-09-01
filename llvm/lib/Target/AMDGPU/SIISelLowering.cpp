@@ -2236,7 +2236,8 @@ bool SITargetLowering::isNonGlobalAddrSpace(unsigned AS) {
 bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
-    if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
+    if ((DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+         DestAS == AMDGPUAS::LANE_SHARED) &&
         Subtarget->hasGloballyAddressableScratch()) {
       // Flat -> private requires subtracting src_flat_scratch_base_lo.
       return false;
@@ -7836,13 +7837,15 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
-  // flat -> local/private
+  // flat -> local/private/laneshared
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-        DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+        DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+        DestAS == AMDGPUAS::LANE_SHARED) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
-      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
+      if ((DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+           DestAS == AMDGPUAS::LANE_SHARED) &&
           Subtarget->hasGloballyAddressableScratch()) {
         // flat -> private with globally addressable scratch: subtract
         // src_flat_scratch_base_lo.
@@ -7869,9 +7872,10 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   // local/private -> flat
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-        SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::LANE_SHARED) {
       SDValue CvtPtr;
-      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+      if ((SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
+           SrcAS == AMDGPUAS::LANE_SHARED) &&
           Subtarget->hasGloballyAddressableScratch()) {
         // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
         // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
