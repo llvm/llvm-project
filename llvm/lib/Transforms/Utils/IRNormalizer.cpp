@@ -597,11 +597,9 @@ IRNormalizer::collectOutputInstructions(Function &F) const {
   // Output instructions are collected top-down in each function,
   // any change may break the def-use chain in reordering methods.
   SmallVector<Instruction *, 16> Outputs;
-
   for (auto &I : instructions(F))
     if (isOutput(&I))
       Outputs.push_back(&I);
-
   return Outputs;
 }
 
@@ -611,10 +609,7 @@ IRNormalizer::collectOutputInstructions(Function &F) const {
 /// \param I Considered instruction.
 bool IRNormalizer::isOutput(const Instruction *I) const {
   // Outputs are such instructions which may have side effects or is ReturnInst.
-  if (I->mayHaveSideEffects() || isa<ReturnInst>(I))
-    return true;
-
-  return false;
+  return I->mayHaveSideEffects() || isa<ReturnInst>(I);
 }
 
 /// Helper method checking whether the instruction has users and only
@@ -675,7 +670,6 @@ SetVector<int> IRNormalizer::getOutputFootprint(
       if (auto *UI = dyn_cast<Instruction>(U)) {
         // Vector for outputs which use UI.
         SetVector<int> OutputsUsingUI = getOutputFootprint(UI, Visited);
-
         // Insert the indexes of outputs using UI.
         Outputs.insert(OutputsUsingUI.begin(), OutputsUsingUI.end());
       }
