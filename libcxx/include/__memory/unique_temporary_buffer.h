@@ -44,7 +44,7 @@ struct __sized_temporary_buffer_deleter {
 };
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp, __sized_temporary_buffer_deleter<_Tp>>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp, __sized_temporary_buffer_deleter<_Tp> >
 __make_unique_sized_temporary_buffer(ptrdiff_t __count) {
   typedef __sized_temporary_buffer_deleter<_Tp> __deleter_type;
   typedef unique_ptr<_Tp, __deleter_type> __unique_buffer_type;

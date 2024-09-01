@@ -132,7 +132,7 @@ __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Pred
   // We now have a reduced range [__first, __last)
   // *__first is known to be false
   difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last);
-  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type>> __unique_buf;
+  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type> > __unique_buf;
   pair<value_type*, ptrdiff_t> __p(0, 0);
   if (__len >= __alloc_limit) {
     __unique_buf = std::__make_unique_sized_temporary_buffer<value_type>(__len);
@@ -270,7 +270,7 @@ _LIBCPP_HIDE_FROM_ABI _BidirectionalIterator __stable_partition_impl(
   // *__last is known to be true
   // __len >= 2
   difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last) + 1;
-  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type>> __unique_buf;
+  unique_ptr<value_type, __sized_temporary_buffer_deleter<value_type> > __unique_buf;
   pair<value_type*, ptrdiff_t> __p(0, 0);
   if (__len >= __alloc_limit) {
     __unique_buf = std::__make_unique_sized_temporary_buffer<value_type>(__len);

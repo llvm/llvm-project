@@ -1561,6 +1561,7 @@ module std_private_memory_unique_ptr                      [system] {
 }
 module std_private_memory_unique_temporary_buffer         [system] {
   header "__memory/unique_temporary_buffer.h"
+  export std_private_memory_unique_ptr
   export std_private_type_traits_is_constant_evaluated
 }
 module std_private_memory_uses_allocator                  [system] { header "__memory/uses_allocator.h" }
