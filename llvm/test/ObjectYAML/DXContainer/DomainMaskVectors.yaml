@@ -70,11 +70,11 @@ Parts:
       NumThreadsZ:     0
       ResourceStride:  24
       Resources:
-        - Type:            2
+        - Type:            CBV
           Space:           0
           LowerBound:      0
           UpperBound:      0
-          Kind:            13
+          Kind:            CBuffer
           Flags:           0
       SigInputElements:
         - Name:            AAA_HSFoo
