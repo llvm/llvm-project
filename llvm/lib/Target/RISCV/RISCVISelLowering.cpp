@@ -6295,31 +6295,21 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Op0 = Op.getOperand(0);
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
-    if (VT == MVT::f16 && Op0VT == MVT::i16 &&
-        Subtarget.hasStdExtZfhminOrZhinxmin()) {
+    if (Op0VT == MVT::i16 &&
+        ((VT == MVT::f16 && Subtarget.hasStdExtZfhminOrZhinxmin()) ||
+         (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()))) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
-      return FPConv;
-    }
-    if (VT == MVT::bf16 && Op0VT == MVT::i16 &&
-        Subtarget.hasStdExtZfbfmin()) {
-      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::bf16, NewOp0);
-      return FPConv;
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, NewOp0);
     }
     if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
         Subtarget.hasStdExtFOrZfinx()) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
-      SDValue FPConv =
-          DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
-      return FPConv;
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
     }
     if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32) {
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitScalar(Op0, DL, MVT::i32, MVT::i32);
-      SDValue RetReg =
-          DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
-      return RetReg;
+      return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
     }
 
     // Consider other scalar<->scalar casts as legal if the types are legal.
@@ -12567,12 +12557,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op0 = N->getOperand(0);
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
-    if (VT == MVT::i16 && Op0VT == MVT::f16 &&
-        Subtarget.hasStdExtZfhminOrZhinxmin()) {
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
-    } else if (VT == MVT::i16 && Op0VT == MVT::bf16 &&
-               Subtarget.hasStdExtZfbfmin()) {
+    if (VT == MVT::i16 &&
+        ((Op0VT == MVT::f16 && Subtarget.hasStdExtZfhminOrZhinxmin()) ||
+         (Op0VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()))) {
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
     } else if (VT == MVT::i32 && Op0VT == MVT::f32 && Subtarget.is64Bit() &&
