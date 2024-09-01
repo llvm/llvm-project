@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_SCOPED_TEMPORARY_BUFFER_H
-#define _LIBCPP___MEMORY_SCOPED_TEMPORARY_BUFFER_H
+#ifndef _LIBCPP___MEMORY_UNIQUE_TEMPORARY_BUFFER_H
+#define _LIBCPP___MEMORY_UNIQUE_TEMPORARY_BUFFER_H
 
 #include <__assert>
 #include <__config>
@@ -35,11 +35,11 @@ struct __sized_temporary_buffer_deleter {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Tp* __ptr) _NOEXCEPT {
     if (__libcpp_is_constant_evaluated()) {
-      allocator<_Tp>().deallocate(__ptr_, __count_);
+      allocator<_Tp>().deallocate(__ptr, __count_);
       return;
     }
 
-    std::__libcpp_deallocate_unsized((void*)__ptr_, _LIBCPP_ALIGNOF(_Tp));
+    std::__libcpp_deallocate_unsized((void*)__ptr, _LIBCPP_ALIGNOF(_Tp));
   }
 };
 
@@ -86,4 +86,4 @@ __make_unique_sized_temporary_buffer(ptrdiff_t __count) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_SCOPED_TEMPORARY_BUFFER_H
+#endif // _LIBCPP___MEMORY_UNIQUE_TEMPORARY_BUFFER_H
