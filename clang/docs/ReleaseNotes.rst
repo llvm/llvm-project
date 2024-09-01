@@ -339,6 +339,7 @@ Bug Fixes to C++ Support
 - Template parameter names are considered in the name lookup of out-of-line class template
   specialization right before its declaration context. (#GH64082)
 - Fixed a constraint comparison bug for friend declarations. (#GH78101)
+- Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
