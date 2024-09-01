@@ -862,12 +862,13 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
 RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
                                 const uint8_t *loc) const {
-  // Only R_X86_64_[REX_]GOTPCRELX can be relaxed. GNU as may emit GOTPCRELX
-  // with addend != -4. Such an instruction does not load the full GOT entry, so
-  // we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip), %rax
-  // (addend=0) loads the high 32 bits of the GOT entry.
+  // Only R_X86_64_[REX_]|[REX2_]GOTPCRELX can be relaxed. GNU as may emit
+  // GOTPCRELX with addend != -4. Such an instruction does not load the full GOT
+  // entry, so we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip),
+  // %rax (addend=0) loads the high 32 bits of the GOT entry.
   if (!ctx.arg.relax || addend != -4 ||
-      (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX))
+      (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX &&
+       type != R_X86_64_REX2_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
@@ -883,7 +884,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
   if (op == 0xff && (modRm == 0x15 || modRm == 0x25))
     return R_RELAX_GOT_PC;
 
-  // We don't support test/binop instructions without a REX prefix.
+  // We don't support test/binop instructions without a REX/REX2 prefix.
   if (type == R_X86_64_GOTPCRELX)
     return R_GOT_PC;
 
