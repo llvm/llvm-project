@@ -459,8 +459,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
     setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
-    setOperationAction(ISD::FABS, MVT::bf16, Expand);
-    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
+    setOperationAction(ISD::FABS, MVT::bf16, Custom);
+    setOperationAction(ISD::FNEG, MVT::bf16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   }
 
@@ -476,8 +476,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_LRINT, ISD::STRICT_LLRINT,
                           ISD::STRICT_LROUND, ISD::STRICT_LLROUND},
                          MVT::f16, Legal);
-      setOperationAction(ISD::FABS, MVT::f16, Expand);
-      setOperationAction(ISD::FNEG, MVT::f16, Expand);
+      setOperationAction(ISD::FABS, MVT::f16, Custom);
+      setOperationAction(ISD::FNEG, MVT::f16, Custom);
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     }
 
@@ -5942,6 +5942,29 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   return Res;
 }
 
+static SDValue lowerFABSorFNEG(SDValue Op, SelectionDAG &DAG,
+                               const RISCVSubtarget &Subtarget) {
+  bool IsFABS = Op.getOpcode() == ISD::FABS;
+  assert((IsFABS || Op.getOpcode() == ISD::FNEG) &&
+         "Wrong opcode for lowering FABS or FNEG.");
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT VT = Op.getSimpleValueType();
+  assert((VT == MVT::f16 || VT == MVT::bf16) && "Unexpected type");
+
+  SDLoc DL(Op);
+  SDValue Fmv =
+      DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op.getOperand(0));
+
+  APInt Mask = IsFABS ? APInt::getSignedMaxValue(16) : APInt::getSignMask(16);
+  Mask = Mask.sext(Subtarget.getXLen());
+
+  unsigned LogicOpc = IsFABS ? ISD::AND : ISD::XOR;
+  SDValue Logic =
+      DAG.getNode(LogicOpc, DL, XLenVT, Fmv, DAG.getConstant(Mask, DL, XLenVT));
+  return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, Logic);
+}
+
 /// Get a RISC-V target specified VL op for a given SDNode.
 static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
@@ -7071,12 +7094,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
+  case ISD::FABS:
+  case ISD::FNEG:
+    if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
+      return lowerFABSorFNEG(Op, DAG, Subtarget);
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FDIV:
-  case ISD::FNEG:
-  case ISD::FABS:
   case ISD::FSQRT:
   case ISD::FMA:
   case ISD::FMINNUM:
