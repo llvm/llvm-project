@@ -69,7 +69,7 @@ __make_unique_sized_temporary_buffer(ptrdiff_t __count) {
 #else
     if (__is_overaligned_for_new(_LIBCPP_ALIGNOF(_Tp))) {
       // Since aligned operator new is unavailable, constructs an empty buffer rather than one with invalid alignment.
-      return;
+      return __unique_buffer_type();
     }
 
     __ptr = static_cast<_Tp*>(::operator new(__count * sizeof(_Tp), nothrow));
