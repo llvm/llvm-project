@@ -2810,6 +2810,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     switch (FI.getExtParameterInfo(ArgNo).getABI()) {
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
+      Attrs.addAttribute(llvm::Attribute::NoAlias);
+      break;
     case ParameterABI::Ordinary:
       break;
 
@@ -4146,6 +4150,15 @@ static void emitWriteback(CodeGenFunction &CGF,
   assert(!isProvablyNull(srcAddr.getBasePointer()) &&
          "shouldn't have writeback for provably null argument");
 
+  if (writeback.WritebackExpr) {
+    CGF.EmitIgnoredExpr(writeback.WritebackExpr);
+
+    if (writeback.LifetimeSz)
+      CGF.EmitLifetimeEnd(writeback.LifetimeSz,
+                          writeback.Temporary.getBasePointer());
+    return;
+  }
+
   llvm::BasicBlock *contBB = nullptr;
 
   // If the argument wasn't provably non-null, we need to null check
@@ -4608,6 +4621,9 @@ void CodeGenFunction::EmitCallArgs(
     // Un-reverse the arguments we just evaluated so they match up with the LLVM
     // IR function.
     std::reverse(Args.begin() + CallArgsStart, Args.end());
+
+    // Reverse the writebacks to match the MSVC ABI.
+    Args.reverseWritebacks();
   }
 }
 
@@ -4686,6 +4702,12 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
 
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
+
+  // Add writeback for HLSLOutParamExpr.
+  if (const HLSLOutArgExpr *OE = dyn_cast<HLSLOutArgExpr>(E)) {
+    EmitHLSLOutArgExpr(OE, args, type);
+    return;
+  }
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);

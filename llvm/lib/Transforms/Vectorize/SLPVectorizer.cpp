@@ -269,7 +269,7 @@ static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
     return PowerOf2Ceil(Sz);
   // Find the number of elements, which forms full vectors.
   const unsigned NumParts = TTI.getRegUsageForType(getWidenedType(Ty, Sz));
-  if (NumParts == 0 || NumParts == Sz)
+  if (NumParts == 0 || NumParts >= Sz)
     return PowerOf2Ceil(Sz);
   return PowerOf2Ceil(divideCeil(Sz, NumParts)) * NumParts;
 }
@@ -1250,7 +1250,7 @@ static bool hasFullVectorsOnly(const TargetTransformInfo &TTI, Type *Ty,
   if (has_single_bit(Sz))
     return true;
   const unsigned NumParts = TTI.getRegUsageForType(getWidenedType(Ty, Sz));
-  return NumParts > 0 && NumParts != Sz && has_single_bit(Sz / NumParts) &&
+  return NumParts > 0 && NumParts < Sz && has_single_bit(Sz / NumParts) &&
          Sz % NumParts == 0;
 }
 
