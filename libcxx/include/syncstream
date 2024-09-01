@@ -46,7 +46,9 @@ namespace std {
         using streambuf_type = basic_streambuf<charT, traits>;
 
         // [syncstream.syncbuf.cons], construction and destruction
-        explicit basic_syncbuf(streambuf_type* obuf = nullptr)
+        basic_syncbuf()
+          : basic_syncbuf(nullptr) {}
+        explicit basic_syncbuf(streambuf_type* obuf)
           : basic_syncbuf(obuf, Allocator()) {}
         basic_syncbuf(streambuf_type*, const Allocator&);
         basic_syncbuf(basic_syncbuf&&);
@@ -253,8 +255,9 @@ public:
 
   // [syncstream.syncbuf.cons], construction and destruction
 
-  _LIBCPP_HIDE_FROM_ABI explicit basic_syncbuf(streambuf_type* __obuf = nullptr)
-      : basic_syncbuf(__obuf, _Allocator()) {}
+  _LIBCPP_HIDE_FROM_ABI basic_syncbuf() : basic_syncbuf(nullptr) {}
+
+  _LIBCPP_HIDE_FROM_ABI explicit basic_syncbuf(streambuf_type* __obuf) : basic_syncbuf(__obuf, _Allocator()) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_syncbuf(streambuf_type* __obuf, _Allocator const& __alloc)
       : __wrapped_(__obuf), __str_(__alloc) {

@@ -517,11 +517,18 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
 
     // Den = real(RHS)² + imag(RHS)²
     T A, B;
-    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B))
-      return false;
+    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B)) {
+      // Ignore overflow here, because that's what the current interpeter does.
+    }
     T Den;
     if (T::add(A, B, Bits, &Den))
       return false;
+
+    if (Compare(Den, Zero) == ComparisonCategoryResult::Equal) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_expr_divide_by_zero);
+      return false;
+    }
 
     // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
     T &ResultR = Result.atIndex(0).deref<T>();
@@ -979,24 +986,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
-  if (!Pointer::hasSameBase(LHS, RHS)) {
-    if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
-        RHS.getOffset() == 0) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-          << LHS.toDiagnosticString(S.getASTContext());
-      return false;
-    } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-               LHS.getOffset() == 0) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-          << RHS.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-
-    S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
-    return true;
-  } else {
+  if (Pointer::hasSameBase(LHS, RHS)) {
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
 
@@ -1012,6 +1002,35 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
     return true;
   }
+  // Otherwise we need to do a bunch of extra checks before returning Unordered.
+  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
+      RHS.getOffset() == 0) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+        << LHS.toDiagnosticString(S.getASTContext());
+    return false;
+  } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+             LHS.getOffset() == 0) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  bool BothNonNull = !LHS.isZero() && !RHS.isZero();
+  // Reject comparisons to literals.
+  for (const auto &P : {LHS, RHS}) {
+    if (P.isZero())
+      continue;
+    if (BothNonNull && P.pointsToLiteral()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
+      return false;
+    }
+  }
+
+  S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
+  return true;
 }
 
 template <>
@@ -1023,9 +1042,10 @@ inline bool CmpHelperEQ<MemberPointer>(InterpState &S, CodePtr OpPC,
   // If either operand is a pointer to a weak function, the comparison is not
   // constant.
   for (const auto &MP : {LHS, RHS}) {
-    if (const CXXMethodDecl *MD = MP.getMemberFunction(); MD && MD->isWeak()) {
+    if (MP.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_mem_pointer_weak_comparison) << MD;
+      S.FFDiag(Loc, diag::note_constexpr_mem_pointer_weak_comparison)
+          << MP.getMemberFunction();
       return false;
     }
   }
@@ -2284,6 +2304,15 @@ inline bool Null(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   return true;
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool IsNonNull(InterpState &S, CodePtr OpPC) {
+  const auto &P = S.Stk.pop<T>();
+  if (P.isWeak())
+    return false;
+  S.Stk.push<Boolean>(Boolean::from(!P.isZero()));
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // This, ImplicitThis
 //===----------------------------------------------------------------------===//
@@ -2537,7 +2566,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
     return false;
 
-  if (Ptr.isRoot() || !Ptr.isUnknownSizeArray() || Ptr.isDummy()) {
+  if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
   }
@@ -2623,7 +2652,11 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallable(S, OpPC, Func))
     return false;
 
-  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression())
+  // FIXME: The isConstructor() check here is not always right. The current
+  // constant evaluator is somewhat inconsistent in when it allows a function
+  // call when checking for a constant expression.
+  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
+      !Func->isConstructor())
     return false;
 
   if (!CheckCallDepth(S, OpPC))
@@ -2795,7 +2828,7 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   return true;
 }
 
-inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const Decl *D) {
+inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
   S.Stk.push<MemberPointer>(D);
   return true;
 }

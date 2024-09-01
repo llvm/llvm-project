@@ -820,19 +820,21 @@ public:
       markOverdefined(ValueState[V], V);
   }
 
-  void trackValueOfArgument(Argument *A) {
+  ValueLatticeElement getArgAttributeVL(Argument *A) {
     if (A->getType()->isIntOrIntVectorTy()) {
-      if (std::optional<ConstantRange> Range = A->getRange()) {
-        markConstantRange(ValueState[A], A, *Range);
-        return;
-      }
+      if (std::optional<ConstantRange> Range = A->getRange())
+        return ValueLatticeElement::getRange(*Range);
     }
-    if (A->hasNonNullAttr()) {
-      markNotNull(ValueState[A], A);
-      return;
-    }
+    if (A->hasNonNullAttr())
+      return ValueLatticeElement::getNot(Constant::getNullValue(A->getType()));
     // Assume nothing about the incoming arguments without attributes.
-    markOverdefined(A);
+    return ValueLatticeElement::getOverdefined();
+  }
+
+  void trackValueOfArgument(Argument *A) {
+    if (A->getType()->isStructTy())
+      return (void)markOverdefined(A);
+    mergeInValue(A, getArgAttributeVL(A));
   }
 
   bool isStructLatticeConstant(Function *F, StructType *STy);
@@ -1800,7 +1802,9 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
                        getMaxWidenStepsOpts());
         }
       } else
-        mergeInValue(&*AI, getValueState(*CAI), getMaxWidenStepsOpts());
+        mergeInValue(&*AI,
+                     getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
+                     getMaxWidenStepsOpts());
     }
   }
 }

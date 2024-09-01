@@ -7049,6 +7049,11 @@ void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
@@ -8963,15 +8968,34 @@ void ASTReader::ReadLateParsedTemplates(
   LateParsedTemplates.clear();
 }
 
-void ASTReader::AssignedLambdaNumbering(const CXXRecordDecl *Lambda) {
-  if (Lambda->getLambdaContextDecl()) {
-    // Keep track of this lambda so it can be merged with another lambda that
-    // is loaded later.
-    LambdaDeclarationsForMerging.insert(
-        {{Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-          Lambda->getLambdaIndexInContext()},
-         const_cast<CXXRecordDecl *>(Lambda)});
+void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
+  if (!Lambda->getLambdaContextDecl())
+    return;
+
+  auto LambdaInfo =
+      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
+                     Lambda->getLambdaIndexInContext());
+
+  // Handle the import and then include case for lambdas.
+  if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
+      Iter != LambdaDeclarationsForMerging.end() &&
+      Iter->second->isFromASTFile() && Lambda->getFirstDecl() == Lambda) {
+    CXXRecordDecl *Previous =
+        cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
+    Lambda->setPreviousDecl(Previous);
+    // FIXME: It will be best to use the Previous type when we creating the
+    // lambda directly. But that requires us to get the lambda context decl and
+    // lambda index before creating the lambda, which needs a drastic change in
+    // the parser.
+    const_cast<QualType &>(Lambda->TypeForDecl->CanonicalType) =
+        Previous->TypeForDecl->CanonicalType;
+    return;
   }
+
+  // Keep track of this lambda so it can be merged with another lambda that
+  // is loaded later.
+  LambdaDeclarationsForMerging.insert(
+      {LambdaInfo, const_cast<CXXRecordDecl *>(Lambda)});
 }
 
 void ASTReader::LoadSelector(Selector Sel) {

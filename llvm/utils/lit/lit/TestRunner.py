@@ -197,7 +197,7 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeout
     """
     # Use the helper even when no timeout is required to make
-    # other code simpler (i.e. avoid bunch of ``!= None`` checks)
+    # other code simpler (i.e. avoid bunch of ``is not None`` checks)
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
@@ -742,7 +742,16 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    raise InternalShellError(j, "Error: 'env' requires a" " subcommand")
+                    # Return the environment variables if no argument is provided.
+                    env_str = "\n".join(
+                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                    )
+                    results.append(
+                        ShellCommandResult(
+                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                        )
+                    )
+                    return 0
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1

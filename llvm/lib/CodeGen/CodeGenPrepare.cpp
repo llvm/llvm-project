@@ -1183,6 +1183,12 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
     }
   }
 
+  // Preserve loop Metadata.
+  if (BI->hasMetadata(LLVMContext::MD_loop)) {
+    for (auto *Pred : predecessors(BB))
+      Pred->getTerminator()->copyMetadata(*BI, LLVMContext::MD_loop);
+  }
+
   // The PHIs are now updated, change everything that refers to BB to use
   // DestBB and remove BB.
   BB->replaceAllUsesWith(DestBB);
@@ -2794,12 +2800,34 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     return false;
   };
 
+  SmallVector<const IntrinsicInst *, 4> FakeUses;
+
+  auto isFakeUse = [&FakeUses](const Instruction *Inst) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Inst);
+        II && II->getIntrinsicID() == Intrinsic::fake_use) {
+      // Record the instruction so it can be preserved when the exit block is
+      // removed. Do not preserve the fake use that uses the result of the
+      // PHI instruction.
+      // Do not copy fake uses that use the result of a PHI node.
+      // FIXME: If we do want to copy the fake use into the return blocks, we
+      // have to figure out which of the PHI node operands to use for each
+      // copy.
+      if (!isa<PHINode>(II->getOperand(0))) {
+        FakeUses.push_back(II);
+      }
+      return true;
+    }
+
+    return false;
+  };
+
   // Make sure there are no instructions between the first instruction
   // and return.
   const Instruction *BI = BB->getFirstNonPHI();
   // Skip over debug and the bitcast.
   while (isa<DbgInfoIntrinsic>(BI) || BI == BCI || BI == EVI ||
-         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI))
+         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI) ||
+         isFakeUse(BI))
     BI = BI->getNextNode();
   if (BI != RetI)
     return false;
@@ -2808,6 +2836,9 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   /// call.
   const Function *F = BB->getParent();
   SmallVector<BasicBlock *, 4> TailCallBBs;
+  // Record the call instructions so we can insert any fake uses
+  // that need to be preserved before them.
+  SmallVector<CallInst *, 4> CallInsts;
   if (PN) {
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       // Look through bitcasts.
@@ -2819,6 +2850,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
           TLI->mayBeEmittedAsTailCall(CI) &&
           attributesPermitTailCall(F, CI, RetI, *TLI)) {
         TailCallBBs.push_back(PredBB);
+        CallInsts.push_back(CI);
       } else {
         // Consider the cases in which the phi value is indirectly produced by
         // the tail call, for example when encountering memset(), memmove(),
@@ -2838,8 +2870,10 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
             isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
             IncomingVal == CI->getArgOperand(0) &&
             TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI))
+            attributesPermitTailCall(F, CI, RetI, *TLI)) {
           TailCallBBs.push_back(PredBB);
+          CallInsts.push_back(CI);
+        }
       }
     }
   } else {
@@ -2857,6 +2891,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
               (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
                V == CI->getArgOperand(0))) {
             TailCallBBs.push_back(Pred);
+            CallInsts.push_back(CI);
           }
         }
       }
@@ -2883,8 +2918,17 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   }
 
   // If we eliminated all predecessors of the block, delete the block now.
-  if (Changed && !BB->hasAddressTaken() && pred_empty(BB))
+  if (Changed && !BB->hasAddressTaken() && pred_empty(BB)) {
+    // Copy the fake uses found in the original return block to all blocks
+    // that contain tail calls.
+    for (auto *CI : CallInsts) {
+      for (auto const *FakeUse : FakeUses) {
+        auto *ClonedInst = FakeUse->clone();
+        ClonedInst->insertBefore(CI);
+      }
+    }
     BB->eraseFromParent();
+  }
 
   return Changed;
 }

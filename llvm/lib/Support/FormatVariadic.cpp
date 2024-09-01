@@ -25,8 +25,8 @@ static std::optional<AlignStyle> translateLocChar(char C) {
   LLVM_BUILTIN_UNREACHABLE;
 }
 
-bool formatv_object_base::consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
-                                             size_t &Align, char &Pad) {
+static bool consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
+                               size_t &Align, char &Pad) {
   Where = AlignStyle::Right;
   Align = 0;
   Pad = ' ';
@@ -35,8 +35,7 @@ bool formatv_object_base::consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
 
   if (Spec.size() > 1) {
     // A maximum of 2 characters at the beginning can be used for something
-    // other
-    // than the width.
+    // other than the width.
     // If Spec[1] is a loc char, then Spec[0] is a pad char and Spec[2:...]
     // contains the width.
     // Otherwise, if Spec[0] is a loc char, then Spec[1:...] contains the width.
@@ -55,8 +54,7 @@ bool formatv_object_base::consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
   return !Failed;
 }
 
-std::optional<ReplacementItem>
-formatv_object_base::parseReplacementItem(StringRef Spec) {
+static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
   StringRef RepString = Spec.trim("{}");
 
   // If the replacement sequence does not start with a non-negative integer,
@@ -82,15 +80,14 @@ formatv_object_base::parseReplacementItem(StringRef Spec) {
     RepString = StringRef();
   }
   RepString = RepString.trim();
-  if (!RepString.empty()) {
-    assert(false && "Unexpected characters found in replacement string!");
-  }
+  assert(RepString.empty() &&
+         "Unexpected characters found in replacement string!");
 
   return ReplacementItem{Spec, Index, Align, Where, Pad, Options};
 }
 
-std::pair<ReplacementItem, StringRef>
-formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
+static std::pair<ReplacementItem, StringRef>
+splitLiteralAndReplacement(StringRef Fmt) {
   while (!Fmt.empty()) {
     // Everything up until the first brace is a literal.
     if (Fmt.front() != '{') {
@@ -143,15 +140,77 @@ formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
   return std::make_pair(ReplacementItem{Fmt}, StringRef());
 }
 
+#ifndef NDEBUG
+#define ENABLE_VALIDATION 1
+#else
+#define ENABLE_VALIDATION 0 // Conveniently enable validation in release mode.
+#endif
+
 SmallVector<ReplacementItem, 2>
-formatv_object_base::parseFormatString(StringRef Fmt) {
+formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
+                                       bool Validate) {
   SmallVector<ReplacementItem, 2> Replacements;
-  ReplacementItem I;
+
+#if ENABLE_VALIDATION
+  const StringRef SavedFmtStr = Fmt;
+  size_t NumExpectedArgs = 0;
+#endif
+
   while (!Fmt.empty()) {
+    ReplacementItem I;
     std::tie(I, Fmt) = splitLiteralAndReplacement(Fmt);
     if (I.Type != ReplacementType::Empty)
       Replacements.push_back(I);
+#if ENABLE_VALIDATION
+    if (I.Type == ReplacementType::Format)
+      NumExpectedArgs = std::max(NumExpectedArgs, I.Index + 1);
+#endif
   }
+
+#if ENABLE_VALIDATION
+  if (!Validate)
+    return Replacements;
+
+  // Perform additional validation. Verify that the number of arguments matches
+  // the number of replacement indices and that there are no holes in the
+  // replacement indices.
+
+  // When validation fails, return an array of replacement items that
+  // will print an error message as the outout of this formatv() (used when
+  // validation is enabled in release mode).
+  auto getErrorReplacements = [SavedFmtStr](StringLiteral ErrorMsg) {
+    return SmallVector<ReplacementItem, 2>{
+        ReplacementItem("Invalid formatv() call: "), ReplacementItem(ErrorMsg),
+        ReplacementItem(" for format string: "), ReplacementItem(SavedFmtStr)};
+  };
+
+  if (NumExpectedArgs != NumArgs) {
+    errs() << formatv(
+        "Expected {0} Args, but got {1} for format string '{2}'\n",
+        NumExpectedArgs, NumArgs, SavedFmtStr);
+    assert(0 && "Invalid formatv() call");
+    return getErrorReplacements("Unexpected number of arguments");
+  }
+
+  // Find the number of unique indices seen. All replacement indices
+  // are < NumExpectedArgs.
+  SmallVector<bool> Indices(NumExpectedArgs);
+  size_t Count = 0;
+  for (const ReplacementItem &I : Replacements) {
+    if (I.Type != ReplacementType::Format || Indices[I.Index])
+      continue;
+    Indices[I.Index] = true;
+    ++Count;
+  }
+
+  if (Count != NumExpectedArgs) {
+    errs() << formatv(
+        "Replacement field indices cannot have holes for format string '{0}'\n",
+        SavedFmtStr);
+    assert(0 && "Invalid format string");
+    return getErrorReplacements("Replacement indices have holes");
+  }
+#endif // ENABLE_VALIDATION
   return Replacements;
 }
 

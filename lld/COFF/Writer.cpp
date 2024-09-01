@@ -219,10 +219,12 @@ private:
   void sortECChunks();
   void removeUnusedSections();
   void assignAddresses();
-  bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin);
+  bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
+                 MachineTypes machine);
   std::pair<Defined *, bool> getThunk(DenseMap<uint64_t, Defined *> &lastThunks,
                                       Defined *target, uint64_t p,
-                                      uint16_t type, int margin);
+                                      uint16_t type, int margin,
+                                      MachineTypes machine);
   bool createThunks(OutputSection *os, int margin);
   bool verifyRanges(const std::vector<Chunk *> chunks);
   void createECCodeMap();
@@ -396,8 +398,9 @@ void OutputSection::addContributingPartialSection(PartialSection *sec) {
 
 // Check whether the target address S is in range from a relocation
 // of type relType at address P.
-bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
-  if (ctx.config.machine == ARMNT) {
+bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
+                       MachineTypes machine) {
+  if (machine == ARMNT) {
     int64_t diff = AbsoluteDifference(s, p + 4) + margin;
     switch (relType) {
     case IMAGE_REL_ARM_BRANCH20T:
@@ -408,7 +411,7 @@ bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
     default:
       return true;
     }
-  } else if (ctx.config.machine == ARM64) {
+  } else if (isAnyArm64(machine)) {
     int64_t diff = AbsoluteDifference(s, p) + margin;
     switch (relType) {
     case IMAGE_REL_ARM64_BRANCH26:
@@ -421,7 +424,7 @@ bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
       return true;
     }
   } else {
-    llvm_unreachable("Unexpected architecture");
+    return true;
   }
 }
 
@@ -429,17 +432,17 @@ bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
 // or create a new one.
 std::pair<Defined *, bool>
 Writer::getThunk(DenseMap<uint64_t, Defined *> &lastThunks, Defined *target,
-                 uint64_t p, uint16_t type, int margin) {
+                 uint64_t p, uint16_t type, int margin, MachineTypes machine) {
   Defined *&lastThunk = lastThunks[target->getRVA()];
-  if (lastThunk && isInRange(type, lastThunk->getRVA(), p, margin))
+  if (lastThunk && isInRange(type, lastThunk->getRVA(), p, margin, machine))
     return {lastThunk, false};
   Chunk *c;
-  switch (ctx.config.machine) {
-  case ARMNT:
+  switch (getMachineArchType(machine)) {
+  case Triple::thumb:
     c = make<RangeExtensionThunkARM>(ctx, target);
     break;
-  case ARM64:
-    c = make<RangeExtensionThunkARM64>(ctx, target);
+  case Triple::aarch64:
+    c = make<RangeExtensionThunkARM64>(machine, target);
     break;
   default:
     llvm_unreachable("Unexpected architecture");
@@ -471,6 +474,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
     SectionChunk *sc = dyn_cast_or_null<SectionChunk>(os->chunks[i]);
     if (!sc)
       continue;
+    MachineTypes machine = sc->getMachine();
     size_t thunkInsertionSpot = i + 1;
 
     // Try to get a good enough estimate of where new thunks will be placed.
@@ -497,11 +501,12 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
       uint64_t s = sym->getRVA();
 
-      if (isInRange(rel.Type, s, p, margin))
+      if (isInRange(rel.Type, s, p, margin, machine))
         continue;
 
       // If the target isn't in range, hook it up to an existing or new thunk.
-      auto [thunk, wasNew] = getThunk(lastThunks, sym, p, rel.Type, margin);
+      auto [thunk, wasNew] =
+          getThunk(lastThunks, sym, p, rel.Type, margin, machine);
       if (wasNew) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
@@ -603,6 +608,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
     SectionChunk *sc = dyn_cast_or_null<SectionChunk>(c);
     if (!sc)
       continue;
+    MachineTypes machine = sc->getMachine();
 
     ArrayRef<coff_relocation> relocs = sc->getRelocs();
     for (const coff_relocation &rel : relocs) {
@@ -615,7 +621,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
       uint64_t p = sc->getRVA() + rel.VirtualAddress;
       uint64_t s = sym->getRVA();
 
-      if (!isInRange(rel.Type, s, p, 0))
+      if (!isInRange(rel.Type, s, p, 0, machine))
         return false;
     }
   }
@@ -625,7 +631,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
 // Assign addresses and add thunks if necessary.
 void Writer::finalizeAddresses() {
   assignAddresses();
-  if (ctx.config.machine != ARMNT && ctx.config.machine != ARM64)
+  if (ctx.config.machine != ARMNT && !isAnyArm64(ctx.config.machine))
     return;
 
   size_t origNumChunks = 0;
