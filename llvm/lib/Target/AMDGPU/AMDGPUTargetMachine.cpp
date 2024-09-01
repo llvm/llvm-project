@@ -771,12 +771,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
-
-        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0) {
-          AMDGPUAttributorOptions Opts;
-          Opts.IsClosedWorld = true;
-          PM.addPass(AMDGPUAttributorPass(*this, Opts));
-        }
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(
