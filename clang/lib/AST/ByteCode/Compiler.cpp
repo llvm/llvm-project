@@ -1235,12 +1235,6 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     assert(RD);
     if (RD->isInvalidDecl())
       return false;
-    if (RD->isUnion()) {
-      // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
-      // object's first non-static named data member is zero-initialized
-      // FIXME
-      return false;
-    }
 
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
         CXXRD && CXXRD->getNumVBases() > 0) {
@@ -3434,6 +3428,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     if (!this->emitFinishInitPop(E))
       return false;
 
+    // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
+    // object's first non-static named data member is zero-initialized
     if (R->isUnion())
       break;
   }
