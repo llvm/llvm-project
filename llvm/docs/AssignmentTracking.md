@@ -90,7 +90,7 @@ int fun(int a) {
 ```
 compiled without optimisations:
 ```
-$ clang++ test.cpp -o test.ll -emit-llvm -S -g -O0 -Xclang -fexperimental-assignment-tracking
+$ clang++ test.cpp -o test.ll -emit-llvm -S -g -O0 -Xclang -fexperimental-assignment-tracking=enabled
 ```
 we get:
 ```
@@ -196,8 +196,7 @@ the choice at each instruction, iteratively joining the results for each block.
 
 ### TODO list
 
-As this is an experimental work in progress so there are some items we still need
-to tackle:
+Outstanding improvements:
 
 * As mentioned in test llvm/test/DebugInfo/assignment-tracking/X86/diamond-3.ll,
   the analysis should treat escaping calls like untagged stores.
@@ -230,3 +229,8 @@ to tackle:
   that we can only track assignments with fixed offsets and sizes, I think we
   can probably get rid of the address and address-expression part, since it
   will always be computable with the info we have.
+
+* Assignment tracking is disabled by default for LTO and thinLTO builds, and
+  if LLDB debugger tuning has been specified. We should remove these
+  restrictions. See EmitAssemblyHelper::RunOptimizationPipeline in
+  clang/lib/CodeGen/BackendUtil.cpp.
