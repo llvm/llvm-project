@@ -31,7 +31,6 @@ $
 import abc
 from functools import wraps
 import gc
-import glob
 import io
 import json
 import os.path
@@ -416,7 +415,7 @@ class _LocalProcess(_BaseProcess):
 
         self._proc = Popen(
             [executable] + args,
-            stdout=open(os.devnull) if not self._trace_on else None,
+            stdout=DEVNULL if not self._trace_on else None,
             stdin=PIPE,
             env=env,
         )
