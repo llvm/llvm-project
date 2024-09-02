@@ -595,9 +595,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Custom);
 
     // f16/bf16 require custom handling.
-    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT,
-                        ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
+    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
                        XLenVT, Custom);
+    setOperationAction({ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
+                       XLenVT, Legal);
 
     setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
