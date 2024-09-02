@@ -2668,6 +2668,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
       break;
     }
     case tok::at:
+    case tok::colon:
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         nextToken();
