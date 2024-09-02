@@ -762,9 +762,11 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
                                                    []<string>)),
             ManualCodegen = [{
     {
-      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
-      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      if (IsMasked)
+        IntrinsicTypes = {ResultType, Ops[0]->getType(), Ops.back()->getType()};
+      else
+        IntrinsicTypes = {ResultType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 6> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -772,11 +774,10 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
       unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
 
       if (NoPassthru) { // Push poison into passthru
-        Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+        Operands.push_back(llvm::PoisonValue::get(ResultType));
       } else { // Push intrinsics operands into passthru
         llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(Builder.CreateExtractValue(PassthruOperand, {I}));
+        Operands.push_back(PassthruOperand);
       }
 
       Operands.push_back(Ops[Offset]); // Ptr
@@ -785,6 +786,7 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
       Operands.push_back(Ops[Offset + 1]); // VL
       if (IsMasked)
         Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
 
@@ -828,24 +830,24 @@ multiclass RVVUnitStridedSegStoreTuple<string op> {
     {
       // Masked
       // Builtin: (mask, ptr, v_tuple, vl)
-      // Intrinsic: (val0, val1, ..., ptr, mask, vl)
+      // Intrinsic: (tuple, ptr, mask, vl)
       // Unmasked
       // Builtin: (ptr, v_tuple, vl)
-      // Intrinsic: (val0, val1, ..., ptr, vl)
+      // Intrinsic: (tuple, ptr, vl)
       unsigned Offset = IsMasked ? 1 : 0;
-      llvm::Value *VTupleOperand = Ops[Offset + 1];
 
-      SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I) {
-        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
-        Operands.push_back(V);
-      }
+      SmallVector<llvm::Value*, 5> Operands;
+      Operands.push_back(Ops[Offset + 1]); // tuple
       Operands.push_back(Ops[Offset]); // Ptr
       if (IsMasked)
         Operands.push_back(Ops[0]);
       Operands.push_back(Ops[Offset + 2]); // VL
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
-      IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType()};
+      if (IsMasked)
+        IntrinsicTypes = {Operands[0]->getType(), Ops[0]->getType(), Operands.back()->getType()};
+      else
+        IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType()};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       return Builder.CreateCall(F, Operands, "");
    }
@@ -880,9 +882,11 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
                                                    []<string>)),
             ManualCodegen = [{
     {
-      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
-      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      if (IsMasked)
+        IntrinsicTypes = {ResultType, Ops.back()->getType(), Ops[0]->getType()};
+      else
+        IntrinsicTypes = {ResultType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 6> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -890,11 +894,10 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
       unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
 
       if (NoPassthru) { // Push poison into passthru
-        Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+        Operands.push_back(llvm::PoisonValue::get(ResultType));
       } else { // Push intrinsics operands into passthru
         llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(Builder.CreateExtractValue(PassthruOperand, {I}));
+        Operands.push_back(PassthruOperand);
       }
 
       Operands.push_back(Ops[Offset]); // Ptr
@@ -903,6 +906,7 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
       Operands.push_back(Ops[Offset + 2]); // vl
       if (IsMasked)
         Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
 
@@ -911,14 +915,10 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
       clang::CharUnits Align =
           CGM.getNaturalPointeeTypeAlignment(E->getArg(Offset + 1)->getType());
 
-      llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
-      for (unsigned I = 0; I < NF; ++I) {
-        llvm::Value *V = Builder.CreateExtractValue(LoadValue, {I});
-        ReturnTuple = Builder.CreateInsertValue(ReturnTuple, V, {I});
-      }
+      llvm::Value *ReturnTuple = Builder.CreateExtractValue(LoadValue, 0);
 
       // Store new_vl
-      llvm::Value *V = Builder.CreateExtractValue(LoadValue, {NF});
+      llvm::Value *V = Builder.CreateExtractValue(LoadValue, 1);
       Builder.CreateStore(V, Address(Ops[Offset + 1], V->getType(), Align));
 
       if (ReturnValue.isNull())
@@ -957,9 +957,11 @@ multiclass RVVStridedSegLoadTuple<string op> {
                                                    []<string>)),
             ManualCodegen = [{
     {
-      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
-      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      if (IsMasked)
+        IntrinsicTypes = {ResultType, Ops.back()->getType(), Ops[0]->getType()};
+      else
+        IntrinsicTypes = {ResultType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 7> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -967,11 +969,10 @@ multiclass RVVStridedSegLoadTuple<string op> {
       unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
 
       if (NoPassthru) { // Push poison into passthru
-        Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+        Operands.push_back(llvm::PoisonValue::get(ResultType));
       } else { // Push intrinsics operands into passthru
         llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(Builder.CreateExtractValue(PassthruOperand, {I}));
+        Operands.push_back(PassthruOperand);
       }
 
       Operands.push_back(Ops[Offset]); // Ptr
@@ -981,6 +982,7 @@ multiclass RVVStridedSegLoadTuple<string op> {
       Operands.push_back(Ops[Offset + 2]); // VL
       if (IsMasked)
         Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -1025,25 +1027,25 @@ multiclass RVVStridedSegStoreTuple<string op> {
     {
       // Masked
       // Builtin: (mask, ptr, stride, v_tuple, vl)
-      // Intrinsic: (val0, val1, ..., ptr, stride, mask, vl)
+      // Intrinsic: (tuple, ptr, stride, mask, vl)
       // Unmasked
       // Builtin: (ptr, stride, v_tuple, vl)
-      // Intrinsic: (val0, val1, ..., ptr, stride, vl)
+      // Intrinsic: (tuple, ptr, stride, vl)
       unsigned Offset = IsMasked ? 1 : 0;
-      llvm::Value *VTupleOperand = Ops[Offset + 2];
 
-      SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I) {
-        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
-        Operands.push_back(V);
-      }
+      SmallVector<llvm::Value*, 6> Operands;
+      Operands.push_back(Ops[Offset + 2]); // tuple
       Operands.push_back(Ops[Offset]); // Ptr
       Operands.push_back(Ops[Offset + 1]); // Stride
       if (IsMasked)
         Operands.push_back(Ops[0]);
       Operands.push_back(Ops[Offset + 3]); // VL
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
-      IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType()};
+      if (IsMasked)
+        IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType(), Ops[0]->getType()};
+      else
+        IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType()};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       return Builder.CreateCall(F, Operands, "");
     }
@@ -1073,9 +1075,7 @@ multiclass RVVIndexedSegLoadTuple<string op> {
                                                    []<string>)),
             ManualCodegen = [{
     {
-      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
-      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 7> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -1083,11 +1083,10 @@ multiclass RVVIndexedSegLoadTuple<string op> {
       unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
 
       if (NoPassthru) { // Push poison into passthru
-        Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+        Operands.push_back(llvm::PoisonValue::get(ResultType));
       } else { // Push intrinsics operands into passthru
         llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
-        for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(Builder.CreateExtractValue(PassthruOperand, {I}));
+        Operands.push_back(PassthruOperand);
       }
 
       Operands.push_back(Ops[Offset]); // Ptr
@@ -1097,9 +1096,15 @@ multiclass RVVIndexedSegLoadTuple<string op> {
       Operands.push_back(Ops[Offset + 2]); // VL
       if (IsMasked)
         Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
-      IntrinsicTypes = {ElementVectorType, Ops[Offset + 1]->getType(),
-                        Ops.back()->getType()};
+      if (IsMasked)
+        IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(),
+                          Ops[0]->getType(),
+                          Ops.back()->getType()};
+      else
+        IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(),
+                          Ops.back()->getType()};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
 
@@ -1139,26 +1144,28 @@ multiclass RVVIndexedSegStoreTuple<string op> {
     {
       // Masked
       // Builtin: (mask, ptr, index, v_tuple, vl)
-      // Intrinsic: (val0, val1, ..., ptr, index, mask, vl)
+      // Intrinsic: (tuple, ptr, index, mask, vl)
       // Unmasked
       // Builtin: (ptr, index, v_tuple, vl)
-      // Intrinsic: (val0, val1, ..., ptr, index, vl)
+      // Intrinsic: (tuple, ptr, index, vl)
       unsigned Offset = IsMasked ? 1 : 0;
-      llvm::Value *VTupleOperand = Ops[Offset + 2];
 
-      SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I) {
-        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
-        Operands.push_back(V);
-      }
+      SmallVector<llvm::Value*, 6> Operands;
+      Operands.push_back(Ops[Offset + 2]); // tuple
       Operands.push_back(Ops[Offset]); // Ptr
       Operands.push_back(Ops[Offset + 1]); // Idx
       if (IsMasked)
         Operands.push_back(Ops[0]);
       Operands.push_back(Ops[Offset + 3]); // VL
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
 
-      IntrinsicTypes = {Operands[0]->getType(), Ops[Offset + 1]->getType(),
-                        Operands.back()->getType()};
+      if (IsMasked)
+        IntrinsicTypes = {Operands[0]->getType(), Ops[Offset + 1]->getType(),
+                          Ops[0]->getType(),
+                          Operands.back()->getType()};
+      else
+        IntrinsicTypes = {Operands[0]->getType(), Ops[Offset + 1]->getType(),
+                          Operands.back()->getType()};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       return Builder.CreateCall(F, Operands, "");
     }
@@ -2528,22 +2535,23 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vget_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
-        if (isa<StructType>(Ops[0]->getType())) // For tuple type
-          // Extract value from index (operand 1) of vtuple (operand 0)
-          return Builder.CreateExtractValue(
-            Ops[0],
-            {(unsigned)cast<ConstantInt>(Ops[1])->getZExtValue()});
         auto *VecTy = cast<ScalableVectorType>(ResultType);
-        auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
-        // Mask to only valid indices.
-        unsigned MaxIndex = OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
-        assert(isPowerOf2_32(MaxIndex));
-        Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
-        Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
-        Ops[1] = Builder.CreateMul(Ops[1],
-                                   ConstantInt::get(Ops[1]->getType(),
-                                                    VecTy->getMinNumElements()));
-        return Builder.CreateExtractVector(ResultType, Ops[0], Ops[1]);
+        if (auto *OpVecTy = dyn_cast<ScalableVectorType>(Ops[0]->getType())) {
+          unsigned MaxIndex = OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
+          assert(isPowerOf2_32(MaxIndex));
+          // Mask to only valid indices.
+          Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
+          Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
+          Ops[1] = Builder.CreateMul(Ops[1],
+                                     ConstantInt::get(Ops[1]->getType(),
+                                                      VecTy->getMinNumElements()));
+          return Builder.CreateExtractVector(ResultType, Ops[0], Ops[1]);
+        }
+
+        return Builder.CreateIntrinsic(Intrinsic::riscv_tuple_extract,
+                                       {ResultType, Ops[0]->getType()},
+                                       {Ops[0], Builder.CreateZExt(Ops[1],
+                                        Builder.getInt32Ty())});
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
@@ -2564,22 +2572,23 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vset_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
-        if (isa<StructType>(ResultType)) // For tuple type
-          // Insert value (operand 2) into index (operand 1) of vtuple (operand 0)
-          return Builder.CreateInsertValue(
-            Ops[0], Ops[2],
-            {(unsigned)cast<ConstantInt>(Ops[1])->getZExtValue()});
-        auto *ResVecTy = cast<ScalableVectorType>(ResultType);
-        auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
-        // Mask to only valid indices.
-        unsigned MaxIndex = ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
-        assert(isPowerOf2_32(MaxIndex));
-        Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
-        Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
-        Ops[1] = Builder.CreateMul(Ops[1],
-                                   ConstantInt::get(Ops[1]->getType(),
-                                                    VecTy->getMinNumElements()));
-        return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
+        if (auto *ResVecTy = dyn_cast<ScalableVectorType>(ResultType)) {
+          auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+          unsigned MaxIndex = ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
+          assert(isPowerOf2_32(MaxIndex));
+          // Mask to only valid indices.
+          Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
+          Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
+          Ops[1] = Builder.CreateMul(Ops[1],
+                                     ConstantInt::get(Ops[1]->getType(),
+                                                      VecTy->getMinNumElements()));
+          return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
+        }
+
+        return Builder.CreateIntrinsic(Intrinsic::riscv_tuple_insert,
+                                       {ResultType, Ops[2]->getType()},
+                                       {Ops[0], Ops[2],
+                                        Builder.CreateZExt(Ops[1],Builder.getInt32Ty())});
       }
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
@@ -2603,22 +2612,22 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       SupportOverloading = false,
       ManualCodegen = [{
       {
-        if (isa<StructType>(ResultType)) {
-          unsigned NF = cast<StructType>(ResultType)->getNumElements();
-          llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
-          for (unsigned I = 0; I < NF; ++I) {
-            ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
-          }
-          return ReturnTuple;
-        }
         llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
         auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
         for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
-          llvm::Value *Idx =
-            ConstantInt::get(Builder.getInt64Ty(),
-                              VecTy->getMinNumElements() * I);
-          ReturnVector =
-            Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+          if (isa<ScalableVectorType>(ResultType)) {
+            llvm::Value *Idx = ConstantInt::get(Builder.getInt64Ty(),
+                                                VecTy->getMinNumElements() * I);
+            ReturnVector =
+              Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+          } else {
+            llvm::Value *Idx = ConstantInt::get(Builder.getInt32Ty(), I);
+            ReturnVector =
+              Builder.CreateIntrinsic(Intrinsic::riscv_tuple_insert,
+                                      {ResultType, Ops[I]->getType()},
+                                      {ReturnVector, Ops[I], Idx});
+          }
+
         }
         return ReturnVector;
       }
