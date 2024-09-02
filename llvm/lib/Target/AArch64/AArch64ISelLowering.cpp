@@ -1990,12 +1990,10 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-
   if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-
   return VT != MVT::nxv4i32 && VT != MVT::nxv2i64;
 }
 
