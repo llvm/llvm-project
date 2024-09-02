@@ -273,11 +273,12 @@ using TypeSigTy = SmallVector<unsigned char>;
 /// Computes type signature of the intrinsic \p Int.
 static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   TypeSigTy TypeSig;
-  if (const auto *R = Int.TheDef->getValue("TypeSig")) {
-    for (const auto *a : cast<ListInit>(R->getValue())->getValues()) {
-      for (const auto *b : cast<ListInit>(a)->getValues())
-        TypeSig.emplace_back(cast<IntInit>(b)->getValue());
-    }
+  const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
+  const ListInit *OuterList = TypeInfo->getValueAsListInit("TypeSig");
+
+  for (const auto *Outer : OuterList->getValues()) {
+    for (const auto *Inner : cast<ListInit>(Outer)->getValues())
+      TypeSig.emplace_back(cast<IntInit>(Inner)->getValue());
   }
   return TypeSig;
 }
