@@ -21810,7 +21810,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   // The fully-reduced type. Should be a vector of i32 or i64
   EVT ReducedType = N->getValueType(0);
   // The type that is extended to the wide type. Should be an i8 or i16
-  EVT ExtendedType = A.getValueType();
+  EVT MulSrcType = A.getValueType();
   // The wide type with four times as many elements as the reduced type. Should
   // be a vector of i32 or i64, the same as the fully-reduced type
   EVT WideType = MulOp.getValueType();
@@ -21818,12 +21818,12 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
   if (WideType == MVT::nxv16i32 && ReducedType == MVT::nxv4i32 &&
-      ExtendedType == MVT::nxv16i8)
+      MulSrcType == MVT::nxv16i8)
     return DAG.getNode(Opcode, DL, MVT::nxv4i32,
                               NarrowOp, A, B);
 
   if (WideType == MVT::nxv8i64 && ReducedType == MVT::nxv2i64 &&
-      ExtendedType == MVT::nxv8i16)
+      MulSrcType == MVT::nxv8i16)
     return DAG.getNode(Opcode, DL, MVT::nxv2i64,
                               NarrowOp, A, B);
 
