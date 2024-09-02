@@ -2,7 +2,7 @@
 
 ; RUN: opt < %s -passes=dse -S | FileCheck %s
 
-define void @overwrite_middle(ptr  %X) {
+define void @overwrite_middle(ptr %X) {
 ; CHECK-LABEL: define void @overwrite_middle(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -20,25 +20,25 @@ entry:
   ret void
 }
 
-define void @overwrite_middle_smaller_alignment(ptr  %X) {
-; CHECK-LABEL: define void @overwrite_middle_smaller_alignment(
+define void @overwrite_middle_mismatched_alignment(ptr %X) {
+; CHECK-LABEL: define void @overwrite_middle_mismatched_alignment(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 984
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 8 dereferenceable(16) [[REAR]], i8 5, i64 16, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 8 dereferenceable(8) [[X]], i8 5, i64 8, i1 false)
+; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 976
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 dereferenceable(24) [[REAR]], i8 5, i64 24, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 dereferenceable(8) [[X]], i8 5, i64 8, i1 false)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 8 dereferenceable(976) [[ARRAYIDX]], i8 3, i64 976, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(976) [[ARRAYIDX]], i8 3, i64 976, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  tail call void @llvm.memset.p0.i64(ptr  align 8 dereferenceable(1000) %X, i8 5, i64 1000, i1 false)
-  %arrayidx = getelementptr inbounds i8, ptr %X, i64 8
-  tail call void @llvm.memset.p0.i64(ptr  align 8 dereferenceable(976) %arrayidx, i8 3, i64 976, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr  align 16 dereferenceable(1000) %X, i8 5, i64 1000, i1 false)
+  %arrayidx = getelementptr inbounds i8, ptr %X, i64 16
+  tail call void @llvm.memset.p0.i64(ptr  align 1 dereferenceable(980) %arrayidx, i8 3, i64 980, i1 false)
   ret void
 }
 
-define void @overwrite_middle2(ptr  %X) {
+define void @overwrite_middle2(ptr %X) {
 ; CHECK-LABEL: define void @overwrite_middle2(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -56,7 +56,7 @@ entry:
   ret void
 }
 
-define void @front_and_rear_bigger_than_threshold(ptr  %X) {
+define void @front_and_rear_bigger_than_threshold(ptr %X) {
 ; CHECK-LABEL: define void @front_and_rear_bigger_than_threshold(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -72,7 +72,7 @@ entry:
   ret void
 }
 
-define void @dead_smaller_than_threshold(ptr  %X) {
+define void @dead_smaller_than_threshold(ptr %X) {
 ; CHECK-LABEL: define void @dead_smaller_than_threshold(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -90,7 +90,7 @@ entry:
   ret void
 }
 
-define void @dontwrite28to32memset_atomic(ptr nocapture %X) {
+define void @dontwrite28to32memset_atomic(ptr %X) {
 ; CHECK-LABEL: define void @dontwrite28to32memset_atomic(
 ; CHECK-SAME: ptr nocapture [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
