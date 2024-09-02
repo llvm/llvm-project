@@ -304,14 +304,6 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SIfptrunc_round_upward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_UPWARD",
-  SDTFPRoundOp
->;
-
-def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
-  SDTFPRoundOp
->;
-
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
@@ -798,6 +790,22 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
+def as_hw_round_mode : SDNodeXForm<timm, [{
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  return CurDAG->getTargetConstant((N->getSExtValue() + 3) % 4, SDLoc(N),
+                                    MVT::i32);
+}]>;
+
+def SupportedRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero ||
+         Imm == (int)RoundingMode::NearestTiesToEven ||
+         Imm == (int)RoundingMode::TowardPositive ||
+         Imm == (int)RoundingMode::TowardNegative;
+}]>;
+
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   uint64_t Imm = N->getZExtValue();
   unsigned Bit = (Imm >> }] # bitnum # [{ ) & 1;
@@ -1017,9 +1025,8 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class NamedIntOperand<ValueType Type, string prefix, bit Optional = 1,
-                      string name = NAME>
-    : CustomOperand<Type, Optional, name> {
+class NamedIntOperand<string prefix, bit Optional = 1, string name = NAME>
+    : CustomOperand<i32, Optional, name> {
   string Prefix = prefix;
 
   let PredicateMethod =
@@ -1079,10 +1086,10 @@ class ArrayOperand0<string Id, string Name = NAME>
 let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
 let PrintMethod = "printOffset" in
-def Offset : NamedIntOperand<i32, "offset">;
+def Offset : NamedIntOperand<"offset">;
 let Validator = "isUInt<8>" in {
-def Offset0 : NamedIntOperand<i32, "offset0">;
-def Offset1 : NamedIntOperand<i32, "offset1">;
+def Offset0 : NamedIntOperand<"offset0">;
+def Offset1 : NamedIntOperand<"offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;
@@ -1118,7 +1125,7 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 def FORMAT : CustomOperand<i8>;
 
 let PrintInHex = 1 in
-def DMask : NamedIntOperand<i16, "dmask">;
+def DMask : NamedIntOperand<"dmask">;
 
 def Dim : CustomOperand<i8, /*optional=*/1>;
 
@@ -1139,24 +1146,24 @@ def dpp8 : CustomOperand<i32, 0, "DPP8">;
 def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
 let DefaultValue = "0xf", PrintInHex = 1, AlwaysPrint = 1 in {
-def DppRowMask : NamedIntOperand<i32, "row_mask">;
-def DppBankMask : NamedIntOperand<i32, "bank_mask">;
+def DppRowMask : NamedIntOperand<"row_mask">;
+def DppBankMask : NamedIntOperand<"bank_mask">;
 }
-def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl"> {
+def DppBoundCtrl : NamedIntOperand<"bound_ctrl"> {
   let ConvertMethod = "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }";
   let PrintMethod = "printDppBoundCtrl";
 }
 
 let DecoderMethod = "decodeDpp8FI", PrintMethod = "printDppFI" in
-def Dpp8FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
+def Dpp8FI : NamedIntOperand<"fi", 1, "DppFI">;
 let PrintMethod = "printDppFI" in
-def Dpp16FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
+def Dpp16FI : NamedIntOperand<"fi", 1, "DppFI">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
-def CBSZ : NamedIntOperand<i32, "cbsz"> {
+def CBSZ : NamedIntOperand<"cbsz"> {
   let Validator = "isUInt<3>";
 }
-def ABID : NamedIntOperand<i32, "abid"> {
+def ABID : NamedIntOperand<"abid"> {
   let Validator = "isUInt<4>";
 }
 def hwreg : CustomOperand<i32, 0, "Hwreg">;
@@ -1164,21 +1171,21 @@ def hwreg : CustomOperand<i32, 0, "Hwreg">;
 def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 let AlwaysPrint = 1 in {
-def WaitVDST : NamedIntOperand<i8, "wait_vdst"> {
+def WaitVDST : NamedIntOperand<"wait_vdst"> {
   let Validator = "isUInt<4>";
 }
-def WaitEXP : NamedIntOperand<i8, "wait_exp"> {
+def WaitEXP : NamedIntOperand<"wait_exp"> {
   let Validator = "isUInt<3>";
 }
-def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst"> {
+def WaitVAVDst : NamedIntOperand<"wait_va_vdst"> {
   let Validator = "isUInt<4>";
 }
-def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc"> {
+def WaitVMVSrc : NamedIntOperand<"wait_vm_vsrc"> {
   let Validator = "isUInt<1>";
 }
 } // End AlwaysPrint = 1
 
-def ByteSel : NamedIntOperand<i8, "byte_sel"> {
+def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
 
@@ -2345,6 +2352,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
+  field bit HasFP8DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -2922,6 +2930,15 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ColFields = ["IsVCMPX"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+def FP8DstByteSelTable : GenericTable {
+  let FilterClass = "VOP3_Pseudo";
+  let CppTypeName = "FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getFP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

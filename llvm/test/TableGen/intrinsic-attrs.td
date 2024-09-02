@@ -60,7 +60,7 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK-NEXT: default: llvm_unreachable("Invalid attribute set number");
 // CHECK-NEXT: case 0:
 // CHECK-NEXT:     return AttributeSet::get(C, {
-// CHECK-NEXT: Attribute::get(C, Attribute::Dereferenceable, 16),
+// CHECK-NEXT:       Attribute::get(C, Attribute::Dereferenceable, 16),
 // CHECK-NEXT: });
 // CHECK-NEXT: }
 // CHECK-NEXT: }

@@ -86,7 +86,7 @@ define i8 @test4(i8 %a, i8 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -105,7 +105,7 @@ exit:
 define i8 @test5(i8 %b) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 0, [[B:%.*]]
-; CHECK-NEXT:    ret i8 [[SHL]]
+; CHECK-NEXT:    ret i8 0
 ;
   %shl = shl i8 0, %b
   ret i8 %shl
@@ -472,5 +472,19 @@ define i1 @shl_nuw_nsw_test4(i32 %x, i32 range(i32 0, 32) %k) {
   %sh_prom = zext nneg i32 %k to i64
   %shl = shl nsw i64 %conv, %sh_prom
   %cmp = icmp eq i64 %shl, -9223372036854775808
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_nsw_test5(i32 %x) {
+; CHECK-LABEL: @shl_nuw_nsw_test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 768, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHL]], 1846
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %shl = shl nuw nsw i32 768, %x
+  %add = add nuw i32 %shl, 1846
+  %cmp = icmp sgt i32 %add, 0
   ret i1 %cmp
 }

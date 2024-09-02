@@ -751,7 +751,7 @@ let SubtargetPredicate = isGFX11Plus in {
     let IsInvalidSingleUseConsumer = 1;
     let IsInvalidSingleUseProducer = 1;
   }
-  defm V_MOV_B16_t16    : VOP1Inst<"v_mov_b16_t16", VOPProfile_True16<VOP_I16_I16>>;
+  defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
@@ -1397,7 +1397,8 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus]
 
-let OtherPredicates = [isGFX8Plus] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let OtherPredicates = [isGFX8Plus, p] in {
 def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)
@@ -1420,7 +1421,43 @@ def : GCNPat <
   (EXTRACT_SUBREG $src, sub0)
 >;
 
-} // End OtherPredicates = [isGFX8Plus]
+} // End OtherPredicates = [isGFX8Plus, p]
+
+let OtherPredicates = [UseFakeTrue16Insts] in {
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
+  (COPY $src)
+>;
+} // End OtherPredicates = [UseFakeTrue16Insts]
+
+
+let OtherPredicates = [UseRealTrue16Insts] in {
+def : GCNPat<
+  (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
+  (COPY $src)
+>;
+
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat<
+  (i64 (anyext i16:$src)),
+  (REG_SEQUENCE VReg_64, $src, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat<
+  (i16 (trunc i32:$src)),
+  (EXTRACT_SUBREG $src, lo16)
+>;
+
+def : GCNPat <
+  (i16 (trunc i64:$src)),
+  (EXTRACT_SUBREG $src, lo16)
+>;
+
+} // End OtherPredicates = [UseRealTrue16Insts]
 
 //===----------------------------------------------------------------------===//
 // GFX9

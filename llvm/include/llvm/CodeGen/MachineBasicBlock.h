@@ -478,11 +478,11 @@ public:
   Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
-  void removeLiveIn(MCPhysReg Reg,
+  void removeLiveIn(MCRegister Reg,
                     LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Return true if the specified register is in the live in set.
-  bool isLiveIn(MCPhysReg Reg,
+  bool isLiveIn(MCRegister Reg,
                 LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
@@ -1297,7 +1297,15 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static NodeRef getEntryNode(MachineBasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+
+  static unsigned getNumber(MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<const MachineBasicBlock *> {
   using NodeRef = const MachineBasicBlock *;
@@ -1306,7 +1314,15 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
   static NodeRef getEntryNode(const MachineBasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+
+  static unsigned getNumber(const MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<const MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 // Provide specializations of GraphTraits to be able to treat a
 // MachineFunction as a graph of MachineBasicBlocks and to walk it
@@ -1324,7 +1340,15 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
 
   static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+
+  static unsigned getNumber(MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   using NodeRef = const MachineBasicBlock *;
@@ -1336,7 +1360,15 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
 
   static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+
+  static unsigned getNumber(const MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 // These accessors are handy for sharing templated code between IR and MIR.
 inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }

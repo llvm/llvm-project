@@ -58,11 +58,11 @@ define void @absolute_func_empty_arguments() !absolute_symbol !0 {
 ; CHECK-NEXT: ptr @absolute_two_arguments_wrong_width
 !4 = !{i32 256, i32 512}
 
-; CHECK-NEXT: Range types must match instruction type!
+; CHECK-NEXT: Range pair types must match!
 ; CHECK-NEXT: ptr @absolute_two_arguments_one_wrong_width0
 !5 = !{i32 256, i64 512}
 
-; CHECK-NEXT: Range types must match instruction type!
+; CHECK-NEXT: Range pair types must match!
 ; CHECK-NEXT: ptr @absolute_two_arguments_one_wrong_width1
 !6 = !{i64 256, i32 512}
 

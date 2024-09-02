@@ -35,6 +35,27 @@ func.func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func.func @broadcast_scalable_unit_dim(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. [4])}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<[4]xf32>
+}
+
+// -----
+
+func.func @broadcast_fixed_to_scalable(%arg0: vector<2xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch (2 vs. [2])}}
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<[2]xf32>
+}
+
+// -----
+
+func.func @broadcast_scalable_to_fixed(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. 1)}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<4x1xf32>
+}
+
+// -----
+
 func.func @broadcast_unknown(%arg0: memref<4x8xf32>) {
   // expected-error@+1 {{'vector.broadcast' op source type is not a vector}}
   %1 = vector.broadcast %arg0 : memref<4x8xf32> to vector<1x8xf32>
@@ -1839,5 +1860,18 @@ func.func @invalid_step_0d() {
 func.func @invalid_step_2d() {
   // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<2x4xf32>'}}
   vector.step : vector<2x4xf32>
+  return
+}
+
+// -----
+
+func.func @matrix_multiply_scalable(%a: vector<[4]xf64>, %b: vector<4xf64>) {
+  // expected-error @+1 {{'vector.matrix_multiply' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[4]xf64>'}}
+  %c = vector.matrix_multiply %a, %b {
+    lhs_rows = 2: i32,
+    lhs_columns = 2: i32 ,
+    rhs_columns = 2: i32 }
+  : (vector<[4]xf64>, vector<4xf64>) -> vector<4xf64>
+
   return
 }

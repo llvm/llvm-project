@@ -31,3 +31,16 @@ template <int a>
 
 template <int a>
 [[noreturn]] __declspec(dllexport) __attribute__((cdecl)) void k(); // ok
+
+extern "C" {
+  __attribute__ ((__warn_unused_result__)) [[__maybe_unused__]] int l(int); // ok
+  [[__maybe_unused__]] __attribute__ ((__warn_unused_result__)) int m(int); // ok
+}
+
+extern "C" {
+  __attribute__ ((__warn_unused_result__)) [[__maybe_unused__]] int n (int); // ok
+  __attribute__ ((__warn_unused_result__)) [[__maybe_unused__]] static int o (int x) { return x; }; // ok
+}
+
+extern "C" __attribute__ ((__warn_unused_result__)) [[__maybe_unused__]] int p(int); // ok
+extern "C" [[__maybe_unused__]] __attribute__ ((__warn_unused_result__)) int q(int); // ok

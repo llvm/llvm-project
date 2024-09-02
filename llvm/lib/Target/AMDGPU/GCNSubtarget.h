@@ -239,6 +239,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
+  bool HasVmemWriteVgprInOrder = false;
 
   bool RequiresCOV6 = false;
 
@@ -1285,9 +1286,17 @@ public:
 
   bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
 
+  bool hasVmemWriteVgprInOrder() const { return HasVmemWriteVgprInOrder; }
+
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if inline constants are not supported for F16 pseudo
+  /// scalar transcendentals.
+  bool hasNoF16PseudoScalarTransInlineConstants() const {
+    return getGeneration() == GFX12;
+  }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

@@ -375,6 +375,7 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
+  MBBNumberingEpoch++;
 }
 
 /// This method iterates over the basic blocks and assigns their IsBeginSection

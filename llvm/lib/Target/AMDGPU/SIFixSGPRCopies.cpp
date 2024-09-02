@@ -64,6 +64,7 @@
 /// ultimately led to the creation of an illegal COPY.
 //===----------------------------------------------------------------------===//
 
+#include "SIFixSGPRCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -118,7 +119,7 @@ public:
 #endif
 };
 
-class SIFixSGPRCopies : public MachineFunctionPass {
+class SIFixSGPRCopies {
   MachineDominatorTree *MDT;
   SmallVector<MachineInstr*, 4> SCCCopies;
   SmallVector<MachineInstr*, 4> RegSequences;
@@ -129,15 +130,13 @@ class SIFixSGPRCopies : public MachineFunctionPass {
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
 
 public:
-  static char ID;
-
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  SIFixSGPRCopies() : MachineFunctionPass(ID) {}
+  SIFixSGPRCopies(MachineDominatorTree *MDT) : MDT(MDT) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
   void fixSCCCopies(MachineFunction &MF);
   void prepareRegSequenceAndPHIs(MachineFunction &MF);
   unsigned getNextVGPRToSGPRCopyId() { return ++NextVGPRToSGPRCopyID; }
@@ -158,6 +157,20 @@ public:
   bool tryMoveVGPRConstToSGPR(MachineOperand &MO, Register NewDst,
                               MachineBasicBlock *BlockToInsertTo,
                               MachineBasicBlock::iterator PointToInsertTo);
+};
+
+class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SIFixSGPRCopiesLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    MachineDominatorTree *MDT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    SIFixSGPRCopies Impl(MDT);
+    return Impl.run(MF);
+  }
 
   StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
@@ -171,18 +184,18 @@ public:
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(SIFixSGPRCopies, DEBUG_TYPE,
-                     "SI Fix SGPR copies", false, false)
+INITIALIZE_PASS_BEGIN(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SIFixSGPRCopies, DEBUG_TYPE,
-                     "SI Fix SGPR copies", false, false)
+INITIALIZE_PASS_END(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
+                    false, false)
 
-char SIFixSGPRCopies::ID = 0;
+char SIFixSGPRCopiesLegacy::ID = 0;
 
-char &llvm::SIFixSGPRCopiesID = SIFixSGPRCopies::ID;
+char &llvm::SIFixSGPRCopiesLegacyID = SIFixSGPRCopiesLegacy::ID;
 
-FunctionPass *llvm::createSIFixSGPRCopiesPass() {
-  return new SIFixSGPRCopies();
+FunctionPass *llvm::createSIFixSGPRCopiesLegacyPass() {
+  return new SIFixSGPRCopiesLegacy();
 }
 
 static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
@@ -602,7 +615,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   return Changed;
 }
 
-bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
+bool SIFixSGPRCopies::run(MachineFunction &MF) {
   // Only need to run this in SelectionDAG path.
   if (MF.getProperties().hasProperty(
         MachineFunctionProperties::Property::Selected))
@@ -612,7 +625,6 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
@@ -1132,4 +1144,18 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       }
     }
   }
+}
+
+PreservedAnalyses
+SIFixSGPRCopiesPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  SIFixSGPRCopies Impl(&MDT);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // TODO: We could detect CFG changed.
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  return PA;
 }
