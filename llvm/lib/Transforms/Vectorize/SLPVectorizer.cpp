@@ -10221,11 +10221,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       return false;
                     NextIndex += SV->getShuffleMask().size();
                     return true;
-                  })) {
+                  }))
                 return ::getShuffleCost(
                     *TTI, TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
                     calculateShufflevectorMask(E->Scalars));
-              }
             }
             return TTI::TCC_Free;
           });
