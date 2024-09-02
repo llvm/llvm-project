@@ -86,7 +86,6 @@ const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
 TargetTransformInfo::PopcntSupportKind
 LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  llvm::errs() << "XXX: " << TyWidth << "\n";
   return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
