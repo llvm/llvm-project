@@ -92,8 +92,9 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
     break;
   }
 
-  for (uint64_t Msb = 32; Msb < 64; ++Msb) {
-    uint64_t HighMask = ~((1ULL << (Msb + 1)) - 1);
+  uint64_t Msb = 32;
+  uint64_t HighMask = ~((1ULL << (Msb + 1)) - 1);
+  for (; Msb < 64; ++Msb, HighMask = (HighMask << 1) + 1) {
     for (uint64_t Lsb = Msb; Lsb > 0; --Lsb) {
       uint64_t LowMask = (1ULL << Lsb) - 1;
       uint64_t Mask = HighMask | LowMask;
