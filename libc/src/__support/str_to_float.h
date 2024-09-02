@@ -1159,13 +1159,11 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       index += 3;
       StorageType nan_mantissa = 0;
       // this handles the case of `NaN(n-character-sequence)`, where the
-      // n-character-sequence is made of 0 or more letters and numbers in any
-      // order.
+      // n-character-sequence is made of 0 or more letters, numbers, or
+      // underscore characters in any order.
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        // Apparently it's common for underscores to also be accepted. No idea
-        // why, but it's causing fuzz failures.
         while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {

@@ -1,0 +1,11 @@
+# RUN: llc -filetype=obj -mtriple x86_64-apple-macosx -o %t.x86-64.o \
+# RUN:   %S/Inputs/main-ret-0.ll
+# RUN: llc -filetype=obj -mtriple arm64-apple-macosx -o %t.arm64.o \
+# RUN:   %S/Inputs/main-ret-0.ll
+# RUN: llvm-lipo -create -output %t.universal.o -arch x86_64 %t.x86-64.o \
+# RUN:   -arch arm64 %t.arm64.o
+# RUN: llvm-jitlink -noexec -triple arm64-apple-macosx %t.universal.o
+#
+# REQUIRES: x86-registered-target && aarch64-registered-target
+#
+# Check that universal binaries don't raise "not a valid object file" errors.

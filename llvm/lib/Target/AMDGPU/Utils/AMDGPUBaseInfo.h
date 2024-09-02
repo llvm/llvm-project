@@ -862,6 +862,9 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isFP8DstSelInst(unsigned Opc);
+
+LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
 
 LLVM_READONLY
@@ -1314,8 +1317,7 @@ bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
-/// The bit indicating isHi is the LSB of the encoding.
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI);
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.

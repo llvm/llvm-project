@@ -9,7 +9,6 @@
 #ifndef LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 #define LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"

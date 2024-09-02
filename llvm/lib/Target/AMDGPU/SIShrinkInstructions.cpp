@@ -152,6 +152,10 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
       if (AMDGPU::VGPR_32RegClass.contains(Reg) &&
           !AMDGPU::VGPR_32_Lo128RegClass.contains(Reg))
         return false;
+
+      if (AMDGPU::VGPR_16RegClass.contains(Reg) &&
+          !AMDGPU::VGPR_16_Lo128RegClass.contains(Reg))
+        return false;
     }
   }
   return true;
@@ -1048,7 +1052,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
               MachineFunctionProperties::Property::NoVRegs))
         continue;
 
-      if (ST->useRealTrue16Insts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
+      if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
           !shouldShrinkTrue16(MI))
         continue;
 

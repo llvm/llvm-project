@@ -620,8 +620,7 @@ inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
     _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
 {
-  std::__swap_allocator(
-      __alloc(), __x.__alloc(), integral_constant<bool, __node_traits::propagate_on_container_swap::value>());
+  std::__swap_allocator(__alloc(), __x.__alloc());
   using std::swap;
   swap(__before_begin()->__next_, __x.__before_begin()->__next_);
 }
@@ -1518,8 +1517,7 @@ operator<=(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
 operator<=>(const forward_list<_Tp, _Allocator>& __x, const forward_list<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // #if _LIBCPP_STD_VER <= 17

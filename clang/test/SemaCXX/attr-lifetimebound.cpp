@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace usage_invalid {
   // FIXME: Should we diagnose a void return type?
@@ -9,6 +9,7 @@ namespace usage_invalid {
     A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a constructor}}
     ~A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a destructor}}
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
+    int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
     int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
     int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
   };
@@ -237,6 +238,16 @@ template <class T> T *addressof(T &arg) {
         &const_cast<char &>(reinterpret_cast<const volatile char &>(arg)));
 }
 
+template<typename T>
+struct basic_string_view {
+  basic_string_view(const T *);
+};
+
+template <class T> struct span {
+  template<size_t _ArrayExtent>
+	span(const T (&__arr)[_ArrayExtent]) noexcept;
+};
+
 } // namespace foo
 } // namespace std
 
@@ -265,3 +276,14 @@ namespace move_forward_et_al_examples {
   S *AddressOfOk = std::addressof(X);
 } // namespace move_forward_et_al_examples
 
+namespace ctor_cases {
+std::basic_string_view<char> test1() {
+  char abc[10];
+  return abc;  // expected-warning {{address of stack memory associated with local variable}}
+}
+
+std::span<int> test2() {
+  int abc[10];
+  return abc; // expected-warning {{address of stack memory associated with local variable}}
+}
+} // namespace ctor_cases
