@@ -155,17 +155,17 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_scale_x4_double( <vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4) {
 ; CHECK-LABEL: multi_vec_scale_x4_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z27.d, z7.d
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    mov z24.d, z4.d
+; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    mov z26.d, z25.d
+; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    fscale { z0.d - z3.d }, { z0.d - z3.d }, { z24.d - z27.d }
+; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
+; CHECK-NEXT:    fscale { z0.d - z3.d }, { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.fp8.scale.x4.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4)
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sme.fp8.scale.x4.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4)
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
