@@ -80,10 +80,6 @@ protected:
   ProfileSummaryInfo *PSI;
   DomConditionCache DC;
 
-  // Optional analyses. When non-null, these can both be used to do better
-  // combining and will be updated to reflect any changes.
-  LoopInfo *LI;
-
   ReversePostOrderTraversal<BasicBlock *> &RPOT;
 
   bool MadeIRChange = false;
@@ -106,13 +102,13 @@ public:
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI,
+               ProfileSummaryInfo *PSI, const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTI(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI), RPOT(RPOT) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 
@@ -351,7 +347,6 @@ public:
   }
   BlockFrequencyInfo *getBlockFrequencyInfo() const { return BFI; }
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
-  LoopInfo *getLoopInfo() const { return LI; }
 
   // Call target specific combiners
   std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
