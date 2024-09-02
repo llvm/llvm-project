@@ -167,7 +167,7 @@ class Builder:
             utils = []
 
             # Note: LLVM_AR is currently required by API TestBSDArchives.py tests.
-            # Assembly a full path to llvm-ar for given LLVM_TOOLS_DIR;
+            # Assemble a full path to llvm-ar for given LLVM_TOOLS_DIR;
             # otherwise assume we have llvm-ar at the same place where is CC specified.
             if not os.getenv("LLVM_AR"):
                 llvm_ar = getLlvmUtil("llvm-ar")
