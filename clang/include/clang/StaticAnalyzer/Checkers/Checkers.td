@@ -1043,10 +1043,6 @@ def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
   Documentation<HasDocumentation>;
 
-def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
-  HelpText<"Check for overflows in the arguments to malloc()">,
-  Documentation<HasDocumentation>;
-
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
   HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
