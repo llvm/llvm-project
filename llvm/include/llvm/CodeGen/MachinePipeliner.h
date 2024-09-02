@@ -373,7 +373,7 @@ public:
         }
       }
     }
-    // Handle a back-edge between a store and a load
+    // Handle a back-edge in loop carried dependencies
     SUnit *FirstNode = Nodes[0];
     SUnit *LastNode = Nodes[Nodes.size() - 1];
 

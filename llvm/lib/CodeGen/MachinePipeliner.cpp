@@ -1680,19 +1680,13 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
         Added.set(N);
       }
     }
-    // Order edges of the following:
-    // 1. Load -> Store
-    // 2. Store -> Load
-    // are treated as a back-edge in the adjacency matrix.
-    // Store after store was handled above.
+    // A chain edge between a store and a load is treated as a back-edge in the
+    // adjacency matrix.
     for (auto &PI : SUnits[i].Preds) {
-      if (PI.getKind() != SDep::Order ||
+      if (!SUnits[i].getInstr()->mayStore() ||
           !DAG->isLoopCarriedDep(&SUnits[i], PI, false))
         continue;
-      if ((SUnits[i].getInstr()->mayLoad() &&
-           PI.getSUnit()->getInstr()->mayStore()) ||
-          (SUnits[i].getInstr()->mayStore() &&
-           PI.getSUnit()->getInstr()->mayLoad())) {
+      if (PI.getKind() == SDep::Order && PI.getSUnit()->getInstr()->mayLoad()) {
         int N = PI.getSUnit()->NodeNum;
         if (!Added.test(N)) {
           AdjK[i].push_back(N);
