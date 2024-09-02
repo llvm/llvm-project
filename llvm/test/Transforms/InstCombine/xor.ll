@@ -1489,9 +1489,7 @@ define i4 @PR96857_xor_without_noundef(i4  %val0, i4  %val1, i4 %val2) {
 define i32 @or_disjoint_with_xor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @or_disjoint_with_xor(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[B:%.*]], [[TMP0]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[B:%.*]]
 ;
 entry:
   %or = or disjoint i32 %a, %b
@@ -1499,12 +1497,10 @@ entry:
   ret i32 %xor
 }
 
-define i32 @xor_with_or_disjoint(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @xor_with_or_disjoint(
+define i32 @xor_with_or_disjoint_ab(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_ab(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[B:%.*]], [[TMP0]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[B:%.*]]
 ;
 entry:
   %or = or disjoint i32 %a, %b
@@ -1512,12 +1508,21 @@ entry:
   ret i32 %xor
 }
 
-define <2 x i32> @or_disjoint_with_xor_vec(<2 x i32> %a, < 2 x i32> %b, <2 x i32> %c) {
+define i32 @xor_with_or_disjoint_ba(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_ba(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %b, %a
+  %xor = xor i32 %b, %or
+  ret i32 %xor
+}
+
+define <2 x i32> @or_disjoint_with_xor_vec(<2 x i32> %a, < 2 x i32> %b) {
 ; CHECK-LABEL: @or_disjoint_with_xor_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = and <2 x i32> [[B:%.*]], [[TMP0]]
-; CHECK-NEXT:    ret <2 x i32> [[XOR]]
+; CHECK-NEXT:    ret <2 x i32> [[B:%.*]]
 ;
 entry:
   %or = or disjoint <2 x i32> %a, %b
@@ -1525,12 +1530,10 @@ entry:
   ret <2 x i32> %xor
 }
 
-define <2 x i32> @xor_with_or_disjoint_vec(<2 x i32> %a, < 2 x i32> %b, <2 x i32> %c) {
+define <2 x i32> @xor_with_or_disjoint_vec(<2 x i32> %a, < 2 x i32> %b) {
 ; CHECK-LABEL: @xor_with_or_disjoint_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = and <2 x i32> [[B:%.*]], [[TMP0]]
-; CHECK-NEXT:    ret <2 x i32> [[XOR]]
+; CHECK-NEXT:    ret <2 x i32> [[B:%.*]]
 ;
 entry:
   %or = or disjoint <2 x i32> %a, %b
