@@ -115,8 +115,8 @@ public:
 
     ImportIDTable() = default;
 
-    // Three is something wrong with the application logic if we need to make a
-    // copy of this and potentially make a fork.
+    // Something is wrong with the application logic if we need to make a copy
+    // of this and potentially make a fork.
     ImportIDTable(const ImportIDTable &) = delete;
     ImportIDTable &operator=(const ImportIDTable &) = delete;
 
