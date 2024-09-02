@@ -3077,7 +3077,8 @@ static SDValue lowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
 
-  // f16 conversions are promoted to f32 when Zfh/Zhinx are no supported.
+  // f16 conversions are promoted to f32 when Zfh/Zhinx is not enabled.
+  // bf16 conversions are always promoted to f32.
   if ((SrcVal.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx()) ||
       SrcVal.getValueType() == MVT::bf16) {
     SDLoc DL(Op);
