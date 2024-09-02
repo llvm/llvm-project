@@ -821,6 +821,22 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
+def as_hw_round_mode : SDNodeXForm<timm, [{
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  return CurDAG->getTargetConstant((N->getSExtValue() + 3) % 4, SDLoc(N),
+                                    MVT::i32);
+}]>;
+
+def SupportedRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero ||
+         Imm == (int)RoundingMode::NearestTiesToEven ||
+         Imm == (int)RoundingMode::TowardPositive ||
+         Imm == (int)RoundingMode::TowardNegative;
+}]>;
+
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   uint64_t Imm = N->getZExtValue();
   unsigned Bit = (Imm >> }] # bitnum # [{ ) & 1;

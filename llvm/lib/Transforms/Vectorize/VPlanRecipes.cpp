@@ -925,6 +925,45 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  if (Variant) {
+    return Ctx.TTI.getCallInstrCost(nullptr, Variant->getReturnType(),
+                                    Variant->getFunctionType()->params(),
+                                    CostKind);
+  }
+
+  FastMathFlags FMF;
+  // TODO: Manage flags via VPRecipeWithIRFlags.
+  if (auto *FPMO = dyn_cast_or_null<FPMathOperator>(getUnderlyingValue()))
+    FMF = FPMO->getFastMathFlags();
+
+  // Some backends analyze intrinsic arguments to determine cost. If all
+  // operands are VPValues with an underlying IR value, use the original IR
+  // values for cost computations.
+  SmallVector<const Value *> Arguments;
+  for (VPValue *Op : operands()) {
+    auto *V = Op->getUnderlyingValue();
+    if (!V) {
+      Arguments.clear();
+      break;
+    }
+    Arguments.push_back(V);
+  }
+
+  Type *RetTy =
+      ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+  SmallVector<Type *> ParamTys;
+  for (unsigned I = 0; I != getNumOperands(); ++I)
+    ParamTys.push_back(
+        ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
+
+  IntrinsicCostAttributes CostAttrs(VectorIntrinsicID, RetTy, Arguments,
+                                    ParamTys, FMF);
+  return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -1802,18 +1841,18 @@ void VPReductionRecipe::execute(VPTransformState &State) {
             (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), PrevInChain,
             NewVecOp);
       PrevInChain = NewRed;
+      NextInChain = NewRed;
     } else {
       PrevInChain = State.get(getChainOp(), Part, /*IsScalar*/ true);
       NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
+        NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
+                                     NewRed, PrevInChain);
+      else
+        NextInChain = State.Builder.CreateBinOp(
+            (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed,
+            PrevInChain);
     }
-    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
-      NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
-                                   NewRed, PrevInChain);
-    } else if (IsOrdered)
-      NextInChain = NewRed;
-    else
-      NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
     State.set(this, NextInChain, Part, /*IsScalar*/ true);
   }
 }

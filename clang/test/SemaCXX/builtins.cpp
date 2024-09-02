@@ -175,3 +175,7 @@ template void test_builtin_complex(int, double); // expected-note {{instantiatio
 static void __builtin_cpu_init(); // expected-error {{static declaration of '__builtin_cpu_init' follows non-static declaration}} \
                                      expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
 #endif
+
+#ifdef _MSC_VER
+constexpr int x = []{ __noop; return 0; }(); // expected-no-diagnostics
+#endif

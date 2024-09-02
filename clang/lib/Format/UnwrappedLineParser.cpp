@@ -2682,6 +2682,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
       break;
     }
     case tok::at:
+    case tok::colon:
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         nextToken();
@@ -4029,6 +4030,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       break;
     case tok::coloncolon:
+    case tok::hashhash:
       break;
     default:
       if (!JSPastExtendsOrImplements && !ClassName &&

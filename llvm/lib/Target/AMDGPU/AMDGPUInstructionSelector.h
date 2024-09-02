@@ -402,6 +402,9 @@ private:
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;
 
+  void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
   void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;
 

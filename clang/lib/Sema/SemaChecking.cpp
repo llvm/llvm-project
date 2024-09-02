@@ -4880,7 +4880,8 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
     if (Arg->isTypeDependent())
       return false;
 
-    ExprResult Res = PerformImplicitConversion(Arg, Context.IntTy, AA_Passing);
+    ExprResult Res = PerformImplicitConversion(Arg, Context.IntTy,
+                                               AssignmentAction::Passing);
 
     if (Res.isInvalid())
       return true;
@@ -11424,6 +11425,18 @@ static void AnalyzeImplicitConversions(
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
     WorkList.push_back({E, CC, IsListInit});
+    return;
+  }
+
+  if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
+    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
+    // The base expression is only used to initialize the parameter for
+    // arguments to `inout` parameters, so we only traverse down the base
+    // expression for `inout` cases.
+    if (OutArgE->isInOut())
+      WorkList.push_back(
+          {OutArgE->getCastedTemporary()->getSourceExpr(), CC, IsListInit});
+    WorkList.push_back({OutArgE->getWritebackCast(), CC, IsListInit});
     return;
   }
 
