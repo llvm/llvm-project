@@ -200,7 +200,7 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
 ///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
 ///   {
 ///     %tile_update = arm_sme.insert_tile_slice
-///        %broadcast_to_1d, %iter_tile, %tile_slice_index :
+///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
 ///        vector<[4]xi32> into vector<[4]x[4]xi32>
 ///     scf.yield %tile_update : vector<[4]x[4]xi32>
 ///   }
@@ -268,7 +268,7 @@ struct BroadcastOpToArmSMELowering
 ///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
 ///   {
 ///     %tile_update = arm_sme.insert_tile_slice
-///        %broadcast_to_1d, %iter_tile, %tile_slice_index :
+///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
 ///        vector<[4]xi32> into vector<[4]x[4]xi32>
 ///     scf.yield %tile_update : vector<[4]x[4]xi32>
 ///   }

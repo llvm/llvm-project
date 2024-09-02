@@ -606,10 +606,10 @@ def InsertTileSliceOp : ArmSME_Op<"insert_tile_slice", [
   let summary = "Insert 1-D scalable vector into slice of 2-D tile";
   let description = [{
     Inserts a 1-D scalable vector to a slice of a 2-D scalable vector tile at
-    the given index. The type of the 1-D scalable vector to be moved must match
-    the type of the tile slice. A tile slice is a 1-D vector of horizontally or
-    vertically contiguous elements within a ZA tile. The updated tile is
-    returned as the result.
+    the given index. The type of the 1-D scalable vector to be inserted must
+    match the type of the tile slice. A tile slice is a 1-D vector of
+    horizontally or vertically contiguous elements within a ZA tile. The updated
+    tile is returned as the result.
 
     An optional tile slice layout attribute specifies whether the tile slice is
     horizontal (default) or vertical.

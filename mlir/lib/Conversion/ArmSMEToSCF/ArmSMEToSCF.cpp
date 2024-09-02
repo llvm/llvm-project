@@ -246,7 +246,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///        vector<[4]xi32> into vector<[4]xi32>
 ///    // Insert slice into tile
 ///    %tile_update = arm_sme.insert_tile_slice
-///      %slice, %iter_tile, %tile_slice_idx :
+///      %slice, %iter_tile[%tile_slice_idx] :
 ///      vector<[4]xi32> into vector<[4]x[4]xi32>
 ///    scf.yield %tile_update : vector<[4]x[4]xi32>
 ///  }
