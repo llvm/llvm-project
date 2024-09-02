@@ -19573,7 +19573,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
   }
 
   if (LocVT.isVector()) {
-    if (unsigned Reg =
+    if (MCRegister Reg =
             allocateRVVReg(ValVT, ValNo, FirstMaskArgument, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
