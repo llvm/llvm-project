@@ -257,7 +257,7 @@ General purpose options
 
   A semicolon list of arguments to pass when running the libc++ benchmarks using the
   ``check-cxx-benchmarks`` rule. By default we run the benchmarks for a very short amount of time,
-  since the primary use of ``check-cxx-benchmarks`` is to get test and coverage sanitizer, not to
+  since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
   get accurate measurements.
 
 .. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
