@@ -24,11 +24,11 @@ define void @overwrite_middle_mismatched_alignment(ptr %X) {
 ; CHECK-LABEL: define void @overwrite_middle_mismatched_alignment(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 976
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 dereferenceable(24) [[REAR]], i8 5, i64 24, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 dereferenceable(8) [[X]], i8 5, i64 8, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(976) [[ARRAYIDX]], i8 3, i64 976, i1 false)
+; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 992
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 dereferenceable(8) [[REAR]], i8 5, i64 8, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 dereferenceable(16) [[X]], i8 5, i64 16, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 16
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(980) [[ARRAYIDX]], i8 3, i64 980, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -92,7 +92,7 @@ entry:
 
 define void @dontwrite28to32memset_atomic(ptr %X) {
 ; CHECK-LABEL: define void @dontwrite28to32memset_atomic(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) {
+; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 992
 ; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 dereferenceable(8) [[REAR]], i8 5, i64 8, i32 4)
