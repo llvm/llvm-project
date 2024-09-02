@@ -35,8 +35,15 @@ using InputIter = cpp20_input_iterator<const int*>;
 
 struct InputRange : std::ranges::view_interface<InputRange> {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
   constexpr InputIter begin() const { return InputIter(buff); }
-  constexpr InputIter end() const { return InputIter(buff + 8); }
+  constexpr sentinel_wrapper<InputIter> end() const { return sentinel_wrapper(InputIter(buff + 8)); }
+};
+
+struct NonConstInputRange : std::ranges::view_interface<NonConstInputRange> {
+  int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+  constexpr InputIter begin() { return InputIter(buff); }
+  constexpr sentinel_wrapper<InputIter> end() { return sentinel_wrapper(InputIter(buff + 8)); }
 };
 
 struct SizedInputRange : std::ranges::view_interface<SizedInputRange> {
@@ -221,6 +228,19 @@ constexpr bool testEmpty() {
 
   return true;
 }
+
+#if TEST_STD_VER >= 23
+template <class T>
+concept ConstAccessorsInvocable = requires(T& t) {
+  t.cbegin();
+  t.cend();
+};
+
+static_assert(ConstAccessorsInvocable<InputRange>);
+static_assert(ConstAccessorsInvocable<const InputRange>);
+static_assert(ConstAccessorsInvocable<NonConstInputRange>);
+static_assert(!ConstAccessorsInvocable<const NonConstInputRange>);
+#endif // TEST_STD_VER >= 23
 
 template<class T>
 concept DataInvocable = requires (T const& obj) { obj.data(); };
