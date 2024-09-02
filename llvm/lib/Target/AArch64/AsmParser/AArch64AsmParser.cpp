@@ -6994,14 +6994,13 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
       return Extension.Name == Name;
     });
 
-    if (It != std::end(ExtensionMap)) {
-      if (EnableFeature)
-        STI.SetFeatureBitsTransitively(It->Features);
-      else
-        STI.ClearFeatureBitsTransitively(It->Features);
-    } else {
-      Error(CurLoc, "unsupported architectural extension: " + Name);
-    }
+    if (It == std::end(ExtensionMap))
+      return Error(CurLoc, "unsupported architectural extension: " + Name);
+
+    if (EnableFeature)
+      STI.SetFeatureBitsTransitively(It->Features);
+    else
+      STI.ClearFeatureBitsTransitively(It->Features);
     CurLoc = incrementLoc(CurLoc, Name.size());
   }
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
@@ -7079,14 +7078,13 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       return Extension.Name == Name;
     });
 
-    if (It != std::end(ExtensionMap)) {
-      if (EnableFeature)
-        STI.SetFeatureBitsTransitively(It->Features);
-      else
-        STI.ClearFeatureBitsTransitively(It->Features);
-    } else {
-      Error(CurLoc, "unsupported architectural extension: " + Name);
-    }
+    if (It == std::end(ExtensionMap))
+      return Error(CurLoc, "unsupported architectural extension: " + Name);
+
+    if (EnableFeature)
+      STI.SetFeatureBitsTransitively(It->Features);
+    else
+      STI.ClearFeatureBitsTransitively(It->Features);
     CurLoc = incrementLoc(CurLoc, Name.size());
   }
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
