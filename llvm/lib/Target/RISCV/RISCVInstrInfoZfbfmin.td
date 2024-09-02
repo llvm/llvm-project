@@ -38,7 +38,7 @@ def riscv_fpextend_bf16_oneuse : PatFrag<(ops node:$A),
 let Predicates = [HasStdExtZfbfmin] in {
 def FCVT_BF16_S : FPUnaryOp_r_frm<0b0100010, 0b01000, FPR16, FPR32, "fcvt.bf16.s">,
                   Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
-def FCVT_S_BF16 : FPUnaryOp_r_frm<0b0100000, 0b00110, FPR32, FPR16, "fcvt.s.bf16">,
+def FCVT_S_BF16 : FPUnaryOp_r_frmlegacy<0b0100000, 0b00110, FPR32, FPR16, "fcvt.s.bf16">,
                   Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
 } // Predicates = [HasStdExtZfbfmin]
 
@@ -58,7 +58,7 @@ def : StPat<store, FSH, FPR16, bf16>;
 def : Pat<(bf16 (riscv_fpround_bf16 FPR32:$rs1)),
           (FCVT_BF16_S FPR32:$rs1, FRM_DYN)>;
 def : Pat<(riscv_fpextend_bf16 (bf16 FPR16:$rs1)),
-          (FCVT_S_BF16 FPR16:$rs1, FRM_DYN)>;
+          (FCVT_S_BF16 FPR16:$rs1, FRM_RNE)>;
 
 // Moves (no conversion)
 def : Pat<(bf16 (riscv_fmv_h_x GPR:$src)), (FMV_H_X GPR:$src)>;
