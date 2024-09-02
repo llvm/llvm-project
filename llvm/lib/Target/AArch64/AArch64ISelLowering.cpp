@@ -21815,13 +21815,11 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   // as many elements in the wide type
   if (WideType == MVT::nxv16i32 && ReducedType == MVT::nxv4i32 &&
       MulSrcType == MVT::nxv16i8)
-    return DAG.getNode(Opcode, DL, MVT::nxv4i32,
-                              NarrowOp, A, B);
+    return DAG.getNode(Opcode, DL, MVT::nxv4i32, NarrowOp, A, B);
 
   if (WideType == MVT::nxv8i64 && ReducedType == MVT::nxv2i64 &&
       MulSrcType == MVT::nxv8i16)
-    return DAG.getNode(Opcode, DL, MVT::nxv2i64,
-                              NarrowOp, A, B);
+    return DAG.getNode(Opcode, DL, MVT::nxv2i64, NarrowOp, A, B);
 
   return SDValue();
 }
