@@ -24,22 +24,6 @@
 extern "C" {
 #endif // __cplusplus
 
-// Initializes rtsan if it has not been initialized yet.
-// Used by the RTSan runtime to ensure that rtsan is initialized before any
-// other rtsan functions are called.
-void SANITIZER_CDECL __rtsan_ensure_initialized();
-
-// Enter real-time context.
-// When in a real-time context, RTSan interceptors will error if realtime
-// violations are detected. Calls to this method are injected at the code
-// generation stage when RTSan is enabled.
-void SANITIZER_CDECL __rtsan_realtime_enter();
-
-// Exit the real-time context.
-// When not in a real-time context, RTSan interceptors will simply forward
-// intercepted method calls to the real methods.
-void SANITIZER_CDECL __rtsan_realtime_exit();
-
 // Disable all RTSan error reporting.
 void SANITIZER_CDECL __rtsan_disable(void);
 
@@ -47,36 +31,11 @@ void SANITIZER_CDECL __rtsan_disable(void);
 // The counterpart to `__rtsan_disable`.
 void SANITIZER_CDECL __rtsan_enable(void);
 
-// Expect that the next call to a function with the given name will not be
-// called from a realtime context.
-void SANITIZER_CDECL
-__rtsan_expect_not_realtime(const char *intercepted_function_name);
-
 #ifdef __cplusplus
 } // extern "C"
 
 namespace __rtsan {
-#if (defined(__has_feature) && __has_feature(realtime_sanitizer)) ||           \
-    SANITIZE_REALTIME
-
-void Initialize() { __rtsan_ensure_initialized(); }
-
-class ScopedEnabler {
-public:
-  ScopedEnabler() { __rtsan_realtime_enter(); }
-  ~ScopedEnabler() { __rtsan_realtime_exit(); }
-
-#if __cplusplus >= 201103L
-  ScopedEnabler(const ScopedEnabler &) = delete;
-  ScopedEnabler &operator=(const ScopedEnabler &) = delete;
-  ScopedEnabler(ScopedEnabler &&) = delete;
-  ScopedEnabler &operator=(ScopedEnabler &&) = delete;
-#else
-private:
-  ScopedEnabler(const ScopedEnabler &);
-  ScopedEnabler &operator=(const ScopedEnabler &);
-#endif // __cplusplus >= 201103L
-};
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
 
 class ScopedDisabler {
 public:
@@ -97,20 +56,12 @@ private:
 
 #else // doesn't have realtime_sanitizer
 
-void Initialize() {}
-
-class ScopedEnabler {
-public:
-  ScopedEnabler() {}
-};
-
 class ScopedDisabler {
 public:
   ScopedDisabler() {}
 };
 
-#endif // (defined(__has_feature) && __has_feature(realtime_sanitizer)) ||
-       // SANITIZE_REALTIME
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 } // namespace __rtsan
 #endif // __cplusplus
 

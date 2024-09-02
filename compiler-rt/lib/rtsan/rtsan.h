@@ -18,15 +18,22 @@ extern "C" {
 // A call to this method is added to the preinit array on Linux systems.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init();
 
-// See documentation in rtsan_interface.h.
+// Initializes rtsan if it has not been initialized yet.
+// Used by the RTSan runtime to ensure that rtsan is initialized before any
+// other rtsan functions are called.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized();
 
 SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized();
 
-// See documentation in rtsan_interface.h.
+// Enter real-time context.
+// When in a real-time context, RTSan interceptors will error if realtime
+// violations are detected. Calls to this method are injected at the code
+// generation stage when RTSan is enabled.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter();
 
-// See documentation in rtsan_interface.h.
+// Exit the real-time context.
+// When not in a real-time context, RTSan interceptors will simply forward
+// intercepted method calls to the real methods.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit();
 
 // See documentation in rtsan_interface.h.
@@ -35,7 +42,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable();
 // See documentation in rtsan_interface.h.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable();
 
-// See documentation in rtsan_interface.h.
+// Expect that the next call to a function with the given name will not be
+// called from a realtime context.
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_expect_not_realtime(const char *intercepted_function_name);
 
