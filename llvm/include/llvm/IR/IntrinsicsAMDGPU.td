@@ -3492,6 +3492,23 @@ def int_amdgcn_wmma_i32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i
 def int_amdgcn_wmma_i32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 
+class AMDGPUWmmaIntrinsicBlockScaleClamp<LLVMType AB, LLVMType CD, LLVMType scale_ty> :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [CD], // %D
+    [
+      AB,               // %A
+      AB,               // %B
+      CD,               // %C
+      scale_ty,         // %scale_a
+      scale_ty,         // %scale_b
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>]
+>;
+
+def int_amdgcn_wmma_f32_16x16x64_f8f6f4_clamp : AMDGPUWmmaIntrinsicBlockScaleClamp<llvm_v8i32_ty, llvm_v8f32_ty, llvm_i32_ty>;
 
 class AMDGPUSWmmacIntrinsicClamp<LLVMType A, LLVMType B, LLVMType CD> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
