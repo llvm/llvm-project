@@ -83,4 +83,11 @@ const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
   llvm_unreachable("unknown register class");
 }
 
+TargetTransformInfo::PopcntSupportKind
+LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) {
+  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
+  llvm::errs() << "XXX: " << TyWidth << "\n";
+  return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
