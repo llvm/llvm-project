@@ -3286,6 +3286,15 @@ TEST_F(TokenAnnotatorTest, BlockLBrace) {
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_BlockLBrace);
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+
+  Tokens = annotate("[foo bar:{{0, 1}} baz:baz];",
+                    getLLVMStyle(FormatStyle::LK_ObjC));
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown); // Not TT_BlockLBrace.
+  EXPECT_BRACE_KIND(Tokens[4], BK_Unknown);          // Not BK_Block.
+  EXPECT_BRACE_KIND(Tokens[5], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Unknown);  // Not BK_Block.
+  EXPECT_BRACE_KIND(Tokens[10], BK_Unknown); // Not BK_Block.
 }
 
 TEST_F(TokenAnnotatorTest, SwitchExpression) {
