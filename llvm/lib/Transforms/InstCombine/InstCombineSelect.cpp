@@ -3640,42 +3640,56 @@ static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
   return false;
 }
 
-static Value *foldSelectAddConstant(SelectInst &SI,
-                                    InstCombiner::BuilderTy &Builder) {
-  Value *Cmp;
+// This transformation enables the possibility of transforming fcmp + sel into
+// a fmaxnum/fminnum intrinsic.
+static Value *foldSelectIntoAddConstant(SelectInst &SI,
+                                        InstCombiner::BuilderTy &Builder) {
+  // Do this transformation only when select instruction gives NaN and NSZ
+  // guarantee.
+  auto *SIFOp = dyn_cast<FPMathOperator>(&SI);
+  if (!SIFOp || !SIFOp->hasNoSignedZeros() || !SIFOp->hasNoNaNs())
+    return nullptr;
+
+  // select((fcmp Pred, X, 0), (fadd X, C), C)
+  //      => fadd((select (fcmp Pred, X, 0), X, 0), C)
+  //
+  // Pred := OGT, OGE, OLT, OLE, UGT, UGE, ULT, and ULE
   Instruction *FAdd;
-  ConstantFP *C;
+  Constant *C;
+  Value *X, *Z;
+  CmpInst::Predicate Pred;
 
-  // select((fcmp OGT/OLT, X, 0), (fadd X, C), C) => fadd((select (fcmp OGT/OLT,
-  // X, 0), X, 0), C)
-
-  // This transformation enables the possibility of transforming fcmp + sel into
-  // a fmax/fmin.
-
-  // OneUse check for `Cmp` is necessary because it makes sure that other
+  // Note: OneUse check for `Cmp` is necessary because it makes sure that other
   // InstCombine folds don't undo this transformation and cause an infinite
   // loop.
-  if (match(&SI, m_Select(m_OneUse(m_Value(Cmp)), m_OneUse(m_Instruction(FAdd)),
-                          m_ConstantFP(C))) ||
-      match(&SI, m_Select(m_OneUse(m_Value(Cmp)), m_ConstantFP(C),
-                          m_OneUse(m_Instruction(FAdd))))) {
-    Value *X;
-    CmpInst::Predicate Pred;
-    if (!match(Cmp, m_FCmp(Pred, m_Value(X), m_AnyZeroFP())))
+  if (match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
+                          m_OneUse(m_Instruction(FAdd)), m_Constant(C))) ||
+      match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
+                          m_Constant(C), m_OneUse(m_Instruction(FAdd))))) {
+    if (!match(Z, m_AnyZeroFP()))
       return nullptr;
 
-    if (Pred != CmpInst::FCMP_OGT && Pred != CmpInst::FCMP_OLT)
+    // Only these Predicates can be transformed into fmaxnum/fminnum intrinsic.
+    switch (Pred) {
+    default:
       return nullptr;
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_UGT:
+    case FCmpInst::FCMP_UGE:
+    case FCmpInst::FCMP_ULT:
+    case FCmpInst::FCMP_ULE:
+      break;
+    }
 
     if (!match(FAdd, m_FAdd(m_Specific(X), m_Specific(C))))
       return nullptr;
 
-    FastMathFlags FMF = FAdd->getFastMathFlags();
-    FMF |= SI.getFastMathFlags();
-
-    Value *NewSelect = Builder.CreateSelect(
-        Cmp, X, ConstantFP::getZero(C->getType()), SI.getName() + ".new", &SI);
-    cast<Instruction>(NewSelect)->setFastMathFlags(FMF);
+    Value *NewSelect = Builder.CreateSelect(SI.getCondition(), X, Z,
+                                            SI.getName() + ".new", &SI);
+    cast<Instruction>(NewSelect)->setFastMathFlags(SI.getFastMathFlags());
 
     Value *NewFAdd =
         Builder.CreateFAddFMF(NewSelect, C, FAdd, FAdd->getName() + ".new");
@@ -4081,9 +4095,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
     return replaceInstUsesWith(SI, V);
 
-  if (Value *V = foldSelectAddConstant(SI, Builder)) {
+  if (Value *V = foldSelectIntoAddConstant(SI, Builder))
     return replaceInstUsesWith(SI, V);
-  }
 
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
