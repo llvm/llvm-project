@@ -207,7 +207,7 @@ class Builder:
 
             return [
                 'CC=%s' % cc,
-                'CCC=%s' % cc_type,
+                'CC_TYPE=%s' % cc_type,
                 'CXX=%s' % cxx,
             ] + utils
         return []

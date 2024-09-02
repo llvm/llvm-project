@@ -110,7 +110,7 @@ endif
 # Always override the linker. Assign already normalized CC.
 override LD := $(CC)
 # A kind of linker. It always gets retrieved from CC.
-override LDC := $(CCC)
+override LDC := $(CC_TYPE)
 
 ifeq "$(HOST_OS)" "Windows_NT"
        # This function enframes the full path with the platform specific quotes. This is necessary to run the c++ executable
@@ -218,7 +218,7 @@ endif
 LIMIT_DEBUG_INFO_FLAGS =
 NO_LIMIT_DEBUG_INFO_FLAGS =
 MODULE_DEBUG_INFO_FLAGS =
-ifeq ($(CCC), clang)
+ifeq ($(CC_TYPE), clang)
    LIMIT_DEBUG_INFO_FLAGS += -flimit-debug-info
    NO_LIMIT_DEBUG_INFO_FLAGS += -fno-limit-debug-info
    MODULE_DEBUG_INFO_FLAGS += -gmodules
@@ -324,7 +324,7 @@ endif
 # Windows specific options
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Windows_NT"
-	ifeq ($(CCC), clang)
+	ifeq ($(CC_TYPE), clang)
 		# Clang for Windows doesn't support C++ Exceptions
 		CXXFLAGS += -fno-exceptions
 		CXXFLAGS += -D_HAS_EXCEPTIONS=0
@@ -369,7 +369,7 @@ endif
 
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
-	ifeq ($(CCC), clang)
+	ifeq ($(CC_TYPE), clang)
 		# Force clang looking for the gcc's headers at specific rootfs folder.
 		CXXFLAGS += -stdlib=libstdc++ $(GCC_TOOLCHAIN_FLAGS)
 		LDFLAGS += -stdlib=libstdc++ $(GCC_TOOLCHAIN_FLAGS)
@@ -407,7 +407,7 @@ ifeq (1, $(USE_SYSTEM_STDLIB))
         CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(SDKROOT)/usr/include/c++/v1
         LDFLAGS += -L$(SDKROOT)/usr/lib -Wl,-rpath,$(SDKROOT)/usr/lib -lc++
     else
-        ifeq ($(CCC), clang)
+        ifeq ($(CC_TYPE),clang)
             # Force clang looking for the gcc's headers at specific rootfs folder.
             CXXFLAGS += $(GCC_TOOLCHAIN_FLAGS)
             LDFLAGS += $(GCC_TOOLCHAIN_FLAGS)
@@ -476,7 +476,7 @@ ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	endif
 endif
 
-ifeq ($(CCC), clang)
+ifeq ($(CC_TYPE), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
 

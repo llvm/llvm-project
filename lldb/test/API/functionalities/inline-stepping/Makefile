@@ -1,6 +1,6 @@
 CXX_SOURCES := calling.cpp
 
-ifeq ($(CCC), icc)
+ifeq ($(CC_TYPE), icc)
     CXXFLAGS_EXTRAS := -debug inline-debug-info
 endif
 
