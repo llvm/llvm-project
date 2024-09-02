@@ -109,9 +109,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
-      HasODRHash(false), Definition(D) {}
+      IsAnyDestructorNoReturn(false), HasDeletedSpecialMembers(0),
+      IsLambda(false), IsParsingBaseSpecifiers(false),
+      ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -622,6 +622,14 @@ bool CXXRecordDecl::isTriviallyCopyable() const {
   if (hasNonTrivialMoveAssignment()) return false;
   //   -- has a trivial destructor.
   if (!hasTrivialDestructor()) return false;
+  // C++17 [class]p6: that has at least one non-deleted copy constructor, move
+  // constructor, copy assignment operator, or move assignment operator,
+  if (getASTContext().getLangOpts().CPlusPlus17 &&
+      (data().HasDeletedSpecialMembers &
+       (SMF_CopyAssignment | SMF_CopyConstructor | SMF_MoveAssignment |
+        SMF_MoveConstructor)) == (SMF_CopyAssignment | SMF_CopyConstructor |
+                                  SMF_MoveAssignment | SMF_MoveConstructor))
+    return false;
 
   return true;
 }
@@ -1485,7 +1493,10 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     // out whether it's trivial yet (not until we get to the end of the
     // class). We'll handle this method in
     // finishedDefaultedOrDeletedMember.
-  } else if (MD->isTrivial()) {
+    return;
+  }
+
+  if (MD->isTrivial()) {
     data().HasTrivialSpecialMembers |= SMKind;
     data().HasTrivialSpecialMembersForCall |= SMKind;
   } else if (MD->isTrivialForCall()) {
@@ -1500,6 +1511,10 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     // class later, which can change the special method's triviality).
     if (!MD->isUserProvided())
       data().DeclaredNonTrivialSpecialMembersForCall |= SMKind;
+  }
+
+  if (MD->isDeleted()) {
+    data().HasDeletedSpecialMembers |= SMKind;
   }
 }
 
@@ -1538,6 +1553,8 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
       data().HasTrivialSpecialMembers |= SMKind;
     else
       data().DeclaredNonTrivialSpecialMembers |= SMKind;
+    if (D->isDeleted())
+      data().HasDeletedSpecialMembers |= SMKind;
   }
 }
 
