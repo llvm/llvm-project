@@ -1678,6 +1678,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
                     "}();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id (^block)(Foo *a) = ^id _Nullable(Foo *_Nullable a) {\n"
+                    "  return a;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 27u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown); // Not CtorDtorDeclName.
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ObjCBlockLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
