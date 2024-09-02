@@ -14,5 +14,4 @@ long long sveStoreWithTypeCast(int *datas) {
 }
 
 // TBAA: ![[CHAR:[0-9]+]] = !{!"omnipotent char",
-// TBAA: ![[TBAA6:[0-9]+]] = !{![[LONG:.+]], ![[LONG]], i64 0}
-// TBAA: ![[LONG:[0-9]+]] = !{!"long", ![[CHAR]], i64 0}
+// TBAA: ![[TBAA6:[0-9]+]] = !{![[CHAR]], ![[CHAR]], i64 0}
