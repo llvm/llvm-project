@@ -9,6 +9,7 @@
 namespace std { struct type_info; }
 
 namespace cwg1900 { // cwg1900: 2.7
+// See the test for CWG1477 for detailed analysis
 namespace N {
 struct A {
   friend int f();
