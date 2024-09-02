@@ -484,10 +484,8 @@ SourceManager::GetDefaultFileAndLine() {
 #else // FIXME: upstream this!
         lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
         if (line_entry.IsValid()) {
-          SetDefaultFileAndLine(line_entry.GetFile(), line_entry.line);
-          file_spec = m_last_file_spec;
-          line = m_last_line;
-          return true;
+          SetDefaultFileAndLine(line_entry.file_sp, line_entry.line);
+          return SupportFileAndLine(line_entry.file_sp, m_last_line);
         }
 #endif
         // END SWIFT
