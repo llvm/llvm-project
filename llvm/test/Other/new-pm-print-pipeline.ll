@@ -92,8 +92,8 @@
 ; CHECK-27: function(separate-const-offset-from-gep<lower-gep>)
 
 ;; Test InstCombine options - the first pass checks default settings, and the second checks customized options.
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(instcombine,instcombine<use-loop-info;no-verify-fixpoint;max-iterations=42>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-28
-; CHECK-28: function(instcombine<max-iterations=1;no-use-loop-info;verify-fixpoint>,instcombine<max-iterations=42;use-loop-info;no-verify-fixpoint>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(instcombine,instcombine<no-verify-fixpoint;max-iterations=42>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-28
+; CHECK-28: function(instcombine<max-iterations=1;verify-fixpoint>,instcombine<max-iterations=42;no-verify-fixpoint>)
 
 ;; Test function-attrs
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function-attrs<skip-non-recursive-function-attrs>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-29
