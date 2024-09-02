@@ -3183,15 +3183,14 @@ bool IRTranslator::translateExtractElement(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
-  // A ShuffleVector that has operates on scalable vectors is a splat vector
-  // where the value of the splat vector is the 0th element of the first
-  // operand, since the index mask operand is the zeroinitializer (undef and
+  // A ShuffleVector that operates on scalable vectors is a splat vector where
+  // the value of the splat vector is the 0th element of the first operand,
+  // since the index mask operand is the zeroinitializer (undef and
   // poison are treated as zeroinitializer here).
   if (U.getOperand(0)->getType()->isScalableTy()) {
-    Value *Op0 = U.getOperand(0);
+    Register Val = getOrCreateVReg(*U.getOperand(0));
     auto SplatVal = MIRBuilder.buildExtractVectorElementConstant(
-        LLT::scalar(Op0->getType()->getScalarSizeInBits()),
-        getOrCreateVReg(*Op0), 0);
+        MRI->getType(Val).getElementType(), Val, 0);
     MIRBuilder.buildSplatVector(getOrCreateVReg(U), SplatVal);
     return true;
   }

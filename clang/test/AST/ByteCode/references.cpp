@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -verify=ref,both %s
 
 
 constexpr int a = 10;
@@ -135,3 +135,12 @@ static_assert(nonextended_string_ref[2] == '\0', "");
 /// but taking its address is.
 int &&A = 12;
 int arr[!&A];
+
+namespace Temporaries {
+  struct A { int n; };
+  struct B { const A &a; };
+  const B j = {{1}}; // both-note {{temporary created here}}
+
+  static_assert(j.a.n == 1, "");  // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+}

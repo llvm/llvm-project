@@ -1565,6 +1565,10 @@ public:
   /// Produce a widened version of the call instruction.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenCallRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
