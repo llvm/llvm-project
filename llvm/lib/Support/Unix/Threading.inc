@@ -141,12 +141,8 @@ static constexpr uint32_t get_max_thread_name_length_impl() {
   return PTHREAD_MAX_NAMELEN_NP;
 #elif defined(__APPLE__)
   return 64;
-#elif defined(__linux__)
-#if HAVE_PTHREAD_SETNAME_NP
+#elif defined(__linux__) && HAVE_PTHREAD_SETNAME_NP
   return 16;
-#else
-  return 0;
-#endif
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
   return 16;
 #elif defined(__OpenBSD__)
@@ -174,12 +170,8 @@ void llvm::set_thread_name(const Twine &Name) {
   if (get_max_thread_name_length() > 0)
     NameStr = NameStr.take_back(get_max_thread_name_length() - 1);
   (void)NameStr;
-#if defined(__linux__)
-#if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
-#if HAVE_PTHREAD_SETNAME_NP
+#if defined(__linux__) && HAVE_PTHREAD_SETNAME_NP
   ::pthread_setname_np(::pthread_self(), NameStr.data());
-#endif
-#endif
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
 #elif defined(__NetBSD__)
@@ -241,13 +233,11 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   ::pthread_get_name_np(::pthread_self(), buf, len);
 
   Name.append(buf, buf + strlen(buf));
-#elif defined(__linux__)
-#if HAVE_PTHREAD_GETNAME_NP
+#elif defined(__linux__) && HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char Buffer[len] = {'\0'}; // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
-#endif
 #endif
 }
 
