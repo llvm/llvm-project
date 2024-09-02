@@ -21807,12 +21807,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   assert(Opcode != 0 && "Unexpected dot product case encountered.");
 
-  // The fully-reduced type. Should be a vector of i32 or i64
   EVT ReducedType = N->getValueType(0);
-  // The type that is extended to the wide type. Should be an i8 or i16
   EVT MulSrcType = A.getValueType();
-  // The wide type with four times as many elements as the reduced type. Should
-  // be a vector of i32 or i64, the same as the fully-reduced type
   EVT WideType = MulOp.getValueType();
 
   // Dot products operate on chunks of four elements so there must be four times
