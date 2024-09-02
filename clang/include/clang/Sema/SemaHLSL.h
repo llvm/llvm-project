@@ -37,6 +37,9 @@ public:
   HLSLNumThreadsAttr *mergeNumThreadsAttr(Decl *D,
                                           const AttributeCommonInfo &AL, int X,
                                           int Y, int Z);
+  HLSLWaveSizeAttr *mergeWaveSizeAttr(Decl *D, const AttributeCommonInfo &AL,
+                                      int Min, int Max, int Preferred,
+                                      int SpelledArgsCount);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                   llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
@@ -52,6 +55,7 @@ public:
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
