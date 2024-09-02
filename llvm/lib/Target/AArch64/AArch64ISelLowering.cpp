@@ -1988,6 +1988,15 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
   return false;
 }
 
+bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
+    const IntrinsicInst *I) const {
+  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
+    return true;
+
+  EVT VT = EVT::getEVT(I->getType());
+  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64;
+}
+
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   if (!Subtarget->isSVEorStreamingSVEAvailable())
     return true;
@@ -21763,6 +21772,61 @@ static SDValue tryCombineWhileLo(SDNode *N,
   return SDValue(N, 0);
 }
 
+SDValue tryLowerPartialReductionToDot(SDNode *N,
+                                      const AArch64Subtarget *Subtarget,
+                                      SelectionDAG &DAG) {
+
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+         getIntrinsicID(N) ==
+             Intrinsic::experimental_vector_partial_reduce_add &&
+         "Expected a partial reduction node");
+
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // The narrower of the two operands. Used as the accumulator
+  auto NarrowOp = N->getOperand(1);
+  auto MulOp = N->getOperand(2);
+  if (MulOp->getOpcode() != ISD::MUL)
+    return SDValue();
+
+  auto ExtA = MulOp->getOperand(0);
+  auto ExtB = MulOp->getOperand(1);
+  bool IsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
+  bool IsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
+  if (ExtA->getOpcode() != ExtB->getOpcode() || (!IsSExt && !IsZExt))
+    return SDValue();
+
+  auto A = ExtA->getOperand(0);
+  auto B = ExtB->getOperand(0);
+  if (A.getValueType() != B.getValueType())
+    return SDValue();
+
+  unsigned Opcode = 0;
+
+  if (IsSExt)
+    Opcode = AArch64ISD::SDOT;
+  else if (IsZExt)
+    Opcode = AArch64ISD::UDOT;
+
+  assert(Opcode != 0 && "Unexpected dot product case encountered.");
+
+  EVT ReducedType = N->getValueType(0);
+  EVT MulSrcType = A.getValueType();
+
+  // Dot products operate on chunks of four elements so there must be four times
+  // as many elements in the wide type
+  if (ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8)
+    return DAG.getNode(Opcode, DL, MVT::nxv4i32, NarrowOp, A, B);
+
+  if (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16)
+    return DAG.getNode(Opcode, DL, MVT::nxv2i64, NarrowOp, A, B);
+
+  return SDValue();
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -21771,6 +21835,12 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    if (auto Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
+      return Dot;
+    return DAG.getPartialReduceAdd(SDLoc(N), N->getValueType(0),
+                                   N->getOperand(1), N->getOperand(2));
+  }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:
     return tryCombineFixedPointConvert(N, DCI, DAG);
