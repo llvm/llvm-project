@@ -42,8 +42,6 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable();
 // See documentation in rtsan_interface.h.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable();
 
-// Expect that the next call to a function with the given name will not be
-// called from a realtime context.
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_expect_not_realtime(const char *intercepted_function_name);
 

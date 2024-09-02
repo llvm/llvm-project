@@ -25,10 +25,11 @@ extern "C" {
 #endif // __cplusplus
 
 // Disable all RTSan error reporting.
+// Must be paired with a call to `__rtsan_enable`
 void SANITIZER_CDECL __rtsan_disable(void);
 
 // Re-enable all RTSan error reporting.
-// The counterpart to `__rtsan_disable`.
+// Must follow a call to `__rtsan_disable`.
 void SANITIZER_CDECL __rtsan_enable(void);
 
 #ifdef __cplusplus
@@ -54,7 +55,7 @@ private:
 #endif // __cplusplus >= 201103L
 };
 
-#else // doesn't have realtime_sanitizer
+#else
 
 class ScopedDisabler {
 public:
