@@ -308,7 +308,10 @@ static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
 const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
   Reg = Reg->getBaseRegion();
   while (const auto *SymReg = dyn_cast<SymbolicRegion>(Reg)) {
-    Reg = SymReg->getSymbol()->getOriginRegion()->getBaseRegion();
+    const auto *OriginReg = SymReg->getSymbol()->getOriginRegion();
+    if (!OriginReg)
+      break;
+    Reg = OriginReg->getBaseRegion();
   }
   return Reg;
 }

@@ -8043,34 +8043,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-    SDValue OpNode = getValue(I.getOperand(1));
-    EVT ReducedTy = EVT::getEVT(I.getType());
-    EVT FullTy = OpNode.getValueType();
 
-    unsigned Stride = ReducedTy.getVectorMinNumElements();
-    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
-
-    // Collect all of the subvectors
-    std::deque<SDValue> Subvectors;
-    Subvectors.push_back(getValue(I.getOperand(0)));
-    for (unsigned i = 0; i < ScaleFactor; i++) {
-      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
-      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy,
-                                       {OpNode, SourceIndex}));
+    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
     }
 
-    // Flatten the subvector tree
-    while (Subvectors.size() > 1) {
-      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy,
-                                       {Subvectors[0], Subvectors[1]}));
-      Subvectors.pop_front();
-      Subvectors.pop_front();
-    }
-
-    assert(Subvectors.size() == 1 &&
-           "There should only be one subvector after tree flattening");
-
-    setValue(&I, Subvectors[0]);
+    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
+                                         getValue(I.getOperand(0)),
+                                         getValue(I.getOperand(1))));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -9596,9 +9577,11 @@ static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
   std::pair<unsigned, const TargetRegisterClass *> InputRC =
       TLI.getRegForInlineAsmConstraint(TRI, MatchingOpInfo.ConstraintCode,
                                        MatchingOpInfo.ConstraintVT);
-  if ((OpInfo.ConstraintVT.isInteger() !=
-       MatchingOpInfo.ConstraintVT.isInteger()) ||
-      (MatchRC.second != InputRC.second)) {
+  const bool OutOpIsIntOrFP =
+      OpInfo.ConstraintVT.isInteger() || OpInfo.ConstraintVT.isFloatingPoint();
+  const bool InOpIsIntOrFP = MatchingOpInfo.ConstraintVT.isInteger() ||
+                             MatchingOpInfo.ConstraintVT.isFloatingPoint();
+  if ((OutOpIsIntOrFP != InOpIsIntOrFP) || (MatchRC.second != InputRC.second)) {
     // FIXME: error out in a more elegant fashion
     report_fatal_error("Unsupported asm: input constraint"
                        " with a matching output constraint of"

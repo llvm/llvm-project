@@ -7395,7 +7395,8 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
         return std::nullopt;
       }
       VariantRefCast = SemaRef.PerformImplicitConversion(
-          VariantRef, FnPtrType.getUnqualifiedType(), Sema::AA_Converting);
+          VariantRef, FnPtrType.getUnqualifiedType(),
+          AssignmentAction::Converting);
       if (!VariantRefCast.isUsable())
         return std::nullopt;
     }
@@ -8415,9 +8416,10 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
   if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
     return Capture;
   if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
-    return SemaRef.PerformImplicitConversion(
-        Capture->IgnoreImpCasts(), Capture->getType(), Sema::AA_Converting,
-        /*AllowExplicit=*/true);
+    return SemaRef.PerformImplicitConversion(Capture->IgnoreImpCasts(),
+                                             Capture->getType(),
+                                             AssignmentAction::Converting,
+                                             /*AllowExplicit=*/true);
   auto I = Captures.find(Capture);
   if (I != Captures.end())
     return buildCapture(SemaRef, Capture, I->second, Name);
@@ -8517,7 +8519,7 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
           SemaRef
               .PerformImplicitConversion(
                   SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Upper).get(),
-                  CastType, Sema::AA_Converting)
+                  CastType, AssignmentAction::Converting)
               .get();
       Lower = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Lower).get();
       NewStep = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, NewStep.get());
@@ -8801,8 +8803,9 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
                                : Type->hasSignedIntegerRepresentation();
     Type = C.getIntTypeForBitwidth(NewSize, IsSigned);
     if (!SemaRef.Context.hasSameType(Diff.get()->getType(), Type)) {
-      Diff = SemaRef.PerformImplicitConversion(
-          Diff.get(), Type, Sema::AA_Converting, /*AllowExplicit=*/true);
+      Diff = SemaRef.PerformImplicitConversion(Diff.get(), Type,
+                                               AssignmentAction::Converting,
+                                               /*AllowExplicit=*/true);
       if (!Diff.isUsable())
         return nullptr;
     }
@@ -8820,7 +8823,8 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
                        C.getTypeSize(Type) < NewSize);
       if (!SemaRef.Context.hasSameType(Diff.get()->getType(), NewType)) {
         Diff = SemaRef.PerformImplicitConversion(Diff.get(), NewType,
-                                                 Sema::AA_Converting, true);
+                                                 AssignmentAction::Converting,
+                                                 /*AllowExplicit=*/true);
         if (!Diff.isUsable())
           return nullptr;
       }
@@ -8892,7 +8896,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
           SemaRef.Context.getUnsignedPointerDiffType())) {
     Diff = SemaRef.PerformImplicitConversion(
         Diff.get(), SemaRef.Context.getUnsignedPointerDiffType(),
-        Sema::AA_Converting, /*AllowExplicit=*/true);
+        AssignmentAction::Converting, /*AllowExplicit=*/true);
   }
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
@@ -8920,7 +8924,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   // Convert to the original type.
   if (SemaRef.Context.hasSameType(Diff.get()->getType(), VarType))
     Diff = SemaRef.PerformImplicitConversion(Diff.get(), VarType,
-                                             Sema::AA_Converting,
+                                             AssignmentAction::Converting,
                                              /*AllowExplicit=*/true);
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
@@ -8955,7 +8959,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
     return SemaRef
         .PerformImplicitConversion(
             SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get(),
-            SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+            SemaRef.Context.BoolTy, /*Action=*/AssignmentAction::Casting,
             /*AllowExplicit=*/true)
         .get();
 
@@ -8976,7 +8980,8 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
     if (!SemaRef.Context.hasSameUnqualifiedType(CondExpr.get()->getType(),
                                                 SemaRef.Context.BoolTy))
       CondExpr = SemaRef.PerformImplicitConversion(
-          CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+          CondExpr.get(), SemaRef.Context.BoolTy,
+          /*Action=*/AssignmentAction::Casting,
           /*AllowExplicit=*/true);
   }
 
@@ -9393,7 +9398,7 @@ buildCounterInit(Sema &SemaRef, Scope *S, SourceLocation Loc, ExprResult VarRef,
   if (!SemaRef.Context.hasSameType(NewStart.get()->getType(),
                                    VarRef.get()->getType())) {
     NewStart = SemaRef.PerformImplicitConversion(
-        NewStart.get(), VarRef.get()->getType(), Sema::AA_Converting,
+        NewStart.get(), VarRef.get()->getType(), AssignmentAction::Converting,
         /*AllowExplicit=*/true);
     if (!NewStart.isUsable())
       return ExprError();
@@ -9469,7 +9474,8 @@ static ExprResult buildCounterUpdate(
     if (!SemaRef.Context.hasSameType(Update.get()->getType(),
                                      VarRef.get()->getType())) {
       Update = SemaRef.PerformImplicitConversion(
-          Update.get(), VarRef.get()->getType(), Sema::AA_Converting, true);
+          Update.get(), VarRef.get()->getType(), AssignmentAction::Converting,
+          /*AllowExplicit=*/true);
       if (!Update.isUsable())
         return ExprError();
     }
@@ -9491,8 +9497,8 @@ static ExprResult widenIterationCount(unsigned Bits, Expr *E, Sema &SemaRef) {
     return ExprResult(E);
   // OK to convert to signed, because new type has more bits than old.
   QualType NewType = C.getIntTypeForBitwidth(Bits, /*Signed=*/true);
-  return SemaRef.PerformImplicitConversion(E, NewType, Sema::AA_Converting,
-                                           true);
+  return SemaRef.PerformImplicitConversion(
+      E, NewType, AssignmentAction::Converting, /*AllowExplicit=*/true);
 }
 
 /// Check if the given expression \a E is a constant integer that fits
@@ -9752,19 +9758,19 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   // true).
   auto PreCond = ExprResult(IterSpaces[0].PreCond);
   Expr *N0 = IterSpaces[0].NumIterations;
-  ExprResult LastIteration32 =
-      widenIterationCount(/*Bits=*/32,
-                          SemaRef
-                              .PerformImplicitConversion(
-                                  N0->IgnoreImpCasts(), N0->getType(),
-                                  Sema::AA_Converting, /*AllowExplicit=*/true)
-                              .get(),
-                          SemaRef);
+  ExprResult LastIteration32 = widenIterationCount(
+      /*Bits=*/32,
+      SemaRef
+          .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
+                                     AssignmentAction::Converting,
+                                     /*AllowExplicit=*/true)
+          .get(),
+      SemaRef);
   ExprResult LastIteration64 = widenIterationCount(
       /*Bits=*/64,
       SemaRef
           .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
-                                     Sema::AA_Converting,
+                                     AssignmentAction::Converting,
                                      /*AllowExplicit=*/true)
           .get(),
       SemaRef);
@@ -9790,7 +9796,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           CurScope, Loc, BO_Mul, LastIteration32.get(),
           SemaRef
               .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         Sema::AA_Converting,
+                                         AssignmentAction::Converting,
                                          /*AllowExplicit=*/true)
               .get());
     if (LastIteration64.isUsable())
@@ -9798,7 +9804,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           CurScope, Loc, BO_Mul, LastIteration64.get(),
           SemaRef
               .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         Sema::AA_Converting,
+                                         AssignmentAction::Converting,
                                          /*AllowExplicit=*/true)
               .get());
   }
@@ -11538,7 +11544,7 @@ bool OpenMPAtomicUpdateChecker::checkStatement(Stmt *S, unsigned DiagId,
     if (Update.isInvalid())
       return true;
     Update = SemaRef.PerformImplicitConversion(Update.get(), X->getType(),
-                                               Sema::AA_Casting);
+                                               AssignmentAction::Casting);
     if (Update.isInvalid())
       return true;
     UpdateExpr = Update.get();
@@ -15655,7 +15661,7 @@ static bool findOMPAllocatorHandleT(Sema &S, SourceLocation Loc,
       break;
     }
     Res = S.PerformImplicitConversion(Res.get(), AllocatorHandleEnumTy,
-                                      Sema::AA_Initializing,
+                                      AssignmentAction::Initializing,
                                       /*AllowExplicit=*/true);
     if (!Res.isUsable()) {
       ErrorFound = true;
@@ -15686,7 +15692,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocatorClause(Expr *A,
     return nullptr;
   Allocator = SemaRef.PerformImplicitConversion(
       Allocator.get(), DSAStack->getOMPAllocatorHandleT(),
-      Sema::AA_Initializing,
+      AssignmentAction::Initializing,
       /*AllowExplicit=*/true);
   if (Allocator.isInvalid())
     return nullptr;
@@ -23096,7 +23102,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
       return nullptr;
     AllocatorRes = SemaRef.PerformImplicitConversion(
         AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
-        Sema::AA_Initializing,
+        AssignmentAction::Initializing,
         /*AllowExplicit=*/true);
     if (AllocatorRes.isInvalid())
       return nullptr;
@@ -23939,14 +23945,14 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
 
     Expr *Begin = D.Range.Begin;
     if (!IsDeclTyDependent && Begin && !Begin->isTypeDependent()) {
-      ExprResult BeginRes =
-          SemaRef.PerformImplicitConversion(Begin, DeclTy, Sema::AA_Converting);
+      ExprResult BeginRes = SemaRef.PerformImplicitConversion(
+          Begin, DeclTy, AssignmentAction::Converting);
       Begin = BeginRes.get();
     }
     Expr *End = D.Range.End;
     if (!IsDeclTyDependent && End && !End->isTypeDependent()) {
-      ExprResult EndRes =
-          SemaRef.PerformImplicitConversion(End, DeclTy, Sema::AA_Converting);
+      ExprResult EndRes = SemaRef.PerformImplicitConversion(
+          End, DeclTy, AssignmentAction::Converting);
       End = EndRes.get();
     }
     Expr *Step = D.Range.Step;

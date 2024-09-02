@@ -232,7 +232,7 @@ define i1 @ip_test_nonnull_caller(ptr %p) {
 }
 
 define ptr @ret_nonnull_pointer(ptr nonnull %p) {
-; CHECK-LABEL: define ptr @ret_nonnull_pointer(
+; CHECK-LABEL: define nonnull ptr @ret_nonnull_pointer(
 ; CHECK-SAME: ptr nonnull [[P:%.*]]) {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
