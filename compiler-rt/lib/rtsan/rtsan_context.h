@@ -31,8 +31,8 @@ public:
   Context &operator=(Context &&) = delete;
 
 private:
-  int realtime_depth{0};
-  int bypass_depth{0};
+  int realtime_depth_{0};
+  int bypass_depth_{0};
 };
 
 Context &GetContextForThisThread();

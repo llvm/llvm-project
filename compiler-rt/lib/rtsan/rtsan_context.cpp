@@ -63,13 +63,13 @@ static void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
 
 __rtsan::Context::Context() = default;
 
-void __rtsan::Context::RealtimePush() { realtime_depth++; }
+void __rtsan::Context::RealtimePush() { realtime_depth_++; }
 
-void __rtsan::Context::RealtimePop() { realtime_depth--; }
+void __rtsan::Context::RealtimePop() { realtime_depth_--; }
 
-void __rtsan::Context::BypassPush() { bypass_depth++; }
+void __rtsan::Context::BypassPush() { bypass_depth_++; }
 
-void __rtsan::Context::BypassPop() { bypass_depth--; }
+void __rtsan::Context::BypassPop() { bypass_depth_--; }
 
 void __rtsan::ExpectNotRealtime(Context &context,
                                 const char *intercepted_function_name) {
@@ -81,9 +81,9 @@ void __rtsan::ExpectNotRealtime(Context &context,
   }
 }
 
-bool __rtsan::Context::InRealtimeContext() const { return realtime_depth > 0; }
+bool __rtsan::Context::InRealtimeContext() const { return realtime_depth_ > 0; }
 
-bool __rtsan::Context::IsBypassed() const { return bypass_depth > 0; }
+bool __rtsan::Context::IsBypassed() const { return bypass_depth_ > 0; }
 
 void __rtsan::PrintDiagnostics(const char *intercepted_function_name) {
   fprintf(stderr,
