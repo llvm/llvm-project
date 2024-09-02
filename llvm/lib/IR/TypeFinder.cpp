@@ -96,8 +96,10 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
                   dyn_cast<DbgVariableRecord>(&Dbg)) {
             for (Value *V : DVI->location_ops())
               incorporateValue(V);
-            if (Value *Addr = DVI->getAddress(); Addr && DVI->isDbgAssign())
-              incorporateValue(Addr);
+            if (DVI->isDbgAssign()) {
+              if (Value *Addr = DVI->getAddress())
+                incorporateValue(Addr);
+            }
           }
         }
       }
