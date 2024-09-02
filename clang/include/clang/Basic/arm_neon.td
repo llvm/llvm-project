@@ -2127,7 +2127,7 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {
   def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
 }
 
-let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8" in {
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   // fscale
   def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
   def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
