@@ -1,9 +1,8 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
-; Print to a specific file
 ; RUN: ld.lld -m elf_x86_64 -shared %t.o -o %t.so --plugin-opt=time-trace=%t.trace.json
 ; RUN: FileCheck --input-file=%t.trace.json %s
-; Print to stdout
+;; Print to stdout
 ; RUN: ld.lld -m elf_x86_64 -shared %t.o -o %t.so --plugin-opt=time-trace=- | \
 ; RUN: FileCheck %s
 
@@ -18,4 +17,3 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo() {
   ret void
 }
-
