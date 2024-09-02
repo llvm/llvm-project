@@ -1081,10 +1081,11 @@ public:
 
   /// Create a call to llvm.experimental_cttz_elts
   Value *CreateCountTrailingZeroElems(Type *ResTy, Value *Mask,
+                                      bool ZeroIsPoison = true,
                                       const Twine &Name = "") {
-    return CreateIntrinsic(
-        Intrinsic::experimental_cttz_elts, {ResTy, Mask->getType()},
-        {Mask, getInt1(/*ZeroIsPoison=*/true)}, nullptr, Name);
+    return CreateIntrinsic(Intrinsic::experimental_cttz_elts,
+                           {ResTy, Mask->getType()},
+                           {Mask, getInt1(ZeroIsPoison)}, nullptr, Name);
   }
 
 private:
