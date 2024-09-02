@@ -223,9 +223,9 @@ private:
   friend bool operator==(Scalar lhs, Scalar rhs);
   friend bool operator!=(const Scalar &lhs, const Scalar &rhs);
   friend bool operator<(Scalar lhs, Scalar rhs);
-  friend bool operator<=(const Scalar &lhs, const Scalar &rhs);
+  friend bool operator<=(Scalar lhs, Scalar rhs);
   friend bool operator>(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator>=(const Scalar &lhs, const Scalar &rhs);
+  friend bool operator>=(Scalar lhs, Scalar rhs);
 };
 
 // Split out the operators into a format where the compiler will be able to
@@ -254,9 +254,9 @@ const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
 bool operator==(Scalar lhs, Scalar rhs);
 bool operator!=(const Scalar &lhs, const Scalar &rhs);
 bool operator<(Scalar lhs, Scalar rhs);
-bool operator<=(const Scalar &lhs, const Scalar &rhs);
+bool operator<=(Scalar lhs, Scalar rhs);
 bool operator>(const Scalar &lhs, const Scalar &rhs);
-bool operator>=(const Scalar &lhs, const Scalar &rhs);
+bool operator>=(Scalar lhs, Scalar rhs);
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Scalar &scalar);
 
