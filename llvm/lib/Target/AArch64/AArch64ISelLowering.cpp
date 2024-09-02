@@ -21809,16 +21809,13 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   EVT ReducedType = N->getValueType(0);
   EVT MulSrcType = A.getValueType();
-  EVT WideType = MulOp.getValueType();
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if (WideType == MVT::nxv16i32 && ReducedType == MVT::nxv4i32 &&
-      MulSrcType == MVT::nxv16i8)
+  if (ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8)
     return DAG.getNode(Opcode, DL, MVT::nxv4i32, NarrowOp, A, B);
 
-  if (WideType == MVT::nxv8i64 && ReducedType == MVT::nxv2i64 &&
-      MulSrcType == MVT::nxv8i16)
+  if (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16)
     return DAG.getNode(Opcode, DL, MVT::nxv2i64, NarrowOp, A, B);
 
   return SDValue();
