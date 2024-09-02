@@ -4183,7 +4183,7 @@ ParseStatus AArch64AsmParser::tryParseVectorRegister(MCRegister &Reg,
 
   if (RegNum) {
     if (Next != StringRef::npos) {
-      Kind = Name.slice(Next, StringRef::npos);
+      Kind = Name.substr(Next);
       if (!isValidVectorKind(Kind, MatchKind))
         return TokError("invalid vector kind qualifier");
     }

@@ -634,7 +634,7 @@ ArrayAttr {0}::getIndexingMaps() {{
   MLIRContext *context = getContext();
   auto symbolBindings = getSymbolBindings(*this);
   SmallVector<AffineMap> maps;
-  {2}
+  {1}
   cached = Builder(context).getAffineMapArrayAttr(maps);
   getOperation()->setAttr(memoizeAttr, cached);
   return cached;
@@ -929,7 +929,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         // TODO: This needs to be memoized and/or converted to non-parser based
         // C++ codegen prior to real use.
         os << llvm::formatv(structuredOpIndexingMapsFormat, className,
-                            dimIdentsStr, interleaveToString(stmts, "\n  "));
+                            interleaveToString(stmts, "\n  "));
       }
     } else {
       os << llvm::formatv(rankPolyStructuredOpIndexingMapsFormat, className);

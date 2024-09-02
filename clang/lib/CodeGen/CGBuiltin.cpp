@@ -18497,22 +18497,14 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
-Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
-  if (QT->hasFloatingRepresentation()) {
-    switch (elementCount) {
-    case 2:
-      return Intrinsic::dx_dot2;
-    case 3:
-      return Intrinsic::dx_dot3;
-    case 4:
-      return Intrinsic::dx_dot4;
-    }
-  }
-  if (QT->hasSignedIntegerRepresentation())
-    return Intrinsic::dx_sdot;
-
-  assert(QT->hasUnsignedIntegerRepresentation());
-  return Intrinsic::dx_udot;
+// Return dot product intrinsic that corresponds to the QT scalar type
+Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
+  if (QT->isFloatingType())
+    return RT.getFDotIntrinsic();
+  if (QT->isSignedIntegerType())
+    return RT.getSDotIntrinsic();
+  assert(QT->isUnsignedIntegerType());
+  return RT.getUDotIntrinsic();
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -18555,37 +18547,38 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     llvm::Type *T0 = Op0->getType();
     llvm::Type *T1 = Op1->getType();
+
+    // If the arguments are scalars, just emit a multiply
     if (!T0->isVectorTy() && !T1->isVectorTy()) {
       if (T0->isFloatingPointTy())
-        return Builder.CreateFMul(Op0, Op1, "dx.dot");
+        return Builder.CreateFMul(Op0, Op1, "hlsl.dot");
 
       if (T0->isIntegerTy())
-        return Builder.CreateMul(Op0, Op1, "dx.dot");
+        return Builder.CreateMul(Op0, Op1, "hlsl.dot");
 
-      // Bools should have been promoted
       llvm_unreachable(
           "Scalar dot product is only supported on ints and floats.");
     }
+    // For vectors, validate types and emit the appropriate intrinsic
+
     // A VectorSplat should have happened
     assert(T0->isVectorTy() && T1->isVectorTy() &&
            "Dot product of vector and scalar is not supported.");
 
-    // A vector sext or sitofp should have happened
-    assert(T0->getScalarType() == T1->getScalarType() &&
-           "Dot product of vectors need the same element types.");
-
     auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
         E->getArg(1)->getType()->getAs<VectorType>();
-    // A HLSLVectorTruncation should have happend
+
+    assert(VecTy0->getElementType() == VecTy1->getElementType() &&
+           "Dot product of vectors need the same element types.");
+
     assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
            "Dot product requires vectors to be of the same size.");
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
-        getDotProductIntrinsic(E->getArg(0)->getType(),
-                               VecTy0->getNumElements()),
-        ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
+        getDotProductIntrinsic(CGM.getHLSLRuntime(), VecTy0->getElementType()),
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -20351,6 +20344,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_min_gen_ull:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E);
 
+  case NVPTX::BI__nvvm_atom_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
@@ -20542,6 +20536,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_sys_xor_gen_l:
   case NVPTX::BI__nvvm_atom_sys_xor_gen_ll:
     return MakeScopedAtomic(Intrinsic::nvvm_atomic_xor_gen_i_sys, *this, E);
+  case NVPTX::BI__nvvm_atom_cta_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_ll: {
@@ -20553,6 +20548,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
             Intrinsic::nvvm_atomic_cas_gen_i_cta, {ElemTy, Ptr->getType()}),
         {Ptr, EmitScalarExpr(E->getArg(1)), EmitScalarExpr(E->getArg(2))});
   }
+  case NVPTX::BI__nvvm_atom_sys_cas_gen_us:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_i:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_l:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_ll: {
@@ -21215,6 +21211,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32_f64:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i64_f32:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i64_f64:
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i16x8_f16x8:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32x4_f32x4: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
@@ -21226,6 +21223,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32_f64:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i64_f32:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i64_f64:
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i16x8_f16x8:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32x4_f32x4: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
@@ -21273,6 +21271,10 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_pmax, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_ceil_f16x8:
+  case WebAssembly::BI__builtin_wasm_floor_f16x8:
+  case WebAssembly::BI__builtin_wasm_trunc_f16x8:
+  case WebAssembly::BI__builtin_wasm_nearest_f16x8:
   case WebAssembly::BI__builtin_wasm_ceil_f32x4:
   case WebAssembly::BI__builtin_wasm_floor_f32x4:
   case WebAssembly::BI__builtin_wasm_trunc_f32x4:
@@ -21283,18 +21285,22 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_nearest_f64x2: {
     unsigned IntNo;
     switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_ceil_f16x8:
     case WebAssembly::BI__builtin_wasm_ceil_f32x4:
     case WebAssembly::BI__builtin_wasm_ceil_f64x2:
       IntNo = Intrinsic::ceil;
       break;
+    case WebAssembly::BI__builtin_wasm_floor_f16x8:
     case WebAssembly::BI__builtin_wasm_floor_f32x4:
     case WebAssembly::BI__builtin_wasm_floor_f64x2:
       IntNo = Intrinsic::floor;
       break;
+    case WebAssembly::BI__builtin_wasm_trunc_f16x8:
     case WebAssembly::BI__builtin_wasm_trunc_f32x4:
     case WebAssembly::BI__builtin_wasm_trunc_f64x2:
       IntNo = Intrinsic::trunc;
       break;
+    case WebAssembly::BI__builtin_wasm_nearest_f16x8:
     case WebAssembly::BI__builtin_wasm_nearest_f32x4:
     case WebAssembly::BI__builtin_wasm_nearest_f64x2:
       IntNo = Intrinsic::nearbyint;
@@ -21493,12 +21499,14 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_bitmask, Vec->getType());
     return Builder.CreateCall(Callee, {Vec});
   }
+  case WebAssembly::BI__builtin_wasm_abs_f16x8:
   case WebAssembly::BI__builtin_wasm_abs_f32x4:
   case WebAssembly::BI__builtin_wasm_abs_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
     Function *Callee = CGM.getIntrinsic(Intrinsic::fabs, Vec->getType());
     return Builder.CreateCall(Callee, {Vec});
   }
+  case WebAssembly::BI__builtin_wasm_sqrt_f16x8:
   case WebAssembly::BI__builtin_wasm_sqrt_f32x4:
   case WebAssembly::BI__builtin_wasm_sqrt_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
@@ -22088,13 +22096,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
-  unsigned NF = 1;
   // The 0th bit simulates the `vta` of RVV
   // The 1st bit simulates the `vma` of RVV
   constexpr unsigned RVV_VTA = 0x1;
   constexpr unsigned RVV_VMA = 0x2;
   int PolicyAttrs = 0;
   bool IsMasked = false;
+  // This is used by segment load/store to determine it's llvm type.
+  unsigned SegInstSEW = 8;
 
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;

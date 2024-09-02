@@ -503,9 +503,11 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
+
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false)
+                    ResourceKind::TypedBuffer,
+                    /*IsROV=*/false)
         .addArraySubscriptOperators()
         .completeDefinition();
   });
