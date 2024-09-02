@@ -7945,6 +7945,9 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
       return Context.TypePackElementDecl;
     NewLoaded = Context.getTypePackElementDecl();
     break;
+  case NUM_PREDEF_DECL_IDS:
+    llvm_unreachable("Invalid decl ID");
+    break;
   }
 
   assert(NewLoaded && "Failed to load predefined decl?");
