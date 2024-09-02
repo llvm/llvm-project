@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux-gnu -fsyntax-only --embed-dir=%S/Inputs -std=c23 %s -pedantic
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux-gnu -fsyntax-only --embed-dir=%S/Inputs -std=c23 %s -pedantic -Wpre-c23-compat
 
 #include <limits.h>
 
@@ -19,19 +19,19 @@
 
 enum x {
 a = INT_MAX,
-b = ULLONG_MAX,
+b = ULLONG_MAX, // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
 a_type = GET_TYPE_INT(a),
 b_type = GET_TYPE_INT(b)
 };
 
-static_assert(GET_TYPE_INT(a) == GET_TYPE_INT(b));
+_Static_assert(GET_TYPE_INT(a) == GET_TYPE_INT(b), "ok"); 
 
 extern enum x e_a;
 extern __typeof(b) e_a;
 extern __typeof(a) e_a;
 
 enum a {
-  a0 = 0xFFFFFFFFFFFFFFFFULL
+  a0 = 0xFFFFFFFFFFFFFFFFULL // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
 };
 
 _Bool e () {
@@ -51,9 +51,9 @@ unsigned long long h () {
 }
 
 enum big_enum {
-  big_enum_a = LONG_MAX,
-  big_enum_b = a + 1,
-  big_enum_c = ULLONG_MAX
+  big_enum_a = LONG_MAX, // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
+  big_enum_b = a + 1, // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
+  big_enum_c = ULLONG_MAX // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
 };
 
-static_assert(GET_TYPE_INT(big_enum_a) == GET_TYPE_INT(big_enum_b));
+_Static_assert(GET_TYPE_INT(big_enum_a) == GET_TYPE_INT(big_enum_b), "ok");

@@ -1,23 +1,23 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify=expected,c99 -pedantic
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify -pedantic
 enum e {A,
-        B = 42LL << 32,        // c99-warning {{ISO C restricts enumerator values to range of 'int'}}
+        B = 42LL << 32,        // c99-warning {{enumerator values exceeding range of 'int' is a C23 extension}}
       C = -4, D = 12456 };
 
 enum f { a = -2147483648, b = 2147483647 }; // ok.
 
 enum g {  // too negative
-   c = -2147483649,         // c99-warning {{ISO C restricts enumerator values to range of 'int'}}
+   c = -2147483649,         // c99-warning {{enumerator values exceeding range of 'int' is a C23 extension}}
    d = 2147483647 };
 enum h { e = -2147483648, // too pos
-   f = 2147483648,           // c99-warning {{ISO C restricts enumerator values to range of 'int'}}
+   f = 2147483648,           // c99-warning {{enumerator values exceeding range of 'int' is a C23 extension}}
   i = 0xFFFF0000 // c99-warning {{too large}}
 };
 
 // minll maxull
 enum x                      // expected-warning {{enumeration values exceed range of largest integer}}
-{ y = -9223372036854775807LL-1,  // c99-warning {{ISO C restricts enumerator values to range of 'int'}}
-z = 9223372036854775808ULL };    // c99-warning {{ISO C restricts enumerator values to range of 'int'}}
+{ y = -9223372036854775807LL-1,  // c99-warning {{enumerator values exceeding range of 'int' is a C23 extension}}
+z = 9223372036854775808ULL };    // c99-warning {{enumerator values exceeding range of 'int' is a C23 extension}}
 
 int test(void) {
   return sizeof(enum e) ;

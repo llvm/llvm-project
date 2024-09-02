@@ -6185,9 +6185,12 @@ def err_misplaced_ivar : Error<
 def warn_ivars_in_interface : Warning<
   "declaration of instance variables in the interface is deprecated">,
   InGroup<DiagGroup<"objc-interface-ivars">>, DefaultIgnore;
-def ext_enum_value_not_int : Extension<
-  "ISO C restricts enumerator values to range of 'int' (%0 is too "
-  "%select{small|large}1)">;
+def ext_c23_enum_value_not_int : Extension<
+  "enumerator values exceeding range of 'int' is a C23 extension (%0 is too "
+  "%select{small|large}1)">, InGroup<C23>;
+def warn_c17_compat_enum_value_not_int : Warning<
+  "enumerator values exceeding range of 'int' is incompatible with C standards before C23 (%0 is too "
+  "%select{small|large}1)">, DefaultIgnore, InGroup<CPre23Compat>;
 def ext_enum_too_large : ExtWarn<
   "enumeration values exceed range of largest integer">, InGroup<EnumTooLarge>;
 def ext_enumerator_increment_too_large : ExtWarn<

@@ -19475,10 +19475,11 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
 
           // Complain if the value is not representable in an int.
           if (!isRepresentableIntegerValue(Context, EnumVal, Context.IntTy)) {
-            if (!getLangOpts().C23)
-              Diag(IdLoc, diag::ext_enum_value_not_int)
-                  << toString(EnumVal, 10) << Val->getSourceRange()
-                  << (EnumVal.isUnsigned() || EnumVal.isNonNegative());
+            Diag(IdLoc, (getLangOpts().C23)
+                            ? diag::warn_c17_compat_enum_value_not_int
+                            : diag::ext_c23_enum_value_not_int)
+                << toString(EnumVal, 10) << Val->getSourceRange()
+                << (EnumVal.isUnsigned() || EnumVal.isNonNegative());
           } else if (!Context.hasSameType(Val->getType(), Context.IntTy)) {
             // Force the type of the expression to 'int'.
             Val = ImpCastExprToType(Val, Context.IntTy, CK_IntegralCast).get();
@@ -19559,12 +19560,13 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         // older language modes as an extension.
         if (!getLangOpts().CPlusPlus && !getLangOpts().C23 && !T.isNull())
           Diag(IdLoc, diag::warn_enum_value_overflow);
-      } else if (!getLangOpts().CPlusPlus && !getLangOpts().C23 &&
-                 !EltTy->isDependentType() &&
+      } else if (!getLangOpts().CPlusPlus && !EltTy->isDependentType() &&
                  !isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
         // Enforce C99 6.7.2.2p2 even when we compute the next value.
-        Diag(IdLoc, diag::ext_enum_value_not_int)
-          << toString(EnumVal, 10) << 1;
+        Diag(IdLoc, (getLangOpts().C23)
+                        ? diag::warn_c17_compat_enum_value_not_int
+                        : diag::ext_c23_enum_value_not_int)
+            << toString(EnumVal, 10) << 1;
       }
     }
   }
