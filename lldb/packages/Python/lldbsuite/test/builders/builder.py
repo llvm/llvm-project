@@ -160,7 +160,7 @@ class Builder:
 
             util_names = {
                 "OBJCOPY": "objcopy",
-                "STRIP": "objcopy",
+                "STRIP": "strip",
                 "ARCHIVER": "ar",
                 "DWP": "dwp",
             }
