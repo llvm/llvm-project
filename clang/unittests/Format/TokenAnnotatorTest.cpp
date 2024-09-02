@@ -3256,6 +3256,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[10], BK_Block);
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_StructRBrace);
   EXPECT_BRACE_KIND(Tokens[11], BK_Block);
+
+  Tokens = annotate("#define MEMBER(NAME) NAME{\"\"}");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
