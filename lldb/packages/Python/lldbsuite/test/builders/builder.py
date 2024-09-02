@@ -173,14 +173,14 @@ class Builder:
         # otherwise assume we have llvm-ar at the same place where is CC specified.
         if not os.getenv("LLVM_AR"):
             llvm_ar = getLlvmUtil("llvm-ar")
-            utils.extend(['LLVM_AR=%s' % llvm_ar])
+            utils.extend(["LLVM_AR=%s" % llvm_ar])
 
         if not lldbplatformutil.platformIsDarwin():
             if configuration.use_llvm_tools:
                 # Use the llvm project tool instead of the system defaults.
                 for var, name in util_names.items():
-                    utils.append('%s=%s' % (var, getLlvmUtil("llvm-" + name)))
-                utils.extend(['AR=%s' % llvm_ar])
+                    utils.append("%s=%s" % (var, getLlvmUtil("llvm-" + name)))
+                utils.extend(["AR=%s" % llvm_ar])
             elif cc_type in ["clang", "cc", "gcc"]:
                 util_paths = {}
                 # Assembly a toolchain side tool cmd based on passed CC.
@@ -190,7 +190,7 @@ class Builder:
                         util_paths[var] = getToolchainUtil(name)
                     else:
                         util_paths[var] = os.getenv(var)
-                utils.extend(['AR=%s' % util_paths["ARCHIVER"]])
+                utils.extend(["AR=%s" % util_paths["ARCHIVER"]])
 
                 # Look for llvm-dwp or gnu dwp
                 if not lldbutil.which(util_paths["DWP"]):
@@ -203,14 +203,14 @@ class Builder:
                         del util_paths["DWP"]
 
                 for var, path in util_paths.items():
-                    utils.append('%s=%s' % (var, path))
+                    utils.append("%s=%s" % (var, path))
         else:
-            utils.extend(['AR=%slibtool' % os.getenv("CROSS_COMPILE", "")])
+            utils.extend(["AR=%slibtool" % os.getenv("CROSS_COMPILE", "")])
 
         return [
-            'CC=%s' % cc,
-            'CC_TYPE=%s' % cc_type,
-            'CXX=%s' % cxx,
+            "CC=%s" % cc,
+            "CC_TYPE=%s" % cc_type,
+            "CXX=%s" % cxx,
         ] + utils
 
     def getSDKRootSpec(self):
