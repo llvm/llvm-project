@@ -46,9 +46,9 @@ protected:
 
   static constexpr StringRef getImportSymbolPrefix() { return "__imp_"; }
 
-  bool relocationNeedsDLLImportStub(const RelocationRef &R) const;
+  bool relocationNeedsDLLImportStub(const RelocationRef &R) const override;
 
-  unsigned sizeAfterAddingDLLImportStub(unsigned Size) const {
+  unsigned sizeAfterAddingDLLImportStub(unsigned Size) const override {
     return alignTo(Size, PointerSize) + PointerSize;
   }
 
