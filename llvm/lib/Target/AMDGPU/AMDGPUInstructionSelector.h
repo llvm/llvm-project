@@ -392,6 +392,9 @@ private:
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;
 
+  void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
   void renderScaledMAIIntrinsicOperand(MachineInstrBuilder &MIB,
                                        const MachineInstr &MI, int OpIdx) const;
 

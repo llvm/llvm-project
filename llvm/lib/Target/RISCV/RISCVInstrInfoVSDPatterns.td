@@ -676,13 +676,18 @@ multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<SDNode op,
     : VPatWidenBinaryFPSDNode_VV_VF_RM<op, instruction_name>,
       VPatWidenBinaryFPSDNode_WV_WF_RM<op, instruction_name>;
 
-multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name> {
-  foreach vtiToWti = AllWidenableFloatVectors in {
+multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name,
+                                            list <VTypeInfoToWide> vtiToWtis,
+                                            PatFrags extop> {
+  foreach vtiToWti = vtiToWtis in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
     defvar suffix = vti.LMul.MX # "_E" # vti.SEW;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in {
+                                 GetVTypePredicates<wti>.Predicates,
+                                 !if(!eq(vti.Scalar, bf16),
+                                     [HasStdExtZvfbfwma],
+                                     [])) in {
       def : Pat<(fma (wti.Vector (riscv_fpextend_vl_oneuse
                                       (vti.Vector vti.RegClass:$rs1),
                                       (vti.Mask true_mask), (XLenVT srcvalue))),
@@ -697,7 +702,7 @@ multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name> {
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
       def : Pat<(fma (wti.Vector (SplatFPOp
-                                      (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1)))),
+                                      (extop (vti.Scalar vti.ScalarRegClass:$rs1)))),
                      (wti.Vector (riscv_fpextend_vl_oneuse
                                       (vti.Vector vti.RegClass:$rs2),
                                       (vti.Mask true_mask), (XLenVT srcvalue))),
@@ -1284,7 +1289,12 @@ foreach fvti = AllFloatVectors in {
 }
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACC">;
+defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACC",
+                                        AllWidenableFloatVectors,
+                                        fpext_oneuse>;
+defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
+                                        AllWidenableBFloatToFloatVectors,
+                                        riscv_fpextend_bf16_oneuse>;
 defm : VPatWidenFPNegMulAccSDNode_VV_VF_RM<"PseudoVFWNMACC">;
 defm : VPatWidenFPMulSacSDNode_VV_VF_RM<"PseudoVFWMSAC">;
 defm : VPatWidenFPNegMulSacSDNode_VV_VF_RM<"PseudoVFWNMSAC">;

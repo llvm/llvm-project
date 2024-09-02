@@ -2406,6 +2406,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(
         cast<BTFTagAttributedType>(T)->getWrappedType().getTypePtr());
 
+  case Type::HLSLAttributedResource:
+    return getTypeInfo(
+        cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr());
+
   case Type::Atomic: {
     // Start with the base type information.
     TypeInfo Info = getTypeInfo(cast<AtomicType>(T)->getValueType());
@@ -3606,6 +3610,21 @@ bool ASTContext::hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U) {
   return hasSameType(T, U) ||
          hasSameType(getFunctionTypeWithoutPtrSizes(T),
                      getFunctionTypeWithoutPtrSizes(U));
+}
+
+QualType ASTContext::getFunctionTypeWithoutParamABIs(QualType T) const {
+  if (const auto *Proto = T->getAs<FunctionProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI = Proto->getExtProtoInfo();
+    EPI.ExtParameterInfos = nullptr;
+    return getFunctionType(Proto->getReturnType(), Proto->param_types(), EPI);
+  }
+  return T;
+}
+
+bool ASTContext::hasSameFunctionTypeIgnoringParamABI(QualType T,
+                                                     QualType U) const {
+  return hasSameType(T, U) || hasSameType(getFunctionTypeWithoutParamABIs(T),
+                                          getFunctionTypeWithoutParamABIs(U));
 }
 
 void ASTContext::adjustExceptionSpec(
@@ -5219,6 +5238,28 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
   return QualType(Ty, 0);
 }
 
+QualType ASTContext::getHLSLAttributedResourceType(
+    QualType Wrapped, QualType Contained,
+    const HLSLAttributedResourceType::Attributes &Attrs) {
+
+  llvm::FoldingSetNodeID ID;
+  HLSLAttributedResourceType::Profile(ID, Wrapped, Contained, Attrs);
+
+  void *InsertPos = nullptr;
+  HLSLAttributedResourceType *Ty =
+      HLSLAttributedResourceTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  QualType Canon = getCanonicalType(Wrapped);
+  Ty = new (*this, alignof(HLSLAttributedResourceType))
+      HLSLAttributedResourceType(Canon, Wrapped, Contained, Attrs);
+
+  Types.push_back(Ty);
+  HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
+
+  return QualType(Ty, 0);
+}
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
@@ -13584,6 +13625,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(FunctionNoProto)
     CANONICAL_TYPE(FunctionProto)
     CANONICAL_TYPE(IncompleteArray)
+    CANONICAL_TYPE(HLSLAttributedResource)
     CANONICAL_TYPE(LValueReference)
     CANONICAL_TYPE(MemberPointer)
     CANONICAL_TYPE(ObjCInterface)
