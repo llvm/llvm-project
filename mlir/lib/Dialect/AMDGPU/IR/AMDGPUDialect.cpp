@@ -233,11 +233,10 @@ LogicalResult WMMAOp::verify() {
   Type sourceAElemType = sourceVectorAType.getElementType();
   Type destElemType = destVectorType.getElementType();
 
-  bool isDestFloat =
-      (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
+  bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
   bool isSrcFloat =
-      (sourceAElemType.isF16() || sourceAElemType.isBF16() ||
-       sourceAElemType.isFloat8E4M3FN() || sourceAElemType.isFloat8E5M2());
+      isa<Float16Type, BFloat16Type, Float8E4M3FNType, Float8E5M2Type>(
+          sourceAElemType);
 
   if (isDestFloat && !isSrcFloat) {
     return emitOpError("Expected float sources with float destination");
