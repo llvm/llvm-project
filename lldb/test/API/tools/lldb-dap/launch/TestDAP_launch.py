@@ -229,7 +229,12 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         Tests launch of a simple program with environment variables
         """
         program = self.getBuildArtifact("a.out")
-        env = {"NO_VALUE": "", "WITH_VALUE":"BAR", "EMPTY_VALUE": "", "SPACE": "Hello World"}
+        env = {
+            "NO_VALUE": "",
+            "WITH_VALUE": "BAR",
+            "EMPTY_VALUE": "",
+            "SPACE": "Hello World",
+        }
         self.build_and_launch(program, env=env)
         self.continue_to_exit()
 
