@@ -1294,7 +1294,7 @@ defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACC",
                                         fpext_oneuse>;
 defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
                                         AllWidenableBFloatToFloatVectors,
-                                        riscv_fpextend_bf16_oneuse>;
+                                        fpext_oneuse>;
 defm : VPatWidenFPNegMulAccSDNode_VV_VF_RM<"PseudoVFWNMACC">;
 defm : VPatWidenFPMulSacSDNode_VV_VF_RM<"PseudoVFWMSAC">;
 defm : VPatWidenFPNegMulSacSDNode_VV_VF_RM<"PseudoVFWNMSAC">;
