@@ -3894,11 +3894,11 @@ void MachineVerifier::verifyStackFrame() {
       BBState.ExitIsSetup = BBState.EntryIsSetup;
     }
 
-    if ((int)MBB->getCallFrameSize() != -BBState.EntryValue) {
+    if ((int)MBB->getCallFrameSizeOrZero() != -BBState.EntryValue) {
       report("Call frame size on entry does not match value computed from "
              "predecessor",
              MBB);
-      OS << "Call frame size on entry " << MBB->getCallFrameSize()
+      OS << "Call frame size on entry " << MBB->getCallFrameSizeOrZero()
          << " does not match value computed from predecessor "
          << -BBState.EntryValue << '\n';
     }

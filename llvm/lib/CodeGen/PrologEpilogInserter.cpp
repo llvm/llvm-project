@@ -392,9 +392,9 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
       TFI->eliminateCallFramePseudoInstr(MF, *I->getParent(), I);
 
     // We can't track the call frame size after call frame pseudos have been
-    // eliminated. Set it to zero everywhere to keep MachineVerifier happy.
+    // eliminated. Clear it everywhere to keep MachineVerifier happy.
     for (MachineBasicBlock &MBB : MF)
-      MBB.setCallFrameSize(0);
+      MBB.clearCallFrameSize();
   }
 }
 
@@ -1350,11 +1350,11 @@ void PEI::replaceFrameIndicesBackward(MachineFunction &MF) {
       // Get the SP adjustment for the end of MBB from the start of any of its
       // successors. They should all be the same.
       assert(all_of(MBB.successors(), [&MBB](const MachineBasicBlock *Succ) {
-        return Succ->getCallFrameSize() ==
-               (*MBB.succ_begin())->getCallFrameSize();
+        return Succ->getCallFrameSizeOrZero() ==
+               (*MBB.succ_begin())->getCallFrameSizeOrZero();
       }));
       const MachineBasicBlock &FirstSucc = **MBB.succ_begin();
-      SPAdj = TFI.alignSPAdjust(FirstSucc.getCallFrameSize());
+      SPAdj = TFI.alignSPAdjust(FirstSucc.getCallFrameSizeOrZero());
       if (TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp)
         SPAdj = -SPAdj;
     }
@@ -1362,8 +1362,8 @@ void PEI::replaceFrameIndicesBackward(MachineFunction &MF) {
     replaceFrameIndicesBackward(&MBB, MF, SPAdj);
 
     // We can't track the call frame size after call frame pseudos have been
-    // eliminated. Set it to zero everywhere to keep MachineVerifier happy.
-    MBB.setCallFrameSize(0);
+    // eliminated. Clear it everywhere to keep MachineVerifier happy.
+    MBB.clearCallFrameSize();
   }
 }
 
@@ -1373,15 +1373,15 @@ void PEI::replaceFrameIndices(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
   for (auto &MBB : MF) {
-    int SPAdj = TFI.alignSPAdjust(MBB.getCallFrameSize());
+    int SPAdj = TFI.alignSPAdjust(MBB.getCallFrameSizeOrZero());
     if (TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp)
       SPAdj = -SPAdj;
 
     replaceFrameIndices(&MBB, MF, SPAdj);
 
     // We can't track the call frame size after call frame pseudos have been
-    // eliminated. Set it to zero everywhere to keep MachineVerifier happy.
-    MBB.setCallFrameSize(0);
+    // eliminated. Clear it everywhere to keep MachineVerifier happy.
+    MBB.clearCallFrameSize();
   }
 }
 

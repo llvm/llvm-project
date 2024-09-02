@@ -13151,7 +13151,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Set the call frame size on entry to the new basic blocks.
     // See https://reviews.llvm.org/D156113.
-    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    std::optional<unsigned> CallFrameSize = TII->getCallFrameSizeAt(MI);
     copy0MBB->setCallFrameSize(CallFrameSize);
     sinkMBB->setCallFrameSize(CallFrameSize);
 

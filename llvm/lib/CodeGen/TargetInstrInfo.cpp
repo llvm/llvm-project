@@ -1624,15 +1624,15 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
   return std::nullopt;
 }
 
-// Get the call frame size just before MI.
-unsigned TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
+std::optional<unsigned>
+TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
   // Search backwards from MI for the most recent call frame instruction.
   MachineBasicBlock *MBB = MI.getParent();
   for (auto &AdjI : reverse(make_range(MBB->instr_begin(), MI.getIterator()))) {
     if (AdjI.getOpcode() == getCallFrameSetupOpcode())
       return getFrameTotalSize(AdjI);
     if (AdjI.getOpcode() == getCallFrameDestroyOpcode())
-      return 0;
+      return std::nullopt;
   }
 
   // If none was found, use the call frame size from the start of the basic

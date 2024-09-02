@@ -3199,7 +3199,7 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   F->insert(It, SinkMBB);
 
   // Set the call frame size on entry to the new basic blocks.
-  unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+  std::optional<unsigned> CallFrameSize = TII->getCallFrameSizeAt(MI);
   Copy0MBB->setCallFrameSize(CallFrameSize);
   SinkMBB->setCallFrameSize(CallFrameSize);
 

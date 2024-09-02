@@ -502,7 +502,7 @@ public:
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
-  bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parseCallFrameSize(std::optional<unsigned> &CallFrameSize);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -685,7 +685,7 @@ bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
 }
 
 // Parse basic block call frame size.
-bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
+bool MIParser::parseCallFrameSize(std::optional<unsigned> &CallFrameSize) {
   assert(Token.is(MIToken::kw_call_frame_size));
   lex();
   unsigned Value = 0;
@@ -713,7 +713,7 @@ bool MIParser::parseBasicBlockDefinition(
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
-  unsigned CallFrameSize = 0;
+  std::optional<unsigned> CallFrameSize;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {

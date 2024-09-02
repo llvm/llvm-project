@@ -18599,7 +18599,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   F->insert(I, TailMBB);
 
   // Set the call frame size on entry to the new basic blocks.
-  unsigned CallFrameSize = TII.getCallFrameSizeAt(*LastSelectPseudo);
+  std::optional<unsigned> CallFrameSize =
+      TII.getCallFrameSizeAt(*LastSelectPseudo);
   IfFalseMBB->setCallFrameSize(CallFrameSize);
   TailMBB->setCallFrameSize(CallFrameSize);
 

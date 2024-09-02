@@ -2424,7 +2424,7 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MF->insert(I, falseMBB);
 
   // Set the call frame size on entry to the new basic blocks.
-  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  std::optional<unsigned> CallFrameSize = TII.getCallFrameSizeAt(MI);
   trueMBB->setCallFrameSize(CallFrameSize);
   falseMBB->setCallFrameSize(CallFrameSize);
 

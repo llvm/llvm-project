@@ -2265,8 +2265,9 @@ public:
     return false;
   }
 
-  // Get the call frame size just before MI.
-  unsigned getCallFrameSizeAt(MachineInstr &MI) const;
+  /// Get the call frame size just before MI. Contains no value if MI is not in
+  /// a call sequence. Zero-sized call frames are possible.
+  std::optional<unsigned> getCallFrameSizeAt(MachineInstr &MI) const;
 
   /// Fills in the necessary MachineOperands to refer to a frame index.
   /// The best way to understand this is to print `asm(""::"m"(x));` after
