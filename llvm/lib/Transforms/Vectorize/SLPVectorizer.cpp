@@ -6584,6 +6584,13 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     OrdersType &CurrentOrder, SmallVectorImpl<Value *> &PointerOps) const {
   assert(S.MainOp && "Expected instructions with same/alternate opcodes only.");
 
+  if (S.MainOp->getType()->isFloatingPointTy() &&
+      TTI->isFPVectorizationPotentiallyUnsafe() && any_of(VL, [](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return I && (I->isBinaryOp() || isa<CallInst>(I)) && !I->isFast();
+      }))
+    return TreeEntry::NeedToGather;
+
   unsigned ShuffleOrOp =
       S.isAltShuffle() ? (unsigned)Instruction::ShuffleVector : S.getOpcode();
   auto *VL0 = cast<Instruction>(S.OpValue);
@@ -11204,6 +11211,10 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
       UndefVectorExtracts.push_back(I);
       continue;
     }
+    if (Idx >= VecTy->getNumElements()) {
+      UndefVectorExtracts.push_back(I);
+      continue;
+    }
     SmallBitVector ExtractMask(VecTy->getNumElements(), true);
     ExtractMask.reset(*Idx);
     if (isUndefVector(EI->getVectorOperand(), ExtractMask).all()) {
@@ -11251,7 +11262,7 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   // shuffle of a single/two vectors the scalars are extracted from.
   std::optional<TTI::ShuffleKind> Res =
       isFixedVectorShuffle(GatheredExtracts, Mask);
-  if (!Res) {
+  if (!Res || all_of(Mask, [](int Idx) { return Idx == PoisonMaskElem; })) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
     copy(SavedVL, VL.begin());

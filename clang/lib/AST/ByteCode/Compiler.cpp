@@ -3772,7 +3772,6 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
-      DeclScope<Emitter> LocalScope(this, VD);
 
       if (VarT) {
         if (!this->visit(Init))
@@ -3795,6 +3794,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
       return this->emitPopPtr(Init);
     };
+
+    DeclScope<Emitter> LocalScope(this, VD);
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
