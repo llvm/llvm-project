@@ -101,7 +101,7 @@ class OpName(Instruction):
         return self._operands[0]
 
 
-# The only decoration we use if the BuilIn one to initialize the values.
+# The only decoration we use if the BuiltIn one to initialize the values.
 class OpDecorate(Instruction):
     def static_execution(self, lane):
         if self._operands[1] == "LinkageAttributes":

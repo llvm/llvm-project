@@ -185,9 +185,9 @@ class Lane:
     # The wave this lane belongs to.
     _wave: Wave
     # The callstack of this lane. Each tuple represents 1 call.
-    #   The first element is the IP the function will return to.
-    #   The second element is the callback to call to store the return value
-    #   into the correct register.
+    # The first element is the IP the function will return to.
+    # The second element is the callback to call to store the return value
+    # into the correct register.
     _callstack: list[Tuple[InstructionPointer, Callable[[Any], None]]]
 
     _previous_bb: Optional[BasicBlock]
@@ -234,7 +234,7 @@ class Lane:
         self._registers[name] = value
 
     # Get the value in register "name" in this lane.
-    # if allow_undef is true, fetching an unknown register won't fail.
+    # If allow_undef is true, fetching an unknown register won't fail.
     def get_register(self, name: str, allow_undef: bool = False) -> Optional[Any]:
         if allow_undef and name not in self._registers:
             return None
@@ -404,7 +404,7 @@ class Wave:
     # The instructions scheduled for execution.
     _tasks: Task
     # The actual requirements to comply with when executing instructions.
-    # e.g: the set of lanes required to merge before executing the merge block.
+    # E.g: the set of lanes required to merge before executing the merge block.
     _convergence_requirements: list[ConvergenceRequirement]
     # The indices of the active lanes for the current executing instruction.
     _active_lane_indices: set[int]
@@ -502,7 +502,7 @@ class Wave:
     def get_first_active_lane_index(self) -> int:
         return min(self._active_lane_indices)
 
-    # Broadcast the given value to all active lane registers'.
+    # Broadcast the given value to all active lane registers.
     def broadcast_register(self, register: str, value: Any) -> None:
         for tid in self._active_lane_indices:
             self._lanes[tid].set_register(register, value)
