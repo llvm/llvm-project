@@ -791,3 +791,30 @@ void global_ptr_to_ptr() {
   *global_pp = nullptr;
 }
 } // namespace leaking_via_indirect_global_invalidated
+
+namespace not_leaking_via_simple_ptr {
+void top(const char *p) {
+    char tmp;
+    p = &tmp;
+}
+
+extern void copy(char *output, const char *input, unsigned size);
+extern bool foo(const char *input);
+extern void bar(char *output, unsigned count);
+extern bool baz(char *output, const char *input);
+
+void repo(const char *input, char *output) {
+  char temp[64];
+  copy(temp, input, sizeof(temp));
+
+  char result[64];
+  input = temp;
+  if (foo(temp)) {
+    bar(result, sizeof(result));
+    input = result;
+  }
+  if (!baz(output, input)) {
+    copy(output, input, sizeof(result));
+  }
+}
+} // namespace not_leaking_via_simple_ptr
