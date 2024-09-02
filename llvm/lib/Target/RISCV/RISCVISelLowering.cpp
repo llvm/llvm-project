@@ -452,8 +452,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
-    setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
-    setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
@@ -6500,18 +6498,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return SplitVectorOp(Op, DAG);
     return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::FP_EXTEND: {
-    SDLoc DL(Op);
-    EVT VT = Op.getValueType();
-    SDValue Op0 = Op.getOperand(0);
-    EVT Op0VT = Op0.getValueType();
-    if (VT == MVT::f32 && Op0VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin())
-      return DAG.getNode(RISCVISD::FP_EXTEND_BF16, DL, MVT::f32, Op0);
-    if (VT == MVT::f64 && Op0VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
-      SDValue FloatVal =
-          DAG.getNode(RISCVISD::FP_EXTEND_BF16, DL, MVT::f32, Op0);
-      return DAG.getNode(ISD::FP_EXTEND, DL, MVT::f64, FloatVal);
-    }
-
     if (!Op.getValueType().isVector())
       return Op;
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
@@ -20463,7 +20449,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
   NODE_NAME_CASE(FP_ROUND_BF16)
-  NODE_NAME_CASE(FP_EXTEND_BF16)
   NODE_NAME_CASE(FROUND)
   NODE_NAME_CASE(FCLASS)
   NODE_NAME_CASE(FSGNJX)
