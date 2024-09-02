@@ -51,6 +51,9 @@ Improvements and New Features
   
 - ``std::fill`` has been optimized for segmented iterators like ``std::deque::iterator`` in C++23 and
   later, which can lead up to 40x performance improvements.
+  
+- ``std::fill_n`` has been optimized for segmented iterators like ``std::deque::iterator`` in C++23 and
+  later, which can lead up to 40x performance improvements.
 
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
   ``std::return_temporary_buffer`` available.
