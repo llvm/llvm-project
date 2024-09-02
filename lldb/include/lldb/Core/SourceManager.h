@@ -141,14 +141,13 @@ public:
 
   ~SourceManager();
 
-  FileSP GetLastFile() { return GetFile(m_last_file_spec); }
+  FileSP GetLastFile() { return GetFile(m_last_support_file_sp); }
 
-  size_t
-  DisplaySourceLinesWithLineNumbers(const FileSpec &file, uint32_t line,
-                                    uint32_t column, uint32_t context_before,
-                                    uint32_t context_after,
-                                    const char *current_line_cstr, Stream *s,
-                                    const SymbolContextList *bp_locs = nullptr);
+  size_t DisplaySourceLinesWithLineNumbers(
+      lldb::SupportFileSP support_file_sp, uint32_t line, uint32_t column,
+      uint32_t context_before, uint32_t context_after,
+      const char *current_line_cstr, Stream *s,
+      const SymbolContextList *bp_locs = nullptr);
 
   // This variant uses the last file we visited.
   size_t DisplaySourceLinesWithLineNumbersUsingLastFile(
@@ -159,22 +158,31 @@ public:
   size_t DisplayMoreWithLineNumbers(Stream *s, uint32_t count, bool reverse,
                                     const SymbolContextList *bp_locs = nullptr);
 
-  bool SetDefaultFileAndLine(const FileSpec &file_spec, uint32_t line);
+  bool SetDefaultFileAndLine(lldb::SupportFileSP support_file_sp,
+                             uint32_t line);
 
-  bool GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line);
+  struct SupportFileAndLine {
+    lldb::SupportFileSP support_file_sp;
+    uint32_t line;
+    SupportFileAndLine(lldb::SupportFileSP support_file_sp, uint32_t line)
+        : support_file_sp(support_file_sp), line(line) {}
+  };
+
+  std::optional<SupportFileAndLine> GetDefaultFileAndLine();
 
   bool DefaultFileAndLineSet() {
-    return (GetFile(m_last_file_spec).get() != nullptr);
+    return (GetFile(m_last_support_file_sp).get() != nullptr);
   }
 
-  void FindLinesMatchingRegex(FileSpec &file_spec, RegularExpression &regex,
-                              uint32_t start_line, uint32_t end_line,
+  void FindLinesMatchingRegex(lldb::SupportFileSP support_file_sp,
+                              RegularExpression &regex, uint32_t start_line,
+                              uint32_t end_line,
                               std::vector<uint32_t> &match_lines);
 
-  FileSP GetFile(const FileSpec &file_spec);
+  FileSP GetFile(lldb::SupportFileSP support_file_sp);
 
 protected:
-  FileSpec m_last_file_spec;
+  lldb::SupportFileSP m_last_support_file_sp;
   uint32_t m_last_line;
   uint32_t m_last_count;
   bool m_default_set;

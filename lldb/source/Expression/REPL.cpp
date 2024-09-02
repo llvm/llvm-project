@@ -493,7 +493,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
             // Now set the default file and line to the REPL source file
             m_target.GetSourceManager().SetDefaultFileAndLine(
-                FileSpec(m_repl_source_path), new_default_line);
+                std::make_shared<SupportFile>(FileSpec(m_repl_source_path)),
+                new_default_line);
           }
           static_cast<IOHandlerEditline &>(io_handler)
               .SetBaseLineNumber(m_code.GetSize() + 1);
@@ -590,13 +591,11 @@ Status REPL::RunLoop() {
 
   lldb::IOHandlerSP io_handler_sp(GetIOHandler());
 
-  FileSpec save_default_file;
-  uint32_t save_default_line = 0;
+  std::optional<SourceManager::SupportFileAndLine> default_file_line;
 
   if (!m_repl_source_path.empty()) {
     // Save the current default file and line
-    m_target.GetSourceManager().GetDefaultFileAndLine(save_default_file,
-                                                      save_default_line);
+    default_file_line = m_target.GetSourceManager().GetDefaultFileAndLine();
   }
 
   debugger.RunIOHandlerAsync(io_handler_sp);
@@ -635,8 +634,8 @@ Status REPL::RunLoop() {
   }
 
   // Restore the default file and line
-  if (save_default_file && save_default_line != 0)
-    m_target.GetSourceManager().SetDefaultFileAndLine(save_default_file,
-                                                      save_default_line);
+  if (default_file_line)
+    m_target.GetSourceManager().SetDefaultFileAndLine(
+        default_file_line->support_file_sp, default_file_line->line);
   return error;
 }
