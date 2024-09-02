@@ -592,10 +592,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
                        Custom);
 
-    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
-                       XLenVT, Legal);
-    setOperationAction({ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
-                       XLenVT, Custom);
+    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT}, XLenVT,
+                       Legal);
+    setOperationAction({ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP}, XLenVT,
+                       Custom);
 
     setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
@@ -2968,13 +2968,15 @@ static SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), DL, {MVT::f32, MVT::Other},
                                 {Op.getOperand(0), Op.getOperand(1)});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, DL, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
     }
-    return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(),
-                       DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0)),
-                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+    return DAG.getNode(
+        ISD::FP_ROUND, DL, Op.getValueType(),
+        DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0)),
+        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
   }
 
   // Other operations are legal.
