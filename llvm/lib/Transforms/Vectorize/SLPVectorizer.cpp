@@ -6584,6 +6584,13 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     OrdersType &CurrentOrder, SmallVectorImpl<Value *> &PointerOps) const {
   assert(S.MainOp && "Expected instructions with same/alternate opcodes only.");
 
+  if (S.MainOp->getType()->isFloatingPointTy() &&
+      TTI->isFPVectorizationPotentiallyUnsafe() && any_of(VL, [](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return I && (I->isBinaryOp() || isa<CallInst>(I)) && !I->isFast();
+      }))
+    return TreeEntry::NeedToGather;
+
   unsigned ShuffleOrOp =
       S.isAltShuffle() ? (unsigned)Instruction::ShuffleVector : S.getOpcode();
   auto *VL0 = cast<Instruction>(S.OpValue);
