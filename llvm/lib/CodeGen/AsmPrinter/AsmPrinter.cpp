@@ -2790,29 +2790,32 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
   MCSection *JumpTableSizesSection = nullptr;
   StringRef sectionName = ".llvm_jump_table_sizes";
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  bool isElf = TM.getTargetTriple().isOSBinFormatELF();
+  bool isCoff = TM.getTargetTriple().isOSBinFormatCOFF();
+
+  if (!isCoff && !isElf)
+    return;
+
+  if (isElf) {
     MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
     int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
 
     JumpTableSizesSection = OutContext.getELFSection(
         sectionName, ELF::SHT_LLVM_JT_SIZES, Flags, 0, GroupName, F.hasComdat(),
         MCSection::NonUniqueID, LinkedToSym);
-  } else if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+  } else if (isCoff) {
     if (F.hasComdat()) {
-      MCSymbolCOFF *LinkedToSym = dyn_cast<MCSymbolCOFF>(CurrentFnSym);
-
       JumpTableSizesSection = OutContext.getCOFFSection(
           sectionName,
           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
               COFF::IMAGE_SCN_LNK_COMDAT | COFF::IMAGE_SCN_MEM_DISCARDABLE,
           F.getComdat()->getName(), COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
-    } else
+    } else {
       JumpTableSizesSection = OutContext.getCOFFSection(
           sectionName, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                            COFF::IMAGE_SCN_MEM_READ |
                            COFF::IMAGE_SCN_MEM_DISCARDABLE);
-  } else {
-    return;
+    }
   }
 
   OutStreamer->switchSection(JumpTableSizesSection);
