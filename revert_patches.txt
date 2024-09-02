@@ -164,3 +164,7 @@ Revert: Depends upon older [ctx_prof] reverts
 1022323c9b7c [ctx_prof] Move the "from json" logic more centrally to reuse it from test. (#106129)
 contact : mhalk (Michael Halkenhaeuser)
 ---
+Breaks build of 534.hpgmg
+ 9ccf82543d50 - [VPlan] Implement VPWidenCallRecipe::computeCost (NFCI). (#106047)
+b0de7fa46687 [VPlan] Use op from underlying call in computeCost if needed.   
+---
