@@ -62,10 +62,10 @@ def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadST,      0>;
 def : ReadAdvance<ReadVLD,     0>;
 
+// NOTE: Copied from N2.
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
-def : WriteRes<WriteFDiv,    []> { let Unsupported = 1; }
-def : WriteRes<WriteBarrier, []> { let Unsupported = 1; }
-def : WriteRes<WriteHint,    []> { let Unsupported = 1; }
+def : WriteRes<WriteBarrier, []> { let Latency = 1; }
+def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
 //===----------------------------------------------------------------------===//
 // Define customized scheduler read/write types specific to the Neoverse N3.
@@ -124,12 +124,6 @@ def N3Write_20c_1M0 : SchedWriteRes<[N3UnitM0]> {
 
 //===----------------------------------------------------------------------===//
 // Define generic 2 micro-op types
-
-def N3Write_1c_2I : SchedWriteRes<[N3UnitI]> {
-  let Latency = 1;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
-}
 
 def N3Write_1c_1B_1S : SchedWriteRes<[N3UnitB, N3UnitS]> {
     let Latency = 1;
@@ -770,7 +764,7 @@ def : InstRW<[N3Write_4c_2I_2L, WriteLDHi], (instrs LDPSWi)>;
 def : InstRW<[WriteAdr, WriteLD, WriteLDHi], (instrs LDPWpost, LDPWpre)>;
 
 // Load pair, immed post-index or immed pre-index, normal, X-form
-def : InstRW<[N3Write_1c_2I, N3Write_4c_2L, WriteLDHi], (instrs LDPXpost, LDPXpre)>;
+def : InstRW<[WriteAdr, N3Write_4c_2L, WriteLDHi], (instrs LDPXpost, LDPXpre)>;
 
 // Load pair, immed post-index or immed pre-index, signed words
 def : InstRW<[N3Write_0c, N3Write_4c_2I_2L, WriteLDHi], (instrs LDPSWpost, LDPSWpre)>;
@@ -785,7 +779,7 @@ def : SchedAlias<WriteST, N3Write_1c_1L01_1D>;
 
 // Store register, immed post-index
 // Store register, immed pre-index
-def : InstRW<[N3Write_1c_2I, WriteST], (instregex "^STR(BB|HH|W|X)(post|pre)$")>;
+def : InstRW<[WriteAdr, WriteST], (instregex "^STR(BB|HH|W|X)(post|pre)$")>;
 
 // Store register, register offset, basic
 // Store register, register offset, scaled by 4/8
@@ -800,7 +794,7 @@ def : SchedAlias<WriteSTP, N3Write_1c_1L01_1D>;
 
 // Store pair, immed post-index
 // Store pair, immed pre-index
-def : InstRW<[N3Write_1c_2I, WriteSTP], (instregex "^STP[WX](post|pre)$")>;
+def : InstRW<[WriteAdr, WriteSTP], (instregex "^STP[WX](post|pre)$")>;
 
 // Tag Load instructions
 // -----------------------------------------------------------------------------
@@ -856,7 +850,7 @@ def : InstRW<[N3Write_5c_1V0], (instrs FDIVHrr, FSQRTHr)>;
 
 // FP divide, S-form
 // FP square root, S-form
-def : InstRW<[N3Write_7c_1V0], (instrs FDIVSrr, FSQRTSr)>;
+def : SchedAlias<WriteFDiv , N3Write_7c_1V0>;
 
 // FP divide, D-form
 // FP square root, D-form
@@ -927,7 +921,7 @@ def : InstRW<[N3Write_6c_2L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
 // Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, S/D-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[N3Write_1c_2I, N3Write_6c_2L, WriteLDHi], (instregex "^LDP[SDQ](post|pre)$")>;
+def : InstRW<[WriteAdr, N3Write_6c_2L, WriteLDHi], (instregex "^LDP[SDQ](post|pre)$")>;
 
 // FP store instructions
 // -----------------------------------------------------------------------------
@@ -938,13 +932,13 @@ def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STUR[BHSDQ]i$")>;
 
 // Store vector reg, immed post-index, B/H/S/D-form
 // Store vector reg, immed post-index, Q-form
-def : InstRW<[N3Write_1c_2I, N3Write_2c_1L01_1V], (instregex "^STR[BHSDQ]post$")>;
+def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instregex "^STR[BHSDQ]post$")>;
 
 // Store vector reg, immed pre-index, B/H/S/D-form
-def : InstRW<[N3Write_1c_2I, N3Write_3c_1L01_1V], (instregex "^STR[BHSD]pre$")>;
+def : InstRW<[WriteAdr, N3Write_3c_1L01_1V], (instregex "^STR[BHSD]pre$")>;
 
 // Store vector reg, immed pre-index, Q-form
-def : InstRW<[N3Write_1c_2I, N3Write_2c_1L01_1V], (instrs STRQpre)>;
+def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instrs STRQpre)>;
 
 // Store vector reg, unsigned immed, B/H/S/D-form
 // Store vector reg, unsigned immed, Q-form
@@ -979,7 +973,7 @@ def : InstRW<[N3Write_2c_1L01_1V], (instregex "^STN?P[SDQ]i$")>;
 // Store vector pair, immed pre-index, S-form
 // Store vector pair, immed pre-index, D-form
 // Store vector pair, immed pre-index, Q-form
-def : InstRW<[N3Write_1c_2I, N3Write_2c_1L01_1V], (instregex "^STP[SDQ](post|pre)$")>;
+def : InstRW<[WriteAdr, N3Write_2c_1L01_1V], (instregex "^STP[SDQ](post|pre)$")>;
 
 // ASIMD integer instructions
 // -----------------------------------------------------------------------------

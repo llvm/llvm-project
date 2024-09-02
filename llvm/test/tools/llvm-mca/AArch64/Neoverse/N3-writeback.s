@@ -3161,10 +3161,10 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      608
-# CHECK-NEXT: Total uOps:        3700
+# CHECK-NEXT: Total uOps:        3500
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    6.09
+# CHECK-NEXT: uOps Per Cycle:    5.76
 # CHECK-NEXT: IPC:               1.64
 # CHECK-NEXT: Block RThroughput: 5.3
 
@@ -3207,12 +3207,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      507
-# CHECK-NEXT: Total uOps:        2300
+# CHECK-NEXT: Total uOps:        1900
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.54
+# CHECK-NEXT: uOps Per Cycle:    3.75
 # CHECK-NEXT: IPC:               1.97
-# CHECK-NEXT: Block RThroughput: 3.5
+# CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -3226,7 +3226,7 @@ add x0, x27, 1
 # CHECK-NEXT: [0,5]     .D==eE----R.   add	x0, x27, #1
 # CHECK-NEXT: [0,6]     .D==eeeeeeER   ldp	q1, q2, [x27, #992]!
 # CHECK-NEXT: [0,7]     .D===eE----R   add	x0, x27, #1
-# CHECK-NEXT: [0,8]     . D==eeeeE-R   ldp	w1, w2, [x27], #248
+# CHECK-NEXT: [0,8]     .D===eeeeE-R   ldp	w1, w2, [x27], #248
 # CHECK-NEXT: [0,9]     . D===eE---R   add	x0, x27, #1
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -3244,21 +3244,21 @@ add x0, x27, 1
 # CHECK-NEXT: 5.     1     3.0    0.0    4.0       add	x0, x27, #1
 # CHECK-NEXT: 6.     1     3.0    0.0    0.0       ldp	q1, q2, [x27, #992]!
 # CHECK-NEXT: 7.     1     4.0    0.0    4.0       add	x0, x27, #1
-# CHECK-NEXT: 8.     1     3.0    0.0    1.0       ldp	w1, w2, [x27], #248
+# CHECK-NEXT: 8.     1     4.0    0.0    1.0       ldp	w1, w2, [x27], #248
 # CHECK-NEXT: 9.     1     4.0    0.0    3.0       add	x0, x27, #1
-# CHECK-NEXT:        1     2.7    0.1    2.0       <total>
+# CHECK-NEXT:        1     2.8    0.1    2.0       <total>
 
 # CHECK:      [45] Code Region - G46
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
-# CHECK-NEXT: Total Cycles:      407
-# CHECK-NEXT: Total uOps:        2300
+# CHECK-NEXT: Total Cycles:      406
+# CHECK-NEXT: Total uOps:        2100
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    5.65
+# CHECK-NEXT: uOps Per Cycle:    5.17
 # CHECK-NEXT: IPC:               2.46
-# CHECK-NEXT: Block RThroughput: 3.5
+# CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     0123456789
@@ -3267,12 +3267,12 @@ add x0, x27, 1
 # CHECK-NEXT: [0,1]     D=eE--R  .   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     D=eeeeER .   ldp	w1, w2, [x27, #248]!
 # CHECK-NEXT: [0,3]     D==eE--R .   add	x0, x27, #1
-# CHECK-NEXT: [0,4]     .D=eeeeER.   ldp	x1, x2, [x27, #496]!
+# CHECK-NEXT: [0,4]     D==eeeeER.   ldp	x1, x2, [x27, #496]!
 # CHECK-NEXT: [0,5]     .D==eE--R.   add	x0, x27, #1
 # CHECK-NEXT: [0,6]     .D==eeeeER   ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: [0,7]     .D===eE--R   add	x0, x27, #1
-# CHECK-NEXT: [0,8]     . D=eeeeER   ldpsw	x1, x2, [x27, #248]!
-# CHECK-NEXT: [0,9]     . D===eE-R   add	x0, x27, #1
+# CHECK-NEXT: [0,7]     .D==eE---R   add	x0, x27, #1
+# CHECK-NEXT: [0,8]     .D==eeeeER   ldpsw	x1, x2, [x27, #248]!
+# CHECK-NEXT: [0,9]     . D==eE--R   add	x0, x27, #1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3285,13 +3285,13 @@ add x0, x27, 1
 # CHECK-NEXT: 1.     1     2.0    0.0    2.0       add	x0, x27, #1
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldp	w1, w2, [x27, #248]!
 # CHECK-NEXT: 3.     1     3.0    0.0    2.0       add	x0, x27, #1
-# CHECK-NEXT: 4.     1     2.0    0.0    0.0       ldp	x1, x2, [x27, #496]!
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldp	x1, x2, [x27, #496]!
 # CHECK-NEXT: 5.     1     3.0    0.0    2.0       add	x0, x27, #1
 # CHECK-NEXT: 6.     1     3.0    0.0    0.0       ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: 7.     1     4.0    1.0    2.0       add	x0, x27, #1
-# CHECK-NEXT: 8.     1     2.0    0.0    0.0       ldpsw	x1, x2, [x27, #248]!
-# CHECK-NEXT: 9.     1     4.0    2.0    1.0       add	x0, x27, #1
-# CHECK-NEXT:        1     2.6    0.4    0.9       <total>
+# CHECK-NEXT: 7.     1     3.0    0.0    3.0       add	x0, x27, #1
+# CHECK-NEXT: 8.     1     3.0    0.0    0.0       ldpsw	x1, x2, [x27, #248]!
+# CHECK-NEXT: 9.     1     3.0    1.0    2.0       add	x0, x27, #1
+# CHECK-NEXT:        1     2.6    0.2    1.1       <total>
 
 # CHECK:      [46] Code Region - G47
 
@@ -4975,12 +4975,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.96
+# CHECK-NEXT: uOps Per Cycle:    4.56
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 3.3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -5020,12 +5020,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.96
+# CHECK-NEXT: uOps Per Cycle:    3.97
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -5065,12 +5065,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.96
+# CHECK-NEXT: uOps Per Cycle:    3.97
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -5110,12 +5110,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      505
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.95
+# CHECK-NEXT: uOps Per Cycle:    3.96
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     0123456789
@@ -5155,12 +5155,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.96
+# CHECK-NEXT: uOps Per Cycle:    3.97
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -5200,12 +5200,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.96
+# CHECK-NEXT: uOps Per Cycle:    3.97
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -5245,12 +5245,12 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        2500
+# CHECK-NEXT: Total uOps:        2400
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    4.96
+# CHECK-NEXT: uOps Per Cycle:    4.76
 # CHECK-NEXT: IPC:               1.98
-# CHECK-NEXT: Block RThroughput: 3.8
+# CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
