@@ -43,7 +43,9 @@ class MemoryHolesTestCase(TestBase):
         # inside the holes we've deliberately left empty.
         self.memory = self.frame().FindVariable("mem_with_holes").GetValueAsUnsigned()
         self.pagesize = self.frame().FindVariable("pagesize").GetValueAsUnsigned()
-        self.num_pages = self.target().FindFirstGlobalVariable("num_pages").GetValueAsUnsigned()
+        self.num_pages = (
+            self.target().FindFirstGlobalVariable("num_pages").GetValueAsUnsigned()
+        )
         positions = self.frame().FindVariable("positions")
         self.positions = [
             positions.GetChildAtIndex(i).GetValueAsUnsigned()
@@ -65,9 +67,9 @@ class MemoryHolesTestCase(TestBase):
     def test_memory_find(self):
         self._prepare_inferior()
 
-        matches = [ f"data found at location: {p:#x}" for p in self.positions ]
+        matches = [f"data found at location: {p:#x}" for p in self.positions]
         self.expect(
             f'memory find --count {len(self.positions)+1} --string "needle" '
-            f'{self.memory:#x} {self.memory+self.pagesize*self.num_pages:#x}',
+            f"{self.memory:#x} {self.memory+self.pagesize*self.num_pages:#x}",
             substrs=matches + ["no more matches within the range"],
         )
