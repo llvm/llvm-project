@@ -146,7 +146,7 @@ static constexpr uint32_t get_max_thread_name_length_impl() {
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
   return 16;
 #elif defined(__OpenBSD__)
-  return 32;
+  return 24;
 #else
   return 0;
 #endif
