@@ -20,12 +20,14 @@ LLVM pass writers, and minimal disruption to LLVM in general.
 
 ## Status and usage
 
-**Status**: Experimental work in progress. Enabling is strongly advised against
-except for development and testing.
+**Status**: Enabled by default in Clang but disabled under some circumstances
+(which can be overridden with the `forced` option, see below). `opt` will not
+run the pass unless asked (`-passes=declare-to-assign`).
 
-**Enable in Clang**: `-Xclang -fexperimental-assignment-tracking`
+**Flag**:
+`-Xclang -fexperimental-assignment-tracking=<disabled|enabled|forced>`
 
-That causes Clang to get LLVM to run the pass `declare-to-assign`. The pass
+When enabled Clang gets LLVM to run the pass `declare-to-assign`. The pass
 converts conventional debug records to assignment tracking metadata and sets
 the module flag `debug-info-assignment-tracking` to the value `i1 true`. To
 check whether assignment tracking is enabled for a module call
