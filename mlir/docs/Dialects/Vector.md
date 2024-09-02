@@ -90,8 +90,8 @@ fixed-width arrays of 1-D scalable vectors. This means scalable vectors with a
 non-trailing scalable dimension (e.g. `vector<4x[8]x128xf32`) are not
 convertible to LLVM.
 
-Finally, MLIR takes the same view on scalable Vectors as LLVM (c.f. (Vector
-Type)[https://llvm.org/docs/LangRef.html#vector-type]):
+Finally, MLIR takes the same view on scalable Vectors as LLVM (c.f.
+[VectorType](https://llvm.org/docs/LangRef.html#vector-type)):
 > For scalable vectors, the total number of elements is a constant multiple
 > (called vscale) of the specified number of elements; vscale is a positive
 > integer that is unknown at compile time and the same hardware-dependent

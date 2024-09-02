@@ -603,6 +603,8 @@ def : Pat<(fneg (any_fma_nsz FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3)),
 foreach Ext = FExts in {
   defm : PatFprFpr_m<fminnum, FMIN_S, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_S, Ext>;
+  defm : PatFprFpr_m<fminimumnum, FMIN_S, Ext>;
+  defm : PatFprFpr_m<fmaximumnum, FMAX_S, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
 }
@@ -797,8 +799,8 @@ def : Pat<(i64 (any_lrint FPR32INX:$rs1)), (FCVT_L_S_INX $rs1, FRM_DYN)>;
 def : Pat<(i64 (any_llrint FPR32INX:$rs1)), (FCVT_L_S_INX $rs1, FRM_DYN)>;
 
 // float->int64 rounded to neartest with ties rounded away from zero.
-def : Pat<(i64 (any_lround FPR32INX:$rs1)), (FCVT_L_S_INX $rs1, FRM_DYN)>;
-def : Pat<(i64 (any_llround FPR32INX:$rs1)), (FCVT_L_S_INX $rs1, FRM_DYN)>;
+def : Pat<(i64 (any_lround FPR32INX:$rs1)), (FCVT_L_S_INX $rs1, FRM_RMM)>;
+def : Pat<(i64 (any_llround FPR32INX:$rs1)), (FCVT_L_S_INX $rs1, FRM_RMM)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W_INX $rs1, FRM_DYN)>;

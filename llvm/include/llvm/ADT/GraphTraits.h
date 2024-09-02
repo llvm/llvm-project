@@ -19,6 +19,7 @@
 #ifndef LLVM_ADT_GRAPHTRAITS_H
 #define LLVM_ADT_GRAPHTRAITS_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 
 namespace llvm {
@@ -93,6 +94,17 @@ struct GraphTraits {
   // file #include'd.
   using NodeRef = typename GraphType::UnknownGraphTypeError;
 };
+
+namespace detail {
+template <typename T>
+using has_number_t = decltype(GraphTraits<T>::getNumber(
+    std::declval<typename GraphTraits<T>::NodeRef>()));
+} // namespace detail
+
+/// Indicate whether a GraphTraits<NodeT>::getNumber() is supported.
+template <typename NodeT>
+constexpr bool GraphHasNodeNumbers =
+    is_detected<detail::has_number_t, NodeT>::value;
 
 // Inverse - This class is used as a little marker class to tell the graph
 // iterator to iterate over the graph in a graph defined "Inverse" ordering.

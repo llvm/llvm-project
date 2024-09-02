@@ -19,10 +19,7 @@ def is_before(range1, range2):
 
 log_contents = json.loads(sys.stdin.read())
 events = log_contents["traceEvents"]
-
-instants = [event for event in events if event["name"] == "InstantiateFunction"]
 codegens = [event for event in events if event["name"] == "CodeGen Function"]
-opts = [event for event in events if event["name"] == "OptFunction"]
 frontends = [event for event in events if event["name"] == "Frontend"]
 backends = [event for event in events if event["name"] == "Backend"]
 
@@ -51,11 +48,3 @@ if not all(
     ]
 ):
     sys.exit("Not all Frontend section are before all Backend sections!")
-
-# Check that entries for foo exist and are in a demangled form.
-if not any(e for e in instants if "foo<int>" in e["args"]["detail"]):
-    sys.exit("Missing Instantiate entry for foo!")
-if not any(e for e in codegens if "foo<int>" in e["args"]["detail"]):
-    sys.exit("Missing CodeGen entry for foo!")
-if not any(e for e in opts if "foo<int>" in e["args"]["detail"]):
-    sys.exit("Missing Optimize entry for foo!")

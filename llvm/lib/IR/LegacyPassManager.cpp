@@ -12,7 +12,6 @@
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1384,8 +1383,7 @@ bool FPPassManager::runOnFunction(Function &F) {
 
   // Store name outside of loop to avoid redundant calls.
   const StringRef Name = F.getName();
-  llvm::TimeTraceScope FunctionScope(
-      "OptFunction", [&F]() { return demangle(F.getName().str()); });
+  llvm::TimeTraceScope FunctionScope("OptFunction", Name);
 
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);

@@ -1031,8 +1031,8 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     return EvaluateExpression(expr, options);
   } else {
     Status error;
-    error.SetErrorString("can't evaluate expressions when the "
-                           "process is running.");
+    error = Status::FromErrorString("can't evaluate expressions when the "
+                                    "process is running.");
     ValueObjectSP error_val_sp = ValueObjectConstResult::Create(nullptr, error);
     result.SetSP(error_val_sp, false);
   }
@@ -1127,14 +1127,14 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
       }
     } else {
       Status error;
-      error.SetErrorString("can't evaluate expressions when the "
-                           "process is running.");
+      error = Status::FromErrorString("can't evaluate expressions when the "
+                                      "process is running.");
       expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
       expr_result.SetSP(expr_value_sp, false);
     }
   } else {
       Status error;
-      error.SetErrorString("sbframe object is not valid.");
+      error = Status::FromErrorString("sbframe object is not valid.");
       expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
       expr_result.SetSP(expr_value_sp, false);
   }
@@ -1195,9 +1195,20 @@ bool SBFrame::IsArtificial() const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame)
+  if (StackFrame *frame = exe_ctx.GetFramePtr())
     return frame->IsArtificial();
+
+  return false;
+}
+
+bool SBFrame::IsHidden() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  if (StackFrame *frame = exe_ctx.GetFramePtr())
+    return frame->IsHidden();
 
   return false;
 }

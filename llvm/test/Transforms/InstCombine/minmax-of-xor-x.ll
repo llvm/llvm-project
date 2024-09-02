@@ -76,8 +76,8 @@ define i8 @smin_xor_Cpow2_neg(i8 %x) {
 define i8 @umax_xor_pow2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_xor_pow2(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[NY]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[YP2]], [[X:%.*]]
+; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[Y]], [[NY]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[X:%.*]], [[YP2]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ny = sub i8 0, %y
@@ -90,9 +90,9 @@ define i8 @umax_xor_pow2(i8 %x, i8 %y) {
 define <2 x i8> @umin_xor_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @umin_xor_pow2(
 ; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
-; CHECK-NEXT:    [[YP2:%.*]] = and <2 x i8> [[NY]], [[Y]]
+; CHECK-NEXT:    [[YP2:%.*]] = and <2 x i8> [[Y]], [[NY]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[YP2]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %ny = sub <2 x i8> <i8 0, i8 0>, %y
@@ -105,8 +105,8 @@ define <2 x i8> @umin_xor_pow2(<2 x i8> %x, <2 x i8> %y) {
 define i8 @smax_xor_pow2_unk(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_xor_pow2_unk(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[NY]], [[Y]]
-; CHECK-NEXT:    [[X_XOR:%.*]] = xor i8 [[YP2]], [[X:%.*]]
+; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[Y]], [[NY]]
+; CHECK-NEXT:    [[X_XOR:%.*]] = xor i8 [[X:%.*]], [[YP2]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[X_XOR]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -120,8 +120,8 @@ define i8 @smax_xor_pow2_unk(i8 %x, i8 %y) {
 define <2 x i8> @smin_xor_pow2_unk(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @smin_xor_pow2_unk(
 ; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
-; CHECK-NEXT:    [[YP2:%.*]] = and <2 x i8> [[NY]], [[Y]]
-; CHECK-NEXT:    [[X_XOR:%.*]] = xor <2 x i8> [[YP2]], [[X:%.*]]
+; CHECK-NEXT:    [[YP2:%.*]] = and <2 x i8> [[Y]], [[NY]]
+; CHECK-NEXT:    [[X_XOR:%.*]] = xor <2 x i8> [[X:%.*]], [[YP2]]
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[X]], <2 x i8> [[X_XOR]])
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
@@ -159,12 +159,12 @@ pos:
 define i8 @smin_xor_pow2_pos(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smin_xor_pow2_pos(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[Y]], [[NY]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[YP2]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[YP2]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       pos:
 ; CHECK-NEXT:    call void @barrier()

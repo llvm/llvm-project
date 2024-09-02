@@ -23,17 +23,17 @@ using StaticDescTy = StaticDescriptor<maxRank, true, 0>;
 // for CopyElement.
 struct CopyDescriptor {
   // A constructor specifying all members explicitly.
+  // The toAt and fromAt specify subscript storages that might be
+  // external to CopyElement, and cannot be modified.
+  // The copy descriptor only establishes toAtPtr_ and fromAtPtr_
+  // pointers to point to these storages.
   RT_API_ATTRS CopyDescriptor(const Descriptor &to, const SubscriptValue toAt[],
       const Descriptor &from, const SubscriptValue fromAt[],
       std::size_t elements, bool usesStaticDescriptors = false)
       : to_(to), from_(from), elements_(elements),
         usesStaticDescriptors_(usesStaticDescriptors) {
-    for (int dim{0}; dim < to.rank(); ++dim) {
-      toAt_[dim] = toAt[dim];
-    }
-    for (int dim{0}; dim < from.rank(); ++dim) {
-      fromAt_[dim] = fromAt[dim];
-    }
+    toAtPtr_ = toAt;
+    fromAtPtr_ = fromAt;
   }
   // The number of elements to copy is initialized from the to descriptor.
   // The current element subscripts are initialized from the lower bounds
@@ -46,14 +46,32 @@ struct CopyDescriptor {
     from.GetLowerBounds(fromAt_);
   }
 
+  // Increment the toAt_ and fromAt_ subscripts to the next
+  // element.
+  RT_API_ATTRS void IncrementSubscripts(Terminator &terminator) {
+    // This method must not be called for copy descriptors
+    // using external non-modifiable subscript storage.
+    RUNTIME_CHECK(terminator, toAt_ == toAtPtr_ && fromAt_ == fromAtPtr_);
+    to_.IncrementSubscripts(toAt_);
+    from_.IncrementSubscripts(fromAt_);
+  }
+
   // Descriptor of the destination.
   const Descriptor &to_;
   // A subscript specifying the current element position to copy to.
   SubscriptValue toAt_[maxRank];
+  // A pointer to the storage of the 'to' subscript.
+  // It may point to toAt_ or to an external non-modifiable
+  // subscript storage.
+  const SubscriptValue *toAtPtr_{toAt_};
   // Descriptor of the source.
   const Descriptor &from_;
   // A subscript specifying the current element position to copy from.
   SubscriptValue fromAt_[maxRank];
+  // A pointer to the storage of the 'from' subscript.
+  // It may point to fromAt_ or to an external non-modifiable
+  // subscript storage.
+  const SubscriptValue *fromAtPtr_{fromAt_};
   // Number of elements left to copy.
   std::size_t elements_;
   // Must be true, if the to and from descriptors are allocated
@@ -75,6 +93,18 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     const Descriptor &from, const SubscriptValue fromAt[],
     Terminator &terminator) {
+  if (!to.Addendum()) {
+    // Avoid the overhead of creating the work stacks below
+    // for the simple non-derived type cases, because the overhead
+    // might be noticeable over the total amount of work that
+    // needs to be done for the copy.
+    char *toPtr{to.Element<char>(toAt)};
+    char *fromPtr{from.Element<char>(fromAt)};
+    RUNTIME_CHECK(terminator, to.ElementBytes() == from.ElementBytes());
+    std::memcpy(toPtr, fromPtr, to.ElementBytes());
+    return;
+  }
+
 #if !defined(RT_DEVICE_COMPILATION)
   constexpr unsigned copyStackReserve{16};
   constexpr unsigned descriptorStackReserve{6};
@@ -108,9 +138,9 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
       continue;
     }
     const Descriptor &curTo{currentCopy.to_};
-    SubscriptValue *curToAt{currentCopy.toAt_};
+    const SubscriptValue *curToAt{currentCopy.toAtPtr_};
     const Descriptor &curFrom{currentCopy.from_};
-    SubscriptValue *curFromAt{currentCopy.fromAt_};
+    const SubscriptValue *curFromAt{currentCopy.fromAtPtr_};
     char *toPtr{curTo.Element<char>(curToAt)};
     char *fromPtr{curFrom.Element<char>(curFromAt)};
     RUNTIME_CHECK(terminator, curTo.ElementBytes() == curFrom.ElementBytes());
@@ -121,8 +151,7 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     std::memcpy(toPtr, fromPtr, curTo.ElementBytes());
     --elements;
     if (elements != 0) {
-      curTo.IncrementSubscripts(curToAt);
-      curFrom.IncrementSubscripts(curFromAt);
+      currentCopy.IncrementSubscripts(terminator);
     }
 
     // Deep copy allocatable and automatic components if any.
@@ -154,8 +183,9 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
             const typeInfo::Value *bounds{component->bounds()};
             std::size_t elements{1};
             for (int dim{0}; dim < component->rank(); ++dim) {
-              SubscriptValue lb{bounds[2 * dim].GetValue(&curTo).value_or(0)};
-              SubscriptValue ub{
+              typeInfo::TypeParameterValue lb{
+                  bounds[2 * dim].GetValue(&curTo).value_or(0)};
+              typeInfo::TypeParameterValue ub{
                   bounds[2 * dim + 1].GetValue(&curTo).value_or(0)};
               extents[dim] = ub >= lb ? ub - lb + 1 : 0;
               elements *= extents[dim];

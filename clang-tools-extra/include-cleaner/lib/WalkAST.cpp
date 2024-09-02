@@ -23,7 +23,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -204,7 +203,12 @@ public:
   bool VisitUsingDecl(UsingDecl *UD) {
     for (const auto *Shadow : UD->shadows()) {
       auto *TD = Shadow->getTargetDecl();
-      auto IsUsed = TD->isUsed() || TD->isReferenced();
+      // For function-decls, we might have overloads brought in due to
+      // transitive dependencies. Hence we only want to report explicit
+      // references for those if they're used.
+      // But for record decls, spelling of the type always refers to primary
+      // decl non-ambiguously. Hence spelling is already a use.
+      auto IsUsed = TD->isUsed() || TD->isReferenced() || !TD->getAsFunction();
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
 
@@ -271,7 +275,6 @@ public:
   // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    // if (CTSD->isExplicitSpecialization())
     if (clang::isTemplateExplicitInstantiationOrSpecialization(
             CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
@@ -279,7 +282,6 @@ public:
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    // if (VTSD->isExplicitSpecialization())
     if (clang::isTemplateExplicitInstantiationOrSpecialization(
             VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
@@ -350,6 +352,15 @@ public:
     report(E->getExprLoc(),
            const_cast<CXXRecordDecl *>(E->getBestDynamicClassType()),
            RefType::Implicit);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    report(E->getExprLoc(), E->getOperatorNew(), RefType::Ambiguous);
+    return true;
+  }
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
 };

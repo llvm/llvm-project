@@ -931,6 +931,71 @@ exit:
   ret void
 }
 
+; Test case for https://github.com/llvm/llvm-project/issues/105722.
+define i64 @live_in_known_1_via_scev() {
+; CHECK-LABEL: @live_in_known_1_via_scev(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i32 3, i32 0
+; CHECK-NEXT:    br label [[PH:%.*]]
+; CHECK:       ph:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[N:%.*]] = add nuw nsw i32 [[SEL]], 6
+; CHECK-NEXT:    [[P_EXT:%.*]] = zext nneg i32 [[P]] to i64
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ <i64 3, i64 1, i64 1, i64 1>, [[VECTOR_PH]] ], [ [[VEC_PHI]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i32> [[VEC_IV]], <i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[VEC_PHI]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
+; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.mul.v4i64(<4 x i64> [[TMP1]])
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 8, [[MIDDLE_BLOCK]] ], [ 0, [[PH]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 3, [[PH]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RED_MUL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED_MUL]] = mul nsw i64 [[RED]], [[P_EXT]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[RED_MUL]], [[LOOP]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %sel = select i1 false, i32 3, i32 0
+  br label %ph
+
+ph:
+  %p = phi i32 [ 1, %entry ]
+  %N = add nuw nsw i32 %sel, 6
+  %p.ext = zext nneg i32 %p to i64
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %ph ], [ %iv.next, %loop ]
+  %red = phi i64 [ 3, %ph ], [ %red.mul,  %loop ]
+  %red.mul = mul nsw i64 %red, %p.ext
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %red.mul, %loop ]
+  ret i64 %res
+}
+
 declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }

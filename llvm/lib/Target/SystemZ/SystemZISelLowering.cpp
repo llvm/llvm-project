@@ -710,6 +710,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY,  MVT::Other, Custom);
   setOperationAction(ISD::VAEND,   MVT::Other, Expand);
 
+  if (Subtarget.isTargetzOS()) {
+    // Handle address space casts between mixed sized pointers.
+    setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+    setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
+  }
+
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
 
   // Codes for which we want to perform some z-specific combinations.
@@ -6059,6 +6065,34 @@ SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue lowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT DstVT = Op.getSimpleValueType();
+
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+  unsigned SrcAS = N->getSrcAddressSpace();
+
+  assert(SrcAS != N->getDestAddressSpace() &&
+         "addrspacecast must be between different address spaces");
+
+  // addrspacecast [0 <- 1] : Assinging a ptr32 value to a 64-bit pointer.
+  // addrspacecast [1 <- 0] : Assigining a 64-bit pointer to a ptr32 value.
+  if (SrcAS == SYSTEMZAS::PTR32 && DstVT == MVT::i64) {
+    Op = DAG.getNode(ISD::AND, dl, MVT::i32, Src,
+                     DAG.getConstant(0x7fffffff, dl, MVT::i32));
+    Op = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op);
+  } else if (DstVT == MVT::i32) {
+    Op = DAG.getNode(ISD::TRUNCATE, dl, DstVT, Src);
+    Op = DAG.getNode(ISD::AND, dl, MVT::i32, Op,
+                     DAG.getConstant(0x7fffffff, dl, MVT::i32));
+    Op = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op);
+  } else {
+    report_fatal_error("Bad address space in addrspacecast");
+  }
+  return Op;
+}
+
 SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -6232,6 +6266,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRL_BY_SCALAR);
   case ISD::SRA:
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
+  case ISD::ADDRSPACECAST:
+    return lowerAddrSpaceCast(Op, DAG);
   case ISD::ROTL:
     return lowerShift(Op, DAG, SystemZISD::VROTL_BY_SCALAR);
   case ISD::IS_FPCLASS:
@@ -6875,6 +6911,20 @@ SDValue SystemZTargetLowering::combineLOAD(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   EVT LdVT = N->getValueType(0);
+  if (auto *LN = dyn_cast<LoadSDNode>(N)) {
+    if (LN->getAddressSpace() == SYSTEMZAS::PTR32) {
+      MVT PtrVT = getPointerTy(DAG.getDataLayout());
+      MVT LoadNodeVT = LN->getBasePtr().getSimpleValueType();
+      if (PtrVT != LoadNodeVT) {
+        SDLoc DL(LN);
+        SDValue AddrSpaceCast = DAG.getAddrSpaceCast(
+            DL, PtrVT, LN->getBasePtr(), SYSTEMZAS::PTR32, 0);
+        return DAG.getExtLoad(LN->getExtensionType(), DL, LN->getValueType(0),
+                              LN->getChain(), AddrSpaceCast, LN->getMemoryVT(),
+                              LN->getMemOperand());
+      }
+    }
+  }
   SDLoc DL(N);
 
   // Replace a 128-bit load that is used solely to move its value into GPRs
@@ -7042,6 +7092,20 @@ SDValue SystemZTargetLowering::combineSTORE(
   auto *SN = cast<StoreSDNode>(N);
   auto &Op1 = N->getOperand(1);
   EVT MemVT = SN->getMemoryVT();
+
+  if (SN->getAddressSpace() == SYSTEMZAS::PTR32) {
+    MVT PtrVT = getPointerTy(DAG.getDataLayout());
+    MVT StoreNodeVT = SN->getBasePtr().getSimpleValueType();
+    if (PtrVT != StoreNodeVT) {
+      SDLoc DL(SN);
+      SDValue AddrSpaceCast = DAG.getAddrSpaceCast(DL, PtrVT, SN->getBasePtr(),
+                                                   SYSTEMZAS::PTR32, 0);
+      return DAG.getStore(SN->getChain(), DL, SN->getValue(), AddrSpaceCast,
+                          SN->getPointerInfo(), SN->getOriginalAlign(),
+                          SN->getMemOperand()->getFlags(), SN->getAAInfo());
+    }
+  }
+
   // If we have (truncstoreiN (extract_vector_elt X, Y), Z) then it is better
   // for the extraction to be done on a vMiN value, so that we can use VSTE.
   // If X has wider elements then convert it to:

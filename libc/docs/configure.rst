@@ -52,3 +52,5 @@ to learn about the defaults for your platform and target.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
+* **"time" options**
+    - ``LIBC_CONF_TIME_64BIT``: Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit.

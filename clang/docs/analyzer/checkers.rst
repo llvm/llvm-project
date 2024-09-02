@@ -571,7 +571,7 @@ if ((y = make_int())) {
 nullability
 ^^^^^^^^^^^
 
-Objective C checkers that warn for null pointer passing and dereferencing errors.
+Checkers (mostly Objective C) that warn for null pointer passing and dereferencing errors.
 
 .. _nullability-NullPassedToNonnull:
 
@@ -588,8 +588,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
 
 .. _nullability-NullReturnedFromNonnull:
 
-nullability.NullReturnedFromNonnull (ObjC)
-""""""""""""""""""""""""""""""""""""""""""
+nullability.NullReturnedFromNonnull (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""""""""""""
 Warns when a null pointer is returned from a function that has _Nonnull return type.
 
 .. code-block:: objc
@@ -602,6 +602,22 @@ Warns when a null pointer is returned from a function that has _Nonnull return t
    // Warning: nil returned from a method that is expected
    // to return a non-null value
    return result;
+ }
+
+Warns when a null pointer is returned from a function annotated with ``__attribute__((returns_nonnull))``
+
+.. code-block:: cpp
+
+ int global;
+ __attribute__((returns_nonnull)) void* getPtr(void* p);
+
+ void* getPtr(void* p) {
+   if (p) { // forgot to negate the condition
+     return &global;
+   }
+   // Warning: nullptr returned from a function that is expected
+   // to return a non-null value
+   return p;
  }
 
 .. _nullability-NullableDereferenced:
@@ -2517,7 +2533,11 @@ alpha.core.PointerSub (C)
 Check for pointer subtractions on two pointers pointing to different memory
 chunks. According to the C standard §6.5.6 only subtraction of pointers that
 point into (or one past the end) the same array object is valid (for this
-purpose non-array variables are like arrays of size 1).
+purpose non-array variables are like arrays of size 1). This checker only
+searches for different memory objects at subtraction, but does not check if the
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
 
 .. code-block:: c
 
@@ -2527,11 +2547,6 @@ purpose non-array variables are like arrays of size 1).
    x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
    x = (&a + 1) - &a;
    x = &b - &a; // warn: 'a' and 'b' are different variables
-   x = (&a + 2) - &a; // warn: for a variable it is only valid to have a pointer
-                      // to one past the address of it
-   x = &c[10] - &c[0];
-   x = &c[11] - &c[0]; // warn: index larger than one past the end
-   x = &c[-1] - &c[0]; // warn: negative index
  }
 
  struct S {
@@ -2553,9 +2568,6 @@ There may be existing applications that use code like above for calculating
 offsets of members in a structure, using pointer subtractions. This is still
 undefined behavior according to the standard and code like this can be replaced
 with the `offsetof` macro.
-
-The checker only reports cases where stack-allocated objects are involved (no
-warnings on pointers to memory allocated by `malloc`).
 
 .. _alpha-core-StackAddressAsyncEscape:
 
