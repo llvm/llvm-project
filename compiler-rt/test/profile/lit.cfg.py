@@ -166,6 +166,7 @@ if config.host_os not in [
     "NetBSD",
     "SunOS",
     "AIX",
+    "Haiku",
 ]:
     config.unsupported = True
 
