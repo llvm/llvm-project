@@ -2526,8 +2526,10 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
   size_t bytes_read = 0;
   Status error = m_current_process->ReadMemoryWithoutTrap(
       read_addr, &buf[0], byte_count, bytes_read);
-  LLDB_LOG(log, "ReadMemoryWithoutTrap({0}) read {1}/{2} bytes (error: {3})",
-           read_addr, byte_count, bytes_read, error);
+  LLDB_LOG(
+      log,
+      "ReadMemoryWithoutTrap({0}) read {1} of {2} requested bytes (error: {3})",
+      read_addr, byte_count, bytes_read, error);
   if (bytes_read == 0)
     return SendErrorResponse(0x08);
 

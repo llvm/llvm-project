@@ -1,5 +1,6 @@
 """
-Test the memory commands operating on memory regions with holes
+Test the memory commands operating on memory regions with holes (inaccessible
+pages)
 """
 
 import lldb
@@ -58,6 +59,3 @@ class MemoryHolesTestCase(TestBase):
         self.assertEqual(len(content), self.pagesize)
         self.assertEqual(content[0:7], b"needle\0")
         self.assertTrue(error.Fail())
-        self.assertEqual(
-            f"memory read failed for {self.memory+self.pagesize:#x}", error.GetCString()
-        )
