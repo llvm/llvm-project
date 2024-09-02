@@ -3581,6 +3581,9 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         // "__atomic_base" or something.
         if (StringRef(RD->getNameAsString()).contains("atomic")) {
           BR.markInvalid(getTag(), S);
+          // After report is considered invalid there is no need to proceed
+          // futher.
+          return nullptr;
         }
       }
     }
@@ -3673,10 +3676,11 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             }
 
             // Switch suspection to outer destructor to catch patterns like:
+            // (note that class name is special to bypass
+            // isReferenceCountingPointerDestructor() logic)
             //
             // SmartPointr::~SmartPointr() {
-            //  if (__c11_atomic_fetch_sub(refcount, 1, memory_order_relaxed) ==
-            //  1)
+            //  if (refcount.fetch_sub(1) == 1)
             //    release_resources();
             // }
             // void SmartPointr::release_resources() {
