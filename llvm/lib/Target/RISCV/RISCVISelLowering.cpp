@@ -18976,9 +18976,10 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   return false;
 }
 
-static unsigned allocateRVVReg(MVT ValVT, unsigned ValNo,
-                               std::optional<unsigned> FirstMaskArgument,
-                               CCState &State, const RISCVTargetLowering &TLI) {
+static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo,
+                                 std::optional<unsigned> FirstMaskArgument,
+                                 CCState &State,
+                                 const RISCVTargetLowering &TLI) {
   const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
   if (RC == &RISCV::VRRegClass) {
     // Assign the first mask argument to V0.
