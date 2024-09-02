@@ -432,8 +432,7 @@ public:
         VecSizeInBits = ContextType.getSizeInBits();
       }
 
-      ImmChecks.emplace_back(
-          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits));
+      ImmChecks.emplace_back(ArgIdx, Kind, EltSizeInBits, VecSizeInBits);
     }
     llvm::sort(ImmChecks.begin(), ImmChecks.end(),
                [](const ImmCheck &a, const ImmCheck &b) {
@@ -588,7 +587,7 @@ class NeonEmitter {
                                      SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
-  bool areRangeChecksCompatable(const ArrayRef<ImmCheck> ChecksA,
+  bool areRangeChecksCompatible(const ArrayRef<ImmCheck> ChecksA,
                                 const ArrayRef<ImmCheck> ChecksB);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
                                   SmallVectorImpl<Intrinsic *> &Defs);
@@ -2180,7 +2179,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
 }
 
 inline bool
-NeonEmitter::areRangeChecksCompatable(const ArrayRef<ImmCheck> ChecksA,
+NeonEmitter::areRangeChecksCompatible(const ArrayRef<ImmCheck> ChecksA,
                                       const ArrayRef<ImmCheck> ChecksB) {
   // If multiple intrinsics map to the same builtin, we must ensure that the
   // intended range checks performed in SemaArm.cpp do not contradict each
@@ -2192,7 +2191,7 @@ NeonEmitter::areRangeChecksCompatable(const ArrayRef<ImmCheck> ChecksA,
   // are not and so must be the same.
   bool compat =
       std::equal(ChecksA.begin(), ChecksA.end(), ChecksB.begin(), ChecksB.end(),
-                 [](const auto A, const auto B) {
+                 [](const auto &A, const auto &B) {
                    return A.getImmArgIdx() == B.getImmArgIdx() &&
                           A.getKind() == B.getKind() &&
                           A.getVecSizeInBits() == B.getVecSizeInBits();
@@ -2216,8 +2215,8 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
 
     const auto it = Emitted.find(Def->getMangledName());
     if (it != Emitted.end()) {
-      assert(areRangeChecksCompatable(Checks, it->second) &&
-             "Neon intrinsics with incompatable immediate range checks cannot "
+      assert(areRangeChecksCompatible(Checks, it->second) &&
+             "Neon intrinsics with incompatible immediate range checks cannot "
              "share a builtin.");
       continue; // Ensure this is emitted only once
     }
@@ -2225,9 +2224,9 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
     // Emit builtin's range checks
     OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ":\n";
     for (const auto &Check : Checks) {
-      OS << " ImmChecks.push_back(std::make_tuple(" << Check.getImmArgIdx()
-         << ", " << Check.getKind() << ", " << Check.getElementSizeInBits()
-         << ", " << Check.getVecSizeInBits() << "));\n"
+      OS << " ImmChecks.emplace_back(" << Check.getImmArgIdx() << ", "
+         << Check.getKind() << ", " << Check.getElementSizeInBits() << ", "
+         << Check.getVecSizeInBits() << ");\n"
          << " break;\n";
     }
     Emitted[Def->getMangledName()] = Checks;

@@ -373,12 +373,9 @@ enum ArmSMEState : unsigned {
 bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
                                 unsigned ArgIdx, unsigned EltBitWidth,
                                 unsigned VecBitWidth) {
-
-  typedef bool (*OptionSetCheckFnTy)(int64_t Value);
-
   // Function that checks whether the operand (ArgIdx) is an immediate
-  // that is one of the predefined values.
-  auto CheckImmediateInSet = [&](OptionSetCheckFnTy CheckImm,
+  // that is one of a given set of values.
+  auto CheckImmediateInSet = [&](std::initializer_list<int64_t> Set,
                                  int ErrDiag) -> bool {
     // We can't check the value of a dependent argument.
     Expr *Arg = TheCall->getArg(ArgIdx);
@@ -390,7 +387,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
       return true;
 
-    if (!CheckImm(Imm.getSExtValue()))
+    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
       return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
     return false;
   };
@@ -462,14 +459,12 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
       return true;
     break;
   case ImmCheckType::ImmCheckComplexRot90_270:
-    if (CheckImmediateInSet([](int64_t V) { return V == 90 || V == 270; },
-                            diag::err_rotation_argument_to_cadd))
+    if (CheckImmediateInSet({90, 270}, diag::err_rotation_argument_to_cadd))
       return true;
     break;
   case ImmCheckType::ImmCheckComplexRotAll90:
-    if (CheckImmediateInSet(
-            [](int64_t V) { return V == 0 || V == 90 || V == 180 || V == 270; },
-            diag::err_rotation_argument_to_cmla))
+    if (CheckImmediateInSet({0, 90, 180, 270},
+                            diag::err_rotation_argument_to_cmla))
       return true;
     break;
   case ImmCheckType::ImmCheck0_1:
@@ -516,16 +511,14 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
   return false;
 }
 
-bool SemaARM::ParseNeonImmChecks(
+bool SemaARM::PerformNeonImmChecks(
     CallExpr *TheCall,
-    SmallVector<std::tuple<int, int, int, int>, 2> &ImmChecks,
+    SmallVectorImpl<std::tuple<int, int, int, int>> &ImmChecks,
     int OverloadType = -1) {
-  unsigned CheckTy;
-  unsigned ArgIdx, ElementSizeInBits, VecSizeInBits;
   bool HasError = false;
 
   for (const auto &I : ImmChecks) {
-    std::tie(ArgIdx, CheckTy, ElementSizeInBits, VecSizeInBits) = I;
+    auto [ArgIdx, CheckTy, ElementSizeInBits, VecSizeInBits] = I;
 
     if (OverloadType >= 0)
       ElementSizeInBits = NeonTypeFlags(OverloadType).getEltSizeInBits();
@@ -537,14 +530,12 @@ bool SemaARM::ParseNeonImmChecks(
   return HasError;
 }
 
-bool SemaARM::ParseSVEImmChecks(
-    CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
-
+bool SemaARM::PerformSVEImmChecks(
+    CallExpr *TheCall, SmallVectorImpl<std::tuple<int, int, int>> &ImmChecks) {
   bool HasError = false;
-  unsigned CheckTy, ArgIdx, ElementSizeInBits;
 
   for (const auto &I : ImmChecks) {
-    std::tie(ArgIdx, CheckTy, ElementSizeInBits) = I;
+    auto [ArgIdx, CheckTy, ElementSizeInBits] = I;
     HasError |=
         CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementSizeInBits, 128);
   }
@@ -701,7 +692,7 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SME_IMMEDIATE_CHECK
   }
 
-  return ParseSVEImmChecks(TheCall, ImmChecks);
+  return PerformSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
@@ -729,7 +720,7 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SVE_IMMEDIATE_CHECK
   }
 
-  return ParseSVEImmChecks(TheCall, ImmChecks);
+  return PerformSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
@@ -819,7 +810,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #undef GET_NEON_IMMEDIATE_CHECK
   }
 
-  return ParseNeonImmChecks(TheCall, ImmChecks, TV);
+  return PerformNeonImmChecks(TheCall, ImmChecks, TV);
 }
 
 bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID,

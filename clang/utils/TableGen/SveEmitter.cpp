@@ -1203,9 +1203,7 @@ void SVEEmitter::createIntrinsic(
              "ImmArgIdx and Kind must be nonnegative");
 
       unsigned ElementSizeInBits = 0;
-      char Mod;
-      unsigned NumVectors;
-      std::tie(Mod, NumVectors) = getProtoModifier(Proto, EltSizeArgIdx + 1);
+      auto [Mod, NumVectors] = getProtoModifier(Proto, EltSizeArgIdx + 1);
       if (EltSizeArgIdx >= 0)
         ElementSizeInBits = SVEType(TS, Mod, NumVectors).getElementSizeInBits();
       ImmChecks.push_back(ImmCheck(ArgIdx, Kind, ElementSizeInBits));
@@ -1528,9 +1526,8 @@ void SVEEmitter::createRangeChecks(raw_ostream &OS) {
 
     OS << "case SVE::BI__builtin_sve_" << Def->getMangledName() << ":\n";
     for (auto &Check : Def->getImmChecks())
-      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getImmArgIdx()
-         << ", " << Check.getKind() << ", " << Check.getElementSizeInBits()
-         << "));\n";
+      OS << "ImmChecks.emplace_back(" << Check.getImmArgIdx() << ", "
+         << Check.getKind() << ", " << Check.getElementSizeInBits() << ");\n";
     OS << "  break;\n";
 
     Emitted.insert(Def->getMangledName());
