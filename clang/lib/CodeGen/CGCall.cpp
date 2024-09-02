@@ -2544,7 +2544,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute("disable-tail-calls", "true");
 
     // Suppress the machine instruction scheduler when -fextend-lifetimes is on.
-    if (CodeGenOpts.ExtendLifetimes)
+    if (CodeGenOpts.ExtendLifetimes || CodeGenOpts.ExtendThisPtr)
       FuncAttrs.addAttribute(llvm::Attribute::OptimizeForDebugging);
 
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
@@ -3566,7 +3566,7 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
     // markers, and fake uses and their operands.
     const llvm::Instruction *LoadIntoFakeUse = nullptr;
     for (llvm::Instruction &I : make_range(IP->rbegin(), IP->rend())) {
-      // Ignore instructions are just loads for fake uses; the load should
+      // Ignore instructions that are just loads for fake uses; the load should
       // immediately precede the fake use, so we only need to remember the
       // operand for the last fake use seen.
       if (LoadIntoFakeUse == &I)
