@@ -382,7 +382,7 @@ foreach(target riscv32-unknown-elf)
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dtimeval=struct timeval{int tv_sec; int tv_usec;}\" \"-Dgettimeofday(tv, tz)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
+    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dtimeval=struct timeval{int tv_sec; int tv_usec;}\" \"-Dgettimeofday(tv, tz)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
   endforeach()
   foreach(type SHARED;MODULE;EXE)
     set(RUNTIMES_${target}_CMAKE_${type}_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")

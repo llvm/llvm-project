@@ -375,24 +375,28 @@ struct LinearExpression {
   APInt Scale;
   APInt Offset;
 
+  /// True if all operations in this expression are NUW.
+  bool IsNUW;
   /// True if all operations in this expression are NSW.
   bool IsNSW;
 
   LinearExpression(const CastedValue &Val, const APInt &Scale,
-                   const APInt &Offset, bool IsNSW)
-      : Val(Val), Scale(Scale), Offset(Offset), IsNSW(IsNSW) {}
+                   const APInt &Offset, bool IsNUW, bool IsNSW)
+      : Val(Val), Scale(Scale), Offset(Offset), IsNUW(IsNUW), IsNSW(IsNSW) {}
 
-  LinearExpression(const CastedValue &Val) : Val(Val), IsNSW(true) {
+  LinearExpression(const CastedValue &Val)
+      : Val(Val), IsNUW(true), IsNSW(true) {
     unsigned BitWidth = Val.getBitWidth();
     Scale = APInt(BitWidth, 1);
     Offset = APInt(BitWidth, 0);
   }
 
-  LinearExpression mul(const APInt &Other, bool MulIsNSW) const {
+  LinearExpression mul(const APInt &Other, bool MulIsNUW, bool MulIsNSW) const {
     // The check for zero offset is necessary, because generally
     // (X +nsw Y) *nsw Z does not imply (X *nsw Z) +nsw (Y *nsw Z).
     bool NSW = IsNSW && (Other.isOne() || (MulIsNSW && Offset.isZero()));
-    return LinearExpression(Val, Scale * Other, Offset * Other, NSW);
+    bool NUW = IsNUW && (Other.isOne() || MulIsNUW);
+    return LinearExpression(Val, Scale * Other, Offset * Other, NUW, NSW);
   }
 };
 }
@@ -408,7 +412,7 @@ static LinearExpression GetLinearExpression(
 
   if (const ConstantInt *Const = dyn_cast<ConstantInt>(Val.V))
     return LinearExpression(Val, APInt(Val.getBitWidth(), 0),
-                            Val.evaluateWith(Const->getValue()), true);
+                            Val.evaluateWith(Const->getValue()), true, true);
 
   if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(Val.V)) {
     if (ConstantInt *RHSC = dyn_cast<ConstantInt>(BOp->getOperand(1))) {
@@ -444,6 +448,7 @@ static LinearExpression GetLinearExpression(
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset += RHS;
+        E.IsNUW &= NUW;
         E.IsNSW &= NSW;
         break;
       }
@@ -451,13 +456,14 @@ static LinearExpression GetLinearExpression(
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset -= RHS;
+        E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Mul:
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT)
-                .mul(RHS, NSW);
+                .mul(RHS, NUW, NSW);
         break;
       case Instruction::Shl:
         // We're trying to linearize an expression of the kind:
@@ -472,6 +478,7 @@ static LinearExpression GetLinearExpression(
                                 Depth + 1, AC, DT);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
+        E.IsNUW &= NUW;
         E.IsNSW &= NSW;
         break;
       }
@@ -697,7 +704,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       // If the integer type is smaller than the index size, it is implicitly
       // sign extended or truncated to index size.
       bool NUSW = GEPOp->hasNoUnsignedSignedWrap();
-      bool NonNeg = NUSW && GEPOp->hasNoUnsignedWrap();
+      bool NUW = GEPOp->hasNoUnsignedWrap();
+      bool NonNeg = NUSW && NUW;
       unsigned Width = Index->getType()->getIntegerBitWidth();
       unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
       unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
@@ -706,9 +714,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), NUSW);
+      LE = LE.mul(APInt(IndexSize, TypeSize), NUW, NUSW);
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
+      if (!LE.IsNUW)
+        Decomposed.NWFlags = Decomposed.NWFlags.withoutNoUnsignedWrap();
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
@@ -719,7 +729,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
              areBothVScale(Decomposed.VarIndices[i].Val.V, LE.Val.V)) &&
             Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val)) {
           Scale += Decomposed.VarIndices[i].Scale;
-          LE.IsNSW = false; // We cannot guarantee nsw for the merge.
+          // We cannot guarantee no-wrap for the merge.
+          LE.IsNSW = LE.IsNUW = false;
           Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
         }

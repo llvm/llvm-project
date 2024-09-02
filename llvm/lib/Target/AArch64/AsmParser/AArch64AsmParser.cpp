@@ -6947,14 +6947,10 @@ static void ExpandCryptoAEK(const AArch64::ArchInfo &ArchInfo,
   }
 }
 
-static SMLoc incrementLoc(SMLoc L, int Offset) {
-  return SMLoc::getFromPointer(L.getPointer() + Offset);
-}
-
 /// parseDirectiveArch
 ///   ::= .arch token
 bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
-  SMLoc CurLoc = getLoc();
+  SMLoc ArchLoc = getLoc();
 
   StringRef Arch, ExtensionString;
   std::tie(Arch, ExtensionString) =
@@ -6962,7 +6958,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 
   const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
-    return Error(CurLoc, "unknown arch name");
+    return Error(ArchLoc, "unknown arch name");
 
   if (parseToken(AsmToken::EndOfStatement))
     return true;
@@ -6982,30 +6978,27 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
     ExtensionString.split(RequestedExtensions, '+');
 
   ExpandCryptoAEK(*ArchInfo, RequestedExtensions);
-  CurLoc = incrementLoc(CurLoc, Arch.size());
 
+  FeatureBitset Features = STI.getFeatureBits();
+  setAvailableFeatures(ComputeAvailableFeatures(Features));
   for (auto Name : RequestedExtensions) {
-    // Advance source location past '+'.
-    CurLoc = incrementLoc(CurLoc, 1);
-
     bool EnableFeature = !Name.consume_front_insensitive("no");
 
-    auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
-      return Extension.Name == Name;
-    });
+    for (const auto &Extension : ExtensionMap) {
+      if (Extension.Name != Name)
+        continue;
 
-    if (It == std::end(ExtensionMap))
-      Error(CurLoc, "unsupported architectural extension: " + Name);
+      if (Extension.Features.none())
+        report_fatal_error("unsupported architectural extension: " + Name);
 
-    if (EnableFeature)
-      STI.SetFeatureBitsTransitively(It->Features);
-    else
-      STI.ClearFeatureBitsTransitively(It->Features);
-
-    CurLoc = incrementLoc(CurLoc, Name.size());
+      FeatureBitset ToggleFeatures =
+          EnableFeature
+              ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
+              : STI.ToggleFeature(Features & Extension.Features);
+      setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
+      break;
+    }
   }
-  FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
-  setAvailableFeatures(Features);
   return false;
 }
 
@@ -7025,21 +7018,28 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     Name = Name.substr(2);
   }
 
-  auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
-    return Extension.Name == Name;
-  });
-
-  if (It == std::end(ExtensionMap))
-    return Error(ExtLoc, "unsupported architectural extension: " + Name);
-
   MCSubtargetInfo &STI = copySTI();
-  if (EnableFeature)
-    STI.SetFeatureBitsTransitively(It->Features);
-  else
-    STI.ClearFeatureBitsTransitively(It->Features);
-  FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
-  setAvailableFeatures(Features);
-  return false;
+  FeatureBitset Features = STI.getFeatureBits();
+  for (const auto &Extension : ExtensionMap) {
+    if (Extension.Name != Name)
+      continue;
+
+    if (Extension.Features.none())
+      return Error(ExtLoc, "unsupported architectural extension: " + Name);
+
+    FeatureBitset ToggleFeatures =
+        EnableFeature
+            ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
+            : STI.ToggleFeature(Features & Extension.Features);
+    setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
+    return false;
+  }
+
+  return Error(ExtLoc, "unknown architectural extension: " + Name);
+}
+
+static SMLoc incrementLoc(SMLoc L, int Offset) {
+  return SMLoc::getFromPointer(L.getPointer() + Offset);
 }
 
 /// parseDirectiveCPU
@@ -7075,22 +7075,30 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
 
     bool EnableFeature = !Name.consume_front_insensitive("no");
 
-    auto It = llvm::find_if(ExtensionMap, [&Name](const auto &Extension) {
-      return Extension.Name == Name;
-    });
+    bool FoundExtension = false;
+    for (const auto &Extension : ExtensionMap) {
+      if (Extension.Name != Name)
+        continue;
 
-    if (It == std::end(ExtensionMap))
-      Error(CurLoc, "unsupported architectural extension: " + Name);
+      if (Extension.Features.none())
+        report_fatal_error("unsupported architectural extension: " + Name);
 
-    if (EnableFeature)
-      STI.SetFeatureBitsTransitively(It->Features);
-    else
-      STI.ClearFeatureBitsTransitively(It->Features);
+      FeatureBitset Features = STI.getFeatureBits();
+      FeatureBitset ToggleFeatures =
+          EnableFeature
+              ? STI.SetFeatureBitsTransitively(~Features & Extension.Features)
+              : STI.ToggleFeature(Features & Extension.Features);
+      setAvailableFeatures(ComputeAvailableFeatures(ToggleFeatures));
+      FoundExtension = true;
+
+      break;
+    }
+
+    if (!FoundExtension)
+      Error(CurLoc, "unsupported architectural extension");
 
     CurLoc = incrementLoc(CurLoc, Name.size());
   }
-  FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
-  setAvailableFeatures(Features);
   return false;
 }
 

@@ -505,14 +505,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_MemberPointerToBoolean: {
     PrimType PtrT = classifyPrim(SubExpr->getType());
 
-    // Just emit p != nullptr for this.
     if (!this->visit(SubExpr))
       return false;
-
-    if (!this->emitNull(PtrT, nullptr, CE))
-      return false;
-
-    return this->emitNE(PtrT, CE);
+    return this->emitIsNonNull(PtrT, CE);
   }
 
   case CK_IntegralComplexToBoolean:
@@ -1240,12 +1235,6 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     assert(RD);
     if (RD->isInvalidDecl())
       return false;
-    if (RD->isUnion()) {
-      // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
-      // object's first non-static named data member is zero-initialized
-      // FIXME
-      return false;
-    }
 
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
         CXXRD && CXXRD->getNumVBases() > 0) {
@@ -2323,8 +2312,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(
-        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+                                                 /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -3439,6 +3428,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     if (!this->emitFinishInitPop(E))
       return false;
 
+    // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
+    // object's first non-static named data member is zero-initialized
     if (R->isUnion())
       break;
   }
@@ -3777,7 +3768,6 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
-      DeclScope<Emitter> LocalScope(this, VD);
 
       if (VarT) {
         if (!this->visit(Init))
@@ -3800,6 +3790,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
       return this->emitPopPtr(Init);
     };
+
+    DeclScope<Emitter> LocalScope(this, VD);
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {

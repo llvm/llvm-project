@@ -181,16 +181,21 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     if (!Ptr.isStaticTemporary())
       return true;
 
-    if (Ptr.getDeclDesc()->getType().isConstQualified())
+    const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(
+        Ptr.getDeclDesc()->asExpr());
+    if (!MTE)
       return true;
 
-    if (S.P.getCurrentDecl() == ID)
-      return true;
-
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
-    S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-    return false;
+    // FIXME(perf): Since we do this check on every Load from a static
+    // temporary, it might make sense to cache the value of the
+    // isUsableInConstantExpressions call.
+    if (!MTE->isUsableInConstantExpressions(S.getASTContext()) &&
+        Ptr.block()->getEvalID() != S.Ctx.getEvalID()) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
+      S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
+      return false;
+    }
   }
   return true;
 }
@@ -226,7 +231,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
 
   // Some builtin functions require us to only look at the call site, since
   // the classified parameter types do not match.
-  if (CurFunc->isBuiltin()) {
+  if (unsigned BID = CurFunc->getBuiltinID();
+      BID && S.getASTContext().BuiltinInfo.hasCustomTypechecking(BID)) {
     const auto *CE =
         cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
     for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
