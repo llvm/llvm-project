@@ -26,6 +26,7 @@ class MachineFunction;
 class MachineBasicBlock;
 class BitVector;
 class AllocaInst;
+class MachineFrameSizeInfo;
 class TargetInstrInfo;
 
 /// The CalleeSavedInfo class tracks the information need to locate where a
@@ -282,6 +283,10 @@ private:
   /// class).  This information is important for frame pointer elimination.
   /// It is only valid during and after prolog/epilog code insertion.
   uint64_t MaxCallFrameSize = ~UINT64_C(0);
+
+  /// Call frame sizes for the MachineFunction's MachineBasicBlocks. This is set
+  /// by the MachineFrameSizeInfo constructor and cleared by its destructor.
+  MachineFrameSizeInfo *SizeInfo = nullptr;
 
   /// The number of bytes of callee saved registers that the target wants to
   /// report for the current function in the CodeView S_FRAMEPROC record.
@@ -676,6 +681,13 @@ public:
   }
   void setMaxCallFrameSize(uint64_t S) { MaxCallFrameSize = S; }
 
+  /// Return an object that can be queried for call frame sizes at specific
+  /// locations in the MachineFunction. Constructing a MachineFrameSizeInfo
+  /// object for the MachineFunction automatically makes it available via this
+  /// field during the object's lifetime.
+  MachineFrameSizeInfo *getSizeInfo() const { return SizeInfo; }
+  void setSizeInfo(MachineFrameSizeInfo *SI) { SizeInfo = SI; }
+
   /// Returns how many bytes of callee-saved registers the target pushed in the
   /// prologue. Only used for debug info.
   unsigned getCVBytesOfCalleeSavedRegisters() const {
@@ -851,7 +863,11 @@ public:
 /// MachineBasicBlocks of a MachineFunction based on call frame setup and
 /// destroy pseudo instructions. Usually, no call frame is open at block
 /// boundaries, except if a call sequence has been split into multiple blocks.
-/// Computing this information is deferred until it is queried.
+///
+/// Computing this information is deferred until it is queried. Upon
+/// construction, a MachineFrameSizeInfo object registers itself in the
+/// MachineFunction's MachineFrameInfo (and it unregisters when destructed).
+/// While registered, it can be retrieved via MachineFrameInfo::getSizeInfo().
 ///
 /// This class assumes that call frame instructions are placed properly, i.e.,
 /// every program path hits a frame destroy of equal size after hitting a frame
@@ -859,7 +875,12 @@ public:
 /// frame sequences are not allowed.
 class MachineFrameSizeInfo {
 public:
-  MachineFrameSizeInfo(MachineFunction &MF) : MF(MF) {}
+  MachineFrameSizeInfo(MachineFunction &MF) : MF(MF) {
+    assert(MF.getFrameInfo().getSizeInfo() == nullptr);
+    MF.getFrameInfo().setSizeInfo(this);
+  }
+
+  ~MachineFrameSizeInfo() { MF.getFrameInfo().setSizeInfo(nullptr); }
 
   /// Get the call frame size just before MI. Contains no value if MI is not in
   /// a call sequence. Zero-sized call frames are possible.

@@ -47,6 +47,12 @@ static std::pair<bool, bool> runImpl(MachineFunction &MF) {
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
 
+  // Pseudo-Lowering might require the sizes of call frames, so compute them
+  // (lazily). The MachineFrameSizeInfo registers itself in MF's
+  // MachineFrameInfo for the SizeInfo's lifetime and does not need to be passed
+  // explicitly.
+  const MachineFrameSizeInfo MFSI(MF);
+
   // Iterate through each instruction in the function, looking for pseudos.
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock *MBB = &*I;
