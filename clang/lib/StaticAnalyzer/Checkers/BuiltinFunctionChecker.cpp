@@ -97,6 +97,9 @@ public:
   void handleOverflowBuiltin(const CallEvent &Call, CheckerContext &C,
                              BinaryOperator::Opcode Op,
                              QualType ResultType) const;
+  const NoteTag *createBuiltinNoOverflowNoteTag(CheckerContext &C,
+                                                bool bothFeasible, SVal Arg1,
+                                                SVal Arg2, SVal Result) const;
   std::pair<bool, bool> checkOverflow(CheckerContext &C, SVal RetVal,
                                       QualType Res) const;
 
@@ -117,6 +120,23 @@ private:
 };
 
 } // namespace
+
+const NoteTag *BuiltinFunctionChecker::createBuiltinNoOverflowNoteTag(
+    CheckerContext &C, bool bothFeasible, SVal Arg1, SVal Arg2,
+    SVal Result) const {
+  return C.getNoteTag([Result, Arg1, Arg2, bothFeasible](
+                          PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+    if (!BR.isInteresting(Result))
+      return;
+
+    // Propagate interestingness to input argumets if result is interesting.
+    BR.markInteresting(Arg1);
+    BR.markInteresting(Arg2);
+
+    if (bothFeasible)
+      OS << "Assuming overflow does not happen";
+  });
+}
 
 std::pair<bool, bool>
 BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
@@ -179,7 +199,10 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
         StateNoOverflow = addTaint(StateNoOverflow, *L);
     }
 
-    C.addTransition(StateNoOverflow);
+    const NoteTag *tag = createBuiltinNoOverflowNoteTag(
+        C, NotOverflow && Overflow, Arg1, Arg2, RetVal);
+
+    C.addTransition(StateNoOverflow, tag);
   }
 
   if (Overflow)
