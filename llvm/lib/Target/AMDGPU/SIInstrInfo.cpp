@@ -2098,8 +2098,20 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   }
 }
 
+Register SIInstrInfo::findImplicitExecSrc(const MachineInstr &MI) {
+  for (auto &Op : MI.implicit_operands()) {
+    if (Op.isDef())
+      continue;
+    Register OpReg = Op.getReg();
+    if (OpReg == AMDGPU::EXEC || OpReg == AMDGPU::EXEC_LO ||
+        OpReg == AMDGPU::SCC)
+      continue;
+    return OpReg;
+  }
+  return Register();
+}
+
 bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
   switch (MI.getOpcode()) {
@@ -2286,21 +2298,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MachineOperand &InactiveSrc = MI.getOperand(2);
 
     // Find implicit register defining lanes active outside WWM.
+    Register ExecSrcReg = findImplicitExecSrc(MI);
+    assert(ExecSrcReg && "V_SET_INACTIVE must be in known WWM region");
     // Note: default here is set to ExecReg so that functional MIR is still
     // generated if implicit def is not found and assertions are disabled.
-    Register ExecSrcReg = ExecReg;
-    for (auto &Op : MI.implicit_operands()) {
-      if (Op.isDef() || !Op.isReg())
-        continue;
-      Register OpReg = Op.getReg();
-      if (OpReg == AMDGPU::EXEC || OpReg == AMDGPU::EXEC_LO ||
-          OpReg == AMDGPU::SCC)
-        continue;
-      ExecSrcReg = OpReg;
-      break;
-    }
-    assert(ExecSrcReg != ExecReg &&
-           "V_SET_INACTIVE must be in known WWM region");
+    if (!ExecSrcReg)
+      ExecSrcReg = ExecReg;
 
     // Ideally in WWM this operation is lowered to V_CNDMASK; however,
     // constant bus constraints and the presence of literal constants
@@ -2329,8 +2332,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         (usesConstantBus(MRI, ActiveSrc, Desc.operands()[Src1Idx]) ? 1 : 0) +
         (usesConstantBus(MRI, InactiveSrc, Desc.operands()[Src0Idx]) ? 1 : 0);
     int LiteralConstants =
-        (ActiveSrc.isImm() && !isInlineConstant(ActiveImm) ? 1 : 0) +
-        (InactiveSrc.isImm() && !isInlineConstant(InactiveImm) ? 1 : 0);
+        ((ActiveSrc.isReg() ||
+          (ActiveSrc.isImm() && isInlineConstant(ActiveImm)))
+             ? 0
+             : 1) +
+        ((InactiveSrc.isReg() ||
+          (InactiveSrc.isImm() && isInlineConstant(InactiveImm)))
+             ? 0
+             : 1);
 
     bool UseVCndMask =
         ConstantBusUses <= ConstantBusLimit && LiteralConstants <= LiteralLimit;
@@ -2338,11 +2347,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // Decomposition must not introduce new literals.
       UseVCndMask &=
           ActiveSrc.isReg() ||
-          (isInlineConstant(ActiveImmLo) && isInlineConstant(ActiveImmLo)) ||
+          (isInlineConstant(ActiveImmLo) && isInlineConstant(ActiveImmHi)) ||
           (!isInlineConstant(ActiveImm));
       UseVCndMask &= InactiveSrc.isReg() ||
                      (isInlineConstant(InactiveImmLo) &&
-                      isInlineConstant(InactiveImmLo)) ||
+                      isInlineConstant(InactiveImmHi)) ||
                      (!isInlineConstant(InactiveImm));
     }
 
@@ -2352,34 +2361,34 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           ActiveSrc.isReg()
               ? MachineOperand::CreateReg(
                     RI.getSubReg(ActiveSrc.getReg(), AMDGPU::sub0), false,
-                    /*isImp=*/false, /*isKill*/ false)
+                    /*isImp=*/false, /*isKill=*/false)
               : MachineOperand::CreateImm(ActiveImmLo.getSExtValue());
       MachineOperand ActiveHi =
           ActiveSrc.isReg()
               ? MachineOperand::CreateReg(
                     RI.getSubReg(ActiveSrc.getReg(), AMDGPU::sub1), false,
-                    /*isImp=*/false, /*isKill*/ ActiveSrc.isKill())
+                    /*isImp=*/false, /*isKill=*/ActiveSrc.isKill())
               : MachineOperand::CreateImm(ActiveImmHi.getSExtValue());
       MachineOperand InactiveLo =
           InactiveSrc.isReg()
               ? MachineOperand::CreateReg(
                     RI.getSubReg(InactiveSrc.getReg(), AMDGPU::sub0), false,
-                    /*isImp=*/false, /*isKill*/ false)
+                    /*isImp=*/false, /*isKill=*/false)
               : MachineOperand::CreateImm(InactiveImmLo.getSExtValue());
       MachineOperand InactiveHi =
           InactiveSrc.isReg()
               ? MachineOperand::CreateReg(
                     RI.getSubReg(InactiveSrc.getReg(), AMDGPU::sub1), false,
-                    /*isImp=*/false, /*isKill*/ InactiveSrc.isKill())
+                    /*isImp=*/false, /*isKill=*/InactiveSrc.isKill())
               : MachineOperand::CreateImm(InactiveImmHi.getSExtValue());
-      BuildMI(MBB, MI, DL, get(Opcode), RI.getSubReg(DstReg, AMDGPU::sub0))
+      BuildMI(MBB, MI, DL, Desc, RI.getSubReg(DstReg, AMDGPU::sub0))
           .addImm(0)
           .add(InactiveLo)
           .addImm(0)
           .add(ActiveLo)
           .addReg(ExecSrcReg)
           .addReg(DstReg, RegState::ImplicitDefine);
-      BuildMI(MBB, MI, DL, get(Opcode), RI.getSubReg(DstReg, AMDGPU::sub1))
+      BuildMI(MBB, MI, DL, Desc, RI.getSubReg(DstReg, AMDGPU::sub1))
           .addImm(0)
           .add(InactiveHi)
           .addImm(0)
@@ -2388,7 +2397,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(DstReg, RegState::ImplicitDefine);
     } else if (UseVCndMask) {
       // Single V_CNDMASK_B32
-      BuildMI(MBB, MI, DL, get(Opcode), DstReg)
+      BuildMI(MBB, MI, DL, Desc, DstReg)
           .addImm(0)
           .add(InactiveSrc)
           .addImm(0)
@@ -2406,9 +2415,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         // Set exec mask to inactive lanes,
         // but only if active lanes would be overwritten.
         if (DstIsActive) {
-          MachineInstr *ExecMI =
-              BuildMI(MBB, MI, DL, get(NotOpc), ExecReg).addReg(ExecSrcReg);
-          ExecMI->addRegisterDead(AMDGPU::SCC, TRI); // SCC is overwritten
+          BuildMI(MBB, MI, DL, get(NotOpc), ExecReg)
+              .addReg(ExecSrcReg)
+              .setOperandDead(3); // Dead scc
         }
         // Copy inactive lanes
         MachineInstr *VMov =
