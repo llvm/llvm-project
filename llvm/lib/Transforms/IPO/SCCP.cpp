@@ -278,9 +278,7 @@ static bool runIPSCCP(
   SmallVector<ReturnInst*, 8> ReturnsToZap;
 
   Solver.inferReturnAttributes();
-  for (const auto &I : Solver.getTrackedRetVals()) {
-    Function *F = I.first;
-    const ValueLatticeElement &ReturnValue = I.second;
+  for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
     assert(!F->getReturnType()->isVoidTy() &&
            "should not track void functions");
     if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())

@@ -355,9 +355,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 }
 
 void SCCPSolver::inferReturnAttributes() const {
-  for (const auto &I : getTrackedRetVals()) {
-    Function *F = I.first;
-    const ValueLatticeElement &ReturnValue = I.second;
+  for (const auto &[F, ReturnValue] : getTrackedRetVals()) {
 
     // If there is a known constant range for the return value, add range
     // attribute to the return value.
