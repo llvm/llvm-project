@@ -1594,8 +1594,8 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Expand a partial reduction intrinsic call.
-  /// Op1 and Op2 are its operands and ReducedTY is the intrinsic's return type.
+  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
+  /// its operands and ReducedTY is the intrinsic's return type.
   SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
                               SDValue Op2);
 
