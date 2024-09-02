@@ -17652,11 +17652,12 @@ void Sema::PopExpressionEvaluationContext() {
 
   // Append the collected materialized temporaries into previous context before
   // exit if the previous also is a lifetime extending context.
-  auto &PrevRecord = parentEvaluationContext();
-  if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
-      PrevRecord.InLifetimeExtendingContext &&
+  if (getLangOpts().CPlusPlus23 &&
+      Rec.InLifetimeExtendingContext == LifetimeExtendingContext::CollectTemp &&
+      parentEvaluationContext().InLifetimeExtendingContext ==
+          LifetimeExtendingContext::CollectTemp &&
       !Rec.ForRangeLifetimeExtendTemps.empty()) {
-    PrevRecord.ForRangeLifetimeExtendTemps.append(
+    parentEvaluationContext().ForRangeLifetimeExtendTemps.append(
         Rec.ForRangeLifetimeExtendTemps);
   }
 

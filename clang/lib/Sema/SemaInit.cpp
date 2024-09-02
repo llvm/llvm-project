@@ -752,29 +752,23 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         return;
       ExprResult DIE;
       {
-        // Enter a lifetime extension context, then we can support lifetime
+        // Enter a lifetime extending context, then we can support lifetime
         // extension of temporary created by aggregate initialization using a
-        // default member initializer (DR1815 https://wg21.link/CWG1815).
+        // default member initializer (CWG1815 https://wg21.link/CWG1815).
         //
         // In a lifetime extension context, BuildCXXDefaultInitExpr will clone
-        // the initializer expression on each use and the temporaries which
-        // actually bound to a reference member should be extended here.
-        //
-        // FIXME: In default member initializer, lifetime extension context will
-        // collect the MaterializedTemporaryExprs which bound to a reference
-        // member, but we don't need that, can we avoid this collection action?
-        EnterExpressionEvaluationContext LifetimeExtensionContext(
+        // the initializer expression for each use and the temporaries which
+        // binds to a reference member should be extended here.
+        EnterExpressionEvaluationContext LifetimeExtendingContext(
             SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
             /*LambdaContextDecl=*/nullptr,
             Sema::ExpressionEvaluationContextRecord::EK_Other, true);
 
         // Lifetime extension in default-member-init.
-        auto &LastRecord = SemaRef.ExprEvalContexts.back();
-
-        // Just copy previous record, make sure we haven't forget anything.
-        LastRecord =
-            SemaRef.ExprEvalContexts[SemaRef.ExprEvalContexts.size() - 2];
-        LastRecord.InLifetimeExtendingContext = true;
+        // Just copy parent record, make sure we haven't forget anything.
+        SemaRef.currentEvaluationContext() = SemaRef.parentEvaluationContext();
+        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
+            Sema::LifetimeExtendingContext::FlagOnly;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {

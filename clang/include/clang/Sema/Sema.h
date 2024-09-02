@@ -6298,6 +6298,15 @@ public:
 
   using ImmediateInvocationCandidate = llvm::PointerIntPair<ConstantExpr *, 1>;
 
+  enum class LifetimeExtendingContext {
+    None,       // Not in a lifetime extending context.
+    FlagOnly,   // A flag indicating whether we are in lifetime extending
+                // context.
+    CollectTemp // A flag indicating whether we are in lifetime
+                // extending context, additional, collects
+                // temporary variables created in this context.
+  };
+
   /// Data structure used to record current or nested
   /// expression evaluation contexts.
   struct ExpressionEvaluationContextRecord {
@@ -6380,7 +6389,8 @@ public:
     /// Whether we are currently in a context in which all temporaries must be
     /// lifetime-extended, even if they're not bound to a reference (for
     /// example, in a for-range initializer).
-    bool InLifetimeExtendingContext = false;
+    LifetimeExtendingContext InLifetimeExtendingContext =
+        LifetimeExtendingContext::None;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -7804,7 +7814,14 @@ public:
   bool isInLifetimeExtendingContext() const {
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().InLifetimeExtendingContext;
+    return currentEvaluationContext().InLifetimeExtendingContext !=
+           LifetimeExtendingContext::None;
+  }
+
+  LifetimeExtendingContext getLifetimeExtendingContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return currentEvaluationContext().InLifetimeExtendingContext;
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
@@ -7850,11 +7867,10 @@ public:
   /// flag from previous context.
   void keepInLifetimeExtendingContext() {
     if (ExprEvalContexts.size() > 2 &&
-        parentEvaluationContext().InLifetimeExtendingContext) {
-      auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = parentEvaluationContext();
-      LastRecord.InLifetimeExtendingContext =
-          PrevRecord.InLifetimeExtendingContext;
+        parentEvaluationContext().InLifetimeExtendingContext !=
+            LifetimeExtendingContext::None) {
+      currentEvaluationContext().InLifetimeExtendingContext =
+          parentEvaluationContext().InLifetimeExtendingContext;
     }
   }
 

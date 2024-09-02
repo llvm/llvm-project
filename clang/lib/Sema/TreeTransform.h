@@ -8892,10 +8892,9 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
       getSema().getLangOpts().CPlusPlus23);
 
   // P2718R0 - Lifetime extension in range-based for loops.
-  if (getSema().getLangOpts().CPlusPlus23) {
-    auto &LastRecord = getSema().ExprEvalContexts.back();
-    LastRecord.InLifetimeExtendingContext = true;
-  }
+  if (getSema().getLangOpts().CPlusPlus23)
+    getSema().currentEvaluationContext().InLifetimeExtendingContext =
+        Sema::LifetimeExtendingContext::CollectTemp;
   StmtResult Init =
       S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
   if (Init.isInvalid())
