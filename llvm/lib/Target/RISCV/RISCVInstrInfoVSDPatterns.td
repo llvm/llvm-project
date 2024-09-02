@@ -677,8 +677,7 @@ multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<SDNode op,
       VPatWidenBinaryFPSDNode_WV_WF_RM<op, instruction_name>;
 
 multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name,
-                                            list <VTypeInfoToWide> vtiToWtis,
-                                            PatFrags extop> {
+                                            list <VTypeInfoToWide> vtiToWtis> {
   foreach vtiToWti = vtiToWtis in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
@@ -702,7 +701,7 @@ multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name,
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
       def : Pat<(fma (wti.Vector (SplatFPOp
-                                      (extop (vti.Scalar vti.ScalarRegClass:$rs1)))),
+                                      (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1)))),
                      (wti.Vector (riscv_fpextend_vl_oneuse
                                       (vti.Vector vti.RegClass:$rs2),
                                       (vti.Mask true_mask), (XLenVT srcvalue))),
@@ -1290,11 +1289,9 @@ foreach fvti = AllFloatVectors in {
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACC",
-                                        AllWidenableFloatVectors,
-                                        fpext_oneuse>;
+                                        AllWidenableFloatVectors>;
 defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
-                                        AllWidenableBFloatToFloatVectors,
-                                        riscv_fpextend_bf16_oneuse>;
+                                        AllWidenableBFloatToFloatVectors>;
 defm : VPatWidenFPNegMulAccSDNode_VV_VF_RM<"PseudoVFWNMACC">;
 defm : VPatWidenFPMulSacSDNode_VV_VF_RM<"PseudoVFWMSAC">;
 defm : VPatWidenFPNegMulSacSDNode_VV_VF_RM<"PseudoVFWNMSAC">;
