@@ -140,7 +140,7 @@ static bool isAnnexKAvailable(std::optional<bool> &CacheVar, Preprocessor *PP,
 }
 
 static std::vector<UnsafeFunctionsCheck::CheckedFunction>
-ParseCheckedFunctions(StringRef Option, StringRef OptionName,
+parseCheckedFunctions(StringRef Option, StringRef OptionName,
                       ClangTidyContext *Context) {
   std::vector<StringRef> Functions = utils::options::parseStringList(Option);
   std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
@@ -158,6 +158,7 @@ ParseCheckedFunctions(StringRef Option, StringRef OptionName,
       Context->configurationDiag("invalid configuration value for option '%0'; "
                                  "expected the name of an unsafe function")
           << OptionName;
+      continue;
     }
 
     if (Replacement.trim().empty()) {
@@ -165,6 +166,7 @@ ParseCheckedFunctions(StringRef Option, StringRef OptionName,
           "invalid configuration value '%0' for option '%1'; "
           "expected a replacement function name")
           << Name.trim() << OptionName;
+      continue;
     }
 
     Result.push_back(
@@ -176,7 +178,7 @@ ParseCheckedFunctions(StringRef Option, StringRef OptionName,
   return Result;
 }
 
-static std::string SerializeCheckedFunctions(
+static std::string serializeCheckedFunctions(
     const std::vector<UnsafeFunctionsCheck::CheckedFunction> &Functions) {
   std::vector<std::string> Result;
   Result.reserve(Functions.size());
@@ -195,10 +197,10 @@ static std::string SerializeCheckedFunctions(
 UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CustomNormalFunctions(ParseCheckedFunctions(
+      CustomNormalFunctions(parseCheckedFunctions(
           Options.get(OptionNameCustomNormalFunctions, ""),
           OptionNameCustomNormalFunctions, Context)),
-      CustomAnnexKFunctions(ParseCheckedFunctions(
+      CustomAnnexKFunctions(parseCheckedFunctions(
           Options.get(OptionNameCustomAnnexKFunctions, ""),
           OptionNameCustomAnnexKFunctions, Context)),
       ReportDefaultFunctions(
@@ -208,9 +210,9 @@ UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
 
 void UnsafeFunctionsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, OptionNameCustomNormalFunctions,
-                SerializeCheckedFunctions(CustomNormalFunctions));
+                serializeCheckedFunctions(CustomNormalFunctions));
   Options.store(Opts, OptionNameCustomAnnexKFunctions,
-                SerializeCheckedFunctions(CustomAnnexKFunctions));
+                serializeCheckedFunctions(CustomAnnexKFunctions));
   Options.store(Opts, OptionNameReportDefaultFunctions, ReportDefaultFunctions);
   Options.store(Opts, OptionNameReportMoreUnsafeFunctions,
                 ReportMoreUnsafeFunctions);
@@ -343,14 +345,13 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     for (const auto &Entry : CustomNormalFunctions) {
-
       if (Entry.Pattern.match(*FuncDecl)) {
         ShowCheckedFunctionWarning(Entry);
         return;
       }
     }
 
-    assert(false && "No custom function was matched.");
+    llvm_unreachable("No custom function was matched.");
     return;
   }
 

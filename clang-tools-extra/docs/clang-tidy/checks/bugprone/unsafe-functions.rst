@@ -20,7 +20,7 @@ Unsafe functions
 ----------------
 
 The following functions are reported if `ReportDefaultFunctions
-<unsafe-functions.html#cmdoption-arg-ReportDefaultFunctions>`_ is enabled.
+<unsafe-functions.html#option-ReportDefaultFunctions>`_ is enabled.
 
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
@@ -49,7 +49,7 @@ The following functions are always checked, regardless of *Annex K* availability
  - ``setbuf``, suggested replacement: ``setvbuf``
 
 If `ReportMoreUnsafeFunctions
-<unsafe-functions.html#cmdoption-arg-ReportMoreUnsafeFunctions>`_ is enabled,
+<unsafe-functions.html#option-ReportMoreUnsafeFunctions>`_ is enabled,
 the following functions are also checked:
 
  - ``bcmp``, suggested replacement: ``memcmp``
@@ -77,6 +77,8 @@ Both macros have to be defined to suggest replacement functions from *Annex K.*
 ``__STDC_WANT_LIB_EXT1__`` must be defined to ``1`` by the user **before**
 including any system headers.
 
+.. _custom-functions:
+
 Custom functions
 ----------------
 
@@ -96,9 +98,9 @@ The functions are matched using POSIX extended regular expressions.
 *(Note: The regular expressions do not support negative* ``(?!)`` *matches)*
 
 The `reason` is optional and is used to provide additional information about the
-reasoning behind the replacement. The default reason is ``is marked as unsafe``.
+reasoning behind the replacement. The default reason is `is marked as unsafe`.
 
-As an example, the configuration ``^original$, replacement, is deprecated;``
+As an example, the configuration `^original$, replacement, is deprecated;`
 will produce the following diagnostic message.
 
 .. code:: c
@@ -107,13 +109,15 @@ will produce the following diagnostic message.
    ::std::original(); // no-warning
    original_function(); // no-warning
 
-If the regular expression contains the character ``:``, it is matched against the
+If the regular expression contains the character `:`, it is matched against the
 qualified name (i.e. ``std::original``), otherwise the regex is matched against the unqualified name (``original``).
-If the regular expression starts with ``::`` (or ``^::``), it is matched against the
+If the regular expression starts with `::` (or `^::`), it is matched against the
 fully qualified name (``::std::original``).
 
 Options
 -------
+
+.. _option-ReportMoreUnsafeFunctions:
 
 .. option:: ReportMoreUnsafeFunctions
 
@@ -123,6 +127,8 @@ Options
    this option enables.
    Default is `true`.
 
+.. _option-ReportDefaultFunctions:
+
 .. option:: ReportDefaultFunctions
 
     When `true`, the check reports the default set of functions.
@@ -130,14 +136,17 @@ Options
 
 .. option:: CustomNormalFunctions
 
-    A comma-separated list of regular expressions, their replacements, and an
-    optional reason. For more information, see `Custom functions
-    <unsafe-functions.html#custom-functions>`_.
+    A semicolon-separated list of custom functions to be matched. A matched
+    function contains a regular expression, the name of the replacement
+    function, and an optional reason, separated by comma. For more information,
+    see `Custom functions <unsafe-functions.html#custom-functions>`_.
 
 .. option:: CustomAnnexKFunctions
 
-    A comma-separated list of regular expressions, their replacements, and an
-    optional reason. For more information, see `Custom functions
+    A semicolon-separated list of custom functions to be matched, if Annex K is
+    available. A matched function contains a regular expression, the name of the
+    replacement function, and an optional reason, separated by comma. For more
+    information, see `Custom functions
     <unsafe-functions.html#custom-functions>`_.
 
 Examples
