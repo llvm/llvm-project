@@ -840,11 +840,6 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     // regions to enable more aggressive CSE'ing).
     OperationFolder folder(ctx, this);
     auto insertKnownConstant = [&](Operation *op) {
-      // This hoisting is to enable more folding, so skip checking if known
-      // constant, updating dense map etc if not doing folding.
-      if (!config.fold)
-        return false;
-
       // Check for existing constants when populating the worklist. This avoids
       // accidentally reversing the constant order during processing.
       Attribute constValue;
@@ -857,13 +852,13 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
       region.walk([&](Operation *op) {
-        if (!insertKnownConstant(op))
+        if (!config.cseConstants || !insertKnownConstant(op))
           addToWorklist(op);
       });
     } else {
       // Add all nested operations to the worklist in preorder.
       region.walk<WalkOrder::PreOrder>([&](Operation *op) {
-        if (!insertKnownConstant(op)) {
+        if (!config.cseConstants || !insertKnownConstant(op)) {
           addToWorklist(op);
           return WalkResult::advance();
         }

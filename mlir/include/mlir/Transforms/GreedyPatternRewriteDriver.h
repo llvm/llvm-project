@@ -92,14 +92,13 @@ public:
   /// An optional listener that should be notified about IR modifications.
   RewriterBase::Listener *listener = nullptr;
 
-  // Whether this should fold while greedily rewriting.
-  //
-  // Note: greedy here generally refers to two forms, 1) greedily applying
-  // patterns based purely on benefit and applying without backtracking using
-  // default cost model, 2) greedily folding where possible while attempting to
-  // match and rewrite using the provided patterns. With this option set to
-  // false it only does the former.
+  /// Whether this should fold while greedily rewriting. This also disables
+  /// CSE'ing constants.
   bool fold = true;
+
+  /// If set to "true", constants are CSE'd (even across multiple regions that
+  /// are in a parent-ancestor relationship).
+  bool cseConstants = true;
 };
 
 //===----------------------------------------------------------------------===//
