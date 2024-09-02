@@ -1923,6 +1923,13 @@ class getSrcModSDWA <ValueType VT> {
                 Int32SDWAInputMods))));
 }
 
+// Return type of SSrc operand in VOPM.
+class getVOPMSSrcForVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT, f32)  : SSrc_f32,
+                              !eq(VT, f16)  : SSrc_f16,
+                              !eq(VT, bf16) : SSrc_bf16);
+}
+
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.
 class getIns32 <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs> {
   dag ret = !if(!eq(NumSrcArgs, 1), (ins Src0RC:$src0),               // VOP1

@@ -358,9 +358,10 @@ class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1,
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
                      !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));
 
-  // Assuming ssrc supports float constants (SSrc_f32).
-  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrc_f32:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp),
-                           (ins Src0RC64:$src0, SSrc_f32:$ssrc, AuxData:$aux_data, Clamp0:$clamp));
+  field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret;
+
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp),
+                           (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp));
 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
                          !eq(Scatter, 2) : "$vdst, $src2",
@@ -673,44 +674,44 @@ multiclass VOPM_Cvt_To_Tensor_MultiPseudos<string ProfilePrefix> {
 
 defm V_CVT_TO_TENSOR : VOPM_Cvt_To_Tensor_MultiPseudos<"VOPM_CVT_TO_TENSOR">;
 
-def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped], 1>,
+def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped, f32], 1>,
                                             [(set v4f32:$vdst, (int_amdgcn_scale_bias_activate_f32 v4f32:$src0, f32:$ssrc, f32:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  v2f16, untyped], 1>,
-                                            [(set v8f16:$vdst, (int_amdgcn_scale_bias_activate_f16 v8f16:$src0, f32:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, v2bf16, untyped], 1>,
-                                            [(set v8bf16:$vdst, (int_amdgcn_scale_bias_activate_bf16 v8bf16:$src0, f32:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  v2f16, untyped, f16], 1>,
+                                            [(set v8f16:$vdst, (int_amdgcn_scale_bias_activate_f16 v8f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, v2bf16, untyped, bf16], 1>,
+                                            [(set v8bf16:$vdst, (int_amdgcn_scale_bias_activate_bf16 v8bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
 
 let SchedRW = [Write32Bit, Write32Bit] in {
-def V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  v2f16, v2f16], 2>,
-                                                     [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_scale_bias_activate_scatter2_f16 v4f16:$src0, f32:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  v2bf16, v2bf16], 2>,
-                                                      [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_scale_bias_activate_scatter2_bf16 v4bf16:$src0, f32:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  v2f16, v2f16, f16], 2>,
+                                                     [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_scale_bias_activate_scatter2_f16 v4f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  v2bf16, v2bf16, bf16], 2>,
+                                                      [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_scale_bias_activate_scatter2_bf16 v4bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
 }
 let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
-def V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  v2f16, v2f16], 4>,
-                                                     [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_scale_bias_activate_scatter4_f16 v8f16:$src0, f32:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  v2bf16, v2bf16], 4>,
-                                                      [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_scale_bias_activate_scatter4_bf16 v8bf16:$src0, f32:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  v2f16, v2f16, f16], 4>,
+                                                     [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_scale_bias_activate_scatter4_f16 v8f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  v2bf16, v2bf16, bf16], 4>,
+                                                      [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_scale_bias_activate_scatter4_bf16 v8bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
 }
 
-def V_UNIFORM_SCALE_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  untyped, untyped], 1>,
+def V_UNIFORM_SCALE_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  untyped, untyped, f32], 1>,
                                                [(set v4f32:$vdst, (int_amdgcn_uniform_scale_activate_f32 v4f32:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  untyped, untyped], 1>,
-                                               [(set v8f16:$vdst, (int_amdgcn_uniform_scale_activate_f16 v8f16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, untyped, untyped], 1>,
-                                                [(set v8bf16:$vdst, (int_amdgcn_uniform_scale_activate_bf16 v8bf16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  untyped, untyped, f16], 1>,
+                                               [(set v8f16:$vdst, (int_amdgcn_uniform_scale_activate_f16 v8f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, untyped, untyped, bf16], 1>,
+                                                [(set v8bf16:$vdst, (int_amdgcn_uniform_scale_activate_bf16 v8bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
 
 let SchedRW = [Write32Bit, Write32Bit] in {
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  untyped, v2f16], 2>,
-                                                        [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_f16 v4f16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  untyped, v2bf16], 2>,
-                                                         [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_bf16 v4bf16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  untyped, v2f16, f16], 2>,
+                                                        [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_f16 v4f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  untyped, v2bf16, bf16], 2>,
+                                                         [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_bf16 v4bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
 }
 let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  untyped, v2f16], 4>,
-                                                        [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_f16 v8f16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  untyped, v2bf16], 4>,
-                                                         [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_bf16 v8bf16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  untyped, v2f16, f16], 4>,
+                                                        [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_f16 v8f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  untyped, v2bf16, bf16], 4>,
+                                                         [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_bf16 v8bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
 }
 
 multiclass VOPM_WMMA_Pseudo<VOPM_WMMA_Profile P> {
