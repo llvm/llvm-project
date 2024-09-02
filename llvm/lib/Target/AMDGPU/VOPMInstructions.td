@@ -1280,10 +1280,10 @@ multiclass VOP3M_WMMA_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X64_", NAME) : VOP3M_WMMA_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_WMMA_F32_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x70>;
-defm V_WMMA_F16_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x71>;
-defm V_WMMA_F32_16X16X16_BF16    : VOP3M_WMMA_Real_gfx13 <0x72>;
-defm V_WMMA_BF16_16X16X16_BF16   : VOP3M_WMMA_Real_gfx13 <0x73>;
+defm V_WMMA_F32_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x70, "v_wmma_f32_16x16_f16">;
+defm V_WMMA_F16_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x71, "v_wmma_f16_16x16_f16">;
+defm V_WMMA_F32_16X16X16_BF16    : VOP3M_WMMA_Real_gfx13 <0x72, "v_wmma_f32_16x16_bf16">;
+defm V_WMMA_BF16_16X16X16_BF16   : VOP3M_WMMA_Real_gfx13 <0x73, "v_wmma_bf16_16x16_bf16">;
 defm V_WMMA_F32_16X16_FP8_FP8    : VOP3M_WMMA_K1_K2_Real <0x74>;
 defm V_WMMA_F32_16X16_FP8_BF8    : VOP3M_WMMA_K1_K2_Real <0x75>;
 defm V_WMMA_F32_16X16_BF8_FP8    : VOP3M_WMMA_K1_K2_Real <0x76>;
