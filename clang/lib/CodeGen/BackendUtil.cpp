@@ -1237,7 +1237,8 @@ runThinLTOBackend(DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
   // We can simply import the values mentioned in the combined index, since
   // we should only invoke this using the individual indexes written out
   // via a WriteIndexesThinBackend.
-  FunctionImporter::ImportMapTy ImportList;
+  FunctionImporter::ImportIDTable ImportIDs;
+  FunctionImporter::ImportMapTy ImportList(ImportIDs);
   if (!lto::initImportList(*M, *CombinedIndex, ImportList))
     return;
 
