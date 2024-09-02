@@ -6509,8 +6509,21 @@ def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
-                             (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
+// The addr_temp and addr_temp_out operands are logically a pair of GPR
+// operands:
+// * addr is an input, holding the address to swap.
+// * temp is a earlyclobber output, used internally in the expansion of the
+//   pseudo-inst.
+// These are combined into one GPRPair operand to ensure that register
+// allocation always succeeds. In the worst case there are only 4 GPRPair
+// registers available, of which this instruction needs 3 for the other
+// operands. If these operands weren't combined they would also use two GPR
+// registers, which could overlap with two different GPRPairs, causing
+// allocation to fail. With them combined, we need to allocate 4 GPRPairs,
+// which will always succeed.
+let Constraints = "@earlyclobber $Rd,$addr_temp_out = $addr_temp" in
+def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
+                             (ins GPRPair:$addr_temp, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
 }
 
