@@ -51,6 +51,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1832,14 +1833,13 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
 
   // Pass any environment variables along that the user specified.
   auto envMap = GetStringMap(*arguments, "env");
-  std::vector<std::string> envs;
-  envs.reserve(envMap.size());
+  lldb::SBEnvironment envs{};
   for (const auto &[key, value] : envMap) {
-    envs.emplace_back(key + '=' + value);
+    envs.Set(key.c_str(), value.c_str(), true);
   }
 
-  if (!envs.empty())
-    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+  if (envs.GetNumValues() != 0)
+    launch_info.SetEnvironment(envs, true);
 
   auto flags = launch_info.GetLaunchFlags();
 
