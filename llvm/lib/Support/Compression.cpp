@@ -224,6 +224,20 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
   return E;
 }
 
+Error zstd::getDecompressedSize(ArrayRef<uint8_t> Input,
+                                size_t &UncompressedSize) {
+
+  unsigned long long Res = ZSTD_getFrameContentSize(Input.data(), Input.size());
+
+  // ZSTD_getFrameContentSize returns unsigned long long, but the size
+  // of uncompressed data should be bounded by size_t.
+  UncompressedSize = static_cast<size_t>(Res);
+
+  return ZSTD_isError(Res) ? make_error<StringError>(ZSTD_getErrorName(Res),
+                                                     inconvertibleErrorCode())
+                           : Error::success();
+}
+
 #else
 bool zstd::isAvailable() { return false; }
 void zstd::compress(ArrayRef<uint8_t> Input,
@@ -239,5 +253,9 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
                        SmallVectorImpl<uint8_t> &Output,
                        size_t UncompressedSize) {
   llvm_unreachable("zstd::decompress is unavailable");
+}
+Error zstd::getDecompressedSize(ArrayRef<uint8_t> Input,
+                                size_t &UncompressedSize) {
+  llvm_unreachable("zstd::getDecompressedSize is unavailable");
 }
 #endif
