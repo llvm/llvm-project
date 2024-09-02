@@ -2495,7 +2495,11 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
 }
 
 /// Check if instruction depends on ZExt and this ZExt can be moved after the
-/// instruction. Move ZExt if it is profitable
+/// instruction. Move ZExt if it is profitable. For example:
+///     logic(zext(x),y) -> zext(logic(x,trunc(y)))
+///     lshr((zext(x),y) -> zext(lshr(x,trunc(y)))
+/// Cost model calculations takes into account if zext(x) has other users and
+/// whether it can be propagated through them too.
 bool VectorCombine::shrinkType(llvm::Instruction &I) {
   Value *ZExted, *OtherOperand;
   if (!match(&I, m_c_BitwiseLogic(m_ZExt(m_Value(ZExted)),
@@ -2503,8 +2507,7 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
       !match(&I, m_LShr(m_ZExt(m_Value(ZExted)), m_Value(OtherOperand))))
     return false;
 
-  Instruction *ZExtOperand =
-      cast<Instruction>(I.getOperand(I.getOperand(0) == OtherOperand ? 1 : 0));
+  Value *ZExtOperand = I.getOperand(I.getOperand(0) == OtherOperand ? 1 : 0);
 
   auto *BigTy = cast<FixedVectorType>(I.getType());
   auto *SmallTy = cast<FixedVectorType>(ZExted->getType());
@@ -2519,9 +2522,10 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
 
   // Calculate costs of leaving current IR as it is and moving ZExt operation
   // later, along with adding truncates if needed
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost ZExtCost = TTI.getCastInstrCost(
       Instruction::ZExt, BigTy, SmallTy,
-      TargetTransformInfo::CastContextHint::None, TTI::TCK_RecipThroughput);
+      TargetTransformInfo::CastContextHint::None, CostKind);
   InstructionCost CurrentCost = ZExtCost;
   InstructionCost ShrinkCost = 0;
 
@@ -2529,8 +2533,10 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   for (User *U : ZExtOperand->users()) {
     auto *UI = cast<Instruction>(U);
     if (UI == &I) {
-      CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy);
-      ShrinkCost += TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy);
+      CurrentCost +=
+          TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy, CostKind);
+      ShrinkCost +=
+          TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy, CostKind);
       ShrinkCost += ZExtCost;
       continue;
     }
@@ -2540,12 +2546,13 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
 
     // Check if we can propagate ZExt through its other users
     KB = computeKnownBits(UI, *DL);
-    unsigned UBW = KB.getBitWidth() - KB.Zero.countLeadingOnes();
+    unsigned UBW = KB.getBitWidth() - KB.countMinLeadingZeros();
     if (UBW > BW)
       return false;
 
-    CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy);
-    ShrinkCost += TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy);
+    CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy, CostKind);
+    ShrinkCost +=
+        TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy, CostKind);
     ShrinkCost += ZExtCost;
   }
 
@@ -2554,7 +2561,7 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   if (!isa<Constant>(OtherOperand))
     ShrinkCost += TTI.getCastInstrCost(
         Instruction::Trunc, SmallTy, BigTy,
-        TargetTransformInfo::CastContextHint::None, TTI::TCK_RecipThroughput);
+        TargetTransformInfo::CastContextHint::None, CostKind);
 
   // If the cost of shrinking types and leaving the IR is the same, we'll lean
   // towards modifying the IR because shrinking opens opportunities for other
