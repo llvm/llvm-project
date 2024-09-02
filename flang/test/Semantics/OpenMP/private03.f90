@@ -17,17 +17,17 @@ subroutine stmt_function(temp)
   q = 32
   r = 9
 
-  !ERROR: Variable 'p' in STATEMENT FUNCTION expression cannot be in a PRIVATE clause
+  !ERROR: Variable 'p' in statement function expression cannot be in a PRIVATE clause
   !$omp parallel private(p)
   s = c(temp)
   !$omp end parallel
 
-  !ERROR: Variable 's' in STATEMENT FUNCTION expression cannot be in a FIRSTPRIVATE clause
+  !ERROR: Variable 's' in statement function expression cannot be in a FIRSTPRIVATE clause
   !$omp parallel firstprivate(s)
   s = s + f(temp)
   !$omp end parallel
 
-  !ERROR: Variable 's' in STATEMENT FUNCTION expression cannot be in a LASTPRIVATE clause
+  !ERROR: Variable 's' in statement function expression cannot be in a LASTPRIVATE clause
   !$omp parallel do lastprivate(s, t)
   do i = 1, 10
   t(i) = v(temp) + i - s
