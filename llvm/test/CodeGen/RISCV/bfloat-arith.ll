@@ -75,14 +75,19 @@ define bfloat @fsgnj_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN:       # %bb.0:
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    fsh fa1, 12(sp)
-; RV32IZFBFMIN-NEXT:    fsh fa0, 8(sp)
 ; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    lbu a1, 9(sp)
-; RV32IZFBFMIN-NEXT:    andi a0, a0, 128
-; RV32IZFBFMIN-NEXT:    andi a1, a1, 127
-; RV32IZFBFMIN-NEXT:    or a0, a1, a0
-; RV32IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV32IZFBFMIN-NEXT:    flh fa0, 8(sp)
+; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IZFBFMIN-NEXT:    slli a1, a1, 17
+; RV32IZFBFMIN-NEXT:    andi a2, a0, 128
+; RV32IZFBFMIN-NEXT:    srli a0, a1, 17
+; RV32IZFBFMIN-NEXT:    beqz a2, .LBB5_2
+; RV32IZFBFMIN-NEXT:  # %bb.1:
+; RV32IZFBFMIN-NEXT:    lui a1, 1048568
+; RV32IZFBFMIN-NEXT:    or a0, a0, a1
+; RV32IZFBFMIN-NEXT:  .LBB5_2:
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a0
+; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFBFMIN-NEXT:    ret
 ;
@@ -90,14 +95,19 @@ define bfloat @fsgnj_s(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN:       # %bb.0:
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    fsh fa1, 8(sp)
-; RV64IZFBFMIN-NEXT:    fsh fa0, 0(sp)
 ; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    lbu a1, 1(sp)
-; RV64IZFBFMIN-NEXT:    andi a0, a0, 128
-; RV64IZFBFMIN-NEXT:    andi a1, a1, 127
-; RV64IZFBFMIN-NEXT:    or a0, a1, a0
-; RV64IZFBFMIN-NEXT:    sb a0, 1(sp)
-; RV64IZFBFMIN-NEXT:    flh fa0, 0(sp)
+; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa0
+; RV64IZFBFMIN-NEXT:    slli a1, a1, 49
+; RV64IZFBFMIN-NEXT:    andi a2, a0, 128
+; RV64IZFBFMIN-NEXT:    srli a0, a1, 49
+; RV64IZFBFMIN-NEXT:    beqz a2, .LBB5_2
+; RV64IZFBFMIN-NEXT:  # %bb.1:
+; RV64IZFBFMIN-NEXT:    lui a1, 1048568
+; RV64IZFBFMIN-NEXT:    or a0, a0, a1
+; RV64IZFBFMIN-NEXT:  .LBB5_2:
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a0
+; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
@@ -105,39 +115,19 @@ define bfloat @fsgnj_s(bfloat %a, bfloat %b) nounwind {
 }
 
 define i32 @fneg_s(bfloat %a, bfloat %b) nounwind {
-; RV32IZFBFMIN-LABEL: fneg_s:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa4, 12(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32IZFBFMIN-NEXT:    feq.s a0, fa5, fa4
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fneg_s:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa4, 8(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64IZFBFMIN-NEXT:    feq.s a0, fa5, fa4
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fneg_s:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    fadd.s fa5, fa5, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa4, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    feq.s a0, fa5, fa4
+; CHECK-NEXT:    ret
   %1 = fadd bfloat %a, %a
   %2 = fneg bfloat %1
   %3 = fcmp oeq bfloat %1, %2
@@ -153,45 +143,57 @@ define bfloat @fsgnjn_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 4(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 5(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 5(sp)
-; RV32IZFBFMIN-NEXT:    flh fa5, 4(sp)
-; RV32IZFBFMIN-NEXT:    fsh fa0, 8(sp)
+; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa5
+; RV32IZFBFMIN-NEXT:    lui a0, 1048568
+; RV32IZFBFMIN-NEXT:    xor a1, a1, a0
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a1
 ; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 9(sp)
 ; RV32IZFBFMIN-NEXT:    lbu a1, 13(sp)
-; RV32IZFBFMIN-NEXT:    andi a0, a0, 127
-; RV32IZFBFMIN-NEXT:    andi a1, a1, 128
-; RV32IZFBFMIN-NEXT:    or a0, a0, a1
-; RV32IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV32IZFBFMIN-NEXT:    flh fa0, 8(sp)
+; RV32IZFBFMIN-NEXT:    fmv.x.h a2, fa0
+; RV32IZFBFMIN-NEXT:    slli a2, a2, 17
+; RV32IZFBFMIN-NEXT:    andi a3, a1, 128
+; RV32IZFBFMIN-NEXT:    srli a1, a2, 17
+; RV32IZFBFMIN-NEXT:    bnez a3, .LBB7_2
+; RV32IZFBFMIN-NEXT:  # %bb.1:
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a1
+; RV32IZFBFMIN-NEXT:    j .LBB7_3
+; RV32IZFBFMIN-NEXT:  .LBB7_2:
+; RV32IZFBFMIN-NEXT:    or a0, a1, a0
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a0
+; RV32IZFBFMIN-NEXT:  .LBB7_3:
+; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFBFMIN-NEXT:    ret
 ;
 ; RV64IZFBFMIN-LABEL: fsgnjn_s:
 ; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -32
+; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa5
+; RV64IZFBFMIN-NEXT:    lui a0, 1048568
+; RV64IZFBFMIN-NEXT:    xor a1, a1, a0
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a1
 ; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    fsh fa0, 16(sp)
-; RV64IZFBFMIN-NEXT:    fsh fa5, 24(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 17(sp)
-; RV64IZFBFMIN-NEXT:    lbu a1, 25(sp)
-; RV64IZFBFMIN-NEXT:    andi a0, a0, 127
-; RV64IZFBFMIN-NEXT:    andi a1, a1, 128
-; RV64IZFBFMIN-NEXT:    or a0, a0, a1
-; RV64IZFBFMIN-NEXT:    sb a0, 17(sp)
-; RV64IZFBFMIN-NEXT:    flh fa0, 16(sp)
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 32
+; RV64IZFBFMIN-NEXT:    lbu a1, 9(sp)
+; RV64IZFBFMIN-NEXT:    fmv.x.h a2, fa0
+; RV64IZFBFMIN-NEXT:    slli a2, a2, 49
+; RV64IZFBFMIN-NEXT:    andi a3, a1, 128
+; RV64IZFBFMIN-NEXT:    srli a1, a2, 49
+; RV64IZFBFMIN-NEXT:    bnez a3, .LBB7_2
+; RV64IZFBFMIN-NEXT:  # %bb.1:
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a1
+; RV64IZFBFMIN-NEXT:    j .LBB7_3
+; RV64IZFBFMIN-NEXT:  .LBB7_2:
+; RV64IZFBFMIN-NEXT:    or a0, a1, a0
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a0
+; RV64IZFBFMIN-NEXT:  .LBB7_3:
+; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
+; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = fadd bfloat %a, %b
   %2 = fneg bfloat %1
@@ -204,40 +206,34 @@ declare bfloat @llvm.fabs.bf16(bfloat)
 define bfloat @fabs_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: fabs_s:
 ; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    andi a0, a0, 127
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa4, 12(sp)
+; RV32IZFBFMIN-NEXT:    fmv.x.h a0, fa5
+; RV32IZFBFMIN-NEXT:    slli a0, a0, 17
+; RV32IZFBFMIN-NEXT:    srli a0, a0, 17
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa4, a0
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFBFMIN-NEXT:    ret
 ;
 ; RV64IZFBFMIN-LABEL: fabs_s:
 ; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    andi a0, a0, 127
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa4, 8(sp)
+; RV64IZFBFMIN-NEXT:    fmv.x.h a0, fa5
+; RV64IZFBFMIN-NEXT:    slli a0, a0, 49
+; RV64IZFBFMIN-NEXT:    srli a0, a0, 49
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa4, a0
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = fadd bfloat %a, %b
   %2 = call bfloat @llvm.fabs.bf16(bfloat %1)
@@ -289,45 +285,22 @@ define bfloat @fmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 }
 
 define bfloat @fmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fmsub_s:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV32IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa1
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fmsub_s:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV64IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa1
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fmsub_s:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
+; CHECK-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
   %c_ = fadd bfloat 0.0, %c ; avoid negation using xor
   %negc = fsub bfloat -0.0, %c_
   %1 = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %negc)
@@ -335,61 +308,28 @@ define bfloat @fmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 }
 
 define bfloat @fnmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmadd_s:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV32IZFBFMIN-NEXT:    flh fa4, 8(sp)
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa1
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa4, fa3, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmadd_s:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 0(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 1(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 1(sp)
-; RV64IZFBFMIN-NEXT:    flh fa4, 0(sp)
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa1
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa4, fa3, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmadd_s:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa2
+; CHECK-NEXT:    fadd.s fa4, fa3, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    fmv.x.h a0, fa4
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa4, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
+; CHECK-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
   %a_ = fadd bfloat 0.0, %a
   %c_ = fadd bfloat 0.0, %c
   %nega = fsub bfloat -0.0, %a_
@@ -399,61 +339,28 @@ define bfloat @fnmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 }
 
 define bfloat @fnmadd_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmadd_s_2:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
-; RV32IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV32IZFBFMIN-NEXT:    flh fa4, 8(sp)
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmadd_s_2:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
-; RV64IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 0(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 1(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 1(sp)
-; RV64IZFBFMIN-NEXT:    flh fa4, 0(sp)
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmadd_s_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa2
+; CHECK-NEXT:    fadd.s fa4, fa3, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    fmv.x.h a0, fa4
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa4, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
+; CHECK-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
   %b_ = fadd bfloat 0.0, %b
   %c_ = fadd bfloat 0.0, %c
   %negb = fsub bfloat -0.0, %b_
@@ -463,37 +370,18 @@ define bfloat @fnmadd_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
 }
 
 define bfloat @fnmadd_s_3(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmadd_s_3:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa1
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa0, 12(sp)
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmadd_s_3:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa1
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa0, 8(sp)
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmadd_s_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
+; CHECK-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
   %1 = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   %neg = fneg bfloat %1
   ret bfloat %neg
@@ -501,82 +389,40 @@ define bfloat @fnmadd_s_3(bfloat %a, bfloat %b, bfloat %c) nounwind {
 
 
 define bfloat @fnmadd_nsz(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmadd_nsz:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa1
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa0, 12(sp)
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmadd_nsz:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa1
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa0, 8(sp)
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmadd_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
+; CHECK-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
   %1 = call nsz bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   %neg = fneg nsz bfloat %1
   ret bfloat %neg
 }
 
 define bfloat @fnmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmsub_s:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa2
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa1
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmsub_s:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa2
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa1
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmsub_s:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa2
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
+; CHECK-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
   %a_ = fadd bfloat 0.0, %a
   %nega = fsub bfloat -0.0, %a_
   %1 = call bfloat @llvm.fma.bf16(bfloat %nega, bfloat %b, bfloat %c)
@@ -584,45 +430,22 @@ define bfloat @fnmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
 }
 
 define bfloat @fnmsub_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmsub_s_2:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
-; RV32IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa2
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmsub_s_2:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
-; RV64IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa2
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa0
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmsub_s_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa2
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa0
+; CHECK-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
   %b_ = fadd bfloat 0.0, %b
   %negb = fsub bfloat -0.0, %b_
   %1 = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %negb, bfloat %c)
@@ -669,63 +492,31 @@ define bfloat @fmsub_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
 }
 
 define bfloat @fnmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; RV32IZFBFMIN-LABEL: fnmadd_s_contract:
-; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa1
-; RV32IZFBFMIN-NEXT:    fadd.s fa3, fa3, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa3, fa3
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa3
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fmul.s fa5, fa5, fa3
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV32IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV32IZFBFMIN-NEXT:    sb a0, 13(sp)
-; RV32IZFBFMIN-NEXT:    flh fa3, 12(sp)
-; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa3
-; RV32IZFBFMIN-NEXT:    fsub.s fa5, fa4, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV32IZFBFMIN-NEXT:    ret
-;
-; RV64IZFBFMIN-LABEL: fnmadd_s_contract:
-; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64IZFBFMIN-NEXT:    fmv.w.x fa4, zero
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa1
-; RV64IZFBFMIN-NEXT:    fadd.s fa3, fa3, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa3, fa3
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa3, fa3
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fmul.s fa5, fa5, fa3
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa2
-; RV64IZFBFMIN-NEXT:    xori a0, a0, 128
-; RV64IZFBFMIN-NEXT:    sb a0, 9(sp)
-; RV64IZFBFMIN-NEXT:    flh fa3, 8(sp)
-; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa5, fa4
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa3
-; RV64IZFBFMIN-NEXT:    fsub.s fa5, fa4, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
-; RV64IZFBFMIN-NEXT:    ret
+; CHECK-LABEL: fnmadd_s_contract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
+; CHECK-NEXT:    fadd.s fa3, fa3, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa3, fa3
+; CHECK-NEXT:    fcvt.s.bf16 fa2, fa2
+; CHECK-NEXT:    fadd.s fa4, fa2, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa3
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fmul.s fa5, fa5, fa3
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.x.h a0, fa5
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fsub.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
   %a_ = fadd bfloat 0.0, %a ; avoid negation using xor
   %b_ = fadd bfloat 0.0, %b ; avoid negation using xor
   %c_ = fadd bfloat 0.0, %c ; avoid negation using xor

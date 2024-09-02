@@ -3313,10 +3313,12 @@ FinishTemplateArgumentDeduction(
   if (Trap.hasErrorOccurred())
     return TemplateDeductionResult::SubstitutionFailure;
 
-  if (auto Result = CheckDeducedArgumentConstraints(S, Partial, SugaredBuilder,
-                                                    CanonicalBuilder, Info);
-      Result != TemplateDeductionResult::Success)
-    return Result;
+  if (!IsPartialOrdering) {
+    if (auto Result = CheckDeducedArgumentConstraints(
+            S, Partial, SugaredBuilder, CanonicalBuilder, Info);
+        Result != TemplateDeductionResult::Success)
+      return Result;
+  }
 
   return TemplateDeductionResult::Success;
 }
@@ -3364,13 +3366,16 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   if (Trap.hasErrorOccurred())
     return TemplateDeductionResult::SubstitutionFailure;
 
-  if (auto Result = CheckDeducedArgumentConstraints(S, Template, SugaredBuilder,
-                                                    CanonicalBuilder, Info);
-      Result != TemplateDeductionResult::Success)
-    return Result;
+  if (!PartialOrdering) {
+    if (auto Result = CheckDeducedArgumentConstraints(
+            S, Template, SugaredBuilder, CanonicalBuilder, Info);
+        Result != TemplateDeductionResult::Success)
+      return Result;
+  }
 
   return TemplateDeductionResult::Success;
 }
+
 /// Complete template argument deduction for DeduceTemplateArgumentsFromType.
 /// FIXME: this is mostly duplicated with the above two versions. Deduplicate
 /// the three implementations.
@@ -5595,19 +5600,8 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
       TDR != TemplateDeductionResult::Success)
     return TDR;
 
-  // C++20 [temp.deduct]p5 - Only check constraints when all parameters have
-  // been deduced.
-  if (!IsIncomplete) {
-    if (auto Result = CheckDeducedArgumentConstraints(S, FTD, SugaredBuilder,
-                                                      CanonicalBuilder, Info);
-        Result != TemplateDeductionResult::Success)
-      return Result;
-  }
-
-  if (Trap.hasErrorOccurred())
-    return TemplateDeductionResult::SubstitutionFailure;
-
-  return TemplateDeductionResult::Success;
+  return Trap.hasErrorOccurred() ? TemplateDeductionResult::SubstitutionFailure
+                                 : TemplateDeductionResult::Success;
 }
 
 /// Determine whether the function template \p FT1 is at least as
