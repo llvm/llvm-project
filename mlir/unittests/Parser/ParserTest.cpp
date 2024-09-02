@@ -101,4 +101,31 @@ TEST(MLIRParser, ParseAttr) {
     EXPECT_EQ(attr, b.getI64IntegerAttr(9));
   }
 }
+  
+TEST(MLIRParser, UnknownDialect) {
+  using namespace testing;
+  // We need a dialect that exists but is not registered to the
+  // context so that its ops are unrecognized but we can still get
+  // a name for it.
+  std::string moduleStr = R"mlir(
+   builtin.module {
+    "test.int_types"() () -> (i16, si32, ui64, i8)
+   }
+  )mlir";
+  
+  MLIRContext context;
+  ASSERT_THAT(context.getAvailableDialects(), Not(Contains("test")));
+
+  ParserConfig config(&context, /*verifyAfterParse=*/false);
+  std::vector<std::string> diagnostics;
+  ScopedDiagnosticHandler handler(&context, [&](Diagnostic &d) {
+    llvm::raw_string_ostream(diagnostics.emplace_back())
+      << d.getLocation() << ": " << d;
+  });
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(moduleStr, config);
+  EXPECT_FALSE(module);
+
+  EXPECT_THAT(diagnostics, ElementsAre(HasSubstr("operation being parsed with an unregistered dialect 'test'. If this is intended, please use -allow-unregistered-dialect with the MLIR tool used")));
+}
 } // namespace
