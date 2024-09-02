@@ -377,6 +377,24 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
+  /// Returns true if the loop has a speculative early exit, i.e. an
+  /// uncountable exit that isn't the latch block.
+  bool hasSpeculativeEarlyExit() const { return HasSpeculativeEarlyExit; }
+
+  /// Returns the speculative early exiting block.
+  BasicBlock *getSpeculativeEarlyExitingBlock() const {
+    assert(getUncountableExitingBlocks().size() == 1 &&
+           "Expected only a single uncountable exiting block");
+    return getUncountableExitingBlocks()[0];
+  }
+
+  /// Returns the destination of a speculative early exiting block.
+  BasicBlock *getSpeculativeEarlyExitBlock() const {
+    assert(getUncountableExitBlocks().size() == 1 &&
+           "Expected only a single uncountable exit block");
+    return getUncountableExitBlocks()[0];
+  }
+
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
   bool isMaskRequired(const Instruction *I) const {
@@ -403,6 +421,22 @@ public:
   ScalarEvolution *getScalarEvolution() const { return PSE.getSE(); }
 
   DominatorTree *getDominatorTree() const { return DT; }
+
+  /// Returns all exiting blocks with a countable exit, i.e. the
+  /// exit-not-taken count is known exactly at compile time.
+  const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {
+    return CountableExitingBlocks;
+  }
+
+  /// Returns all the exiting blocks with an uncountable exit.
+  const SmallVector<BasicBlock *, 4> &getUncountableExitingBlocks() const {
+    return UncountableExitingBlocks;
+  }
+
+  /// Returns all the exit blocks from uncountable exiting blocks.
+  SmallVector<BasicBlock *, 4> getUncountableExitBlocks() const {
+    return UncountableExitBlocks;
+  }
 
 private:
   /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
@@ -436,7 +470,7 @@ private:
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
-  bool canVectorizeMemory();
+  bool canVectorizeMemory(bool IsEarlyExitLoop);
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
@@ -445,6 +479,10 @@ private:
   /// Return true if we can vectorize this outer loop. The method performs
   /// specific checks for outer loop vectorization.
   bool canVectorizeOuterLoop();
+
+  /// Returns true if this is a supported early exit loop that we can
+  /// vectorize.
+  bool isVectorizableEarlyExitLoop();
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
@@ -551,6 +589,16 @@ private:
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
+
+  /// Indicates whether this loop has a speculative early exit, i.e. an
+  /// uncountable exiting block that is not the latch.
+  bool HasSpeculativeEarlyExit = false;
+
+  /// Keeps track of all the exits with known or countable exit-not-taken
+  /// counts.
+  SmallVector<BasicBlock *, 4> CountableExitingBlocks;
+  SmallVector<BasicBlock *, 4> UncountableExitingBlocks;
+  SmallVector<BasicBlock *, 4> UncountableExitBlocks;
 };
 
 } // namespace llvm

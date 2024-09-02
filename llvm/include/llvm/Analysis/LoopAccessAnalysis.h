@@ -661,7 +661,8 @@ public:
   bool isInvariant(Value *V) const;
 
   unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
+  unsigned getNumLoads() const { return NumLoads; }
+  unsigned getNumCalls() const { return NumCalls; }
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
@@ -754,6 +755,7 @@ private:
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
+  unsigned NumCalls = 0;
 
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;
