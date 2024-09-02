@@ -839,7 +839,7 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   // BlockAddress operands were used to keep information between passes,
   // let's undo the "address taken" status to reflect that Succ doesn't
   // actually correspond to an IR-level basic block.
-  for (MachineBasicBlock *Succ: ClearAddressTaken)
+  for (MachineBasicBlock *Succ : ClearAddressTaken)
     Succ->setAddressTakenIRBlock(nullptr);
 }
 
