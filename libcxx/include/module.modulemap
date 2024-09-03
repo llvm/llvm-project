@@ -1508,7 +1508,7 @@ module std_private_memory_allocation_guard                [system] { header "__m
 module std_private_memory_allocator                       [system] {
   header "__memory/allocator.h"
   export std_private_type_traits_diagnostic_utilities
-  export std_private_type_traits_is_array
+  export std_private_type_traits_is_bounded_array
   export std_private_type_traits_is_const
   export std_private_type_traits_is_function
   export std_private_type_traits_is_reference

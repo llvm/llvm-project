@@ -10,7 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H
 
 #include <__config>
-#include <__type_traits/is_array.h>
+#include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
@@ -27,7 +27,7 @@
 #else
 #  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)                          \
     ;                                                                                                                  \
-    static_assert(!is_array<_Tp>::value, "'std::" _Template "' cannot " _Verb " C arrays before C++20")
+    static_assert(!__libcpp_is_bounded_array<_Tp>::value, "'std::" _Template "' cannot " _Verb " C arrays before C++20")
 #endif
 
 // Per https://eel.is/c++draft/containers#container.reqmts-64, allocator-aware containers must have an
