@@ -293,8 +293,7 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
 /// A group has the following features
 /// 1. All of value in a group are shufflevector.
 /// 2. The mask of all shufflevector is isExtractSubvectorMask.
-/// 3. The mask of all shufflevector uses all of the elements of the source (and
-/// the elements are used in order).
+/// 3. The mask of all shufflevector uses all of the elements of the source.
 /// e.g., it is 1 group (%0)
 /// %1 = shufflevector <16 x i8> %0, <16 x i8> poison,
 ///    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -322,7 +321,8 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
   auto *SV = cast<ShuffleVectorInst>(VL.front());
   unsigned SVNumElements =
       cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
-  unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
+  unsigned ShuffleMaskSize = SV->getShuffleMask().size();
+  unsigned GroupSize = SVNumElements / ShuffleMaskSize;
   if (GroupSize == 0 || (VL.size() % GroupSize) != 0)
     return 0;
   unsigned NumGroup = 0;
@@ -330,7 +330,7 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
     auto *SV = cast<ShuffleVectorInst>(VL[I]);
     Value *Src = SV->getOperand(0);
     ArrayRef<Value *> Group = VL.slice(I, GroupSize);
-    SmallVector<int> ExtractionIndex(SVNumElements);
+    SmallBitVector ExpectedIndex(GroupSize);
     if (!all_of(Group, [&](Value *V) {
           auto *SV = cast<ShuffleVectorInst>(V);
           // From the same source.
@@ -339,12 +339,11 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
           int Index;
           if (!SV->isExtractSubvectorMask(Index))
             return false;
-          for (int I : seq<int>(Index, Index + SV->getShuffleMask().size()))
-            ExtractionIndex.push_back(I);
+          ExpectedIndex.set(Index / ShuffleMaskSize);
           return true;
         }))
       return 0;
-    if (!is_sorted(ExtractionIndex))
+    if (!ExpectedIndex.all())
       return 0;
     ++NumGroup;
   }
@@ -10289,12 +10288,40 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return VecCost;
     };
     if (SLPReVec && !E->isAltShuffle())
-      return GetCostDiff(GetScalarCost, [](InstructionCost) {
-        // shufflevector will be eliminated by instcombine because the
-        // shufflevector masks are used in order (guaranteed by
-        // getShufflevectorNumGroups). The vector cost is 0.
-        return TTI::TCC_Free;
-      });
+      return GetCostDiff(
+          GetScalarCost, [&](InstructionCost) -> InstructionCost {
+            // If a group uses mask in order, the shufflevector can be
+            // eliminated by instcombine. Then the cost is 0.
+            assert(isa<ShuffleVectorInst>(VL.front()) &&
+                   "Not supported shufflevector usage.");
+            auto *SV = cast<ShuffleVectorInst>(VL.front());
+            unsigned SVNumElements =
+                cast<FixedVectorType>(SV->getOperand(0)->getType())
+                    ->getNumElements();
+            unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
+            for (size_t I = 0, End = VL.size(); I != End; I += GroupSize) {
+              ArrayRef<Value *> Group = VL.slice(I, GroupSize);
+              int NextIndex = 0;
+              if (!all_of(Group, [&](Value *V) {
+                    assert(isa<ShuffleVectorInst>(V) &&
+                           "Not supported shufflevector usage.");
+                    auto *SV = cast<ShuffleVectorInst>(V);
+                    int Index;
+                    bool isExtractSubvectorMask =
+                        SV->isExtractSubvectorMask(Index);
+                    assert(isExtractSubvectorMask &&
+                           "Not supported shufflevector usage.");
+                    if (NextIndex != Index)
+                      return false;
+                    NextIndex += SV->getShuffleMask().size();
+                    return true;
+                  }))
+                return ::getShuffleCost(
+                    *TTI, TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
+                    calculateShufflevectorMask(E->Scalars));
+            }
+            return TTI::TCC_Free;
+          });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
   case Instruction::Freeze:
@@ -14072,9 +14099,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
-        // The current shufflevector usage always duplicate the source.
-        V = Builder.CreateShuffleVector(Src,
-                                        calculateShufflevectorMask(E->Scalars));
+        assert(isa<ShuffleVectorInst>(Src) &&
+               "Not supported shufflevector usage.");
+        auto *SVSrc = cast<ShuffleVectorInst>(Src);
+        assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
+               "Not supported shufflevector usage.");
+        SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
+        SmallVector<int> NewMask(ThisMask.size());
+        transform(ThisMask, NewMask.begin(),
+                  [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
+        V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
         propagateIRFlags(V, E->Scalars, VL0);
       } else {
         assert(E->isAltShuffle() &&
