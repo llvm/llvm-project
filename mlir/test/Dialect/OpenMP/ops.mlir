@@ -99,10 +99,11 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     omp.terminator
   }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (memref<i32>, memref<i32>) -> ()
 
-  // CHECK: omp.distribute
-  omp.distribute {
-    // CHECK-NEXT: omp.parallel
-    omp.parallel {
+  // CHECK: omp.parallel
+  omp.parallel {
+    // CHECK-NOT: omp.terminator
+    // CHECK: omp.distribute
+    omp.distribute {
       // CHECK-NEXT: omp.wsloop
       omp.wsloop {
         // CHECK-NEXT: omp.loop_nest
@@ -116,14 +117,15 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     omp.terminator
   } {omp.composite}
 
-  // CHECK: omp.distribute
-  omp.distribute {
-    // CHECK-NEXT: omp.parallel
-    omp.parallel {
+  // CHECK: omp.parallel
+  omp.parallel {
+    // CHECK-NOT: omp.terminator
+    // CHECK: omp.distribute
+    omp.distribute {
       // CHECK-NEXT: omp.wsloop
       omp.wsloop {
         // CHECK-NEXT: omp.simd
-        omp.simd{
+        omp.simd {
           // CHECK-NEXT: omp.loop_nest
           omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
             omp.yield
@@ -1019,10 +1021,10 @@ func.func @parallel_reduction_byref() {
 func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
-    // CHECK: omp.wsloop {
-    omp.wsloop {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.wsloop reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+    omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
       // CHECK: omp.loop_nest (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         %1 = arith.constant 2.0 : f32
@@ -1216,10 +1218,10 @@ func.func @parallel_reduction2() {
 func.func @parallel_wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
-    // CHECK: omp.wsloop {
-    omp.wsloop {
+  // CHECK: omp.parallel {
+  omp.parallel {
+    // CHECK: omp.wsloop reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+    omp.wsloop reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
       // CHECK: omp.loop_nest (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         %1 = arith.constant 2.0 : f32

@@ -61,6 +61,7 @@
 #include "VPlanHCFGBuilder.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -4466,7 +4467,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       if (EphemeralRecipes.contains(&R))
         continue;
       // Continue early if the recipe is considered to not produce a vector
-      //  result. Note that this includes VPInstruction where some opcodes may
+      // result. Note that this includes VPInstruction where some opcodes may
       // produce a vector, to preserve existing behavior as VPInstructions model
       // aspects not directly mapped to existing IR instructions.
       switch (R.getVPDefID()) {
@@ -5385,8 +5386,18 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // 3. Emulated masked memrefs, if a hacked cost is needed.
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
-            computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
+            computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
+          // Check if we decided to scalarize a call. If so, update the widening
+          // decision of the call to CM_Scalarize with the computed scalar cost.
+          for (const auto &[I, _] : ScalarCosts) {
+            auto *CI = dyn_cast<CallInst>(I);
+            if (!CI || !CallWideningDecisions.contains({CI, VF}))
+              continue;
+            CallWideningDecisions[{CI, VF}].Kind = CM_Scalarize;
+            CallWideningDecisions[{CI, VF}].Cost = ScalarCosts[CI];
+          }
+        }
         // Remember that BB will remain after vectorization.
         PredicatedBBsAfterVectorization[VF].insert(BB);
         for (auto *Pred : predecessors(BB)) {
@@ -6528,6 +6539,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
+    if (!isa<Constant>(Op2) && PSE.getSE()->isSCEVable(Op2->getType()) &&
+        isa<SCEVConstant>(PSE.getSCEV(Op2))) {
+      Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
+    }
     auto Op2Info = TTI.getOperandInfo(Op2);
     if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
         Legal->isInvariant(Op2))
@@ -6812,6 +6827,9 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     if (auto *Br = dyn_cast_or_null<BranchInst>(Op)) {
       BasicBlock *ThenBB = Br->getSuccessor(0);
       BasicBlock *ElseBB = Br->getSuccessor(1);
+      // Don't considers branches leaving the loop for simplification.
+      if (!TheLoop->contains(ThenBB) || !TheLoop->contains(ElseBB))
+        continue;
       bool ThenEmpty = IsEmptyBlock(ThenBB);
       bool ElseEmpty = IsEmptyBlock(ElseBB);
       if ((ThenEmpty && ElseEmpty) ||
@@ -7108,7 +7126,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       IVInsts.push_back(CI);
     }
     for (Instruction *IVInst : IVInsts) {
-      if (!CostCtx.SkipCostComputation.insert(IVInst).second)
+      if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
         continue;
       InstructionCost InductionCost = CostCtx.getLegacyCost(IVInst, VF);
       LLVM_DEBUG({
@@ -7116,6 +7134,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                << ": induction instruction " << *IVInst << "\n";
       });
       Cost += InductionCost;
+      CostCtx.SkipCostComputation.insert(IVInst);
     }
   }
 
@@ -7141,7 +7160,12 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     if (!OrigLoop->contains(CondI) ||
         !CostCtx.SkipCostComputation.insert(CondI).second)
       continue;
-    Cost += CostCtx.getLegacyCost(CondI, VF);
+    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
+    LLVM_DEBUG({
+      dbgs() << "Cost of " << CondICost << " for VF " << VF
+             << ": exit condition instruction " << *CondI << "\n";
+    });
+    Cost += CondICost;
     for (Value *Op : CondI->operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (!OpI || any_of(OpI->users(), [&ExitInstrs, this](User *U) {
@@ -7244,10 +7268,9 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
 /// not have corresponding recipes in \p Plan and are not marked to be ignored
 /// in \p CostCtx. This means the VPlan contains simplification that the legacy
 /// cost-model did not account for.
-static bool
-planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
-                                      VPCostContext &CostCtx, Loop *TheLoop,
-                                      LoopVectorizationCostModel &CM) {
+static bool planContainsAdditionalSimplifications(VPlan &Plan,
+                                                  VPCostContext &CostCtx,
+                                                  Loop *TheLoop) {
   // First collect all instructions for the recipes in Plan.
   auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
@@ -7278,16 +7301,13 @@ planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates
   // that the VPlan contains extra simplifications.
-  return any_of(
-      TheLoop->blocks(), [&SeenInstrs, VF, &CostCtx, &CM](BasicBlock *BB) {
-        return any_of(*BB, [&SeenInstrs, VF, &CostCtx, &CM](Instruction &I) {
-          if (isa<PHINode>(&I))
-            return false;
-          return !SeenInstrs.contains(&I) &&
-                 !CostCtx.skipCostComputation(&I, true) &&
-                 !CM.canTruncateToMinimalBitwidth(&I, VF);
-        });
-      });
+  return any_of(TheLoop->blocks(), [&SeenInstrs, &CostCtx](BasicBlock *BB) {
+    return any_of(*BB, [&SeenInstrs, &CostCtx](Instruction &I) {
+      if (isa<PHINode>(&I))
+        return false;
+      return !SeenInstrs.contains(&I) && !CostCtx.skipCostComputation(&I, true);
+    });
+  });
 }
 #endif
 
@@ -7358,8 +7378,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   assert((BestFactor.Width == LegacyVF.Width ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                BestFactor.Width, CostCtx,
-                                                OrigLoop, CM)) &&
+                                                CostCtx, OrigLoop)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
@@ -8384,6 +8403,20 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+    if (I->getOpcode() == Instruction::Mul) {
+      // Simplify operands of multiplications using SCEV. This is needed at the
+      // moment to match the behavior of the legacy cost-model.
+      // TODO: Generalize to any opcode and move to VPlan transformation.
+      SmallVector<VPValue *> NewOps(Operands);
+      ScalarEvolution &SE = *PSE.getSE();
+      for (unsigned I = 0; I < Operands.size(); ++I) {
+        Value *V = NewOps[I]->getUnderlyingValue();
+        if (!isa<Constant>(V) && SE.isSCEVable(V->getType()))
+          if (auto *C = dyn_cast<SCEVConstant>(PSE.getSE()->getSCEV(V)))
+            NewOps[I] = Plan.getOrAddLiveIn(C->getValue());
+      }
+      return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    }
     return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
   };
 }
@@ -8647,6 +8680,11 @@ addUsersInExitBlock(VPlan &Plan,
 
   // Introduce VPUsers modeling the exit values.
   for (const auto &[ExitPhi, V] : ExitingValuesToFix) {
+    // Pass live-in values used by exit phis directly through to the live-out.
+    if (V->isLiveIn()) {
+      Plan.addLiveOut(ExitPhi, V);
+      continue;
+    }
     VPValue *Ext = B.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {V, Plan.getOrAddLiveIn(ConstantInt::get(
@@ -8987,35 +9025,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  for (const auto *IG : InterleaveGroups) {
-    auto *Recipe =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
-    SmallVector<VPValue *, 4> StoredValues;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
-        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
-        StoredValues.push_back(StoreR->getStoredValue());
-      }
-
-    bool NeedsMaskForGaps =
-        IG->requiresScalarEpilogue() && !CM.isScalarEpilogueAllowed();
-    assert((!NeedsMaskForGaps || useMaskedInterleavedAccesses(CM.TTI)) &&
-           "masked interleaved groups are not allowed.");
-    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                                        Recipe->getMask(), NeedsMaskForGaps);
-    VPIG->insertBefore(Recipe);
-    unsigned J = 0;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *Member = IG->getMember(i)) {
-        VPRecipeBase *MemberR = RecipeBuilder.getRecipe(Member);
-        if (!Member->getType()->isVoidTy()) {
-          VPValue *OriginalV = MemberR->getVPSingleValue();
-          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
-          J++;
-        }
-        MemberR->eraseFromParent();
-      }
-  }
+  VPlanTransforms::createInterleaveGroups(InterleaveGroups, RecipeBuilder,
+                                          CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);

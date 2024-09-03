@@ -40,7 +40,8 @@ bool R600InstrInfo::isVector(const MachineInstr &MI) const {
 void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 const DebugLoc &DL, MCRegister DestReg,
-                                MCRegister SrcReg, bool KillSrc) const {
+                                MCRegister SrcReg, bool KillSrc,
+                                bool RenamableDest, bool RenamableSrc) const {
   unsigned VectorComponents = 0;
   if ((R600::R600_Reg128RegClass.contains(DestReg) ||
       R600::R600_Reg128VerticalRegClass.contains(DestReg)) &&
@@ -74,12 +75,9 @@ void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 /// \returns true if \p MBBI can be moved into a new basic.
 bool R600InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI) const {
-  for (MachineInstr::const_mop_iterator I = MBBI->operands_begin(),
-                                        E = MBBI->operands_end(); I != E; ++I) {
-    if (I->isReg() && !I->getReg().isVirtual() && I->isUse() &&
-        RI.isPhysRegLiveAcrossClauses(I->getReg()))
+  for (const MachineOperand &MO : MBBI->all_uses())
+    if (!MO.getReg().isVirtual() && RI.isPhysRegLiveAcrossClauses(MO.getReg()))
       return false;
-  }
   return true;
 }
 
@@ -218,15 +216,10 @@ bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
   if (!isALUInstr(MI.getOpcode())) {
     return false;
   }
-  for (MachineInstr::const_mop_iterator I = MI.operands_begin(),
-                                        E = MI.operands_end();
-       I != E; ++I) {
-    if (!I->isReg() || !I->isUse() || I->getReg().isVirtual())
-      continue;
-
-    if (R600::R600_LDS_SRC_REGRegClass.contains(I->getReg()))
+  for (const MachineOperand &MO : MI.all_uses())
+    if (MO.getReg().isPhysical() &&
+        R600::R600_LDS_SRC_REGRegClass.contains(MO.getReg()))
       return true;
-  }
   return false;
 }
 
