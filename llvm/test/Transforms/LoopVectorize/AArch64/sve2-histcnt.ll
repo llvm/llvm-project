@@ -11,203 +11,10 @@ target triple = "aarch64-unknown-linux-gnu"
 ;;     buckets[indices[i]]++;
 ;; }
 
+;; Confirm finding a histogram operation
 ; CHECK-LABEL: Checking a loop in 'simple_histogram'
-
-; CHECK: LV: Checking for a histogram on: store i32 %inc, ptr %arrayidx2, align 4
-; CHECK: LV: Found histogram for: store i32 %inc, ptr %arrayidx2, align 4
-
-;; Check that the scalar plan contains the original instructions.
-; CHECK: VPlan 'Initial VPlan for VF={1},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%4>
-; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%indices>, vp<%3>
-; CHECK-NEXT:     CLONE ir<%0> = load ir<%arrayidx>
-; CHECK-NEXT:     CLONE ir<%idxprom1> = zext ir<%0>
-; CHECK-NEXT:     CLONE ir<%arrayidx2> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
-; CHECK-NEXT:     CLONE ir<%1> = load ir<%arrayidx2>
-; CHECK-NEXT:     CLONE ir<%inc> = add nsw ir<%1>, ir<1>
-; CHECK-NEXT:     CLONE store ir<%inc>, ir<%arrayidx2>
-; CHECK-NEXT:     EMIT vp<%4> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%4>, vp<%1>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%6> = icmp eq ir<%N>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%6>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-
-;; Check that the vectorized plan contains a histogram recipe instead.
-; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%5>
-; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%indices>, vp<%3>
-; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
-; CHECK-NEXT:     WIDEN ir<%0> = load vp<%4>
-; CHECK-NEXT:     WIDEN-CAST ir<%idxprom1> = zext  ir<%0> to i64
-; CHECK-NEXT:     WIDEN-GEP Inv[Var] ir<%arrayidx2> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
-; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: ir<%arrayidx2>, inc: ir<1>
-; CHECK-NEXT:     EMIT vp<%5> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%5>, vp<%1>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%7> = icmp eq ir<%N>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%7>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-
-;; Check that a non-constant but loop invariant inc value is correctly represented
-; CHECK-LABEL: LV: Checking a loop in 'simple_histogram_inc_param'
-; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%5>
-; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%indices>, vp<%3>
-; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
-; CHECK-NEXT:     WIDEN ir<%0> = load vp<%4>
-; CHECK-NEXT:     WIDEN-CAST ir<%idxprom1> = zext  ir<%0> to i64
-; CHECK-NEXT:     WIDEN-GEP Inv[Var] ir<%arrayidx2> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
-; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: ir<%arrayidx2>, inc: ir<%incval>
-; CHECK-NEXT:     EMIT vp<%5> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%5>, vp<%1>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%7> = icmp eq ir<%N>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%7>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-
-;; Check that a sub operation results in a dec parameter in the recipe
-; CHECK-LABEL: LV: Checking a loop in 'simple_histogram_sub'
-; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%5>
-; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%indices>, vp<%3>
-; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
-; CHECK-NEXT:     WIDEN ir<%0> = load vp<%4>
-; CHECK-NEXT:     WIDEN-CAST ir<%idxprom1> = zext  ir<%0> to i64
-; CHECK-NEXT:     WIDEN-GEP Inv[Var] ir<%arrayidx2> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
-; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: ir<%arrayidx2>, dec: ir<1>
-; CHECK-NEXT:     EMIT vp<%5> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%5>, vp<%1>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%7> = icmp eq ir<%N>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%7>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-
-;; Check that masks are represented
-; CHECK-LABEL: LV: Checking a loop in 'conditional_histogram'
-; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%6>
-; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%indices>, vp<%3>
-; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
-; CHECK-NEXT:     WIDEN ir<%0> = load vp<%4>
-; CHECK-NEXT:     WIDEN-CAST ir<%idxprom1> = zext  ir<%0> to i64
-; CHECK-NEXT:     WIDEN-GEP Inv[Var] ir<%arrayidx2> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
-; CHECK-NEXT:     CLONE ir<%condidx> = getelementptr inbounds ir<%conds>, vp<%3>
-; CHECK-NEXT:     vp<%5> = vector-pointer ir<%condidx>
-; CHECK-NEXT:     WIDEN ir<%conddata> = load vp<%5>
-; CHECK-NEXT:     WIDEN ir<%ifcond> = icmp sgt ir<%conddata>, ir<5100>
-; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: ir<%arrayidx2>, inc: ir<1>, mask: ir<%ifcond>
-; CHECK-NEXT:     EMIT vp<%6> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%6>, vp<%1>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%8> = icmp eq ir<%N>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%8>
-; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
+; CHECK: LV: Checking for a histogram on: store i32 %inc, ptr %gep.bucket, align 4
+; CHECK: LV: Found histogram for: store i32 %inc, ptr %gep.bucket, align 4
 
 ;; Confirm cost calculation for runtime checks
 ; CHECK-LABEL: LV: Checking a loop in 'simple_histogram_rtdepcheck'
@@ -271,13 +78,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -337,13 +144,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, %incval
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, %incval
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -371,7 +178,7 @@ define void @simple_histogram_sub(ptr noalias %buckets, ptr readonly %indices, i
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP10]], i32 -1, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -387,7 +194,7 @@ define void @simple_histogram_sub(ptr noalias %buckets, ptr readonly %indices, i
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext i32 [[TMP12]] to i64
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP13]], -1
@@ -403,13 +210,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = sub nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = sext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = sub nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -479,19 +286,19 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %next ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
   %condidx = getelementptr inbounds i32, ptr %conds, i64 %iv
   %conddata = load i32, ptr %condidx, align 4
   %ifcond = icmp sgt i32 %conddata, 5100
   br i1 %ifcond, label %iftrue, label %next
 
 iftrue:
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   br label %next
 
 next:
@@ -529,13 +336,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i8, ptr %buckets, i64 %idxprom1
-  %1 = load i8, ptr %arrayidx2, align 4
-  %inc = add nsw i8 %1, 1
-  store i8 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i8, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i8, ptr %gep.bucket, align 4
+  %inc = add nsw i8 %l.bucket, 1
+  store i8 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -570,13 +377,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds float, ptr %buckets, i64 %idxprom1
-  %1 = load float, ptr %arrayidx2, align 4
-  %inc = fadd fast float %1, 1.0
-  store float %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds float, ptr %buckets, i64 %idxprom1
+  %l.bucket = load float, ptr %gep.bucket, align 4
+  %inc = fadd fast float %l.bucket, 1.0
+  store float %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -613,15 +420,15 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %incidx = getelementptr inbounds i32, ptr %incvals, i64 %iv
-  %incval = load i32, ptr %incidx, align 4
-  %inc = add nsw i32 %1, %incval
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %gep.incvals = getelementptr inbounds i32, ptr %incvals, i64 %iv
+  %l.incval = load i32, ptr %gep.incvals, align 4
+  %inc = add nsw i32 %l.bucket, %l.incval
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -689,13 +496,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !0
@@ -759,13 +566,83 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [1048576 x i32], ptr @idx_array, i64 0, i64 %iv
-  %2 = load i32, ptr %arrayidx, align 4
-  %idxprom5 = sext i32 %2 to i64
-  %arrayidx6 = getelementptr inbounds [1048576 x i32], ptr @data_array, i64 0, i64 %idxprom5
-  %3 = load i32, ptr %arrayidx6, align 4
-  %inc = add nsw i32 %3, 1
-  store i32 %inc, ptr %arrayidx6, align 4
+  %gep.indices = getelementptr inbounds [1048576 x i32], ptr @idx_array, i64 0, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom5 = sext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds [1048576 x i32], ptr @data_array, i64 0, i64 %idxprom5
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
+
+for.exit:
+  ret void
+}
+
+;; Add a struct into the mix, use a different constant index.
+;; { unused, buckets }
+%somestruct = type { [1048576 x i32], [1048576 x i32] }
+
+define void @histogram_array_4op_gep_nonzero_const_idx(i64 noundef %N, ptr readonly %indices, ptr noalias %data.struct) #0 {
+; CHECK-LABEL: define void @histogram_array_4op_gep_nonzero_const_idx(
+; CHECK-SAME: i64 noundef [[N:%.*]], ptr readonly [[INDICES:%.*]], ptr noalias [[DATA_STRUCT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul nsw i64 [[TMP2]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], [[DOTNEG]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[SOMESTRUCT:%.*]], ptr [[DATA_STRUCT]], i64 1, i32 0, <vscale x 4 x i64> [[TMP6]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP7]], i32 1, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    [[GEP_INDICES:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV1]]
+; CHECK-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_INDICES]], align 4
+; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[L_IDX]] to i64
+; CHECK-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr inbounds [[SOMESTRUCT]], ptr [[DATA_STRUCT]], i64 1, i32 0, i64 [[IDXPROM5]]
+; CHECK-NEXT:    [[L_BUCKET:%.*]] = load i32, ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[L_BUCKET]], 1
+; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT]], label [[FOR_BODY1]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom5 = sext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds %somestruct, ptr %data.struct, i32 1, i32 0, i64 %idxprom5
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
@@ -799,13 +676,13 @@ define void @simple_histogram_tailfold(ptr noalias %buckets, ptr readonly %indic
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP6]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -814,13 +691,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !2
@@ -873,7 +750,7 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
@@ -894,7 +771,7 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    store i32 [[IV_TRUNC]], ptr [[IDX_ADDR]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -903,13 +780,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %idx.addr = getelementptr inbounds i32, ptr %array, i64 %iv
   %iv.trunc = trunc i64 %iv to i32
   store i32 %iv.trunc, ptr %idx.addr, align 4
@@ -948,16 +825,79 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @simple_histogram_64b(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @simple_histogram_64b(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul nsw i64 [[TMP2]], -2
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], [[DOTNEG]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[BUCKETS]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> [[TMP6]], i64 1, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_INDICES:%.*]] = getelementptr inbounds i64, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[L_IDX:%.*]] = load i64, ptr [[GEP_INDICES]], align 4
+; CHECK-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr inbounds i64, ptr [[BUCKETS]], i64 [[L_IDX]]
+; CHECK-NEXT:    [[L_BUCKET:%.*]] = load i64, ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i64 [[L_BUCKET]], 1
+; CHECK-NEXT:    store i64 [[INC]], ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i64, ptr %indices, i64 %iv
+  %l.idx = load i64, ptr %gep.indices, align 4
+  %gep.bucket = getelementptr inbounds i64, ptr %buckets, i64 %l.idx
+  %l.bucket = load i64, ptr %gep.bucket, align 4
+  %inc = add nsw i64 %l.bucket, 1
+  store i64 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
 
 for.exit:
   ret void

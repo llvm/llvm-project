@@ -8471,7 +8471,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   if (Legal->isMaskRequired(HI->Store))
     HGramOps.push_back(getBlockInMask(HI->Store->getParent()));
 
-  return new VPHistogramRecipe(*HI, Opcode,
+  return new VPHistogramRecipe(Opcode,
                                make_range(HGramOps.begin(), HGramOps.end()),
                                HI->Store->getDebugLoc());
 }

@@ -1110,12 +1110,17 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
 
   // Check that the index is calculated by loading from another array. Ignore
   // any extensions.
-  // FIXME: Support indices from other sources that a linear load from memory?
+  // FIXME: Support indices from other sources than a linear load from memory?
+  //        We're currently trying to match an operation looping over an array
+  //        of indices, but there could be additional levels of indirection
+  //        in place, or possibly some additional calculation to form the index
+  //        from the loaded data.
   Value *VPtrVal;
   if (!match(HIdx, m_ZExtOrSExtOrSelf(m_Load(m_Value(VPtrVal)))))
     return false;
 
-  if (!isa<SCEVAddRecExpr>(PSE.getSE()->getSCEV(VPtrVal)))
+  if (!isa<SCEVAddRecExpr>(PSE.getSE()->getSCEV(VPtrVal)) ||
+      TheLoop->isLoopInvariant(VPtrVal))
     return false;
 
   // Ensure we'll have the same mask by checking that all parts of the histogram
@@ -1143,6 +1148,11 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
   const MemoryDepChecker::Dependence *IUDep = nullptr;
   const MemoryDepChecker &DepChecker = LAI->getDepChecker();
   const auto *Deps = DepChecker.getDependences();
+  // If there were too many dependences, LAA abandons recording them. We can't
+  // proceed safely if we don't know what the dependences are.
+  if (!Deps)
+    return false;
+
   for (const MemoryDepChecker::Dependence &Dep : *Deps) {
     // Ignore dependencies that are either known to be safe or can be
     // checked at runtime.

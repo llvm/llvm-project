@@ -33,7 +33,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <cassert>
 
 using namespace llvm;
@@ -286,10 +285,6 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
   // the legacy model.
   if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
     return &WidenMem->getIngredient();
-  // FIXME: Override the cost method properly to take gather/scatter cost
-  //        into account, instead of just the intrinsic via the legacy model.
-  if (auto *HG = dyn_cast<VPHistogramRecipe>(R))
-    return HG->getHistogramInfo().Update;
   return nullptr;
 }
 
@@ -1059,6 +1054,39 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
                                   {VTy, IncAmt->getType()},
                                   {Address, IncAmt, Mask});
   }
+}
+
+InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  // FIXME: Take the gather and scatter into account as well. For now we're
+  //        generating the same cost as the fallback path, but we'll likely
+  //        need to create a new TTI method for determining the cost, including
+  //        whether we can use base + vec-of-smaller-indices or just
+  //        vec-of-pointers.
+  assert(VF.isVector() && "Invalid VF for histogram cost");
+  Value *Address = getOperand(0)->getUnderlyingValue();
+  Value *IncAmt = getOperand(1)->getUnderlyingValue();
+  Type *IncTy = IncAmt->getType();
+  VectorType *VTy = VectorType::get(IncTy, VF);
+
+  // Assume that a non-constant update value (or a constant != 1) requires
+  // a multiply, and add that into the cost.
+  InstructionCost MulCost = TTI::TCC_Free;
+  ConstantInt *RHS = dyn_cast<ConstantInt>(IncAmt);
+  if (!RHS || RHS->getZExtValue() != 1)
+    MulCost = Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
+
+  // Find the cost of the histogram operation itself.
+  Type *PtrTy = VectorType::get(Address->getType(), VF);
+  Type *MaskTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+  IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
+                              Type::getVoidTy(Ctx.LLVMCtx),
+                              {PtrTy, IncTy, MaskTy});
+
+  // Add the costs together with the add/sub operation.
+  return Ctx.TTI.getIntrinsicInstrCost(
+             ICA, TargetTransformInfo::TCK_RecipThroughput) +
+         MulCost + Ctx.TTI.getArithmeticInstrCost(Opcode, VTy);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

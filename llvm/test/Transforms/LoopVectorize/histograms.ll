@@ -3,6 +3,8 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
+;; Currently we don't expect this to vectorize, since the generic cost model returns
+;; invalid for the histogram intrinsic.
 define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
 ; CHECK-LABEL: define void @simple_histogram(
 ; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) {
@@ -28,13 +30,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body

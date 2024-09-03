@@ -1672,15 +1672,13 @@ public:
 /// of intrinsics. The only update operations currently supported are
 /// 'add' and 'sub' where the other term is loop-invariant.
 class VPHistogramRecipe : public VPRecipeBase {
-  const HistogramInfo &Info;
   unsigned Opcode;
 
 public:
   template <typename IterT>
-  VPHistogramRecipe(const HistogramInfo &HI, unsigned Opcode,
-                    iterator_range<IterT> Operands, DebugLoc DL = {})
-      : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Info(HI),
-        Opcode(Opcode) {}
+  VPHistogramRecipe(unsigned Opcode, iterator_range<IterT> Operands,
+                    DebugLoc DL = {})
+      : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Opcode(Opcode) {}
 
   ~VPHistogramRecipe() override = default;
 
@@ -1693,9 +1691,11 @@ public:
   /// Produce a vectorized histogram operation.
   void execute(VPTransformState &State) override;
 
-  unsigned getOpcode() const { return Opcode; }
+  /// Return the cost of this VPHistogramRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
-  const HistogramInfo &getHistogramInfo() const { return Info; }
+  unsigned getOpcode() const { return Opcode; }
 
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.

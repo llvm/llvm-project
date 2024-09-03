@@ -59,13 +59,13 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %idxprom1 = zext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
-  %1 = load i32, ptr %arrayidx2, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %arrayidx2, align 4
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !0
