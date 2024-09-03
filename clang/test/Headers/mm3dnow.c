@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding %s -verify
+// FIXME: Deprecation skipped to avoid a warning for anything including the intrinsics module when
+// modules are enabled.
+// SKIPPED: %clang_cc1 -fsyntax-only -ffreestanding %s -verify
 // RUN: %clang_cc1 -fsyntax-only -D_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS -ffreestanding %s -verify
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -x c++ %s -verify
+// SKIPPED: %clang_cc1 -fsyntax-only -ffreestanding -x c++ %s -verify
 
 #if defined(i386) || defined(__x86_64__)
 #ifndef _CLANG_DISABLE_CRT_DEPRECATION_WARNINGS
