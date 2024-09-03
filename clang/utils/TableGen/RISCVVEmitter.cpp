@@ -167,13 +167,67 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
       static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
 
+// This function is used to get the log2SEW of each segment load/store, this
+// prevent to add a member to RVVIntrinsic.
+static unsigned getSegInstLog2SEW(StringRef InstName) {
+  // clang-format off
+#define KEY_VAL(KEY, VAL) {#KEY, VAL}
+#define KEY_VAL_ALL_W_POLICY(KEY, VAL) \
+  KEY_VAL(KEY, VAL),                   \
+  KEY_VAL(KEY ## _tu, VAL),            \
+  KEY_VAL(KEY ## _tum, VAL),           \
+  KEY_VAL(KEY ## _tumu, VAL),          \
+  KEY_VAL(KEY ## _mu, VAL)
+
+#define KEY_VAL_ALL_NF_BASE(MACRO_NAME, NAME, SEW, LOG2SEW, SUFFIX) \
+  MACRO_NAME(NAME ## 2e ## SEW, LOG2SEW), \
+  MACRO_NAME(NAME ## 3e ## SEW, LOG2SEW), \
+  MACRO_NAME(NAME ## 4e ## SEW, LOG2SEW), \
+  MACRO_NAME(NAME ## 5e ## SEW, LOG2SEW), \
+  MACRO_NAME(NAME ## 6e ## SEW, LOG2SEW), \
+  MACRO_NAME(NAME ## 7e ## SEW, LOG2SEW), \
+  MACRO_NAME(NAME ## 8e ## SEW, LOG2SEW)
+
+#define KEY_VAL_ALL_NF(NAME, SEW, LOG2SEW) \
+  KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW,)
+
+#define KEY_VAL_FF_ALL_NF(NAME, SEW, LOG2SEW) \
+  KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW, _FF)
+
+#define KEY_VAL_ALL_NF_SEW_BASE(MACRO_NAME, NAME) \
+  MACRO_NAME(NAME, 8, 3),  \
+  MACRO_NAME(NAME, 16, 4), \
+  MACRO_NAME(NAME, 32, 5), \
+  MACRO_NAME(NAME, 64, 6)
+
+#define KEY_VAL_ALL_NF_SEW(NAME) \
+  KEY_VAL_ALL_NF_SEW_BASE(KEY_VAL_ALL_NF, NAME)
+
+#define KEY_VAL_FF_ALL_NF_SEW(NAME) \
+  KEY_VAL_ALL_NF_SEW_BASE(KEY_VAL_FF_ALL_NF, NAME)
+  // clang-format on
+
+  static StringMap<unsigned> SegInsts = {
+      KEY_VAL_ALL_NF_SEW(vlseg),   KEY_VAL_FF_ALL_NF_SEW(vlseg),
+      KEY_VAL_ALL_NF_SEW(vlsseg),  KEY_VAL_ALL_NF_SEW(vloxseg),
+      KEY_VAL_ALL_NF_SEW(vluxseg), KEY_VAL_ALL_NF_SEW(vsseg),
+      KEY_VAL_ALL_NF_SEW(vssseg),  KEY_VAL_ALL_NF_SEW(vsoxseg),
+      KEY_VAL_ALL_NF_SEW(vsuxseg)};
+
+#undef KEY_VAL_ALL_NF_SEW
+#undef KEY_VAL_ALL_NF
+#undef KEY_VAL
+
+  return SegInsts.lookup(InstName);
+}
+
 void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (!RVVI->getIRName().empty())
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
-  if (RVVI->getNF() >= 2)
-    OS << "  NF = " + utostr(RVVI->getNF()) + ";\n";
 
   OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
+  OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
+     << ";\n";
 
   if (RVVI->hasManualCodegen()) {
     OS << "IsMasked = " << (RVVI->isMasked() ? "true" : "false") << ";\n";
@@ -458,14 +512,16 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   // Map to keep track of which builtin names have already been emitted.
   StringMap<RVVIntrinsic *> BuiltinMap;
 
-  // Print switch body when the ir name, ManualCodegen or policy changes from
-  // previous iteration.
+  // Print switch body when the ir name, ManualCodegen, policy or log2sew
+  // changes from previous iteration.
   RVVIntrinsic *PrevDef = Defs.begin()->get();
   for (auto &Def : Defs) {
     StringRef CurIRName = Def->getIRName();
     if (CurIRName != PrevDef->getIRName() ||
         (Def->getManualCodegen() != PrevDef->getManualCodegen()) ||
-        (Def->getPolicyAttrs() != PrevDef->getPolicyAttrs())) {
+        (Def->getPolicyAttrs() != PrevDef->getPolicyAttrs()) ||
+        (getSegInstLog2SEW(Def->getOverloadedName()) !=
+         getSegInstLog2SEW(PrevDef->getOverloadedName()))) {
       emitCodeGenSwitchBody(PrevDef, OS);
     }
     PrevDef = Def.get();

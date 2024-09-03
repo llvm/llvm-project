@@ -2879,6 +2879,10 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   dumpName(D);
 }
 
+void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
+  OS << (E->isInOut() ? " inout" : " out");
+}
+
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
