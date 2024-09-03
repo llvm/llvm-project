@@ -1,6 +1,5 @@
 # FIXME: This should fail the verifier
 # XFAIL: *
-# REQUIRES: amdgpu-registered-target
 # RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 
 # %1 is live out of %bb.1 through the loop edge, and therefore the kill flag is invalid.

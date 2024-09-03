@@ -125,6 +125,7 @@ Status MainLoopWindows::Run() {
 
     if (*signaled_event < m_read_fds.size()) {
       auto &KV = *std::next(m_read_fds.begin(), *signaled_event);
+      WSAResetEvent(KV.second.event);
       ProcessReadObject(KV.first);
     } else {
       assert(*signaled_event == m_read_fds.size());
