@@ -482,7 +482,7 @@ struct RegisterBindingFlags {
   bool DefaultGlobals = false;
 
   // used only when Resource == true
-  llvm::dxil::ResourceClass ResourceClass = llvm::dxil::ResourceClass::UAV;
+  std::optional<llvm::dxil::ResourceClass> ResourceClass;
 };
 
 static bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
@@ -626,22 +626,20 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
   return Flags;
 }
 
-enum class RegisterType {
-  SRV = static_cast<int>(llvm::dxil::ResourceClass::SRV),
-  UAV = static_cast<int>(llvm::dxil::ResourceClass::UAV),
-  CBuffer = static_cast<int>(llvm::dxil::ResourceClass::CBuffer),
-  Sampler = static_cast<int>(llvm::dxil::ResourceClass::Sampler),
-  C,
-  I,
-  Invalid
-};
+enum class RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
 
-static RegisterType
-convertResourceClassToRegisterType(llvm::dxil::ResourceClass RC) {
-  assert(RC >= llvm::dxil::ResourceClass::SRV &&
-         RC <= llvm::dxil::ResourceClass::Sampler &&
-         "unexpected resource class value");
-  return static_cast<RegisterType>(RC);
+static RegisterType getRegisterType(llvm::dxil::ResourceClass RC) {
+  switch (RC) {
+  case llvm::dxil::ResourceClass::SRV:
+    return RegisterType::SRV;
+  case llvm::dxil::ResourceClass::UAV:
+    return RegisterType::UAV;
+  case llvm::dxil::ResourceClass::CBuffer:
+    return RegisterType::CBuffer;
+  case llvm::dxil::ResourceClass::Sampler:
+    return RegisterType::Sampler;
+  }
+  llvm_unreachable("unexpected ResourceClass value");
 }
 
 static RegisterType getRegisterType(StringRef Slot) {
@@ -734,8 +732,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
-    RegisterType expRegType =
-        convertResourceClassToRegisterType(Flags.ResourceClass);
+    RegisterType expRegType = getRegisterType(Flags.ResourceClass.value());
     if (regType != expRegType) {
       S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
           << regTypeNum;
