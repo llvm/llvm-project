@@ -385,6 +385,7 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                                  Location loc,
                                  const TypeConverter *typeConverter,
                                  bool isUnsigned, Value llvmInput,
+                                 Value mlirInput,
                                  SmallVector<Value, 4> &operands) {
   Type inputType = llvmInput.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
@@ -398,23 +399,29 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
     return;
   }
 
+  // We need to check the type of the input before conversion to properly test
+  // for int8. This is because, in LLVM, fp8 type is converted to int8, so the
+  // fp8/int8 information is lost during the conversion process.
+  auto mlirInputType = cast<VectorType>(mlirInput.getType());
+  bool isInputInt8 = mlirInputType.getElementType().isInteger(8);
+  if (isInputInt8) {
+    // if element type is 8-bit signed or unsigned, ignore the isUnsigned flag
+    bool localIsUnsigned = isUnsigned;
+    if (elemType.isUnsignedInteger(8)) {
+      localIsUnsigned = true;
+    } else if (elemType.isSignedInteger(8)) {
+      localIsUnsigned = false;
+    }
+    Value sign = createI1Constant(rewriter, loc, !localIsUnsigned);
+    operands.push_back(sign);
+  }
+
   int64_t numBytes = vectorType.getNumElements();
   Type i32 = rewriter.getI32Type();
   VectorType vectorType32bits = VectorType::get(numBytes * 8 / 32, i32);
   auto llvmVectorType32bits = typeConverter->convertType(vectorType32bits);
-
   Value result = rewriter.createOrFold<LLVM::BitcastOp>(
       loc, llvmVectorType32bits, llvmInput);
-
-  // if element type is 8-bit signed or unsigned, ignore the isUnsigned flag
-  bool localIsUnsigned = isUnsigned;
-  if (elemType.isUnsignedInteger(8)) {
-    localIsUnsigned = true;
-  } else if (elemType.isSignedInteger(8)) {
-    localIsUnsigned = false;
-  }
-  Value sign = createI1Constant(rewriter, loc, !localIsUnsigned);
-  operands.push_back(sign);
   operands.push_back(result);
 }
 
@@ -590,18 +597,20 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
   auto elemSourceType = sourceVectorType.getElementType();
   auto elemDestType = destVectorType.getElementType();
 
-  if (elemSourceType.isF16() && elemDestType.isF32()) {
+  if (elemSourceType.isF16() && elemDestType.isF32())
     return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
-  }
-  if (elemSourceType.isBF16() && elemDestType.isF32()) {
+  if (elemSourceType.isBF16() && elemDestType.isF32())
     return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
-  } else if (elemSourceType.isF16() && elemDestType.isF16()) {
+  if (elemSourceType.isF16() && elemDestType.isF16())
     return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
-  } else if (elemSourceType.isBF16() && elemDestType.isBF16()) {
+  if (elemSourceType.isBF16() && elemDestType.isBF16())
     return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
-  } else if (elemSourceType.isInteger(8) && elemDestType.isInteger(32)) {
+  if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
     return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-  }
+  if (elemSourceType.isFloat8E4M3FN() && elemDestType.isF32())
+    return ROCDL::wmma_f32_16x16x16_fp8::getOperationName();
+  if (elemSourceType.isFloat8E5M2() && elemDestType.isF32())
+    return ROCDL::wmma_f32_16x16x16_bf8::getOperationName();
   return std::nullopt;
 }
 
@@ -662,8 +671,8 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     Location loc = op.getLoc();
     Type outType = typeConverter->convertType(op.getDestD().getType());
 
-    if (chipset.majorVersion != 11)
-      return op->emitOpError("WMMA only supported on gfx11");
+    if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
+      return op->emitOpError("WMMA only supported on gfx11 and gfx12");
 
     std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, chipset);
 
@@ -675,9 +684,9 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 
     SmallVector<Value, 4> operands;
     wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedA(),
-                         adaptor.getSourceA(), operands);
+                         adaptor.getSourceA(), op.getSourceA(), operands);
     wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedB(),
-                         adaptor.getSourceB(), operands);
+                         adaptor.getSourceB(), op.getSourceB(), operands);
     wmmaPushOutputOperand(rewriter, loc, typeConverter, adaptor.getDestC(),
                           op.getSubwordOffset(), op.getClamp(), operands);
 
