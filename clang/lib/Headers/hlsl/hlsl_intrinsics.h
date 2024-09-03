@@ -367,6 +367,17 @@ bool any(double4);
 /// \brief Returns the arcsine of the input value, \a Val.
 /// \param Val The input value.
 
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half asin(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half2 asin(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half3 asin(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half4 asin(half4);
+#endif
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 float asin(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
@@ -377,11 +388,11 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 float4 asin(float4);
 
 //===----------------------------------------------------------------------===//
-// asin builtins
+// asuint builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn uint asin(T Val)
-/// \brief Reinterprest.
+/// \fn uint asuint(T Val)
+/// \brief Interprets the bit pattern of x as an unsigned integer.
 /// \param Val The input value.
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
@@ -392,16 +403,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
 uint3 asuint(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
 uint4 asuint(float4);
-
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint asuint(double);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint2 asuint(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint3 asuint(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_asuint)
-uint4 asuint(double4);
 
 //===----------------------------------------------------------------------===//
 // atan builtins

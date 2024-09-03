@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -29,8 +28,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1473,6 +1470,25 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
+bool CheckArgTypeWithoutImplicits(
+    Sema *S, Expr *Arg, QualType ExpectedType,
+    llvm::function_ref<bool(clang::QualType PassedType)> Check) {
+
+  QualType ArgTy = Arg->IgnoreImpCasts()->getType();
+
+  clang::QualType BaseType =
+      ArgTy->isVectorType()
+          ? ArgTy->getAs<clang::VectorType>()->getElementType()
+          : ArgTy;
+
+  if (Check(BaseType)) {
+    S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+        << ArgTy << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
 bool CheckArgsTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
@@ -1497,6 +1513,14 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
   };
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                   checkAllFloatTypes);
+}
+
+bool CheckArgIsFloatOrIntWithoutImplicits(Sema *S, Expr *Arg) {
+  auto checkFloat = [](clang::QualType PassedType) -> bool {
+    return !PassedType->isFloat32Type() && !PassedType->isIntegerType();
+  };
+
+  return CheckArgTypeWithoutImplicits(S, Arg, S->Context.FloatTy, checkFloat);
 }
 
 bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
@@ -1760,16 +1784,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-
-    if(ArgTyA->isVectorType()){
-      auto VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
-      auto ReturnType = this->getASTContext().getVectorType(TheCall->getCallReturnType(this->getASTContext()), VecTy->getNumElements(),
-                                          VectorKind::Generic);
-
-      TheCall->setType(ReturnType);
-    }
+    Expr *Arg = TheCall->getArg(0);
+    if (CheckArgIsFloatOrIntWithoutImplicits(&SemaRef, Arg))
+      return true;
 
     break;
   }

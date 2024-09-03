@@ -27,11 +27,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
@@ -41,7 +39,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -65,7 +62,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -18871,14 +18867,14 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         {}, false, true));
   }
   case Builtin::BI__builtin_hlsl_elementwise_asuint: {
-    Value *Op = EmitScalarExpr(E->getArg(0));
-    E->dump();
+    Value *Op = EmitScalarExpr(E->getArg(0)->IgnoreImpCasts());
+
     llvm::Type *DestTy = llvm::Type::getInt32Ty(this->getLLVMContext());
 
-    if (Op -> getType()->isVectorTy()){
-      auto VecTy = E->getArg(0)->getType()->getAs<VectorType>();
-      DestTy = llvm::VectorType::get(DestTy, VecTy->getNumElements(),
-                                     VecTy->isSizelessVectorType());
+    if (Op->getType()->isVectorTy()) {
+      const VectorType *VecTy = E->getArg(0)->getType()->getAs<VectorType>();
+      DestTy = llvm::VectorType::get(
+          DestTy, ElementCount::getFixed(VecTy->getNumElements()));
     }
 
     return Builder.CreateBitCast(Op, DestTy);
