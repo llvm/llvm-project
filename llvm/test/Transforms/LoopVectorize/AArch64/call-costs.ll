@@ -126,6 +126,59 @@ exit:
   ret void
 }
 
+define void @call_scalarized(ptr noalias %src, ptr noalias %dst, double %0) {
+; CHECK-LABEL: define void @call_scalarized(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], double [[TMP0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[CMP295:%.*]] = fcmp ugt double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[CMP299:%.*]] = fcmp ugt double [[L]], 0.000000e+00
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP295]], [[CMP299]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[L]])
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    store double [[SQRT]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 100, %entry ], [ %iv.next, %loop.latch ]
+  %iv.next = add i64 %iv, -1
+  %gep.src = getelementptr double, ptr %src, i64 %iv.next
+  %l = load double, ptr %gep.src, align 8
+  %cmp295 = fcmp ugt double %0, 0.000000e+00
+  %cmp299 = fcmp ugt double %l, 0.000000e+00
+  %or.cond = or i1 %cmp295, %cmp299
+  br i1 %or.cond, label %loop.latch, label %then
+
+then:
+  %sqrt = call double @llvm.sqrt.f64(double %l)
+  %gep.dst = getelementptr double, ptr %dst, i64 %iv.next
+  store double %sqrt, ptr %gep.dst, align 8
+  br label %loop.latch
+
+loop.latch:
+  %tobool.not = icmp eq i64 %iv.next, 0
+  br i1 %tobool.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+declare double @llvm.sqrt.f64(double) #0
 declare double @llvm.powi.f64.i32(double, i32)
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 ;.
