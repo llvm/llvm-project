@@ -756,14 +756,13 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
 }
 
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
-                      APFloat::opStatus Status) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
-
+                      APFloat::opStatus Status, FPOptions FPO) {
   // [expr.pre]p4:
   //   If during the evaluation of an expression, the result is not
   //   mathematically defined [...], the behavior is undefined.
   // FIXME: C++ rules require us to not conform to IEEE 754 here.
   if (Result.isNan()) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
     S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
         << /*NaN=*/true << S.Current->getRange(OpPC);
     return S.noteUndefinedBehavior();
@@ -774,12 +773,11 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   if (S.inConstantContext())
     return true;
 
-  FPOptions FPO = E.asExpr()->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-
   if ((Status & APFloat::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
     // Inexact result means that it depends on rounding mode. If the requested
     // mode is dynamic, the evaluation cannot be made in compile time.
+    const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
     return false;
   }
@@ -788,12 +786,14 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
       (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
        FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
        FPO.getAllowFEnvAccess())) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
     return false;
   }
 
   if ((Status & APFloat::opStatus::opInvalidOp) &&
       FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
     // There is no usefully definable result.
     S.FFDiag(E);
     return false;
