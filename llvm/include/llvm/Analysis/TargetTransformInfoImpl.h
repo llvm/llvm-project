@@ -778,6 +778,7 @@ public:
     case Intrinsic::experimental_gc_relocate:
     case Intrinsic::coro_alloc:
     case Intrinsic::coro_begin:
+    case Intrinsic::coro_begin_custom_abi:
     case Intrinsic::coro_free:
     case Intrinsic::coro_end:
     case Intrinsic::coro_frame:
