@@ -599,27 +599,3 @@ def : Pat<(fcopysign FPR16INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_H_INX $rs1, (FCVT_H_D_INX $rs2, 0b111))>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR16INX:$rs2), (FSGNJ_D_INX $rs1, (FCVT_D_H_INX $rs2, FRM_RNE))>;
 } // Predicates = [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64]
-
-let Predicates = [HasStdExtZfhmin, NoStdExtZfh] in {
-// half->[u]int. Round-to-zero must be used.
-def : Pat<(i32 (any_fp_to_sint (f16 FPR16:$rs1))), (FCVT_W_S (FCVT_S_H $rs1, FRM_RNE), FRM_RTZ)>;
-def : Pat<(i32 (any_fp_to_uint (f16 FPR16:$rs1))), (FCVT_WU_S (FCVT_S_H $rs1, FRM_RNE), FRM_RTZ)>;
-} // Predicates = [HasStdExtZfhmin, NoStdExtZfh]
-
-let Predicates = [HasStdExtZhinxmin, NoStdExtZhinx] in {
-// half->[u]int. Round-to-zero must be used.
-def : Pat<(i32 (any_fp_to_sint FPR16INX:$rs1)), (FCVT_W_S_INX (FCVT_S_H_INX $rs1, FRM_RNE), FRM_RTZ)>;
-def : Pat<(i32 (any_fp_to_uint FPR16INX:$rs1)), (FCVT_WU_S_INX (FCVT_S_H_INX $rs1, FRM_RNE), FRM_RTZ)>;
-} // Predicates = [HasStdExtZhinxmin, NoStdExtZhinx]
-
-let Predicates = [HasStdExtZfhmin, NoStdExtZfh, IsRV64] in {
-// half->[u]int64. Round-to-zero must be used.
-def : Pat<(i64 (any_fp_to_sint (f16 FPR16:$rs1))), (FCVT_L_S (FCVT_S_H $rs1, FRM_RNE), FRM_RTZ)>;
-def : Pat<(i64 (any_fp_to_uint (f16 FPR16:$rs1))), (FCVT_LU_S (FCVT_S_H $rs1, FRM_RNE), FRM_RTZ)>;
-} // Predicates = [HasStdExtZfhmin, NoStdExtZfh, IsRV64]
-
-let Predicates = [HasStdExtZhinxmin, NoStdExtZhinx, IsRV64] in {
-// half->[u]int64. Round-to-zero must be used.
-def : Pat<(i64 (any_fp_to_sint FPR16INX:$rs1)), (FCVT_L_S_INX (FCVT_S_H_INX $rs1, FRM_RNE), FRM_RTZ)>;
-def : Pat<(i64 (any_fp_to_uint FPR16INX:$rs1)), (FCVT_LU_S_INX (FCVT_S_H_INX $rs1, FRM_RNE), FRM_RTZ)>;
-} // Predicates = [HasStdExtZhinxmin, NoStdExtZhinx, IsRV64]
