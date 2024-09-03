@@ -11804,9 +11804,10 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
 }
 
 Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
-  auto &Res = EntryToLastInstruction.FindAndConstruct(E);
-  if (Res.second)
-    return *Res.second;
+  auto It = EntryToLastInstruction.find(E);
+  if (It != EntryToLastInstruction.end())
+    return *It->second;
+  auto &Res = EntryToLastInstruction.try_emplace(E).first->second;
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
   // constant indeces).
@@ -11910,10 +11911,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
            return isa<ExtractElementInst, UndefValue>(V) ||
                   areAllOperandsNonInsts(V);
          })))
-      Res.second = FindLastInst();
+      Res = FindLastInst();
     else
-      Res.second = FindFirstInst();
-    return *Res.second;
+      Res = FindFirstInst();
+    return *Res;
   }
 
   // Find the last instruction. The common case should be that BB has been
@@ -11927,7 +11928,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     auto *Bundle = BlocksSchedules[BB]->getScheduleData(V);
     if (Bundle && Bundle->isPartOfBundle())
       for (; Bundle; Bundle = Bundle->NextInBundle)
-        Res.second = Bundle->Inst;
+        Res = Bundle->Inst;
   }
 
   // LastInst can still be null at this point if there's either not an entry
@@ -11948,10 +11949,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // not ideal. However, this should be exceedingly rare since it requires that
   // we both exit early from buildTree_rec and that the bundle be out-of-order
   // (causing us to iterate all the way to the end of the block).
-  if (!Res.second)
-    Res.second = FindLastInst();
-  assert(Res.second && "Failed to find last instruction in bundle");
-  return *Res.second;
+  if (!Res)
+    Res = FindLastInst();
+  assert(Res && "Failed to find last instruction in bundle");
+  return *Res;
 }
 
 void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
