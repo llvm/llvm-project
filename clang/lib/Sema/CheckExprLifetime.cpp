@@ -975,7 +975,6 @@ static bool pathOnlyHandlesGslPointer(IndirectLocalPath &Path) {
 static bool isAssginmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
   if (!CMD)
     return false;
-  assert(CMD->getOverloadedOperator() == OverloadedOperatorKind::OO_Equal);
   return isNormalAsisgnmentOperator(CMD) && CMD->param_size() == 1 &&
          CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
 }
