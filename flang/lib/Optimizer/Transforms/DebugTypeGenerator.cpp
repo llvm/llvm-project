@@ -271,6 +271,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
   uint64_t sizeInBits = 0;
   mlir::LLVM::DIExpressionAttr lenExpr = nullptr;
   mlir::LLVM::DIExpressionAttr locExpr = nullptr;
+  mlir::LLVM::DIVariableAttr varAttr = nullptr;
 
   if (hasDescriptor) {
     llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
@@ -289,7 +290,25 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     sizeInBits =
         charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind());
   } else {
-    return genPlaceholderType(context);
+    // In some situations, the len of the character is not part of the type but
+    // can be found at the runtime. Here we create an artificial variable that
+    // will contain that length. This variable is used as 'stringLength' in
+    // DIStringTypeAttr.
+    if (declOp && !declOp.getTypeparams().empty()) {
+      mlir::Operation *op = declOp.getTypeparams()[0].getDefiningOp();
+      if (auto unbox = mlir::dyn_cast_or_null<fir::UnboxCharOp>(op)) {
+        auto name =
+            mlir::StringAttr::get(context, "." + declOp.getUniqName().str());
+        mlir::LLVM::DITypeAttr Ty =
+            convertType(unbox.getResult(1).getType(), fileAttr, scope, declOp);
+        auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
+            context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
+            /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
+        mlir::OpBuilder builder(context);
+        unbox->setLoc(builder.getFusedLoc({unbox->getLoc()}, lvAttr));
+        varAttr = mlir::cast<mlir::LLVM::DIVariableAttr>(lvAttr);
+      }
+    }
   }
 
   // FIXME: Currently the DIStringType in llvm does not have the option to set
@@ -299,7 +318,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/nullptr, lenExpr, locExpr, encoding);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
