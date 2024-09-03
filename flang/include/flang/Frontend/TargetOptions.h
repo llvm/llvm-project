@@ -41,7 +41,7 @@ public:
 
   /// The real KINDs disabled for this target
   std::vector<int> disabledRealKinds;
-  
+
   /// The integer KINDs disabled for this target
   std::vector<int> disabledIntegerKinds;
 };

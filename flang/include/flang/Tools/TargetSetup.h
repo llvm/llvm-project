@@ -27,12 +27,10 @@ namespace Fortran::tools {
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
   for (auto realKind : targetOptions.disabledRealKinds) {
-    targetCharacteristics.DisableType(
-        common::TypeCategory::Real, realKind);
+    targetCharacteristics.DisableType(common::TypeCategory::Real, realKind);
   }
   for (auto intKind : targetOptions.disabledIntegerKinds) {
-    targetCharacteristics.DisableType(
-        common::TypeCategory::Integer, intKind);
+    targetCharacteristics.DisableType(common::TypeCategory::Integer, intKind);
   }
   targetCharacteristics.set_compilerOptionsString(compilerOptions)
       .set_compilerVersionString(compilerVersion);

@@ -442,11 +442,11 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   if (args.hasArg(clang::driver::options::OPT_fdisable_real_10)) {
     opts.disabledRealKinds.push_back(10);
   }
-  
+
   if (args.hasArg(clang::driver::options::OPT_fdisable_real_3)) {
     opts.disabledRealKinds.push_back(3);
   }
-  
+
   if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16)) {
     opts.disabledIntegerKinds.push_back(16);
   }
