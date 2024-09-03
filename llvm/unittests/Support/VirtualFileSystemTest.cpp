@@ -766,7 +766,7 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
 template <typename DirIter>
 static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   std::error_code EC;
-  SmallVector<StringRef, 4> Expected(ExpectedOut.begin(), ExpectedOut.end());
+  SmallVector<StringRef, 4> Expected(ExpectedOut);
   SmallVector<std::string, 4> InputToCheck;
 
   // Do not rely on iteration order to check for contents, sort both
@@ -1583,7 +1583,7 @@ public:
       IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS = new DummyFileSystem(),
       StringRef YAMLFilePath = "") {
     std::string VersionPlusContent("{\n  'version':0,\n");
-    VersionPlusContent += Content.slice(Content.find('{') + 1, StringRef::npos);
+    VersionPlusContent += Content.substr(Content.find('{') + 1);
     return getFromYAMLRawString(VersionPlusContent, ExternalFS, YAMLFilePath);
   }
 

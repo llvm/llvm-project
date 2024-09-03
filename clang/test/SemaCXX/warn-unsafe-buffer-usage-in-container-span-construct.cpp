@@ -79,6 +79,8 @@ namespace construct_wt_ptr_size {
     unsigned Y = 10;
     std::span<int> S = std::span{&X, 1}; // no-warning
     int Arr[10];
+    typedef int TenInts_t[10];
+    TenInts_t Arr2;
 
     S = std::span{&X, 2};                // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
     S = std::span{new int[10], 10};      // no-warning
@@ -90,6 +92,7 @@ namespace construct_wt_ptr_size {
     S = std::span{new int[10], 9};       // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}  // not smart enough to tell its safe
     S = std::span{new int[10], Y};       // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}  // not smart enough to tell its safe
     S = std::span{Arr, 10};              // no-warning
+    S = std::span{Arr2, 10};             // no-warning
     S = std::span{Arr, Y};               // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}  // not smart enough to tell its safe
     S = std::span{p, 0};                 // no-warning
   }

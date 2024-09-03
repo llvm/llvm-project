@@ -1210,39 +1210,31 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
                                          RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
+  auto getIdentity = [&]() {
+    Intrinsic::ID ID = getReductionIntrinsicID(RdxKind);
+    unsigned Opc = getArithmeticReductionInstruction(ID);
+    return ConstantExpr::getBinOpIdentity(Opc, SrcVecEltTy);
+  };
   switch (RdxKind) {
   case RecurKind::Add:
-    return Builder.CreateAddReduce(Src);
   case RecurKind::Mul:
-    return Builder.CreateMulReduce(Src);
   case RecurKind::And:
-    return Builder.CreateAndReduce(Src);
   case RecurKind::Or:
-    return Builder.CreateOrReduce(Src);
   case RecurKind::Xor:
-    return Builder.CreateXorReduce(Src);
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin:
+  case RecurKind::FMax:
+  case RecurKind::FMin:
+  case RecurKind::FMinimum:
+  case RecurKind::FMaximum:
+    return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
-    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
-                                    Src);
+    return Builder.CreateFAddReduce(getIdentity(), Src);
   case RecurKind::FMul:
-    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
-  case RecurKind::SMax:
-    return Builder.CreateIntMaxReduce(Src, true);
-  case RecurKind::SMin:
-    return Builder.CreateIntMinReduce(Src, true);
-  case RecurKind::UMax:
-    return Builder.CreateIntMaxReduce(Src, false);
-  case RecurKind::UMin:
-    return Builder.CreateIntMinReduce(Src, false);
-  case RecurKind::FMax:
-    return Builder.CreateFPMaxReduce(Src);
-  case RecurKind::FMin:
-    return Builder.CreateFPMinReduce(Src);
-  case RecurKind::FMinimum:
-    return Builder.CreateFPMinimumReduce(Src);
-  case RecurKind::FMaximum:
-    return Builder.CreateFPMaximumReduce(Src);
+    return Builder.CreateFMulReduce(getIdentity(), Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
@@ -1901,8 +1893,7 @@ Value *llvm::addRuntimeChecks(
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
   LLVMContext &Ctx = Loc->getContext();
-  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
-                                           Loc->getDataLayout());
+  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
@@ -1955,8 +1946,7 @@ Value *llvm::addDiffRuntimeChecks(
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
-  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
-                                           Loc->getDataLayout());
+  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;

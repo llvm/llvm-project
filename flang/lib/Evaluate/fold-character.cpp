@@ -97,7 +97,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Constant<T>{CharacterUtils<KIND>::NEW_LINE()}};
   } else if (name == "repeat") { // not elemental
     if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
-            context, funcRef.arguments())}) {
+            context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
       auto str{std::get<Scalar<T>>(*scalars)};
       auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
       if (n < 0) {
@@ -117,8 +117,8 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "trim") { // not elemental
-    if (auto scalar{
-            GetScalarConstantArguments<T>(context, funcRef.arguments())}) {
+    if (auto scalar{GetScalarConstantArguments<T>(
+            context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
       return Expr<T>{Constant<T>{
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }

@@ -27,14 +27,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptLexer.h"
+#include "Config.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 
 using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
+
+ScriptLexer::Buffer::Buffer(MemoryBufferRef mb)
+    : s(mb.getBuffer()), filename(mb.getBufferIdentifier()),
+      begin(mb.getBufferStart()) {
+  if (config->sysroot == "")
+    return;
+  StringRef path = filename;
+  for (; !path.empty(); path = sys::path::parent_path(path)) {
+    if (!sys::fs::equivalent(config->sysroot, path))
+      continue;
+    isUnderSysroot = true;
+    return;
+  }
+}
 
 ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {
   activeFilenames.insert(mb.getBufferIdentifier());

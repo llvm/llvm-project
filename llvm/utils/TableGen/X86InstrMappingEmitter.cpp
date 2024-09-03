@@ -242,7 +242,8 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     auto It = llvm::find_if(Predicates, [](const Record *R) {
       StringRef Name = R->getName();
       return Name == "HasAVXNECONVERT" || Name == "HasAVXVNNI" ||
-             Name == "HasAVXIFMA";
+             Name == "HasAVXIFMA" || Name == "HasAVXVNNIINT8" ||
+             Name == "HasAVXVNNIINT16";
     });
     if (It != Predicates.end())
       PredicateInsts[(*It)->getValueAsString("CondString")].push_back(NewInst);

@@ -3680,6 +3680,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::SMIN,       MVT::v2i64,   {  1,  3,  1,  1 } },
     { ISD::SMULO,      MVT::v8i64,   { 44, 44, 81, 93 } },
     { ISD::SMULO,      MVT::v16i32,  {  5, 12,  9, 11 } },
+    { ISD::SMULO,      MVT::v32i16,  {  6, 12, 17, 17 } },
+    { ISD::SMULO,      MVT::v64i8,   { 22, 28, 42, 42 } },
     { ISD::SSUBSAT,    MVT::v2i64,   {  2, 13,  9, 10 } },
     { ISD::SSUBSAT,    MVT::v4i64,   {  2, 15,  7,  8 } },
     { ISD::SSUBSAT,    MVT::v8i64,   {  2, 14,  7,  8 } },
@@ -3702,6 +3704,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::UMIN,       MVT::v2i64,   {  1,  3,  1,  1 } },
     { ISD::UMULO,      MVT::v8i64,   { 52, 52, 95, 104} },
     { ISD::UMULO,      MVT::v16i32,  {  5, 12,  8, 10 } },
+    { ISD::UMULO,      MVT::v32i16,  {  5, 13, 16, 16 } },
+    { ISD::UMULO,      MVT::v64i8,   { 18, 24, 30, 30 } },
     { ISD::UADDSAT,    MVT::v2i64,   {  1,  4,  4,  4 } },
     { ISD::UADDSAT,    MVT::v4i64,   {  1,  4,  4,  4 } },
     { ISD::UADDSAT,    MVT::v8i64,   {  1,  4,  4,  4 } },
@@ -4179,37 +4183,37 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FSQRT,      MVT::v4f32,   { 56, 56,  1,  2 } }, // Pentium III from http://www.agner.org/
   };
   static const CostKindTblEntry BMI64CostTbl[] = { // 64-bit targets
-    { ISD::CTTZ,       MVT::i64,     {  1 } },
+    { ISD::CTTZ,       MVT::i64,     {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry BMI32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTTZ,       MVT::i32,     {  1 } },
-    { ISD::CTTZ,       MVT::i16,     {  1 } },
-    { ISD::CTTZ,       MVT::i8,      {  1 } },
+    { ISD::CTTZ,       MVT::i32,     {  1,  1,  1,  1 } },
+    { ISD::CTTZ,       MVT::i16,     {  2,  1,  1,  1 } },
+    { ISD::CTTZ,       MVT::i8,      {  2,  1,  1,  1 } },
   };
   static const CostKindTblEntry LZCNT64CostTbl[] = { // 64-bit targets
-    { ISD::CTLZ,       MVT::i64,     {  1 } },
+    { ISD::CTLZ,       MVT::i64,     {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry LZCNT32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTLZ,       MVT::i32,     {  1 } },
-    { ISD::CTLZ,       MVT::i16,     {  2 } },
-    { ISD::CTLZ,       MVT::i8,      {  2 } },
+    { ISD::CTLZ,       MVT::i32,     {  1,  1,  1,  1 } },
+    { ISD::CTLZ,       MVT::i16,     {  2,  1,  1,  1 } },
+    { ISD::CTLZ,       MVT::i8,      {  2,  1,  1,  1 } },
   };
   static const CostKindTblEntry POPCNT64CostTbl[] = { // 64-bit targets
-    { ISD::CTPOP,      MVT::i64,     {  1, 1, 1, 1 } }, // popcnt
+    { ISD::CTPOP,      MVT::i64,     {  1,  1,  1,  1 } }, // popcnt
   };
   static const CostKindTblEntry POPCNT32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTPOP,      MVT::i32,     {  1, 1, 1, 1 } }, // popcnt
-    { ISD::CTPOP,      MVT::i16,     {  1, 1, 2, 2 } }, // popcnt(zext())
-    { ISD::CTPOP,      MVT::i8,      {  1, 1, 2, 2 } }, // popcnt(zext())
+    { ISD::CTPOP,      MVT::i32,     {  1,  1,  1,  1 } }, // popcnt
+    { ISD::CTPOP,      MVT::i16,     {  1,  1,  2,  2 } }, // popcnt(zext())
+    { ISD::CTPOP,      MVT::i8,      {  1,  1,  2,  2 } }, // popcnt(zext())
   };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
     { ISD::BSWAP,      MVT::i64,     {  1,  2,  1,  2 } },
-    { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR+XOR
-    { ISD::CTTZ,       MVT::i64,     {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR
+    { ISD::CTLZ,       MVT::i64,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTTZ,       MVT::i64,     {  2,  2,  3,  4 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i64,     {  2,  3,  1,  3 } },
@@ -4237,18 +4241,18 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::i8,      {  7,  9, 13, 14 } },
     { ISD::BSWAP,      MVT::i32,     {  1,  1,  1,  1 } },
     { ISD::BSWAP,      MVT::i16,     {  1,  2,  1,  2 } }, // ROL
-    { ISD::CTLZ,       MVT::i32,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ,       MVT::i16,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ,       MVT::i8,      {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTLZ,       MVT::i32,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i16,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i8,      {  2,  2,  5,  6 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  2,  2 } }, // BSR+XOR
     { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
-    { ISD::CTTZ,       MVT::i32,     {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ,       MVT::i16,     {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ,       MVT::i8,      {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  1 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  1 } }, // BSF
+    { ISD::CTTZ,       MVT::i32,     {  2,  2,  3,  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
     { ISD::CTPOP,      MVT::i8,      {  7,  6,  6,  6 } },

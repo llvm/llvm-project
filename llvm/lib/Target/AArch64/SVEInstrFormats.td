@@ -10,11 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Helper class to find the largest legal scalable vector type that can hold VT.
-// Non-matches return VT, which often means VT is the container type.
-class SVEContainerVT<ValueType VT> {
-  ValueType Value = !cond(
-    // fixed length vectors
+// Helper class to hold conversions of legal fixed-length vector types.
+class NEONType<ValueType VT> {
+  // The largest legal scalable vector type that can hold VT.
+  ValueType SVEContainer = !cond(
     !eq(VT, v8i8): nxv16i8,
     !eq(VT, v16i8): nxv16i8,
     !eq(VT, v4i16): nxv8i16,
@@ -31,13 +30,35 @@ class SVEContainerVT<ValueType VT> {
     !eq(VT, v2f64): nxv2f64,
     !eq(VT, v4bf16): nxv8bf16,
     !eq(VT, v8bf16): nxv8bf16,
-    // unpacked scalable vectors
+    true : untyped);
+}
+
+// Helper class to hold conversions of legal scalable vector types.
+class SVEType<ValueType VT> {
+  // The largest legal scalable vector type that can hold VT.
+  // Non-matches return VT because only packed types remain.
+  ValueType Packed = !cond(
     !eq(VT, nxv2f16): nxv8f16,
     !eq(VT, nxv4f16): nxv8f16,
     !eq(VT, nxv2f32): nxv4f32,
     !eq(VT, nxv2bf16): nxv8bf16,
     !eq(VT, nxv4bf16): nxv8bf16,
     true : VT);
+
+  // The legal scalable vector that is half the length of VT.
+  ValueType HalfLength = !cond(
+    !eq(VT, nxv8f16): nxv4f16,
+    !eq(VT, nxv4f16): nxv2f16,
+    !eq(VT, nxv4f32): nxv2f32,
+    !eq(VT, nxv8bf16): nxv4bf16,
+    !eq(VT, nxv4bf16): nxv2bf16,
+    true : untyped);
+
+  // The legal scalable vector that is quarter the length of VT.
+  ValueType QuarterLength = !cond(
+    !eq(VT, nxv8f16): nxv2f16,
+    !eq(VT, nxv8bf16): nxv2bf16,
+    true : untyped);
 }
 
 def SDT_AArch64Setcc : SDTypeProfile<1, 4, [
@@ -446,7 +467,6 @@ multiclass SVE_1_Op_PassthruUndef_Round_Pat<ValueType vtd, SDPatternOperator op,
 }
 
 def SVEDup0 : ComplexPattern<vAny, 0, "SelectDupZero", []>;
-def SVEDupNeg0 : ComplexPattern<vAny, 0, "SelectDupNegativeZero", []>;
 
 class SVE_1_Op_PassthruZero_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, Instruction inst>
@@ -2960,10 +2980,10 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>,
              SVEPseudo2Instr<NAME, 1>;
   // convert vt1 to a packed type for the intrinsic patterns
-  defvar packedvt1 = SVEContainerVT<vt1>.Value;
+  defvar packedvt1 = SVEType<vt1>.Packed;
 
   // convert vt3 to a packed type for the intrinsic patterns
-  defvar packedvt3 = SVEContainerVT<vt3>.Value;
+  defvar packedvt3 = SVEType<vt3>.Packed;
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
@@ -2983,7 +3003,7 @@ multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
              SVEPseudo2Instr<NAME, 1>;
 
   // convert vt1 to a packed type for the intrinsic patterns
-  defvar packedvt1 = SVEContainerVT<vt1>.Value;
+  defvar packedvt1 = SVEType<vt1>.Packed;
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, vt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
@@ -8709,6 +8729,12 @@ multiclass sve_float_dot<bit bf, bit o2, ZPRRegOp dst_ty, ZPRRegOp src_ty,
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, InVT, InVT, !cast<Instruction>(NAME)>;
 }
 
+multiclass sve_fp8_dot<bit bf, ZPRRegOp dst_ty, string asm> {
+  def NAME : sve_float_dot<bf, 0b1, dst_ty, ZPR8, asm>{
+    let Uses = [FPMR, FPCR];
+  }
+}
+
 class sve_float_dot_indexed<bit bf, ZPRRegOp dst_ty, ZPRRegOp src1_ty,
                             ZPRRegOp src2_ty, Operand iop_ty, string asm>
 : I<(outs dst_ty:$Zda), (ins dst_ty:$_Zda, src1_ty:$Zn, src2_ty:$Zm, iop_ty:$iop),
@@ -10213,6 +10239,7 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
   let Inst{11-10} = opc;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+  let Uses = [FPMR, FPCR];
 }
 
 multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic> {
@@ -10232,6 +10259,7 @@ class sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic,
   let Inst{9-6} = Zn;
   let Inst{5} = 0b0;
   let Inst{4-0} = Zd;
+  let Uses = [FPMR, FPCR];
 }
 
 multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src> {
@@ -10260,6 +10288,7 @@ class sve2_fp8_mla_long_by_indexed_elem<bit T, string mnemonic>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR16.ElementSize;
+  let Uses = [FPMR, FPCR];
 }
 
 // FP8 Widening Multiply-Add (Long)/(Long Long) Group
@@ -10283,6 +10312,7 @@ class sve2_fp8_mla<bits<3>opc, ZPRRegOp dst_ty, string mnemonic>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = dst_ty.ElementSize;
+  let Uses = [FPMR, FPCR];
 }
 
 // FP8 Widening Multiply-Add Long Long - Indexed Group
@@ -10307,15 +10337,48 @@ class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR32.ElementSize;
+  let Uses = [FPMR, FPCR];
+}
+
+class sve_fp8_dot_indexed<bits<4> opc, ZPRRegOp dst_ty, Operand iop_ty, string mnemonic>
+: I<(outs dst_ty:$Zda), (ins dst_ty:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, iop_ty:$iop),
+    mnemonic, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<3> Zm;
+  let Inst{31-23} = 0b011001000;
+  let Inst{22}    = opc{3};
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = opc{2-1};
+  let Inst{18-16} = Zm;
+  let Inst{15-12} = 0b0100;
+  let Inst{11}    = opc{0};
+  let Inst{10}    = 0b1;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Uses = [FPMR, FPCR];
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let hasSideEffects = 0;
+  let mayRaiseFPException = 1;
 }
 
 // FP8 Widening Dot-Product - Indexed Group
-multiclass sve2_fp8_dot_indexed<string mnemonic>{
-  def NAME : sve_float_dot_indexed<0b0, ZPR16, ZPR8, ZPR3b8, VectorIndexH, mnemonic> {
+multiclass sve2_fp8_dot_indexed_h<string asm>{
+  def NAME : sve_fp8_dot_indexed<{0, ?, ?, ?}, ZPR16, VectorIndexH, asm> {
     bits<3> iop;
+
     let Inst{20-19} = iop{2-1};
-    let Inst{11} = iop{0};
-    let Inst{10} = 0b1;
+    let Inst{11}    = iop{0};
+  }
+}
+
+multiclass sve2_fp8_dot_indexed_s<string asm>{
+  def NAME : sve_fp8_dot_indexed<{1, ?, ?, 0}, ZPR32, VectorIndexS32b, asm> {
+    bits<2> iop;
+
+    let Inst{20-19} = iop{1-0};
   }
 }
 

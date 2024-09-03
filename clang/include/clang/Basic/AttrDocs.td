@@ -1382,6 +1382,34 @@ Sample usage:
   }];
 }
 
+def NoConvergentDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute prevents a function from being treated as convergent, which
+means that optimizations can only move calls to that function to
+control-equivalent blocks. If a statement is marked as ``noconvergent`` and
+contains calls, it also prevents those calls from being treated as convergent.
+In other words, those calls are not restricted to only being moved to
+control-equivalent blocks.
+
+In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
+declarations and calls are treated as convergent by default for correctness.
+This ``noconvergent`` attribute is helpful for developers to prevent them from
+being treated as convergent when it's safe.
+
+.. code-block:: c
+
+  __device__ float bar(float);
+  __device__ float foo(float) __attribute__((noconvergent)) {}
+
+  __device__ int example(void) {
+    float x;
+    [[clang::noconvergent]] x = bar(x);
+  }
+
+  }];
+}
+
 def NoSplitStackDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1564,6 +1592,12 @@ succeeds but Clang emits a warning specifying that the function is deprecated.
 Finally, if Clang is instructed to compile code for macOS 10.7, the call
 fails because ``f()`` is no longer available.
 
+Clang is instructed to compile code for a minimum deployment version using
+the ``-target`` or ``-mtargetos`` command line arguments. For example,
+macOS 10.7 would be specified as ``-target x86_64-apple-macos10.7`` or
+``-mtargetos=macos10.7``. Variants like Mac Catalyst are specified as
+``-target arm64-apple-ios15.0-macabi`` or ``-mtargetos=ios15.0-macabi``
+
 The availability attribute is a comma-separated list starting with the
 platform name and then including clauses specifying important milestones in the
 declaration's lifetime (in any order) along with additional information. Those
@@ -1608,41 +1642,61 @@ the implicitly inferred availability attributes. If no availability attribute
 specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
-``ios``
-  Apple's iOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-ios*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=ios*version*``
-  command-line argument.
-
-``macos``
-  Apple's macOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-macos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=macos*version*``
-  command-line argument. ``macosx`` is supported for
-  backward-compatibility reasons, but it is deprecated.
-
-``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-tvos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=tvos*version*``
-  command-line argument.
-
-``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-watchos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=watchos*version*``
-  command-line argument.
-
-``visionos``
-  Apple's visionOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-visionos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=visionos*version*``
-  command-line argument.
-
+``iOS``
+``macOS``
+``tvOS``
+``watchOS``
+``iOSApplicationExtension``
+``macOSApplicationExtension``
+``tvOSApplicationExtension``
+``watchOSApplicationExtension``
+``macCatalyst``
+``macCatalystApplicationExtension``
+``visionOS``
+``visionOSApplicationExtension``
 ``driverkit``
-  Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the ``-target *arch*-apple-driverkit*version*``
-  command line argument.
+``swift``
+``android``
+``fuchsia``
+``ohos``
+``zos``
+``ShaderModel``
+
+Some platforms have alias names:
+
+``ios``
+``macos``
+``macosx (deprecated)``
+``tvos``
+``watchos``
+``ios_app_extension``
+``macos_app_extension``
+``macosx_app_extension (deprecated)``
+``tvos_app_extension``
+``watchos_app_extension``
+``maccatalyst``
+``maccatalyst_app_extension``
+``visionos``
+``visionos_app_extension``
+``shadermodel``
+
+Supported environment names for the ShaderModel platform:
+
+``pixel``
+``vertex``
+``geometry``
+``hull``
+``domain``
+``compute``
+``raygeneration``
+``intersection``
+``anyhit``
+``closesthit``
+``miss``
+``callable``
+``mesh``
+``amplification``
+``library``
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -2317,6 +2371,25 @@ section.
   }];
 }
 
+def BPFFastCallDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Functions annotated with this attribute are likely to be inlined by BPF JIT.
+It is assumed that inlined implementation uses less caller saved registers,
+than a regular function.
+Specifically, the following registers are likely to be preserved:
+- ``R0`` if function return value is ``void``;
+- ``R2-R5` if function takes 1 argument;
+- ``R3-R5` if function takes 2 arguments;
+- ``R4-R5` if function takes 3 arguments;
+- ``R5`` if function takes 4 arguments;
+
+For such functions Clang generates code pattern that allows BPF JIT
+to recognize and remove unnecessary spills and fills of the preserved
+registers.
+  }];
+}
+
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (MIPS)";
@@ -2453,7 +2526,7 @@ For example:
   typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
   #endif
 
-Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+Creates a type ``fixed_vint8m1_t`` that is a fixed-length variant of
 ``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
 can be used in globals, structs, unions, and arrays, all of which are
 unsupported for sizeless types.
@@ -6774,77 +6847,103 @@ def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 The attribute ``[[clang::unsafe_buffer_usage]]`` should be placed on functions
-that need to be avoided as they are prone to buffer overflows. It is designed to
-work together with the off-by-default compiler warning ``-Wunsafe-buffer-usage``
-to help codebases transition away from raw pointer based buffer management,
-in favor of safer abstractions such as C++20 ``std::span``. The attribute causes
-``-Wunsafe-buffer-usage`` to warn on every use of the function, and it may
-enable ``-Wunsafe-buffer-usage`` to emit automatic fix-it hints
-which would help the user replace such unsafe functions with safe
+that need to be avoided as they are prone to buffer overflows or unsafe buffer
+struct fields. It is designed to work together with the off-by-default compiler
+warning ``-Wunsafe-buffer-usage``to help codebases transition away from raw pointer
+based buffer management, in favor of safer abstractions such as C++20 ``std::span``.
+The attribute causes ``-Wunsafe-buffer-usage`` to warn on every use of the function or
+the field it is attached to, and it may also lead to emission of automatic fix-it
+hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-The attribute does not suppress ``-Wunsafe-buffer-usage`` inside the function
-to which it is attached. These warnings still need to be addressed.
+* Attribute attached to functions: The attribute does not suppress 
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+  These warnings still need to be addressed.
 
-The attribute is warranted even if the only way a function can overflow
-the buffer is by violating the function's preconditions. For example, it
-would make sense to put the attribute on function ``foo()`` below because
-passing an incorrect size parameter would cause a buffer overflow:
+  The attribute is warranted even if the only way a function can overflow
+  the buffer is by violating the function's preconditions. For example, it
+  would make sense to put the attribute on function ``foo()`` below because
+  passing an incorrect size parameter would cause a buffer overflow:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  [[clang::unsafe_buffer_usage]]
-  void foo(int *buf, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
-      buf[i] = i;
+    [[clang::unsafe_buffer_usage]]
+    void foo(int *buf, size_t size) {
+      for (size_t i = 0; i < size; ++i) {
+        buf[i] = i;
+      }
     }
-  }
 
-The attribute is NOT warranted when the function uses safe abstractions,
-assuming that these abstractions weren't misused outside the function.
-For example, function ``bar()`` below doesn't need the attribute,
-because assuming that the container ``buf`` is well-formed (has size that
-fits the original buffer it refers to), overflow cannot occur:
+  The attribute is NOT warranted when the function uses safe abstractions,
+  assuming that these abstractions weren't misused outside the function.
+  For example, function ``bar()`` below doesn't need the attribute,
+  because assuming that the container ``buf`` is well-formed (has size that
+  fits the original buffer it refers to), overflow cannot occur:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  void bar(std::span<int> buf) {
-    for (size_t i = 0; i < buf.size(); ++i) {
-      buf[i] = i;
+    void bar(std::span<int> buf) {
+      for (size_t i = 0; i < buf.size(); ++i) {
+        buf[i] = i;
+      }
     }
-  }
 
-In this case function ``bar()`` enables the user to keep the buffer
-"containerized" in a span for as long as possible. On the other hand,
-Function ``foo()`` in the previous example may have internal
-consistency, but by accepting a raw buffer it requires the user to unwrap
-their span, which is undesirable according to the programming model
-behind ``-Wunsafe-buffer-usage``.
+  In this case function ``bar()`` enables the user to keep the buffer
+  "containerized" in a span for as long as possible. On the other hand,
+  Function ``foo()`` in the previous example may have internal
+  consistency, but by accepting a raw buffer it requires the user to unwrap
+  their span, which is undesirable according to the programming model
+  behind ``-Wunsafe-buffer-usage``.
 
-The attribute is warranted when a function accepts a raw buffer only to
-immediately put it into a span:
+  The attribute is warranted when a function accepts a raw buffer only to
+  immediately put it into a span:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  [[clang::unsafe_buffer_usage]]
-  void baz(int *buf, size_t size) {
-    std::span<int> sp{ buf, size };
-    for (size_t i = 0; i < sp.size(); ++i) {
-      sp[i] = i;
+    [[clang::unsafe_buffer_usage]]
+    void baz(int *buf, size_t size) {
+      std::span<int> sp{ buf, size };
+      for (size_t i = 0; i < sp.size(); ++i) {
+        sp[i] = i;
+      }
     }
-  }
 
-In this case ``baz()`` does not contain any unsafe operations, but the awkward
-parameter type causes the caller to unwrap the span unnecessarily.
-Note that regardless of the attribute, code inside ``baz()`` isn't flagged
-by ``-Wunsafe-buffer-usage`` as unsafe. It is definitely undesirable,
-but if ``baz()`` is on an API surface, there is no way to improve it
-to make it as safe as ``bar()`` without breaking the source and binary
-compatibility with existing users of the function. In such cases
-the proper solution would be to create a different function (possibly
-an overload of ``baz()``) that accepts a safe container like ``bar()``,
-and then use the attribute on the original ``baz()`` to help the users
-update their code to use the new function.
+  In this case ``baz()`` does not contain any unsafe operations, but the awkward
+  parameter type causes the caller to unwrap the span unnecessarily.
+  Note that regardless of the attribute, code inside ``baz()`` isn't flagged
+  by ``-Wunsafe-buffer-usage`` as unsafe. It is definitely undesirable,
+  but if ``baz()`` is on an API surface, there is no way to improve it
+  to make it as safe as ``bar()`` without breaking the source and binary
+  compatibility with existing users of the function. In such cases
+  the proper solution would be to create a different function (possibly
+  an overload of ``baz()``) that accepts a safe container like ``bar()``,
+  and then use the attribute on the original ``baz()`` to help the users
+  update their code to use the new function.
+
+* Attribute attached to fields: The attribute should only be attached to 
+  struct fields, if the fields can not be updated to a safe type with bounds 
+  check, such as std::span. In other words, the buffers prone to unsafe accesses 
+  should always be updated to use safe containers/views and attaching the attribute 
+  must be last resort when such an update is infeasible.
+
+  The attribute can be placed on individual fields or a set of them as shown below.
+
+  .. code-block:: c++
+
+    struct A {
+      [[clang::unsafe_buffer_usage]]
+      int *ptr1;
+
+      [[clang::unsafe_buffer_usage]]
+      int *ptr2, buf[10];
+
+      [[clang::unsafe_buffer_usage]]
+      size_t sz;
+    };
+
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
+
   }];
 }
 
@@ -7319,6 +7418,43 @@ The default for the attribute is controlled by the ``-fzero-call-used-regs``
 flag.
 
 .. _Return-Oriented Programming: https://en.wikipedia.org/wiki/Return-oriented_programming
+  }];
+}
+
+def WaveSizeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``WaveSize`` attribute specify a wave size on a shader entry point in order
+to indicate either that a shader depends on or strongly prefers a specific wave
+size.
+There're 2 versions of the attribute: ``WaveSize`` and ``RangedWaveSize``.
+The syntax for ``WaveSize`` is:
+
+.. code-block:: text
+
+  ``[WaveSize(<numLanes>)]``
+
+The allowed wave sizes that an HLSL shader may specify are the powers of 2
+between 4 and 128, inclusive.
+In other words, the set: [4, 8, 16, 32, 64, 128].
+
+The syntax for ``RangedWaveSize`` is:
+
+.. code-block:: text
+
+  ``[WaveSize(<minWaveSize>, <maxWaveSize>, [prefWaveSize])]``
+
+Where minWaveSize is the minimum wave size supported by the shader representing
+the beginning of the allowed range, maxWaveSize is the maximum wave size
+supported by the shader representing the end of the allowed range, and
+prefWaveSize is the optional preferred wave size representing the size expected
+to be the most optimal for this shader.
+
+``WaveSize`` is available for HLSL shader model 6.6 and later.
+``RangedWaveSize`` available for HLSL shader model 6.8 and later.
+
+The full documentation is available here: https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_WaveSize.html
+and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
 }
 

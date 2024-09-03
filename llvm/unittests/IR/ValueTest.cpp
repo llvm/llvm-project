@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Value.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -389,6 +390,29 @@ TEST(ValueTest, replaceUsesOutsideBlockDbgVariableRecord) {
   EXPECT_TRUE(DVR1->getVariableLocationOp(0) == cast<Value>(A));
   // These users are outside Entry so should be changed.
   EXPECT_TRUE(DVR2->getVariableLocationOp(0) == cast<Value>(B));
+}
+
+TEST(GlobalTest, Initializer) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  Constant *Int8Null = Constant::getNullValue(Int8Ty);
+
+  GlobalVariable *GV = new GlobalVariable(
+      M, Int8Ty, false, GlobalValue::ExternalLinkage, nullptr, "GV");
+
+  EXPECT_FALSE(GV->hasInitializer());
+  GV->setInitializer(Int8Null);
+  EXPECT_TRUE(GV->hasInitializer());
+  EXPECT_EQ(GV->getInitializer(), Int8Null);
+  GV->setInitializer(nullptr);
+  EXPECT_FALSE(GV->hasInitializer());
+
+  EXPECT_EQ(LLVMGetInitializer(wrap(GV)), nullptr);
+  LLVMSetInitializer(wrap(GV), wrap(Int8Null));
+  EXPECT_EQ(LLVMGetInitializer(wrap(GV)), wrap(Int8Null));
+  LLVMSetInitializer(wrap(GV), nullptr);
+  EXPECT_EQ(LLVMGetInitializer(wrap(GV)), nullptr);
 }
 
 } // end anonymous namespace

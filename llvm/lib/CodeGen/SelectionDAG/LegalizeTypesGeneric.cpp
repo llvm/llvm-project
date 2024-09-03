@@ -403,6 +403,17 @@ SDValue DAGTypeLegalizer::ExpandOp_EXTRACT_ELEMENT(SDNode *N) {
   return N->getConstantOperandVal(1) ? Hi : Lo;
 }
 
+// Split the integer operand in two and create a second FAKE_USE node for
+// the other half. The original SDNode is updated in place.
+SDValue DAGTypeLegalizer::ExpandOp_FAKE_USE(SDNode *N) {
+  SDValue Lo, Hi;
+  SDValue Chain = N->getOperand(0);
+  GetExpandedOp(N->getOperand(1), Lo, Hi);
+  SDValue LoUse = DAG.getNode(ISD::FAKE_USE, SDLoc(), MVT::Other, Chain, Lo);
+  DAG.UpdateNodeOperands(N, LoUse, Hi);
+  return SDValue(N, 0);
+}
+
 SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {
   // The vector type is legal but the element type needs expansion.
   EVT VecVT = N->getValueType(0);

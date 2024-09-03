@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: test_load_add_32
 ; CHECK: c3 21
-; CHECK: lock *(u32 *)(r1 + 0) += r2
+; CHECK: lock *(u32 *)(r1 + 0) += w2
 define void @test_load_add_32(ptr %p, i32 zeroext %v) {
 entry:
   atomicrmw add ptr %p, i32 %v seq_cst

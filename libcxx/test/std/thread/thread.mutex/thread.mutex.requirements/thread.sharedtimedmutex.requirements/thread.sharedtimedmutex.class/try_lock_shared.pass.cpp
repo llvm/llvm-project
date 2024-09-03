@@ -5,11 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
-
-// ALLOW_RETRIES: 2
 
 // <shared_mutex>
 
@@ -17,58 +15,66 @@
 
 // bool try_lock_shared();
 
-#include <cassert>
-#include <chrono>
-#include <cstdlib>
 #include <shared_mutex>
+#include <cassert>
 #include <thread>
 #include <vector>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
-std::shared_timed_mutex m;
+int main(int, char**) {
+  // Try to lock-shared a mutex that is not locked yet. This should succeed.
+  {
+    std::shared_timed_mutex m;
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        bool succeeded = m.try_lock_shared();
+        assert(succeeded);
+        m.unlock_shared();
+      }));
+    }
 
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
+    for (auto& t : threads)
+      t.join();
+  }
 
-
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
-ms Tolerance = ms(200);
-#else
-ms Tolerance = ms(200 * 5);
-#endif
-
-void f()
-{
-    time_point t0 = Clock::now();
-    assert(!m.try_lock_shared());
-    assert(!m.try_lock_shared());
-    assert(!m.try_lock_shared());
-    while(!m.try_lock_shared())
-        std::this_thread::yield();
-    time_point t1 = Clock::now();
-    m.unlock_shared();
-    ns d = t1 - t0 - ms(250);
-    assert(d < Tolerance);  // within tolerance
-}
-
-int main(int, char**)
-{
+  // Try to lock-shared a mutex that is already exclusively locked. This should fail.
+  {
+    std::shared_timed_mutex m;
     m.lock();
-    std::vector<std::thread> v;
-    for (int i = 0; i < 5; ++i)
-        v.push_back(support::make_test_thread(f));
-    std::this_thread::sleep_for(ms(250));
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        bool succeeded = m.try_lock_shared();
+        assert(!succeeded);
+      }));
+    }
+
+    for (auto& t : threads)
+      t.join();
+
     m.unlock();
-    for (auto& t : v)
-        t.join();
+  }
+
+  // Try to lock-shared a mutex that is already lock-shared. This should succeed.
+  {
+    std::shared_timed_mutex m;
+    m.lock_shared();
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        bool succeeded = m.try_lock_shared();
+        assert(succeeded);
+        m.unlock_shared();
+      }));
+    }
+    m.unlock_shared();
+
+    for (auto& t : threads)
+      t.join();
+  }
 
   return 0;
 }

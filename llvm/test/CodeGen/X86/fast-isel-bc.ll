@@ -4,7 +4,7 @@
 
 ; PR4684
 
-declare void @func2(x86_mmx)
+declare void @func2(<1 x i64>)
 
 ; This isn't spectacular, but it's MMX code at -O0...
 
@@ -28,7 +28,7 @@ define void @func1() nounwind {
 ; X64-NEXT:    callq _func2
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
-  %tmp0 = bitcast <2 x i32> <i32 0, i32 2> to x86_mmx
-  call void @func2(x86_mmx %tmp0)
+  %tmp0 = bitcast <2 x i32> <i32 0, i32 2> to <1 x i64>
+  call void @func2(<1 x i64> %tmp0)
   ret void
 }

@@ -41,15 +41,6 @@ public:
   static constexpr size_t MIN_ALIGNMENT =
       cpp::max(BlockType::ALIGNMENT, alignof(max_align_t));
 
-  struct HeapStats {
-    size_t total_bytes;
-    size_t bytes_allocated;
-    size_t cumulative_allocated;
-    size_t cumulative_freed;
-    size_t total_allocate_calls;
-    size_t total_free_calls;
-  };
-
   constexpr FreeListHeap() : begin_(&_end), end_(&__llvm_libc_heap_limit) {}
 
   constexpr FreeListHeap(span<cpp::byte> region)
@@ -62,8 +53,6 @@ public:
   void free(void *ptr);
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
-
-  const HeapStats &heap_stats() const { return heap_stats_; }
 
   cpp::span<cpp::byte> region() const { return {begin_, end_}; }
 
@@ -82,7 +71,6 @@ private:
   cpp::byte *begin_;
   cpp::byte *end_;
   FreeListType freelist_{DEFAULT_BUCKETS};
-  HeapStats heap_stats_{};
 };
 
 template <size_t BUFF_SIZE, size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()>
@@ -100,7 +88,6 @@ private:
 
 template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::init() {
   LIBC_ASSERT(!is_initialized_ && "duplicate initialization");
-  heap_stats_.total_bytes = region().size();
   auto result = BlockType::init(region());
   BlockType *block = *result;
   freelist_.add_chunk(block_to_span(block));
@@ -139,10 +126,6 @@ void *FreeListHeap<NUM_BUCKETS>::allocate_impl(size_t alignment, size_t size) {
 
   chunk_block->mark_used();
 
-  heap_stats_.bytes_allocated += size;
-  heap_stats_.cumulative_allocated += size;
-  heap_stats_.total_allocate_calls += 1;
-
   return chunk_block->usable_space();
 }
 
@@ -171,35 +154,26 @@ template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");
 
   BlockType *chunk_block = BlockType::from_usable_space(bytes);
-
-  size_t size_freed = chunk_block->inner_size();
+  LIBC_ASSERT(chunk_block->next() && "sentinel last block cannot be freed");
   LIBC_ASSERT(chunk_block->used() && "The block is not in-use");
   chunk_block->mark_free();
 
   // Can we combine with the left or right blocks?
-  BlockType *prev = chunk_block->prev();
-  BlockType *next = nullptr;
+  BlockType *prev_free = chunk_block->prev_free();
+  BlockType *next = chunk_block->next();
 
-  if (chunk_block->next())
-    next = chunk_block->next();
-
-  if (prev != nullptr && !prev->used()) {
+  if (prev_free != nullptr) {
     // Remove from freelist and merge
-    freelist_.remove_chunk(block_to_span(prev));
-    chunk_block = chunk_block->prev();
+    freelist_.remove_chunk(block_to_span(prev_free));
+    chunk_block = prev_free;
     chunk_block->merge_next();
   }
-
-  if (next != nullptr && !next->used()) {
+  if (!next->used()) {
     freelist_.remove_chunk(block_to_span(next));
     chunk_block->merge_next();
   }
   // Add back to the freelist
   freelist_.add_chunk(block_to_span(chunk_block));
-
-  heap_stats_.bytes_allocated -= size_freed;
-  heap_stats_.cumulative_freed += size_freed;
-  heap_stats_.total_free_calls += 1;
 }
 
 // Follows constract of the C standard realloc() function

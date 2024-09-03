@@ -75,13 +75,20 @@ private:
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
-  return target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                   rel.getType(config->isMips64EL));
+  return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
+                                       rel.getType(config->isMips64EL));
 }
 
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rela &rel) {
+  return rel.r_addend;
+}
+
+// Currently, we assume all input CREL relocations have an explicit addend.
+template <class ELFT>
+static uint64_t getAddend(InputSectionBase &sec,
+                          const typename ELFT::Crel &rel) {
   return rel.r_addend;
 }
 
@@ -227,7 +234,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   markSymbol(symtab.find(config->fini));
   for (StringRef s : config->undefined)
     markSymbol(symtab.find(s));
-  for (StringRef s : script->referencedSymbols)
+  for (StringRef s : ctx.script->referencedSymbols)
     markSymbol(symtab.find(s));
   for (auto [symName, _] : symtab.cmseSymMap) {
     markSymbol(symtab.cmseSymMap[symName].sym);
@@ -239,7 +246,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // all of them. We also want to preserve personality routines and LSDA
   // referenced by .eh_frame sections, so we scan them for that here.
   for (EhInputSection *eh : ctx.ehInputSections) {
-    const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+    const RelsOrRelas<ELFT> rels =
+        eh->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
     if (rels.areRelocsRel())
       scanEhFrameSection(*eh, rels.rels);
     else if (rels.relas.size())
@@ -285,7 +293,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
-    if (isReserved(sec) || script->shouldKeep(sec)) {
+    if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
       enqueue(sec, 0);
     } else if ((!config->zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
@@ -309,6 +317,8 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
     for (const typename ELFT::Rel &rel : rels.rels)
       resolveReloc(sec, rel, false);
     for (const typename ELFT::Rela &rel : rels.relas)
+      resolveReloc(sec, rel, false);
+    for (const typename ELFT::Crel &rel : rels.crels)
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)

@@ -119,7 +119,7 @@ static RT_API_ATTRS bool EditBOZInput(
   std::memset(n, 0, bytes);
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
-      (isHostLittleEndian ? significantBytes - 1 : 0)};
+      (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
   int shift{((digits - 1) * LOG2_BASE) & 7};
   while (digits > 0) {
     char32_t ch{*io.NextInField(remaining, edit)};
@@ -507,18 +507,29 @@ static RT_API_ATTRS void RaiseFPExceptions(
 #define RAISE std::feraiseexcept
 #endif
 #endif // !defined(RT_DEVICE_COMPILATION)
+
+// Some environment (e.g. emscripten, musl) don't define FE_OVERFLOW as allowed
+// by c99 (but not c++11) :-/
+#if defined(FE_OVERFLOW) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Overflow) {
     RAISE(FE_OVERFLOW);
   }
+#endif
+#if defined(FE_UNDERFLOW) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Underflow) {
     RAISE(FE_UNDERFLOW);
   }
+#endif
+#if defined(FE_INEXACT) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Inexact) {
     RAISE(FE_INEXACT);
   }
+#endif
+#if defined(FE_INVALID) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Invalid) {
     RAISE(FE_INVALID);
   }
+#endif
 #undef RAISE
 }
 

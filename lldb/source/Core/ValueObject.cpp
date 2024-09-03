@@ -195,7 +195,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
       }
 
     } else {
-      m_error.SetErrorString("out of scope");
+      m_error = Status::FromErrorString("out of scope");
     }
   }
   return m_error.Success();
@@ -362,7 +362,7 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   Scalar scalar_value;
 
   if (!ResolveValue(scalar_value)) {
-    error.SetErrorString("failed to get a scalar result");
+    error = Status::FromErrorString("failed to get a scalar result");
     return false;
   }
 
@@ -780,7 +780,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
-    error.SetErrorString("unable to read value");
+    error = Status::FromErrorString("unable to read value");
     return false;
   }
 
@@ -793,15 +793,15 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
 
   switch (value_type) {
   case Value::ValueType::Invalid:
-    error.SetErrorString("invalid location");
+    error = Status::FromErrorString("invalid location");
     return false;
   case Value::ValueType::Scalar: {
     Status set_error =
         m_value.GetScalar().SetValueFromData(data, encoding, byte_size);
 
     if (!set_error.Success()) {
-      error.SetErrorStringWithFormat("unable to set scalar value: %s",
-                                     set_error.AsCString());
+      error = Status::FromErrorStringWithFormat(
+          "unable to set scalar value: %s", set_error.AsCString());
       return false;
     }
   } break;
@@ -817,7 +817,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
       if (!error.Success())
         return false;
       if (bytes_written != byte_size) {
-        error.SetErrorString("unable to write value to memory");
+        error = Status::FromErrorString("unable to write value to memory");
         return false;
       }
     }
@@ -861,7 +861,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
 
   if (!target) {
     s << "<no target to read from>";
-    error.SetErrorString("no target to read from");
+    error = Status::FromErrorString("no target to read from");
     CopyStringDataToBufferSP(s, buffer_sp);
     return {0, was_capped};
   }
@@ -903,7 +903,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
         const char *cstr = GetDataExtractor().PeekCStr(0);
         if (cstr == nullptr) {
           s << "<invalid address>";
-          error.SetErrorString("invalid address");
+          error = Status::FromErrorString("invalid address");
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
@@ -912,7 +912,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
         return {cstr_len, was_capped};
       } else {
         s << "<invalid address>";
-        error.SetErrorString("invalid address");
+        error = Status::FromErrorString("invalid address");
         CopyStringDataToBufferSP(s, buffer_sp);
         return {0, was_capped};
       }
@@ -982,7 +982,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       }
     }
   } else {
-    error.SetErrorString("not a string object");
+    error = Status::FromErrorString("not a string object");
     s << "<not a string object>";
   }
   CopyStringDataToBufferSP(s, buffer_sp);
@@ -1185,14 +1185,16 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !val_type.IsFloat() && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
-    error.SetErrorString("current value object is not an integer objet");
+    error =
+        Status::FromErrorString("current value object is not an integer objet");
     return;
   }
 
   // Verify the current object is not actually associated with any program
   // variable.
   if (GetVariable()) {
-    error.SetErrorString("current value object is not a temporary object");
+    error = Status::FromErrorString(
+        "current value object is not a temporary object");
     return;
   }
 
@@ -1203,7 +1205,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
   if (auto temp = GetCompilerType().GetByteSize(target.get()))
     byte_size = temp.value();
   if (value.getBitWidth() != byte_size * CHAR_BIT) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "illegal argument: new value should be of the same size");
     return;
   }
@@ -1221,14 +1223,16 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !val_type.IsFloat() && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
-    error.SetErrorString("current value object is not an integer objet");
+    error =
+        Status::FromErrorString("current value object is not an integer objet");
     return;
   }
 
   // Verify the current object is not actually associated with any program
   // variable.
   if (GetVariable()) {
-    error.SetErrorString("current value object is not a temporary object");
+    error = Status::FromErrorString(
+        "current value object is not a temporary object");
     return;
   }
 
@@ -1236,7 +1240,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   CompilerType new_val_type = new_val_sp->GetCompilerType();
   if (!new_val_type.IsInteger() && !new_val_type.IsFloat() &&
       !new_val_type.IsPointerType()) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "illegal argument: new value should be of the same size");
     return;
   }
@@ -1246,13 +1250,13 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
     if (value_or_err)
       SetValueFromInteger(*value_or_err, error);
     else
-      error.SetErrorString("error getting APSInt from new_val_sp");
+      error = Status::FromErrorString("error getting APSInt from new_val_sp");
   } else if (new_val_type.IsFloat()) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
       SetValueFromInteger(value_or_err->bitcastToAPInt(), error);
     else
-      error.SetErrorString("error getting APFloat from new_val_sp");
+      error = Status::FromErrorString("error getting APFloat from new_val_sp");
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);
@@ -1263,7 +1267,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
         num_bits = temp.value();
       SetValueFromInteger(llvm::APInt(num_bits, int_val), error);
     } else
-      error.SetErrorString("error converting new_val_sp to integer");
+      error = Status::FromErrorString("error converting new_val_sp to integer");
   }
 }
 
@@ -1632,7 +1636,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
-    error.SetErrorString("unable to read value");
+    error = Status::FromErrorString("unable to read value");
     return false;
   }
 
@@ -1668,7 +1672,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
           if (!error.Success())
             return false;
           if (bytes_written != byte_size) {
-            error.SetErrorString("unable to write value to memory");
+            error = Status::FromErrorString("unable to write value to memory");
             return false;
           }
         }
@@ -1691,7 +1695,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
 
       } break;
       case Value::ValueType::Invalid:
-        error.SetErrorString("invalid location");
+        error = Status::FromErrorString("invalid location");
         return false;
       case Value::ValueType::FileAddress:
       case Value::ValueType::Scalar:
@@ -1702,7 +1706,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     }
   } else {
     // We don't support setting things bigger than a scalar at present.
-    error.SetErrorString("unable to write aggregate data type");
+    error = Status::FromErrorString("unable to write aggregate data type");
     return false;
   }
 
@@ -2879,13 +2883,13 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     GetExpressionPath(strm);
 
     if (is_pointer_or_reference_type)
-      error.SetErrorStringWithFormat("dereference failed: (%s) %s",
-                                     GetTypeName().AsCString("<invalid type>"),
-                                     strm.GetData());
+      error = Status::FromErrorStringWithFormat(
+          "dereference failed: (%s) %s",
+          GetTypeName().AsCString("<invalid type>"), strm.GetData());
     else
-      error.SetErrorStringWithFormat("not a pointer or reference type: (%s) %s",
-                                     GetTypeName().AsCString("<invalid type>"),
-                                     strm.GetData());
+      error = Status::FromErrorStringWithFormat(
+          "not a pointer or reference type: (%s) %s",
+          GetTypeName().AsCString("<invalid type>"), strm.GetData());
     return ValueObjectSP();
   }
 }
@@ -2903,8 +2907,8 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
     case eAddressTypeInvalid: {
       StreamString expr_path_strm;
       GetExpressionPath(expr_path_strm);
-      error.SetErrorStringWithFormat("'%s' is not in memory",
-                                     expr_path_strm.GetData());
+      error = Status::FromErrorStringWithFormat("'%s' is not in memory",
+                                                expr_path_strm.GetData());
     } break;
 
     case eAddressTypeFile:
@@ -2926,8 +2930,8 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
   } else {
     StreamString expr_path_strm;
     GetExpressionPath(expr_path_strm);
-    error.SetErrorStringWithFormat("'%s' doesn't have a valid address",
-                                   expr_path_strm.GetData());
+    error = Status::FromErrorStringWithFormat(
+        "'%s' doesn't have a valid address", expr_path_strm.GetData());
   }
 
   return m_addr_of_valobj_sp;
@@ -2963,8 +2967,9 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
       || m_value.GetValueType() == Value::ValueType::LoadAddress)
         return DoCast(compiler_type);
 
-  error.SetErrorString("Can only cast to a type that is equal to or smaller "
-                       "than the orignal type.");
+  error = Status::FromErrorString(
+      "Can only cast to a type that is equal to or smaller "
+      "than the orignal type.");
 
   return ValueObjectConstResult::Create(
       ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope(),
@@ -3170,12 +3175,13 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   bool is_integer = GetCompilerType().IsInteger();
 
   if (!type.IsScalarType()) {
-    m_error.SetErrorString("target type must be a scalar");
+    m_error = Status::FromErrorString("target type must be a scalar");
     return GetSP();
   }
 
   if (!is_scalar && !is_enum && !is_pointer) {
-    m_error.SetErrorString("argument must be a scalar, enum, or pointer");
+    m_error =
+        Status::FromErrorString("argument must be a scalar, enum, or pointer");
     return GetSP();
   }
 
@@ -3189,11 +3195,12 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
 
   if (is_pointer) {
     if (!type.IsInteger() && !type.IsBoolean()) {
-      m_error.SetErrorString("target type must be an integer or boolean");
+      m_error =
+          Status::FromErrorString("target type must be an integer or boolean");
       return GetSP();
     }
     if (!type.IsBoolean() && type_byte_size < val_byte_size) {
-      m_error.SetErrorString(
+      m_error = Status::FromErrorString(
           "target type cannot be smaller than the pointer type");
       return GetSP();
     }
@@ -3209,7 +3216,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromBool(
             target, !float_value_or_err->isZero(), "result");
       else {
-        m_error.SetErrorStringWithFormat(
+        m_error = Status::FromErrorStringWithFormat(
             "cannot get value as APFloat: %s",
             llvm::toString(float_value_or_err.takeError()).c_str());
         return GetSP();
@@ -3228,7 +3235,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
                                                        "result");
       } else {
-        m_error.SetErrorStringWithFormat(
+        m_error = Status::FromErrorStringWithFormat(
             "cannot get value as APSInt: %s",
             llvm::toString(int_value_or_err.takeError()).c_str());
         ;
@@ -3246,7 +3253,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         // Casting floating point values that are out of bounds of the target
         // type is undefined behaviour.
         if (status & llvm::APFloatBase::opInvalidOp) {
-          m_error.SetErrorStringWithFormat(
+          m_error = Status::FromErrorStringWithFormat(
               "invalid type cast detected: %s",
               llvm::toString(float_value_or_err.takeError()).c_str());
           return GetSP();
@@ -3269,7 +3276,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                          "result");
       } else {
-        m_error.SetErrorStringWithFormat(
+        m_error = Status::FromErrorStringWithFormat(
             "cannot get value as APSInt: %s",
             llvm::toString(int_value_or_err.takeError()).c_str());
         return GetSP();
@@ -3284,7 +3291,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
-          m_error.SetErrorStringWithFormat(
+          m_error = Status::FromErrorStringWithFormat(
               "cannot get value as APSInt: %s",
               llvm::toString(int_value_or_err.takeError()).c_str());
           return GetSP();
@@ -3299,7 +3306,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
-          m_error.SetErrorStringWithFormat(
+          m_error = Status::FromErrorStringWithFormat(
               "cannot get value as APFloat: %s",
               llvm::toString(float_value_or_err.takeError()).c_str());
           return GetSP();
@@ -3308,7 +3315,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
     }
   }
 
-  m_error.SetErrorString("Unable to perform requested cast");
+  m_error = Status::FromErrorString("Unable to perform requested cast");
   return GetSP();
 }
 
@@ -3318,12 +3325,13 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
   bool is_float = GetCompilerType().IsFloat();
 
   if (!is_enum && !is_integer && !is_float) {
-    m_error.SetErrorString("argument must be an integer, a float, or an enum");
+    m_error = Status::FromErrorString(
+        "argument must be an integer, a float, or an enum");
     return GetSP();
   }
 
   if (!type.IsEnumerationType()) {
-    m_error.SetErrorString("target type must be an enum");
+    m_error = Status::FromErrorString("target type must be an enum");
     return GetSP();
   }
 
@@ -3343,7 +3351,7 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       // Casting floating point values that are out of bounds of the target
       // type is undefined behaviour.
       if (status & llvm::APFloatBase::opInvalidOp) {
-        m_error.SetErrorStringWithFormat(
+        m_error = Status::FromErrorStringWithFormat(
             "invalid type cast detected: %s",
             llvm::toString(value_or_err.takeError()).c_str());
         return GetSP();
@@ -3351,7 +3359,7 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
                                                      "result");
     } else {
-      m_error.SetErrorString("cannot get value as APFloat");
+      m_error = Status::FromErrorString("cannot get value as APFloat");
       return GetSP();
     }
   } else {
@@ -3362,13 +3370,13 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
                                                      "result");
     } else {
-      m_error.SetErrorStringWithFormat(
+      m_error = Status::FromErrorStringWithFormat(
           "cannot get value as APSInt: %s",
           llvm::toString(value_or_err.takeError()).c_str());
       return GetSP();
     }
   }
-  m_error.SetErrorString("Cannot perform requested cast");
+  m_error = Status::FromErrorString("Cannot perform requested cast");
   return GetSP();
 }
 
