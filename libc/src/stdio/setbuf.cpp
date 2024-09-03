@@ -9,9 +9,10 @@
 #include "src/stdio/setbuf.h"
 #include "hdr/stdio_macros.h"
 #include "src/__support/File/file.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, setbuf,
                    (::FILE *__restrict stream, char *__restrict buf)) {
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(void, setbuf,
     libc_errno = err;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

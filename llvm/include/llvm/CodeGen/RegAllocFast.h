@@ -15,7 +15,7 @@
 namespace llvm {
 
 struct RegAllocFastPassOptions {
-  RegClassFilterFunc Filter = nullptr;
+  RegAllocFilterFunc Filter = nullptr;
   StringRef FilterName = "all";
   bool ClearVRegs = true;
 };

@@ -34,6 +34,7 @@ if(LLVM_LIBC_FULL_BUILD)
     SUITE
       libc-support-tests
     SRCS
+      fake_heap.s
       freelist_heap_test.cpp
       freelist_malloc_test.cpp
     DEPENDS
@@ -131,18 +132,15 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-# NVPTX does not support varargs currently.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    arg_list_test
-    SUITE
-      libc-support-tests
-    SRCS
-      arg_list_test.cpp
-    DEPENDS
-      libc.src.__support.arg_list
-  )
-endif()
+add_libc_test(
+  arg_list_test
+  SUITE
+    libc-support-tests
+  SRCS
+    arg_list_test.cpp
+  DEPENDS
+    libc.src.__support.arg_list
+)
 
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
@@ -203,6 +201,8 @@ add_libc_test(
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
+  COMPILE_OPTIONS
+    -O3
   UNIT_TEST_ONLY
     # Aligned Allocation is not supported in hermetic builds.
 )

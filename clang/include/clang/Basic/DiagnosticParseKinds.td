@@ -481,6 +481,9 @@ def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
 
+def err_function_parameter_limit_exceeded : Error<
+  "too many function parameters; subsequent parameters will be ignored">;
+
 // C++26 structured bindings
 def ext_decl_attrs_on_binding : ExtWarn<
   "an attribute specifier sequence attached to a structured binding declaration "
@@ -895,9 +898,10 @@ def missing_template_arg_list_after_template_kw : Extension<
   "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
   DefaultError;
 
-def ext_missing_dependent_template_keyword : ExtWarn<
-  "use 'template' keyword to treat '%0' as a dependent template name">,
-  InGroup<DiagGroup<"missing-dependent-template-keyword">>;
+def err_missing_dependent_template_keyword : Error<
+  "use 'template' keyword to treat '%0' as a dependent template name">;
+def warn_missing_dependent_template_keyword : ExtWarn<
+  "use 'template' keyword to treat '%0' as a dependent template name">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
@@ -963,6 +967,15 @@ def ext_delete_with_message : ExtWarn<
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def ext_variadic_friends : ExtWarn<
+  "variadic 'friend' declarations are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_variadic_friends : Warning<
+  "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
 
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<

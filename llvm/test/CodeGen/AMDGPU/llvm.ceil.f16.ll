@@ -10,7 +10,7 @@ declare <2 x half> @llvm.ceil.v2f16(<2 x half> %a)
 define amdgpu_kernel void @ceil_f16(
 ; SI-LABEL: ceil_f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_mov_b32 s10, s6
@@ -30,7 +30,7 @@ define amdgpu_kernel void @ceil_f16(
 ;
 ; VI-LABEL: ceil_f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_mov_b32 s10, s6
@@ -48,7 +48,7 @@ define amdgpu_kernel void @ceil_f16(
 ;
 ; GFX11-LABEL: ceil_f16:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s10, s6
@@ -68,7 +68,7 @@ define amdgpu_kernel void @ceil_f16(
 ;
 ; GFX11-FAKE16-LABEL: ceil_f16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s6, -1
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s10, s6
@@ -104,7 +104,7 @@ entry:
 define amdgpu_kernel void @ceil_v2f16(
 ; SI-LABEL: ceil_v2f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_mov_b32 s10, s6
@@ -130,7 +130,7 @@ define amdgpu_kernel void @ceil_v2f16(
 ;
 ; VI-LABEL: ceil_v2f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_mov_b32 s10, s6
@@ -150,7 +150,7 @@ define amdgpu_kernel void @ceil_v2f16(
 ;
 ; GFX11-LABEL: ceil_v2f16:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s10, s6
@@ -165,12 +165,10 @@ define amdgpu_kernel void @ceil_v2f16(
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_ceil_f16_e32 v0.l, v0.l
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-NEXT:    v_ceil_f16_e32 v0.h, v1.l
 ; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_ceil_f16_e32 v0.h, v0.h
 ; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_nop 0
@@ -179,7 +177,7 @@ define amdgpu_kernel void @ceil_v2f16(
 ;
 ; GFX11-FAKE16-LABEL: ceil_v2f16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s6, -1
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s10, s6

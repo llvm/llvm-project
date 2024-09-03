@@ -1056,6 +1056,19 @@ public:
     return !getAddrDiscriminator()->isNullValue();
   }
 
+  /// A constant value for the address discriminator which has special
+  /// significance to ctors/dtors lowering. Regular address discrimination can't
+  /// be applied for them since uses of llvm.global_{c|d}tors are disallowed
+  /// (see Verifier::visitGlobalVariable) and we can't emit getelementptr
+  /// expressions referencing these special arrays.
+  enum { AddrDiscriminator_CtorsDtors = 1 };
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const;
+
   /// Check whether an authentication operation with key \p Key and (possibly
   /// blended) discriminator \p Discriminator is known to be compatible with
   /// this ptrauth signed pointer.

@@ -231,3 +231,31 @@ struct type_info {
 namespace GH93650 {
 auto func(auto... inputArgs) { return typeid(inputArgs...[0]); }
 } // namespace GH93650
+
+
+namespace GH105900 {
+
+template <typename... opts>
+struct types  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> opts...[get_index<s>()] {}
+};
+
+template <auto... opts>
+struct vars  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> decltype(opts...[get_index<s>()]) {return 0;}
+};
+
+void f() {
+    types<void>::x<0>();
+    vars<0>::x<0>();
+}
+
+}

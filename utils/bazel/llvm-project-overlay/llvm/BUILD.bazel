@@ -1599,6 +1599,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":Demangle",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -2653,7 +2654,6 @@ cc_library(
         ":CodeGen",
         ":Core",
         ":Coroutines",
-        ":Demangle",
         ":HipStdPar",
         ":IPO",
         ":IRPrinter",
@@ -4160,6 +4160,7 @@ cc_library(
         ":Option",
         ":Support",
         ":WindowsManifest",
+        ":config",
     ],
 )
 
@@ -4601,6 +4602,7 @@ cc_binary(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
+        ":config",
     ],
 )
 

@@ -332,7 +332,7 @@ struct FunctionSignatureNode : public TypeNode {
   // The function's calling convention.
   CallingConv CallConvention = CallingConv::None;
 
-  // Function flags (gloabl, public, etc)
+  // Function flags (global, public, etc)
   FuncClass FunctionClass = FC_Global;
 
   FunctionRefQualifier RefQualifier = FunctionRefQualifier::None;

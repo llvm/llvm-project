@@ -54,9 +54,11 @@ template <typename Op>
 static llvm::LogicalResult checkCudaAttr(Op op) {
   if (op.getDataAttr() == cuf::DataAttribute::Device ||
       op.getDataAttr() == cuf::DataAttribute::Managed ||
-      op.getDataAttr() == cuf::DataAttribute::Unified)
+      op.getDataAttr() == cuf::DataAttribute::Unified ||
+      op.getDataAttr() == cuf::DataAttribute::Pinned)
     return mlir::success();
-  return op.emitOpError("expect device, managed or unified cuda attribute");
+  return op.emitOpError()
+         << "expect device, managed, pinned or unified cuda attribute";
 }
 
 llvm::LogicalResult cuf::AllocOp::verify() { return checkCudaAttr(*this); }
@@ -97,6 +99,11 @@ llvm::LogicalResult cuf::AllocateOp::verify() {
 llvm::LogicalResult cuf::DataTransferOp::verify() {
   mlir::Type srcTy = getSrc().getType();
   mlir::Type dstTy = getDst().getType();
+  if (getShape()) {
+    if (!fir::isa_ref_type(srcTy) || !fir::isa_ref_type(dstTy))
+      return emitOpError()
+             << "shape can only be specified on data transfer with references";
+  }
   if ((fir::isa_ref_type(srcTy) && fir::isa_ref_type(dstTy)) ||
       (fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy)) ||
       (fir::isa_ref_type(srcTy) && fir::isa_box_type(dstTy)) ||
@@ -105,9 +112,11 @@ llvm::LogicalResult cuf::DataTransferOp::verify() {
   if (fir::isa_trivial(srcTy) &&
       matchPattern(getSrc().getDefiningOp(), mlir::m_Constant()))
     return mlir::success();
+
   return emitOpError()
          << "expect src and dst to be references or descriptors or src to "
-            "be a constant";
+            "be a constant: "
+         << srcTy << " - " << dstTy;
 }
 
 //===----------------------------------------------------------------------===//

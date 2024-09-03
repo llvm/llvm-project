@@ -742,9 +742,8 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI12_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    fle.d a2, a2, s0
 ; RV32IZFINXZDINX-NEXT:    lui a5, 524288
-; RV32IZFINXZDINX-NEXT:    li a4, 1
 ; RV32IZFINXZDINX-NEXT:    lui a3, 524288
-; RV32IZFINXZDINX-NEXT:    bne a2, a4, .LBB12_2
+; RV32IZFINXZDINX-NEXT:    beqz a2, .LBB12_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1: # %start
 ; RV32IZFINXZDINX-NEXT:    mv a3, a1
 ; RV32IZFINXZDINX-NEXT:  .LBB12_2: # %start
@@ -1460,11 +1459,9 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_w_demanded_bits:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    addiw a2, a0, 1
-; RV64IZFINXZDINX-NEXT:    addi a0, a0, 1
-; RV64IZFINXZDINX-NEXT:    fcvt.d.w a0, a0
-; RV64IZFINXZDINX-NEXT:    sd a0, 0(a1)
-; RV64IZFINXZDINX-NEXT:    mv a0, a2
+; RV64IZFINXZDINX-NEXT:    addiw a0, a0, 1
+; RV64IZFINXZDINX-NEXT:    fcvt.d.w a2, a0
+; RV64IZFINXZDINX-NEXT:    sd a2, 0(a1)
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_d_w_demanded_bits:

@@ -262,8 +262,8 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GCN-LABEL: fmaximumi_f32_move_to_valu:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GCN-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_b32 v1, v0, s[6:7] scope:SCOPE_SYS
@@ -286,8 +286,8 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GCN-LABEL: fmaximum_f16_move_to_valu:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GCN-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_u16 v1, v0, s[6:7] scope:SCOPE_SYS

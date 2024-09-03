@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -794,7 +795,8 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (RHS.isInvalid())
       return true;
     if (SemaRef.DiagnoseAssignmentResult(ConvTy, Arg->getBeginLoc(), LHSTy,
-                                         RHSTy, RHS.get(), Sema::AA_Assigning))
+                                         RHSTy, RHS.get(),
+                                         AssignmentAction::Assigning))
       return true;
   }
 
@@ -920,7 +922,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
     CastNeeded = CK_BitCast;
     Diag(DRE->getBeginLoc(), diag::ext_typecheck_convert_discards_qualifiers)
         << PointerArg->getType() << Context.getPointerType(AddrType)
-        << Sema::AA_Passing << PointerArg->getSourceRange();
+        << AssignmentAction::Passing << PointerArg->getSourceRange();
   }
 
   // Finally, do the cast and replace the argument with the corrected version.

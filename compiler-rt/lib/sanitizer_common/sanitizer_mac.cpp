@@ -788,7 +788,11 @@ void WriteOneLineToSyslog(const char *s) {
   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
     os_log_error(OS_LOG_DEFAULT, "%{public}s", s);
   } else {
+#pragma clang diagnostic push
+// as_log is deprecated.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
+#pragma clang diagnostic pop
   }
 #endif
 }
@@ -843,6 +847,9 @@ void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
   // Log with os_trace. This will make it into the crash log.
 #if SANITIZER_OS_TRACE
+#pragma clang diagnostic push
+// os_trace is deprecated.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
     // os_trace requires the message (format parameter) to be a string literal.
     if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
@@ -860,6 +867,7 @@ void LogFullErrorReport(const char *buffer) {
     if (common_flags()->log_to_syslog)
       os_trace("Consult syslog for more information.");
   }
+#pragma clang diagnostic pop
 #endif
 
   // Log to syslog.
@@ -1372,8 +1380,8 @@ void DumpProcessMap() {
   for (uptr i = 0; i < modules.size(); ++i) {
     char uuid_str[128];
     FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());
-    Printf("0x%zx-0x%zx %s (%s) %s\n", modules[i].base_address(),
-           modules[i].max_address(), modules[i].full_name(),
+    Printf("%p-%p %s (%s) %s\n", (void *)modules[i].base_address(),
+           (void *)modules[i].max_address(), modules[i].full_name(),
            ModuleArchToString(modules[i].arch()), uuid_str);
   }
   Printf("End of module map.\n");

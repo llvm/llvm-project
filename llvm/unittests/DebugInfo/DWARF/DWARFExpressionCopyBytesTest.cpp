@@ -112,10 +112,7 @@ DWARFExpressionCopyBytesTest::createStreamer(raw_pwrite_stream &OS) {
   std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
   Res.Streamer.reset(TheTarget->createMCObjectStreamer(
       Triple(TripleName), *Res.Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-      std::move(OW), std::unique_ptr<MCCodeEmitter>(MCE), *STI,
-      /* RelaxAll */ false,
-      /* IncrementalLinkerCompatible */ false,
-      /* DWARFMustBeAtTheEnd */ false));
+      std::move(OW), std::unique_ptr<MCCodeEmitter>(MCE), *STI));
   return Res;
 }
 

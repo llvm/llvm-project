@@ -88,6 +88,17 @@ def getStdFlag(cfg, std):
     return None
 
 
+def getDefaultStdValue(cfg):
+    viable = [s for s in reversed(_allStandards) if getStdFlag(cfg, s)]
+
+    if not viable:
+        raise RuntimeError(
+            "Unable to successfully detect the presence of any -std=c++NN flag. This likely indicates an issue with your compiler."
+        )
+
+    return viable[0]
+
+
 def getSpeedOptimizationFlag(cfg):
     if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
         return "-O3"
@@ -170,9 +181,7 @@ DEFAULT_PARAMETERS = [
         choices=_allStandards,
         type=str,
         help="The version of the standard to compile the test suite with.",
-        default=lambda cfg: next(
-            s for s in reversed(_allStandards) if getStdFlag(cfg, s)
-        ),
+        default=lambda cfg: getDefaultStdValue(cfg),
         actions=lambda std: [
             AddFeature(std),
             AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
