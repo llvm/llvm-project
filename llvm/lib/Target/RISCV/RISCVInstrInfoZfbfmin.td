@@ -31,7 +31,7 @@ let Predicates = [HasStdExtZfbfmin] in {
 def FCVT_BF16_S : FPUnaryOp_r_frm<0b0100010, 0b01000, FPR16, FPR32, "fcvt.bf16.s">,
                   Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
 def FCVT_S_BF16 : FPUnaryOp_r_frm<0b0100000, 0b00110, FPR32, FPR16, "fcvt.s.bf16">,
-                  Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
+                  Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
 } // Predicates = [HasStdExtZfbfmin]
 
 //===----------------------------------------------------------------------===//
