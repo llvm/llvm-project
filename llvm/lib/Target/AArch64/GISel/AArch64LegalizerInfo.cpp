@@ -149,6 +149,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return Query.Types[0].getNumElements() <= 16;
           },
           0, s8)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -196,12 +197,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
       .lowerFor({s8, s16, s32, s64, v2s64, v4s32, v2s32})
+      .libcallFor({s128})
       .widenScalarOrEltToNextPow2(0)
-      .clampScalarOrElt(0, s32, s64)
+      .minScalarOrElt(0, s32)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .moreElementsToNextPow2(0);
-
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_SMULO, G_UMULO})
       .widenScalarToNextPow2(0, /*Min = */ 32)
@@ -241,9 +242,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
-                               G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM,
-                               G_FMAXIMUM, G_FMINIMUM, G_FCEIL, G_FFLOOR,
-                               G_FRINT, G_FNEARBYINT, G_INTRINSIC_TRUNC,
+                               G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
+                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
+                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
                                G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
@@ -251,6 +252,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return (Ty == v8s16 || Ty == v4s16) && HasFP16;
       })
       .libcallFor({s128})
+      .minScalarOrElt(0, MinFPScalar)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
+
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[0];
+        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .lowerIf(scalarOrEltWiderThan(0, 64))
       .minScalarOrElt(0, MinFPScalar)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -267,8 +282,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .libcallFor({{s64, s128}})
       .minScalarOrElt(1, MinFPScalar);
 
-  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
-                               G_FLOG10, G_FTAN, G_FEXP, G_FEXP2, G_FEXP10})
+  getActionDefinitionsBuilder(
+      {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10, G_FTAN, G_FEXP,
+       G_FEXP2, G_FEXP10, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH})
       // We need a call for these, so we always need to scalarize.
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
@@ -560,7 +576,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(0, s32, s32)
-      .clampScalarOrElt(1, MinFPScalar, s64)
+      .minScalarOrElt(1, MinFPScalar)
+      .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .minScalarEltSameAsIf(
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];
@@ -572,7 +589,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampMaxNumElements(1, s64, 2)
-      .moreElementsToNextPow2(1);
+      .moreElementsToNextPow2(1)
+      .libcallFor({{s32, s128}});
 
   // Extensions
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {
@@ -950,6 +968,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .minScalarOrElt(0, s8)
       .widenVectorEltsToVectorMinSize(0, 64)
+      .widenScalarOrEltToNextPow2(0)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
@@ -1202,6 +1221,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1)
       .lower();
 
+  // TODO: Update this to correct handling when adding AArch64/SVE support.
+  getActionDefinitionsBuilder(G_VECTOR_COMPRESS).lower();
+
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{s32, s32}, {s32, s64}, {s64, s64}})
       .lower();
@@ -1283,6 +1305,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
 
   getActionDefinitionsBuilder(G_PREFETCH).custom();
+
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

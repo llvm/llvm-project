@@ -16,6 +16,9 @@
 #define FORTRAN_FRONTEND_LANGOPTIONS_H
 
 #include <string>
+#include <vector>
+
+#include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::frontend {
 
@@ -57,6 +60,9 @@ public:
   /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
   std::string OMPHostIRFile;
+
+  /// List of triples passed in using -fopenmp-targets.
+  std::vector<llvm::Triple> OMPTargetTriples;
 
   LangOptions();
 };

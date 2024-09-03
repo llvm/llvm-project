@@ -56,10 +56,10 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
+void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-
+#if !defined(RT_DEVICE_COMPILATION)
   char *pathSrc{EnsureNullTerminated(
       path1.OffsetElement(), path1.ElementBytes(), terminator)};
   char *pathDst{EnsureNullTerminated(
@@ -84,6 +84,9 @@ void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
   if (pathDst != path2.OffsetElement()) {
     FreeMemory(pathDst);
   }
+#else // !defined(RT_DEVICE_COMPILATION)
+  terminator.Crash("RENAME intrinsic is only supported on host devices");
+#endif // !defined(RT_DEVICE_COMPILATION)
 }
 
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,

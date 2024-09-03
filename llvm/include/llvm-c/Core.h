@@ -146,27 +146,27 @@ typedef enum {
 } LLVMOpcode;
 
 typedef enum {
-  LLVMVoidTypeKind,      /**< type with no size */
-  LLVMHalfTypeKind,      /**< 16 bit floating point type */
-  LLVMFloatTypeKind,     /**< 32 bit floating point type */
-  LLVMDoubleTypeKind,    /**< 64 bit floating point type */
-  LLVMX86_FP80TypeKind,  /**< 80 bit floating point type (X87) */
-  LLVMFP128TypeKind,     /**< 128 bit floating point type (112-bit mantissa)*/
-  LLVMPPC_FP128TypeKind, /**< 128 bit floating point type (two 64-bits) */
-  LLVMLabelTypeKind,     /**< Labels */
-  LLVMIntegerTypeKind,   /**< Arbitrary bit width integers */
-  LLVMFunctionTypeKind,  /**< Functions */
-  LLVMStructTypeKind,    /**< Structures */
-  LLVMArrayTypeKind,     /**< Arrays */
-  LLVMPointerTypeKind,   /**< Pointers */
-  LLVMVectorTypeKind,    /**< Fixed width SIMD vector type */
-  LLVMMetadataTypeKind,  /**< Metadata */
-  LLVMX86_MMXTypeKind,   /**< X86 MMX */
-  LLVMTokenTypeKind,     /**< Tokens */
-  LLVMScalableVectorTypeKind, /**< Scalable SIMD vector type */
-  LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
-  LLVMX86_AMXTypeKind,   /**< X86 AMX */
-  LLVMTargetExtTypeKind, /**< Target extension type */
+  LLVMVoidTypeKind = 0,     /**< type with no size */
+  LLVMHalfTypeKind = 1,     /**< 16 bit floating point type */
+  LLVMFloatTypeKind = 2,    /**< 32 bit floating point type */
+  LLVMDoubleTypeKind = 3,   /**< 64 bit floating point type */
+  LLVMX86_FP80TypeKind = 4, /**< 80 bit floating point type (X87) */
+  LLVMFP128TypeKind = 5, /**< 128 bit floating point type (112-bit mantissa)*/
+  LLVMPPC_FP128TypeKind = 6, /**< 128 bit floating point type (two 64-bits) */
+  LLVMLabelTypeKind = 7,     /**< Labels */
+  LLVMIntegerTypeKind = 8,   /**< Arbitrary bit width integers */
+  LLVMFunctionTypeKind = 9,  /**< Functions */
+  LLVMStructTypeKind = 10,   /**< Structures */
+  LLVMArrayTypeKind = 11,    /**< Arrays */
+  LLVMPointerTypeKind = 12,  /**< Pointers */
+  LLVMVectorTypeKind = 13,   /**< Fixed width SIMD vector type */
+  LLVMMetadataTypeKind = 14, /**< Metadata */
+                             /* 15 previously used by LLVMX86_MMXTypeKind */
+  LLVMTokenTypeKind = 16,    /**< Tokens */
+  LLVMScalableVectorTypeKind = 17, /**< Scalable SIMD vector type */
+  LLVMBFloatTypeKind = 18,         /**< 16 bit brain floating point type */
+  LLVMX86_AMXTypeKind = 19,        /**< X86 AMX */
+  LLVMTargetExtTypeKind = 20,      /**< Target extension type */
 } LLVMTypeKind;
 
 typedef enum {
@@ -286,6 +286,7 @@ typedef enum {
   LLVMInstructionValueKind,
   LLVMPoisonValueValueKind,
   LLVMConstantTargetNoneValueKind,
+  LLVMConstantPtrAuthValueKind,
 } LLVMValueKind;
 
 typedef enum {
@@ -644,6 +645,11 @@ LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI);
 unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
                                   unsigned SLen);
 unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
+
+/**
+ * Maps a synchronization scope name to a ID unique within this context.
+ */
+unsigned LLVMGetSyncScopeID(LLVMContextRef C, const char *Name, size_t SLen);
 
 /**
  * Return an unique id given the name of a enum attribute,
@@ -1179,6 +1185,16 @@ LLVMValueRef LLVMAddFunction(LLVMModuleRef M, const char *Name,
 LLVMValueRef LLVMGetNamedFunction(LLVMModuleRef M, const char *Name);
 
 /**
+ * Obtain a Function value from a Module by its name.
+ *
+ * The returned value corresponds to a llvm::Function value.
+ *
+ * @see llvm::Module::getFunction()
+ */
+LLVMValueRef LLVMGetNamedFunctionWithLength(LLVMModuleRef M, const char *Name,
+                                            size_t Length);
+
+/**
  * Obtain an iterator to the first Function in a Module.
  *
  * @see llvm::Module::begin()
@@ -1667,6 +1683,35 @@ LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
 unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy);
 
 /**
+ * Get the pointer value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getPointer
+ */
+LLVMValueRef LLVMGetConstantPtrAuthPointer(LLVMValueRef PtrAuth);
+
+/**
+ * Get the key value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getKey
+ */
+LLVMValueRef LLVMGetConstantPtrAuthKey(LLVMValueRef PtrAuth);
+
+/**
+ * Get the discriminator value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthDiscriminator(LLVMValueRef PtrAuth);
+
+/**
+ * Get the address discriminator value for the associated ConstantPtrAuth
+ * constant.
+ *
+ * @see llvm::ConstantPtrAuth::getAddrDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthAddrDiscriminator(LLVMValueRef PtrAuth);
+
+/**
  * @}
  */
 
@@ -1685,11 +1730,6 @@ LLVMTypeRef LLVMVoidTypeInContext(LLVMContextRef C);
  * Create a label type in a context.
  */
 LLVMTypeRef LLVMLabelTypeInContext(LLVMContextRef C);
-
-/**
- * Create a X86 MMX type in a context.
- */
-LLVMTypeRef LLVMX86MMXTypeInContext(LLVMContextRef C);
 
 /**
  * Create a X86 AMX type in a context.
@@ -1712,7 +1752,6 @@ LLVMTypeRef LLVMMetadataTypeInContext(LLVMContextRef C);
  */
 LLVMTypeRef LLVMVoidType(void);
 LLVMTypeRef LLVMLabelType(void);
-LLVMTypeRef LLVMX86MMXType(void);
 LLVMTypeRef LLVMX86AMXType(void);
 
 /**
@@ -1789,6 +1828,10 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
  * @{
  */
 
+// Currently, clang-format tries to format the LLVM_FOR_EACH_VALUE_SUBCLASS
+// macro in a progressively-indented fashion, which is not desired
+// clang-format off
+
 #define LLVM_FOR_EACH_VALUE_SUBCLASS(macro) \
   macro(Argument)                           \
   macro(BasicBlock)                         \
@@ -1808,6 +1851,7 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
       macro(ConstantStruct)                 \
       macro(ConstantTokenNone)              \
       macro(ConstantVector)                 \
+      macro(ConstantPtrAuth)                \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \
         macro(GlobalObject)                 \
@@ -1879,6 +1923,8 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
       macro(AtomicRMWInst)                  \
       macro(FenceInst)
 
+// clang-format on
+
 /**
  * @defgroup LLVMCCoreValueGeneral General APIs
  *
@@ -1931,6 +1977,13 @@ void LLVMDumpValue(LLVMValueRef Val);
  * @see llvm::Value::print()
  */
 char *LLVMPrintValueToString(LLVMValueRef Val);
+
+/**
+ * Obtain the context to which this value is associated.
+ *
+ * @see llvm::Value::getContext()
+ */
+LLVMContextRef LLVMGetValueContext(LLVMValueRef Val);
 
 /**
  * Return a string representation of the DbgRecord. Use
@@ -2373,6 +2426,14 @@ LLVM_ATTRIBUTE_C_DEPRECATED(
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size);
 
 /**
+ * Create a ConstantPtrAuth constant with the given values.
+ *
+ * @see llvm::ConstantPtrAuth::get()
+ */
+LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
+                                 LLVMValueRef Disc, LLVMValueRef AddrDisc);
+
+/**
  * @}
  */
 
@@ -2594,6 +2655,8 @@ LLVMValueRef LLVMAddGlobalInAddressSpace(LLVMModuleRef M, LLVMTypeRef Ty,
                                          const char *Name,
                                          unsigned AddressSpace);
 LLVMValueRef LLVMGetNamedGlobal(LLVMModuleRef M, const char *Name);
+LLVMValueRef LLVMGetNamedGlobalWithLength(LLVMModuleRef M, const char *Name,
+                                          size_t Length);
 LLVMValueRef LLVMGetFirstGlobal(LLVMModuleRef M);
 LLVMValueRef LLVMGetLastGlobal(LLVMModuleRef M);
 LLVMValueRef LLVMGetNextGlobal(LLVMValueRef GlobalVar);
@@ -4110,6 +4173,13 @@ void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
                                     LLVMMetadataRef FPMathTag);
 
 /**
+ * Obtain the context to which this builder is associated.
+ *
+ * @see llvm::IRBuilder::getContext()
+ */
+LLVMContextRef LLVMGetBuilderContext(LLVMBuilderRef Builder);
+
+/**
  * Deprecated: Passing the NULL location will crash.
  * Use LLVMGetCurrentDebugLocation2 instead.
  */
@@ -4527,15 +4597,28 @@ LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef, LLVMTypeRef ElemTy,
                                const char *Name);
 LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering ordering,
                             LLVMBool singleThread, const char *Name);
+LLVMValueRef LLVMBuildFenceSyncScope(LLVMBuilderRef B,
+                                     LLVMAtomicOrdering ordering, unsigned SSID,
+                                     const char *Name);
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B, LLVMAtomicRMWBinOp op,
                                 LLVMValueRef PTR, LLVMValueRef Val,
                                 LLVMAtomicOrdering ordering,
                                 LLVMBool singleThread);
+LLVMValueRef LLVMBuildAtomicRMWSyncScope(LLVMBuilderRef B,
+                                         LLVMAtomicRMWBinOp op,
+                                         LLVMValueRef PTR, LLVMValueRef Val,
+                                         LLVMAtomicOrdering ordering,
+                                         unsigned SSID);
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMValueRef Cmp, LLVMValueRef New,
                                     LLVMAtomicOrdering SuccessOrdering,
                                     LLVMAtomicOrdering FailureOrdering,
                                     LLVMBool SingleThread);
+LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(LLVMBuilderRef B, LLVMValueRef Ptr,
+                                             LLVMValueRef Cmp, LLVMValueRef New,
+                                             LLVMAtomicOrdering SuccessOrdering,
+                                             LLVMAtomicOrdering FailureOrdering,
+                                             unsigned SSID);
 
 /**
  * Get the number of elements in the mask of a ShuffleVector instruction.
@@ -4559,6 +4642,22 @@ int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
 
 LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst);
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool SingleThread);
+
+/**
+ * Returns whether an instruction is an atomic instruction, e.g., atomicrmw,
+ * cmpxchg, fence, or loads and stores with atomic ordering.
+ */
+LLVMBool LLVMIsAtomic(LLVMValueRef Inst);
+
+/**
+ * Returns the synchronization scope ID of an atomic instruction.
+ */
+unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst);
+
+/**
+ * Sets the synchronization scope ID of an atomic instruction.
+ */
+void LLVMSetAtomicSyncScopeID(LLVMValueRef AtomicInst, unsigned SSID);
 
 LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst);
 void LLVMSetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst,

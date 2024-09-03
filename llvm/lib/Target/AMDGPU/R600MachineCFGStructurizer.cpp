@@ -598,7 +598,7 @@ MachineInstr *R600MachineCFGStructurizer::getLoopendBlockBranchInstr(
     if (MI) {
       if (isCondBranch(MI) || isUncondBranch(MI))
         return MI;
-      else if (!TII->isMov(MI->getOpcode()))
+      if (!TII->isMov(MI->getOpcode()))
         break;
     }
   }
@@ -669,8 +669,8 @@ void R600MachineCFGStructurizer::wrapup(MachineBasicBlock *MBB) {
    }
 
    //delete continue right before endloop
-   for (unsigned i = 0; i < ContInstr.size(); ++i)
-      ContInstr[i]->eraseFromParent();
+   for (auto *MI : ContInstr)
+     MI->eraseFromParent();
 
    // TODO to fix up jump table so later phase won't be confused.  if
    // (jumpTableInfo->isEmpty() == false) { need to clean the jump table, but

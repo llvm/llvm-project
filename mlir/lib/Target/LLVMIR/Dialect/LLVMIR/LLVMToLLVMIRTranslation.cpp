@@ -219,6 +219,25 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     call->setCallingConv(convertCConvToLLVM(callOp.getCConv()));
     call->setTailCallKind(convertTailCallKindToLLVM(callOp.getTailCallKind()));
+    if (callOp.getConvergentAttr())
+      call->addFnAttr(llvm::Attribute::Convergent);
+    if (callOp.getNoUnwindAttr())
+      call->addFnAttr(llvm::Attribute::NoUnwind);
+    if (callOp.getWillReturnAttr())
+      call->addFnAttr(llvm::Attribute::WillReturn);
+
+    if (MemoryEffectsAttr memAttr = callOp.getMemoryEffectsAttr()) {
+      llvm::MemoryEffects memEffects =
+          llvm::MemoryEffects(llvm::MemoryEffects::Location::ArgMem,
+                              convertModRefInfoToLLVM(memAttr.getArgMem())) |
+          llvm::MemoryEffects(
+              llvm::MemoryEffects::Location::InaccessibleMem,
+              convertModRefInfoToLLVM(memAttr.getInaccessibleMem())) |
+          llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
+                              convertModRefInfoToLLVM(memAttr.getOther()));
+      call->setMemoryEffects(memEffects);
+    }
+
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);
     moduleTranslation.setTBAAMetadata(callOp, call);

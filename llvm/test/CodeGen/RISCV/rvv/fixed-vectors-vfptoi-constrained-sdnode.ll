@@ -34,14 +34,14 @@ declare <1 x i7> @llvm.experimental.constrained.fptosi.v1i7.v1f16(<1 x half>, me
 define <1 x i7> @vfptosi_v1f16_v1i7(<1 x half> %va) strictfp {
 ; RV32-LABEL: vfptosi_v1f16_v1i7:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa5, v8
 ; RV32-NEXT:    fcvt.w.h a0, fa5, rtz
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vfptosi_v1f16_v1i7:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; RV64-NEXT:    vfmv.f.s fa5, v8
 ; RV64-NEXT:    fcvt.l.h a0, fa5, rtz
 ; RV64-NEXT:    ret
@@ -53,16 +53,16 @@ declare <1 x i7> @llvm.experimental.constrained.fptoui.v1i7.v1f16(<1 x half>, me
 define <1 x i7> @vfptoui_v1f16_v1i7(<1 x half> %va) strictfp {
 ; RV32-LABEL: vfptoui_v1f16_v1i7:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa5, v8
-; RV32-NEXT:    fcvt.wu.h a0, fa5, rtz
+; RV32-NEXT:    fcvt.w.h a0, fa5, rtz
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vfptoui_v1f16_v1i7:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; RV64-NEXT:    vfmv.f.s fa5, v8
-; RV64-NEXT:    fcvt.lu.h a0, fa5, rtz
+; RV64-NEXT:    fcvt.l.h a0, fa5, rtz
 ; RV64-NEXT:    ret
   %evec = call <1 x i7> @llvm.experimental.constrained.fptoui.v1i7.v1f16(<1 x half> %va, metadata !"fpexcept.strict")
   ret <1 x i7> %evec

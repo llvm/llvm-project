@@ -110,7 +110,7 @@ SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
   return GetBaseSymbolFile().GetDIEToVariable();
 }
 
-SymbolFileDWARF::CompilerTypeToDIE &
+llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
 SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
   return GetBaseSymbolFile().GetForwardDeclCompilerTypeToDIE();
 }

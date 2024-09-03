@@ -736,14 +736,16 @@ public:
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
+  const TargetLibraryInfo &TLI;
   VPTypeAnalysis Types;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
 
-  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy,
-                LLVMContext &LLVMCtx, LoopVectorizationCostModel &CM)
-      : TTI(TTI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
+  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+                Type *CanIVTy, LLVMContext &LLVMCtx,
+                LoopVectorizationCostModel &CM)
+      : TTI(TTI), TLI(TLI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -796,7 +798,7 @@ public:
   /// Return the cost of this recipe, taking into account if the cost
   /// computation should be skipped and the ForceTargetInstructionCost flag.
   /// Also takes care of printing the cost for debugging.
-  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -860,9 +862,11 @@ public:
   DebugLoc getDebugLoc() const { return DL; }
 
 protected:
-  /// Compute the cost of this recipe using the legacy cost model and the
-  /// underlying instructions.
-  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
+  /// Compute the cost of this recipe either using a recipe's specialized
+  /// implementation or using the legacy cost model and the underlying
+  /// instructions.
+  virtual InstructionCost computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const;
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -1399,9 +1403,10 @@ public:
   bool isSingleScalar() const;
 };
 
-/// VPWidenRecipe is a recipe for producing a copy of vector type its
-/// ingredient. This recipe covers most of the traditional vectorization cases
-/// where each ingredient transforms into a vectorized version of itself.
+/// VPWidenRecipe is a recipe for producing a widened instruction using the
+/// opcode and operands of the recipe. This recipe covers most of the
+/// traditional vectorization cases where each recipe transforms into a
+/// vectorized version of itself.
 class VPWidenRecipe : public VPRecipeWithIRFlags {
   unsigned Opcode;
 
@@ -1421,8 +1426,13 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
-  /// Produce widened copies of all Ingredients.
+  /// Produce a widened instruction using the opcode and operands of the recipe,
+  /// processing State.VF elements.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   unsigned getOpcode() const { return Opcode; }
 
@@ -1555,6 +1565,10 @@ public:
   /// Produce a widened version of the call instruction.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenCallRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
@@ -1668,6 +1682,14 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    assert(getNumOperands() == 1 && "must have a single operand");
     return true;
   }
 
@@ -2023,12 +2045,12 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, I1, M1, I2, M2, ...]. Note that the first
-  /// incoming value does not have a mask associated.
+  /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
+  /// be omitted (implied by passing an odd number of operands) in which case
+  /// all other incoming values are merged into it.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert((Operands.size() + 1) % 2 == 0 &&
-           "Expected an odd number of operands");
+    assert(Operands.size() > 0 && "Expected at least one operand!");
   }
 
   VPBlendRecipe *clone() override {
@@ -2038,19 +2060,25 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// Return the number of incoming values, taking into account that the first
-  /// incoming value has no mask.
-  unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
+  /// A normalized blend is one that has an odd number of operands, whereby the
+  /// first operand does not have an associated mask.
+  bool isNormalized() const { return getNumOperands() % 2; }
+
+  /// Return the number of incoming values, taking into account when normalized
+  /// the first incoming value will have no mask.
+  unsigned getNumIncomingValues() const {
+    return (getNumOperands() + isNormalized()) / 2;
+  }
 
   /// Return incoming value number \p Idx.
   VPValue *getIncomingValue(unsigned Idx) const {
-    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - 1);
+    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - isNormalized());
   }
 
   /// Return mask number \p Idx.
   VPValue *getMask(unsigned Idx) const {
-    assert(Idx > 0 && "First index has no mask associated.");
-    return getOperand(Idx * 2);
+    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
+    return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
   }
 
   /// Generate the phi/select nodes.
@@ -2244,12 +2272,12 @@ public:
 /// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
-  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL, VPValue *CondOp)
+  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp)
       : VPReductionRecipe(
-            VPDef::VPReductionEVLSC, R->getRecurrenceDescriptor(),
-            cast_or_null<Instruction>(R->getUnderlyingValue()),
-            ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}), CondOp,
-            R->isOrdered()) {}
+            VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
+            cast_or_null<Instruction>(R.getUnderlyingValue()),
+            ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
+            R.isOrdered()) {}
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -2556,10 +2584,10 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L->getIngredient(),
-                            {L->getAddr(), EVL}, L->isConsecutive(),
-                            L->isReverse(), L->getDebugLoc()),
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
+                            {L.getAddr(), &EVL}, L.isConsecutive(),
+                            L.isReverse(), L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2632,11 +2660,10 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S->getIngredient(),
-                            {S->getAddr(), S->getStoredValue(), EVL},
-                            S->isConsecutive(), S->isReverse(),
-                            S->getDebugLoc()) {
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
+                            {S.getAddr(), S.getStoredValue(), &EVL},
+                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -3469,11 +3496,6 @@ public:
 
   void addLiveOut(PHINode *PN, VPValue *V);
 
-  void removeLiveOut(PHINode *PN) {
-    delete LiveOuts[PN];
-    LiveOuts.erase(PN);
-  }
-
   const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
     return LiveOuts;
   }
@@ -3785,44 +3807,6 @@ public:
   /// Return true if all visited instruction can be combined.
   bool isCompletelySLP() const { return CompletelySLP; }
 };
-
-namespace vputils {
-
-/// Returns true if only the first lane of \p Def is used.
-bool onlyFirstLaneUsed(const VPValue *Def);
-
-/// Returns true if only the first part of \p Def is used.
-bool onlyFirstPartUsed(const VPValue *Def);
-
-/// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
-/// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
-/// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
-/// pre-header already contains a recipe expanding \p Expr, return it. If not,
-/// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                       ScalarEvolution &SE);
-
-/// Returns true if \p VPV is uniform after vectorization.
-inline bool isUniformAfterVectorization(VPValue *VPV) {
-  // A value defined outside the vector region must be uniform after
-  // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideVectorRegions())
-    return true;
-  VPRecipeBase *Def = VPV->getDefiningRecipe();
-  assert(Def && "Must have definition for value defined inside vector region");
-  if (auto Rep = dyn_cast<VPReplicateRecipe>(Def))
-    return Rep->isUniform();
-  if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
-    return all_of(GEP->operands(), isUniformAfterVectorization);
-  if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar();
-  return false;
-}
-
-/// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(VPValue *V, VPlan &Plan);
-} // end namespace vputils
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

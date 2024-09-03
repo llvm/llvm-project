@@ -104,16 +104,19 @@ libc_support_library(
     name = "qsort_test_helper",
     hdrs = ["SortingTest.h"],
     deps = [
+        "//libc:__support_macros_config",
         "//libc:qsort_util",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
+
 libc_test(
     name = "qsort_test",
     srcs = ["qsort_test.cpp"],
     libc_function_deps = ["//libc:qsort"],
     deps = [":qsort_test_helper"],
 )
+
 libc_test(
     name = "quick_sort_test",
     srcs = ["quick_sort_test.cpp"],
@@ -122,6 +125,7 @@ libc_test(
         "//libc:qsort_util",
     ],
 )
+
 libc_test(
     name = "heap_sort_test",
     srcs = ["heap_sort_test.cpp"],

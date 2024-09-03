@@ -367,7 +367,9 @@ private:
   static Error registerEHFrames(span<const char> EHFrameSection);
   static Error deregisterEHFrames(span<const char> EHFrameSection);
 
-  static Error registerObjCRegistrationObjects(JITDylibState &JDS);
+  static Error
+  registerObjCRegistrationObjects(std::unique_lock<std::mutex> &JDStatesLock,
+                                  JITDylibState &JDS);
   static Error runModInits(std::unique_lock<std::mutex> &JDStatesLock,
                            JITDylibState &JDS);
 
@@ -1059,7 +1061,7 @@ Error MachOPlatformRuntimeState::deregisterEHFrames(
 }
 
 Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
-    JITDylibState &JDS) {
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS) {
   ORC_RT_DEBUG(printdbg("Registering Objective-C / Swift metadata.\n"));
 
   std::vector<char *> RegObjBases;
@@ -1074,6 +1076,9 @@ Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
         "Could not register Objective-C / Swift metadata: _objc_map_images / "
         "_objc_load_image not found");
 
+  // Release the lock while calling out to libobjc in case +load methods cause
+  // reentering the orc runtime.
+  JDStatesLock.unlock();
   std::vector<char *> Paths;
   Paths.resize(RegObjBases.size());
   _objc_map_images(RegObjBases.size(), Paths.data(),
@@ -1081,6 +1086,7 @@ Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
 
   for (void *RegObjBase : RegObjBases)
     _objc_load_image(nullptr, reinterpret_cast<mach_header *>(RegObjBase));
+  JDStatesLock.lock();
 
   return Error::success();
 }
@@ -1218,7 +1224,7 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   }
 
   // Initialize this JITDylib.
-  if (auto Err = registerObjCRegistrationObjects(JDS))
+  if (auto Err = registerObjCRegistrationObjects(JDStatesLock, JDS))
     return Err;
   if (auto Err = runModInits(JDStatesLock, JDS))
     return Err;

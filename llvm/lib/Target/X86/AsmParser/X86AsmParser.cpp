@@ -1956,8 +1956,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (DotOffset != StringRef::npos) {
           consumeToken();
           StringRef LHS = Identifier.slice(0, DotOffset);
-          StringRef Dot = Identifier.slice(DotOffset, DotOffset + 1);
-          StringRef RHS = Identifier.slice(DotOffset + 1, StringRef::npos);
+          StringRef Dot = Identifier.substr(DotOffset, 1);
+          StringRef RHS = Identifier.substr(DotOffset + 1);
           if (!RHS.empty()) {
             getLexer().UnLex(AsmToken(AsmToken::Identifier, RHS));
           }
@@ -2789,7 +2789,7 @@ bool X86AsmParser::parseATTOperand(OperandVector &Operands) {
       if (auto *RE = dyn_cast<X86MCExpr>(Expr)) {
         // Segment Register. Reset Expr and copy value to register.
         Expr = nullptr;
-        Reg = RE->getRegNo();
+        Reg = RE->getReg();
 
         // Check the register.
         if (Reg == X86::EIZ || Reg == X86::RIZ)
@@ -3052,7 +3052,7 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
       return true;
 
     // Check the register.
-    BaseReg = cast<X86MCExpr>(E)->getRegNo();
+    BaseReg = cast<X86MCExpr>(E)->getReg();
     if (BaseReg == X86::EIZ || BaseReg == X86::RIZ)
       return Error(BaseLoc, "eiz and riz can only be used as index registers",
                    SMRange(BaseLoc, EndLoc));
@@ -3079,7 +3079,7 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
           Warning(Loc, "scale factor without index register is ignored");
         Scale = 1;
       } else { // IndexReg Found.
-        IndexReg = cast<X86MCExpr>(E)->getRegNo();
+        IndexReg = cast<X86MCExpr>(E)->getReg();
 
         if (BaseReg == X86::RIP)
           return Error(Loc,
@@ -3776,6 +3776,17 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   if (X86::optimizeShiftRotateWithImmediateOne(Inst))
     return true;
 
+  auto replaceWithCCMPCTEST = [&](unsigned Opcode) -> bool {
+    if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {
+      Inst.setFlags(~(X86::IP_USE_EVEX)&Inst.getFlags());
+      Inst.setOpcode(Opcode);
+      Inst.addOperand(MCOperand::createImm(0));
+      Inst.addOperand(MCOperand::createImm(10));
+      return true;
+    }
+    return false;
+  };
+
   switch (Inst.getOpcode()) {
   default: return false;
   case X86::JMP_1:
@@ -3807,6 +3818,61 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     Inst.setOpcode(X86::INT3);
     return true;
   }
+  // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=} <>, <>`, and
+  // `{evex} test <>, <>` is alias of `ctest {dfv=} <>, <>`
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    return replaceWithCCMPCTEST(X86::TO);
+    FROM_TO(CMP64rr, CCMP64rr)
+    FROM_TO(CMP64mi32, CCMP64mi32)
+    FROM_TO(CMP64mi8, CCMP64mi8)
+    FROM_TO(CMP64mr, CCMP64mr)
+    FROM_TO(CMP64ri32, CCMP64ri32)
+    FROM_TO(CMP64ri8, CCMP64ri8)
+    FROM_TO(CMP64rm, CCMP64rm)
+
+    FROM_TO(CMP32rr, CCMP32rr)
+    FROM_TO(CMP32mi, CCMP32mi)
+    FROM_TO(CMP32mi8, CCMP32mi8)
+    FROM_TO(CMP32mr, CCMP32mr)
+    FROM_TO(CMP32ri, CCMP32ri)
+    FROM_TO(CMP32ri8, CCMP32ri8)
+    FROM_TO(CMP32rm, CCMP32rm)
+
+    FROM_TO(CMP16rr, CCMP16rr)
+    FROM_TO(CMP16mi, CCMP16mi)
+    FROM_TO(CMP16mi8, CCMP16mi8)
+    FROM_TO(CMP16mr, CCMP16mr)
+    FROM_TO(CMP16ri, CCMP16ri)
+    FROM_TO(CMP16ri8, CCMP16ri8)
+    FROM_TO(CMP16rm, CCMP16rm)
+
+    FROM_TO(CMP8rr, CCMP8rr)
+    FROM_TO(CMP8mi, CCMP8mi)
+    FROM_TO(CMP8mr, CCMP8mr)
+    FROM_TO(CMP8ri, CCMP8ri)
+    FROM_TO(CMP8rm, CCMP8rm)
+
+    FROM_TO(TEST64rr, CTEST64rr)
+    FROM_TO(TEST64mi32, CTEST64mi32)
+    FROM_TO(TEST64mr, CTEST64mr)
+    FROM_TO(TEST64ri32, CTEST64ri32)
+
+    FROM_TO(TEST32rr, CTEST32rr)
+    FROM_TO(TEST32mi, CTEST32mi)
+    FROM_TO(TEST32mr, CTEST32mr)
+    FROM_TO(TEST32ri, CTEST32ri)
+
+    FROM_TO(TEST16rr, CTEST16rr)
+    FROM_TO(TEST16mi, CTEST16mi)
+    FROM_TO(TEST16mr, CTEST16mr)
+    FROM_TO(TEST16ri, CTEST16ri)
+
+    FROM_TO(TEST8rr, CTEST8rr)
+    FROM_TO(TEST8mi, CTEST8mi)
+    FROM_TO(TEST8mr, CTEST8mr)
+    FROM_TO(TEST8ri, CTEST8ri)
+#undef FROM_TO
   }
 }
 
@@ -4158,7 +4224,10 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_Unsupported;
     break;
   case OpcodePrefix_EVEX:
-    if ((TSFlags & X86II::EncodingMask) != X86II::EVEX)
+    if (is64BitMode() && (TSFlags & X86II::EncodingMask) != X86II::EVEX &&
+        !X86::isCMP(Opc) && !X86::isTEST(Opc))
+      return Match_Unsupported;
+    if (!is64BitMode() && (TSFlags & X86II::EncodingMask) != X86II::EVEX)
       return Match_Unsupported;
     break;
   }

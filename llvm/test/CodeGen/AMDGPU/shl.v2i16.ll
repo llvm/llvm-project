@@ -8,15 +8,15 @@
 define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
 ; GFX9-LABEL: s_shl_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GFX9-NEXT:    s_mov_b32 s7, 0xf000
-; GFX9-NEXT:    s_mov_b32 s6, -1
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GFX9-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    s_mov_b32 s4, s0
-; GFX9-NEXT:    s_mov_b32 s5, s1
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, s3, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NEXT:    s_mov_b32 s0, s4
+; GFX9-NEXT:    s_mov_b32 s1, s5
+; GFX9-NEXT:    v_pk_lshlrev_b16 v0, s7, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_shl_v2i16:
@@ -59,14 +59,14 @@ define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2
 ;
 ; GFX10-LABEL: s_shl_v2i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GFX10-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX10-NEXT:    s_mov_b32 s6, -1
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_pk_lshlrev_b16 v0, s3, s2
-; GFX10-NEXT:    s_mov_b32 s4, s0
-; GFX10-NEXT:    s_mov_b32 s5, s1
-; GFX10-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX10-NEXT:    v_pk_lshlrev_b16 v0, s7, s6
+; GFX10-NEXT:    s_mov_b32 s0, s4
+; GFX10-NEXT:    s_mov_b32 s1, s5
+; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_shl_v2i16:
@@ -90,13 +90,13 @@ define amdgpu_kernel void @s_shl_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <2
 define amdgpu_kernel void @v_shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GFX9-LABEL: v_shl_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v0, v1, v0
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_shl_v2i16:
@@ -142,13 +142,13 @@ define amdgpu_kernel void @v_shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ;
 ; GFX10-LABEL: v_shl_v2i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v2, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, v1, v0
-; GFX10-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX10-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: v_shl_v2i16:
@@ -374,13 +374,13 @@ define amdgpu_kernel void @shl_s_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1)
 define amdgpu_kernel void @shl_imm_v_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GFX9-LABEL: shl_imm_v_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v1, v1, 8 op_sel_hi:[1,0]
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: shl_imm_v_v2i16:
@@ -426,13 +426,13 @@ define amdgpu_kernel void @shl_imm_v_v2i16(ptr addrspace(1) %out, ptr addrspace(
 ;
 ; GFX10-LABEL: shl_imm_v_v2i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX10-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v1, v1, 8 op_sel_hi:[1,0]
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: shl_imm_v_v2i16:
@@ -462,13 +462,13 @@ define amdgpu_kernel void @shl_imm_v_v2i16(ptr addrspace(1) %out, ptr addrspace(
 define amdgpu_kernel void @shl_v_imm_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GFX9-LABEL: shl_v_imm_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: shl_v_imm_v2i16:
@@ -510,13 +510,13 @@ define amdgpu_kernel void @shl_v_imm_v2i16(ptr addrspace(1) %out, ptr addrspace(
 ;
 ; GFX10-LABEL: shl_v_imm_v2i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX10-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: shl_v_imm_v2i16:
@@ -546,14 +546,14 @@ define amdgpu_kernel void @shl_v_imm_v2i16(ptr addrspace(1) %out, ptr addrspace(
 define amdgpu_kernel void @v_shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GFX9-LABEL: v_shl_v4i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
+; GFX9-NEXT:    global_load_dwordx4 v[0:3], v4, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v1, v3, v1
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v0, v2, v0
-; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
+; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_shl_v4i16:
@@ -609,14 +609,14 @@ define amdgpu_kernel void @v_shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ;
 ; GFX10-LABEL: v_shl_v4i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
+; GFX10-NEXT:    global_load_dwordx4 v[0:3], v4, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v1, v3, v1
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, v2, v0
-; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: v_shl_v4i16:
@@ -649,14 +649,14 @@ define amdgpu_kernel void @v_shl_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %
 define amdgpu_kernel void @shl_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GFX9-LABEL: shl_v_imm_v4i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v0, 8, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: shl_v_imm_v4i16:
@@ -708,14 +708,14 @@ define amdgpu_kernel void @shl_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace(
 ;
 ; GFX10-LABEL: shl_v_imm_v4i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v2, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, 8, v0 op_sel_hi:[0,1]
-; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: shl_v_imm_v4i16:

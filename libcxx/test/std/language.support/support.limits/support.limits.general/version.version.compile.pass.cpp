@@ -166,13 +166,15 @@
     __cpp_lib_polymorphic_allocator                         201902L [C++20]
     __cpp_lib_print                                         202207L [C++23]
     __cpp_lib_quoted_string_io                              201304L [C++14]
-    __cpp_lib_ranges                                        202207L [C++20]
+    __cpp_lib_ranges                                        202110L [C++20]
+                                                            202406L [C++23]
     __cpp_lib_ranges_as_const                               202207L [C++23]
     __cpp_lib_ranges_as_rvalue                              202207L [C++23]
     __cpp_lib_ranges_chunk                                  202202L [C++23]
     __cpp_lib_ranges_chunk_by                               202202L [C++23]
     __cpp_lib_ranges_concat                                 202403L [C++26]
     __cpp_lib_ranges_contains                               202207L [C++23]
+    __cpp_lib_ranges_find_last                              202207L [C++23]
     __cpp_lib_ranges_iota                                   202202L [C++23]
     __cpp_lib_ranges_join_with                              202202L [C++23]
     __cpp_lib_ranges_repeat                                 202207L [C++23]
@@ -216,10 +218,11 @@
     __cpp_lib_string_udls                                   201304L [C++14]
     __cpp_lib_string_view                                   201606L [C++17]
                                                             201803L [C++20]
+                                                            202403L [C++26]
     __cpp_lib_submdspan                                     202306L [C++26]
     __cpp_lib_syncbuf                                       201803L [C++20]
     __cpp_lib_text_encoding                                 202306L [C++26]
-    __cpp_lib_three_way_comparison                          201711L [C++20]
+    __cpp_lib_three_way_comparison                          201907L [C++20]
     __cpp_lib_to_address                                    201711L [C++20]
     __cpp_lib_to_array                                      201907L [C++20]
     __cpp_lib_to_chars                                      201611L [C++17]
@@ -846,6 +849,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -1742,6 +1749,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -2809,6 +2820,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -4117,8 +4132,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++20"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_ranges_as_const
@@ -4143,6 +4158,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -4420,8 +4439,8 @@
 # ifndef __cpp_lib_three_way_comparison
 #   error "__cpp_lib_three_way_comparison should be defined in c++20"
 # endif
-# if __cpp_lib_three_way_comparison != 201711L
-#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++20"
+# if __cpp_lib_three_way_comparison != 201907L
+#   error "__cpp_lib_three_way_comparison should have the value 201907L in c++20"
 # endif
 
 # ifndef __cpp_lib_to_address
@@ -5541,17 +5560,11 @@
 #   error "__cpp_lib_optional_range_support should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++23"
-#   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++23"
+# endif
+# if __cpp_lib_out_ptr != 202106L
+#   error "__cpp_lib_out_ptr should have the value 202106L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -5607,8 +5620,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++23"
+# if __cpp_lib_ranges != 202406L
+#   error "__cpp_lib_ranges should have the value 202406L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -5660,6 +5673,13 @@
 # endif
 # if __cpp_lib_ranges_contains != 202207L
 #   error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
+# endif
+
+# ifndef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_find_last != 202207L
+#   error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6018,8 +6038,8 @@
 # ifndef __cpp_lib_three_way_comparison
 #   error "__cpp_lib_three_way_comparison should be defined in c++23"
 # endif
-# if __cpp_lib_three_way_comparison != 201711L
-#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++23"
+# if __cpp_lib_three_way_comparison != 201907L
+#   error "__cpp_lib_three_way_comparison should have the value 201907L in c++23"
 # endif
 
 # ifndef __cpp_lib_to_address
@@ -6535,16 +6555,16 @@
 #   error "__cpp_lib_constexpr_memory should have the value 202202L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_ABI_VCRUNTIME)
 #   ifndef __cpp_lib_constexpr_new
 #     error "__cpp_lib_constexpr_new should be defined in c++26"
 #   endif
 #   if __cpp_lib_constexpr_new != 202406L
 #     error "__cpp_lib_constexpr_new should have the value 202406L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_constexpr_new
-#     error "__cpp_lib_constexpr_new should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_constexpr_new should not be defined when the requirement '!defined(_LIBCPP_ABI_VCRUNTIME)' is not met!"
 #   endif
 # endif
 
@@ -7153,16 +7173,16 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if __has_builtin(__builtin_is_virtual_base_of)
 #   ifndef __cpp_lib_is_virtual_base_of
 #     error "__cpp_lib_is_virtual_base_of should be defined in c++26"
 #   endif
 #   if __cpp_lib_is_virtual_base_of != 202406L
 #     error "__cpp_lib_is_virtual_base_of should have the value 202406L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_is_virtual_base_of
-#     error "__cpp_lib_is_virtual_base_of should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_is_virtual_base_of should not be defined when the requirement '__has_builtin(__builtin_is_virtual_base_of)' is not met!"
 #   endif
 # endif
 
@@ -7382,17 +7402,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++26"
-#   endif
-#   if __cpp_lib_out_ptr != 202311L
-#     error "__cpp_lib_out_ptr should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++26"
+# endif
+# if __cpp_lib_out_ptr != 202311L
+#   error "__cpp_lib_out_ptr should have the value 202311L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7457,8 +7471,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++26"
+# if __cpp_lib_ranges != 202406L
+#   error "__cpp_lib_ranges should have the value 202406L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7519,6 +7533,13 @@
 # endif
 # if __cpp_lib_ranges_contains != 202207L
 #   error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
+# endif
+
+# ifndef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_find_last != 202207L
+#   error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7894,8 +7915,8 @@
 # ifndef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should be defined in c++26"
 # endif
-# if __cpp_lib_string_view != 201803L
-#   error "__cpp_lib_string_view should have the value 201803L in c++26"
+# if __cpp_lib_string_view != 202403L
+#   error "__cpp_lib_string_view should have the value 202403L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7940,8 +7961,8 @@
 # ifndef __cpp_lib_three_way_comparison
 #   error "__cpp_lib_three_way_comparison should be defined in c++26"
 # endif
-# if __cpp_lib_three_way_comparison != 201711L
-#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++26"
+# if __cpp_lib_three_way_comparison != 201907L
+#   error "__cpp_lib_three_way_comparison should have the value 201907L in c++26"
 # endif
 
 # ifndef __cpp_lib_to_address

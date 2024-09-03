@@ -143,7 +143,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
 // Helper for AddGlue to clone node operands.
 static void CloneNodeWithValues(SDNode *N, SelectionDAG *DAG, ArrayRef<EVT> VTs,
                                 SDValue ExtraOper = SDValue()) {
-  SmallVector<SDValue, 8> Ops(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> Ops(N->ops());
   if (ExtraOper.getNode())
     Ops.push_back(ExtraOper);
 

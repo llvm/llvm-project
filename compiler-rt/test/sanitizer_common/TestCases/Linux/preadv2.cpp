@@ -7,6 +7,14 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+#if !defined(__GLIBC_PREREQ)
+#define __GLIBC_PREREQ(a, b) 0
+#endif
+
+#if !__GLIBC_PREREQ(2, 26)
+#define preadv2(a, b, c, d, e) preadv(a, b, c, d) 
+#endif
+
 int main(void) {
   int fd = open("/proc/self/stat", O_RDONLY);
   char bufa[7];

@@ -6,4 +6,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(SandboxIRTests
   SandboxIRTest.cpp
+  TrackerTest.cpp
+  TypesTest.cpp
   )
