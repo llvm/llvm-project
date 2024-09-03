@@ -11804,10 +11804,9 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
 }
 
 Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
-  auto It = EntryToLastInstruction.find(E);
-  if (It != EntryToLastInstruction.end())
-    return *It->second;
   auto &Res = EntryToLastInstruction.try_emplace(E).first->second;
+  if (Res)
+    return *Res;
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
   // constant indeces).
