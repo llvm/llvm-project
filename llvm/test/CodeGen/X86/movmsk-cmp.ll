@@ -4429,7 +4429,6 @@ define i32 @PR39665_c_ray_select(<2 x double> %x, <2 x double> %y) {
 ; SSE-LABEL: PR39665_c_ray_select:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE-NEXT:    psllq $63, %xmm1
 ; SSE-NEXT:    movmskpd %xmm1, %eax
 ; SSE-NEXT:    cmpl $3, %eax
 ; SSE-NEXT:    movl $42, %ecx
@@ -4440,7 +4439,6 @@ define i32 @PR39665_c_ray_select(<2 x double> %x, <2 x double> %y) {
 ; AVX1OR2-LABEL: PR39665_c_ray_select:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; AVX1OR2-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vtestpd %xmm1, %xmm0
 ; AVX1OR2-NEXT:    movl $42, %ecx
