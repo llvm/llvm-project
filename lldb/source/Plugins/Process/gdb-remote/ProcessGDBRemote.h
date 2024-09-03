@@ -22,6 +22,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"

@@ -5028,7 +5028,7 @@ bool ParseRegisters(
           if (it != registers_flags_types.end()) {
             auto flags_type = it->second.get();
             if (reg_info.byte_size == flags_type->GetSize())
-              reg_info.flags_type = flags_type;
+              reg_info.register_type = flags_type;
             else
               LLDB_LOG(
                   log,
