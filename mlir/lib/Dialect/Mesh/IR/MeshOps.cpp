@@ -583,14 +583,14 @@ bool MeshSharding::equalHaloAndShardSizes(const MeshSharding &rhs) const {
                                     rhs.getStaticHaloSizes().end()))) {
     return false;
   }
-  if (rhs.getStaticShardedDimsSizes().size() != getDynamicHaloSizes().size() ||
+  if (rhs.getStaticShardedDimsSizes().size() != getStaticShardedDimsSizes().size() ||
       !llvm::equal(llvm::make_range(getStaticShardedDimsSizes().begin(),
                                     getStaticShardedDimsSizes().end()),
                    llvm::make_range(rhs.getStaticShardedDimsSizes().begin(),
                                     rhs.getStaticShardedDimsSizes().end()))) {
     return false;
   }
-  if (rhs.getDynamicHaloSizes().size() != getStaticShardedDimsSizes().size() ||
+  if (rhs.getDynamicHaloSizes().size() != getDynamicHaloSizes().size() ||
       !llvm::equal(llvm::make_range(getDynamicHaloSizes().begin(),
                                     getDynamicHaloSizes().end()),
                    llvm::make_range(rhs.getDynamicHaloSizes().begin(),
