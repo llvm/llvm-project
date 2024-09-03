@@ -148,13 +148,14 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   Triple TT(M.getTargetTriple());
   PSV.BaseData.MinimumWaveLaneCount = 0;
   PSV.BaseData.MaximumWaveLaneCount = std::numeric_limits<uint32_t>::max();
-  PSV.BaseData.ShaderStage =
-      static_cast<uint8_t>(TT.getEnvironment() - Triple::Pixel);
 
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() != 0 ||
-         TT.getEnvironment() == Triple::Library);
+         MMI.ShaderStage == Triple::Library);
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(MMI.ShaderStage - Triple::Pixel);
+
   // Hardcoded values here to unblock loading the shader into D3D.
   //
   // TODO: Lots more stuff to do here!
