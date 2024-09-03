@@ -277,7 +277,7 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
   // force-target-instruction-cost overwriting the cost of recipe with
   // underlying instruction which is inconsistent with the legacy model.
   // TODO: Remove WidenMem from this function when we don't need to compare to
-  // the latecy model.
+  // the legacy model.
   if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
     return &WidenMem->getIngredient();
   return nullptr;
