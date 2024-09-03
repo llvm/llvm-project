@@ -2850,7 +2850,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   // Copy NUW for ADDs if both instructions have it.
   if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
       BO0->hasNoUnsignedWrap()) {
-    // If the constant-folder didn't kick in, and a new Instruction was created.
+    // If `Inv` was not constant-folded, a new Instruction has been created.
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setHasNoUnsignedWrap(true);
     NewBO->setHasNoUnsignedWrap(true);
