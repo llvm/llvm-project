@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CoroInternal.h"
-#include "SuspendCrossingInfo.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
+#include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
 
 #ifndef LLVM_TRANSFORMS_COROUTINES_SPILLINGINFO_H
 #define LLVM_TRANSFORMS_COROUTINES_SPILLINGINFO_H

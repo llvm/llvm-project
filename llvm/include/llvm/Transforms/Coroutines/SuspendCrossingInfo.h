@@ -12,16 +12,16 @@
 // ptrs in the BlockToIndexMapping.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
-#define LLVM_LIB_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
+#ifndef LLVM_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
+#define LLVM_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
 
-#include "CoroInstr.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
 
 namespace llvm {
 
