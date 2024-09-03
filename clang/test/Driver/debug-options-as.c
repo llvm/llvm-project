@@ -37,7 +37,7 @@
 // Check that clang-cl with the -Z7 option works the same, not triggering
 // any DWARF output.
 //
-// RUN: %clang_cl -### -c -Z7 -x assembler %s 2>&1 \
+// RUN: %clang_cl -### -c -Z7 -x assembler -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MSVC %s
 
 // Check to make sure clang with -g on a .s file gets passed -dwarf-debug-producer.
