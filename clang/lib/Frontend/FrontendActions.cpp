@@ -262,20 +262,11 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
-bool clang::BeginInvocationForModules(CompilerInstance &CI) {
-  // Embed all module files for named modules.
-  // See https://github.com/llvm/llvm-project/issues/72383 for discussion.
-  CI.getFrontendOpts().ModulesEmbedAllFiles = true;
-  CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
-  return true;
-}
-
-bool GenerateModuleInterfaceAction::BeginInvocation(
+bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
-  if (!BeginInvocationForModules(CI))
-    return false;
+  CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
 
-  return GenerateModuleAction::BeginInvocation(CI);
+  return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
 std::unique_ptr<ASTConsumer>
