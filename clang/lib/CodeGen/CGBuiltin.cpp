@@ -18706,8 +18706,6 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
       return Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");
 
     // if cond is a vector of bools lower to a shufflevector
-    // todo check if that true and false are vectors
-    // todo check that the size of true and false and cond are the same
     if (TCond->isVectorTy() &&
 	E->getArg(0)->getType()->getAs<VectorType>()->getElementType()->isBooleanType()) {
       assert(OpTrue->getType()->isVectorTy() && OpFalse->getType()->isVectorTy() &&
