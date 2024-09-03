@@ -43439,6 +43439,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::UNPCKH:
   case X86ISD::UNPCKL:
     return false;
+    // SSE comparisons handle all fcmp cases.
+    // TODO: Add PCMPEQ/GT and CMPM/MM with test coverage.
+  case X86ISD::CMPP:
+    return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {
     case Intrinsic::x86_sse2_pmadd_wd:

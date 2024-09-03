@@ -408,7 +408,9 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                  APFloat::getLargest(Semantics, Negative));
   }
   case Intrinsic::vp_reduce_fadd:
-    return ConstantFP::getNegativeZero(EltTy);
+    return ConstantExpr::getBinOpIdentity(
+        Instruction::FAdd, EltTy, false,
+        VPI.getFastMathFlags().noSignedZeros());
   case Intrinsic::vp_reduce_fmul:
     return ConstantFP::get(EltTy, 1.0);
   }

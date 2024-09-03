@@ -937,8 +937,11 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     ExpandUINT_TO_FLOAT(Node, Results);
     return;
   case ISD::FNEG:
-    Results.push_back(ExpandFNEG(Node));
-    return;
+    if (SDValue Expanded = ExpandFNEG(Node)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::FSUB:
     ExpandFSUB(Node, Results);
     return;
@@ -1777,16 +1780,16 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
   // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
-  if (TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) &&
-      TLI.isOperationLegalOrCustom(ISD::FSUB, VT)) {
-    SDLoc DL(Node);
-    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
-    SDValue SignMask = DAG.getConstant(
-        APInt::getSignMask(IntVT.getScalarSizeInBits()), DL, IntVT);
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, IntVT, Cast, SignMask);
-    return DAG.getNode(ISD::BITCAST, DL, VT, Xor);
-  }
-  return DAG.UnrollVectorOp(Node);
+  if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) ||
+      !TLI.isOperationLegalOrCustom(ISD::FSUB, VT))
+    return SDValue();
+
+  SDLoc DL(Node);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
+  SDValue SignMask = DAG.getConstant(
+      APInt::getSignMask(IntVT.getScalarSizeInBits()), DL, IntVT);
+  SDValue Xor = DAG.getNode(ISD::XOR, DL, IntVT, Cast, SignMask);
+  return DAG.getNode(ISD::BITCAST, DL, VT, Xor);
 }
 
 void VectorLegalizer::ExpandFSUB(SDNode *Node,
