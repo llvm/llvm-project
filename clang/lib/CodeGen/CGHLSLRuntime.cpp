@@ -17,6 +17,7 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -295,13 +296,14 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   // inside the record decl
   for (auto *FD : RD->fields()) {
     const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
-    const auto *HLSLResClassAttr = FD->getAttr<HLSLResourceClassAttr>();
-    if (!HLSLResAttr || !HLSLResClassAttr)
+    const HLSLAttributedResourceType *AttrResType =
+        dyn_cast<HLSLAttributedResourceType>(FD->getType().getTypePtr());
+    if (!HLSLResAttr || !AttrResType)
       continue;
 
-    llvm::hlsl::ResourceClass RC = HLSLResClassAttr->getResourceClass();
+    llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+    bool IsROV = AttrResType->getAttrs().IsROV;
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
-    bool IsROV = FD->hasAttr<HLSLROVAttr>();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
 
     BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
