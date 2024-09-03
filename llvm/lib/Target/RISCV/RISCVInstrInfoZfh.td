@@ -599,27 +599,3 @@ def : Pat<(fcopysign FPR16INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_H_INX $rs1, (FCVT_H_D_INX $rs2, 0b111))>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR16INX:$rs2), (FSGNJ_D_INX $rs1, (FCVT_D_H_INX $rs2, FRM_RNE))>;
 } // Predicates = [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64]
-
-let Predicates = [HasStdExtZfhmin, NoStdExtZfh] in {
-// [u]int->half. Match GCC and default to using dynamic rounding mode.
-def : Pat<(f16 (any_sint_to_fp (i32 GPR:$rs1))), (FCVT_H_S (FCVT_S_W $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(f16 (any_uint_to_fp (i32 GPR:$rs1))), (FCVT_H_S (FCVT_S_WU $rs1, FRM_DYN), FRM_DYN)>;
-} // Predicates = [HasStdExtZfhmin, NoStdExtZfh]
-
-let Predicates = [HasStdExtZhinxmin, NoStdExtZhinx] in {
-// [u]int->half. Match GCC and default to using dynamic rounding mode.
-def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_H_S_INX (FCVT_S_W_INX $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_H_S_INX (FCVT_S_WU_INX $rs1, FRM_DYN), FRM_DYN)>;
-} // Predicates = [HasStdExtZhinxmin, NoStdExtZhinx]
-
-let Predicates = [HasStdExtZfhmin, NoStdExtZfh, IsRV64] in {
-// [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(f16 (any_sint_to_fp (i64 GPR:$rs1))), (FCVT_H_S (FCVT_S_L $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(f16 (any_uint_to_fp (i64 GPR:$rs1))), (FCVT_H_S (FCVT_S_LU $rs1, FRM_DYN), FRM_DYN)>;
-} // Predicates = [HasStdExtZfhmin, NoStdExtZfh, IsRV64]
-
-let Predicates = [HasStdExtZhinxmin, NoStdExtZhinx, IsRV64] in {
-// [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_H_S_INX (FCVT_S_L_INX $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_H_S_INX (FCVT_S_LU_INX $rs1, FRM_DYN), FRM_DYN)>;
-} // Predicates = [HasStdExtZhinxmin, NoStdExtZhinx, IsRV64]

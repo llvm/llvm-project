@@ -58,18 +58,6 @@ def : Pat<(riscv_fmv_x_anyexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 def : Pat<(riscv_fmv_x_signexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 } // Predicates = [HasStdExtZfbfmin]
 
-let Predicates = [HasStdExtZfbfmin] in {
-// [u]int->bf16. Match GCC and default to using dynamic rounding mode.
-def : Pat<(bf16 (any_sint_to_fp (i32 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_W $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(bf16 (any_uint_to_fp (i32 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_WU $rs1, FRM_DYN), FRM_DYN)>;
-}
-
-let Predicates = [HasStdExtZfbfmin, IsRV64] in {
-// [u]int->bf16. Match GCC and default to using dynamic rounding mode.
-def : Pat<(bf16 (any_sint_to_fp (i64 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_L $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(bf16 (any_uint_to_fp (i64 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_LU $rs1, FRM_DYN), FRM_DYN)>;
-}
-
 let Predicates = [HasStdExtZfbfmin, HasStdExtD] in {
 // bf16 -> f64
 def : Pat<(fpextend (bf16 FPR16:$rs1)),
