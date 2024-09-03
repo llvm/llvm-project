@@ -330,11 +330,11 @@ func.func @transfer_read_permutations(%mem_0 : memref<?x?xf32>, %mem_1 : memref<
          vector<7x14x8x16xf32>, vector<8xf32>
 }
 
-// CHECK-LABEL: func @transfer_write_permutations_tensor
+// CHECK-LABEL: func @transfer_write_permutations_tensor_masked
 // CHECK-SAME:    %[[SRC:.*]]: tensor<?x?x?x?xf32>
 // CHECK-SAME:    %[[VEC:.*]]: vector<7x14x8x16xf32>
 // CHECK-SAME:    %[[M:.*]]: i1
-func.func @transfer_write_permutations_tensor(
+func.func @transfer_write_permutations_tensor_masked(
     %src : tensor<?x?x?x?xf32>,
     %vec : vector<7x14x8x16xf32>, %m: i1) -> tensor<?x?x?x?xf32> {
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
