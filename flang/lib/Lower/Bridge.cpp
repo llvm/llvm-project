@@ -1244,40 +1244,25 @@ private:
     assert(lowerToHighLevelFIR());
     hlfir::Entity lhs{dst.getAddr()};
     hlfir::Entity rhs{src.getAddr()};
-    // Temporary_lhs is set to true in hlfir.assign below to avoid user
-    // assignment to be used and finalization to be called on the LHS.
-    // This may or may not be correct but mimics the current behaviour
-    // without HLFIR.
-    auto copyData = [&](hlfir::Entity l, hlfir::Entity r) {
-      // Dereference RHS and load it if trivial scalar.
-      r = hlfir::loadTrivialScalar(loc, *builder, r);
-      builder->create<hlfir::AssignOp>(
-          loc, r, l,
-          /*isWholeAllocatableAssignment=*/isAllocatable,
-          /*keepLhsLengthInAllocatableAssignment=*/false,
-          /*temporary_lhs=*/true);
-    };
 
-    if (isAllocatable) {
-      // Deep copy allocatable if it is allocated.
-      hlfir::Entity temp =
-          hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
-      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
-      mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
-      builder->genIfThen(loc, isAllocated)
-          .genThen([&]() {
-            // Copy the DATA, not the descriptors.
-            copyData(lhs, rhs);
-          })
-          .end();
-    } else if (isPointer) {
+    if (isPointer) {
       // Set LHS target to the target of RHS (do not copy the RHS
       // target data into the LHS target storage).
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
     } else {
-      // Non ALLOCATABLE/POINTER variable. Simple DATA copy.
-      copyData(lhs, rhs);
+      // Temporary_lhs is set to true in hlfir.assign below to avoid user
+      // assignment to be used and finalization to be called on the LHS.
+      // This may or may not be correct but mimics the current behaviour
+      // without HLFIR.
+      //
+      // Dereference RHS and load it if trivial scalar.
+      rhs = hlfir::loadTrivialScalar(loc, *builder, rhs);
+      builder->create<hlfir::AssignOp>(
+          loc, rhs, lhs,
+          /*isWholeAllocatableAssignment=*/isAllocatable,
+          /*keepLhsLengthInAllocatableAssignment=*/false,
+          /*temporary_lhs=*/true);
     }
   }
 
