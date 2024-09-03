@@ -710,6 +710,23 @@ TEST(FormatVariadicTest, FormatFilterRange) {
   EXPECT_EQ("1, 2, 3", formatv("{0}", Range).str());
 }
 
+TEST(FormatVariadicTest, Validate) {
+#ifndef NDEBUG
+#if GTEST_HAS_DEATH_TEST
+  // If asserts are enabled, verify that invalid formatv calls cause assertions.
+  EXPECT_DEATH(formatv("{0}", 1, 2).str(), "Expected 1 Args, but got 2");
+  EXPECT_DEATH(formatv("{0} {2}", 1, 2, 3).str(),
+               "Replacement field indices cannot have holes");
+#else  // GTEST_HAS_DEATH_TEST
+  GTEST_SKIP() << "No support for EXPECT_DEATH";
+#endif // GTEST_HAS_DEATH_TEST
+#else  // NDEBUG
+  // If asserts are disabled, verify that validation is disabled.
+  EXPECT_EQ(formatv("{0}", 1, 2).str(), "1");
+  EXPECT_EQ(formatv("{0} {2}", 1, 2, 3).str(), "1 3");
+#endif // NDEBUG
+}
+
 namespace {
 
 enum class Base { First };

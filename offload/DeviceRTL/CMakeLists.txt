@@ -60,10 +60,10 @@ if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
 elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
        LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "native")
   if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
-    libomptarget_error_say(
+    message(FATAL_ERROR
       "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
   elseif(NOT LIBOMPTARGET_FOUND_NVIDIA_GPU AND NOT LIBOMPTARGET_FOUND_AMDGPU_GPU)
-    libomptarget_error_say("No AMD or NVIDIA GPU found on the system when using 'auto'")
+    message(FATAL_ERROR "No AMD or NVIDIA GPU found on the system when using 'auto'")
   endif()
   set(LIBOMPTARGET_DEVICE_ARCHITECTURES
       "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
@@ -291,7 +291,7 @@ foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
     compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
   else()
-    libomptarget_error_say("Unknown GPU architecture '${gpu_arch}'")
+    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
   endif()
 endforeach()
 
