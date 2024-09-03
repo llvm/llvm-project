@@ -4329,6 +4329,7 @@ workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
   // That's why make an unconditional branch from loop preheader to loop
   // exit block
   Builder.restoreIP({Preheader, Preheader->end()});
+  Builder.SetCurrentDebugLocation(Preheader->getTerminator()->getDebugLoc());
   Preheader->getTerminator()->eraseFromParent();
   Builder.CreateBr(CLI->getExit());
 
