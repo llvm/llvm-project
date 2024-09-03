@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMScalarOpts
   ADCE.cpp
   AlignmentFromAssumptions.cpp
   AnnotationRemarks.cpp
+  ARMWidenStrings.cpp
   BDCE.cpp
   CallSiteSplitting.cpp
   ConstantHoisting.cpp

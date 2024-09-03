@@ -212,6 +212,7 @@
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
+#include "llvm/Transforms/Scalar/ARMWidenStrings.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
 #include "llvm/Transforms/Scalar/AnnotationRemarks.h"
 #include "llvm/Transforms/Scalar/BDCE.h"
