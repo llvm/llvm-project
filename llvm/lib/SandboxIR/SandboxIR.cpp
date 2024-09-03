@@ -2180,6 +2180,11 @@ void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
   cast<llvm::ShuffleVectorInst>(Val)->setShuffleMask(Mask);
 }
 
+VectorType *ShuffleVectorInst::getType() const {
+    return cast<VectorType>(
+              Ctx.getType(cast<llvm::ShuffleVectorInst>(Val)->getType()));
+}
+
 void ShuffleVectorInst::commute() {
   Ctx.getTracker().emplaceIfTracking<ShuffleVectorSetMask>(this);
   Ctx.getTracker().emplaceIfTracking<UseSwap>(getOperandUse(0),
