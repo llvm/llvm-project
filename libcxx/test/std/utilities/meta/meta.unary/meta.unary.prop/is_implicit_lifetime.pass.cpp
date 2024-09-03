@@ -120,9 +120,7 @@ struct [[clang::type_visibility("hidden")]] TypeVisibility {};
 // Test implicit-lifetime type
 template <typename T, bool Expected>
 constexpr void test_is_implicit_lifetime() {
-  static_assert(std::is_implicit_lifetime<T>::value == Expected);
-
-  // Runtime check
+  assert(std::is_implicit_lifetime<T>::value == Expected);
   assert(std::is_implicit_lifetime_v<T> == Expected);
 }
 
