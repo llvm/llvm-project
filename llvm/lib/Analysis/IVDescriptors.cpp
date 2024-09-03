@@ -1035,7 +1035,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
 Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) const {
+                                                   FastMathFlags FMF) {
   switch (K) {
   case RecurKind::Xor:
   case RecurKind::Add:
@@ -1071,8 +1071,7 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
     return ConstantFP::getInfinity(Tp, true /*Negative*/);
   case RecurKind::IAnyOf:
   case RecurKind::FAnyOf:
-    return getRecurrenceStartValue();
-    break;
+    llvm_unreachable("No meaningful identity for recurrence kind");
   default:
     llvm_unreachable("Unknown recurrence kind");
   }

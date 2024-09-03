@@ -25,6 +25,7 @@ class Context;
 // Forward declare friend classes for MSVC.
 class PointerType;
 class VectorType;
+class IntegerType;
 class FunctionType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
@@ -38,6 +39,7 @@ protected:
   friend class VectorType;   // For LLVMTy.
   friend class PointerType;  // For LLVMTy.
   friend class FunctionType; // For LLVMTy.
+  friend class IntegerType;  // For LLVMTy.
   friend class Function;     // For LLVMTy.
   friend class CallBase;     // For LLVMTy.
   friend class ConstantInt;  // For LLVMTy.
@@ -292,6 +294,22 @@ public:
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::FunctionType>(From->LLVMTy);
+  }
+};
+
+/// Class to represent integer types. Note that this class is also used to
+/// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
+/// Int64Ty.
+/// Integer representation type
+class IntegerType : public Type {
+public:
+  static IntegerType *get(Context &C, unsigned NumBits);
+  // TODO: add missing functions
+  static bool classof(const Type *From) {
+    return isa<llvm::IntegerType>(From->LLVMTy);
+  }
+  operator llvm::IntegerType &() const {
+    return *cast<llvm::IntegerType>(LLVMTy);
   }
 };
 
