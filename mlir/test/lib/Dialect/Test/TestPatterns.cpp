@@ -388,8 +388,9 @@ struct TestGreedyPatternDriver
     GreedyRewriteConfig config;
     config.useTopDownTraversal = this->useTopDownTraversal;
     config.maxIterations = this->maxIterations;
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                       config);
+    config.fold = this->fold;
+    config.cseConstants = this->cseConstants;
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
   Option<bool> useTopDownTraversal{
@@ -400,6 +401,11 @@ struct TestGreedyPatternDriver
       *this, "max-iterations",
       llvm::cl::desc("Max. iterations in the GreedyRewriteConfig"),
       llvm::cl::init(GreedyRewriteConfig().maxIterations)};
+  Option<bool> fold{*this, "fold", llvm::cl::desc("Whether to fold"),
+                    llvm::cl::init(GreedyRewriteConfig().fold)};
+  Option<bool> cseConstants{*this, "cse-constants",
+                            llvm::cl::desc("Whether to CSE constants"),
+                            llvm::cl::init(GreedyRewriteConfig().cseConstants)};
 };
 
 struct DumpNotifications : public RewriterBase::Listener {

@@ -170,9 +170,8 @@ applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
   bool failed = false;
   for (Region &region : op->getRegions()) {
     bool regionChanged;
-    failed |=
-        applyPatternsAndFoldGreedily(region, patterns, config, &regionChanged)
-            .failed();
+    failed |= applyPatternsGreedily(region, patterns, config, &regionChanged)
+                  .failed();
     anyRegionChanged |= regionChanged;
   }
   if (changed)
