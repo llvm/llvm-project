@@ -112,10 +112,10 @@
 
 // Security Buffer Check is on by default.
 // RUN: %clang_cl -### -- %s 2>&1 | FileCheck -check-prefix=GS-default %s
-// GS-default: "-stack-protector" "2"
+// GS-default: "-stack-protector" "1"
 
 // RUN: %clang_cl /GS -### -- %s 2>&1 | FileCheck -check-prefix=GS %s
-// GS: "-stack-protector" "2"
+// GS: "-stack-protector" "1"
 
 // RUN: %clang_cl /GS- -### -- %s 2>&1 | FileCheck -check-prefix=GS_ %s
 // GS_-NOT: -stack-protector

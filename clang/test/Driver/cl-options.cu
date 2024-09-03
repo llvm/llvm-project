@@ -8,7 +8,7 @@
 // GS-default: "-cc1" "-triple" "nvptx{{(64)?}}-nvidia-cuda"
 // GS-default-NOT: "-stack-protector"
 // GS-default: "-cc1" "-triple"
-// GS-default: "-stack-protector" "2"
+// GS-default: "-stack-protector" "1"
 
 // -exceptions should be passed to device-side compilation.
 // RUN: not %clang_cl /c /GX -### -nocudalib -nocudainc -- %s 2>&1 | FileCheck -check-prefix=GX %s
