@@ -203,16 +203,33 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::withRecId(DistinctAttr recId) {
   return DICompositeTypeAttr::get(
-      getContext(), getTag(), recId, getName(), getFile(), getLine(),
-      getScope(), getBaseType(), getFlags(), getSizeInBits(), getAlignInBits(),
-      getElements(), getDataLocation(), getRank(), getAllocated(),
-      getAssociated());
+      getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
+      getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
+      getAlignInBits(), getElements(), getDataLocation(), getRank(),
+      getAllocated(), getAssociated());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
-  return DICompositeTypeAttr::get(recId.getContext(), 0, recId, {}, {}, 0, {},
-                                  {}, DIFlags(), 0, 0, {}, {}, {}, {}, {});
+  return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                                  0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
+                                  {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DISubprogramAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
+  return DISubprogramAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getCompileUnit(),
+      getScope(), getName(), getLinkageName(), getFile(), getLine(),
+      getScopeLine(), getSubprogramFlags(), getType(), getRetainedNodes());
+}
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
+  return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//

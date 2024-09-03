@@ -146,8 +146,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     elements.push_back(subrangeTy);
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
-      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+      /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
       dataLocation, /*rank=*/nullptr, allocated, associated);
 }
@@ -188,7 +188,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   }
 
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_structure_type, /*recursive_id=*/{},
+      context, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, result.second.name), fileAttr, line, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
@@ -236,8 +236,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   // have been set to some valid default values.
 
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
-      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+      /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
       /*associated=*/nullptr);
