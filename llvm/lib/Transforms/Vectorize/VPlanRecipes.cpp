@@ -939,13 +939,19 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
   if (auto *FPMO = dyn_cast_or_null<FPMathOperator>(getUnderlyingValue()))
     FMF = FPMO->getFastMathFlags();
 
-  // Some backends analyze intrinsic arguments to determine cost. If all
-  // operands are VPValues with an underlying IR value, use the original IR
-  // values for cost computations.
+  // Some backends analyze intrinsic arguments to determine cost. Use the
+  // underlying value for the operand if it has one. Otherwise try to use the
+  // operand of the underlying call instruction, if there is one. Otherwise
+  // clear Arguments.
+  // TODO: Rework TTI interface to be independent of concrete IR values.
   SmallVector<const Value *> Arguments;
-  for (VPValue *Op : operands()) {
+  for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
+      if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
+        Arguments.push_back(UI->getArgOperand(Idx));
+        continue;
+      }
       Arguments.clear();
       break;
     }
@@ -959,8 +965,10 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
     ParamTys.push_back(
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
-  IntrinsicCostAttributes CostAttrs(VectorIntrinsicID, RetTy, Arguments,
-                                    ParamTys, FMF);
+  // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
+  IntrinsicCostAttributes CostAttrs(
+      VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
+      dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
