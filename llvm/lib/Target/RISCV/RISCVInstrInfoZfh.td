@@ -405,18 +405,16 @@ foreach Ext = ZfhExts in {
 }
 
 let Predicates = [HasStdExtZfh] in {
-defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16, f16>;
-
 def PseudoFROUND_H : PseudoFROUND<FPR16, f16>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZhinx] in {
-defm Select_FPR16INX : SelectCC_GPR_rrirr<FPR16INX, f16>;
-
 def PseudoFROUND_H_INX : PseudoFROUND<FPR16INX, f16>;
 } // Predicates = [HasStdExtZhinx]
 
 let Predicates = [HasStdExtZfhmin] in {
+defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16, f16>;
+
 /// Loads
 def : LdPat<load, FLH, f16>;
 
@@ -425,6 +423,8 @@ def : StPat<store, FSH, FPR16, f16>;
 } // Predicates = [HasStdExtZfhmin]
 
 let Predicates = [HasStdExtZhinxmin] in {
+defm Select_FPR16INX : SelectCC_GPR_rrirr<FPR16INX, f16>;
+
 /// Loads
 def : Pat<(f16 (load (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
           (COPY_TO_REGCLASS (LH GPR:$rs1, simm12:$imm12), GPRF16)>;
