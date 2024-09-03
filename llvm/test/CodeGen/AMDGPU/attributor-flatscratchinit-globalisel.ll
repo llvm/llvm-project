@@ -4,7 +4,7 @@
 ;; tests of alloca
 
 define void @without_alloca(i1 %arg0) {
-  store volatile i1 %arg0, ptr addrspace(1) undef
+  store volatile i1 %arg0, ptr addrspace(1) null
   ret void
 }
 
@@ -15,7 +15,7 @@ define void @with_alloca() {
 }
 
 define amdgpu_kernel void @without_alloca_cc_kernel(i1 %arg0) {
-  store volatile i1 %arg0, ptr addrspace(1) undef
+  store volatile i1 %arg0, ptr addrspace(1) null
   ret void
 }
 
@@ -453,13 +453,13 @@ declare i32 @llvm.amdgcn.workgroup.id.x()
 
 define void @use_intrinsic_workitem_id_x() {
   %val = call i32 @llvm.amdgcn.workitem.id.x()
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) null
   ret void
 }
 
 define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel() {
   %val = call i32 @llvm.amdgcn.workitem.id.x()
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) null
   ret void
 }
 

@@ -10,7 +10,7 @@ define void @without_alloca(i1 %arg0) {
 ;
 ; GFX10-LABEL: define void @without_alloca(i1 %arg0)
 ; GFX10-SAME:  #[[ATTR_GFX10_NOFSI:[0-9]+]]
-  store volatile i1 %arg0, ptr addrspace(1) undef
+  store volatile i1 %arg0, ptr addrspace(1) null
   ret void
 }
 
@@ -31,7 +31,7 @@ define amdgpu_kernel void @without_alloca_cc_kernel(i1 %arg0) {
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @without_alloca_cc_kernel(i1 %arg0)
 ; GFX10-SAME:  #[[ATTR_GFX10_NOFSI2:[0-9]+]]
-  store volatile i1 %arg0, ptr addrspace(1) undef
+  store volatile i1 %arg0, ptr addrspace(1) null
   ret void
 }
 
@@ -858,7 +858,7 @@ define void @use_intrinsic_workitem_id_x() {
 ; GFX10-LABEL: define void @use_intrinsic_workitem_id_x()
 ; GFX10-SAME:  #[[ATTR_GFX10_NOFSI4:[0-9]+]]
   %val = call i32 @llvm.amdgcn.workitem.id.x()
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) null
   ret void
 }
 
@@ -869,7 +869,7 @@ define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10-LABEL: define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel()
 ; GFX10-SAME:  #[[ATTR_GFX10_NOFSI2]]
   %val = call i32 @llvm.amdgcn.workitem.id.x()
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) null
   ret void
 }
 
