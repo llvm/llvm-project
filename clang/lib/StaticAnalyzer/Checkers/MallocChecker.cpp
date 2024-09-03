@@ -3676,7 +3676,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             }
 
             // Switch suspection to outer destructor to catch patterns like:
-            // (note that class name is special to bypass
+            // (note that class name is distorted to bypass
             // isReferenceCountingPointerDestructor() logic)
             //
             // SmartPointr::~SmartPointr() {
