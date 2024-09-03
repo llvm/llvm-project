@@ -46,7 +46,15 @@ public:
 
   const Enumerators &GetEnumerators() const { return m_enumerators; }
 
-  void DumpToLog(Log *log) const;
+  virtual void DumpToLog(Log *log) const override;
+
+  virtual unsigned GetSize() const override {
+    // Enums don't have a size until they are used by a specific register,
+    // so we return 0 just to be sure they don't end up attached directly to a
+    // register. We expect them to only be used by flags, then the flags are
+    // attached to the register.
+    return 0;
+  }
 
   virtual void ToXMLElement(Stream &strm,
                             const RegisterType *user = nullptr) const override;
@@ -163,9 +171,9 @@ public:
   }
 
   const std::vector<Field> &GetFields() const { return m_fields; }
-  unsigned GetSize() const { return m_size; }
+  virtual unsigned GetSize() const override { return m_size; }
 
-  void DumpToLog(Log *log) const;
+  virtual void DumpToLog(Log *log) const override;
 
   /// Produce a text table showing the layout of all the fields. Unnamed/padding
   /// fields will be included, with only their positions shown.

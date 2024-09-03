@@ -51,6 +51,12 @@ public:
     m_dependencies = dependencies;
   }
 
+  virtual void DumpToLog(Log *log) const = 0;
+
+  /// The size of the type in bytes. Return 0 if the size is unknown or context
+  /// specific.
+  virtual unsigned GetSize() const = 0;
+
 private:
   const RegisterTypeKind m_kind;
   const std::string m_id;
