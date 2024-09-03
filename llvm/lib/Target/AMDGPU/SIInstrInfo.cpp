@@ -2098,7 +2098,9 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   }
 }
 
-Register SIInstrInfo::findImplicitExecSrc(const MachineInstr &MI) {
+Register SIInstrInfo::findSetInactiveMask(const MachineInstr &MI) {
+  assert(MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
+         MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64);
   for (auto &Op : MI.implicit_operands()) {
     if (Op.isDef())
       continue;
@@ -2298,7 +2300,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MachineOperand &InactiveSrc = MI.getOperand(2);
 
     // Find implicit register defining lanes active outside WWM.
-    Register ExecSrcReg = findImplicitExecSrc(MI);
+    Register ExecSrcReg = findSetInactiveMask(MI);
     assert(ExecSrcReg && "V_SET_INACTIVE must be in known WWM region");
     // Note: default here is set to ExecReg so that functional MIR is still
     // generated if implicit def is not found and assertions are disabled.

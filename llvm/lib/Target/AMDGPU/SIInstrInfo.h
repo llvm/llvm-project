@@ -1438,7 +1438,7 @@ public:
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
 
-  static Register findImplicitExecSrc(const MachineInstr &MI);
+  static Register findSetInactiveMask(const MachineInstr &MI);
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class
