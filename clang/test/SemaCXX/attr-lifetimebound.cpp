@@ -292,13 +292,18 @@ namespace GH106372 {
 class [[gsl::Owner]] Foo {};
 class [[gsl::Pointer]] FooView {};
 
+class NonAnnotatedFoo {};
+class NonAnnotatedFooView {};
+
 template <typename T>
 struct StatusOr {
   template <typename U = T>
   StatusOr& operator=(U&& v [[clang::lifetimebound]]);
 };
 
-void test(StatusOr<FooView> foo) {
-  foo = Foo(); // expected-warning {{object backing the pointer foo will be destroyed at the end}}
+void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
+  foo1 = Foo(); // expected-warning {{object backing the pointer foo1 will be destroyed at the end}}
+  // No warning on non-gsl annotated types.
+  foo2 = NonAnnotatedFoo();
 }
 } // namespace GH106372
