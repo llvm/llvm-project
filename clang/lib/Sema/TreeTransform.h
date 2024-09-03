@@ -16585,8 +16585,12 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
     // in the tree transformation.
     if (First->containsErrors())
       return ExprError();
+    bool IsDependent;
     // -> is never a builtin operation.
-    return SemaRef.BuildOverloadedArrowExpr(First, OpLoc);
+    ExprResult Result = SemaRef.BuildOverloadedArrowExpr(
+        First, OpLoc, /*NoArrowOperatorFound=*/nullptr, IsDependent);
+    assert(!IsDependent);
+    return Result;
   } else if (Second == nullptr || isPostIncDec) {
     if (!First->getType()->isOverloadableType() ||
         (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {
