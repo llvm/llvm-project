@@ -5,13 +5,7 @@
 define i35 @f(i35 %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sbfx x8, x0, #0, #35
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    sdiv x10, x9, x8
-; CHECK-NEXT:    msub x8, x10, x8, x9
-; CHECK-NEXT:    clz x8, x8
-; CHECK-NEXT:    sub x8, x8, #29
-; CHECK-NEXT:    ubfx x0, x8, #5, #30
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: f:
