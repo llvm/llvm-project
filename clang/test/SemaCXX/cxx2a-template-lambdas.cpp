@@ -106,7 +106,7 @@ void GH107048() {
   using A = decltype([]<int=x>{});
 
   int z; // expected-note {{'z' declared here}}
-    auto c = []<int t=z>{
+  auto c = []<int t=z>{
     // expected-error@-1 {{no matching function for call to object of type}} \
     // expected-error@-1 {{variable 'z' cannot be implicitly captured in a lambda with no capture-default specified}} \
     // expected-note@-1 {{lambda expression begins here}} \
@@ -114,5 +114,12 @@ void GH107048() {
     // expected-note@-1 {{candidate template ignored: substitution failure: reference to local variable 'z' declared in enclosing function}}
     return t;
   }();
+
+  struct S {};
+  constexpr S s;  // expected-note {{'s' declared here}}
+  auto class_type = []<S=s>{};
+  // expected-error@-1 {{variable 's' cannot be implicitly captured in a lambda with no capture-default specified}} \
+  // expected-note@-1 {{lambda expression begins here}} \
+  // expected-note@-1 4{{capture}}
 }
 #endif
