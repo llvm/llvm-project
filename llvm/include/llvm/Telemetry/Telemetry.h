@@ -16,38 +16,7 @@
 /// - TelemetryInfo: data courier
 /// - TelemetryConfig: this stores configurations on Telemeter.
 ///
-/// This framework is intended to be configurable and extensible:
-///    - Any LLVM tool that wants to use Telemetry can extend/customize it.
-///    - Toolchain vendors can also provide custom implementation/config of the
-///      Telemetry library, which could either overrides or extends the given
-///      tool's upstream implementation, to best fit their organization's usage
-///      and security models.
-///    - End users of such tool can also configure telemetry (as allowed
-///      by their vendor).
-///
-/// Note: There are two important points to highlight about this package:
-///
-///  (0) There is (currently) no concrete implementation of Telemetry in
-///      upstream LLVM. We only provide the abstract API here. Any tool
-///      that wants telemetry will have to implement one.
-///
-///      The reason for this is because all the tools in llvm are
-///      very different in what they care about (what/when/where to instrument)
-///      Hence it might not be practical to a single implementation.
-///      However, if in the future when we see any common pattern, we can
-///      extract them into a shared place. That is TBD - contributions welcomed.
-///
-///  (1) No implementation of Telemetry in upstream LLVM shall directly store
-///      any of the collected data due to privacy and security reasons:
-///        + Different organizations have different opinions on which data
-///          is sensitive and which is not.
-///        + Data ownerships and data collection consents are hard to
-///          accommodate from LLVM developers' point of view.
-///          (Eg., the data collected by Telemetry framework is NOT neccessarily
-///           owned by the user of a LLVM tool with Telemetry enabled, hence
-///           their consent to data collection isn't meaningful. On the other
-///           hand, we have no practical way to request consent from "real"
-///           owners.
+/// Refer to its documentation at llvm/docs/Telemetry.rst for more details.
 //===---------------------------------------------------------------------===//
 
 #ifndef LLVM_TELEMETRY_TELEMETRY_H
@@ -67,7 +36,9 @@
 namespace llvm {
 namespace telemetry {
 
-struct TelemetryConfig {
+// Configuration for the Telemeter class.
+// This struct can be extended as needed.
+struct Config {
   // If true, telemetry will be enabled.
   bool EnableTelemetry;
 
@@ -80,9 +51,12 @@ struct TelemetryConfig {
   std::vector<std::string> AdditionalDestinations;
 };
 
+// Defines a convenient type for timestamp of various events.
+// This is used by the EventStats below.
 using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
-struct TelemetryEventStats {
+// Various time (and possibly memory) statistics of an event.
+struct EventStats {
   // REQUIRED: Start time of an event
   SteadyTimePoint Start;
   // OPTIONAL: End time of an event - may be empty if not meaningful.
@@ -107,22 +81,28 @@ struct EntryKind {
 };
 
 // TelemetryInfo is the data courier, used to forward data from
-// the tool being monitored and the Telemery framework.
+// the tool being monitored to the Telemery framework.
 //
 // This base class contains only the basic set of telemetry data.
 // Downstream implementations can add more fields as needed.
 struct TelemetryInfo {
-  // A "session" corresponds to every time the tool starts.
-  // All entries emitted for the same session will have
-  // the same session_uuid
-  std::string SessionUuid;
+  // This represents a unique-id, conventionally corresponding to
+  // a tools' session - ie., every time the tool starts until it exits.
+  //
+  // Note: a tool could have mutliple sessions running at once, in which
+  // case, these shall be multiple sets of TelemetryInfo with multiple unique
+  // ids.
+  //
+  // Different usages can assign different types of IDs to this field.
+  std::string SessionId;
 
+  // Time/memory statistics of this event.
   TelemetryEventStats Stats;
 
   std::optional<ExitDescription> ExitDesc;
 
   // Counting number of entries.
-  // (For each set of entries with the same session_uuid, this value should
+  // (For each set of entries with the same SessionId, this value should
   // be unique for each entry)
   size_t Counter;
 
@@ -132,20 +112,29 @@ struct TelemetryInfo {
   virtual json::Object serializeToJson() const;
 
   // For isa, dyn_cast, etc, operations.
-  virtual KindType getEntryKind() const { return EntryKind::Base; }
+  virtual KindType getKind() const { return EntryKind::Base; }
   static bool classof(const TelemetryInfo *T) {
-    return T->getEntryKind() == EntryKind::Base;
+    return T->getKind() == EntryKind::Base;
   }
 };
 
-// Where/how to send the telemetry entries.
-class TelemetryDestination {
+// This class presents a data sink to which the Telemetry framework
+// sends data.
+//
+// Its implementation is transparent to the framework.
+// It is up to the vendor to decide which pieces of data to forward
+// and where to forward them.
+class Destination {
 public:
   virtual ~TelemetryDestination() = default;
   virtual Error emitEntry(const TelemetryInfo *Entry) = 0;
   virtual std::string name() const = 0;
 };
 
+// This class is the main interaction point between any LLVM tool
+// and this framework.
+// It is responsible for collecting telemetry data from the tool being
+// monitored.
 class Telemeter {
 public:
   // Invoked upon tool startup
