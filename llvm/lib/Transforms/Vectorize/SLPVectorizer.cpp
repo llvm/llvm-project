@@ -17962,7 +17962,7 @@ public:
           }
           Value *OrigV = TrackedToOrig.find(RdxVal)->second;
           unsigned NumOps =
-              VectorizedVals.lookup(RdxVal) + SameValuesCounter[OrigV];
+              VectorizedVals.lookup(RdxVal) + SameValuesCounter.lookup(OrigV);
           if (NumOps != ReducedValsToOps.find(OrigV)->second.size())
             LocalExternallyUsedValues[RdxVal];
         }
@@ -18104,6 +18104,7 @@ public:
       }
       if (OptReusedScalars && !AnyVectorized) {
         for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
+          assert(P.second && "Expected at least one occurrence.");
           Value *RedVal = emitScaleForReusedOps(P.first, Builder, P.second);
           VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
           Value *OrigV = TrackedToOrig.find(P.first)->second;
