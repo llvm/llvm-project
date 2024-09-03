@@ -17,7 +17,9 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
 
-#pragma GCC system_header
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
 #if _LIBCPP_STD_VER >= 20
 #  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Container, _Tp)
