@@ -136,6 +136,10 @@ ExpandIToFP<OpTy>::matchAndRewrite(OpTy op, PatternRewriter &rewriter) const {
   ImplicitLocOpBuilder builder(op.getLoc(), rewriter);
 
   if (intWidth == mantissaWidth) {
+    if (std::is_same_v<OpTy, LLVM::UIToFPOp>) {
+      return rewriter.notifyMatchFailure(
+          op, "unsigned src is as wide as dst mantissa");
+    }
     // Create a float bit-pattern with zero biased-exponent and zero mantissa.
     APFloat::integerPart intPart = 1ull << (mantissaWidth - 1);
     APFloat floatBits(floatType.getFloatSemantics(), intPart);
