@@ -40,7 +40,7 @@ Arm64RegisterFlagsDetector::DetectPOREL0Fields(uint64_t hwcap, uint64_t hwcap2,
   if (!(hwcap2 & HWCAP2_POE))
     return {};
 
-  static const FieldEnum por_el0_perm_enum("por_el0_perm_enum",
+  static const RegisterTypeEnum por_el0_perm_enum("por_el0_perm_enum",
                                            {
                                                {0b0000, "No Access"},
                                                {0b0001, "Read"},
@@ -81,10 +81,11 @@ Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2,
   if (!(hwcap2 & HWCAP2_FPMR))
     return {};
 
-  static const FieldEnum fp8_format_enum("fp8_format_enum", {
-                                                                {0, "FP8_E5M2"},
-                                                                {1, "FP8_E4M3"},
-                                                            });
+  static const RegisterTypeEnum fp8_format_enum("fp8_format_enum",
+                                                {
+                                                    {0, "FP8_E5M2"},
+                                                    {1, "FP8_E4M3"},
+                                                });
   return {
       {"LSCALE2", 32, 37},
       {"NSCALE", 24, 31},
@@ -144,12 +145,12 @@ Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
   // to prctl(PR_TAGGED_ADDR_CTRL...). Fields are derived from the defines
   // used to build the value.
 
-  std::vector<RegisterFlags::Field> fields;
+  std::vector<RegisterTypeFlags::Field> fields;
   fields.reserve(4);
   if (hwcap3 & HWCAP3_MTE_STORE_ONLY)
     fields.push_back({"STORE_ONLY", 19});
 
-  static const FieldEnum tcf_enum(
+  static const RegisterTypeEnum tcf_enum(
       "tcf_enum",
       {{0, "TCF_NONE"}, {1, "TCF_SYNC"}, {2, "TCF_ASYNC"}, {3, "TCF_ASYMM"}});
 
@@ -167,11 +168,14 @@ Arm64RegisterFlagsDetector::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2,
                                              uint64_t hwcap3) {
   (void)hwcap3;
 
-  static const FieldEnum rmode_enum(
+  static const RegisterTypeEnum rmode_enum(
       "rmode_enum", {{0, "RN"}, {1, "RP"}, {2, "RM"}, {3, "RZ"}});
 
-  std::vector<RegisterFlags::Field> fpcr_fields{
-      {"AHP", 26}, {"DN", 25}, {"FZ", 24}, {"RMode", 22, 23, &rmode_enum},
+  std::vector<RegisterTypeFlags::Field> fpcr_fields{
+      {"AHP", 26},
+      {"DN", 25},
+      {"FZ", 24},
+      {"RMode", 22, 23, &rmode_enum},
       // Bits 21-20 are "Stride" which is unused in AArch64 state.
   };
 
@@ -236,8 +240,11 @@ Arm64RegisterFlagsDetector::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
   // or at least not from userspace.
 
   // Status bits that are always present.
-  std::vector<RegisterFlags::Field> cpsr_fields{
-      {"N", 31}, {"Z", 30}, {"C", 29}, {"V", 28},
+  std::vector<RegisterTypeFlags::Field> cpsr_fields{
+      {"N", 31},
+      {"Z", 30},
+      {"C", 29},
+      {"V", 28},
       // Bits 27-26 reserved.
   };
 
@@ -290,7 +297,7 @@ void Arm64RegisterFlagsDetector::UpdateRegisterInfo(
   // Register names will not be duplicated, so we do not want to compare against
   // one if it has already been found. Each time we find one, we erase it from
   // this list.
-  std::vector<std::pair<llvm::StringRef, const RegisterFlags *>>
+  std::vector<std::pair<llvm::StringRef, const RegisterTypeFlags *>>
       search_registers;
   for (const auto &reg : m_registers) {
     // It is possible that a register is all extension dependent fields, and

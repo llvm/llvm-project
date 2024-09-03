@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 
@@ -52,7 +52,7 @@ public:
   bool HasDetected() const { return m_has_detected; }
 
 private:
-  using Fields = std::vector<RegisterFlags::Field>;
+  using Fields = std::vector<RegisterTypeFlags::Field>;
   using DetectorFn = std::function<Fields(uint64_t, uint64_t, uint64_t)>;
 
   static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
@@ -78,7 +78,7 @@ private:
           m_detector(detector) {}
 
     llvm::StringRef m_name;
-    RegisterFlags m_flags;
+    RegisterTypeFlags m_flags;
     DetectorFn m_detector;
   } m_registers[9] = {
       RegisterEntry("cpsr", 4, DetectCPSRFields),

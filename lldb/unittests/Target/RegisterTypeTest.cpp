@@ -1,4 +1,4 @@
-//===-- RegisterFlagsTest.cpp ---------------------------------------------===//
+//===-- RegisterTypeTest.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -16,10 +16,10 @@
 using namespace lldb_private;
 using namespace lldb;
 
-TEST(RegisterFlagsTest, Field) {
+TEST(RegisterTypeTest, Field) {
   // We assume that start <= end is always true, so that is not tested here.
 
-  RegisterFlags::Field f1("abc", 0);
+  RegisterTypeFlags::Field f1("abc", 0);
   ASSERT_EQ(f1.GetName(), "abc");
   // start == end means a 1 bit field.
   ASSERT_EQ(f1.GetSizeInBits(), (unsigned)1);
@@ -27,13 +27,13 @@ TEST(RegisterFlagsTest, Field) {
 
   // End is inclusive meaning that start 0 to end 1 includes bit 1
   // to make a 2 bit field.
-  RegisterFlags::Field f2("", 0, 1);
+  RegisterTypeFlags::Field f2("", 0, 1);
   ASSERT_EQ(f2.GetSizeInBits(), (unsigned)2);
   ASSERT_EQ(f2.GetMask(), (uint64_t)3);
 
   // If the field doesn't start at 0 we need to shift up/down
   // to account for it.
-  RegisterFlags::Field f3("", 2, 5);
+  RegisterTypeFlags::Field f3("", 2, 5);
   ASSERT_EQ(f3.GetSizeInBits(), (unsigned)4);
   ASSERT_EQ(f3.GetMask(), (uint64_t)0x3c);
 
@@ -44,15 +44,15 @@ TEST(RegisterFlagsTest, Field) {
   ASSERT_FALSE(f1 < f1);
 }
 
-static RegisterFlags::Field make_field(unsigned start, unsigned end) {
-  return RegisterFlags::Field("", start, end);
+static RegisterTypeFlags::Field make_field(unsigned start, unsigned end) {
+  return RegisterTypeFlags::Field("", start, end);
 }
 
-static RegisterFlags::Field make_field(unsigned bit) {
-  return RegisterFlags::Field("", bit);
+static RegisterTypeFlags::Field make_field(unsigned bit) {
+  return RegisterTypeFlags::Field("", bit);
 }
 
-TEST(RegisterFlagsTest, FieldOverlaps) {
+TEST(RegisterTypeTest, FieldOverlaps) {
   // Single bit fields
   ASSERT_FALSE(make_field(0, 0).Overlaps(make_field(1)));
   ASSERT_TRUE(make_field(1, 1).Overlaps(make_field(1)));
@@ -67,7 +67,7 @@ TEST(RegisterFlagsTest, FieldOverlaps) {
   ASSERT_FALSE(make_field(15, 30).Overlaps(make_field(7, 12)));
 }
 
-TEST(RegisterFlagsTest, PaddingDistance) {
+TEST(RegisterTypeTest, PaddingDistance) {
   // We assume that this method is always called with a more significant
   // (start bit is higher) field first and that they do not overlap.
 
@@ -81,46 +81,47 @@ TEST(RegisterFlagsTest, PaddingDistance) {
   ASSERT_EQ(make_field(31, 31).PaddingDistance(make_field(0)), 30ULL);
 }
 
-TEST(RegisterFlagsTest, AsTable) {
+TEST(RegisterTypeTest, AsTable) {
   // Anonymous fields are shown with an empty name cell.
-  RegisterFlags anon_field("", 4, {make_field(0, 31)});
+  RegisterTypeFlags anon_field("", 4, {make_field(0, 31)});
   ASSERT_EQ("| 31-0 |\n"
             "|------|\n"
             "|      |",
             anon_field.AsTable(100));
 
-  RegisterFlags anon_with_pad("", 4, {make_field(16, 31)});
+  RegisterTypeFlags anon_with_pad("", 4, {make_field(16, 31)});
   ASSERT_EQ("| 31-16 | 15-0 |\n"
             "|-------|------|\n"
             "|       |      |",
             anon_with_pad.AsTable(100));
 
   // Use the wider of position and name to set the column width.
-  RegisterFlags name_wider("", 4, {RegisterFlags::Field("aardvark", 0, 31)});
+  RegisterTypeFlags name_wider("", 4,
+                               {RegisterTypeFlags::Field("aardvark", 0, 31)});
   ASSERT_EQ("|   31-0   |\n"
             "|----------|\n"
             "| aardvark |",
             name_wider.AsTable(100));
   // When the padding is an odd number, put the remaining 1 on the right.
-  RegisterFlags pos_wider("", 4, {RegisterFlags::Field("?", 0, 31)});
+  RegisterTypeFlags pos_wider("", 4, {RegisterTypeFlags::Field("?", 0, 31)});
   ASSERT_EQ("| 31-0 |\n"
             "|------|\n"
             "|  ?   |",
             pos_wider.AsTable(100));
 
   // Single bit fields don't need to show start and end, just one of them.
-  RegisterFlags single_bit("", 4, {make_field(31)});
+  RegisterTypeFlags single_bit("", 4, {make_field(31)});
   ASSERT_EQ("| 31 | 30-0 |\n"
             "|----|------|\n"
             "|    |      |",
             single_bit.AsTable(100));
 
   // Columns are printed horizontally if max width allows.
-  RegisterFlags many_fields("", 4,
-                            {RegisterFlags::Field("cat", 28, 31),
-                             RegisterFlags::Field("pigeon", 20, 23),
-                             RegisterFlags::Field("wolf", 12),
-                             RegisterFlags::Field("x", 0, 4)});
+  RegisterTypeFlags many_fields("", 4,
+                                {RegisterTypeFlags::Field("cat", 28, 31),
+                                 RegisterTypeFlags::Field("pigeon", 20, 23),
+                                 RegisterTypeFlags::Field("wolf", 12),
+                                 RegisterTypeFlags::Field("x", 0, 4)});
   ASSERT_EQ("| 31-28 | 27-24 | 23-20  | 19-13 |  12  | 11-5 | 4-0 |\n"
             "|-------|-------|--------|-------|------|------|-----|\n"
             "|  cat  |       | pigeon |       | wolf |      |  x  |",
@@ -128,14 +129,15 @@ TEST(RegisterFlagsTest, AsTable) {
 
   // max_width tells us when we need to split into further tables.
   // Here no split is needed.
-  RegisterFlags exact_max_single_col("", 4, {RegisterFlags::Field("?", 0, 31)});
+  RegisterTypeFlags exact_max_single_col(
+      "", 4, {RegisterTypeFlags::Field("?", 0, 31)});
   ASSERT_EQ("| 31-0 |\n"
             "|------|\n"
             "|  ?   |",
             exact_max_single_col.AsTable(9));
-  RegisterFlags exact_max_two_col(
-      "", 4,
-      {RegisterFlags::Field("?", 16, 31), RegisterFlags::Field("#", 0, 15)});
+  RegisterTypeFlags exact_max_two_col("", 4,
+                                      {RegisterTypeFlags::Field("?", 16, 31),
+                                       RegisterTypeFlags::Field("#", 0, 15)});
   ASSERT_EQ("| 31-16 | 15-0 |\n"
             "|-------|------|\n"
             "|   ?   |  #   |",
@@ -143,16 +145,17 @@ TEST(RegisterFlagsTest, AsTable) {
 
   // If max is less than a single column, just print the single column. The user
   // will have to put up with some wrapping in this niche case.
-  RegisterFlags zero_max_single_col("", 4, {RegisterFlags::Field("?", 0, 31)});
+  RegisterTypeFlags zero_max_single_col("", 4,
+                                        {RegisterTypeFlags::Field("?", 0, 31)});
   ASSERT_EQ("| 31-0 |\n"
             "|------|\n"
             "|  ?   |",
             zero_max_single_col.AsTable(0));
   // Same logic for any following columns. Effectively making a "vertical"
   // table, just with more grid lines.
-  RegisterFlags zero_max_two_col(
-      "", 4,
-      {RegisterFlags::Field("?", 16, 31), RegisterFlags::Field("#", 0, 15)});
+  RegisterTypeFlags zero_max_two_col("", 4,
+                                     {RegisterTypeFlags::Field("?", 16, 31),
+                                      RegisterTypeFlags::Field("#", 0, 15)});
   ASSERT_EQ("| 31-16 |\n"
             "|-------|\n"
             "|   ?   |\n"
@@ -162,15 +165,16 @@ TEST(RegisterFlagsTest, AsTable) {
             "|  #   |",
             zero_max_two_col.AsTable(0));
 
-  RegisterFlags max_less_than_single_col("", 4,
-                                         {RegisterFlags::Field("?", 0, 31)});
+  RegisterTypeFlags max_less_than_single_col(
+      "", 4, {RegisterTypeFlags::Field("?", 0, 31)});
   ASSERT_EQ("| 31-0 |\n"
             "|------|\n"
             "|  ?   |",
             max_less_than_single_col.AsTable(3));
-  RegisterFlags max_less_than_two_col(
+  RegisterTypeFlags max_less_than_two_col(
       "", 4,
-      {RegisterFlags::Field("?", 16, 31), RegisterFlags::Field("#", 0, 15)});
+      {RegisterTypeFlags::Field("?", 16, 31),
+       RegisterTypeFlags::Field("#", 0, 15)});
   ASSERT_EQ("| 31-16 |\n"
             "|-------|\n"
             "|   ?   |\n"
@@ -179,11 +183,12 @@ TEST(RegisterFlagsTest, AsTable) {
             "|------|\n"
             "|  #   |",
             max_less_than_two_col.AsTable(9));
-  RegisterFlags max_many_columns(
+  RegisterTypeFlags max_many_columns(
       "", 4,
-      {RegisterFlags::Field("A", 24, 31), RegisterFlags::Field("B", 16, 23),
-       RegisterFlags::Field("C", 8, 15),
-       RegisterFlags::Field("really long name", 0, 7)});
+      {RegisterTypeFlags::Field("A", 24, 31),
+       RegisterTypeFlags::Field("B", 16, 23),
+       RegisterTypeFlags::Field("C", 8, 15),
+       RegisterTypeFlags::Field("really long name", 0, 7)});
   ASSERT_EQ("| 31-24 | 23-16 |\n"
             "|-------|-------|\n"
             "|   A   |   B   |\n"
@@ -198,28 +203,32 @@ TEST(RegisterFlagsTest, AsTable) {
             max_many_columns.AsTable(23));
 }
 
-TEST(RegisterFlagsTest, DumpEnums) {
-  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0}}).DumpEnums(80),
+TEST(RegisterTypeTest, DumpEnums) {
+  ASSERT_EQ(RegisterTypeFlags("", 8, {RegisterTypeFlags::Field{"A", 0}})
+                .DumpEnums(80),
             "");
 
-  FieldEnum basic_enum("test", {{0, "an_enumerator"}});
-  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 0, &basic_enum}})
+  RegisterTypeEnum basic_enum("test", {{0, "an_enumerator"}});
+  ASSERT_EQ(RegisterTypeFlags(
+                "", 8, {RegisterTypeFlags::Field{"A", 0, 0, &basic_enum}})
                 .DumpEnums(80),
             "A: 0 = an_enumerator");
 
   // If width is smaller than the enumerator name, print it anyway.
-  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 0, &basic_enum}})
+  ASSERT_EQ(RegisterTypeFlags(
+                "", 8, {RegisterTypeFlags::Field{"A", 0, 0, &basic_enum}})
                 .DumpEnums(5),
             "A: 0 = an_enumerator");
 
-  // Multiple values can go on the same line, up to the width.
-  FieldEnum more_enum("long_enum",
-                      {{0, "an_enumerator"},
-                       {1, "another_enumerator"},
-                       {2, "a_very_very_long_enumerator_has_its_own_line"},
-                       {3, "small"},
-                       {4, "small2"}});
-  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 2, &more_enum}})
+  // Mutliple values can go on the same line, up to the width.
+  RegisterTypeEnum more_enum(
+      "long_enum", {{0, "an_enumerator"},
+                    {1, "another_enumerator"},
+                    {2, "a_very_very_long_enumerator_has_its_own_line"},
+                    {3, "small"},
+                    {4, "small2"}});
+  ASSERT_EQ(RegisterTypeFlags("", 8,
+                              {RegisterTypeFlags::Field{"A", 0, 2, &more_enum}})
                 // Width is chosen to be exactly enough to allow 0 and 1
                 // enumerators on the first line.
                 .DumpEnums(45),
@@ -228,21 +237,21 @@ TEST(RegisterFlagsTest, DumpEnums) {
             "   3 = small, 4 = small2");
 
   // If they all exceed width, one per line.
-  FieldEnum another_enum("another_enum", {{0, "an_enumerator"},
-                                          {1, "another_enumerator"},
-                                          {2, "a_longer_enumerator"}});
-  ASSERT_EQ(
-      RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 1, &another_enum}})
-          .DumpEnums(5),
-      "A: 0 = an_enumerator,\n"
-      "   1 = another_enumerator,\n"
-      "   2 = a_longer_enumerator");
+  RegisterTypeEnum another_enum("another_enum", {{0, "an_enumerator"},
+                                                 {1, "another_enumerator"},
+                                                 {2, "a_longer_enumerator"}});
+  ASSERT_EQ(RegisterTypeFlags(
+                "", 8, {RegisterTypeFlags::Field{"A", 0, 1, &another_enum}})
+                .DumpEnums(5),
+            "A: 0 = an_enumerator,\n"
+            "   1 = another_enumerator,\n"
+            "   2 = a_longer_enumerator");
 
   // If the name is already > the width, put one value per line.
-  FieldEnum short_enum("short_enum", {{0, "a"}, {1, "b"}, {2, "c"}});
-  ASSERT_EQ(RegisterFlags("", 8,
-                          {RegisterFlags::Field{"AReallyLongFieldName", 0, 1,
-                                                &short_enum}})
+  RegisterTypeEnum short_enum("short_enum", {{0, "a"}, {1, "b"}, {2, "c"}});
+  ASSERT_EQ(RegisterTypeFlags("", 8,
+                              {RegisterTypeFlags::Field{"AReallyLongFieldName",
+                                                        0, 1, &short_enum}})
                 .DumpEnums(10),
             "AReallyLongFieldName: 0 = a,\n"
             "                      1 = b,\n"
@@ -251,12 +260,13 @@ TEST(RegisterFlagsTest, DumpEnums) {
   // Fields are separated by a blank line. Indentation of lines split by width
   // is set by the size of the fields name (as opposed to some max of all field
   // names).
-  FieldEnum enum_1("enum_1", {{0, "an_enumerator"}, {1, "another_enumerator"}});
-  FieldEnum enum_2("enum_2",
-                   {{0, "Cdef_enumerator_1"}, {1, "Cdef_enumerator_2"}});
-  ASSERT_EQ(RegisterFlags("", 8,
-                          {RegisterFlags::Field{"Ab", 1, 1, &enum_1},
-                           RegisterFlags::Field{"Cdef", 0, 0, &enum_2}})
+  RegisterTypeEnum enum_1("enum_1",
+                          {{0, "an_enumerator"}, {1, "another_enumerator"}});
+  RegisterTypeEnum enum_2("enum_2",
+                          {{0, "Cdef_enumerator_1"}, {1, "Cdef_enumerator_2"}});
+  ASSERT_EQ(RegisterTypeFlags("", 8,
+                              {RegisterTypeFlags::Field{"Ab", 1, 1, &enum_1},
+                               RegisterTypeFlags::Field{"Cdef", 0, 0, &enum_2}})
                 .DumpEnums(10),
             "Ab: 0 = an_enumerator,\n"
             "    1 = another_enumerator\n"
@@ -265,14 +275,14 @@ TEST(RegisterFlagsTest, DumpEnums) {
             "      1 = Cdef_enumerator_2");
 
   // Having fields without enumerators shouldn't produce any extra newlines.
-  ASSERT_EQ(RegisterFlags("", 8,
-                          {
-                              RegisterFlags::Field{"A", 4, 4},
-                              RegisterFlags::Field{"B", 3, 3, &enum_1},
-                              RegisterFlags::Field{"C", 2, 2},
-                              RegisterFlags::Field{"D", 1, 1, &enum_1},
-                              RegisterFlags::Field{"E", 0, 0},
-                          })
+  ASSERT_EQ(RegisterTypeFlags("", 8,
+                              {
+                                  RegisterTypeFlags::Field{"A", 4, 4},
+                                  RegisterTypeFlags::Field{"B", 3, 3, &enum_1},
+                                  RegisterTypeFlags::Field{"C", 2, 2},
+                                  RegisterTypeFlags::Field{"D", 1, 1, &enum_1},
+                                  RegisterTypeFlags::Field{"E", 0, 0},
+                              })
                 .DumpEnums(80),
             "B: 0 = an_enumerator, 1 = another_enumerator\n"
             "\n"
@@ -282,17 +292,18 @@ TEST(RegisterFlagsTest, DumpEnums) {
 TEST(RegisterFieldsTest, FlagsToXMLElement) {
   StreamString strm;
 
-  // RegisterFlags requires that some fields be given, so no testing of empty
-  // input.
+  // RegisterTypeFlags requires that some fields be given, so no testing of
+  // empty input.
 
   // Unnamed fields are padding that are ignored. This applies to fields passed
   // in, and those generated to fill the other bits (31-1 here).
-  RegisterFlags("Foo", 4, {RegisterFlags::Field("", 0, 0)}).ToXMLElement(strm);
+  RegisterTypeFlags("Foo", 4, {RegisterTypeFlags::Field("", 0, 0)})
+      .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
                               "</flags>\n");
 
   strm.Clear();
-  RegisterFlags("Foo", 4, {RegisterFlags::Field("abc", 0, 0)})
+  RegisterTypeFlags("Foo", 4, {RegisterTypeFlags::Field("abc", 0, 0)})
       .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
                               "  <field name=\"abc\" start=\"0\" end=\"0\"/>\n"
@@ -301,9 +312,9 @@ TEST(RegisterFieldsTest, FlagsToXMLElement) {
   strm.Clear();
   // Should use the current indentation level as a starting point.
   strm.IndentMore();
-  RegisterFlags(
-      "Bar", 5,
-      {RegisterFlags::Field("f1", 25, 32), RegisterFlags::Field("f2", 10, 24)})
+  RegisterTypeFlags("Bar", 5,
+                    {RegisterTypeFlags::Field("f1", 25, 32),
+                     RegisterTypeFlags::Field("f2", 10, 24)})
       .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(),
             "  <flags id=\"Bar\" size=\"5\">\n"
@@ -314,10 +325,11 @@ TEST(RegisterFieldsTest, FlagsToXMLElement) {
   strm.Clear();
   strm.IndentLess();
   // Should replace any XML unsafe characters in field names.
-  RegisterFlags("Safe", 8,
-                {RegisterFlags::Field("A<", 4), RegisterFlags::Field("B>", 3),
-                 RegisterFlags::Field("C'", 2), RegisterFlags::Field("D\"", 1),
-                 RegisterFlags::Field("E&", 0)})
+  RegisterTypeFlags(
+      "Safe", 8,
+      {RegisterTypeFlags::Field("A<", 4), RegisterTypeFlags::Field("B>", 3),
+       RegisterTypeFlags::Field("C'", 2), RegisterTypeFlags::Field("D\"", 1),
+       RegisterTypeFlags::Field("E&", 0)})
       .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(),
             "<flags id=\"Safe\" size=\"8\">\n"
@@ -330,10 +342,11 @@ TEST(RegisterFieldsTest, FlagsToXMLElement) {
 
   // Should include enumerators as the "type".
   strm.Clear();
-  FieldEnum enum_single("enum_single", {{0, "a"}});
-  RegisterFlags("Enumerators", 8,
-                {RegisterFlags::Field("NoEnumerators", 4),
-                 RegisterFlags::Field("OneEnumerator", 3, 3, &enum_single)})
+  RegisterTypeEnum enum_single("enum_single", {{0, "a"}});
+  RegisterTypeFlags(
+      "Enumerators", 8,
+      {RegisterTypeFlags::Field("NoEnumerators", 4),
+       RegisterTypeFlags::Field("OneEnumerator", 3, 3, &enum_single)})
       .ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(),
             "<flags id=\"Enumerators\" size=\"8\">\n"
@@ -343,23 +356,23 @@ TEST(RegisterFieldsTest, FlagsToXMLElement) {
             "</flags>\n");
 }
 
-TEST(RegisterFlagsTest, EnumeratorToXMLElement) {
+TEST(RegisterTypeTest, EnumeratorToXMLElement) {
   StreamString strm;
 
-  FieldEnum::Enumerator(1234, "test").ToXMLElement(strm);
+  RegisterTypeEnum::Enumerator(1234, "test").ToXMLElement(strm);
   ASSERT_EQ(strm.GetString(), "<evalue name=\"test\" value=\"1234\"/>");
 
   // Special XML chars in names must be escaped.
   std::array special_names = {
-      std::make_pair(FieldEnum::Enumerator(0, "A<"),
+      std::make_pair(RegisterTypeEnum::Enumerator(0, "A<"),
                      "<evalue name=\"A&lt;\" value=\"0\"/>"),
-      std::make_pair(FieldEnum::Enumerator(1, "B>"),
+      std::make_pair(RegisterTypeEnum::Enumerator(1, "B>"),
                      "<evalue name=\"B&gt;\" value=\"1\"/>"),
-      std::make_pair(FieldEnum::Enumerator(2, "C'"),
+      std::make_pair(RegisterTypeEnum::Enumerator(2, "C'"),
                      "<evalue name=\"C&apos;\" value=\"2\"/>"),
-      std::make_pair(FieldEnum::Enumerator(3, "D\""),
+      std::make_pair(RegisterTypeEnum::Enumerator(3, "D\""),
                      "<evalue name=\"D&quot;\" value=\"3\"/>"),
-      std::make_pair(FieldEnum::Enumerator(4, "E&"),
+      std::make_pair(RegisterTypeEnum::Enumerator(4, "E&"),
                      "<evalue name=\"E&amp;\" value=\"4\"/>"),
   };
 
@@ -370,17 +383,18 @@ TEST(RegisterFlagsTest, EnumeratorToXMLElement) {
   }
 }
 
-TEST(RegisterFlagsTest, EnumToXMLElement) {
+TEST(RegisterTypeTest, EnumToXMLElement) {
   StreamString strm;
 
-  RegisterFlags user_4("Foo", 4, {RegisterFlags::Field("", 0, 0)});
-  FieldEnum("empty_enum", {})
+  RegisterTypeFlags user_4("Foo", 4, {RegisterTypeFlags::Field("", 0, 0)});
+  RegisterTypeEnum("empty_enum", {})
       .ToXMLElement(strm, llvm::dyn_cast<const RegisterType>(&user_4));
   ASSERT_EQ(strm.GetString(), "<enum id=\"empty_enum\" size=\"4\"/>\n");
 
   strm.Clear();
-  RegisterFlags user_5("Foo", 5, {RegisterFlags::Field("", 0, 0)});
-  FieldEnum("single_enumerator", {FieldEnum::Enumerator(0, "zero")})
+  RegisterTypeFlags user_5("Foo", 5, {RegisterTypeFlags::Field("", 0, 0)});
+  RegisterTypeEnum("single_enumerator",
+                   {RegisterTypeEnum::Enumerator(0, "zero")})
       .ToXMLElement(strm, llvm::dyn_cast<const RegisterType>(&user_5));
   ASSERT_EQ(strm.GetString(), "<enum id=\"single_enumerator\" size=\"5\">\n"
                               "  <evalue name=\"zero\" value=\"0\"/>\n"
@@ -389,8 +403,9 @@ TEST(RegisterFlagsTest, EnumToXMLElement) {
   // Currently we don't emit size if the user of this type is not a flags.
   // We don't expect to see this situation in real use.
   strm.Clear();
-  FieldEnum("multiple_enumerator",
-            {FieldEnum::Enumerator(0, "zero"), FieldEnum::Enumerator(1, "one")})
+  RegisterTypeEnum("multiple_enumerator",
+                   {RegisterTypeEnum::Enumerator(0, "zero"),
+                    RegisterTypeEnum::Enumerator(1, "one")})
       .ToXMLElement(strm, nullptr);
   ASSERT_EQ(strm.GetString(), "<enum id=\"multiple_enumerator\">\n"
                               "  <evalue name=\"zero\" value=\"0\"/>\n"
@@ -398,27 +413,27 @@ TEST(RegisterFlagsTest, EnumToXMLElement) {
                               "</enum>\n");
 }
 
-TEST(RegisterFlagsTest, RegisterFlagsToXML) {
+TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
   // This method should output all the enums used by the register flag set,
   // then the flags set itself. There should only be one definition of each
   // enum, even if it is used by multiple fields.
 
   StreamString strm;
-  FieldEnum enum_a("enum_a", {FieldEnum::Enumerator(0, "zero")});
-  FieldEnum enum_b("enum_b", {FieldEnum::Enumerator(1, "one")});
-  FieldEnum enum_c("enum_c", {FieldEnum::Enumerator(2, "two")});
+  RegisterTypeEnum enum_a("enum_a", {RegisterTypeEnum::Enumerator(0, "zero")});
+  RegisterTypeEnum enum_b("enum_b", {RegisterTypeEnum::Enumerator(1, "one")});
+  RegisterTypeEnum enum_c("enum_c", {RegisterTypeEnum::Enumerator(2, "two")});
   std::unordered_set<const RegisterType *> previously_emitted;
   // Pretend that enum_c was already emitted for a different flag set.
   previously_emitted.insert(&enum_c);
 
-  std::vector<RegisterFlags::Field> fields{
-      RegisterFlags::Field("f1", 31, 31, &enum_a),
-      RegisterFlags::Field("f2", 30, 30, &enum_a),
-      RegisterFlags::Field("f3", 29, 29, &enum_b),
-      RegisterFlags::Field("f4", 27, 28, &enum_c),
+  std::vector<RegisterTypeFlags::Field> fields{
+      RegisterTypeFlags::Field("f1", 31, 31, &enum_a),
+      RegisterTypeFlags::Field("f2", 30, 30, &enum_a),
+      RegisterTypeFlags::Field("f3", 29, 29, &enum_b),
+      RegisterTypeFlags::Field("f4", 27, 28, &enum_c),
   };
 
-  RegisterFlags("Test", 4, fields).ToXML(strm, previously_emitted);
+  RegisterTypeFlags("Test", 4, fields).ToXML(strm, previously_emitted);
   ASSERT_EQ(strm.GetString(),
             "<enum id=\"enum_a\" size=\"4\">\n"
             "  <evalue name=\"zero\" value=\"0\"/>\n"
@@ -436,9 +451,9 @@ TEST(RegisterFlagsTest, RegisterFlagsToXML) {
   // If another flag set were to use the same enums we should not output them
   // again. Only output anything new.
   strm.Clear();
-  FieldEnum enum_d("enum_d", {FieldEnum::Enumerator(3, "three")});
-  fields.push_back(RegisterFlags::Field("f5", 25, 26, &enum_d));
-  RegisterFlags("Test", 4, fields).ToXML(strm, previously_emitted);
+  RegisterTypeEnum enum_d("enum_d", {RegisterTypeEnum::Enumerator(3, "three")});
+  fields.push_back(RegisterTypeFlags::Field("f5", 25, 26, &enum_d));
+  RegisterTypeFlags("Test", 4, fields).ToXML(strm, previously_emitted);
   ASSERT_EQ(strm.GetString(),
             "<enum id=\"enum_d\" size=\"4\">\n"
             "  <evalue name=\"three\" value=\"3\"/>\n"

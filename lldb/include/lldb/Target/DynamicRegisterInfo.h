@@ -12,7 +12,7 @@
 #include <map>
 #include <vector>
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
@@ -41,7 +41,7 @@ public:
     std::vector<uint32_t> invalidate_regs;
     uint32_t value_reg_offset = 0;
     // Non-null if there is an XML provided type.
-    const RegisterFlags *flags_type = nullptr;
+    const RegisterTypeFlags *flags_type = nullptr;
   };
 
   DynamicRegisterInfo() = default;

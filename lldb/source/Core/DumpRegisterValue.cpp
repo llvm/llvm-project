@@ -9,7 +9,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -107,8 +107,8 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  const RegisterFlags *flags_type =
-      llvm::dyn_cast_if_present<RegisterFlags>(reg_info.register_type);
+  const RegisterTypeFlags *flags_type =
+      llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.register_type);
   if (!print_flags || !flags_type || !exe_scope || !target_sp ||
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;

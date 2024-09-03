@@ -11,7 +11,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
@@ -36,7 +36,7 @@ RegisterTypeBuilderClang::RegisterTypeBuilderClang(Target &target)
     : m_target(target) {}
 
 CompilerType RegisterTypeBuilderClang::GetRegisterType(
-    const std::string &name, const lldb_private::RegisterFlags &flags,
+    const std::string &name, const lldb_private::RegisterTypeFlags &flags,
     uint32_t byte_size) {
   lldb::TypeSystemClangSP type_system = ScratchTypeSystemClang::GetForTarget(
       m_target, ScratchTypeSystemClang::IsolatedASTKind::Registers);
@@ -69,11 +69,12 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
 
     // We assume that RegisterFlags has padded and sorted the fields
     // already.
-    for (const RegisterFlags::Field &field : flags.GetFields()) {
+    for (const RegisterTypeFlags::Field &field : flags.GetFields()) {
       CompilerType field_type = field_uint_type;
 
-      if (const FieldEnum *enum_type = field.GetEnum()) {
-        const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
+      if (const RegisterTypeEnum *enum_type = field.GetEnum()) {
+        const RegisterTypeEnum::Enumerators &enumerators =
+            enum_type->GetEnumerators();
         if (!enumerators.empty()) {
           // Enums can be used by many registers and the size of each register
           // may be different. The register size is used as the underlying size

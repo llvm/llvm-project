@@ -55,7 +55,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -4571,7 +4571,8 @@ struct GdbServerTargetInfo {
   RegisterSetMap reg_set_map;
 };
 
-static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
+static RegisterTypeEnum::Enumerators
+ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
@@ -4585,7 +4586,7 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   // 2 = pre-startup, 1 = startup, 0 = startup
   // This only matters for "register info" but let's trust what the server
   // chose regardless.
-  std::map<uint64_t, FieldEnum::Enumerator> enumerators;
+  std::map<uint64_t, RegisterTypeEnum::Enumerator> enumerators;
 
   enum_node.ForEachChildElementWithName(
       "evalue", [&enumerators, &log](const XMLNode &enumerator_node) {
@@ -4624,22 +4625,22 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
 
         if (value && name)
           enumerators.insert_or_assign(
-              *value, FieldEnum::Enumerator(*value, name->str()));
+              *value, RegisterTypeEnum::Enumerator(*value, name->str()));
 
         // Find all evalue elements.
         return true;
       });
 
-  FieldEnum::Enumerators final_enumerators;
+  RegisterTypeEnum::Enumerators final_enumerators;
   for (auto [_, enumerator] : enumerators)
     final_enumerators.push_back(enumerator);
 
   return final_enumerators;
 }
 
-static void
-ParseEnums(XMLNode feature_node,
-           llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+static void ParseEnums(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterTypeEnum>> &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   // The top level element is "<enum...".
@@ -4666,13 +4667,14 @@ ParseEnums(XMLNode feature_node,
         });
 
         if (!id.empty()) {
-          FieldEnum::Enumerators enumerators = ParseEnumEvalues(enum_node);
+          RegisterTypeEnum::Enumerators enumerators =
+              ParseEnumEvalues(enum_node);
           if (!enumerators.empty()) {
             LLDB_LOG(log,
                      "ProcessGDBRemote::ParseEnums Found enum type \"{0}\"",
                      id);
             registers_enum_types.insert_or_assign(
-                id, std::make_unique<FieldEnum>(id, enumerators));
+                id, std::make_unique<RegisterTypeEnum>(id, enumerators));
           }
         }
 
@@ -4681,14 +4683,15 @@ ParseEnums(XMLNode feature_node,
       });
 }
 
-static std::vector<RegisterFlags::Field> ParseFlagsFields(
-    XMLNode flags_node, unsigned size,
-    const llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+static std::vector<RegisterTypeFlags::Field>
+ParseFlagsFields(XMLNode flags_node, unsigned size,
+                 const llvm::StringMap<std::unique_ptr<RegisterTypeEnum>>
+                     &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
   const unsigned max_start_bit = size * 8 - 1;
 
   // Process the fields of this set of flags.
-  std::vector<RegisterFlags::Field> fields;
+  std::vector<RegisterTypeFlags::Field> fields;
   flags_node.ForEachChildElementWithName("field", [&fields, max_start_bit, &log,
                                                    &registers_enum_types](
                                                       const XMLNode
@@ -4765,7 +4768,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
             "\"{2}\", ignoring",
             *start, *end, name->data());
       else {
-        if (RegisterFlags::Field::GetSizeInBits(*start, *end) > 64)
+        if (RegisterTypeFlags::Field::GetSizeInBits(*start, *end) > 64)
           LLDB_LOG(log,
                    "ProcessGDBRemote::ParseFlagsFields Ignoring field \"{2}\" "
                    "that has "
@@ -4773,7 +4776,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
                    name->data());
         else {
           // A field's type may be set to the name of an enum type.
-          const FieldEnum *enum_type = nullptr;
+          const RegisterTypeEnum *enum_type = nullptr;
           if (type && !type->empty()) {
             auto found = registers_enum_types.find(*type);
             if (found != registers_enum_types.end()) {
@@ -4781,7 +4784,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
 
               // No enumerator can exceed the range of the field itself.
               uint64_t max_value =
-                  RegisterFlags::Field::GetMaxValue(*start, *end);
+                  RegisterTypeFlags::Field::GetMaxValue(*start, *end);
               for (const auto &enumerator : enum_type->GetEnumerators()) {
                 if (enumerator.m_value > max_value) {
                   enum_type = nullptr;
@@ -4805,7 +4808,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
           }
 
           fields.push_back(
-              RegisterFlags::Field(name->str(), *start, *end, enum_type));
+              RegisterTypeFlags::Field(name->str(), *start, *end, enum_type));
         }
       }
     }
@@ -4817,8 +4820,9 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
 
 void ParseFlags(
     XMLNode feature_node,
-    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
-    const llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+    llvm::StringMap<std::unique_ptr<RegisterTypeFlags>> &registers_flags_types,
+    const llvm::StringMap<std::unique_ptr<RegisterTypeEnum>>
+        &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   feature_node.ForEachChildElementWithName(
@@ -4856,15 +4860,15 @@ void ParseFlags(
 
         if (id && size) {
           // Process the fields of this set of flags.
-          std::vector<RegisterFlags::Field> fields =
+          std::vector<RegisterTypeFlags::Field> fields =
               ParseFlagsFields(flags_node, *size, registers_enum_types);
           if (fields.size()) {
             // Sort so that the fields with the MSBs are first.
             std::sort(fields.rbegin(), fields.rend());
-            std::vector<RegisterFlags::Field>::const_iterator overlap =
+            std::vector<RegisterTypeFlags::Field>::const_iterator overlap =
                 std::adjacent_find(fields.begin(), fields.end(),
-                                   [](const RegisterFlags::Field &lhs,
-                                      const RegisterFlags::Field &rhs) {
+                                   [](const RegisterTypeFlags::Field &lhs,
+                                      const RegisterTypeFlags::Field &rhs) {
                                      return lhs.Overlaps(rhs);
                                    });
 
@@ -4890,12 +4894,12 @@ void ParseFlags(
                     id->data());
               } else {
                 registers_flags_types.insert_or_assign(
-                    *id, std::make_unique<RegisterFlags>(id->str(), *size,
-                                                         std::move(fields)));
+                    *id, std::make_unique<RegisterTypeFlags>(
+                             id->str(), *size, std::move(fields)));
               }
             } else {
               // If any fields overlap, ignore the whole set of flags.
-              std::vector<RegisterFlags::Field>::const_iterator next =
+              std::vector<RegisterTypeFlags::Field>::const_iterator next =
                   std::next(overlap);
               LLDB_LOG(
                   log,
@@ -4922,8 +4926,8 @@ void ParseFlags(
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
-    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
-    llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+    llvm::StringMap<std::unique_ptr<RegisterTypeFlags>> &registers_flags_types,
+    llvm::StringMap<std::unique_ptr<RegisterTypeEnum>> &registers_enum_types) {
   if (!feature_node)
     return false;
 
@@ -5019,7 +5023,7 @@ bool ParseRegisters(
 
         if (!gdb_type.empty()) {
           // gdb_type could reference some flags type defined in XML.
-          llvm::StringMap<std::unique_ptr<RegisterFlags>>::iterator it =
+          llvm::StringMap<std::unique_ptr<RegisterTypeFlags>>::iterator it =
               registers_flags_types.find(gdb_type);
           if (it != registers_flags_types.end()) {
             auto flags_type = it->second.get();

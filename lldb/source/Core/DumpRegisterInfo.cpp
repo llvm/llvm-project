@@ -8,7 +8,7 @@
 
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/RegisterTypeFlags.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/Support/Casting.h"
@@ -65,7 +65,7 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
                      invalidates, read_from, in_sets,
-                     llvm::dyn_cast_if_present<lldb_private::RegisterFlags>(
+                     llvm::dyn_cast_if_present<lldb_private::RegisterTypeFlags>(
                          info.register_type),
                      terminal_width);
 }
@@ -92,7 +92,7 @@ void lldb_private::DoDumpRegisterInfo(
     Stream &strm, const char *name, const char *alt_name, uint32_t byte_size,
     const std::vector<const char *> &invalidates,
     const std::vector<const char *> &read_from,
-    const std::vector<SetInfo> &in_sets, const RegisterFlags *flags_type,
+    const std::vector<SetInfo> &in_sets, const RegisterTypeFlags *flags_type,
     uint32_t terminal_width) {
   strm << "       Name: " << name;
   if (alt_name)
