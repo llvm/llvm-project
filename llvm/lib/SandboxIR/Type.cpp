@@ -46,3 +46,8 @@ PointerType *PointerType::get(Context &Ctx, unsigned AddressSpace) {
   return cast<PointerType>(
       Ctx.getType(llvm::PointerType::get(Ctx.LLVMCtx, AddressSpace)));
 }
+
+IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {
+  return cast<IntegerType>(
+      Ctx.getType(llvm::IntegerType::get(Ctx.LLVMCtx, NumBits)));
+}
