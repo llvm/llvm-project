@@ -51,12 +51,20 @@ namespace {
 // distance from the thunk to the target is less than 128MB. Long thunks can
 // branch to any virtual address and they are implemented in the derived
 // classes. This class tries to create a short thunk if the target is in range,
-// otherwise it creates a long thunk.
+// otherwise it creates a long thunk. When BTI is enabled indirect branches
+// must land on a BTI instruction. If the destination does not have a BTI
+// instruction mayNeedLandingPad is set to true and Thunk::landingPad points
+// to an alternative entry point with a BTI.
 class AArch64Thunk : public Thunk {
 public:
-  AArch64Thunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
+  AArch64Thunk(Symbol &dest, int64_t addend, bool mayNeedLandingPad)
+      : Thunk(dest, addend), mayNeedLandingPad(mayNeedLandingPad) {}
   bool getMayUseShortThunk();
   void writeTo(uint8_t *buf) override;
+  bool needsSyntheticLandingPad() override;
+
+protected:
+  bool mayNeedLandingPad;
 
 private:
   bool mayUseShortThunk = true;
@@ -66,8 +74,8 @@ private:
 // AArch64 long range Thunks.
 class AArch64ABSLongThunk final : public AArch64Thunk {
 public:
-  AArch64ABSLongThunk(Symbol &dest, int64_t addend)
-      : AArch64Thunk(dest, addend) {}
+  AArch64ABSLongThunk(Symbol &dest, int64_t addend, bool mayNeedLandingPad)
+      : AArch64Thunk(dest, addend, mayNeedLandingPad) {}
   uint32_t size() override { return getMayUseShortThunk() ? 4 : 16; }
   void addSymbols(ThunkSection &isec) override;
 
@@ -77,12 +85,34 @@ private:
 
 class AArch64ADRPThunk final : public AArch64Thunk {
 public:
-  AArch64ADRPThunk(Symbol &dest, int64_t addend) : AArch64Thunk(dest, addend) {}
+  AArch64ADRPThunk(Symbol &dest, int64_t addend, bool mayNeedLandingPad)
+      : AArch64Thunk(dest, addend, mayNeedLandingPad) {}
   uint32_t size() override { return getMayUseShortThunk() ? 4 : 12; }
   void addSymbols(ThunkSection &isec) override;
 
 private:
   void writeLong(uint8_t *buf) override;
+};
+
+// AArch64 BTI Landing Pad
+// When BTI is enabled indirect branches must land on a BTI
+// compatible instruction. When the destination does not have a
+// BTI compatible instruction a Thunk doing an indirect branch
+// targets a Landing Pad Thunk that direct branches to the target.
+class AArch64BTILandingPadThunk final : public Thunk {
+public:
+  AArch64BTILandingPadThunk(Symbol &dest, int64_t addend)
+      : Thunk(dest, addend) {}
+
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : 8; }
+  void addSymbols(ThunkSection &isec) override;
+  InputSection *getTargetInputSection() const override;
+  void writeTo(uint8_t *buf) override;
+
+private:
+  bool getMayUseShortThunk();
+  void writeLong(uint8_t *buf);
+  bool mayUseShortThunk = true;
 };
 
 // Base class for ARM thunks.
@@ -532,6 +562,12 @@ void AArch64Thunk::writeTo(uint8_t *buf) {
   ctx.target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
 }
 
+bool AArch64Thunk::needsSyntheticLandingPad() {
+  // Short Thunks use a direct branch, no synthetic landing pad
+  // required.
+  return mayNeedLandingPad && !getMayUseShortThunk();
+}
+
 // AArch64 long range Thunks.
 void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
@@ -540,7 +576,11 @@ void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
     0x00, 0x00, 0x00, 0x00, // L0: .xword S
     0x00, 0x00, 0x00, 0x00,
   };
-  uint64_t s = getAArch64ThunkDestVA(destination, addend);
+  // if mayNeedLandingPad is true then destination is an
+  // AArch64BTILandingPadThunk that defines landingPad.
+  assert(!mayNeedLandingPad || landingPad != nullptr);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(0)
+                                 : getAArch64ThunkDestVA(destination, addend);
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 8, R_AARCH64_ABS64, s);
 }
@@ -564,7 +604,11 @@ void AArch64ADRPThunk::writeLong(uint8_t *buf) {
       0x10, 0x02, 0x00, 0x91, // add  x16, x16, R_AARCH64_ADD_ABS_LO12_NC(Dest)
       0x00, 0x02, 0x1f, 0xd6, // br   x16
   };
-  uint64_t s = getAArch64ThunkDestVA(destination, addend);
+  // if mayNeedLandingPad is true then destination is an
+  // AArch64BTILandingPadThunk that defines landingPad.
+  assert(!mayNeedLandingPad || landingPad != nullptr);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(0)
+                                 : getAArch64ThunkDestVA(destination, addend);
   uint64_t p = getThunkTargetSym()->getVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
@@ -576,6 +620,48 @@ void AArch64ADRPThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__AArch64ADRPThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$x", STT_NOTYPE, 0, isec);
+}
+
+void AArch64BTILandingPadThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver().save("__AArch64BTIThunk_" + destination.getName()),
+            STT_FUNC, 0, isec);
+  addSymbol("$x", STT_NOTYPE, 0, isec);
+}
+
+InputSection *AArch64BTILandingPadThunk::getTargetInputSection() const {
+  auto &dr = cast<Defined>(destination);
+  return dyn_cast<InputSection>(dr.section);
+}
+
+void AArch64BTILandingPadThunk::writeTo(uint8_t *buf) {
+  if (!getMayUseShortThunk()) {
+    writeLong(buf);
+    return;
+  }
+  write32(buf, 0xd503245f); // BTI c
+  // Control falls through to target in following section.
+}
+
+bool AArch64BTILandingPadThunk::getMayUseShortThunk() {
+  if (!mayUseShortThunk)
+    return false;
+  // If the target is the following instruction then
+  // we can fall through without the indirect branch.
+  uint64_t s = destination.getVA(addend);
+  uint64_t p = getThunkTargetSym()->getVA();
+  // <= 4 as Thunks start off with the same offset
+  // within the section as the destination, so
+  // s - p == 0 until addresses are assigned.
+  mayUseShortThunk = (s - p <= 4);
+  return mayUseShortThunk;
+}
+
+void AArch64BTILandingPadThunk::writeLong(uint8_t *buf) {
+  uint64_t s = destination.getVA(addend);
+  uint64_t p = getThunkTargetSym()->getVA() + 4;
+  write32(buf, 0xd503245f);     // BTI c
+  write32(buf + 4, 0x14000000); // B S
+  ctx.target->relocateNoSym(buf + 4, R_AARCH64_CALL26, s - p);
 }
 
 // ARM Target Thunks
@@ -1264,9 +1350,12 @@ static Thunk *addThunkAArch64(RelType type, Symbol &s, int64_t a) {
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     fatal("unrecognized relocation type");
+  bool mayNeedLandingPad =
+      (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
+      !isAArch64BTILandingPad(s, a);
   if (config->picThunk)
-    return make<AArch64ADRPThunk>(s, a);
-  return make<AArch64ABSLongThunk>(s, a);
+    return make<AArch64ADRPThunk>(s, a, mayNeedLandingPad);
+  return make<AArch64ABSLongThunk>(s, a, mayNeedLandingPad);
 }
 
 // Creates a thunk for long branches or Thumb-ARM interworking.
@@ -1478,5 +1567,14 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
     return addThunkPPC64(rel.type, s, a);
   default:
     llvm_unreachable("add Thunk only supported for ARM, AVR, Mips and PowerPC");
+  }
+}
+
+Thunk *elf::addLandingPadThunk(Symbol &s, int64_t a) {
+  switch (config->emachine) {
+  case EM_AARCH64:
+    return make<AArch64BTILandingPadThunk>(s, a);
+  default:
+    llvm_unreachable("add landing pad only supported for AArch64");
   }
 }

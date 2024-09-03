@@ -28,6 +28,38 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
   return expr & ~static_cast<uint64_t>(0xFFF);
 }
 
+// A BTI landing pad is a valid target for an indirect branch
+// when the Branch Target Identification has been enabled.
+// As linker generated branches are via x16 the
+// BTI landing pads are defined as:
+// BTI C, BTI J, BTI JC, PACIASP, PACIBSP.
+bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
+  // PLT entries accessed indirectly have a BTI c.
+  if (s.isInPlt())
+    return true;
+  Defined *d = dyn_cast_or_null<Defined>(&s);
+  if (d == nullptr || d->section == nullptr ||
+      d->section->kind() != InputSectionBase::Regular)
+    // All places that we cannot disassemble are responsible for making
+    // the target a BTI landing pad.
+    return true;
+  InputSection *isec = cast<InputSection>(d->section);
+  int64_t off = d->value + a;
+  // Likely user error, but protect ourselves against out of bounds
+  // access.
+  if (off < 0 || static_cast<uint64_t>(off) >= isec->getSize())
+    return true;
+  const uint8_t *buf = isec->content().begin();
+  const uint32_t instr = read32le(buf + off);
+  if (instr == 0xd503233f || // PACIASP.
+      instr == 0xd503237f || // PACIBSP.
+      instr == 0xd503245f || // BTI C.
+      instr == 0xd503249f || // BTI J.
+      instr == 0xd50324df)   // BTI JC.
+    return true;
+  return false;
+}
+
 namespace {
 class AArch64 : public TargetInfo {
 public:
