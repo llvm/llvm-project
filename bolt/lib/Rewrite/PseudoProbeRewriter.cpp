@@ -50,7 +50,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::Hidden, cl::cat(BoltCategory));
 
-extern cl::opt<bool> ProfileUsePseudoProbes;
+extern cl::opt<bool> ProfileWritePseudoProbes;
 } // namespace opts
 
 namespace {
@@ -91,14 +91,14 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  if (opts::ProfileUsePseudoProbes)
+  if (opts::ProfileWritePseudoProbes)
     parsePseudoProbe();
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  if (!opts::ProfileUsePseudoProbes)
+  if (!opts::ProfileWritePseudoProbes)
     parsePseudoProbe();
   updatePseudoProbes();
 
@@ -134,18 +134,19 @@ void PseudoProbeRewriter::parsePseudoProbe() {
 
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
   MCPseudoProbeDecoder::Uint64Map FuncStartAddrs;
-  SmallVector<StringRef, 3> Suffixes({".destroy", ".resume", ".llvm."});
+  SmallVector<StringRef, 0> Suffixes(
+      {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
   for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
     for (const MCSymbol *Sym : F->getSymbols()) {
-      StringRef SymName = NameResolver::restore(Sym->getName());
-      uint64_t GUID = Function::getGUID(SymName);
-      FuncStartAddrs[GUID] = F->getAddress();
-      std::optional<StringRef> CommonName =
-          getCommonName(SymName, false, Suffixes);
-      if (!CommonName)
-        continue;
-      GUID = Function::getGUID(*CommonName);
-      FuncStartAddrs.try_emplace(GUID, F->getAddress());
+      StringRef SymName = Sym->getName();
+      for (auto Name : {std::optional(NameResolver::restore(SymName)),
+                        getCommonName(SymName, false, Suffixes)}) {
+        if (!Name)
+          continue;
+        SymName = *Name;
+        uint64_t GUID = Function::getGUID(SymName);
+        FuncStartAddrs[GUID] = F->getAddress();
+      }
     }
   }
   Contents = PseudoProbeSection->getContents();
@@ -166,10 +167,10 @@ void PseudoProbeRewriter::parsePseudoProbe() {
 
   const GUIDProbeFunctionMap &GUID2Func = ProbeDecoder.getGUID2FuncDescMap();
   // Checks GUID in GUID2Func and returns it if it's present or null otherwise.
-  auto checkGUID = [&](StringRef SymName) {
+  auto checkGUID = [&](StringRef SymName) -> uint64_t {
     uint64_t GUID = Function::getGUID(SymName);
     if (GUID2Func.find(GUID) == GUID2Func.end())
-      return 0ull;
+      return 0;
     return GUID;
   };
   for (BinaryFunction *F : BC.getAllBinaryFunctions()) {
