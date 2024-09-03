@@ -4130,18 +4130,46 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   //
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
+  KnownFPClass LHSClass = computeKnownFPClass(LHS, fcAllFlags, /*Depth=*/0, Q);
+  KnownFPClass RHSClass = computeKnownFPClass(RHS, fcAllFlags, /*Depth=*/0, Q);
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    KnownFPClass RHSClass =
-        computeKnownFPClass(RHS, fcAllFlags, /*Depth=*/0, Q);
-    KnownFPClass LHSClass =
-        computeKnownFPClass(LHS, fcAllFlags, /*Depth=*/0, Q);
-
     if (FMF.noNaNs() ||
         (RHSClass.isKnownNeverNaN() && LHSClass.isKnownNeverNaN()))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
 
     if (RHSClass.isKnownAlwaysNaN() || LHSClass.isKnownAlwaysNaN())
       return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
+  }
+  // floor(x) <= x --> true; x <= ceil(x) --> true
+  if (LHSClass.isKnownNeverNaN() &&
+          match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS))) ||
+      RHSClass.isKnownNeverNaN() &&
+          match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS)))) {
+    switch (Pred) {
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_ULE:
+      return getTrue(RetTy);
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_UGT:
+      return getFalse(RetTy);
+    default:
+      break;
+    }
+  }
+  if (RHSClass.isKnownNeverNaN() &&
+          match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS))) ||
+      LHSClass.isKnownNeverNaN() &&
+          match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)))) {
+    switch (Pred) {
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_UGE:
+      return getTrue(RetTy);
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_ULT:
+      return getFalse(RetTy);
+    default:
+      break;
+    }
   }
 
   const APFloat *C = nullptr;
