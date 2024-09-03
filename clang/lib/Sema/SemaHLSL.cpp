@@ -607,9 +607,9 @@ bool SemaHLSL::CreateHLSLAttributedResourceType(
 }
 
 // Validates and creates an HLSL attribute that is applied as type attribute on
-// HLSL resource. The attributes are collected in HLSLResourcesAttrs and at the
-// end of the declaration they are applied to the declaration type by wrapping
-// it in HLSLAttributedResourceType.
+// HLSL resource. The attributes are collected in HLSLResourcesTypeAttrs and at
+// the end of the declaration they are applied to the declaration type by
+// wrapping it in HLSLAttributedResourceType.
 bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
   Attr *A = nullptr;
 
