@@ -211,8 +211,7 @@ build:ci --test_summary=terse
 
 # Attempt to work around intermittent issue while trying to fetch remote blob.
 # See e.g. https://github.com/bazelbuild/bazel/issues/18694.
-build:ci --experimental_remote_cache_eviction_retries=2
-build:ci --experimental_remote_cache_lease_extension=true
+build:ci --remote_default_exec_properties=cache-silo-key=CleverPeafowl
 
 ###############################################################################
 
