@@ -156,3 +156,20 @@ subroutine blt_test11(c)
   ! CHECK: %[[V:.*]] = fir.convert %[[R]] : (i1) -> !fir.logical<4>
   ! CHECK: fir.store %[[V]] to %[[C]] : !fir.ref<!fir.logical<4>>
 end subroutine blt_test11
+
+! CHECK-LABEL: blt_test12
+! CHECK-SAME: %[[A:.*]]: !fir.ref<i32>{{.*}}, %[[B:.*]]: !fir.ref<i32>{{.*}}, %[[C:.*]]: !fir.ref<!fir.logical<4>>{{.*}}
+subroutine blt_test12(a, b, c)
+  integer :: a, b
+  logical :: c
+  ! CHECK: %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<i32>
+  ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i32>
+  ! CHECK: %[[LHS:.*]] = arith.addi %[[A_VAL]], %[[B_VAL]] : i32
+  ! CHECK: %[[A_VAL2:.*]] = fir.load %[[A]] : !fir.ref<i32>
+  ! CHECK: %[[B_VAL2:.*]] = fir.load %[[B]] : !fir.ref<i32>
+  ! CHECK: %[[RHS:.*]] = arith.subi %[[A_VAL2]], %[[B_VAL2]] : i32
+  c = blt(a+b, a-b)
+  ! CHECK: %[[C_CMP:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32
+  ! CHECK: %[[C_VAL:.*]] = fir.convert %[[C_CMP]] : (i1) -> !fir.logical<4>
+  ! CHECK: fir.store %[[C_VAL]] to %[[C]] : !fir.ref<!fir.logical<4>>
+end subroutine blt_test12

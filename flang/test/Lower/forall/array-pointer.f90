@@ -7,6 +7,7 @@
 ! Fortran.
 
 ! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false -fwrapv %s -o - | FileCheck %s --check-prefix=NO-NSW
 
 module array_of_pointer_test
   type t
@@ -651,9 +652,9 @@ end subroutine s7
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_17]] : i32
+! CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_17]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
-! CHECK:           %[[VAL_20:.*]] = arith.subi %[[VAL_18]], %[[VAL_19]] : i32
+! CHECK:           %[[VAL_20:.*]] = arith.subi %[[VAL_18]], %[[VAL_19]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_21]], %[[VAL_22]] : i64
@@ -681,6 +682,55 @@ end subroutine s7
 ! CHECK:         fir.array_merge_store %[[VAL_9]], %[[VAL_43:.*]] to %[[VAL_0]] : !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>
 ! CHECK:         return
 ! CHECK:       }
+
+! NO-NSW-LABEL: func @_QPs7(
+! NO-NSW-SAME:              %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>> {fir.bindc_name = "x"},
+! NO-NSW-SAME:              %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "y", fir.target},
+! NO-NSW-SAME:              %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+! NO-NSW:         %[[VAL_3:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
+! NO-NSW:         %[[VAL_4:.*]] = arith.constant 1 : i32
+! NO-NSW:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
+! NO-NSW:         %[[VAL_6:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+! NO-NSW:         %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> index
+! NO-NSW:         %[[VAL_8:.*]] = arith.constant 1 : index
+! NO-NSW:         %[[VAL_9:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
+! NO-NSW:         %[[VAL_10:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
+! NO-NSW:         %[[VAL_11:.*]] = fir.do_loop %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_13:.*]] = %[[VAL_9]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! NO-NSW:           %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (index) -> i32
+! NO-NSW:           fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<i32>
+! NO-NSW:           %[[VAL_15:.*]] = arith.constant 1 : index
+! NO-NSW:           %[[VAL_16:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+! NO-NSW:           %[[VAL_17:.*]] = arith.constant 1 : i32
+! NO-NSW:           %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_17]] : i32
+! NO-NSW:           %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
+! NO-NSW:           %[[VAL_20:.*]] = arith.subi %[[VAL_18]], %[[VAL_19]] : i32
+! NO-NSW:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
+! NO-NSW:           %[[VAL_22:.*]] = arith.constant 1 : i64
+! NO-NSW:           %[[VAL_23:.*]] = arith.subi %[[VAL_21]], %[[VAL_22]] : i64
+! NO-NSW:           %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_23]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>, i64) -> !fir.ref<!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
+! NO-NSW:           %[[VAL_25:.*]] = fir.field_index ip, !fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>
+! NO-NSW:           %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_24]], %[[VAL_25]] : (!fir.ref<!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+! NO-NSW:           %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! NO-NSW:           %[[VAL_28:.*]] = fir.box_addr %[[VAL_27]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! NO-NSW:           %[[VAL_29:.*]] = fir.load %[[VAL_28]] : !fir.ptr<i32>
+! NO-NSW:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> i64
+! NO-NSW:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> index
+! NO-NSW:           %[[VAL_32:.*]] = arith.subi %[[VAL_31]], %[[VAL_15]] : index
+! NO-NSW:           %[[VAL_33:.*]] = fir.array_access %[[VAL_10]], %[[VAL_32]] : (!fir.array<?xi32>, index) -> !fir.ref<i32>
+! NO-NSW:           %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<i32>) -> !fir.ptr<i32>
+! NO-NSW:           %[[VAL_35:.*]] = fir.embox %[[VAL_34]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! NO-NSW:           %[[VAL_36:.*]] = arith.constant 1 : index
+! NO-NSW:           %[[VAL_37:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
+! NO-NSW:           %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (i32) -> i64
+! NO-NSW:           %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (i64) -> index
+! NO-NSW:           %[[VAL_40:.*]] = arith.subi %[[VAL_39]], %[[VAL_36]] : index
+! NO-NSW:           %[[VAL_41:.*]] = fir.field_index ip, !fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>
+! NO-NSW:           %[[VAL_42:.*]] = fir.array_update %[[VAL_13]], %[[VAL_35]], %[[VAL_40]], %[[VAL_41]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.box<!fir.ptr<i32>>, index, !fir.field) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
+! NO-NSW:           fir.result %[[VAL_42]] : !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
+! NO-NSW:         }
+! NO-NSW:         fir.array_merge_store %[[VAL_9]], %[[VAL_43:.*]] to %[[VAL_0]] : !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>
+! NO-NSW:         return
+! NO-NSW:       }
 
 subroutine s8(x,y,n)
   use array_of_pointer_test

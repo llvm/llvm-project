@@ -1,4 +1,5 @@
 ! RUN: bbc -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! CHECK-LABEL: fir.global @block_
 ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 1.000000e+00 : f32
@@ -95,6 +96,167 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   print *, a7(kk, jj, ii)
   
 end subroutine s
+
+! CHECK-LABEL: func.func @_QPs2
+! NO-NSW-LABEL: func.func @_QPs2
+subroutine s2(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
+  integer i, j, k, ii, jj, kk
+
+  ! extents are compile-time constant
+  real a1(10,20)
+  integer a2(30,*)
+  real a3(2:40,3:50)
+  integer a4(4:60, 5:*)
+
+  ! extents computed at run-time
+  real a5(i:j)
+  integer a6(6:i,j:*)
+  real a7(i:70,7:j,k:80)
+
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: fir.load %arg3 :
+  ! CHECK: arith.subi %{{.*}}, %[[one32:c1[^ ]*]] overflow<nsw> : i32
+  ! CHECK: %[[i1:.*]] = arith.subi %{{.*}}, %[[one64:c1[^ ]*]] : i64
+  ! CHECK: fir.load %arg4 :
+  ! CHECK: arith.addi %{{.*}}, %[[one32]] overflow<nsw> : i32
+  ! CHECK: %[[j1:.*]] = arith.subi %{{.*}}, %[[one64]] : i64
+  ! CHECK: fir.coordinate_of %arg6, %[[i1]], %[[j1]] :
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: fir.load %arg3 :
+  ! NO-NSW: arith.subi %{{.*}}, %[[one32:c1[^ ]*]] : i32
+  ! NO-NSW: %[[i1:.*]] = arith.subi %{{.*}}, %[[one64:c1[^ ]*]] : i64
+  ! NO-NSW: fir.load %arg4 :
+  ! NO-NSW: arith.addi %{{.*}}, %[[one32]] : i32
+  ! NO-NSW: %[[j1:.*]] = arith.subi %{{.*}}, %[[one64]] : i64
+  ! NO-NSW: fir.coordinate_of %arg6, %[[i1]], %[[j1]] :
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a1(ii-1,jj+1)
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: arith.muli %{{.*}}, %[[two32:c2[^ ]*]] overflow<nsw> : i32
+  ! CHECK: fir.coordinate_of %{{[0-9]+}}, %{{[0-9]+}} : {{.*}} -> !fir.ref<i32>
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: arith.muli %{{.*}}, %[[two32:c2[^ ]*]] : i32
+  ! NO-NSW: fir.coordinate_of %{{[0-9]+}}, %{{[0-9]+}} : {{.*}} -> !fir.ref<i32>
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a2(ii,2*jj)
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: fir.load %arg3 :
+  ! CHECK: arith.subi %c40{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[cc2:.*]] = fir.convert %c2{{.*}} :
+  ! CHECK: %[[i2:.*]] = arith.subi %{{.*}}, %[[cc2]] : i64
+  ! CHECK: fir.load %arg4 :
+  ! CHECK: arith.subi %{{.*}}, %[[three32:c3[^ ]*]] overflow<nsw> : i32
+  ! CHECK: %[[cc3:.*]] = fir.convert %c3{{.*}} :
+  ! CHECK: %[[j2:.*]] = arith.subi %{{.*}}, %[[cc3]] : i64
+  ! CHECK: fir.coordinate_of %arg8, %[[i2]], %[[j2]] :
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: fir.load %arg3 :
+  ! NO-NSW: arith.subi %c40{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[cc2:.*]] = fir.convert %c2{{.*}} :
+  ! NO-NSW: %[[i2:.*]] = arith.subi %{{.*}}, %[[cc2]] : i64
+  ! NO-NSW: fir.load %arg4 :
+  ! NO-NSW: arith.subi %{{.*}}, %[[three32:c3[^ ]*]] : i32
+  ! NO-NSW: %[[cc3:.*]] = fir.convert %c3{{.*}} :
+  ! NO-NSW: %[[j2:.*]] = arith.subi %{{.*}}, %[[cc3]] : i64
+  ! NO-NSW: fir.coordinate_of %arg8, %[[i2]], %[[j2]] :
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a3(40-ii,jj-3)
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: arith.muli %{{.*}}, %[[two32]] overflow<nsw> : i32
+  ! CHECK: arith.subi %{{.*}}, %[[one32]] overflow<nsw> : i32
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: arith.muli %{{.*}}, %[[two32]] : i32
+  ! NO-NSW: arith.subi %{{.*}}, %[[one32]] : i32
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a4(ii*2,jj-1)
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: fir.load %arg5 :
+  ! CHECK: arith.addi %{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[x5:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : i64
+  ! CHECK: fir.coordinate_of %arg10, %[[x5]] :
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: fir.load %arg5 :
+  ! NO-NSW: arith.addi %{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[x5:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : i64
+  ! NO-NSW: fir.coordinate_of %arg10, %[[x5]] :
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a5(kk+i)
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: %[[a6:.*]] = fir.convert %arg11 : {{.*}} -> !fir.ref<!fir.array<?xi32>>
+  ! CHECK: fir.load %arg3 :
+  ! CHECK: arith.muli %{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[x6:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! CHECK: fir.load %arg4 :
+  ! CHECK: arith.subi %{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[y6:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! CHECK: %[[z6:.*]] = arith.muli %{{.}}, %[[y6]] : index
+  ! CHECK: %[[w6:.*]] = arith.addi %[[z6]], %[[x6]] : index
+  ! CHECK: fir.coordinate_of %[[a6]], %[[w6]] :
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: %[[a6:.*]] = fir.convert %arg11 : {{.*}} -> !fir.ref<!fir.array<?xi32>>
+  ! NO-NSW: fir.load %arg3 :
+  ! NO-NSW: arith.muli %{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[x6:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! NO-NSW: fir.load %arg4 :
+  ! NO-NSW: arith.subi %{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[y6:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! NO-NSW: %[[z6:.*]] = arith.muli %{{.}}, %[[y6]] : index
+  ! NO-NSW: %[[w6:.*]] = arith.addi %[[z6]], %[[x6]] : index
+  ! NO-NSW: fir.coordinate_of %[[a6]], %[[w6]] :
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a6(ii*i, jj-j)
+  ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: %[[a7:.*]] = fir.convert %arg12 : {{.*}} -> !fir.ref<!fir.array<?xf32>>
+  ! CHECK: fir.load %arg5 :
+  ! CHECK: arith.addi %{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[x7:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! CHECK: fir.load %arg4 :
+  ! CHECK: arith.subi %{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[y7:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! CHECK: %[[z7:.*]] = arith.muli %[[u7:.*]], %[[y7]] : index
+  ! CHECK: %[[w7:.*]] = arith.addi %[[z7]], %[[x7]] : index
+  ! CHECK: %[[v7:.*]] = arith.muli %[[u7]], %{{.*}} : index
+  ! CHECK: fir.load %arg3 :
+  ! CHECK: arith.muli %{{.*}}, %{{[^ ]*}} overflow<nsw> : i32
+  ! CHECK: %[[r7:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! CHECK: %[[s7:.*]] = arith.muli %[[v7]], %[[r7]] : index
+  ! CHECK: %[[t7:.*]] = arith.addi %[[s7]], %[[w7]] : index
+  ! CHECK: fir.coordinate_of %[[a7]], %[[t7]] :
+  ! CHECK-LABEL: EndIoStatement
+
+  ! NO-NSW-LABEL: BeginExternalListOutput
+  ! NO-NSW: %[[a7:.*]] = fir.convert %arg12 : {{.*}} -> !fir.ref<!fir.array<?xf32>>
+  ! NO-NSW: fir.load %arg5 :
+  ! NO-NSW: arith.addi %{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[x7:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! NO-NSW: fir.load %arg4 :
+  ! NO-NSW: arith.subi %{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[y7:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! NO-NSW: %[[z7:.*]] = arith.muli %[[u7:.*]], %[[y7]] : index
+  ! NO-NSW: %[[w7:.*]] = arith.addi %[[z7]], %[[x7]] : index
+  ! NO-NSW: %[[v7:.*]] = arith.muli %[[u7]], %{{.*}} : index
+  ! NO-NSW: fir.load %arg3 :
+  ! NO-NSW: arith.muli %{{.*}}, %{{[^ ]*}} : i32
+  ! NO-NSW: %[[r7:.*]] = arith.subi %{{.*}}, %{{[^ ]*}} : index
+  ! NO-NSW: %[[s7:.*]] = arith.muli %[[v7]], %[[r7]] : index
+  ! NO-NSW: %[[t7:.*]] = arith.addi %[[s7]], %[[w7]] : index
+  ! NO-NSW: fir.coordinate_of %[[a7]], %[[t7]] :
+  ! NO-NSW-LABEL: EndIoStatement
+  print *, a7(kk+k, jj-j, ii*i)
+
+end subroutine s2
 
 ! CHECK-LABEL range
 subroutine range()

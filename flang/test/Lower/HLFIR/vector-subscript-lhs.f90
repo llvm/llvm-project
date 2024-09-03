@@ -1,6 +1,7 @@
 ! Test lowering of vector subscripted designators in assignment
 ! left-hand sides.
 ! RUN: bbc -emit-hlfir -o - -I nw %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nw -fwrapv %s 2>&1 | FileCheck %s
 
 subroutine test_simple(x, vector)
   integer(8) :: vector(10)
@@ -94,6 +95,42 @@ end subroutine
 ! CHECK:    } cleanup {
 ! CHECK:      hlfir.destroy %[[VAL_37:.*]] : !hlfir.expr<6xi64>
 ! CHECK:      hlfir.destroy %[[VAL_38:.*]] : !hlfir.expr<6xi64>
+! CHECK:    }
+! CHECK:  }
+
+subroutine test_added_vectors(x, vector1, vector2)
+  integer(8) :: vector1(10), vector2(10)
+  real :: x(:)
+  x(vector1+vector2) = 42.
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_added_vectors(
+! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
+! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}Evector1
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}Evector2
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}Ex
+! CHECK:  hlfir.region_assign {
+! CHECK:    %[[VAL_7:.*]] = arith.constant 4.200000e+01 : f32
+! CHECK:    hlfir.yield %[[VAL_7]] : f32
+! CHECK:  } to {
+! CHECK:    %[[VAL_8:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<10xi64> {
+! CHECK:    ^bb0(%[[VAL_9:.*]]: index):
+! CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<10xi64>>, index) -> !fir.ref<i64>
+! CHECK:      %[[VAL_11:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<10xi64>>, index) -> !fir.ref<i64>
+! CHECK:      %[[VAL_12:.*]] = fir.load %[[VAL_10]] : !fir.ref<i64>
+! CHECK:      %[[VAL_13:.*]] = fir.load %[[VAL_11]] : !fir.ref<i64>
+! CHECK:      %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : i64
+! CHECK:      hlfir.yield_element %[[VAL_14]] : i64
+! CHECK:    }
+! CHECK:    %[[VAL_27:.*]] = arith.constant 10 : index
+! CHECK:    %[[VAL_28:.*]] = fir.shape %[[VAL_27]] : (index) -> !fir.shape<1>
+! CHECK:    hlfir.elemental_addr %[[VAL_28]] unordered : !fir.shape<1> {
+! CHECK:    ^bb0(%[[VAL_29:.*]]: index):
+! CHECK:      %[[VAL_31:.*]] = hlfir.apply %[[VAL_8]], %[[VAL_29]] : (!hlfir.expr<10xi64>, index) -> i64
+! CHECK:      %[[VAL_32:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_31]])  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+! CHECK:      hlfir.yield %[[VAL_32]] : !fir.ref<f32>
+! CHECK:    } cleanup {
+! CHECK:      hlfir.destroy %[[VAL_8]] : !hlfir.expr<10xi64>
 ! CHECK:    }
 ! CHECK:  }
 

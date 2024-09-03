@@ -1065,7 +1065,15 @@ public:
     mlir::Value lhs = fir::getBase(left);
     mlir::Value rhs = fir::getBase(right);
     assert(lhs.getType() == rhs.getType() && "types must be the same");
-    return builder.create<OpTy>(getLoc(), lhs, rhs);
+    if constexpr (std::is_same_v<OpTy, mlir::arith::AddIOp> ||
+                  std::is_same_v<OpTy, mlir::arith::SubIOp> ||
+                  std::is_same_v<OpTy, mlir::arith::MulIOp>) {
+      auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
+          builder.getContext(), builder.getIntegerOverflowFlags());
+      return builder.create<OpTy>(getLoc(), lhs, rhs, iofAttr);
+    } else {
+      return builder.create<OpTy>(getLoc(), lhs, rhs);
+    }
   }
 
   template <typename OpTy, typename A>
@@ -1397,7 +1405,15 @@ public:
     fir::emitFatalError(getLoc(), "subscript triple notation is not scalar");
   }
   ExtValue genSubscript(const Fortran::evaluate::Subscript &subs) {
-    return genval(subs);
+    mlir::arith::IntegerOverflowFlags iofBackup{};
+    if (!converter.getLoweringOptions().getIntegerWrapAround()) {
+      iofBackup = builder.getIntegerOverflowFlags();
+      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
+    }
+    auto val = genval(subs);
+    if (!converter.getLoweringOptions().getIntegerWrapAround())
+      builder.setIntegerOverflowFlags(iofBackup);
+    return val;
   }
 
   ExtValue gen(const Fortran::evaluate::DataRef &dref) {
