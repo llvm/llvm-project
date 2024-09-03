@@ -26,12 +26,13 @@ namespace Fortran::tools {
   if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64)
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
-  for (auto realKind : targetOptions.disabledRealKinds) {
+        
+  for (auto realKind : targetOptions.disabledRealKinds)
     targetCharacteristics.DisableType(common::TypeCategory::Real, realKind);
-  }
-  for (auto intKind : targetOptions.disabledIntegerKinds) {
+
+  for (auto intKind : targetOptions.disabledIntegerKinds)
     targetCharacteristics.DisableType(common::TypeCategory::Integer, intKind);
-  }
+
   targetCharacteristics.set_compilerOptionsString(compilerOptions)
       .set_compilerVersionString(compilerVersion);
 

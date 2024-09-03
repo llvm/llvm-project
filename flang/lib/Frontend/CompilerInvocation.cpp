@@ -439,17 +439,17 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_real_10)) {
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_10))
     opts.disabledRealKinds.push_back(10);
-  }
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_real_3)) {
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_3)) 
     opts.disabledRealKinds.push_back(3);
-  }
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16)) {
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_2))
+    opts.disabledIntegerKinds.push_back(2);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
     opts.disabledIntegerKinds.push_back(16);
-  }
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
