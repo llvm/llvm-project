@@ -1,8 +1,7 @@
 # RUN: not --crash llc -march=amdgcn -mcpu=gfx1200 -run-pass=none -o /dev/null %s 2>&1 | FileCheck %s    
-# REQUIRES: amdgpu-registered-target    
-    
+
 ---  
-name: fix-illegal-copies  
+name: fix-illegal-vector-copies  
 tracksRegLiveness: true  
 machineFunctionInfo:  
   isEntryFunction: true  
