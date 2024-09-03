@@ -364,14 +364,11 @@ func.func @transfer_write_permutations_memref(
   return
 }
 
-// CHECK-LABEL: func @transfer_write_broadcast_unit_dim
-// CHECK-SAME:    %[[MEM0:.*]]: memref<?x?x?x?xf32>
+// CHECK-LABEL: func @transfer_write_broadcast_unit_dim_tensor
 // CHECK-SAME:    %[[SRC0:.*]]: tensor<?x?x?x?xf32>
 // CHECK-SAME:    %[[VEC0:.*]]: vector<14x8x16xf32>
-// CHECK-SAME:    %[[VEC1:.*]]: vector<8x16xf32>
-func.func @transfer_write_broadcast_unit_dim(
-    %mem_0 : memref<?x?x?x?xf32>, %src_0 : tensor<?x?x?x?xf32>,
-    %vec_0 : vector<14x8x16xf32>, %vec_1 : vector<8x16xf32>) -> tensor<?x?x?x?xf32> {
+func.func @transfer_write_broadcast_unit_dim_tensor(
+    %src_0 : tensor<?x?x?x?xf32>, %vec_0 : vector<14x8x16xf32>) -> tensor<?x?x?x?xf32> {
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
 
@@ -380,12 +377,23 @@ func.func @transfer_write_broadcast_unit_dim(
   // CHECK: %[[NEW_VEC1:.*]] = vector.transpose %[[NEW_VEC0]], [1, 2, 0, 3] : vector<1x14x8x16xf32> to vector<14x8x1x16xf32>
   // CHECK: %[[NEW_RES0:.*]] = vector.transfer_write %[[NEW_VEC1]], %[[SRC0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false, true, true]} : vector<14x8x1x16xf32>, tensor<?x?x?x?xf32>
 
-  vector.transfer_write %vec_1, %mem_0[%c0, %c0, %c0, %c0] {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>} : vector<8x16xf32>, memref<?x?x?x?xf32>
-  // CHECK: %[[NEW_VEC2:.*]] = vector.broadcast %{{.*}} : vector<8x16xf32> to vector<1x8x16xf32>
-  // CHECK: %[[NEW_VEC3:.*]] = vector.transpose %[[NEW_VEC2]], [1, 2, 0] : vector<1x8x16xf32> to vector<8x16x1xf32>
-  // CHECK: vector.transfer_write %[[NEW_VEC3]], %[[MEM0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false, true]} : vector<8x16x1xf32>, memref<?x?x?x?xf32>
-
   return %res : tensor<?x?x?x?xf32>
+}
+
+// CHECK-LABEL: func @transfer_write_broadcast_unit_dim_memref
+// CHECK-SAME:    %[[MEM0:.*]]: memref<?x?x?x?xf32>
+// CHECK-SAME:    %[[VEC0:.*]]: vector<8x16xf32>
+func.func @transfer_write_broadcast_unit_dim_memref(
+    %mem_0 : memref<?x?x?x?xf32>, %vec_0 : vector<8x16xf32>) {
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+
+  vector.transfer_write %vec_0, %mem_0[%c0, %c0, %c0, %c0] {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>} : vector<8x16xf32>, memref<?x?x?x?xf32>
+  // CHECK: %[[NEW_VEC0:.*]] = vector.broadcast %{{.*}} : vector<8x16xf32> to vector<1x8x16xf32>
+  // CHECK: %[[NEW_VEC1:.*]] = vector.transpose %[[NEW_VEC0]], [1, 2, 0] : vector<1x8x16xf32> to vector<8x16x1xf32>
+  // CHECK: vector.transfer_write %[[NEW_VEC1]], %[[MEM0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false, true]} : vector<8x16x1xf32>, memref<?x?x?x?xf32>
+
+  return
 }
 
 module attributes {transform.with_named_sequence} {
