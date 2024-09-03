@@ -586,7 +586,7 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                           PrioritizedCXXGlobalInits.size());
     PrioritizedCXXGlobalInits.push_back(std::make_pair(Key, Fn));
   } else if (isTemplateInstantiation(D->getTemplateSpecializationKind()) ||
-             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR ||
+             !isUniqueGVALinkage(getContext().GetGVALinkageForVariable(D)) ||
              D->hasAttr<SelectAnyAttr>()) {
     // C++ [basic.start.init]p2:
     //   Definitions of explicitly specialized class template static data
