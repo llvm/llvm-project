@@ -2820,9 +2820,9 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (!BO || !BO->isAssociative())
     return false;
 
-  // Only fold ADDs for now.
+  // TODO: Only hoist ADDs and MULs for now.
   Instruction::BinaryOps Opcode = BO->getOpcode();
-  if (Opcode != Instruction::Add)
+  if (Opcode != Instruction::Add && Opcode != Instruction::Mul)
     return false;
 
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
