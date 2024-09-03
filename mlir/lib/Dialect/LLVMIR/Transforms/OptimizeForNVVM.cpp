@@ -163,9 +163,7 @@ ExpandIToFP<OpTy>::matchAndRewrite(OpTy op, PatternRewriter &rewriter) const {
     // Bitcast these values to float and subtract or add them.
     Value exponentCast = builder.create<LLVM::BitcastOp>(dstType, exponentAnd);
     Value mantissaCast = builder.create<LLVM::BitcastOp>(dstType, mantissaAnd);
-    using SubOrAddOp = std::conditional_t<std::is_same_v<OpTy, LLVM::SIToFPOp>,
-                                          LLVM::FSubOp, LLVM::FAddOp>;
-    rewriter.replaceOpWithNewOp<SubOrAddOp>(op, mantissaCast, exponentCast);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, mantissaCast, exponentCast);
     return success();
   }
 
