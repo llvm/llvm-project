@@ -41,10 +41,6 @@ using namespace llvm;
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
 
-static cl::opt<bool> DisableInsertVSETVLPHIOpt(
-    "riscv-disable-insert-vsetvl-phi-opt", cl::init(false), cl::Hidden,
-    cl::desc("Disable looking through phis when inserting vsetvlis."));
-
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
@@ -186,7 +182,7 @@ static bool isMaskRegOp(const MachineInstr &MI) {
 /// Note that this is different from "agnostic" as defined by the vector
 /// specification.  Agnostic requires each lane to either be undisturbed, or
 /// take the value -1; no other value is allowed.
-static bool hasUndefinedMergeOp(const MachineInstr &MI) {
+static bool hasUndefinedPassthru(const MachineInstr &MI) {
 
   unsigned UseOpIdx;
   if (!MI.isRegTiedToUseOperand(0, &UseOpIdx))
@@ -447,13 +443,13 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
-    // For vmv.s.x and vfmv.s.f, if the merge operand is *undefined*, we don't
+    // For vmv.s.x and vfmv.s.f, if the passthru is *undefined*, we don't
     // need to preserve any other bits and are thus compatible with any larger,
     // etype and can disregard policy bits.  Warning: It's tempting to try doing
     // this for any tail agnostic operation, but we can't as TA requires
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
-    if (hasUndefinedMergeOp(MI)) {
+    if (hasUndefinedPassthru(MI)) {
       if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
@@ -462,7 +458,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     }
   }
 
-  // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
+  // vmv.x.s, and vfmv.f.s are unconditional and ignore everything except SEW.
   if (isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
     Res.LMUL = DemandedFields::LMULNone;
@@ -473,7 +469,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 
   if (RISCVII::hasVLOp(MI.getDesc().TSFlags)) {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
-    // A slidedown/slideup with an *undefined* merge op can freely clobber
+    // A slidedown/slideup with an *undefined* passthru can freely clobber
     // elements not copied from the source vector (e.g. masked off, tail, or
     // slideup's prefix). Notes:
     // * We can't modify SEW here since the slide amount is in units of SEW.
@@ -482,7 +478,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // * The LMUL1 restriction is for machines whose latency may depend on VL.
     // * As above, this is only legal for tail "undefined" not "agnostic".
     if (isVSlideInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedMergeOp(MI)) {
+        hasUndefinedPassthru(MI)) {
       Res.VLAny = false;
       Res.VLZeroness = true;
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
@@ -496,7 +492,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // careful to not increase the number of active vector registers (unlike for
     // vmv.s.x.)
     if (isScalarSplatInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedMergeOp(MI)) {
+        hasUndefinedPassthru(MI)) {
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
       Res.SEWLMULRatio = false;
       Res.VLAny = false;
@@ -586,13 +582,14 @@ public:
   }
   // Most AVLIsReg infos will have a single defining MachineInstr, unless it was
   // a PHI node. In that case getAVLVNInfo()->def will point to the block
-  // boundary slot.  If LiveIntervals isn't available, then nullptr is returned.
+  // boundary slot and this will return nullptr.  If LiveIntervals isn't
+  // available, nullptr is also returned.
   const MachineInstr *getAVLDefMI(const LiveIntervals *LIS) const {
     assert(hasAVLReg());
-    if (!LIS)
+    if (!LIS || getAVLVNInfo()->isPHIDef())
       return nullptr;
     auto *MI = LIS->getInstructionFromIndex(getAVLVNInfo()->def);
-    assert(!(getAVLVNInfo()->isPHIDef() && MI));
+    assert(MI);
     return MI;
   }
 
@@ -890,9 +887,9 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
 
-    AU.addUsedIfAvailable<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariables>();
     AU.addPreserved<LiveStacks>();
 
@@ -906,8 +903,6 @@ private:
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
                       const MachineBasicBlock &MBB) const;
-  void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
-                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
   void insertVSETVLI(MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
@@ -927,6 +922,7 @@ private:
 
   VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) const;
   VSETVLIInfo computeInfoForInstr(const MachineInstr &MI) const;
+  void forwardVSETVLIAVL(VSETVLIInfo &Info) const;
 };
 
 } // end anonymous namespace
@@ -936,6 +932,26 @@ char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
+
+// If the AVL is defined by a vsetvli's output vl with the same VLMAX, we can
+// replace the AVL operand with the AVL of the defining vsetvli. E.g.
+//
+// %vl = PseudoVSETVLI %avl:gpr, SEW=32, LMUL=M1
+// $x0 = PseudoVSETVLI %vl:gpr, SEW=32, LMUL=M1
+// ->
+// %vl = PseudoVSETVLI %avl:gpr, SEW=32, LMUL=M1
+// $x0 = PseudoVSETVLI %avl:gpr, SEW=32, LMUL=M1
+void RISCVInsertVSETVLI::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
+  if (!Info.hasAVLReg())
+    return;
+  const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
+  if (!DefMI || !isVectorConfigInstr(*DefMI))
+    return;
+  VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
+  if (!DefInstrInfo.hasSameVLMAX(Info))
+    return;
+  Info.setAVL(DefInstrInfo);
+}
 
 // Return a VSETVLIInfo representing the changes made by this VSETVLI or
 // VSETIVLI instruction.
@@ -962,16 +978,7 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
-  // If AVL is defined by a vsetvli with the same VLMAX, we can replace the
-  // AVL operand with the AVL of the defining vsetvli.
-  if (NewInfo.hasAVLReg()) {
-    if (const MachineInstr *DefMI = NewInfo.getAVLDefMI(LIS);
-        DefMI && isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInstrInfo.hasSameVLMAX(NewInfo))
-        NewInfo.setAVL(DefInstrInfo);
-    }
-  }
+  forwardVSETVLIAVL(NewInfo);
 
   return NewInfo;
 }
@@ -993,7 +1000,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
   bool TailAgnostic = true;
   bool MaskAgnostic = true;
-  if (!hasUndefinedMergeOp(MI)) {
+  if (!hasUndefinedPassthru(MI)) {
     // Start with undisturbed.
     TailAgnostic = false;
     MaskAgnostic = false;
@@ -1060,25 +1067,9 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 #endif
   InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
 
-  // If AVL is defined by a vsetvli with the same VLMAX, we can replace the
-  // AVL operand with the AVL of the defining vsetvli.
-  if (InstrInfo.hasAVLReg()) {
-    if (const MachineInstr *DefMI = InstrInfo.getAVLDefMI(LIS);
-        DefMI && isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInstrInfo.hasSameVLMAX(InstrInfo))
-        InstrInfo.setAVL(DefInstrInfo);
-    }
-  }
+  forwardVSETVLIAVL(InstrInfo);
 
   return InstrInfo;
-}
-
-void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
-                                       const VSETVLIInfo &Info,
-                                       const VSETVLIInfo &PrevInfo) {
-  DebugLoc DL = MI.getDebugLoc();
-  insertVSETVLI(MBB, MachineBasicBlock::iterator(&MI), DL, Info, PrevInfo);
 }
 
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
@@ -1152,15 +1143,32 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                 .addImm(Info.encodeVTYPE());
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*MI);
-    // Normally the AVL's live range will already extend past the inserted
-    // vsetvli because the pseudos below will already use the AVL. But this
-    // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand or
-    // we've taken the AVL from the VL output of another vsetvli.
     LiveInterval &LI = LIS->getInterval(AVLReg);
-    // Need to get non-const VNInfo
-    VNInfo *VNI = LI.getValNumInfo(Info.getAVLVNInfo()->id);
-    LI.addSegment(LiveInterval::Segment(
-        VNI->def, LIS->getInstructionIndex(*MI).getRegSlot(), VNI));
+    SlotIndex SI = LIS->getInstructionIndex(*MI).getRegSlot();
+    // If the AVL value isn't live at MI, do a quick check to see if it's easily
+    // extendable. Otherwise, we need to copy it.
+    if (LI.getVNInfoBefore(SI) != Info.getAVLVNInfo()) {
+      if (!LI.liveAt(SI) && LI.containsOneValue())
+        LIS->extendToIndices(LI, SI);
+      else {
+        Register AVLCopyReg =
+            MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
+        MachineBasicBlock::iterator II;
+        if (Info.getAVLVNInfo()->isPHIDef())
+          II = LIS->getMBBFromIndex(Info.getAVLVNInfo()->def)->getFirstNonPHI();
+        else {
+          II = LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
+          II = std::next(II);
+        }
+        assert(II.isValid());
+        auto AVLCopy =
+            BuildMI(*II->getParent(), II, DL, TII->get(RISCV::COPY), AVLCopyReg)
+                .addReg(AVLReg);
+        LIS->InsertMachineInstrInMaps(*AVLCopy);
+        MI->getOperand(1).setReg(AVLCopyReg);
+        LIS->createAndComputeVirtRegInterval(AVLCopyReg);
+      }
+    }
   }
 }
 
@@ -1357,9 +1365,6 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 // outputs from the last VSETVLI in their respective basic blocks.
 bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
                                         const MachineBasicBlock &MBB) const {
-  if (DisableInsertVSETVLPHIOpt)
-    return true;
-
   if (!Require.hasAVLReg())
     return true;
 
@@ -1433,7 +1438,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // we *do* need to model the state as if it changed as while the
         // register contents are unchanged, the abstract model can change.
         if (!PrefixTransparent || needVSETVLIPHI(CurInfo, MBB))
-          insertVSETVLI(MBB, MI, CurInfo, PrevInfo);
+          insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
         PrefixTransparent = false;
       }
 
@@ -1639,7 +1644,24 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   Used.demandVL();
   Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+
+  auto dropAVLUse = [&](MachineOperand &MO) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      return;
+    Register OldVLReg = MO.getReg();
+    MO.setReg(RISCV::NoRegister);
+
+    if (LIS)
+      LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
+
+    MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
+    if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
+        MRI->use_nodbg_empty(OldVLReg))
+      ToDelete.push_back(VLOpDef);
+  };
+
+  for (MachineInstr &MI :
+       make_early_inc_range(make_range(MBB.rbegin(), MBB.rend()))) {
 
     if (!isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));
@@ -1655,7 +1677,11 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 
     if (NextMI) {
       if (!Used.usedVL() && !Used.usedVTYPE()) {
-        ToDelete.push_back(&MI);
+        dropAVLUse(MI.getOperand(1));
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(MI);
+        MI.eraseFromParent();
+        NumCoalescedVSETVL++;
         // Leave NextMI unchanged
         continue;
       }
@@ -1684,35 +1710,22 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             LIS->shrinkToUses(&DefLI);
           }
 
-          Register OldVLReg;
-          if (MI.getOperand(1).isReg())
-            OldVLReg = MI.getOperand(1).getReg();
+          dropAVLUse(MI.getOperand(1));
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
+                                              false);
 
-          // Clear NextMI's AVL early so we're not counting it as a use.
-          if (NextMI->getOperand(1).isReg())
-            NextMI->getOperand(1).setReg(RISCV::NoRegister);
-
-          if (OldVLReg && OldVLReg.isVirtual()) {
-            // NextMI no longer uses OldVLReg so shrink its LiveInterval.
-            if (LIS)
-              LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
-
-            MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
-            if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
-                MRI->use_nodbg_empty(OldVLReg)) {
-              VLOpDef->eraseFromParent();
-              if (LIS)
-                LIS->removeInterval(OldVLReg);
-            }
-          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        ToDelete.push_back(NextMI);
+
+        dropAVLUse(NextMI->getOperand(1));
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(*NextMI);
+        NextMI->eraseFromParent();
+        NumCoalescedVSETVL++;
         // fallthrough
       }
     }
@@ -1720,10 +1733,13 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     Used = getDemanded(MI, ST);
   }
 
-  NumCoalescedVSETVL += ToDelete.size();
+  // Loop over the dead AVL values, and delete them now.  This has
+  // to be outside the above loop to avoid invalidating iterators.
   for (auto *MI : ToDelete) {
-    if (LIS)
+    if (LIS) {
+      LIS->removeInterval(MI->getOperand(0).getReg());
       LIS->RemoveMachineInstrFromMaps(*MI);
+    }
     MI->eraseFromParent();
   }
 }
@@ -1763,7 +1779,8 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
 
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());

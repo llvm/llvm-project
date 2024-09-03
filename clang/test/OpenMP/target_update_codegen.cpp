@@ -55,21 +55,21 @@ void foo(int arg) {
   // CK1-DAG: call i32 @__kmpc_omp_task(ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr [[TASK:%.+]])
   // CK1-DAG: [[TASK]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i[[sz:32|64]] {{36|64}}, i{{32|64}} 4, ptr [[OMP_TASK_ENTRY:@[^,]+]], i64 [[DEV:%.+]])
   // CK1-DAG: [[DEV]] = sext i32 [[DEV32:%.+]] to i64
-  // CK1-DAG: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
-  // CK1-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
-  // CK1-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
+  // CK1-DAG: [[PRIVATES:%.+]] = getelementptr inbounds nuw [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
+  // CK1-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
+  // CK1-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
   // CK1-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK1-DAG: [[BPGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP]], i32 0, i32 0
   // CK1-DAG: store ptr [[GC:@[^,]+]], ptr [[BPGEP]], align
-  // CK1-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
-  // CK1-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
+  // CK1-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
+  // CK1-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 1
   // CK1-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
   // CK1-DAG: [[PGEP]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i32 0, i32 0
   // CK1-DAG: [[PGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK1-DAG: store ptr [[GC]], ptr [[PGEP]], align
-  // CK1-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
-  // CK1-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
+  // CK1-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 0
+  // CK1-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[PRIVATES]], i32 0, i32 2
   // CK1-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[SIZE00]], i[[sz]] {{4|8}}, i1 false)
   #pragma omp target update if(1+3-5) device(arg) from(gc) nowait
   {++arg;}
@@ -132,17 +132,17 @@ void foo(int arg) {
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: store ptr @gb, ptr [[BP0]]
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[P0]]
-  // CK1-DAG: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+  // CK1-DAG: store ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1), ptr [[P0]]
+  // CK1-DAG: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
   // CK1-DAG: store i64 [[DIV]], ptr [[PS0]],
 
 
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
+  // CK1-DAG: store ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
   // CK1-DAG: store ptr [[VAL1:%[^,]+]], ptr [[P1]]
   // CK1-DAG: [[VAL1]] = getelementptr inbounds {{.+}}ptr [[SEC11:%.+]], i{{.+}} 0
-  // CK1-DAG: [[SEC11]] = load ptr, ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1),
+  // CK1-DAG: [[SEC11]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1),
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   // CK1-NOT: __tgt_target_data_end
@@ -151,7 +151,7 @@ void foo(int arg) {
 }
 
 // CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%{{[^,]+}}, ptr noalias noundef %{{[^,]+}})
-// CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null, i32 0, ptr null, i32 0, ptr null)
 // CK1-DAG: [[BP]] = load ptr, ptr [[FPBPADDR:%[^,]+]], align
 // CK1-DAG: [[P]] = load ptr, ptr [[FPPADDR:%[^,]+]], align
 // CK1-DAG: [[SZ]] = load ptr, ptr [[FPSZADDR:%[^,]+]], align
@@ -524,10 +524,10 @@ void lvalue(struct S *s, int l, int e) {
   // CK9-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
   // CK9-DAG: store ptr [[P:%.+]], ptr [[BP0]]
   // CK9-DAG: store ptr [[P_VAL:%.+]], ptr [[P0]]
-  // CK9-DAG: [[P]] = getelementptr inbounds [[STRUCT_S:%.+]], ptr [[S_VAL:%.+]], i32 0, i32 0
+  // CK9-DAG: [[P]] = getelementptr inbounds nuw [[STRUCT_S:%.+]], ptr [[S_VAL:%.+]], i32 0, i32 0
   // CK9-DAG: [[S_VAL]] = load ptr, ptr [[S_ADDR:%.+]]
   // CK9-DAG: [[P_VAL]] = load ptr, ptr [[P_1:%.+]],
-  // CK9-DAG: [[P_1]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_VAL_2:%.+]], i32 0, i32 0
+  // CK9-DAG: [[P_1]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S_VAL_2:%.+]], i32 0, i32 0
   // CK9-DAG: [[S_VAL_2]] = load ptr, ptr [[S_ADDR:%.+]]
   #pragma omp target update to(*(s->p))
     *(s->p) += e;
@@ -618,13 +618,13 @@ void lvalue(struct S *s, int l, int e) {
   // CK11-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
   // CK11-DAG: store ptr [[P:%.+]], ptr [[BP0]]
   // CK11-DAG: store ptr [[ARRAY_IDX:%.+]], ptr [[P0]]
-  // CK11-DAG: [[P]] = getelementptr inbounds [[STRUCT_S:%.+]], ptr [[SS_1:%.+]], i32 0, i32 0
+  // CK11-DAG: [[P]] = getelementptr inbounds nuw [[STRUCT_S:%.+]], ptr [[SS_1:%.+]], i32 0, i32 0
   // CK11-DAG: [[ARRAY_IDX]] = getelementptr inbounds double, ptr [[ADD_PTR:%.+]], i{{.+}} 3
   // CK11-64-DAG: [[ADD_PTR]] = getelementptr inbounds double, ptr [[S_P:%.+]], i{{.+}} [[IDX_EXT:%.+]]
   // CK11-32-DAG: [[ADD_PTR]] = getelementptr inbounds double, ptr [[S_P:%.+]], i{{.+}} [[L_VAL:%.+]]
   // CK11-64-DAG: [[IDX_EXT]] = sext i32 [[L_VAL:%.+]] to i64
   // CK11-DAG: [[S_P]] = load ptr, ptr [[P_1:%.+]],
-  // CK11-DAG: [[P_1]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ADDR:%.+]], i32 0, i32 0
+  // CK11-DAG: [[P_1]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S_ADDR:%.+]], i32 0, i32 0
   #pragma omp target update to((s->p+l)[3])
     (s->p+l)[3] += e;
   #pragma omp target update from((s->p+l)[3])
@@ -678,7 +678,7 @@ void lvalue(struct S *s, int l, int e) {
   // CK12-DAG: store ptr [[SP]], ptr [[P0]]
   // CK12-DAG: store ptr [[S:%.+]], ptr [[S_VAL:%.+]]
   // CK12-DAG: store i{{.+}} {{.+}}, ptr [[SIZE0]]
-  // CK12-DAG: [[SP]] = getelementptr inbounds [[STRUCT_S:%.+]], ptr [[ONE:%.+]], i32 0, i32 1
+  // CK12-DAG: [[SP]] = getelementptr inbounds nuw [[STRUCT_S:%.+]], ptr [[ONE:%.+]], i32 0, i32 1
   // CK12-DAG: [[ONE]] = load ptr, ptr [[S:%.+]],
   // CK12-DAG: [[ZERO]] = load ptr, ptr [[S]],
   #pragma omp target update to(*(s->sp->p))
@@ -778,7 +778,7 @@ struct SSB {
     // CK14-DAG: store ptr [[ADD_PTR:%.+]], ptr [[P1]]
     // CK14-DAG: [[ADD_PTR]] = getelementptr inbounds double, ptr [[ZERO:%.+]], i{{.+}} 1
     // CK14-DAG: [[ZERO]] = load ptr, ptr [[D_VAL_2:%.+]]
-    // CK14-DAG: [[D_VAL]] = getelementptr inbounds [[SSB:%.+]], ptr [[THIS:%.+]], i32 0, i32 0
+    // CK14-DAG: [[D_VAL]] = getelementptr inbounds nuw [[SSB:%.+]], ptr [[THIS:%.+]], i32 0, i32 0
     // CK14-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
     // CK14-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
     // CK14-DAG: [[SIZE0:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 0
@@ -840,7 +840,7 @@ void lvalue_member(SSA *sap) {
   // CK15-DAG: store ptr [[ADD_PTR:%.+]], ptr [[P1]]
   // CK15-DAG: [[ADD_PTR]] = getelementptr inbounds double, ptr [[THREE:%.+]], i{{.+}} 3
   // CK15-DAG: [[THREE]] = load ptr, ptr [[P_VAL_1:%.+]]
-  // CK15-DAG: [[P_VAL]] = getelementptr inbounds [[SSA:%.+]], ptr [[THIS:%.+]], i32 0, i32 0
+  // CK15-DAG: [[P_VAL]] = getelementptr inbounds nuw [[SSA:%.+]], ptr [[THIS:%.+]], i32 0, i32 0
   // CK15-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK15-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK15-DAG: [[SIZE0:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 0
@@ -947,7 +947,7 @@ void lvalue_find_base(float **f, SSA *sa) {
   // CK17-64-DAG: [[IDX_EXT]] = sext i32 [[ADD:%.+]] to i64
   // CK17-DAG: [[ADD]] = add nsw i32 1, [[FIVE:%.+]]
   // CK17-DAG: [[FIVE]] = load i32, ptr [[I_2:%.+]],
-  // CK17-DAG: [[I_2]] = getelementptr inbounds [[SSA:%.+]], ptr [[FOUR:%.+]], i32 0, i32 0
+  // CK17-DAG: [[I_2]] = getelementptr inbounds nuw [[SSA:%.+]], ptr [[FOUR:%.+]], i32 0, i32 0
   // CK17-DAG: [[FOUR]] = load ptr, ptr [[SSA_ADDR:%.+]],
   // CK17-DAG: [[F]] = load ptr, ptr [[F_ADDR:%.+]],
 
@@ -1126,25 +1126,25 @@ void foo(int arg) {
   // CK20: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], {{.+}} 0, {{.+}} 0
   // CK20: store ptr [[ARRAY_IDX_1]], ptr [[P0]],
   // CK20: [[DIM_1:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
-  // CK20: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK20: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
   // CK20: store i64 0, ptr [[OFFSET]],
-  // CK20: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK20: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
   // CK20: store i64 2, ptr [[COUNT]],
-  // CK20: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK20: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
   // CK20: store i64 {{32|64}}, ptr [[STRIDE]],
   // CK20: [[DIM_2:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
-  // CK20: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK20: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
   // CK20: store i64 1, ptr [[OFFSET_2]],
-  // CK20: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK20: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK20: store i64 4, ptr [[COUNT_2]],
-  // CK20: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK20: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
   // CK20: store i64 {{8|16}}, ptr [[STRIDE_2]],
   // CK20: [[DIM_3:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
-  // CK20: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK20: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
   // CK20: store i64 0, ptr [[OFFSET_3]],
-  // CK20: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK20: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
   // CK20: store i64 1, ptr [[COUNT_3]],
-  // CK20: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK20: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
   // CK20: store i64 {{8|16}}, ptr [[STRIDE_3]],
   // CK20-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
   // CK20-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
@@ -1194,32 +1194,32 @@ struct ST {
     // CK21: [[BP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
     // CK21: [[P0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P:%.+]], i{{.+}} 0, i{{.+}} 0
     // CK21: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
-    // CK21: [[OFFSET_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
+    // CK21: [[OFFSET_1:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
     // CK21: store i64 0, ptr [[OFFSET_1]],
-    // CK21: [[COUNT_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
+    // CK21: [[COUNT_1:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
     // CK21: store i64 2, ptr [[COUNT_1]],
-    // CK21: [[STRIDE_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
+    // CK21: [[STRIDE_1:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
     // CK21: store i64 {{400|800}}, ptr [[STRIDE_1]],
     // CK21: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
-    // CK21: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
+    // CK21: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
     // CK21: store i64 1, ptr [[OFFSET_2]],
-    // CK21: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
+    // CK21: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
     // CK21: store i64 3, ptr [[COUNT_2]],
-    // CK21: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
+    // CK21: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
     // CK21: store i64 {{40|80}}, ptr [[STRIDE_2]],
     // CK21: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
-    // CK21: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
+    // CK21: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
     // CK21: store i64 0, ptr [[OFFSET_3]],
-    // CK21: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
+    // CK21: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
     // CK21: store i64 4, ptr [[COUNT_3]],
-    // CK21: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
+    // CK21: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
     // CK21: store i64 {{4|8}}, ptr [[STRIDE_3]],
     // CK21: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 3
-    // CK21: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
+    // CK21: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
     // CK21: store i64 0, ptr [[OFFSET_4]],
-    // CK21: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
+    // CK21: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
     // CK21: store i64 1, ptr [[COUNT_4]],
-    // CK21: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
+    // CK21: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
     // CK21: store i64 {{4|8}}, ptr [[STRIDE_4]],
     // CK21-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPSZ:%.+]], ptr [[MTYPE]]{{.+}})
     // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
@@ -1268,32 +1268,32 @@ struct ST {
     // CK22: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
     // CK22: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i{{.+}} 0, i{{.+}} 0
     // CK22: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
-    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
     // CK22: store i64 0, ptr [[OFFSET]],
-    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
     // CK22: store i64 2, ptr [[COUNT]],
-    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
     // CK22: store i64 200, ptr [[STRIDE]],
     // CK22: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
-    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
     // CK22: store i64 1, ptr [[OFFSET]],
-    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
     // CK22: store i64 3, ptr [[COUNT]],
-    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
     // CK22: store i64 40, ptr [[STRIDE]],
     // CK22: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
-    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
     // CK22: store i64 0, ptr [[OFFSET]],
-    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
     // CK22: store i64 4, ptr [[COUNT]],
-    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
     // CK22: store i64 4, ptr [[STRIDE]],
     // CK22: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 3
-    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
     // CK22: store i64 0, ptr [[OFFSET]],
-    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
     // CK22: store i64 1, ptr [[COUNT]],
-    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
     // CK22: store i64 4, ptr [[STRIDE]],
     // CK22-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
     // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
@@ -1349,32 +1349,32 @@ void foo(int arg) {
   // CK23: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], {{.+}} 0, {{.+}} 0
   // CK23: store ptr [[ARRAY_IDX_2]], ptr [[P0]],
   // CK23: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
-  // CK23: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK23: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
   // CK23: store i64 0, ptr [[OFFSET]],
-  // CK23: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK23: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
   // CK23: store i64 2, ptr [[COUNT]],
-  // CK23: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK23: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
   // CK23: store i64 200, ptr [[STRIDE]],
   // CK23: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
-  // CK23: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK23: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
   // CK23: store i64 1, ptr [[OFFSET_2]],
-  // CK23: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK23: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK23: store i64 2, ptr [[COUNT_2]],
-  // CK23: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK23: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
   // CK23: store i64 20, ptr [[STRIDE_2]],
   // CK23: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
-  // CK23: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK23: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
   // CK23: store i64 0, ptr [[OFFSET_3]],
-  // CK23: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK23: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
   // CK23: store i64 2, ptr [[COUNT_3]],
-  // CK23: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK23: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
   // CK23: store i64 [[MUL]], ptr [[STRIDE_3]],
   // CK23: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 3
-  // CK23: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
+  // CK23: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
   // CK23: store i64 0, ptr [[OFFSET_4]],
-  // CK23: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
+  // CK23: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
   // CK23: store i64 1, ptr [[COUNT_4]],
-  // CK23: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
+  // CK23: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
   // CK23: store i64 4, ptr [[STRIDE_4]],
   // CK23-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
   // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
@@ -1424,32 +1424,32 @@ void foo(int arg) {
   // CK24: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], {{.+}} 0, {{.+}} 0
   // CK24: store ptr [[ARRAY_IDX_2]], ptr [[P0]],
   // CK24: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
-  // CK24: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK24: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
   // CK24: store i64 0, ptr [[OFFSET]],
-  // CK24: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK24: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
   // CK24: store i64 2, ptr [[COUNT]],
-  // CK24: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK24: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
   // CK24: store i64 320, ptr [[STRIDE]],
   // CK24: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
-  // CK24: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK24: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
   // CK24: store i64 [[ARG]], ptr [[OFFSET_2]],
-  // CK24: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK24: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK24: store i64 [[LEN]], ptr [[COUNT_2]],
-  // CK24: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK24: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
   // CK24: store i64 40, ptr [[STRIDE_2]],
   // CK24: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
-  // CK24: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK24: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
   // CK24: store i64 0, ptr [[OFFSET_3]],
-  // CK24: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK24: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
   // CK24: store i64 2, ptr [[COUNT_3]],
-  // CK24: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK24: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
   // CK24: store i64 [[MUL]], ptr [[STRIDE_3]],
   // CK24: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 3
-  // CK24: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
+  // CK24: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
   // CK24: store i64 0, ptr [[OFFSET_4]],
-  // CK24: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
+  // CK24: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
   // CK24: store i64 1, ptr [[COUNT_4]],
-  // CK24: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
+  // CK24: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
   // CK24: store i64 8, ptr [[STRIDE_4]],
   // CK24-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[MSIZE]], ptr [[MTYPE]]{{.+}})
   // CK24-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
@@ -1500,55 +1500,55 @@ void foo(int arg) {
   // CK25: [[BP0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP:%.+]], i{{.+}} 0, i{{.+}} 0
   // CK25: [[P0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P:%.+]], i{{.+}} 0, i{{.+}} 0
   // CK25: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
-  // CK25: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 0, ptr [[OFFSET]],
-  // CK25: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 2, ptr [[COUNT]],
-  // CK25: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_1]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 80, ptr [[STRIDE]],
   // CK25: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 1
-  // CK25: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 [[ARG:%.+]], ptr [[OFFSET_2]],
-  // CK25: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 [[LEN]], ptr [[COUNT_2]],
-  // CK25: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_2]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 20, ptr [[STRIDE_2]],
   // CK25: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 2
-  // CK25: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 1, ptr [[OFFSET_3]],
-  // CK25: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 4, ptr [[COUNT_3]],
-  // CK25: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_3]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 4, ptr [[STRIDE_3]],
   // CK25: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 3
-  // CK25: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 0, ptr [[OFFSET_4]],
-  // CK25: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 1, ptr [[COUNT_4]],
-  // CK25: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 4, ptr [[STRIDE_4]],
   // CK25: [[PTRS:%.+]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
   // CK25: store ptr [[DIMS]], ptr [[PTRS]],
   // CK25: [[DIM_5:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS_2]], {{.+}} 0, {{.+}} 0
-  // CK25: [[OFFSET_2_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_5]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_2_1:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_5]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 0, ptr [[OFFSET_2_1]],
-  // CK25: [[COUNT_2_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_5]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT_2_1:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_5]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 2, ptr [[COUNT_2_1]],
-  // CK25: [[STRIDE_2_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_5]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE_2_1:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_5]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 12, ptr [[STRIDE_2_1]],
   // CK25: [[DIM_6:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS_2]], {{.+}} 0, {{.+}} 1
-  // CK25: [[OFFSET_2_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_2_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 1, ptr [[OFFSET_2_2]],
-  // CK25: [[COUNT_2_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT_2_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 2, ptr [[COUNT_2_2]],
-  // CK25: [[STRIDE_2_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE_2_2:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_6]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 4, ptr [[STRIDE_2_2]],
   // CK25: [[DIM_7:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS_2]], {{.+}} 0, {{.+}} 2
-  // CK25: [[OFFSET_2_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_2_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 0
   // CK25: store i64 0, ptr [[OFFSET_2_3]],
-  // CK25: [[COUNT_2_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 1
+  // CK25: [[COUNT_2_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 1
   // CK25: store i64 1, ptr [[COUNT_2_3]],
-  // CK25: [[STRIDE_2_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 2
+  // CK25: [[STRIDE_2_3:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_7]], {{.+}} 0, {{.+}} 2
   // CK25: store i64 4, ptr [[STRIDE_2_3]],
   // CK25: [[PTRS_2:%.+]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 2
   // CK25: store ptr [[DIMS_2]], ptr [[PTRS_2]],

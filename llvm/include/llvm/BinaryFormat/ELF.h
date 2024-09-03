@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace ELF {
@@ -696,6 +697,27 @@ enum {
 #include "ELFRelocs/SystemZ.def"
 };
 
+// SPARC Specific e_flags
+enum : unsigned {
+  // ELF extension mask.
+  // All values are available for EM_SPARC32PLUS & EM_SPARCV9 objects, except
+  // EF_SPARC_32PLUS which is a EM_SPARC32PLUS-only flag.
+  //
+  // Note that those features are not mutually exclusive (one can set more than
+  // one flag in this group).
+  EF_SPARC_EXT_MASK = 0xffff00,
+  EF_SPARC_32PLUS = 0x000100,
+  EF_SPARC_SUN_US1 = 0x000200,
+  EF_SPARC_HAL_R1 = 0x000400,
+  EF_SPARC_SUN_US3 = 0x000800,
+
+  // Memory model selection mask for EM_SPARCV9 objects.
+  EF_SPARCV9_MM = 0x3,
+  EF_SPARCV9_TSO = 0x0,
+  EF_SPARCV9_PSO = 0x1,
+  EF_SPARCV9_RMO = 0x2,
+};
+
 // ELF Relocation type for Sparc.
 enum {
 #include "ELFRelocs/Sparc.def"
@@ -1082,7 +1104,10 @@ enum : unsigned {
   SHT_SYMTAB_SHNDX = 18,  // Indices for SHN_XINDEX entries.
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_RELR = 19, // Relocation entries; only offsets.
+  // TODO: Experimental CREL relocations. LLVM will change the value and
+  // break compatibility in the future.
+  SHT_CREL = 0x40000014,
   SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
@@ -1427,6 +1452,14 @@ struct Elf64_Rela {
   }
 };
 
+// In-memory representation of CREL. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel {
+  std::conditional_t<Is64, uint64_t, uint32_t> r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
+};
+
 // Relocation entry without explicit addend or info (relative relocations only).
 typedef Elf64_Xword Elf64_Relr; // offset/bitmap for relative relocations
 
@@ -1688,6 +1721,7 @@ enum : unsigned {
   NT_ARM_SSVE = 0x40b,
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
+  NT_ARM_FPMR = 0x40e,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,
@@ -1774,8 +1808,13 @@ enum : unsigned {
   AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR = 4,
   AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR = 5,
   AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI = 6,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC = 7,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT = 8,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS = 9,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR = 10,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR = 11,
   AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST =
-      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI,
+      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR,
 };
 
 // x86 processor feature bits.
@@ -1936,6 +1975,8 @@ enum {
   ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
+
+constexpr unsigned CREL_HDR_ADDEND = 4;
 
 /// Convert an architecture name into ELF's e_machine value.
 uint16_t convertArchNameToEMachine(StringRef Arch);

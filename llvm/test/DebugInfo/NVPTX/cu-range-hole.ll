@@ -36,7 +36,7 @@
 ; CHECK: $L__func_end2:
 ; CHECK: }
 
-; CHECK: .file 1 "{{.*}}b.c"
+; CHECK-NEXT: .file 1 "{{.*}}b.c"
 
 ; Function Attrs: nounwind uwtable
 define i32 @b(i32 %c) #0 !dbg !5 {

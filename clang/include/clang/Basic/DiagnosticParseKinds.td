@@ -157,9 +157,12 @@ def err_duplicate_default_assoc : Error<
   "duplicate default generic association">;
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
-def ext_generic_with_type_arg : Extension<
-  "passing a type argument as the first operand to '_Generic' is a Clang "
-  "extension">, InGroup<DiagGroup<"generic-type-extension">>;
+def ext_c2y_generic_with_type_arg : Extension<
+  "passing a type argument as the first operand to '_Generic' is a C2y "
+  "extension">, InGroup<C2y>;
+def warn_c2y_compat_generic_with_type_arg : Warning<
+  "passing a type argument as the first operand to '_Generic' is incompatible "
+  "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -477,6 +480,9 @@ def err_expected_coloncolon_after_super : Error<
 def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
+
+def err_function_parameter_limit_exceeded : Error<
+  "too many function parameters; subsequent parameters will be ignored">;
 
 // C++26 structured bindings
 def ext_decl_attrs_on_binding : ExtWarn<
@@ -961,6 +967,15 @@ def ext_delete_with_message : ExtWarn<
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def ext_variadic_friends : ExtWarn<
+  "variadic 'friend' declarations are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_variadic_friends : Warning<
+  "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
 
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<

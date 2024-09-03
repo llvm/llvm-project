@@ -100,6 +100,8 @@ DbgVariableLocation::extractFromMachineInstruction(
 
 DebugHandlerBase::DebugHandlerBase(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}
 
+DebugHandlerBase::~DebugHandlerBase() = default;
+
 void DebugHandlerBase::beginModule(Module *M) {
   if (M->debug_compile_units().empty())
     Asm = nullptr;
@@ -239,10 +241,7 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
          Ty->getTag() == dwarf::DW_TAG_unspecified_type;
 }
 
-static bool hasDebugInfo(const MachineModuleInfo *MMI,
-                         const MachineFunction *MF) {
-  if (!MMI->hasDebugInfo())
-    return false;
+static bool hasDebugInfo(const MachineFunction *MF) {
   auto *SP = MF->getFunction().getSubprogram();
   if (!SP)
     return false;
@@ -256,7 +255,7 @@ static bool hasDebugInfo(const MachineModuleInfo *MMI,
 void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   PrevInstBB = nullptr;
 
-  if (!Asm || !hasDebugInfo(MMI, MF)) {
+  if (!Asm || !hasDebugInfo(MF)) {
     skippedNonDebugFunction();
     return;
   }
@@ -352,7 +351,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 }
 
 void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!Asm || !Asm->hasDebugInfo())
     return;
 
   assert(CurMI == nullptr);
@@ -378,7 +377,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
 }
 
 void DebugHandlerBase::endInstruction() {
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!Asm || !Asm->hasDebugInfo())
     return;
 
   assert(CurMI != nullptr);
@@ -413,7 +412,7 @@ void DebugHandlerBase::endInstruction() {
 }
 
 void DebugHandlerBase::endFunction(const MachineFunction *MF) {
-  if (Asm && hasDebugInfo(MMI, MF))
+  if (Asm && hasDebugInfo(MF))
     endFunctionImpl(MF);
   DbgValues.clear();
   DbgLabels.clear();

@@ -47,7 +47,10 @@ MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
+MCOPT(bool, Crel)
+MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
+MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
 
@@ -128,12 +131,29 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "save-temp-labels", cl::desc("Don't discard temporary labels"));
   MCBINDOPT(SaveTempLabels);
 
+  static cl::opt<bool> Crel("crel",
+                            cl::desc("Use CREL relocation format for ELF"));
+  MCBINDOPT(Crel);
+
+  static cl::opt<bool> ImplicitMapSyms(
+      "implicit-mapsyms",
+      cl::desc("Allow mapping symbol at section beginning to be implicit, "
+               "lowering number of mapping symbols at the expense of some "
+               "portability. Recommended for projects that can build all their "
+               "object files using this option"));
+  MCBINDOPT(ImplicitMapSyms);
+
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
       cl::desc(
           "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);
+
+  static cl::opt<bool> X86Sse2Avx(
+      "x86-sse2avx", cl::desc("Specify that the assembler should encode SSE "
+                              "instructions with VEX prefix"));
+  MCBINDOPT(X86Sse2Avx);
 
   static cl::opt<std::string> ABIName(
       "target-abi", cl::Hidden,
@@ -162,7 +182,10 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.MCSaveTempLabels = getSaveTempLabels();
+  Options.Crel = getCrel();
+  Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
+  Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.AsSecureLogFile = getAsSecureLogFile();

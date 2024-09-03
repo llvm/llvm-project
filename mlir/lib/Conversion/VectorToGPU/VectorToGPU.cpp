@@ -31,7 +31,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -64,7 +63,7 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
   for (auto expr : xferOp.getPermutationMap().getResults()) {
     if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
       Value prevIdx = indices[dim.getPosition()];
-      SmallVector<OpFoldResult, 3> dims(dimValues.begin(), dimValues.end());
+      SmallVector<OpFoldResult, 3> dims(dimValues);
       dims.push_back(prevIdx);
       AffineExpr d0 = rewriter.getAffineDimExpr(offsetMap.getNumDims());
       indices[dim.getPosition()] = affine::makeComposedAffineApply(

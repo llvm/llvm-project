@@ -16,6 +16,7 @@
 // Test the feature test macros defined by <new>
 
 /*  Constant                                Value
+    __cpp_lib_constexpr_new                 202406L [C++26]
     __cpp_lib_destroying_delete             201806L [C++20]
     __cpp_lib_hardware_interference_size    201703L [C++17]
     __cpp_lib_launder                       201606L [C++17]
@@ -25,6 +26,10 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
+
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_destroying_delete
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
@@ -40,6 +45,10 @@
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_destroying_delete
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
 # endif
@@ -53,6 +62,10 @@
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_destroying_delete
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
@@ -79,6 +92,10 @@
 # endif
 
 #elif TEST_STD_VER == 20
+
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
 
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete
@@ -115,6 +132,10 @@
 
 #elif TEST_STD_VER == 23
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete
 #     error "__cpp_lib_destroying_delete should be defined in c++23"
@@ -149,6 +170,19 @@
 # endif
 
 #elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_ABI_VCRUNTIME)
+#   ifndef __cpp_lib_constexpr_new
+#     error "__cpp_lib_constexpr_new should be defined in c++26"
+#   endif
+#   if __cpp_lib_constexpr_new != 202406L
+#     error "__cpp_lib_constexpr_new should have the value 202406L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_constexpr_new
+#     error "__cpp_lib_constexpr_new should not be defined when the requirement '!defined(_LIBCPP_ABI_VCRUNTIME)' is not met!"
+#   endif
+# endif
 
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete

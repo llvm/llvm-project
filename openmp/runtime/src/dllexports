@@ -1276,5 +1276,6 @@ kmp_set_disp_num_buffers                    890
 %endif
 
 __kmpc_set_thread_limit
+__kmpc_dispatch_deinit
 
 # end of file #

@@ -1,7 +1,14 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck --check-prefix=CHECK --check-prefix=SIG_STR %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks -fdisable-block-signature-string | FileCheck --check-prefix=CHECK --check-prefix=NO_SIG_STR %s
 
-// CHECK: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
+// SIG_STR: @[[STR:.*]] = private unnamed_addr constant [6 x i8] c"v4@?0\00", align 1
+// SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
+// NO_SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 268435456, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
+
+// SIG_STR: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @[[STR]], ptr null }, align 4
+// SIG_STR: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @[[STR]], ptr null }, align 4
+// NO_SIG_STR: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr null, ptr null }, align 4
+// NO_SIG_STR: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr null, ptr null }, align 4
 
 void (^f)(void) = ^{};
 
@@ -37,8 +44,8 @@ void (^test1)(void) = ^(void) {
 // CHECK-NEXT: store ptr %1, ptr %[[_ADDR1]], align 4
 // CHECK-NEXT: %[[V2:.*]] = load ptr, ptr %[[_ADDR1]], align 4
 // CHECK-NEXT: %[[V3:.*]] = load ptr, ptr %[[_ADDR]], align 4
-// CHECK-NEXT: %[[V4:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V2]], i32 0, i32 5
-// CHECK-NEXT: %[[V5:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V3]], i32 0, i32 5
+// CHECK-NEXT: %[[V4:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V2]], i32 0, i32 5
+// CHECK-NEXT: %[[V5:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V3]], i32 0, i32 5
 // CHECK-NEXT: %[[BLOCKCOPY_SRC:.*]] = load ptr, ptr %[[V4]], align 4
 // CHECK-NEXT: call void @_Block_object_assign(ptr %[[V5]], ptr %[[BLOCKCOPY_SRC]], i32 8)
 // CHECK-NEXT: ret void
@@ -47,7 +54,7 @@ void (^test1)(void) = ^(void) {
 // CHECK: %[[_ADDR:.*]] = alloca ptr, align 4
 // CHECK-NEXT: store ptr %0, ptr %[[_ADDR]], align 4
 // CHECK-NEXT: %[[V1:.*]] = load ptr, ptr %[[_ADDR]], align 4
-// CHECK-NEXT: %[[V2:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V1]], i32 0, i32 5
+// CHECK-NEXT: %[[V2:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V1]], i32 0, i32 5
 // CHECK-NEXT: %[[V3:.*]] = load ptr, ptr %[[V2]], align 4
 // CHECK-NEXT: call void @_Block_object_dispose(ptr %[[V3]], i32 8)
 // CHECK-NEXT: ret void
@@ -106,7 +113,7 @@ void testConstCaptureInCopyAndDestroyHelpers(void) {
   (^ { i = x; })();
 }
 // CHECK-LABEL: define{{.*}} void @testConstCaptureInCopyAndDestroyHelpers(
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR_TMP21]], ptr %[[BLOCK_DESCRIPTOR]], align 4
 
 // CHECK-LABEL: define internal void @__testConstCaptureInCopyAndDestroyHelpers_block_invoke

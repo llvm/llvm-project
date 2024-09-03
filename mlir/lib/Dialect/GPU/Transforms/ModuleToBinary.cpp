@@ -38,24 +38,9 @@ class GpuModuleToBinaryPass
     : public impl::GpuModuleToBinaryPassBase<GpuModuleToBinaryPass> {
 public:
   using Base::Base;
-  void getDependentDialects(DialectRegistry &registry) const override;
   void runOnOperation() final;
 };
 } // namespace
-
-void GpuModuleToBinaryPass::getDependentDialects(
-    DialectRegistry &registry) const {
-  // Register all GPU related translations.
-  registry.insert<gpu::GPUDialect>();
-  registry.insert<LLVM::LLVMDialect>();
-#if LLVM_HAS_NVPTX_TARGET
-  registry.insert<NVVM::NVVMDialect>();
-#endif
-#if MLIR_ENABLE_ROCM_CONVERSIONS
-  registry.insert<ROCDL::ROCDLDialect>();
-#endif
-  registry.insert<spirv::SPIRVDialect>();
-}
 
 void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
@@ -114,7 +99,8 @@ LogicalResult moduleSerializer(GPUModuleOp op,
       return failure();
     }
 
-    Attribute object = target.createObject(*serializedModule, targetOptions);
+    Attribute object =
+        target.createObject(op, *serializedModule, targetOptions);
     if (!object) {
       op.emitError("An error happened while creating the object.");
       return failure();

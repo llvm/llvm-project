@@ -18,16 +18,27 @@ jobs:
     permissions:
       pull-requests: write
     if: >
-      github.event.workflow_run.event == 'pull_request'
+      github.event.workflow_run.event == 'pull_request' &&
+      (
+        github.event.workflow_run.conclusion == 'success' ||
+        github.event.workflow_run.conclusion == 'failure'
+      )
     steps:
-      - name: 'Download artifact'
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      - name: Fetch Sources
+        uses: actions/checkout@v4
         with:
-          github-token: ${{ secrets.ISSUE_WRITE_DOWNLOAD_ARTIFACT }}
+          sparse-checkout: |
+            .github/workflows/unprivileged-download-artifact/action.yml
+          sparse-checkout-cone-mode: false
+      - name: 'Download artifact'
+        uses: ./.github/workflows/unprivileged-download-artifact
+        id: download-artifact
+        with:
           run-id: ${{ github.event.workflow_run.id }}
-          name: workflow-args
+          artifact-name: workflow-args
 
       - name: 'Comment on PR'
+        if: steps.download-artifact.outputs.artifact-id != ''
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -140,5 +151,7 @@ jobs:
             });
 
       - name: Dump comments file
-        if: always()
+        if: >-
+          always() &&
+          steps.download-artifact.outputs.artifact-id != ''
         run: cat comments

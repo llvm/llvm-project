@@ -77,7 +77,15 @@ DWARFDie DWARFLinker::resolveDIEReference(const DWARFFile &File,
                                           const DWARFDie &DIE,
                                           CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
+  uint64_t RefOffset;
+  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
+    RefOffset = RefValue.getUnit()->getOffset() + *Off;
+  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
+    RefOffset = *Off;
+  } else {
+    reportWarning("Unsupported reference type", File, &DIE);
+    return DWARFDie();
+  }
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
       // In a file with broken references, an attribute might point to a NULL
@@ -1073,7 +1081,13 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     unsigned AttrSize, const DWARFFormValue &Val, const DWARFFile &File,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint64_t Ref = *Val.getAsReference();
+  uint64_t Ref;
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
+    Ref = Val.getUnit()->getOffset() + *Off;
+  else if (Off = Val.getAsDebugInfoReference(); Off)
+    Ref = *Off;
+  else
+    return 0;
 
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;
@@ -1397,6 +1411,12 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     CompileUnit &Unit, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
+
+  // We don't emit any skeleton CUs with dsymutil. So avoid emitting
+  // a redundant DW_AT_GNU_dwo_id on the non-skeleton CU.
+  if (AttrSpec.Attr == dwarf::DW_AT_GNU_dwo_id ||
+      AttrSpec.Attr == dwarf::DW_AT_dwo_id)
+    return 0;
 
   // Check for the offset to the macro table. If offset is incorrect then we
   // need to remove the attribute.

@@ -398,6 +398,16 @@ BMIs cannot be shipped in an archive to create a module library. Instead, the
 BMIs(``*.pcm``) are compiled into object files(``*.o``) and those object files
 are added to the archive instead.
 
+clang-cl
+~~~~~~~~
+
+``clang-cl`` supports the same options as ``clang++`` for modules as detailed above;
+there is no need to prefix these options with ``/clang:``. Note that ``cl.exe``
+`options to emit/consume IFC files <https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/>` are *not* supported.
+The resultant precompiled modules are also not compatible for use with ``cl.exe``.
+
+We recommend that build system authors use the above-mentioned ``clang++`` options  with ``clang-cl`` to build modules.
+
 Consistency Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -652,6 +662,149 @@ in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
    comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
 
+Experimental Non-Cascading Changes
+----------------------------------
+
+This section is primarily for build system vendors. For end compiler users,
+if you don't want to read it all, this is helpful to reduce recompilations.
+We encourage build system vendors and end users try this out and bring feedback.
+
+Before Clang 19, a change in BMI of any (transitive) dependency would cause the
+outputs of the BMI to change. Starting with Clang 19, changes to non-direct
+dependencies should not directly affect the output BMI, unless they affect the
+results of the compilations. We expect that there are many more opportunities
+for this optimization than we currently have realized and would appreaciate 
+feedback about missed optimization opportunities. For example,
+
+.. code-block:: c++
+
+  // m-partA.cppm
+  export module m:partA;
+
+  // m-partB.cppm
+  export module m:partB;
+  export int getB() { return 44; }
+
+  // m.cppm
+  export module m;
+  export import :partA;
+  export import :partB;
+
+  // useBOnly.cppm
+  export module useBOnly;
+  import m;
+  export int B() {
+    return getB();
+  }
+
+  // Use.cc
+  import useBOnly;
+  int get() {
+    return B();
+  }
+
+To compile the project (for brevity, some commands are omitted.):
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+If the interface of ``m-partA.cppm`` is changed to:
+
+.. code-block:: c++
+
+  // m-partA.v1.cppm
+  export module m:partA;
+  export int getA() { return 43; }
+
+and the BMI for ``useBOnly`` is recompiled as in:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+then the contents of ``useBOnly.pcm`` remain unchanged.
+Consequently, if the build system only bases recompilation decisions on directly imported modules,
+it becomes possible to skip the recompilation of ``Use.cc``.
+It should be fine because the altered interfaces do not affect ``Use.cc`` in any way;
+the changes do not cascade.
+
+When ``Clang`` generates a BMI, it records the hash values of all potentially contributory BMIs
+for the BMI being produced. This ensures that build systems are not required to consider
+transitively imported modules when deciding whether to recompile.
+
+What is considered to be a potential contributory BMIs is currently unspecified.
+However, it is a severe bug for a BMI to remain unchanged following an observable change
+that affects its consumers.
+
+Build systems may utilize this optimization by doing an update-if-changed operation to the BMI
+that is consumed from the BMI that is output by the compiler.
+
+We encourage build systems to add an experimental mode that
+reuses the cached BMI when **direct** dependencies did not change,
+even if **transitive** dependencies did change.
+
+Given there are potential compiler bugs, we recommend that build systems
+support this feature as a configurable option so that users
+can go back to the transitive change mode safely at any time.
+
+Interactions with Reduced BMI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With reduced BMI, non-cascading changes can be more powerful. For example,
+
+.. code-block:: c++
+
+  // A.cppm
+  export module A;
+  export int a() { return 44; }
+
+  // B.cppm
+  export module B;
+  import A;
+  export int b() { return a(); }
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+And let's change the implementation for ``A.cppm`` into:
+
+.. code-block:: c++
+
+  export module A;
+  int a_impl() { return 99; }
+  export int a() { return a_impl(); }
+
+and recompile the example:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+We should find the contents of ``B.pcm`` remains the same. In this case, the build system is
+allowed to skip recompilations of TUs which solely and directly depend on module ``B``.
+
+This only happens with a reduced BMI. With reduced BMIs, we won't record the function body
+of ``int b()`` in the BMI for ``B`` so that the module ``A`` doesn't contribute to the BMI of ``B``
+and we have less dependencies.
+
 Performance Tips
 ----------------
 
@@ -740,6 +893,9 @@ approach:
 
 Reducing the duplication from textual includes is what improves compile-time
 performance.
+
+To help users to identify such issues, we add a warning ``-Wdecls-in-multiple-modules``.
+This warning is disabled by default and it needs to be explicitly enabled or by ``-Weverything``.
 
 Transitioning to modules
 ------------------------
@@ -1077,6 +1233,58 @@ parsing their headers, those should be included after the import. If the
 imported modules don't provide such a header, one can be made manually for
 improved compile time performance.
 
+Reachability of internal partition units
+----------------------------------------
+
+The internal partition units are sometimes called implementation partition units in other documentation.
+However, the name may be confusing since implementation partition units are not implementation
+units.
+
+According to `[module.reach]p1 <https://eel.is/c++draft/module.reach#1>`_ and
+`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_ (from N4986):
+
+  A translation unit U is necessarily reachable from a point P if U is a module
+  interface unit on which the translation unit containing P has an interface
+  dependency, or the translation unit containing P imports U, in either case
+  prior to P.
+
+  All translation units that are necessarily reachable are reachable. Additional
+  translation units on which the point within the program has an interface
+  dependency may be considered reachable, but it is unspecified which are and
+  under what circumstances.
+
+For example,
+
+.. code-block:: c++
+
+  // a.cpp
+  import B;
+  int main()
+  {
+      g<void>();
+  }
+
+  // b.cppm
+  export module B;
+  import :C;
+  export template <typename T> inline void g() noexcept
+  {
+      return f<T>();
+  }
+
+  // c.cppm
+  module B:C;
+  template<typename> inline void f() noexcept {}
+
+The internal partition unit ``c.cppm`` is not necessarily reachable by
+``a.cpp`` because ``c.cppm`` is not a module interface unit and ``a.cpp``
+doesn't import ``c.cppm``. This leaves it up to the compiler to decide if
+``c.cppm`` is reachable by ``a.cpp`` or not. Clang's behavior is that
+indirectly imported internal partition units are not reachable.
+
+The suggested approach for using an internal partition unit in Clang is
+to only import them in the implementation unit.
+
 Known Issues
 ------------
 
@@ -1163,7 +1371,7 @@ non-module unit depending on the definition of some macros. However, this usage
 is forbidden by P1857R3 which is not yet implemented in Clang. This means that
 is possible to write invalid modules which will no longer be accepted once
 P1857R3 is implemented. This is tracked by
-`#56917 <https://github.com/llvm/llvm-project/issues/56917>`_.
+`#54047 <https://github.com/llvm/llvm-project/issues/54047>`_.
 
 Until then, it is recommended not to mix macros with module declarations.
 
@@ -1175,13 +1383,6 @@ Currently, Clang requires the file name of an ``importable module unit`` to
 have ``.cppm`` (or ``.ccm``, ``.cxxm``, ``.c++m``) as the file extension.
 However, the behavior is inconsistent with other compilers. This is tracked by
 `#57416 <https://github.com/llvm/llvm-project/issues/57416>`_.
-
-clang-cl is not compatible with standard C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``/clang:-fmodule-file`` and ``/clang:-fprebuilt-module-path`` cannot be used
-to specify the BMI with ``clang-cl.exe``. This is tracked by
-`#64118 <https://github.com/llvm/llvm-project/issues/64118>`_.
 
 Incorrect ODR violation diagnostics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

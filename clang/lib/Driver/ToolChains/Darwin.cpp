@@ -1272,23 +1272,8 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
                               StringRef Component, RuntimeLinkOptions Opts,
                               bool IsShared) const {
-  SmallString<64> DarwinLibName = StringRef("libclang_rt.");
-  // On Darwin the builtins component is not in the library name.
-  if (Component != "builtins") {
-    DarwinLibName += Component;
-    if (!(Opts & RLO_IsEmbedded))
-      DarwinLibName += "_";
-  }
-
-  DarwinLibName += getOSLibraryNameSuffix();
-  DarwinLibName += IsShared ? "_dynamic.dylib" : ".a";
-  SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(Dir, "lib", "darwin");
-  if (Opts & RLO_IsEmbedded)
-    llvm::sys::path::append(Dir, "macho_embedded");
-
-  SmallString<128> P(Dir);
-  llvm::sys::path::append(P, DarwinLibName);
+  std::string P = getCompilerRT(
+      Args, Component, IsShared ? ToolChain::FT_Shared : ToolChain::FT_Static);
 
   // For now, allow missing resource libraries to support developers who may
   // not have compiler-rt checked out or integrated into their build (unless
@@ -1303,18 +1288,56 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   // rpaths. This is currently true from this place, but we need to be
   // careful if this function is ever called before user's rpaths are emitted.
   if (Opts & RLO_AddRPath) {
-    assert(DarwinLibName.ends_with(".dylib") && "must be a dynamic library");
+    assert(StringRef(P).ends_with(".dylib") && "must be a dynamic library");
 
     // Add @executable_path to rpath to support having the dylib copied with
     // the executable.
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back("@executable_path");
 
-    // Add the path to the resource dir to rpath to support using the dylib
-    // from the default location without copying.
+    // Add the compiler-rt library's directory to rpath to support using the
+    // dylib from the default location without copying.
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(Dir));
+    CmdArgs.push_back(Args.MakeArgString(llvm::sys::path::parent_path(P)));
   }
+}
+
+std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
+                                 FileType Type) const {
+  assert(Type != ToolChain::FT_Object &&
+         "it doesn't make sense to ask for the compiler-rt library name as an "
+         "object file");
+  SmallString<64> MachOLibName = StringRef("libclang_rt");
+  // On MachO, the builtins component is not in the library name
+  if (Component != "builtins") {
+    MachOLibName += '.';
+    MachOLibName += Component;
+  }
+  MachOLibName += Type == ToolChain::FT_Shared ? "_dynamic.dylib" : ".a";
+
+  SmallString<128> FullPath(getDriver().ResourceDir);
+  llvm::sys::path::append(FullPath, "lib", "darwin", "macho_embedded",
+                          MachOLibName);
+  return std::string(FullPath);
+}
+
+std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
+                                  FileType Type) const {
+  assert(Type != ToolChain::FT_Object &&
+         "it doesn't make sense to ask for the compiler-rt library name as an "
+         "object file");
+  SmallString<64> DarwinLibName = StringRef("libclang_rt.");
+  // On Darwin, the builtins component is not in the library name
+  if (Component != "builtins") {
+    DarwinLibName += Component;
+    DarwinLibName += '_';
+  }
+  DarwinLibName += getOSLibraryNameSuffix();
+  DarwinLibName += Type == ToolChain::FT_Shared ? "_dynamic.dylib" : ".a";
+
+  SmallString<128> FullPath(getDriver().ResourceDir);
+  llvm::sys::path::append(FullPath, "lib", "darwin", DarwinLibName);
+  return std::string(FullPath);
 }
 
 StringRef Darwin::getPlatformFamily() const {
@@ -1496,6 +1519,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     const char *sanitizer = nullptr;
     if (Sanitize.needsUbsanRt()) {
       sanitizer = "UndefinedBehaviorSanitizer";
+    } else if (Sanitize.needsRtsanRt()) {
+      sanitizer = "RealtimeSanitizer";
     } else if (Sanitize.needsAsanRt()) {
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
@@ -1517,6 +1542,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
                "Static sanitizer runtimes not supported");
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
+    }
+    if (Sanitize.needsRtsanRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "rtsan");
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
@@ -2900,22 +2930,53 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
-static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPlatform, const std::optional<DarwinSDKInfo> &SDKInfo) {
+static bool sdkSupportsBuiltinModules(
+    const Darwin::DarwinPlatformKind &TargetPlatform,
+    const Darwin::DarwinEnvironmentKind &TargetEnvironment,
+    const std::optional<DarwinSDKInfo> &SDKInfo) {
+  if (TargetEnvironment == Darwin::NativeEnvironment ||
+      TargetEnvironment == Darwin::Simulator ||
+      TargetEnvironment == Darwin::MacCatalyst) {
+    // Standard xnu/Mach/Darwin based environments
+    // depend on the SDK version.
+  } else {
+    // All other environments support builtin modules from the start.
+    return true;
+  }
+
   if (!SDKInfo)
+    // If there is no SDK info, assume this is building against a
+    // pre-SDK version of macOS (i.e. before Mac OS X 10.4). Those
+    // don't support modules anyway, but the headers definitely
+    // don't support builtin modules either. It might also be some
+    // kind of degenerate build environment, err on the side of
+    // the old behavior which is to not use builtin modules.
     return false;
 
   VersionTuple SDKVersion = SDKInfo->getVersion();
   switch (TargetPlatform) {
+  // Existing SDKs added support for builtin modules in the fall
+  // 2024 major releases.
   case Darwin::MacOS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(15U);
   case Darwin::IPhoneOS:
-    return SDKVersion >= VersionTuple(99U);
+    switch (TargetEnvironment) {
+    case Darwin::MacCatalyst:
+      // Mac Catalyst uses `-target arm64-apple-ios18.0-macabi` so the platform
+      // is iOS, but it builds with the macOS SDK, so it's the macOS SDK version
+      // that's relevant.
+      return SDKVersion >= VersionTuple(15U);
+    default:
+      return SDKVersion >= VersionTuple(18U);
+    }
   case Darwin::TvOS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(18U);
   case Darwin::WatchOS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(11U);
   case Darwin::XROS:
-    return SDKVersion >= VersionTuple(99U);
+    return SDKVersion >= VersionTuple(2U);
+
+  // New SDKs support builtin modules from the start.
   default:
     return true;
   }
@@ -3007,12 +3068,41 @@ void Darwin::addClangTargetOptions(
   // i.e. when the builtin stdint.h is in the Darwin module too, the cycle
   // goes away. Note that -fbuiltin-headers-in-system-modules does nothing
   // to fix the same problem with C++ headers, and is generally fragile.
-  if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
+  if (!sdkSupportsBuiltinModules(TargetPlatform, TargetEnvironment, SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
 
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
                                 options::OPT_fno_define_target_os_macros))
     CC1Args.push_back("-fdefine-target-os-macros");
+
+  // Disable subdirectory modulemap search on sufficiently recent SDKs.
+  if (SDKInfo &&
+      !DriverArgs.hasFlag(options::OPT_fmodulemap_allow_subdirectory_search,
+                          options::OPT_fno_modulemap_allow_subdirectory_search,
+                          false)) {
+    bool RequiresSubdirectorySearch;
+    VersionTuple SDKVersion = SDKInfo->getVersion();
+    switch (TargetPlatform) {
+    default:
+      RequiresSubdirectorySearch = true;
+      break;
+    case MacOS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(15, 0);
+      break;
+    case IPhoneOS:
+    case TvOS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(18, 0);
+      break;
+    case WatchOS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(11, 0);
+      break;
+    case XROS:
+      RequiresSubdirectorySearch = SDKVersion < VersionTuple(2, 0);
+      break;
+    }
+    if (!RequiresSubdirectorySearch)
+      CC1Args.push_back("-fno-modulemap-allow-subdirectory-search");
+  }
 }
 
 void Darwin::addClangCC1ASTargetOptions(
@@ -3029,7 +3119,7 @@ void Darwin::addClangCC1ASTargetOptions(
       std::string Arg;
       llvm::raw_string_ostream OS(Arg);
       OS << "-target-sdk-version=" << V;
-      CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+      CC1ASArgs.push_back(Args.MakeArgString(Arg));
     };
 
     if (isTargetMacCatalyst()) {
@@ -3052,7 +3142,7 @@ void Darwin::addClangCC1ASTargetOptions(
         std::string Arg;
         llvm::raw_string_ostream OS(Arg);
         OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
-        CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+        CC1ASArgs.push_back(Args.MakeArgString(Arg));
       } else if (const auto *MacOStoMacCatalystMapping =
                      SDKInfo->getVersionMapping(
                          DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
@@ -3063,7 +3153,7 @@ void Darwin::addClangCC1ASTargetOptions(
           std::string Arg;
           llvm::raw_string_ostream OS(Arg);
           OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
-          CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+          CC1ASArgs.push_back(Args.MakeArgString(Arg));
         }
       }
     }
@@ -3456,6 +3546,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

@@ -1,9 +1,9 @@
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
 
-; CHECK: Attribute 'align' exceed the max size 2^14
+; CHECK: huge alignments are not supported yet
 define dso_local void @foo(ptr %p) {
 entry:
-  call void @bar(ptr noundef byval(<8 x float>) align 32768 %p)
+  call void @bar(ptr noundef byval(<8 x float>) align 8589934592 %p)
   ret void
 }
 

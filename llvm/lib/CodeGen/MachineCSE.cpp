@@ -94,8 +94,8 @@ namespace {
       AU.addPreservedID(MachineLoopInfoID);
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addPreserved<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
@@ -184,7 +184,7 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
       continue;
     bool OnlyOneUse = MRI->hasOneNonDBGUse(Reg);
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
-    if (!DefMI->isCopy())
+    if (!DefMI || !DefMI->isCopy())
       continue;
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
@@ -406,7 +406,8 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
 
 bool MachineCSE::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
-      MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo())
+      MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo() ||
+      MI->isFakeUse())
     return false;
 
   // Ignore copies.
@@ -944,7 +945,7 @@ bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
   bool ChangedPRE, ChangedCSE;
   ChangedPRE = PerformSimplePRE(DT);

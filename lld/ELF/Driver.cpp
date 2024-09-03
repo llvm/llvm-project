@@ -93,6 +93,17 @@ void elf::errorOrWarn(const Twine &msg) {
 
 void Ctx::reset() {
   driver = LinkerDriver();
+  script = nullptr;
+  target = nullptr;
+
+  bufferStart = nullptr;
+  mainPart = nullptr;
+  tlsPhdr = nullptr;
+  out = OutSections{};
+  outputSections.clear();
+
+  sym = ElfSym{};
+
   memoryBuffers.clear();
   objectFiles.clear();
   sharedFiles.clear();
@@ -101,17 +112,21 @@ void Ctx::reset() {
   lazyBitcodeFiles.clear();
   inputSections.clear();
   ehInputSections.clear();
+
+  symAux.clear();
   duplicates.clear();
   nonPrevailingSyms.clear();
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  tar.reset();
   internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
   scriptSymOrderCounter = 1;
   scriptSymOrder.clear();
+  ppc64noTocRelax.clear();
   ltoAllVtablesHaveTypeInfos = false;
 }
 
@@ -135,10 +150,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
     elf::ctx.reset();
     symtab = SymbolTable();
 
-    outputSections.clear();
-    symAux.clear();
-
-    tar = nullptr;
     in.reset();
 
     partitions.clear();
@@ -151,9 +162,10 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = ScriptWrapper();
 
-  symAux.emplace_back();
+  LinkerScript script;
+  elf::ctx.script = &script;
+  elf::ctx.symAux.emplace_back();
 
   partitions.clear();
   partitions.emplace_back();
@@ -202,6 +214,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Case("elf64_amdgpu", {ELF64LEKind, EM_AMDGPU})
           .Case("elf64loongarch", {ELF64LEKind, EM_LOONGARCH})
           .Case("elf64_s390", {ELF64BEKind, EM_S390})
+          .Case("hexagonelf", {ELF32LEKind, EM_HEXAGON})
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
@@ -223,14 +236,15 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 
   std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
-  bool addToTar = file->isThin() && tar;
+  bool addToTar = file->isThin() && ctx.tar;
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      tar->append(relativeToRoot(check(c.getFullName())), mbref.getBuffer());
+      ctx.tar->append(relativeToRoot(check(c.getFullName())),
+                      mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -444,13 +458,15 @@ static void checkOptions() {
       error("-r and --export-dynamic may not be used together");
     if (config->debugNames)
       error("-r and --debug-names may not be used together");
+    if (!config->zSectionHeader)
+      error("-r and -z nosectionheader may not be used together");
   }
 
   if (config->executeOnly) {
     if (config->emachine != EM_AARCH64)
       error("--execute-only is only supported on AArch64 targets");
 
-    if (config->singleRoRx && !script->hasSectionsCommand)
+    if (config->singleRoRx && !ctx.script->hasSectionsCommand)
       error("--execute-only and --no-rosegment cannot be used together");
   }
 
@@ -639,9 +655,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
         TarWriter::create(path, path::stem(path));
     if (errOrWriter) {
-      tar = std::move(*errOrWriter);
-      tar->append("response.txt", createResponseFile(args));
-      tar->append("version.txt", getLLDVersion() + "\n");
+      ctx.tar = std::move(*errOrWriter);
+      ctx.tar->append("response.txt", createResponseFile(args));
+      ctx.tar->append("version.txt", getLLDVersion() + "\n");
       StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
       if (!ltoSampleProfile.empty())
         readFile(ltoSampleProfile);
@@ -833,6 +849,8 @@ static ICFLevel getICF(opt::InputArgList &args) {
 static StripPolicy getStrip(opt::InputArgList &args) {
   if (args.hasArg(OPT_relocatable))
     return StripPolicy::None;
+  if (!config->zSectionHeader)
+    return StripPolicy::All;
 
   auto *arg = args.getLastArg(OPT_strip_all, OPT_strip_debug);
   if (!arg)
@@ -990,6 +1008,15 @@ processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     const Elf_Shdr_Impl<ELFT> &sec = objSections[i];
     if (sec.sh_info == inputObj->cgProfileSectionIndex) {
+      if (sec.sh_type == SHT_CREL) {
+        auto crels =
+            CHECK(obj.crels(sec), "could not retrieve cg profile rela section");
+        for (const auto &rel : crels.first)
+          symbolIndices.push_back(rel.getSymbol(false));
+        for (const auto &rel : crels.second)
+          symbolIndices.push_back(rel.getSymbol(false));
+        break;
+      }
       if (sec.sh_type == SHT_RELA) {
         ArrayRef<typename ELFT::Rela> relas =
             CHECK(obj.relas(sec), "could not retrieve cg profile rela section");
@@ -1269,7 +1296,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->dynamicLinker = getDynamicLinker(args);
   config->ehFrameHdr =
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
-  config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
@@ -1408,7 +1435,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->soName = args.getLastArgValue(OPT_soname);
   config->sortSection = getSortSection(args);
   config->splitStackAdjustSize = args::getInteger(args, OPT_split_stack_adjust_size, 16384);
-  config->strip = getStrip(args);
+  config->zSectionHeader =
+      getZFlag(args, "sectionheader", "nosectionheader", true);
+  config->strip = getStrip(args); // needs zSectionHeader
   config->sysroot = args.getLastArgValue(OPT_sysroot);
   config->target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
   config->target2 = getTarget2(args);
@@ -1910,13 +1939,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       hasInput = true;
       break;
     case OPT_defsym: {
-      StringRef from;
-      StringRef to;
-      std::tie(from, to) = StringRef(arg->getValue()).split('=');
-      if (from.empty() || to.empty())
-        error("--defsym: syntax error: " + StringRef(arg->getValue()));
-      else
-        readDefsym(from, MemoryBufferRef(to, "--defsym"));
+      readDefsym(MemoryBufferRef(arg->getValue(), "--defsym"));
       break;
     }
     case OPT_script:
@@ -2021,29 +2044,35 @@ void LinkerDriver::inferMachineType() {
   if (config->ekind != ELFNoneKind)
     return;
 
+  bool inferred = false;
   for (InputFile *f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
-    config->ekind = f->ekind;
-    config->emachine = f->emachine;
+    if (!inferred) {
+      inferred = true;
+      config->ekind = f->ekind;
+      config->emachine = f->emachine;
+      config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
+    }
     config->osabi = f->osabi;
-    config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
-    return;
+    if (f->osabi != ELFOSABI_NONE)
+      return;
   }
-  error("target emulation unknown: -m or at least one .o file required");
+  if (!inferred)
+    error("target emulation unknown: -m or at least one .o file required");
 }
 
 // Parse -z max-page-size=<value>. The default value is defined by
 // each target.
 static uint64_t getMaxPageSize(opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "max-page-size",
-                                       target->defaultMaxPageSize);
+                                       ctx.target->defaultMaxPageSize);
   if (!isPowerOf2_64(val)) {
     error("max-page-size: value isn't a power of 2");
-    return target->defaultMaxPageSize;
+    return ctx.target->defaultMaxPageSize;
   }
   if (config->nmagic || config->omagic) {
-    if (val != target->defaultMaxPageSize)
+    if (val != ctx.target->defaultMaxPageSize)
       warn("-z max-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
@@ -2054,13 +2083,13 @@ static uint64_t getMaxPageSize(opt::InputArgList &args) {
 // each target.
 static uint64_t getCommonPageSize(opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "common-page-size",
-                                       target->defaultCommonPageSize);
+                                       ctx.target->defaultCommonPageSize);
   if (!isPowerOf2_64(val)) {
     error("common-page-size: value isn't a power of 2");
-    return target->defaultCommonPageSize;
+    return ctx.target->defaultCommonPageSize;
   }
   if (config->nmagic || config->omagic) {
-    if (val != target->defaultCommonPageSize)
+    if (val != ctx.target->defaultCommonPageSize)
       warn("-z common-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
@@ -2430,10 +2459,10 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   // Forbid partitions from being used on incompatible targets, and forbid them
   // from being used together with various linker features that assume a single
   // set of output sections.
-  if (script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand)
     error(toString(s->file) +
           ": partitions cannot be used with the SECTIONS command");
-  if (script->hasPhdrsCommands())
+  if (ctx.script->hasPhdrsCommands())
     error(toString(s->file) +
           ": partitions cannot be used with the PHDRS command");
   if (!config->sectionStartMap.empty())
@@ -2545,8 +2574,12 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
-    if (symtab.find(realName))
+    if (Symbol *real = symtab.find(realName)) {
       symtab.addUnusedUndefined(name, sym->binding);
+      // Update sym's binding, which will replace real's later in
+      // SymbolTable::wrap.
+      sym->binding = real->binding;
+    }
 
     Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
@@ -2843,7 +2876,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // After potential archive member extraction involving ENTRY and
   // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
   // RHS may refer to definitions in just extracted object files).
-  script->addScriptReferencedSymbolsToSymTable();
+  ctx.script->addScriptReferencedSymbolsToSymTable();
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
@@ -2873,9 +2906,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
@@ -2907,7 +2942,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // We want to declare linker script's symbols early,
   // so that we can version them.
   // They also might be exported if referenced by DSOs.
-  script->declareSymbols();
+  ctx.script->declareSymbols();
 
   // Handle --exclude-libs. This is before scanVersionScript() due to a
   // workaround for Android ndk: for a defined versioned symbol in an archive
@@ -2919,7 +2954,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!config->relocatable)
@@ -2956,6 +2991,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
+  const size_t numInputFilesBeforeLTO = ctx.driver.files.size();
   compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
@@ -2979,6 +3015,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parallelForEach(newObjectFiles, postParseObjectFile);
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(*d.sym, d.file, d.section, d.value);
+
+  // ELF dependent libraries may have introduced new input files after LTO has
+  // completed. This is an error if the files haven't already been parsed, since
+  // changing the symbol table could break the semantic assumptions of LTO.
+  auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
+  if (!newInputFiles.empty()) {
+    DenseSet<StringRef> oldFilenames;
+    for (InputFile *f :
+         ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
+      oldFilenames.insert(f->getName());
+    for (InputFile *newFile : newInputFiles)
+      if (!oldFilenames.contains(newFile->getName()))
+        errorOrWarn("input file '" + newFile->getName() + "' added after LTO");
+  }
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
@@ -3048,7 +3098,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  mainPart = &partitions[0];
+  ctx.mainPart = &partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3057,9 +3107,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
-  target = getTarget();
+  ctx.target = getTarget();
 
-  config->eflags = target->calcEFlags();
+  config->eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
   // the output can be run on. For example if the OS can use 4k or 64k page
   // sizes then maxPageSize must be 64k for the output to be useable on both.
@@ -3111,13 +3161,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     llvm::TimeTraceScope timeScope("Assign sections");
 
     // Create output sections described by SECTIONS commands.
-    script->processSectionCommands();
+    ctx.script->processSectionCommands();
 
     // Linker scripts control how input sections are assigned to output
     // sections. Input sections that were not handled by scripts are called
     // "orphans", and they are assigned to output sections by the default rule.
     // Process that.
-    script->addOrphanSections();
+    ctx.script->addOrphanSections();
   }
 
   {
@@ -3127,9 +3177,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // merging MergeInputSections into a single MergeSyntheticSection. From this
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
-    for (SectionCommand *cmd : script->sectionCommands)
+    for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(&script.s);
+        osd->osec.finalizeInputSections(ctx.script);
   }
 
   // Two input sections with different output sections should not be folded.

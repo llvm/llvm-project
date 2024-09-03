@@ -118,7 +118,7 @@ public:
   DiagnosticHandlerWrapper &operator=(DiagnosticHandlerWrapper &&) = default;
 
   /// Verifies the captured "expected-*" diagnostics if required.
-  mlir::LogicalResult verify() const {
+  llvm::LogicalResult verify() const {
     if (auto *ptr =
             handler.dyn_cast<mlir::SourceMgrDiagnosticVerifierHandler *>()) {
       return ptr->verify();
@@ -192,7 +192,7 @@ public:
   /// If diagnostic message verification has been requested upon construction of
   /// this source manager, performs the verification, reports errors and returns
   /// the result of the verification. Otherwise passes through the given value.
-  mlir::LogicalResult checkResult(mlir::LogicalResult result) {
+  llvm::LogicalResult checkResult(llvm::LogicalResult result) {
     resultChecked = true;
     if (!verifyDiagnostics)
       return result;
@@ -222,7 +222,7 @@ private:
 
 /// Trivial wrapper around `applyTransforms` that doesn't support extra mapping
 /// and doesn't enforce the entry point transform ops being top-level.
-static mlir::LogicalResult
+static llvm::LogicalResult
 applyTransforms(mlir::Operation *payloadRoot,
                 mlir::transform::TransformOpInterface transformRoot,
                 const mlir::transform::TransformOptions &options) {
@@ -237,7 +237,7 @@ applyTransforms(mlir::Operation *payloadRoot,
 /// application is successful, prints the transformed input buffer into the
 /// given output stream. Additional configuration options are derived from
 /// command-line options.
-static mlir::LogicalResult processPayloadBuffer(
+static llvm::LogicalResult processPayloadBuffer(
     raw_ostream &os, std::unique_ptr<MemoryBuffer> inputBuffer,
     std::unique_ptr<llvm::MemoryBuffer> transformBuffer,
     MutableArrayRef<std::unique_ptr<MemoryBuffer>> transformLibraries,
@@ -309,7 +309,7 @@ static mlir::LogicalResult processPayloadBuffer(
 }
 
 /// Tool entry point.
-static mlir::LogicalResult runMain(int argc, char **argv) {
+static llvm::LogicalResult runMain(int argc, char **argv) {
   // Register all upstream dialects and extensions. Specific uses are advised
   // not to register all dialects indiscriminately but rather hand-pick what is
   // necessary for their use case.

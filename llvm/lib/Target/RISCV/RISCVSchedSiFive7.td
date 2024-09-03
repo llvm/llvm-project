@@ -479,10 +479,6 @@ foreach mx = SchedMxList in {
 // resource, we do not need to use LMULSEWXXX constructors. However, we do
 // use the SEW from the name to determine the number of Cycles.
 
-// This predicate is true when the rs2 operand of vlse or vsse is x0, false
-// otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
-
 foreach mx = SchedMxList in {
   defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 8>.c;
@@ -1287,11 +1283,11 @@ def : ReadAdvance<ReadVMov8V, 0>;
 
 // Others
 def : ReadAdvance<ReadVMask, 0>;
-def : ReadAdvance<ReadVMergeOp_WorstCase, 0>;
+def : ReadAdvance<ReadVPassthru_WorstCase, 0>;
 foreach mx = SchedMxList in {
-  def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx), 0>;
+  def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx), 0>;
   foreach sew = SchedSEWSet<mx>.val in
-    def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
+    def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx  # "_E" # sew), 0>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -4381,8 +4381,7 @@ bool TGParser::CheckTemplateArgValues(
     SmallVectorImpl<llvm::ArgumentInit *> &Values, SMLoc Loc, Record *ArgsRec) {
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
-  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    auto *Value = Values[I];
+  for (llvm::ArgumentInit *&Value : Values) {
     Init *ArgName = nullptr;
     if (Value->isPositional())
       ArgName = TArgs[Value->getIndex()];
@@ -4398,7 +4397,7 @@ bool TGParser::CheckTemplateArgValues(
         assert((!isa<TypedInit>(CastValue) ||
                 cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
                "result of template arg value cast has wrong type");
-        Values[I] = Value->cloneWithValue(CastValue);
+        Value = Value->cloneWithValue(CastValue);
       } else {
         PrintFatalError(Loc, "Value specified for template argument '" +
                                  Arg->getNameInitAsString() + "' is of type " +
@@ -4461,8 +4460,13 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
 
   if (CurRec)
     CurRec->addDump(Loc, Message);
-  else
-    addEntry(std::make_unique<Record::DumpInfo>(Loc, Message));
+  else {
+    HasReferenceResolver resolver{nullptr};
+    resolver.setFinal(true);
+    // force a resolution with a dummy resolver
+    Init *ResolvedMessage = Message->resolveReferences(resolver);
+    addEntry(std::make_unique<Record::DumpInfo>(Loc, ResolvedMessage));
+  }
 
   return false;
 }

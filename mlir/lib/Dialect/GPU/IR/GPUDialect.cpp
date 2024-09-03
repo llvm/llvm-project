@@ -29,7 +29,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -149,9 +148,9 @@ bool MMAMatrixType::isValidElementType(Type elementType) {
 }
 
 LogicalResult
-MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
-                      ArrayRef<int64_t> shape, Type elementType,
-                      StringRef operand) {
+MMAMatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                ArrayRef<int64_t> shape, Type elementType,
+                                StringRef operand) {
   if (operand != "AOp" && operand != "BOp" && operand != "COp")
     return emitError() << "operand expected to be one of AOp, BOp or COp";
 
@@ -621,10 +620,22 @@ LogicalResult gpu::SubgroupReduceOp::verify() {
                        << "` reduction operation is not compatible with type "
                        << getType();
   }
+
+  if (auto clusterSize = getClusterSize()) {
+    uint32_t size = *clusterSize;
+    if (!llvm::isPowerOf2_32(size)) {
+      return emitOpError() << "cluster size " << size
+                           << " is not a power of two";
+    }
+  }
+
   return success();
 }
 
 OpFoldResult gpu::SubgroupReduceOp::fold(FoldAdaptor /*adaptor*/) {
+  if (getClusterSize() == 1)
+    return getValue();
+
   if (!getUniform() && canMakeGroupOpUniform(*this)) {
     setUniform(true);
     return getResult();
@@ -1737,8 +1748,7 @@ LogicalResult gpu::ReturnOp::verify() {
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayAttr targets,
                         Attribute offloadingHandler) {
-  ensureTerminator(*result.addRegion(), builder, result.location);
-
+  result.addRegion()->emplaceBlock();
   Properties &props = result.getOrAddProperties<Properties>();
   if (targets)
     props.targets = targets;
@@ -1752,73 +1762,6 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, name,
         targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets),
         offloadingHandler);
-}
-
-ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
-  StringAttr nameAttr;
-  ArrayAttr targetsAttr;
-
-  if (parser.parseSymbolName(nameAttr))
-    return failure();
-
-  Properties &props = result.getOrAddProperties<Properties>();
-  props.setSymName(nameAttr);
-
-  // Parse the optional offloadingHandler
-  if (succeeded(parser.parseOptionalLess())) {
-    if (parser.parseAttribute(props.offloadingHandler))
-      return failure();
-    if (parser.parseGreater())
-      return failure();
-  }
-
-  // Parse the optional array of target attributes.
-  OptionalParseResult targetsAttrResult =
-      parser.parseOptionalAttribute(targetsAttr, Type{});
-  if (targetsAttrResult.has_value()) {
-    if (failed(*targetsAttrResult)) {
-      return failure();
-    }
-    props.targets = targetsAttr;
-  }
-
-  // If module attributes are present, parse them.
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
-    return failure();
-
-  // Parse the module body.
-  auto *body = result.addRegion();
-  if (parser.parseRegion(*body, {}))
-    return failure();
-
-  // Ensure that this module has a valid terminator.
-  GPUModuleOp::ensureTerminator(*body, parser.getBuilder(), result.location);
-  return success();
-}
-
-void GPUModuleOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  p.printSymbolName(getName());
-
-  if (Attribute attr = getOffloadingHandlerAttr()) {
-    p << " <";
-    p.printAttribute(attr);
-    p << ">";
-  }
-
-  if (Attribute attr = getTargetsAttr()) {
-    p << ' ';
-    p.printAttribute(attr);
-    p << ' ';
-  }
-
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {mlir::SymbolTable::getSymbolAttrName(),
-                                      getTargetsAttrName(),
-                                      getOffloadingHandlerAttrName()});
-  p << ' ';
-  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
 }
 
 bool GPUModuleOp::hasTarget(Attribute target) {
@@ -2148,7 +2091,8 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  Attribute target, CompilationTarget format,
-                                 StringAttr object, DictionaryAttr properties) {
+                                 StringAttr object, DictionaryAttr properties,
+                                 KernelTableAttr kernels) {
   if (!target)
     return emitError() << "the target attribute cannot be null";
   if (target.hasPromiseOrImplementsInterface<TargetAttrInterface>())
@@ -2232,6 +2176,113 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
                             "#gpu.address_space<workgroup>>";
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPU KernelMetadataAttr
+//===----------------------------------------------------------------------===//
+
+KernelMetadataAttr KernelMetadataAttr::get(FunctionOpInterface kernel,
+                                           DictionaryAttr metadata) {
+  assert(kernel && "invalid kernel");
+  return get(kernel.getNameAttr(), kernel.getFunctionType(),
+             kernel.getAllArgAttrs(), metadata);
+}
+
+KernelMetadataAttr
+KernelMetadataAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               FunctionOpInterface kernel,
+                               DictionaryAttr metadata) {
+  assert(kernel && "invalid kernel");
+  return getChecked(emitError, kernel.getNameAttr(), kernel.getFunctionType(),
+                    kernel.getAllArgAttrs(), metadata);
+}
+
+KernelMetadataAttr
+KernelMetadataAttr::appendMetadata(ArrayRef<NamedAttribute> attrs) const {
+  if (attrs.empty())
+    return *this;
+  NamedAttrList attrList;
+  if (DictionaryAttr dict = getMetadata())
+    attrList.append(dict);
+  attrList.append(attrs);
+  return KernelMetadataAttr::get(getName(), getFunctionType(), getArgAttrs(),
+                                 attrList.getDictionary(getContext()));
+}
+
+LogicalResult
+KernelMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           StringAttr name, Type functionType,
+                           ArrayAttr argAttrs, DictionaryAttr metadata) {
+  if (name.empty())
+    return emitError() << "the kernel name can't be empty";
+  if (argAttrs) {
+    if (llvm::any_of(argAttrs, [](Attribute attr) {
+          return !llvm::isa<DictionaryAttr>(attr);
+        }))
+      return emitError()
+             << "all attributes in the array must be a dictionary attribute";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPU KernelTableAttr
+//===----------------------------------------------------------------------===//
+
+KernelTableAttr KernelTableAttr::get(MLIRContext *context,
+                                     ArrayRef<KernelMetadataAttr> kernels,
+                                     bool isSorted) {
+  // Note that `is_sorted` is always only invoked once even with assertions ON.
+  assert((!isSorted || llvm::is_sorted(kernels)) &&
+         "expected a sorted kernel array");
+  // Immediately return the attribute if the array is sorted.
+  if (isSorted || llvm::is_sorted(kernels))
+    return Base::get(context, kernels);
+  // Sort the array.
+  SmallVector<KernelMetadataAttr> kernelsTmp(kernels);
+  llvm::array_pod_sort(kernelsTmp.begin(), kernelsTmp.end());
+  return Base::get(context, kernelsTmp);
+}
+
+KernelTableAttr KernelTableAttr::getChecked(
+    function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+    ArrayRef<KernelMetadataAttr> kernels, bool isSorted) {
+  // Note that `is_sorted` is always only invoked once even with assertions ON.
+  assert((!isSorted || llvm::is_sorted(kernels)) &&
+         "expected a sorted kernel array");
+  // Immediately return the attribute if the array is sorted.
+  if (isSorted || llvm::is_sorted(kernels))
+    return Base::getChecked(emitError, context, kernels);
+  // Sort the array.
+  SmallVector<KernelMetadataAttr> kernelsTmp(kernels);
+  llvm::array_pod_sort(kernelsTmp.begin(), kernelsTmp.end());
+  return Base::getChecked(emitError, context, kernelsTmp);
+}
+
+LogicalResult
+KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                        ArrayRef<KernelMetadataAttr> kernels) {
+  if (kernels.size() < 2)
+    return success();
+  // Check that the kernels are uniquely named.
+  if (std::adjacent_find(kernels.begin(), kernels.end(),
+                         [](KernelMetadataAttr l, KernelMetadataAttr r) {
+                           return l.getName() == r.getName();
+                         }) != kernels.end()) {
+    return emitError() << "expected all kernels to be uniquely named";
+  }
+  return success();
+}
+
+KernelMetadataAttr KernelTableAttr::lookup(StringRef key) const {
+  auto [iterator, found] = impl::findAttrSorted(begin(), end(), key);
+  return found ? *iterator : KernelMetadataAttr();
+}
+
+KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
+  auto [iterator, found] = impl::findAttrSorted(begin(), end(), key);
+  return found ? *iterator : KernelMetadataAttr();
 }
 
 //===----------------------------------------------------------------------===//

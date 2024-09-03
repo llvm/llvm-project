@@ -17,16 +17,22 @@
 ! RUN: %flang --target=x86_64-linux-gnu -march=skylake -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-SKYLAKE
 
+! RUN: %flang --target=x86_64-linux-gnu -mapx-features=egpr -c %s -### 2>&1 \
+! RUN: | FileCheck %s -check-prefix=CHECK-APX
+
+! RUN: %flang --target=x86_64-linux-gnu -mno-apx-features=ccmp -c %s -### 2>&1 \
+! RUN: | FileCheck %s -check-prefix=CHECK-NO-APX
+
 ! RUN: %flang --target=x86_64h-linux-gnu -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-X86_64H
 
 ! RUN: %flang --target=riscv64-linux-gnu -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-RV64
 
-! RUN: %flang --target=amdgcn-amd-amdhsa -mcpu=gfx908 -c %s -### 2>&1 \
+! RUN: %flang --target=amdgcn-amd-amdhsa -mcpu=gfx908 -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU
 
-! RUN: %flang --target=r600-unknown-unknown -mcpu=cayman -c %s -### 2>&1 \
+! RUN: %flang --target=r600-unknown-unknown -mcpu=cayman -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU-R600
 
 ! CHECK-A57: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
@@ -50,6 +56,12 @@
 
 ! CHECK-SKYLAKE: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
 ! CHECK-SKYLAKE-SAME: "-target-cpu" "skylake"
+
+! CHECK-APX: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! CHECK-APX-SAME: "-target-feature" "+egpr"
+
+! CHECK-NO-APX: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! CHECK-NO-APX-SAME: "-target-feature" "-ccmp"
 
 ! CHECK-X86_64H: "-fc1" "-triple" "x86_64h-unknown-linux-gnu"
 ! CHECK-X86_64H-SAME: "-target-cpu" "x86-64" "-target-feature" "-rdrnd" "-target-feature" "-aes" "-target-feature" "-pclmul" "-target-feature" "-rtm" "-target-feature" "-fsgsbase"

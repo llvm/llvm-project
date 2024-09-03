@@ -217,6 +217,9 @@ HANDLE_TARGET_OPCODE(PATCHABLE_TYPED_EVENT_CALL)
 
 HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 
+/// Represents a use of the operand but generates no code.
+HANDLE_TARGET_OPCODE(FAKE_USE)
+
 // This is a fence with the singlethread scope. It represents a compiler memory
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
@@ -503,6 +506,12 @@ HANDLE_TARGET_OPCODE(G_ICMP)
 /// Generic floating-point comparison, also applicable to vectors.
 HANDLE_TARGET_OPCODE(G_FCMP)
 
+/// Generic signed 3-way comparison.
+HANDLE_TARGET_OPCODE(G_SCMP)
+
+/// Generic unsigned 3-way comparison.
+HANDLE_TARGET_OPCODE(G_UCMP)
+
 /// Generic select.
 HANDLE_TARGET_OPCODE(G_SELECT)
 
@@ -753,6 +762,9 @@ HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 
 /// Generic splatvector.
 HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
+
+/// Generic masked compress.
+HANDLE_TARGET_OPCODE(G_VECTOR_COMPRESS)
 
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)

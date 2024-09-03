@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Statepoint.h"
@@ -116,8 +117,8 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
     if (STy->getScalarSizeInBits() < 8)
       StepVecType =
           VectorType::get(getInt8Ty(), cast<ScalableVectorType>(DstType));
-    Value *Res = CreateIntrinsic(Intrinsic::experimental_stepvector,
-                                 {StepVecType}, {}, nullptr, Name);
+    Value *Res = CreateIntrinsic(Intrinsic::stepvector, {StepVecType}, {},
+                                 nullptr, Name);
     if (StepVecType != DstType)
       Res = CreateTrunc(Res, DstType);
     return Res;

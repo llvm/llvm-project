@@ -308,9 +308,6 @@ public:
         case eLanguageTypeC_plus_plus_14:
           m_exception_language = eLanguageTypeC_plus_plus;
           break;
-        case eLanguageTypeObjC:
-          m_exception_language = eLanguageTypeObjC;
-          break;
         case eLanguageTypeObjC_plus_plus:
           error_context =
               "Set exception breakpoints separately for c++ and objective-c";
@@ -319,6 +316,13 @@ public:
           error_context = "Unknown language type for exception breakpoint";
           break;
         default:
+          if (Language *languagePlugin = Language::FindPlugin(language)) {
+            if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+                languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
+              m_exception_language = language;
+              break;
+            }
+          }
           error_context = "Unsupported language type for exception breakpoint";
         }
         if (!error_context.empty())
@@ -535,7 +539,8 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_dummy_options.m_use_dummy);
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     // The following are the various types of breakpoints that could be set:
     //   1).  -f -l -p  [-s -g]   (setting breakpoint by source location)
@@ -764,20 +769,26 @@ protected:
 private:
   bool GetDefaultFile(Target &target, FileSpec &file,
                       CommandReturnObject &result) {
-    uint32_t default_line;
     // First use the Source Manager's default file. Then use the current stack
     // frame's file.
-    if (!target.GetSourceManager().GetDefaultFileAndLine(file, default_line)) {
+    if (auto maybe_file_and_line =
+            target.GetSourceManager().GetDefaultFileAndLine()) {
+      file = maybe_file_and_line->support_file_sp->GetSpecOnly();
+      return true;
+    }
+
       StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
       if (cur_frame == nullptr) {
         result.AppendError(
             "No selected frame to use to find the default file.");
         return false;
-      } else if (!cur_frame->HasDebugInformation()) {
+      }
+      if (!cur_frame->HasDebugInformation()) {
         result.AppendError("Cannot use the selected frame to find the default "
                            "file, it has no debug info.");
         return false;
-      } else {
+      }
+
         const SymbolContext &sc =
             cur_frame->GetSymbolContext(eSymbolContextLineEntry);
         if (sc.line_entry.GetFile()) {
@@ -786,8 +797,6 @@ private:
           result.AppendError("Can't find the file for the selected frame to "
                              "use as the default file.");
           return false;
-        }
-      }
     }
     return true;
   }
@@ -835,7 +844,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_dummy_opts.m_use_dummy);
+    Target &target = m_dummy_opts.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -843,7 +852,7 @@ protected:
     BreakpointIDList valid_bp_ids;
 
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::disablePerm);
 
     if (result.Succeeded()) {
@@ -899,7 +908,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -924,7 +933,7 @@ protected:
       // Particular breakpoint selected; enable that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -1006,7 +1015,7 @@ the second re-enables the first location.");
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
 
@@ -1030,7 +1039,7 @@ protected:
       BreakpointIDList valid_bp_ids;
 
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -1144,7 +1153,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints =
         target.GetBreakpointList(m_options.m_internal);
@@ -1175,7 +1184,7 @@ protected:
       // Particular breakpoints selected; show info about that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (result.Succeeded()) {
@@ -1263,7 +1272,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // The following are the various types of breakpoints that could be
     // cleared:
@@ -1412,7 +1421,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
     result.Clear();
     
     std::unique_lock<std::recursive_mutex> lock;
@@ -1454,7 +1463,7 @@ protected:
 
       if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, &target, result, &excluded_bp_ids,
+            command, target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
         if (!result.Succeeded())
           return;
@@ -1473,7 +1482,7 @@ protected:
       }
     } else {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::deletePerm);
       if (!result.Succeeded())
         return;
@@ -1672,7 +1681,7 @@ protected:
       return;
     }
 
-    Target &target = GetSelectedOrDummyTarget(false);
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1760,7 +1769,7 @@ protected:
     }
 
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1776,7 +1785,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -1834,7 +1843,7 @@ protected:
     }
 
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1850,7 +1859,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::deletePerm);
 
     if (result.Succeeded()) {
@@ -1893,7 +1902,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::vector<std::string> name_list;
     if (command.empty()) {
@@ -2205,7 +2214,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -2315,7 +2324,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -2323,7 +2332,7 @@ protected:
     BreakpointIDList valid_bp_ids;
     if (!command.empty()) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (!result.Succeeded()) {
@@ -2405,7 +2414,7 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
 void CommandObjectMultiwordBreakpoint::VerifyIDs(
-    Args &args, Target *target, bool allow_locations,
+    Args &args, Target &target, bool allow_locations,
     CommandReturnObject &result, BreakpointIDList *valid_ids,
     BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)
@@ -2422,9 +2431,9 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   Args temp_args;
 
   if (args.empty()) {
-    if (target->GetLastCreatedBreakpoint()) {
+    if (target.GetLastCreatedBreakpoint()) {
       valid_ids->AddBreakpointID(BreakpointID(
-          target->GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));
+          target.GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError(
@@ -2440,7 +2449,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // into TEMP_ARGS.
 
   if (llvm::Error err = BreakpointIDList::FindAndReplaceIDRanges(
-          args, target, allow_locations, purpose, temp_args)) {
+          args, &target, allow_locations, purpose, temp_args)) {
     result.SetError(std::move(err));
     return;
   }
@@ -2464,7 +2473,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   for (size_t i = 0; i < count; ++i) {
     BreakpointID cur_bp_id = valid_ids->GetBreakpointIDAtIndex(i);
     Breakpoint *breakpoint =
-        target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+        target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
     if (breakpoint != nullptr) {
       const size_t num_locations = breakpoint->GetNumLocations();
       if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {

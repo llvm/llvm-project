@@ -2,13 +2,7 @@
 ! declare target Fortran array and writing some values to
 ! it before checking the host correctly receives the
 ! correct updates made on the device.
-! REQUIRES: flang
-! UNSUPPORTED: nvptx64-nvidia-cuda
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 module test_0

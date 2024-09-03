@@ -441,6 +441,8 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
+  case ELF::EM_BPF:
+    return StringRef("v4");
   default:
     return std::nullopt;
   }
@@ -1012,4 +1014,15 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
                            TextSectionIndex, PGOAnalyses);
+}
+
+StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
+  auto Data = Sec.getRawDataRefImpl();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
 }

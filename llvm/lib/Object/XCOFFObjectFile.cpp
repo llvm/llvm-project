@@ -1369,7 +1369,7 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
   return getObject()->getStringTableEntry(getSymbol64()->Offset);
 }
 
-// Explictly instantiate template classes.
+// Explicitly instantiate template classes.
 template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
 template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
 

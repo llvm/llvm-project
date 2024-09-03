@@ -31,10 +31,16 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
            "Override module's data layout.">,
     Option<"forcedTargetCPU", "target-cpu", "std::string", /*default=*/"",
            "Override module's target CPU.">,
+    Option<"forcedTuneCPU", "tune-cpu", "std::string", /*default=*/"",
+           "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
     Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
-           "Attach TBAA tags to memory accessing operations.">
+           "Attach TBAA tags to memory accessing operations.">,
+    Option<"typeDescriptorsRenamedForAssembly",
+           "type-descriptors-renamed-for-assembly", "bool", /*default=*/"false",
+           "Global variables created to describe derived types "
+           "have been renamed to avoid special symbols in their names.">
   ];
 }
 
@@ -68,6 +74,8 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Override module's target triple.">,
     Option<"forcedTargetCPU", "target-cpu", "std::string", /*default=*/"",
            "Override module's target CPU.">,
+    Option<"forcedTuneCPU", "tune-cpu", "std::string", /*default=*/"",
+           "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
     Option<"noCharacterConversion", "no-character-conversion",

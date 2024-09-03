@@ -41,6 +41,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -402,6 +403,10 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
+  // If requested, keep track of total profiled sizes for each MIB. This will be
+  // a vector of the same length and order as the MIBs vector, if non-empty.
+  std::vector<uint64_t> TotalSizes;
+
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
   }
@@ -421,6 +426,16 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   OS << " MIB:\n";
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
+  }
+  if (!AE.TotalSizes.empty()) {
+    OS << " TotalSizes per MIB:\n\t\t";
+    First = true;
+    for (uint64_t TS : AE.TotalSizes) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << TS << "\n";
+    }
   }
   return OS;
 }
@@ -793,7 +808,7 @@ public:
       OS << ", hasUnknownCall: " << this->HasUnknownCall;
       OS << ", mustBeUnreachable: " << this->MustBeUnreachable;
       OS << ")";
-      return OS.str();
+      return Output;
     }
   };
 
@@ -1276,8 +1291,13 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
+/// Map of a module name to the GUIDs and summaries we will import from that
+/// module.
+using ModuleToSummariesForIndexTy =
+    std::map<std::string, GVSummaryMapTy, std::less<>>;
+
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 4>;
+using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
@@ -1430,7 +1450,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 9;
+  static constexpr uint64_t BitcodeSummaryVersion = 11;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1793,9 +1813,9 @@ public:
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      if (It->second.first == TypeId)
-        return It->second.second;
+    for (auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return TypeIdPair.second;
     auto It = TypeIdMap.insert(
         {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
     return It->second.second;
@@ -1805,9 +1825,9 @@ public:
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      if (It->second.first == TypeId)
-        return &It->second.second;
+    for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return &TypeIdPair.second;
     return nullptr;
   }
 

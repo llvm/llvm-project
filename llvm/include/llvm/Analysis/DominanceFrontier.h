@@ -20,7 +20,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -29,6 +28,7 @@
 
 namespace llvm {
 
+class BasicBlock;
 class Function;
 class raw_ostream;
 

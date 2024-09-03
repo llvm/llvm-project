@@ -200,6 +200,7 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
         fir.store %3 to %6 : !fir.ref<i32>
         omp.yield
       }
+      omp.terminator
     }
     omp.terminator
   }
@@ -225,6 +226,7 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK:   llvm.store %[[I1]], %[[ARR_I_REF]] : i32, !llvm.ptr
 // CHECK: omp.yield
 // CHECK: }
+// CHECK: omp.terminator
 // CHECK: }
 // CHECK: omp.terminator
 // CHECK: }
@@ -470,7 +472,7 @@ func.func @_QPomp_target() {
 // CHECK:           %[[UPPER:.*]] = llvm.mlir.constant(511 : index) : i64
 // CHECK:           %[[BOUNDS:.*]] = omp.map.bounds   lower_bound(%[[LOWER]] : i64) upper_bound(%[[UPPER]] : i64) extent(%[[EXTENT]] : i64) stride(%[[STRIDE]] : i64) start_idx(%[[STRIDE]] : i64)
 // CHECK:           %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = "a"}
-// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !llvm.ptr) {
+// CHECK:           omp.target map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !llvm.ptr) thread_limit(%[[VAL_2]] : i32) {
 // CHECK:           ^bb0(%[[ARG_0]]: !llvm.ptr):
 // CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
@@ -518,6 +520,7 @@ func.func @_QPsimd_with_nested_loop() {
       fir.store %7 to %3 : !fir.ref<i32>
       omp.yield
     }
+    omp.terminator
   }
   return
 }
@@ -538,6 +541,7 @@ func.func @_QPsimd_with_nested_loop() {
 // CHECK:             ^bb3:
 // CHECK:               omp.yield
 // CHECK:             }
+// CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           llvm.return
 // CHECK:         }

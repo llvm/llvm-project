@@ -346,6 +346,12 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
     MetadataTracking::OwnerTy Owner = Pair.second.first;
     if (!Owner)
       continue;
+    // Check for MetadataAsValue.
+    if (isa<MetadataAsValue *>(Owner)) {
+      cast<MetadataAsValue *>(Owner)->handleChangedMetadata(
+          ValueAsMetadata::get(UndefValue::get(C.getType())));
+      continue;
+    }
     if (!isa<Metadata *>(Owner))
       continue;
     auto *OwnerMD = dyn_cast_if_present<MDNode>(cast<Metadata *>(Owner));
@@ -1250,8 +1256,8 @@ static bool tryMergeRange(SmallVectorImpl<ConstantInt *> &EndPoints,
                           ConstantInt *Low, ConstantInt *High) {
   ConstantRange NewRange(Low->getValue(), High->getValue());
   unsigned Size = EndPoints.size();
-  APInt LB = EndPoints[Size - 2]->getValue();
-  APInt LE = EndPoints[Size - 1]->getValue();
+  const APInt &LB = EndPoints[Size - 2]->getValue();
+  const APInt &LE = EndPoints[Size - 1]->getValue();
   ConstantRange LastRange(LB, LE);
   if (canBeMerged(NewRange, LastRange)) {
     ConstantRange Union = LastRange.unionWith(NewRange);
@@ -1287,12 +1293,12 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
     return A;
 
   // First, walk both lists in order of the lower boundary of each interval.
-  // At each step, try to merge the new interval to the last one we adedd.
+  // At each step, try to merge the new interval to the last one we added.
   SmallVector<ConstantInt *, 4> EndPoints;
-  int AI = 0;
-  int BI = 0;
-  int AN = A->getNumOperands() / 2;
-  int BN = B->getNumOperands() / 2;
+  unsigned AI = 0;
+  unsigned BI = 0;
+  unsigned AN = A->getNumOperands() / 2;
+  unsigned BN = B->getNumOperands() / 2;
   while (AI < AN && BI < BN) {
     ConstantInt *ALow = mdconst::extract<ConstantInt>(A->getOperand(2 * AI));
     ConstantInt *BLow = mdconst::extract<ConstantInt>(B->getOperand(2 * BI));
@@ -1318,10 +1324,11 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
     ++BI;
   }
 
-  // If we have more than 2 ranges (4 endpoints) we have to try to merge
+  // We haven't handled wrap in the previous merge,
+  // if we have at least 2 ranges (4 endpoints) we have to try to merge
   // the last and first ones.
   unsigned Size = EndPoints.size();
-  if (Size > 4) {
+  if (Size > 2) {
     ConstantInt *FB = EndPoints[0];
     ConstantInt *FE = EndPoints[1];
     if (tryMergeRange(EndPoints, FB, FE)) {
@@ -1590,7 +1597,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 4> KnownSet;
+  SmallSet<unsigned, 32> KnownSet;
   KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
 
   // A DIAssignID attachment is debug metadata, don't drop it.

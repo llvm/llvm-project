@@ -42,6 +42,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include <algorithm>
 #include <vector>
@@ -58,6 +59,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class ProfileSummaryInfo;
+class TargetTransformInfo;
 class TargetTransformInfo;
 
 /// A private "module" namespace for types and utilities used by

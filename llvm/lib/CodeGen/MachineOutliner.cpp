@@ -69,6 +69,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -131,6 +132,7 @@ namespace {
 
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
 struct InstructionMapper {
+  const MachineModuleInfo &MMI;
 
   /// The next available integer to assign to a \p MachineInstr that
   /// cannot be outlined.
@@ -332,7 +334,7 @@ struct InstructionMapper {
       // which may be outlinable. Check if each instruction is known to be safe.
       for (; It != OutlinableRangeEnd; ++It) {
         // Keep track of where this instruction is in the module.
-        switch (TII.getOutliningType(It, Flags)) {
+        switch (TII.getOutliningType(MMI, It, Flags)) {
         case InstrType::Illegal:
           mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                                InstrListForMBB);
@@ -381,7 +383,7 @@ struct InstructionMapper {
     }
   }
 
-  InstructionMapper() {
+  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
     assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
@@ -403,6 +405,8 @@ struct InstructionMapper {
 struct MachineOutliner : public ModulePass {
 
   static char ID;
+
+  MachineModuleInfo *MMI = nullptr;
 
   /// Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
@@ -452,8 +456,9 @@ struct MachineOutliner : public ModulePass {
   /// \param Mapper Contains outlining mapping information.
   /// \param[out] FunctionList Filled with a list of \p OutlinedFunctions
   /// each type of candidate.
-  void findCandidates(InstructionMapper &Mapper,
-                      std::vector<OutlinedFunction> &FunctionList);
+  void
+  findCandidates(InstructionMapper &Mapper,
+                 std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList);
 
   /// Replace the sequences of instructions represented by \p OutlinedFunctions
   /// with calls to functions.
@@ -461,7 +466,9 @@ struct MachineOutliner : public ModulePass {
   /// \param M The module we are outlining from.
   /// \param FunctionList A list of functions to be inserted into the module.
   /// \param Mapper Contains the instruction mappings for the module.
-  bool outline(Module &M, std::vector<OutlinedFunction> &FunctionList,
+  /// \param[out] OutlinedFunctionNum The outlined function number.
+  bool outline(Module &M,
+               std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList,
                InstructionMapper &Mapper, unsigned &OutlinedFunctionNum);
 
   /// Creates a function for \p OF and inserts it into the module.
@@ -488,20 +495,19 @@ struct MachineOutliner : public ModulePass {
 
   /// Populate and \p InstructionMapper with instruction-to-integer mappings.
   /// These are used to construct a suffix tree.
-  void populateMapper(InstructionMapper &Mapper, Module &M,
-                      MachineModuleInfo &MMI);
+  void populateMapper(InstructionMapper &Mapper, Module &M);
 
   /// Initialize information necessary to output a size remark.
   /// FIXME: This should be handled by the pass manager, not the outliner.
   /// FIXME: This is nearly identical to the initSizeRemarkInfo in the legacy
   /// pass manager.
-  void initSizeRemarkInfo(const Module &M, const MachineModuleInfo &MMI,
+  void initSizeRemarkInfo(const Module &M,
                           StringMap<unsigned> &FunctionToInstrCount);
 
   /// Emit the remark.
   // FIXME: This should be handled by the pass manager, not the outliner.
   void
-  emitInstrCountChangedRemark(const Module &M, const MachineModuleInfo &MMI,
+  emitInstrCountChangedRemark(const Module &M,
                               const StringMap<unsigned> &FunctionToInstrCount);
 };
 } // Anonymous namespace.
@@ -580,7 +586,8 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
 }
 
 void MachineOutliner::findCandidates(
-    InstructionMapper &Mapper, std::vector<OutlinedFunction> &FunctionList) {
+    InstructionMapper &Mapper,
+    std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
   FunctionList.clear();
   SuffixTree ST(Mapper.UnsignedVec, OutlinerLeafDescendants);
 
@@ -655,11 +662,12 @@ void MachineOutliner::findCandidates(
                       << "\n");
     LLVM_DEBUG(dbgs() << "    Candidates kept: " << NumKept << "\n\n");
 #endif
+    unsigned MinRepeats = 2;
 
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
-    if (CandidatesForRepeatedSeq.size() < 2)
+    if (CandidatesForRepeatedSeq.size() < MinRepeats)
       continue;
 
     // Arbitrarily choose a TII from the first candidate.
@@ -667,21 +675,23 @@ void MachineOutliner::findCandidates(
     const TargetInstrInfo *TII =
         CandidatesForRepeatedSeq[0].getMF()->getSubtarget().getInstrInfo();
 
-    std::optional<OutlinedFunction> OF =
-        TII->getOutliningCandidateInfo(CandidatesForRepeatedSeq);
+    std::optional<std::unique_ptr<OutlinedFunction>> OF =
+        TII->getOutliningCandidateInfo(*MMI, CandidatesForRepeatedSeq,
+                                       MinRepeats);
 
     // If we deleted too many candidates, then there's nothing worth outlining.
     // FIXME: This should take target-specified instruction sizes into account.
-    if (!OF || OF->Candidates.size() < 2)
+    if (!OF.has_value() || OF.value()->Candidates.size() < MinRepeats)
       continue;
 
     // Is it better to outline this candidate than not?
-    if (OF->getBenefit() < OutlinerBenefitThreshold) {
-      emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq, *OF);
+    if (OF.value()->getBenefit() < OutlinerBenefitThreshold) {
+      emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq,
+                                    *OF.value());
       continue;
     }
 
-    FunctionList.push_back(*OF);
+    FunctionList.emplace_back(std::move(OF.value()));
   }
 }
 
@@ -803,8 +813,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
-        Unit /* File */,
+        Unit /* Context */, F->getName(), StringRef(Dummy), Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(
             DB.getOrCreateTypeArray(std::nullopt)), /* void type */
@@ -825,10 +834,9 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   return &MF;
 }
 
-bool MachineOutliner::outline(Module &M,
-                              std::vector<OutlinedFunction> &FunctionList,
-                              InstructionMapper &Mapper,
-                              unsigned &OutlinedFunctionNum) {
+bool MachineOutliner::outline(
+    Module &M, std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList,
+    InstructionMapper &Mapper, unsigned &OutlinedFunctionNum) {
   LLVM_DEBUG(dbgs() << "*** Outlining ***\n");
   LLVM_DEBUG(dbgs() << "NUMBER OF POTENTIAL FUNCTIONS: " << FunctionList.size()
                     << "\n");
@@ -836,23 +844,23 @@ bool MachineOutliner::outline(Module &M,
 
   // Sort by priority where priority := getNotOutlinedCost / getOutliningCost.
   // The function with highest priority should be outlined first.
-  stable_sort(FunctionList,
-              [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
-                return LHS.getNotOutlinedCost() * RHS.getOutliningCost() >
-                       RHS.getNotOutlinedCost() * LHS.getOutliningCost();
-              });
+  stable_sort(FunctionList, [](const std::unique_ptr<OutlinedFunction> &LHS,
+                               const std::unique_ptr<OutlinedFunction> &RHS) {
+    return LHS->getNotOutlinedCost() * RHS->getOutliningCost() >
+           RHS->getNotOutlinedCost() * LHS->getOutliningCost();
+  });
 
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.
   auto *UnsignedVecBegin = Mapper.UnsignedVec.begin();
   LLVM_DEBUG(dbgs() << "WALKING FUNCTION LIST\n");
-  for (OutlinedFunction &OF : FunctionList) {
+  for (auto &OF : FunctionList) {
 #ifndef NDEBUG
-    auto NumCandidatesBefore = OF.Candidates.size();
+    auto NumCandidatesBefore = OF->Candidates.size();
 #endif
     // If we outlined something that overlapped with a candidate in a previous
     // step, then we can't outline from it.
-    erase_if(OF.Candidates, [&UnsignedVecBegin](Candidate &C) {
+    erase_if(OF->Candidates, [&UnsignedVecBegin](Candidate &C) {
       return std::any_of(UnsignedVecBegin + C.getStartIdx(),
                          UnsignedVecBegin + C.getEndIdx() + 1, [](unsigned I) {
                            return I == static_cast<unsigned>(-1);
@@ -860,36 +868,36 @@ bool MachineOutliner::outline(Module &M,
     });
 
 #ifndef NDEBUG
-    auto NumCandidatesAfter = OF.Candidates.size();
+    auto NumCandidatesAfter = OF->Candidates.size();
     LLVM_DEBUG(dbgs() << "PRUNED: " << NumCandidatesBefore - NumCandidatesAfter
                       << "/" << NumCandidatesBefore << " candidates\n");
 #endif
 
     // If we made it unbeneficial to outline this function, skip it.
-    if (OF.getBenefit() < OutlinerBenefitThreshold) {
-      LLVM_DEBUG(dbgs() << "SKIP: Expected benefit (" << OF.getBenefit()
+    if (OF->getBenefit() < OutlinerBenefitThreshold) {
+      LLVM_DEBUG(dbgs() << "SKIP: Expected benefit (" << OF->getBenefit()
                         << " B) < threshold (" << OutlinerBenefitThreshold
                         << " B)\n");
       continue;
     }
 
-    LLVM_DEBUG(dbgs() << "OUTLINE: Expected benefit (" << OF.getBenefit()
+    LLVM_DEBUG(dbgs() << "OUTLINE: Expected benefit (" << OF->getBenefit()
                       << " B) > threshold (" << OutlinerBenefitThreshold
                       << " B)\n");
 
     // It's beneficial. Create the function and outline its sequence's
     // occurrences.
-    OF.MF = createOutlinedFunction(M, OF, Mapper, OutlinedFunctionNum);
-    emitOutlinedFunctionRemark(OF);
+    OF->MF = createOutlinedFunction(M, *OF, Mapper, OutlinedFunctionNum);
+    emitOutlinedFunctionRemark(*OF);
     FunctionsCreated++;
     OutlinedFunctionNum++; // Created a function, move to the next name.
-    MachineFunction *MF = OF.MF;
+    MachineFunction *MF = OF->MF;
     const TargetSubtargetInfo &STI = MF->getSubtarget();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
     // Replace occurrences of the sequence with calls to the new function.
     LLVM_DEBUG(dbgs() << "CREATE OUTLINED CALLS\n");
-    for (Candidate &C : OF.Candidates) {
+    for (Candidate &C : OF->Candidates) {
       MachineBasicBlock &MBB = *C.getMBB();
       MachineBasicBlock::iterator StartIt = C.begin();
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
@@ -988,8 +996,7 @@ bool MachineOutliner::outline(Module &M,
   return OutlinedSomething;
 }
 
-void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
-                                     MachineModuleInfo &MMI) {
+void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   // Build instruction mappings for each function in the module. Start by
   // iterating over each Function in M.
   LLVM_DEBUG(dbgs() << "*** Populating mapper ***\n");
@@ -1003,7 +1010,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
 
     // There's something in F. Check if it has a MachineFunction associated with
     // it.
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
 
     // If it doesn't, then there's nothing to outline from. Move to the next
     // Function.
@@ -1062,12 +1069,11 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
 }
 
 void MachineOutliner::initSizeRemarkInfo(
-    const Module &M, const MachineModuleInfo &MMI,
-    StringMap<unsigned> &FunctionToInstrCount) {
+    const Module &M, StringMap<unsigned> &FunctionToInstrCount) {
   // Collect instruction counts for every function. We'll use this to emit
   // per-function size remarks later.
   for (const Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
 
     // We only care about MI counts here. If there's no MachineFunction at this
     // point, then there won't be after the outliner runs, so let's move on.
@@ -1078,13 +1084,12 @@ void MachineOutliner::initSizeRemarkInfo(
 }
 
 void MachineOutliner::emitInstrCountChangedRemark(
-    const Module &M, const MachineModuleInfo &MMI,
-    const StringMap<unsigned> &FunctionToInstrCount) {
+    const Module &M, const StringMap<unsigned> &FunctionToInstrCount) {
   // Iterate over each function in the module and emit remarks.
   // Note that we won't miss anything by doing this, because the outliner never
   // deletes functions.
   for (const Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
 
     // The outliner never deletes functions. If we don't have a MF here, then we
     // didn't have one prior to outlining either.
@@ -1135,6 +1140,8 @@ bool MachineOutliner::runOnModule(Module &M) {
   if (M.empty())
     return false;
 
+  MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;
 
@@ -1158,8 +1165,6 @@ bool MachineOutliner::runOnModule(Module &M) {
 }
 
 bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
   // If the user passed -enable-machine-outliner=always or
   // -enable-machine-outliner, the pass will run on all functions in the module.
   // Otherwise, if the target supports default outlining, it will run on all
@@ -1177,11 +1182,11 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // If the user specifies that they want to outline from linkonceodrs, set
   // it here.
   OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
-  InstructionMapper Mapper;
+  InstructionMapper Mapper(*MMI);
 
   // Prepare instruction mappings for the suffix tree.
-  populateMapper(Mapper, M, MMI);
-  std::vector<OutlinedFunction> FunctionList;
+  populateMapper(Mapper, M);
+  std::vector<std::unique_ptr<OutlinedFunction>> FunctionList;
 
   // Find all of the outlining candidates.
   findCandidates(Mapper, FunctionList);
@@ -1198,7 +1203,7 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   bool ShouldEmitSizeRemarks = M.shouldEmitInstrCountChangedRemark();
   StringMap<unsigned> FunctionToInstrCount;
   if (ShouldEmitSizeRemarks)
-    initSizeRemarkInfo(M, MMI, FunctionToInstrCount);
+    initSizeRemarkInfo(M, FunctionToInstrCount);
 
   // Outline each of the candidates and return true if something was outlined.
   bool OutlinedSomething =
@@ -1208,7 +1213,7 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // module. If we've asked for size remarks, then output them.
   // FIXME: This should be in the pass manager.
   if (ShouldEmitSizeRemarks && OutlinedSomething)
-    emitInstrCountChangedRemark(M, MMI, FunctionToInstrCount);
+    emitInstrCountChangedRemark(M, FunctionToInstrCount);
 
   LLVM_DEBUG({
     if (!OutlinedSomething)
