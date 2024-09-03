@@ -331,20 +331,20 @@ func.func @transfer_read_permutations(%mem_0 : memref<?x?xf32>, %mem_1 : memref<
 }
 
 // CHECK-LABEL: func @transfer_write_permutations_tensor_masked
-// CHECK-SAME:    %[[SRC:.*]]: tensor<?x?x?x?xf32>
+// CHECK-SAME:    %[[DST:.*]]: tensor<?x?x?x?xf32>
 // CHECK-SAME:    %[[VEC:.*]]: vector<7x14x8x16xf32>
 // CHECK-SAME:    %[[M:.*]]: i1
 func.func @transfer_write_permutations_tensor_masked(
-    %src : tensor<?x?x?x?xf32>,
+    %dst : tensor<?x?x?x?xf32>,
     %vec : vector<7x14x8x16xf32>, %m: i1) -> tensor<?x?x?x?xf32> {
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
 
   // CHECK: %[[MASK:.*]] = vector.splat %[[M]] : vector<16x14x7x8xi1>
   %mask0 = vector.splat %m : vector<16x14x7x8xi1>
-  %res = vector.transfer_write %vec, %src[%c0, %c0, %c0, %c0], %mask0 {in_bounds = [true, false, false, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3, d0)>} : vector<7x14x8x16xf32>, tensor<?x?x?x?xf32>
+  %res = vector.transfer_write %vec, %dst[%c0, %c0, %c0, %c0], %mask0 {in_bounds = [true, false, false, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3, d0)>} : vector<7x14x8x16xf32>, tensor<?x?x?x?xf32>
   // CHECK: %[[NEW_VEC0:.*]] = vector.transpose %{{.*}} [3, 1, 0, 2] : vector<7x14x8x16xf32> to vector<16x14x7x8xf32>
-  // CHECK: %[[NEW_RES0:.*]] = vector.transfer_write %[[NEW_VEC0]], %[[SRC]][%c0, %c0, %c0, %c0], %[[MASK]] {in_bounds = [true, false, true, false]} : vector<16x14x7x8xf32>, tensor<?x?x?x?xf32>
+  // CHECK: %[[NEW_RES0:.*]] = vector.transfer_write %[[NEW_VEC0]], %[[DST]][%c0, %c0, %c0, %c0], %[[MASK]] {in_bounds = [true, false, true, false]} : vector<16x14x7x8xf32>, tensor<?x?x?x?xf32>
 
   return %res : tensor<?x?x?x?xf32>
 }
@@ -365,17 +365,17 @@ func.func @transfer_write_permutations_memref(
 }
 
 // CHECK-LABEL: func @transfer_write_broadcast_unit_dim_tensor
-// CHECK-SAME:    %[[SRC0:.*]]: tensor<?x?x?x?xf32>
+// CHECK-SAME:    %[[DST0:.*]]: tensor<?x?x?x?xf32>
 // CHECK-SAME:    %[[VEC0:.*]]: vector<14x8x16xf32>
 func.func @transfer_write_broadcast_unit_dim_tensor(
-    %src_0 : tensor<?x?x?x?xf32>, %vec_0 : vector<14x8x16xf32>) -> tensor<?x?x?x?xf32> {
+    %dst_0 : tensor<?x?x?x?xf32>, %vec_0 : vector<14x8x16xf32>) -> tensor<?x?x?x?xf32> {
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
 
-  %res = vector.transfer_write %vec_0, %src_0[%c0, %c0, %c0, %c0] {in_bounds = [false, false, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>} : vector<14x8x16xf32>, tensor<?x?x?x?xf32>
+  %res = vector.transfer_write %vec_0, %dst_0[%c0, %c0, %c0, %c0] {in_bounds = [false, false, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>} : vector<14x8x16xf32>, tensor<?x?x?x?xf32>
   // CHECK: %[[NEW_VEC0:.*]] = vector.broadcast %{{.*}} : vector<14x8x16xf32> to vector<1x14x8x16xf32>
   // CHECK: %[[NEW_VEC1:.*]] = vector.transpose %[[NEW_VEC0]], [1, 2, 0, 3] : vector<1x14x8x16xf32> to vector<14x8x1x16xf32>
-  // CHECK: %[[NEW_RES0:.*]] = vector.transfer_write %[[NEW_VEC1]], %[[SRC0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false, true, true]} : vector<14x8x1x16xf32>, tensor<?x?x?x?xf32>
+  // CHECK: %[[NEW_RES0:.*]] = vector.transfer_write %[[NEW_VEC1]], %[[DST0]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false, true, true]} : vector<14x8x1x16xf32>, tensor<?x?x?x?xf32>
 
   return %res : tensor<?x?x?x?xf32>
 }
