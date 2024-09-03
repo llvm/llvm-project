@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "WebAssembly.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/IR/Constants.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -55,6 +57,7 @@ private:
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
 #endif
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 #endif
 }; // end of struct Hello
@@ -109,10 +112,13 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
 
+  OptimizationRemarkEmitter &ORE =
+      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, "webassembly-stack-tagging");
   for (Instruction &I : instructions(F))
-    SIB.visit(I);
+    SIB.visit(ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   std::unique_ptr<DominatorTree> DeleteDT;
@@ -242,6 +248,7 @@ INITIALIZE_PASS_BEGIN(WebAssemblyStackTagging, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 #endif
 INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(WebAssemblyStackTagging, DEBUG_TYPE,
                     "WebAssembly Stack Tagging", false, false)
 
