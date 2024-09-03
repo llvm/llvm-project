@@ -8,13 +8,13 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs \
 ; RUN:   -target-abi lp64 < %s | FileCheck -check-prefix=CHECKIZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs < %s \
-; RUN:   -target-abi=ilp32f | FileCheck -check-prefixes=CHECKIZFHMIN,RV32IZFHMIN %s
+; RUN:   -target-abi=ilp32f | FileCheck -check-prefixes=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs < %s \
-; RUN:   -target-abi=lp64f | FileCheck -check-prefixes=CHECKIZFHMIN,RV64IZFHMIN %s
+; RUN:   -target-abi=lp64f | FileCheck -check-prefixes=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs < %s \
-; RUN:   -target-abi=ilp32 | FileCheck -check-prefixes=CHECKIZHINXMIN,RV32IZFHINXMIN %s
+; RUN:   -target-abi=ilp32 | FileCheck -check-prefixes=CHECKIZHINXMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs < %s \
-; RUN:   -target-abi=lp64 | FileCheck -check-prefixes=CHECKIZHINXMIN,RV64IZHINXMIN %s
+; RUN:   -target-abi=lp64 | FileCheck -check-prefixes=CHECKIZHINXMIN %s
 
 define half @select_icmp_eq(i32 signext %a, i32 signext %b, half %c, half %d) {
 ; CHECK-LABEL: select_icmp_eq:
@@ -419,33 +419,19 @@ define half @select_icmp_slt_one(i32 signext %a) {
 ; CHECKIZHINX-NEXT:    fcvt.h.w a0, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: select_icmp_slt_one:
-; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    slti a0, a0, 1
-; RV32IZFHMIN-NEXT:    fcvt.s.w fa5, a0
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    ret
+; CHECKIZFHMIN-LABEL: select_icmp_slt_one:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    slti a0, a0, 1
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa5, a0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKIZFHMIN-NEXT:    ret
 ;
-; RV64IZFHMIN-LABEL: select_icmp_slt_one:
-; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    slti a0, a0, 1
-; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    ret
-;
-; RV32IZFHINXMIN-LABEL: select_icmp_slt_one:
-; RV32IZFHINXMIN:       # %bb.0:
-; RV32IZFHINXMIN-NEXT:    slti a0, a0, 1
-; RV32IZFHINXMIN-NEXT:    fcvt.s.w a0, a0
-; RV32IZFHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZFHINXMIN-NEXT:    ret
-;
-; RV64IZHINXMIN-LABEL: select_icmp_slt_one:
-; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    slti a0, a0, 1
-; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    ret
+; CHECKIZHINXMIN-LABEL: select_icmp_slt_one:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    slti a0, a0, 1
+; CHECKIZHINXMIN-NEXT:    fcvt.s.w a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = icmp slt i32 %a, 1
   %2 = select i1 %1, half 1.000000e+00, half 0.000000e+00
   ret half %2
@@ -464,33 +450,19 @@ define half @select_icmp_sgt_zero(i32 signext %a) {
 ; CHECKIZHINX-NEXT:    fcvt.h.w a0, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: select_icmp_sgt_zero:
-; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    slti a0, a0, 1
-; RV32IZFHMIN-NEXT:    fcvt.s.w fa5, a0
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    ret
+; CHECKIZFHMIN-LABEL: select_icmp_sgt_zero:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    slti a0, a0, 1
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa5, a0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKIZFHMIN-NEXT:    ret
 ;
-; RV64IZFHMIN-LABEL: select_icmp_sgt_zero:
-; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    slti a0, a0, 1
-; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    ret
-;
-; RV32IZFHINXMIN-LABEL: select_icmp_sgt_zero:
-; RV32IZFHINXMIN:       # %bb.0:
-; RV32IZFHINXMIN-NEXT:    slti a0, a0, 1
-; RV32IZFHINXMIN-NEXT:    fcvt.s.w a0, a0
-; RV32IZFHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZFHINXMIN-NEXT:    ret
-;
-; RV64IZHINXMIN-LABEL: select_icmp_sgt_zero:
-; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    slti a0, a0, 1
-; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    ret
+; CHECKIZHINXMIN-LABEL: select_icmp_sgt_zero:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    slti a0, a0, 1
+; CHECKIZHINXMIN-NEXT:    fcvt.s.w a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = icmp sgt i32 %a, 0
   %2 = select i1 %1, half 0.000000e+00, half 1.000000e+00
   ret half %2
