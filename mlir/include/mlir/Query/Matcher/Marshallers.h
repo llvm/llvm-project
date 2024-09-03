@@ -150,10 +150,11 @@ inline bool checkArgTypeAtIndex(llvm::StringRef matcherName,
 
 // Marshaller function for fixed number of arguments
 template <typename ReturnType, typename... ArgTypes, size_t... Is>
-static VariantMatcher matcherMarshallFixedImpl(
-    void (*matcherFunc)(), [[maybe_unused]] llvm::StringRef matcherName,
-    SourceRange nameRange, llvm::ArrayRef<ParserValue> args, Diagnostics *error,
-    std::index_sequence<Is...>) {
+static VariantMatcher
+matcherMarshallFixedImpl(void (*matcherFunc)(), llvm::StringRef matcherName,
+                         SourceRange nameRange,
+                         llvm::ArrayRef<ParserValue> args, Diagnostics *error,
+                         std::index_sequence<Is...>) {
   using FuncType = ReturnType (*)(ArgTypes...);
 
   // Check if the argument count matches the expected count
