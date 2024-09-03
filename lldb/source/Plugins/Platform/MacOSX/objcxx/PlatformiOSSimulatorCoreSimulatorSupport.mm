@@ -408,7 +408,7 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
                 launch_info.GetPTY().GetSecondaryFileDescriptor();
             if (secondary_fd == PseudoTerminal::invalid_fd) {
               if (llvm::Error Err = launch_info.GetPTY().OpenSecondary(O_RDWR))
-                return Status(std::move(Err));
+                return Status::FromError(std::move(Err));
             }
             secondary_fd = launch_info.GetPTY().GetSecondaryFileDescriptor();
             assert(secondary_fd != PseudoTerminal::invalid_fd);

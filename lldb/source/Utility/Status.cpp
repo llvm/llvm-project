@@ -55,10 +55,10 @@ Status::Status(std::string err_str)
     : m_code(LLDB_GENERIC_ERROR), m_type(eErrorTypeGeneric),
       m_string(std::move(err_str)) {}
 
-const Status &Status::operator=(llvm::Error error) {
+Status::Status(llvm::Error error) {
   if (!error) {
     Clear();
-    return *this;
+    return;
   }
 
   // if the error happens to be a errno error, preserve the error code
@@ -79,8 +79,6 @@ const Status &Status::operator=(llvm::Error error) {
     m_type = eErrorTypeGeneric;
     m_string = llvm::toString(std::move(error));
   }
-
-  return *this;
 }
 
 Status Status::FromErrorStringWithFormat(const char *format, ...) {
@@ -95,6 +93,8 @@ Status Status::FromErrorStringWithFormat(const char *format, ...) {
   va_end(args);
   return Status(string);
 }
+
+Status Status::FromError(llvm::Error error) { return Status(std::move(error)); }
 
 llvm::Error Status::ToError() const {
   if (Success())
