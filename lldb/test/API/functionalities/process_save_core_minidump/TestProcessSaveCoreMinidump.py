@@ -305,12 +305,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
-<<<<<<< HEAD
                 stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(
                     0
                 ).GetRegisters()
-=======
->>>>>>> 32f571ab967c (Reapply "[LLDB][SBSaveCore] Add selectable memory regions to SBSaveCor… (#106293))
 
             # This is almost identical to the single thread test case because
             # minidump defaults to stacks only, so we want to see if the
@@ -328,10 +325,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-<<<<<<< HEAD
                 stacks_to_registers_map,
-=======
->>>>>>> 32f571ab967c (Reapply "[LLDB][SBSaveCore] Add selectable memory regions to SBSaveCor… (#106293))
             )
 
         finally:

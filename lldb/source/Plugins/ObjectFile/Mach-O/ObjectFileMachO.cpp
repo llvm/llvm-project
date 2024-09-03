@@ -6562,7 +6562,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     }
 
     if (make_core) {
-      Process::CoreFileMemoryRanges core_ranges;
+      CoreFileMemoryRanges core_ranges;
       error = process_sp->CalculateCoreFileSaveRanges(options, core_ranges);
       if (error.Success()) {
         const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
