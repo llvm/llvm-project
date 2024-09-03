@@ -4622,13 +4622,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   const MachineFunction *MF = MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
 
+  // FIXME: At this point the COPY verify is done only for non-ssa forms.
+  // Find a better property to recognize the point where instruction selection is just done.
+  // We can only enforce this check after SIFixSGPRCopies pass.
+  if (!MRI.isSSA() && MI.isCopy())
+    return verifyCopy(MI, MRI, ErrInfo);
+
   if (SIInstrInfo::isGenericOpcode(MI.getOpcode())) {
-    // FIXME: At this point the COPY verify is done only for non-ssa forms.
-    // Find a better property to recognize the point where instruction selection
-    // is just done.
-    // We can only enforce this check after SIFixSGPRCopies pass.
-    if (!MRI.isSSA() && MI.isCopy())
-      return verifyCopy(MI, MRI, ErrInfo);
     return true;
   }
 
