@@ -97,6 +97,9 @@ TEST_P(SocketTest, TCPListen0ConnectAccept) {
 }
 
 TEST_P(SocketTest, TCPMainLoopAccept) {
+  if (!HostSupportsProtocol())
+    return;
+
   const bool child_processes_inherit = false;
   auto listen_socket_up =
       std::make_unique<TCPSocket>(true, child_processes_inherit);

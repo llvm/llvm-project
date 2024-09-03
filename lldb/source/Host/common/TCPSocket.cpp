@@ -273,14 +273,17 @@ llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
       NativeSocket sock = AcceptSocket(fd, &AcceptAddr.sockaddr(), &sa_len,
                                        m_child_processes_inherit, error);
       Log *log = GetLog(LLDBLog::Host);
-      if (error.Fail())
+      if (error.Fail()) {
         LLDB_LOG(log, "AcceptSocket({0}): {1}", fd, error);
+        return;
+      }
 
       const lldb_private::SocketAddress &AddrIn = m_listen_sockets[fd];
       if (!AddrIn.IsAnyAddr() && AcceptAddr != AddrIn) {
         CLOSE_SOCKET(sock);
         LLDB_LOG(log, "rejecting incoming connection from {0} (expecting {1})",
                  AcceptAddr.GetIPAddress(), AddrIn.GetIPAddress());
+        return;
       }
       std::unique_ptr<TCPSocket> sock_up(new TCPSocket(sock, *this));
 
