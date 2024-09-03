@@ -3,7 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from instructions import *
-from typing import Any, Iterable, Callable, Optional, Tuple
+from typing import Any, Iterable, Callable, Optional, Tuple, List, Dict
 import argparse
 import fileinput
 import inspect
@@ -56,8 +56,8 @@ def parseInstruction(i):
 # - if the first instruction is a delimiter, the first piece will begin with this delimiter.
 def splitInstructions(
     splitType: type, instructions: Iterable[Instruction]
-) -> list[list[Instruction]]:
-    blocks: list[list[Instruction]] = [[]]
+) -> List[List[Instruction]]:
+    blocks: List[List[Instruction]] = [[]]
     for instruction in instructions:
         if isinstance(instruction, splitType) and len(blocks[-1]) > 0:
             blocks.append([])
@@ -102,9 +102,9 @@ class Function:
         # The name of the function (name of the register returned by OpFunction).
         self._name: str = instructions[0].output_register()
         # The list of basic blocks that belongs to this function.
-        self._basic_blocks: list[BasicBlock] = []
+        self._basic_blocks: List[BasicBlock] = []
         # The variables local to this function.
-        self._variables: list[OpVariable] = [
+        self._variables: List[OpVariable] = [
             x for x in instructions if isinstance(x, OpVariable)
         ]
 
@@ -177,7 +177,7 @@ class InstructionPointer:
 # Defines a Lane in this simulator.
 class Lane:
     # The registers known by this lane.
-    _registers: dict[str, Any]
+    _registers: Dict[str, Any]
     # The current IP of this lane.
     _ip: Optional[InstructionPointer]
     # If this lane running.
@@ -188,7 +188,7 @@ class Lane:
     # The first element is the IP the function will return to.
     # The second element is the callback to call to store the return value
     # into the correct register.
-    _callstack: list[Tuple[InstructionPointer, Callable[[Any], None]]]
+    _callstack: List[Tuple[InstructionPointer, Callable[[Any], None]]]
 
     _previous_bb: Optional[BasicBlock]
     _current_bb: Optional[BasicBlock]
@@ -272,11 +272,11 @@ class Lane:
 
 # Represents the SPIR-V module in the simulator.
 class Module:
-    _functions: dict[str, Function]
-    _prolog: list[Instruction]
-    _globals: list[Instruction]
-    _name2reg: dict[str, str]
-    _reg2name: dict[str, str]
+    _functions: Dict[str, Function]
+    _prolog: List[Instruction]
+    _globals: List[Instruction]
+    _name2reg: Dict[str, str]
+    _reg2name: Dict[str, str]
 
     def __init__(self, instructions) -> None:
         chunks = splitInstructions(OpFunction, instructions)
@@ -392,7 +392,7 @@ class ConvergenceRequirement:
     impactedLanes: set[int]
 
 
-Task = dict[InstructionPointer, list[Lane]]
+Task = Dict[InstructionPointer, List[Lane]]
 
 
 # Defines a Lane group/Wave in the simulator.
@@ -400,12 +400,12 @@ class Wave:
     # The module this wave will execute.
     _module: Module
     # The lanes this wave will be composed of.
-    _lanes: list[Lane]
+    _lanes: List[Lane]
     # The instructions scheduled for execution.
     _tasks: Task
     # The actual requirements to comply with when executing instructions.
     # E.g: the set of lanes required to merge before executing the merge block.
-    _convergence_requirements: list[ConvergenceRequirement]
+    _convergence_requirements: List[ConvergenceRequirement]
     # The indices of the active lanes for the current executing instruction.
     _active_lane_indices: set[int]
 
@@ -423,7 +423,7 @@ class Wave:
         self._active_lane_indices = set()
 
     # Returns True if the given IP can be executed for the given list of lanes.
-    def _is_task_candidate(self, ip: InstructionPointer, lanes: list[Lane]):
+    def _is_task_candidate(self, ip: InstructionPointer, lanes: List[Lane]):
         merged_lanes: set[int] = set()
         for lane in self._lanes:
             if not lane.running():
@@ -463,7 +463,7 @@ class Wave:
 
     # Returns the next task we can schedule. This must always return a task.
     # Calling this when all lanes are dead is invalid.
-    def _get_next_runnable_task(self) -> Tuple[InstructionPointer, list[Lane]]:
+    def _get_next_runnable_task(self) -> Tuple[InstructionPointer, List[Lane]]:
         candidate = None
         for ip, lanes in self._tasks.items():
             if len(lanes) == 0:
@@ -517,7 +517,7 @@ class Wave:
     # Run the wave on the function 'function_name' until all lanes are dead.
     # If verbose is True, execution trace is printed.
     # Returns the value returned by the function for each lane.
-    def run(self, function_name: str, verbose: bool = False) -> list[Any]:
+    def run(self, function_name: str, verbose: bool = False) -> List[Any]:
         for t in self._lanes:
             self._module.initialize(t)
 

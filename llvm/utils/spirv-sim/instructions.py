@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 
 # Base class for an instruction. To implement a basic instruction that doesn't
@@ -9,7 +9,7 @@ class Instruction:
     # Contains the instruction opcode.
     _opcode: str
     # Contains all the instruction operands, except result and opcode.
-    _operands: list[str]
+    _operands: List[str]
 
     def __init__(self, line: str):
         self.line = line
@@ -33,7 +33,7 @@ class Instruction:
         return self._opcode
 
     # Returns the instruction operands.
-    def operands(self) -> list[str]:
+    def operands(self) -> List[str]:
         return self._operands
 
     # Returns the instruction output register. Calling this function is
