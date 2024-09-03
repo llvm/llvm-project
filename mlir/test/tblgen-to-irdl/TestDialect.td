@@ -44,16 +44,17 @@ def Test_AnyOp : Test_Op<"any"> {
 
 // Check confined types are converted correctly.
 def Test_ConfinedOp : Test_Op<"confined"> {
-  let arguments = (ins ConfinedType<I32, [IntNonNegative.predicate]>:$confined,
-                       ConfinedType<I8, [And<[IntMinValue<1>.predicate, IntMaxValue<2>.predicate]>]>:$bounded);
+  let arguments = (ins ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$tensor,
+                       ConfinedType<AnyType, [And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">
+                                             , CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>]>:$vector);
 }
 // CHECK-LABEL: irdl.operation @confined {
-// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.is i32
-// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.c_pred "{{.*}}"
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.any
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.c_pred "(::llvm::isa<::mlir::TensorType>($_self))"
 // CHECK-NEXT:    %[[v2:[^ ]*]] = irdl.all_of(%[[v0]], %[[v1]])
-// CHECK-NEXT:    %[[v3:[^ ]*]] = irdl.is i8
-// CHECK-NEXT:    %[[v4:[^ ]*]] = irdl.c_pred "{{.*}}"
-// CHECK-NEXT:    %[[v5:[^ ]*]] = irdl.c_pred "{{.*}}"
+// CHECK-NEXT:    %[[v3:[^ ]*]] = irdl.any
+// CHECK-NEXT:    %[[v4:[^ ]*]] = irdl.c_pred "(::llvm::isa<::mlir::VectorType>($_self))"
+// CHECK-NEXT:    %[[v5:[^ ]*]] = irdl.c_pred "(::llvm::cast<::mlir::VectorType>($_self).getRank() > 0)"
 // CHECK-NEXT:    %[[v6:[^ ]*]] = irdl.all_of(%[[v4]], %[[v5]])
 // CHECK-NEXT:    %[[v7:[^ ]*]] = irdl.all_of(%[[v3]], %[[v6]])
 // CHECK-NEXT:    irdl.operands(%[[v2]], %[[v7]])
