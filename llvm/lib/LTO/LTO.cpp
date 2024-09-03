@@ -1058,8 +1058,8 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
       if (BM.getModuleIdentifier().contains(Name)) {
         ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
-        llvm::errs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
-                     << " to compile\n";
+        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
+                          << " to compile\n");
       }
     }
   }
