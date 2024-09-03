@@ -298,8 +298,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
 
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
-    llvm::RoundingMode RM = getRoundingMode(CE);
-    return this->emitCastIntegralFloating(*FromT, TargetSemantics, RM, CE);
+    return this->emitCastIntegralFloating(*FromT, TargetSemantics,
+                                          getFPOptions(CE), CE);
   }
 
   case CK_FloatingToBoolean:
@@ -317,12 +317,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (ToT == PT_IntAP)
       return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(CE->getType()),
-                                              CE);
+                                              getFPOptions(CE), CE);
     if (ToT == PT_IntAPS)
       return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(CE->getType()),
-                                               CE);
+                                               getFPOptions(CE), CE);
 
-    return this->emitCastFloatingIntegral(*ToT, CE);
+    return this->emitCastFloatingIntegral(*ToT, getFPOptions(CE), CE);
   }
 
   case CK_NullToPointer:
@@ -810,21 +810,21 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return MaybeCastToBool(this->emitGE(*LT, BO));
   case BO_Sub:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitSubf(getRoundingMode(BO), BO));
+      return Discard(this->emitSubf(getFPOptions(BO), BO));
     return Discard(this->emitSub(*T, BO));
   case BO_Add:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitAddf(getRoundingMode(BO), BO));
+      return Discard(this->emitAddf(getFPOptions(BO), BO));
     return Discard(this->emitAdd(*T, BO));
   case BO_Mul:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitMulf(getRoundingMode(BO), BO));
+      return Discard(this->emitMulf(getFPOptions(BO), BO));
     return Discard(this->emitMul(*T, BO));
   case BO_Rem:
     return Discard(this->emitRem(*T, BO));
   case BO_Div:
     if (BO->getType()->isFloatingType())
-      return Discard(this->emitDivf(getRoundingMode(BO), BO));
+      return Discard(this->emitDivf(getFPOptions(BO), BO));
     return Discard(this->emitDiv(*T, BO));
   case BO_Assign:
     if (DiscardResult)
@@ -1153,7 +1153,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       if (!loadComplexValue(RHSIsComplex, true, ElemIndex, RHSOffset, RHS))
         return false;
       if (ResultElemT == PT_Float) {
-        if (!this->emitAddf(getRoundingMode(E), E))
+        if (!this->emitAddf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitAdd(ResultElemT, E))
@@ -1167,7 +1167,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       if (!loadComplexValue(RHSIsComplex, true, ElemIndex, RHSOffset, RHS))
         return false;
       if (ResultElemT == PT_Float) {
-        if (!this->emitSubf(getRoundingMode(E), E))
+        if (!this->emitSubf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitSub(ResultElemT, E))
@@ -1182,7 +1182,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return false;
 
       if (ResultElemT == PT_Float) {
-        if (!this->emitMulf(getRoundingMode(E), E))
+        if (!this->emitMulf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitMul(ResultElemT, E))
@@ -1198,7 +1198,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return false;
 
       if (ResultElemT == PT_Float) {
-        if (!this->emitDivf(getRoundingMode(E), E))
+        if (!this->emitDivf(getFPOptions(E), E))
           return false;
       } else {
         if (!this->emitDiv(ResultElemT, E))
@@ -2063,22 +2063,21 @@ bool Compiler<Emitter>::VisitFloatCompoundAssignOperator(
   if (!this->emitGetLocal(*RT, TempOffset, E))
     return false;
 
-  llvm::RoundingMode RM = getRoundingMode(E);
   switch (E->getOpcode()) {
   case BO_AddAssign:
-    if (!this->emitAddf(RM, E))
+    if (!this->emitAddf(getFPOptions(E), E))
       return false;
     break;
   case BO_SubAssign:
-    if (!this->emitSubf(RM, E))
+    if (!this->emitSubf(getFPOptions(E), E))
       return false;
     break;
   case BO_MulAssign:
-    if (!this->emitMulf(RM, E))
+    if (!this->emitMulf(getFPOptions(E), E))
       return false;
     break;
   case BO_DivAssign:
-    if (!this->emitDivf(RM, E))
+    if (!this->emitDivf(getFPOptions(E), E))
       return false;
     break;
   default:
@@ -3325,7 +3324,7 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 
   // Or Floats.
   if (T == PT_Float)
-    return this->emitCastFloatingIntegralBool(E);
+    return this->emitCastFloatingIntegralBool(getFPOptions(E), E);
 
   // Or anything else we can.
   return this->emitCast(*T, PT_Bool, E);
@@ -5005,8 +5004,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     if (T == PT_Float) {
-      return DiscardResult ? this->emitIncfPop(getRoundingMode(E), E)
-                           : this->emitIncf(getRoundingMode(E), E);
+      return DiscardResult ? this->emitIncfPop(getFPOptions(E), E)
+                           : this->emitIncf(getFPOptions(E), E);
     }
 
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
@@ -5028,8 +5027,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     if (T == PT_Float) {
-      return DiscardResult ? this->emitDecfPop(getRoundingMode(E), E)
-                           : this->emitDecf(getRoundingMode(E), E);
+      return DiscardResult ? this->emitDecfPop(getFPOptions(E), E)
+                           : this->emitDecf(getFPOptions(E), E);
     }
 
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
@@ -5056,7 +5055,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // Post-inc and pre-inc are the same if the value is to be discarded.
     if (DiscardResult) {
       if (T == PT_Float)
-        return this->emitIncfPop(getRoundingMode(E), E);
+        return this->emitIncfPop(getFPOptions(E), E);
       return this->emitIncPop(*T, E);
     }
 
@@ -5066,7 +5065,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
         return false;
-      if (!this->emitAddf(getRoundingMode(E), E))
+      if (!this->emitAddf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
         return false;
@@ -5105,7 +5104,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // Post-dec and pre-dec are the same if the value is to be discarded.
     if (DiscardResult) {
       if (T == PT_Float)
-        return this->emitDecfPop(getRoundingMode(E), E);
+        return this->emitDecfPop(getFPOptions(E), E);
       return this->emitDecPop(*T, E);
     }
 
@@ -5115,7 +5114,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
         return false;
-      if (!this->emitSubf(getRoundingMode(E), E))
+      if (!this->emitSubf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
         return false;
@@ -5579,13 +5578,15 @@ bool Compiler<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
     }
 
     if (ToT == PT_IntAP)
-      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(ToQT), E);
+      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(ToQT),
+                                              getFPOptions(E), E);
     if (ToT == PT_IntAPS)
-      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(ToQT), E);
+      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(ToQT),
+                                               getFPOptions(E), E);
 
     // Float to integral.
     if (isIntegralType(ToT) || ToT == PT_Bool)
-      return this->emitCastFloatingIntegral(ToT, E);
+      return this->emitCastFloatingIntegral(ToT, getFPOptions(E), E);
   }
 
   if (isIntegralType(FromT) || FromT == PT_Bool) {
@@ -5601,8 +5602,7 @@ bool Compiler<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
     if (ToT == PT_Float) {
       // Integral to floating.
       const llvm::fltSemantics *ToSem = &Ctx.getFloatSemantics(ToQT);
-      return this->emitCastIntegralFloating(FromT, ToSem, getRoundingMode(E),
-                                            E);
+      return this->emitCastIntegralFloating(FromT, ToSem, getFPOptions(E), E);
     }
   }
 
@@ -5639,7 +5639,7 @@ bool Compiler<Emitter>::emitComplexBoolCast(const Expr *E) {
   if (!this->emitArrayElem(ElemT, 0, E))
     return false;
   if (ElemT == PT_Float) {
-    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+    if (!this->emitCastFloatingIntegral(PT_Bool, getFPOptions(E), E))
       return false;
   } else {
     if (!this->emitCast(ElemT, PT_Bool, E))
@@ -5654,7 +5654,7 @@ bool Compiler<Emitter>::emitComplexBoolCast(const Expr *E) {
   if (!this->emitArrayElemPop(ElemT, 1, E))
     return false;
   if (ElemT == PT_Float) {
-    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+    if (!this->emitCastFloatingIntegral(PT_Bool, getFPOptions(E), E))
       return false;
   } else {
     if (!this->emitCast(ElemT, PT_Bool, E))

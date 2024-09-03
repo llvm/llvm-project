@@ -2820,9 +2820,9 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (!BO || !BO->isAssociative())
     return false;
 
-  // Only fold ADDs for now.
+  // TODO: Only hoist ADDs and MULs for now.
   Instruction::BinaryOps Opcode = BO->getOpcode();
-  if (Opcode != Instruction::Add)
+  if (Opcode != Instruction::Add && Opcode != Instruction::Mul)
     return false;
 
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
@@ -2841,15 +2841,18 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
 
-  auto *Inv = BinaryOperator::Create(Opcode, C1, C2, "invariant.op",
-                                     Preheader->getTerminator()->getIterator());
+  IRBuilder<> Builder(Preheader->getTerminator());
+  auto *Inv = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
+
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
 
   // Copy NUW for ADDs if both instructions have it.
   if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
       BO0->hasNoUnsignedWrap()) {
-    Inv->setHasNoUnsignedWrap(true);
+    // If `Inv` was not constant-folded, a new Instruction has been created.
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      I->setHasNoUnsignedWrap(true);
     NewBO->setHasNoUnsignedWrap(true);
   }
 
