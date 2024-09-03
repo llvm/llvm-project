@@ -24,7 +24,7 @@
 ; RUN:  -r %t/m2.bc,f1 \
 ; RUN:  -r %t/m2.bc,f3 \
 ; RUN:  -r %t/m2.bc,entrypoint,plx
-; RUN: opt --passes='function-import,require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: opt --passes='function-import,require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:  -summary-file=%t/m2.bc.thinlto.bc -use-ctx-profile=%t/profile.ctxprofdata %t/m2.bc \
 ; RUN:  -S -o %t/m2.post.ll 2> %t/profile.txt
 ; RUN: diff %t/expected.txt %t/profile.txt

@@ -85,9 +85,6 @@ contact: RonL
 
 ---
 Reverts:
-1e70122cbc18 [ctx_prof] API to get the instrumentation of a BB (#105468)
-960a210b1f22 [ctx_prof] Remove the dependency on the "name" GlobalVariable (#105731)      
-3209766608d1 [ctx_prof] Add Inlining support (#106154)
 [CtxProf] Replace include with forward declaration (NFC)
 Contacts: RonL and Hulk
 ---
