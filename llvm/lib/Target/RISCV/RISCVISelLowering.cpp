@@ -21951,9 +21951,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
         Intrinsic::riscv_vlseg8};
 
-    unsigned SEW = ResVTy->getElementType()->isPointerTy()
-                       ? Subtarget.getXLen()
-                       : ResVTy->getElementType()->getScalarSizeInBits();
+    unsigned SEW =
+        DI->getDataLayout().getTypeSizeInBits(ResVTy->getElementType());
     unsigned NumElts = ResVTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
         LI->getContext(), "riscv.vector.tuple",
@@ -22023,9 +22022,8 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
         Intrinsic::riscv_vsseg8};
 
-    unsigned SEW = InVTy->getElementType()->isPointerTy()
-                       ? Subtarget.getXLen()
-                       : InVTy->getElementType()->getScalarSizeInBits();
+    unsigned SEW =
+        SI->getDataLayout().getTypeSizeInBits(InVTy->getElementType());
     unsigned NumElts = InVTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
         SI->getContext(), "riscv.vector.tuple",
