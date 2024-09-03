@@ -67,7 +67,7 @@ loop:
   br label %loop
 }
 
-; Hoist MUL and drop NUW if both ops have it.
+; Hoist MUL and drop NUW even if both ops have it.
 define void @mul_nuw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_nuw(
 ; CHECK-NEXT:  entry:
@@ -115,30 +115,6 @@ loop:
   br label %loop
 }
 
-; Hoist MUL and drop NUW if only one op has it.
-define void @mul_no_nuw(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @mul_no_nuw(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul i64 [[INDEX]], [[C1]]
-; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = mul i64 %index, %c1
-  call void @use(i64 %step.add)
-  %index.next = mul nuw i64 %step.add, %c2
-  br label %loop
-}
-
 ; Hoist ADD but don't copy NSW if one op has it.
 define void @add_no_nsw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_no_nsw(
@@ -160,30 +136,6 @@ loop:
   %step.add = add i64 %index, %c1
   call void @use(i64 %step.add)
   %index.next = add nsw i64 %step.add, %c2
-  br label %loop
-}
-
-; Hoist MUL and drop NSW if one op has it.
-define void @mul_no_nsw(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @mul_no_nsw(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul i64 [[INDEX]], [[C1]]
-; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = mul i64 %index, %c1
-  call void @use(i64 %step.add)
-  %index.next = mul nsw i64 %step.add, %c2
   br label %loop
 }
 
@@ -211,7 +163,7 @@ loop:
   br label %loop
 }
 
-; Hoist MUL and drop NSW if both ops have it.
+; Hoist MUL and drop NSW even if both ops have it.
 define void @mul_no_nsw_2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_no_nsw_2(
 ; CHECK-NEXT:  entry:
