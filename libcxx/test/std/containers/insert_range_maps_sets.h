@@ -70,10 +70,10 @@ constexpr bool test_map_constraints_insert_range() {
 
 template <class T>
 struct TestCaseMapSet {
-  Buffer<T> initial;
-  Buffer<T> input;
-  Buffer<T> expected;
-  Buffer<T> expected_multi;
+  Buffer<T> initial{};
+  Buffer<T> input{};
+  Buffer<T> expected{};
+  Buffer<T> expected_multi{};
 };
 
 // Empty container.
