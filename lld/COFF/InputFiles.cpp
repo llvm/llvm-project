@@ -1071,19 +1071,39 @@ void ImportFile::parse() {
   this->hdr = hdr;
   externalName = extName;
 
-  impSym = ctx.symtab.addImportData(impName, this);
+  bool isCode = hdr->getType() == llvm::COFF::IMPORT_CODE;
+
+  if (ctx.config.machine != ARM64EC) {
+    impSym = ctx.symtab.addImportData(impName, this, location);
+  } else {
+    // In addition to the regular IAT, ARM64EC also contains an auxiliary IAT,
+    // which holds addresses that are guaranteed to be callable directly from
+    // ARM64 code. Function symbol naming is swapped: __imp_ symbols refer to
+    // the auxiliary IAT, while __imp_aux_ symbols refer to the regular IAT. For
+    // data imports, the naming is reversed.
+    StringRef auxImpName = saver().save("__imp_aux_" + name);
+    if (isCode) {
+      impSym = ctx.symtab.addImportData(auxImpName, this, location);
+      impECSym = ctx.symtab.addImportData(impName, this, auxLocation);
+    } else {
+      impSym = ctx.symtab.addImportData(impName, this, location);
+      impECSym = ctx.symtab.addImportData(auxImpName, this, auxLocation);
+    }
+    if (!impECSym)
+      return;
+  }
   // If this was a duplicate, we logged an error but may continue;
   // in this case, impSym is nullptr.
   if (!impSym)
     return;
 
   if (hdr->getType() == llvm::COFF::IMPORT_CONST)
-    static_cast<void>(ctx.symtab.addImportData(name, this));
+    static_cast<void>(ctx.symtab.addImportData(name, this, location));
 
   // If type is function, we need to create a thunk which jump to an
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
-  if (hdr->getType() == llvm::COFF::IMPORT_CODE) {
+  if (isCode) {
     if (ctx.config.machine != ARM64EC) {
       thunkSym = ctx.symtab.addImportThunk(name, impSym, makeImportThunk());
     } else {
