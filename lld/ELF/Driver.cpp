@@ -1690,7 +1690,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
   if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
     config->thinLTOJobs = arg->getValue();
-  config->threadCount = parallel::strategy.compute_thread_count();
+  config->threadCount = parallel::getThreadCount();
 
   if (config->ltoPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");

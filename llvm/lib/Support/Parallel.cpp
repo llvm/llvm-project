@@ -50,23 +50,32 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
-    ThreadCount = S.compute_thread_count();
+    ThreadCount = S.compute_thread_count() + 1;
+    Threads.reserve(ThreadCount);
+    Threads.resize(2);
+
+    {
+      std::lock_guard<std::mutex> Lock(MutexSequential);
+      auto &Thread0 = Threads[0];
+      Thread0 = std::thread([this, S]() {
+        work(S, 0, MutexSequential, CondSequential, WorkQueueSequential);
+      });
+    }
+
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
-    Threads.reserve(ThreadCount);
-    Threads.resize(1);
     std::lock_guard<std::mutex> Lock(Mutex);
     // Use operator[] before creating the thread to avoid data race in .size()
     // in 'safe libc++' mode.
-    auto &Thread0 = Threads[0];
-    Thread0 = std::thread([this, S] {
-      for (unsigned I = 1; I < ThreadCount; ++I) {
-        Threads.emplace_back([=] { work(S, I); });
+    auto &Thread1 = Threads[1];
+    Thread1 = std::thread([this, S]() {
+      for (unsigned I = 2; I < ThreadCount; ++I) {
+        Threads.emplace_back([=] { work(S, I, Mutex, Cond, WorkQueue); });
         if (Stop)
           break;
       }
       ThreadsCreated.set_value();
-      work(S, 0);
+      work(S, 1, Mutex, Cond, WorkQueue);
     });
   }
 
@@ -78,6 +87,7 @@ public:
       Stop = true;
     }
     Cond.notify_all();
+    CondSequential.notify_all();
     ThreadsCreated.get_future().wait();
   }
 
@@ -99,57 +109,62 @@ public:
   };
 
   void add(std::function<void()> F, bool Sequential = false) override {
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      if (Sequential)
-        WorkQueueSequential.emplace_front(std::move(F));
-      else
-        WorkQueue.emplace_back(std::move(F));
+    if (Sequential) {
+      addImpl<true>(F, MutexSequential, CondSequential, WorkQueueSequential);
+      return;
     }
-    Cond.notify_one();
+
+    addImpl<false>(F, Mutex, Cond, WorkQueue);
   }
 
   size_t getThreadCount() const override { return ThreadCount; }
 
 private:
-  bool hasSequentialTasks() const {
-    return !WorkQueueSequential.empty() && !SequentialQueueIsLocked;
+  template <bool Sequential>
+  void addImpl(std::function<void()> F, std::mutex &M,
+               std::condition_variable &C,
+               std::deque<std::function<void()>> &Q) {
+    {
+      std::lock_guard<std::mutex> Lock(M);
+      if constexpr (Sequential)
+        Q.emplace_front(std::move(F));
+      else
+        Q.emplace_back(std::move(F));
+    }
+    C.notify_one();
   }
 
-  bool hasGeneralTasks() const { return !WorkQueue.empty(); }
-
-  void work(ThreadPoolStrategy S, unsigned ThreadID) {
+  void work(ThreadPoolStrategy S, unsigned ThreadID, std::mutex &M,
+            std::condition_variable &C, std::deque<std::function<void()>> &Q) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
     while (true) {
-      std::unique_lock<std::mutex> Lock(Mutex);
-      Cond.wait(Lock, [&] {
-        return Stop || hasGeneralTasks() || hasSequentialTasks();
-      });
+      std::unique_lock<std::mutex> Lock(M);
+      C.wait(Lock, [&] { return Stop || !Q.empty(); });
+      // Stop if requested.
       if (Stop)
         break;
-      bool Sequential = hasSequentialTasks();
-      if (Sequential)
-        SequentialQueueIsLocked = true;
-      else
-        assert(hasGeneralTasks());
 
-      auto &Queue = Sequential ? WorkQueueSequential : WorkQueue;
-      auto Task = std::move(Queue.back());
-      Queue.pop_back();
+      if (Q.empty()) {
+        Lock.unlock();
+        continue;
+      }
+
+      // Unlock queue and execute task.
+      auto Task = std::move(Q.back());
+      Q.pop_back();
       Lock.unlock();
       Task();
-      if (Sequential)
-        SequentialQueueIsLocked = false;
     }
   }
 
   std::atomic<bool> Stop{false};
-  std::atomic<bool> SequentialQueueIsLocked{false};
   std::deque<std::function<void()>> WorkQueue;
-  std::deque<std::function<void()>> WorkQueueSequential;
   std::mutex Mutex;
   std::condition_variable Cond;
+  std::deque<std::function<void()>> WorkQueueSequential;
+  std::mutex MutexSequential;
+  std::condition_variable CondSequential;
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
