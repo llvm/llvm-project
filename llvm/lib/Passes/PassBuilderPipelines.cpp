@@ -227,12 +227,6 @@ static cl::opt<bool>
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
 
-// TODO: turn on and remove flag
-static cl::opt<bool> EnablePGOForceFunctionAttrs(
-    "enable-pgo-force-function-attrs",
-    cl::desc("Enable pass to set function attributes based on PGO profiles"),
-    cl::init(false));
-
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
                        cl::desc("Enable hot-cold splitting pass"));
@@ -1222,7 +1216,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnablePGOForceFunctionAttrs && PGOOpt)
+  if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
+                 PGOOpt->Action == PGOOptions::SampleUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
