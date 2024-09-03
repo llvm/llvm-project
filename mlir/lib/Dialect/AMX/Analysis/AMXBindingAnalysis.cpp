@@ -354,9 +354,9 @@ TileScopeAnalysis::collectPaletteForTile(Operation *op) {
   pi.set(*index, getPaletteShape(op.getVectorType()));
 
 #define PROCESS_TRINARY_TILE_OP(op)                                            \
-  auto lhsIndex = tileMulFOp.getLhsRegIndex();                                 \
-  auto rhsIndex = tileMulFOp.getRhsRegIndex();                                 \
-  auto accIndex = tileMulFOp.getAccRegIndex();                                 \
+  auto lhsIndex = op.getLhsRegIndex();                                         \
+  auto rhsIndex = op.getRhsRegIndex();                                         \
+  auto accIndex = op.getAccRegIndex();                                         \
   if (!lhsIndex || !rhsIndex || !accIndex) {                                   \
     isValidAnalysis = false;                                                   \
     return PaletteInfo();                                                      \
