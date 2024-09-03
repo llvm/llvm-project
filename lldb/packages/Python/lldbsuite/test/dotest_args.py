@@ -109,19 +109,11 @@ def create_parser():
         help=textwrap.dedent("Specify which dsymutil to use."),
     )
     group.add_argument(
-        "--use-llvm-tools",
-        dest="use_llvm_tools",
-        action="store_true",
-        help=textwrap.dedent(
-            "Force use LLVM tools for testing (llvm-ar, llvm-objcopy, etc.)."
-        ),
-    )
-    group.add_argument(
         "--llvm-tools-dir",
         metavar="dir",
         dest="llvm_tools_dir",
         help=textwrap.dedent(
-            "The location of llvm tools used for testing (llvm-ar, yaml2obj, FileCheck, etc.)."
+            "The location of llvm tools used for testing (yaml2obj, FileCheck, etc.)."
         ),
     )
 
