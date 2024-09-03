@@ -41,6 +41,9 @@ protected:
   friend class Function;     // For LLVMTy.
   friend class CallBase;     // For LLVMTy.
   friend class ConstantInt;  // For LLVMTy.
+  friend class CmpInst; // For LLVMTy. TODO: Cleanup after sandboxir::VectorType
+                        // is more complete.
+
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;

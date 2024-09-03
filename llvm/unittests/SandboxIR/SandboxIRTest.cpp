@@ -4656,6 +4656,11 @@ define void @foo(i32 %i0, i32 %i1) {
       sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
                                  F.getArg(1), &*BB->begin(), Ctx, "");
   EXPECT_EQ(NewCmp, &*BB->begin());
+  // TODO: Improve this test when sandboxir::VectorType is more completely
+  // implemented.
+  sandboxir::Type *RT =
+      sandboxir::CmpInst::makeCmpResultType(F.getArg(0)->getType());
+  EXPECT_TRUE(RT->isIntegerTy(1)); // Only one bit in a single comparison
 }
 
 TEST_F(SandboxIRTest, FCmpInst) {

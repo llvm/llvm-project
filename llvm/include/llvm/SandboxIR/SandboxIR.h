@@ -3267,13 +3267,7 @@ public:
   }
 
   /// Create a result type for fcmp/icmp
-  static Type *makeCmpResultType(Type *OpndType) {
-    if (VectorType *vt = dyn_cast<VectorType>(OpndType)) {
-      return VectorType::get(Type::getInt1Ty(OpndType->getContext()),
-                             vt->getElementCount());
-    }
-    return Type::getInt1Ty(OpndType->getContext());
-  }
+  static Type *makeCmpResultType(Type *OpndType);
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
@@ -3361,6 +3355,8 @@ protected:
   LLVMContext &LLVMCtx;
   friend class Type;        // For LLVMCtx.
   friend class PointerType; // For LLVMCtx.
+  friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
+                        // is complete
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all

@@ -2826,7 +2826,6 @@ FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
   auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
   return cast<FCmpInst>(registerValue(std::move(NewPtr)));
 }
-
 CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
                          Instruction *InsertBefore, Context &Ctx,
                          const Twine &Name) {
@@ -2837,7 +2836,6 @@ CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
     return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
   return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
 }
-
 CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
                                         const Instruction *F,
                                         Instruction *InsertBefore, Context &Ctx,
@@ -2845,6 +2843,17 @@ CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
   CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
   cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
   return Inst;
+}
+
+Type *CmpInst::makeCmpResultType(Type *OpndType) {
+  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
+    // TODO: Cleanup when we have more complete support for
+    // sandboxir::VectorType
+    return OpndType->getContext().getType(llvm::VectorType::get(
+        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
+        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
+  }
+  return Type::getInt1Ty(OpndType->getContext());
 }
 
 void CmpInst::setPredicate(Predicate P) {
