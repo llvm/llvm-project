@@ -97,3 +97,22 @@ void foo() {
 
 }
 #endif
+
+#if __cplusplus >= 202002L
+void GH107048() {
+  constexpr int x{};
+  const int y{};
+  auto b = []<int=x, int=y>{};
+  using A = decltype([]<int=x>{});
+
+  int z; // expected-note {{'z' declared here}}
+    auto c = []<int t=z>{
+    // expected-error@-1 {{no matching function for call to object of type}} \
+    // expected-error@-1 {{variable 'z' cannot be implicitly captured in a lambda with no capture-default specified}} \
+    // expected-note@-1 {{lambda expression begins here}} \
+    // expected-note@-1 4{{capture}} \
+    // expected-note@-1 {{candidate template ignored: substitution failure: reference to local variable 'z' declared in enclosing function}}
+    return t;
+  }();
+}
+#endif
