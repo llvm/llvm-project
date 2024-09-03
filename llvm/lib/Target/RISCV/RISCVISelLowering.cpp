@@ -452,8 +452,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
-    setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
-    setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
@@ -461,7 +459,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
     setOperationAction(ISD::FABS, MVT::bf16, Custom);
     setOperationAction(ISD::FNEG, MVT::bf16, Custom);
-    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Custom);
   }
 
   if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
@@ -479,7 +477,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(Op, MVT::f16, Custom);
       setOperationAction(ISD::FABS, MVT::f16, Custom);
       setOperationAction(ISD::FNEG, MVT::f16, Custom);
-      setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
+      setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
     }
 
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
@@ -5966,6 +5964,69 @@ static SDValue lowerFABSorFNEG(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, Logic);
 }
 
+static SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
+  assert(Op.getOpcode() == ISD::FCOPYSIGN && "Unexpected opcode");
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT VT = Op.getSimpleValueType();
+  assert((VT == MVT::f16 || VT == MVT::bf16) && "Unexpected type");
+
+  SDValue Mag = Op.getOperand(0);
+  SDValue Sign = Op.getOperand(1);
+
+  SDLoc DL(Op);
+
+  // Get sign bit into an integer value.
+  SDValue SignAsInt;
+  unsigned SignSize = Sign.getValueSizeInBits();
+  if (SignSize == Subtarget.getXLen()) {
+    SignAsInt = DAG.getNode(ISD::BITCAST, DL, XLenVT, Sign);
+  } else if (SignSize == 16) {
+    SignAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Sign);
+  } else if (SignSize == 32) {
+    SignAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Sign);
+  } else if (SignSize == 64) {
+    assert(XLenVT == MVT::i32 && "Unexpected type");
+    // Copy the upper word to integer.
+    SignAsInt = DAG.getNode(RISCVISD::SplitF64, DL, {MVT::i32, MVT::i32}, Sign)
+                    .getValue(1);
+    SignSize = 32;
+  } else
+    llvm_unreachable("Unexpected sign size");
+
+  // Get the signbit at the right position for MagAsInt.
+  int ShiftAmount = (int)SignSize - (int)Mag.getValueSizeInBits();
+  if (ShiftAmount > 0) {
+    SignAsInt = DAG.getNode(ISD::SRL, DL, XLenVT, SignAsInt,
+                            DAG.getConstant(ShiftAmount, DL, XLenVT));
+  } else if (ShiftAmount < 0) {
+    SignAsInt = DAG.getNode(ISD::SHL, DL, XLenVT, SignAsInt,
+                            DAG.getConstant(-ShiftAmount, DL, XLenVT));
+  }
+
+  // Mask the sign bit and any bits above it. The extra bits will be dropped
+  // when we convert back to FP.
+  SDValue SignMask = DAG.getConstant(
+      APInt::getSignMask(16).sext(Subtarget.getXLen()), DL, XLenVT);
+  SDValue SignBit = DAG.getNode(ISD::AND, DL, XLenVT, SignAsInt, SignMask);
+
+  // Transform Mag value to integer, and clear the sign bit.
+  SDValue MagAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Mag);
+  SDValue ClearSignMask = DAG.getConstant(
+      APInt::getSignedMaxValue(16).sext(Subtarget.getXLen()), DL, XLenVT);
+  SDValue ClearedSign =
+      DAG.getNode(ISD::AND, DL, XLenVT, MagAsInt, ClearSignMask);
+
+  SDNodeFlags Flags;
+  Flags.setDisjoint(true);
+
+  SDValue CopiedSign =
+      DAG.getNode(ISD::OR, DL, XLenVT, ClearedSign, SignBit, Flags);
+
+  return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, CopiedSign);
+}
+
 /// Get a RISC-V target specified VL op for a given SDNode.
 static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
@@ -6500,18 +6561,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return SplitVectorOp(Op, DAG);
     return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::FP_EXTEND: {
-    SDLoc DL(Op);
-    EVT VT = Op.getValueType();
-    SDValue Op0 = Op.getOperand(0);
-    EVT Op0VT = Op0.getValueType();
-    if (VT == MVT::f32 && Op0VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin())
-      return DAG.getNode(RISCVISD::FP_EXTEND_BF16, DL, MVT::f32, Op0);
-    if (VT == MVT::f64 && Op0VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
-      SDValue FloatVal =
-          DAG.getNode(RISCVISD::FP_EXTEND_BF16, DL, MVT::f32, Op0);
-      return DAG.getNode(ISD::FP_EXTEND, DL, MVT::f64, FloatVal);
-    }
-
     if (!Op.getValueType().isVector())
       return Op;
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
@@ -7178,6 +7227,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
   case ISD::FCOPYSIGN:
+    if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
+      return lowerFCOPYSIGN(Op, DAG, Subtarget);
     if (Op.getValueType() == MVT::nxv32f16 &&
         (Subtarget.hasVInstructionsF16Minimal() &&
          !Subtarget.hasVInstructionsF16()))
@@ -20463,7 +20514,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
   NODE_NAME_CASE(FP_ROUND_BF16)
-  NODE_NAME_CASE(FP_EXTEND_BF16)
   NODE_NAME_CASE(FROUND)
   NODE_NAME_CASE(FCLASS)
   NODE_NAME_CASE(FSGNJX)
