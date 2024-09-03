@@ -4495,7 +4495,10 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
 
   // Currently only inline asm and function call can clobbers fp/bp. So we can
   // do some quick test and return early.
-  if (!MF.hasInlineAsm()) {
+  // And when IPRA is on, callee may also clobber fp/bp.
+  // FIXME: setF/BPClobberedByCall(true) in RegUsageInfoPropagation::setRegMask
+  // so we don't need the condition of IPRA here.
+  if (!MF.hasInlineAsm() && !MF.getTarget().Options.EnableIPRA) {
     X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
     if (!X86FI->getFPClobberedByCall())
       FP = 0;
@@ -4567,7 +4570,9 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
 
       // If the bp is clobbered by a call, we should save and restore outside of
       // the frame setup instructions.
-      if (KillMI->isCall() && DefMI != ME) {
+      // When IPRA is enabled, we could skip this step.
+      if (KillMI->isCall() && DefMI != ME && !MF.hasInlineAsm() &&
+          !MF.getTarget().Options.EnableIPRA) {
         auto FrameSetup = std::next(DefMI);
         // Look for frame setup instruction toward the start of the BB.
         // If we reach another call instruction, it means no frame setup
