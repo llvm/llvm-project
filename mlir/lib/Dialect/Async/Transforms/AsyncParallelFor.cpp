@@ -141,7 +141,6 @@ struct ParallelComputeFunctionArgs {
   BlockArgument blockSize();
   ArrayRef<BlockArgument> tripCounts();
   ArrayRef<BlockArgument> lowerBounds();
-  ArrayRef<BlockArgument> upperBounds();
   ArrayRef<BlockArgument> steps();
   ArrayRef<BlockArgument> captures();
 
