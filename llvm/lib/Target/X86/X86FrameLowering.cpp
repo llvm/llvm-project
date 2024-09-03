@@ -4509,8 +4509,9 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
     bool InsideEHLabels = false;
     auto MI = MBB.rbegin(), ME = MBB.rend();
     auto TermMI = MBB.getFirstTerminator();
-    if (TermMI != MBB.begin())
-      MI = *(std::prev(TermMI));
+    if (TermMI == MBB.begin())
+      continue;
+    MI = *(std::prev(TermMI));
 
     while (MI != ME) {
       // Skip frame setup/destroy instructions.
