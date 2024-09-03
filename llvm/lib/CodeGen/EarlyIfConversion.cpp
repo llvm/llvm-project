@@ -125,6 +125,9 @@ public:
   struct PredicationStrategyBase {
     virtual bool canConvertIf(MachineBasicBlock *Tail) { return true; }
     virtual bool canPredicateInstr(const MachineInstr &I) = 0;
+    /// Apply cost model and heuristics to the if-conversion in IfConv.
+    /// Return true if the conversion is a good idea.
+    virtual bool shouldConvertIf(SSAIfConv &) = 0;
     virtual void predicateBlock(MachineBasicBlock *MBB,
                                 ArrayRef<MachineOperand> Cond,
                                 bool Reverse) = 0;
@@ -184,6 +187,8 @@ public:
   /// convertIf - If-convert the last block passed to canConvertIf(), assuming
   /// it is possible. Add any blocks that are to be erased to RemoveBlocks.
   void convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks);
+
+  bool shouldConvertIf() { return Predicate.shouldConvertIf(*this); }
 };
 } // end anonymous namespace
 
@@ -661,12 +666,9 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks) {
 
 namespace {
 class EarlyIfConverter : public MachineFunctionPass {
-  MCSchedModel SchedModel;
-  MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
-  MachineTraceMetrics::Ensemble *MinInstr = nullptr;
 
 public:
   static char ID;
@@ -678,7 +680,6 @@ public:
 private:
   bool tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *);
   void invalidateTraces(SSAIfConv &IfConv);
-  bool shouldConvertIf(SSAIfConv &IfConv);
 };
 } // end anonymous namespace
 
@@ -762,6 +763,14 @@ template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
 } // anonymous namespace
 
 struct SpeculateStrategy : SSAIfConv::PredicationStrategyBase {
+  MachineLoopInfo *Loops = nullptr;
+  const MCSchedModel &SchedModel;
+  MachineTraceMetrics *Traces = nullptr;
+
+  SpeculateStrategy(MachineLoopInfo *Loops, const MCSchedModel &SchedModel,
+                    MachineTraceMetrics *Traces = nullptr)
+      : Loops(Loops), SchedModel(SchedModel), Traces(Traces) {}
+
   bool canConvertIf(MachineBasicBlock *Tail) override {
     // This is a triangle or a diamond.
     // Skip if we cannot predicate and there are no phis skip as there must
@@ -791,6 +800,8 @@ struct SpeculateStrategy : SSAIfConv::PredicationStrategyBase {
     return true;
   }
 
+  bool shouldConvertIf(SSAIfConv &IfConv) override;
+
   void predicateBlock(MachineBasicBlock *MBB, ArrayRef<MachineOperand> Cond,
                       bool Reverse)
       override { /* do nothing, everything is speculatable and it's valid to
@@ -800,10 +811,7 @@ struct SpeculateStrategy : SSAIfConv::PredicationStrategyBase {
   ~SpeculateStrategy() override = default;
 };
 
-/// Apply cost model and heuristics to the if-conversion in IfConv.
-/// Return true if the conversion is a good idea.
-///
-bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
+bool SpeculateStrategy::shouldConvertIf(SSAIfConv &IfConv) {
   // Stress testing mode disables all cost considerations.
   if (Stress)
     return true;
@@ -823,6 +831,7 @@ bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
         if (Register::isPhysicalRegister(Reg))
           return false;
 
+        MachineRegisterInfo *MRI = &IfConv.Head->getParent()->getRegInfo();
         MachineInstr *Def = MRI->getVRegDef(Reg);
         return CurrentLoop->isLoopInvariant(*Def) ||
                all_of(Def->operands(), [&](MachineOperand &Op) {
@@ -840,8 +849,7 @@ bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
       }))
     return false;
 
-  if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
+  auto MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
   MachineTraceMetrics::Trace TBBTrace = MinInstr->getTrace(IfConv.getTPred());
   MachineTraceMetrics::Trace FBBTrace = MinInstr->getTrace(IfConv.getFPred());
@@ -998,7 +1006,7 @@ bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
 ///
 bool EarlyIfConverter::tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *MBB) {
   bool Changed = false;
-  while (IfConv.canConvertIf(MBB) && shouldConvertIf(IfConv)) {
+  while (IfConv.canConvertIf(MBB) && IfConv.shouldConvertIf()) {
     // If-convert MBB and update analyses.
     invalidateTraces(IfConv);
     SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
@@ -1023,15 +1031,13 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   if (!STI.enableEarlyIfConversion())
     return false;
 
-  SchedModel = STI.getSchedModel();
-  MRI = &MF.getRegInfo();
+  const MCSchedModel &SchedModel = STI.getSchedModel();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   Traces = &getAnalysis<MachineTraceMetrics>();
-  MinInstr = nullptr;
 
   bool Changed = false;
-  SpeculateStrategy Speculate;
+  SpeculateStrategy Speculate(Loops, SchedModel, Traces);
   SSAIfConv IfConv(Speculate, MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
@@ -1051,10 +1057,7 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
 
 namespace {
 class EarlyIfPredicator : public MachineFunctionPass {
-  const TargetInstrInfo *TII = nullptr;
-  TargetSchedModel SchedModel;
   MachineDominatorTree *DomTree = nullptr;
-  MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
 
 public:
@@ -1066,7 +1069,6 @@ public:
 
 protected:
   bool tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *);
-  bool shouldConvertIf(SSAIfConv &IfConv);
 };
 } // end anonymous namespace
 
@@ -1094,7 +1096,11 @@ void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
 
 struct PredicatorStrategy : SSAIfConv::PredicationStrategyBase {
   const TargetInstrInfo *TII = nullptr;
-  PredicatorStrategy(const TargetInstrInfo *TII) : TII(TII) {}
+  TargetSchedModel &SchedModel;
+  MachineBranchProbabilityInfo *MBPI = nullptr;
+  PredicatorStrategy(const TargetInstrInfo *TII, TargetSchedModel &SchedModel,
+                     MachineBranchProbabilityInfo *MBPI)
+      : TII(TII), SchedModel(SchedModel), MBPI(MBPI) {}
 
   bool canPredicateInstr(const MachineInstr &I) override {
     // Check that instruction is predicable
@@ -1110,6 +1116,8 @@ struct PredicatorStrategy : SSAIfConv::PredicationStrategyBase {
     }
     return true;
   }
+
+  bool shouldConvertIf(SSAIfConv &IfConv) override;
 
   void predicateBlock(MachineBasicBlock *MBB, ArrayRef<MachineOperand> Cond,
                       bool Reverse) override {
@@ -1133,7 +1141,7 @@ struct PredicatorStrategy : SSAIfConv::PredicationStrategyBase {
 };
 
 /// Apply the target heuristic to decide if the transformation is profitable.
-bool EarlyIfPredicator::shouldConvertIf(SSAIfConv &IfConv) {
+bool PredicatorStrategy::shouldConvertIf(SSAIfConv &IfConv) {
   auto TrueProbability = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
   if (IfConv.isTriangle()) {
     MachineBasicBlock &IfBlock =
@@ -1176,7 +1184,7 @@ bool EarlyIfPredicator::shouldConvertIf(SSAIfConv &IfConv) {
 bool EarlyIfPredicator::tryConvertIf(SSAIfConv &IfConv,
                                      MachineBasicBlock *MBB) {
   bool Changed = false;
-  while (IfConv.canConvertIf(MBB) && shouldConvertIf(IfConv)) {
+  while (IfConv.canConvertIf(MBB) && IfConv.shouldConvertIf()) {
     // If-convert MBB and update analyses.
     SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
     IfConv.convertIf(RemoveBlocks);
@@ -1196,14 +1204,16 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
-  TII = STI.getInstrInfo();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  TargetSchedModel SchedModel;
   SchedModel.init(&STI);
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  auto *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
-  PredicatorStrategy Predicate(TII);
+  PredicatorStrategy Predicate(TII, SchedModel, MBPI);
   SSAIfConv IfConv(Predicate, MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
