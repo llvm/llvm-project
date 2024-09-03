@@ -2419,6 +2419,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Paren:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::HLSLAttributedResource:
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
@@ -3515,6 +3516,12 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 
   switch (PI.getABI()) {
   case ParameterABI::Ordinary:
+    break;
+
+  // HLSL parameter mangling.
+  case ParameterABI::HLSLOut:
+  case ParameterABI::HLSLInOut:
+    mangleVendorQualifier(getParameterABISpelling(PI.getABI()));
     break;
 
   // All of these start with "swift", so they come before "ns_consumed".
@@ -5729,6 +5736,9 @@ recurse:
     Out << "E";
     break;
   }
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable(
+        "cannot mangle hlsl temporary value; mangling wrong thing?");
   }
 
   if (AsTemplateArg && !IsPrimaryExpr)

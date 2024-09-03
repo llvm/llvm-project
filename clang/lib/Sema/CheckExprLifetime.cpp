@@ -1297,7 +1297,10 @@ void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                        Expr *Init) {
   bool EnableLifetimeWarnings = !SemaRef.getDiagnostics().isIgnored(
       diag::warn_dangling_lifetime_pointer, SourceLocation());
-  bool RunAnalysis = Entity.LHS->getType()->isPointerType() ||
+  bool EnableDanglingPointerAssignment = !SemaRef.getDiagnostics().isIgnored(
+      diag::warn_dangling_pointer_assignment, SourceLocation());
+  bool RunAnalysis = (EnableDanglingPointerAssignment &&
+                      Entity.LHS->getType()->isPointerType()) ||
                      (EnableLifetimeWarnings &&
                       isRecordWithAttr<PointerAttr>(Entity.LHS->getType()));
 

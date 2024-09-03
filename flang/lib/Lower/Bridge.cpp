@@ -20,6 +20,7 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/Cuda.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
@@ -2348,8 +2349,11 @@ private:
       fir::IfOp topIfOp, currentIfOp;
       for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
         auto genIfOp = [&](mlir::Value cond) {
-          auto ifOp =
-              builder->create<fir::IfOp>(toLocation(), cond, /*withElse=*/true);
+          Fortran::lower::pft::Evaluation &succ = *e.controlSuccessor;
+          bool hasElse = succ.isA<Fortran::parser::ElseIfStmt>() ||
+                         succ.isA<Fortran::parser::ElseStmt>();
+          auto ifOp = builder->create<fir::IfOp>(toLocation(), cond,
+                                                 /*withElseRegion=*/hasElse);
           builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
           return ifOp;
         };
@@ -4377,36 +4381,13 @@ private:
     return temps;
   }
 
-  // Check if the insertion point is currently in a device context. HostDevice
-  // subprogram are not considered fully device context so it will return false
-  // for it.
-  // If the insertion point is inside an OpenACC region op, it is considered
-  // device context.
-  static bool isCudaDeviceContext(fir::FirOpBuilder &builder) {
-    if (builder.getRegion().getParentOfType<cuf::KernelOp>())
-      return true;
-    if (builder.getRegion()
-            .getParentOfType<mlir::acc::ComputeRegionOpInterface>())
-      return true;
-    if (auto funcOp =
-            builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
-      if (auto cudaProcAttr =
-              funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                  cuf::getProcAttrName())) {
-        return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
-               cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
-      }
-    }
-    return false;
-  }
-
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isInDeviceContext = isCudaDeviceContext(builder);
+    bool isInDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
 
     bool isCUDATransfer = (Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs) ||
                            Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs)) &&
