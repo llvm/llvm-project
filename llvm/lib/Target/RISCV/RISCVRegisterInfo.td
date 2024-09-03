@@ -234,12 +234,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
   foreach Index = 0-31 in {
     def F#Index#_F : RISCVReg32<!cast<RISCVReg16>("F"#Index#"_H")>,
-      DwarfRegNum<[!add(Index, 32)]>;
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 
   foreach Index = 0-31 in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
-      DwarfRegNum<[!add(Index, 32)]>;
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 }
 
@@ -616,15 +616,40 @@ def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs, (add VR), 1>;
 
+defvar VTupM1N2VTs = [riscv_nxv8i8x2, riscv_nxv4i8x2, riscv_nxv2i8x2, riscv_nxv1i8x2];
+defvar VTupM1N3VTs = [riscv_nxv8i8x3, riscv_nxv4i8x3, riscv_nxv2i8x3, riscv_nxv1i8x3];
+defvar VTupM1N4VTs = [riscv_nxv8i8x4, riscv_nxv4i8x4, riscv_nxv2i8x4, riscv_nxv1i8x4];
+defvar VTupM1N5VTs = [riscv_nxv8i8x5, riscv_nxv4i8x5, riscv_nxv2i8x5, riscv_nxv1i8x5];
+defvar VTupM1N6VTs = [riscv_nxv8i8x6, riscv_nxv4i8x6, riscv_nxv2i8x6, riscv_nxv1i8x6];
+defvar VTupM1N7VTs = [riscv_nxv8i8x7, riscv_nxv4i8x7, riscv_nxv2i8x7, riscv_nxv1i8x7];
+defvar VTupM1N8VTs = [riscv_nxv8i8x8, riscv_nxv4i8x8, riscv_nxv2i8x8, riscv_nxv1i8x8];
+defvar VTupM2N2VTs = [riscv_nxv16i8x2];
+defvar VTupM2N3VTs = [riscv_nxv16i8x3];
+defvar VTupM2N4VTs = [riscv_nxv16i8x4];
+defvar VTupM4N2VTs = [riscv_nxv32i8x2];
+class VTupRegList<int LMUL, int NF> {
+  list<ValueType> L = !cond(!and(!eq(LMUL, 1), !eq(NF, 2)): VTupM1N2VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 3)): VTupM1N3VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 4)): VTupM1N4VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 5)): VTupM1N5VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 6)): VTupM1N6VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 7)): VTupM1N7VTs,
+                            !and(!eq(LMUL, 1), !eq(NF, 8)): VTupM1N8VTs,
+                            !and(!eq(LMUL, 2), !eq(NF, 2)): VTupM2N2VTs,
+                            !and(!eq(LMUL, 2), !eq(NF, 3)): VTupM2N3VTs,
+                            !and(!eq(LMUL, 2), !eq(NF, 4)): VTupM2N4VTs,
+                            !and(!eq(LMUL, 4), !eq(NF, 2)): VTupM4N2VTs);
+}
+
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
     let NF = nf in {
       def "VRN" # nf # "M" # m # "NoV0"
-        : VReg<[untyped],
+        : VReg<VTupRegList<m, nf>.L,
                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
                m>;
       def "VRN" # nf # "M" # m
-        : VReg<[untyped],
+        : VReg<VTupRegList<m, nf>.L,
                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
                     !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
                m>;
@@ -639,5 +664,5 @@ def FRM    : RISCVReg<0, "frm">;
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;
 
-// Dummy VCIX state register
-def VCIX_STATE : RISCVReg<0, "vcix_state">;
+// Dummy SiFive VCIX state register
+def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
