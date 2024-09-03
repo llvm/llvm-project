@@ -795,8 +795,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_SANITIZE_BOUNDS;
   case Attribute::NoSanitizeCoverage:
     return bitc::ATTR_KIND_NO_SANITIZE_COVERAGE;
-  case llvm::Attribute::NoSanitizeRealtime:
-    return bitc::ATTR_KIND_NO_SANITIZE_REALTIME;
   case Attribute::NullPointerIsValid:
     return bitc::ATTR_KIND_NULL_POINTER_IS_VALID;
   case Attribute::OptimizeForDebugging:
@@ -4350,9 +4348,20 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     return;
   }
 
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_VALUE_GUID));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  // GUIDS often use up most of 64-bits, so encode as two Fixed 32.
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned ValueGuidAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
   for (const auto &GVI : valueIds()) {
     Stream.EmitRecord(bitc::FS_VALUE_GUID,
-                      ArrayRef<uint64_t>{GVI.second, GVI.first});
+                      ArrayRef<uint32_t>{GVI.second,
+                                         static_cast<uint32_t>(GVI.first >> 32),
+                                         static_cast<uint32_t>(GVI.first)},
+                      ValueGuidAbbrev);
   }
 
   if (!Index->stackIds().empty()) {
@@ -4366,7 +4375,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   }
 
   // Abbrev for FS_PERMODULE_PROFILE.
-  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // flags
@@ -4520,9 +4529,20 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // Write the index flags.
   Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Index.getFlags()});
 
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_VALUE_GUID));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  // GUIDS often use up most of 64-bits, so encode as two Fixed 32.
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned ValueGuidAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
   for (const auto &GVI : valueIds()) {
     Stream.EmitRecord(bitc::FS_VALUE_GUID,
-                      ArrayRef<uint64_t>{GVI.second, GVI.first});
+                      ArrayRef<uint32_t>{GVI.second,
+                                         static_cast<uint32_t>(GVI.first >> 32),
+                                         static_cast<uint32_t>(GVI.first)},
+                      ValueGuidAbbrev);
   }
 
   // Write the stack ids used by this index, which will be a subset of those in
@@ -4538,7 +4558,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   }
 
   // Abbrev for FS_COMBINED_PROFILE.
-  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid

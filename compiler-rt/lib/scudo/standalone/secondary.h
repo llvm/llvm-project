@@ -79,8 +79,7 @@ struct CachedBlock {
   //        it suggests that beyond 4 pages, the release execution time is
   //        longer than the map execution time. In this way, the default
   //        is dependent on the platform.
-  //    TODO: set MaxReleasedCachePages back to 4U
-  static constexpr uptr MaxReleasedCachePages = 0U;
+  static constexpr uptr MaxReleasedCachePages = 4U;
 
   uptr CommitBase = 0;
   uptr CommitSize = 0;

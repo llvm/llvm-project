@@ -1221,6 +1221,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::f128, Custom);
+        setOperationAction(ISD::IS_FPCLASS, MVT::ppcf128, Custom);
       }
 
       // 128 bit shifts can be accomplished via 3 instructions for SHL and
@@ -11479,6 +11480,12 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
   FPClassTest Category = static_cast<FPClassTest>(RHSC);
+  if (LHS.getValueType() == MVT::ppcf128) {
+    // The higher part determines the value class.
+    LHS = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::f64, LHS,
+                      DAG.getConstant(1, Dl, MVT::i32));
+  }
+
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
@@ -12023,6 +12030,12 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     if (!N->getValueType(0).isVector())
       return;
     SDValue Lowered = LowerTRUNCATEVector(SDValue(N, 0), DAG);
+    if (Lowered)
+      Results.push_back(Lowered);
+    return;
+  }
+  case ISD::SCALAR_TO_VECTOR: {
+    SDValue Lowered = LowerSCALAR_TO_VECTOR(SDValue(N, 0), DAG);
     if (Lowered)
       Results.push_back(Lowered);
     return;
