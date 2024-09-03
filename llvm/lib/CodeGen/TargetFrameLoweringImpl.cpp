@@ -107,8 +107,12 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // are preferred over callee saved registers.
   if (MF.getTarget().Options.EnableIPRA &&
       isSafeForNoCSROpt(MF.getFunction()) &&
-      isProfitableForNoCSROpt(MF.getFunction()))
+      isProfitableForNoCSROpt(MF.getFunction())) {
+    const MCPhysReg *IPRACSRegs = TRI.getIPRACSRegs(&MF);
+    for (unsigned i = 0; IPRACSRegs[i]; ++i)
+      SavedRegs.set(IPRACSRegs[i]);
     return;
+  }
 
   // Get the callee saved register list...
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
