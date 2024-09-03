@@ -8393,6 +8393,20 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+    if (I->getOpcode() == Instruction::Mul) {
+      // Simplify operands of multiplications using SCEV. This is needed at the
+      // moment to match the behavior of the legacy cost-model.
+      // TODO: Generalize to any opcode and move to VPlan transformation.
+      SmallVector<VPValue *> NewOps(Operands);
+      ScalarEvolution &SE = *PSE.getSE();
+      for (unsigned I = 0; I < Operands.size(); ++I) {
+        Value *V = NewOps[I]->getUnderlyingValue();
+        if (!isa<Constant>(V) && SE.isSCEVable(V->getType()))
+          if (auto *C = dyn_cast<SCEVConstant>(PSE.getSE()->getSCEV(V)))
+            NewOps[I] = Plan.getOrAddLiveIn(C->getValue());
+      }
+      return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    }
     return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
   };
 }

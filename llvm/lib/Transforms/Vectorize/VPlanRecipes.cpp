@@ -965,8 +965,10 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
     ParamTys.push_back(
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
-  IntrinsicCostAttributes CostAttrs(VectorIntrinsicID, RetTy, Arguments,
-                                    ParamTys, FMF);
+  // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
+  IntrinsicCostAttributes CostAttrs(
+      VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
+      dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
