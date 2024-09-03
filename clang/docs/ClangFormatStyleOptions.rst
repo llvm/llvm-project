@@ -6845,7 +6845,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _WrapNamespaceBodyWithEmptyLines:
 
-**WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 19` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
+**WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
   Controls number of empty lines at the begging and at the end of
   namespace definition.
 

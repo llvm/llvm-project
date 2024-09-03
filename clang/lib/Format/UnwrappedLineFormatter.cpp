@@ -46,8 +46,8 @@ bool LineEndsNamespaceScope(const AnnotatedLine *Line,
                             const SmallVectorImpl<AnnotatedLine *> &Lines) {
   if (!Line)
     return false;
-  const FormatToken *tok = Line->First;
-  if (!tok || tok->isNot(tok::r_brace))
+  const FormatToken *Tok = Line->First;
+  if (!Tok || Tok->isNot(tok::r_brace))
     return false;
   return getNamespaceToken(Line, Lines) != nullptr;
 }

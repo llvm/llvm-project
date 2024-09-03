@@ -5177,7 +5177,7 @@ struct FormatStyle {
 
   /// Controls number of empty lines at the begging and at the end of
   /// namespace definition.
-  /// \version 19
+  /// \version 20
   WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
 
   bool operator==(const FormatStyle &R) const {

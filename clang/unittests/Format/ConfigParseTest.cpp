@@ -865,6 +865,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
               FormatStyle::SUD_LexicographicNumeric);
 
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Leave;
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Never",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Never);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Always",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Always);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Leave",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Leave);
+
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
   Style.ForEachMacros.clear();
