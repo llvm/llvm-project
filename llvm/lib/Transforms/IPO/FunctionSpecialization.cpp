@@ -736,7 +736,7 @@ bool FunctionSpecializer::run() {
     OriginalFuncs.insert(S.F);
   }
 
-  Solver.solveWhileResolvedUndefsIn(Clones);
+  Solver.solve();
 
   // Update the rest of the call sites - these are the recursive calls, calls
   // to discarded specialisations and calls that may match a specialisation
@@ -771,7 +771,8 @@ bool FunctionSpecializer::run() {
   }
 
   // Rerun the solver to notify the users of the modified callsites.
-  Solver.solveWhileResolvedUndefs();
+  Solver.resetInvalidated();
+  Solver.solve();
 
   for (Function *F : OriginalFuncs)
     if (FunctionMetrics[F].isRecursive)

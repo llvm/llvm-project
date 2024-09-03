@@ -3,8 +3,7 @@
 
 define i1 @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[X:%.*]] = and i1 false, undef
-; CHECK-NEXT:    ret i1 [[X]]
+; CHECK-NEXT:    ret i1 false
 ;
   %X = and i1 false, undef		; <i1> [#uses=1]
   ret i1 %X

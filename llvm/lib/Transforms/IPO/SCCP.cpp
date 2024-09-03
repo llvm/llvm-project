@@ -158,7 +158,7 @@ static bool runIPSCCP(
   }
 
   // Solve for constants.
-  Solver.solveWhileResolvedUndefsIn(M);
+  Solver.solve();
 
   if (IsFuncSpecEnabled) {
     unsigned Iters = 0;
@@ -281,7 +281,7 @@ static bool runIPSCCP(
   for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
     assert(!F->getReturnType()->isVoidTy() &&
            "should not track void functions");
-    if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
+    if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknown())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 

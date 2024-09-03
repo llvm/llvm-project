@@ -13,7 +13,8 @@ define i32 @test1(i1 %C) {
 define i32 @test2(i1 %C) {
 ; CHECK-LABEL: define i32 @test2(
 ; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[C]], i32 0, i32 undef
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %X = select i1 %C, i32 0, i32 undef
   ret i32 %X

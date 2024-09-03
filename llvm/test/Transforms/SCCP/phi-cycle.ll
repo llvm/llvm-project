@@ -8,13 +8,14 @@ define i32 @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ 0, [[LATCH_2:%.*]] ], [ [[P]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP]], label [[LATCH_2:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP]], label [[LATCH_2]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
   br label %loop

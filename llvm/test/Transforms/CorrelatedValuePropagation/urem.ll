@@ -441,7 +441,7 @@ define i8 @urem_undef_range_op2(i8 %x) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 5, [[CASE1]] ], [ 6, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 7, [[PHI]]
+; CHECK-NEXT:    [[RES:%.*]] = urem i8 7, [[PHI]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
 entry:

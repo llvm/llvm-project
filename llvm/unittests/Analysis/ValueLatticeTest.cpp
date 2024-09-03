@@ -172,6 +172,7 @@ TEST_F(ValueLatticeTest, getCompareFloat) {
 TEST_F(ValueLatticeTest, getCompareUndef) {
   auto *I32Ty = IntegerType::get(Context, 32);
   auto *I1Ty = IntegerType::get(Context, 1);
+  Constant *False = ConstantInt::getFalse(Context);
 
   // TODO: These results can be improved.
   auto LV1 = ValueLatticeElement::get(UndefValue::get(I32Ty));
@@ -186,12 +187,12 @@ TEST_F(ValueLatticeTest, getCompareUndef) {
 
   auto *FloatTy = IntegerType::getFloatTy(Context);
   auto LV3 = ValueLatticeElement::get(ConstantFP::get(FloatTy, 1.0));
-  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV3, DL), nullptr);
-  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV3, DL), nullptr);
-  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV3, DL), nullptr);
-  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_ONE, I1Ty, LV3, DL), nullptr);
-  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV3, DL), nullptr);
-  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV3, DL), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV3, DL), False);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV3, DL), False);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV3, DL), False);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_ONE, I1Ty, LV3, DL), False);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV3, DL), False);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV3, DL), False);
 }
 
 } // end anonymous namespace

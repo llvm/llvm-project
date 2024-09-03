@@ -80,12 +80,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
     Solver.trackValueOfArgument(&AI);
 
   // Solve for constants.
-  bool ResolvedUndefs = true;
-  while (ResolvedUndefs) {
-    Solver.solve();
-    LLVM_DEBUG(dbgs() << "RESOLVING UNDEFs\n");
-    ResolvedUndefs = Solver.resolvedUndefsIn(F);
-  }
+  Solver.solve();
 
   bool MadeChanges = false;
 

@@ -7,8 +7,7 @@
 define i32 @test5(i32 %b) {
 ; CHECK-LABEL: define i32 @test5(
 ; CHECK-SAME: i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, [[B]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    ret i32 undef
 ;
   %l = load i32, ptr @j, align 4
   %add = add nsw i32 %l, %b

@@ -9,7 +9,9 @@ define void @test(i1 %c) {
 ; CHECK:       do.body:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[DO_BODY]], label [[FOR_COND41:%.*]]
 ; CHECK:       for.cond41:
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[MID_0:%.*]] = phi float [ 0.000000e+00, [[FOR_COND41]] ], [ undef, [[DO_BODY]] ]
+; CHECK-NEXT:    [[FC:%.*]] = fcmp oeq float [[MID_0]], 0.000000e+00
+; CHECK-NEXT:    call void @use(i1 [[FC]])
 ; CHECK-NEXT:    br label [[FOR_COND41]]
 ;
   br label %do.body

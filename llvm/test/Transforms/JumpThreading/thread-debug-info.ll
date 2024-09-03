@@ -96,10 +96,10 @@ exit:                                             ; preds = %bb.f4, %bb.f3, %bb.
 ; being threaded, the `and` in the function below is optimised away, but its
 ; debug-info should still be preserved.
 ; Similarly, the call to f1 gets cloned, its dbg.value should be cloned too.
-define void @test16(i1 %c, i1 %c2, i1 %c3, i1 %c4) nounwind ssp !dbg !30 {
+define void @test16(i1 %c, i1 %c2, i1 %c3, i1 %c4, i32 %x) nounwind ssp !dbg !30 {
 ; CHECK-LABEL: define void @test16(i1
 entry:
-  %cmp = icmp sgt i32 undef, 1, !dbg !33
+  %cmp = icmp sgt i32 %x, 1, !dbg !33
   br i1 %c, label %land.end, label %land.rhs, !dbg !33
 
 land.rhs:

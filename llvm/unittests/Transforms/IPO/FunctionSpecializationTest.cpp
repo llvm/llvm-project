@@ -89,7 +89,7 @@ protected:
     Solver->markBlockExecutable(&F->front());
     for (Argument &Arg : F->args())
       Solver->markOverdefined(&Arg);
-    Solver->solveWhileResolvedUndefsIn(*M);
+    Solver->solve();
 
     removeSSACopy(*F);
 
