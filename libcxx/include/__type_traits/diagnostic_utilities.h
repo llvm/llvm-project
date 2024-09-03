@@ -25,7 +25,7 @@
 #if _LIBCPP_STD_VER >= 20
 #  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)
 #else
-#  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)                                \
+#  define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)                          \
     ;                                                                                                                  \
     static_assert(!is_array<_Tp>::value, "'std::" _Template "' cannot " _Verb " C arrays before C++20")
 #endif
@@ -34,17 +34,17 @@
 // allocator that meets the Cpp17Allocator requirements (https://eel.is/c++draft/allocator.requirements).
 // In particular, this means that containers should only accept non-cv-qualified object types, and
 // types that are Cpp17Erasable.
-#define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Tp, _Verb)                                             \
-  static_assert(!is_const<_Tp>::value, "'std::" _Template "' cannot " _Verb " const types");                               \
-  static_assert(!is_volatile<_Tp>::value, "'std::" _Template "' cannot " _Verb " volatile types");                         \
-  static_assert(!is_reference<_Tp>::value, "'std::" _Template "' cannot " _Verb " references");                            \
-  static_assert(!is_function<_Tp>::value, "'std::" _Template "' cannot " _Verb " functions")                              \
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)
+#define _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Template, _Tp, _Verb)                                         \
+  static_assert(!is_const<_Tp>::value, "'std::" _Template "' cannot " _Verb " const types");                           \
+  static_assert(!is_volatile<_Tp>::value, "'std::" _Template "' cannot " _Verb " volatile types");                     \
+  static_assert(!is_reference<_Tp>::value, "'std::" _Template "' cannot " _Verb " references");                        \
+  static_assert(!is_function<_Tp>::value, "'std::" _Template "' cannot " _Verb " functions")                           \
+      _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_IS_NOT_ARRAY_BEFORE_CXX20(_Template, _Tp, _Verb)
 
-#define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(_Container, _Tp)          \
+#define _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS(_Container, _Tp)                                               \
   static_assert(                                                                                                       \
       !__libcpp_is_unbounded_array<_Tp>::value, "'std::" _Container "' cannot hold C arrays of an unknown size");      \
-  _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Container, _Tp, "hold");       \
+  _LIBCPP_CHECK_ALLOCATOR_VALUE_TYPE_REQUIREMENTS(_Container, _Tp, "hold");                                            \
   static_assert(!is_void<_Tp>::value, "'std::" _Container "' cannot hold 'void'")
 
 #endif // _LIBCPP___TYPE_TRAITS_DIAGNOSTIC_UTILITIES_H
