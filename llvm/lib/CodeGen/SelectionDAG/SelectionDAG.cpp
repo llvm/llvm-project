@@ -3747,24 +3747,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    APInt LowerCount(BitWidth, Known2.countMinTrailingZeros());
-    APInt UpperCount(BitWidth, 1 + Known2.countMaxTrailingZeros());
-    Known = ConstantRange(LowerCount, UpperCount).toKnownBits();
+    APInt MinCount(BitWidth, Known2.countMinTrailingZeros());
+    APInt MaxCount(BitWidth, Known2.countMaxTrailingZeros());
+    Known = ConstantRange::getNonEmpty(MinCount, MaxCount + 1).toKnownBits();
     break;
   }
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    APInt LowerCount(BitWidth, Known2.countMinLeadingZeros());
-    APInt UpperCount(BitWidth, 1 + Known2.countMaxLeadingZeros());
-    Known = ConstantRange(LowerCount, UpperCount).toKnownBits();
+    APInt MinCount(BitWidth, Known2.countMinLeadingZeros());
+    APInt MaxCount(BitWidth, Known2.countMaxLeadingZeros());
+    Known = ConstantRange::getNonEmpty(MinCount, MaxCount + 1).toKnownBits();
     break;
   }
   case ISD::CTPOP: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    APInt LowerCount(BitWidth, Known2.countMinPopulation());
-    APInt UpperCount(BitWidth, 1 + Known2.countMaxPopulation());
-    Known = ConstantRange(LowerCount, UpperCount).toKnownBits();
+    APInt MinCount(BitWidth, Known2.countMinPopulation());
+    APInt MaxCount(BitWidth, Known2.countMaxPopulation());
+    Known = ConstantRange::getNonEmpty(MinCount, MaxCount + 1).toKnownBits();
     break;
   }
   case ISD::PARITY: {
