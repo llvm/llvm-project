@@ -99,7 +99,7 @@ define double @dot4f64_fast(ptr dereferenceable(32) %ptrx, ptr dereferenceable(3
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[PTRX:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
 ; CHECK-NEXT:    ret double [[TMP4]]
 ;
   %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
@@ -131,7 +131,7 @@ define float @dot4f32_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTRX:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    ret float [[TMP4]]
 ;
   %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
