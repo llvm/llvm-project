@@ -16,7 +16,6 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
@@ -89,9 +88,10 @@ public:
 private:
   // HLSL resource type attributes need to be processed all at once.
   // This is a list to collect them.
-  llvm::SmallVector<const Attr*> HLSLResourcesTypeAttrs;
+  llvm::SmallVector<const Attr *> HLSLResourcesTypeAttrs;
 
-  /// SourceRanges corresponding to HLSLAttributedResourceTypeLocs that we have not yet populated.
+  /// SourceLocation corresponding to HLSLAttributedResourceTypeLocs that we
+  /// have not yet populated.
   llvm::DenseMap<const HLSLAttributedResourceType *, SourceLocation>
       LocsForHLSLAttributedResources;
 };

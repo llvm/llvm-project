@@ -562,7 +562,9 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-bool SemaHLSL::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped, llvm::SmallVector<const Attr *> &AttrList, QualType &ResType) {
+bool SemaHLSL::CreateHLSLAttributedResourceType(
+    Sema &S, QualType Wrapped, llvm::SmallVector<const Attr *> &AttrList,
+    QualType &ResType) {
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType Contained = QualType();
@@ -574,7 +576,8 @@ bool SemaHLSL::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped, llvm:
       continue;
     switch (Attr->getKind()) {
     case attr::HLSLResourceClass: {
-      llvm::dxil::ResourceClass RC = dyn_cast<HLSLResourceClassAttr>(Attr)->getResourceClass();
+      llvm::dxil::ResourceClass RC =
+          dyn_cast<HLSLResourceClassAttr>(Attr)->getResourceClass();
       if (!hasResourceClass) {
         ResAttrs.ResourceClass = RC;
         hasResourceClass = true;
@@ -593,11 +596,13 @@ bool SemaHLSL::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped, llvm:
   }
 
   if (!hasResourceClass) {
-    S.Diag(AttrList.back()->getRange().getEnd(), diag::err_missing_resource_class);
+    S.Diag(AttrList.back()->getRange().getEnd(),
+           diag::err_missing_resource_class);
     return false;
   }
 
-  ResType = S.getASTContext().getHLSLAttributedResourceType(Wrapped, Contained, ResAttrs);
+  ResType = S.getASTContext().getHLSLAttributedResourceType(Wrapped, Contained,
+                                                            ResAttrs);
   return true;
 }
 
@@ -651,8 +656,10 @@ QualType SemaHLSL::ProcessResourceTypeAttributes(QualType CurrentType) {
     return CurrentType;
 
   QualType QT = CurrentType;
-  if (CreateHLSLAttributedResourceType(SemaRef, CurrentType, HLSLResourcesTypeAttrs, QT)) {
-    const HLSLAttributedResourceType *RT = dyn_cast<HLSLAttributedResourceType>(QT.getTypePtr());
+  if (CreateHLSLAttributedResourceType(SemaRef, CurrentType,
+                                       HLSLResourcesTypeAttrs, QT)) {
+    const HLSLAttributedResourceType *RT =
+        dyn_cast<HLSLAttributedResourceType>(QT.getTypePtr());
     SourceLocation Loc = HLSLResourcesTypeAttrs[0]->getLoc();
     LocsForHLSLAttributedResources.insert(std::pair(RT, Loc));
   }
@@ -726,7 +733,8 @@ static void updateResourceClassFlagsFromDeclResourceClass(
   }
 }
 
-const HLSLAttributedResourceType *findAttributedResourceTypeOnField(VarDecl *VD) {
+const HLSLAttributedResourceType *
+findAttributedResourceTypeOnField(VarDecl *VD) {
   assert(VD != nullptr && "expected VarDecl");
   if (RecordDecl *RD = getRecordDeclFromVarDecl(VD)) {
     for (auto *FD : RD->fields()) {
@@ -760,7 +768,8 @@ static void updateResourceClassFlagsFromRecordType(RegisterBindingFlags &Flags,
       const Type *FieldTy = FD->getType().getTypePtr();
       if (const HLSLAttributedResourceType *AttrResType =
               dyn_cast<HLSLAttributedResourceType>(FieldTy)) {
-        updateResourceClassFlagsFromDeclResourceClass(Flags, AttrResType->getAttrs().ResourceClass);
+        updateResourceClassFlagsFromDeclResourceClass(
+            Flags, AttrResType->getAttrs().ResourceClass);
         continue;
       }
       TypesToScan.emplace_back(FD->getType().getTypePtr());
@@ -815,15 +824,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
   return Flags;
 }
 
-enum class RegisterType {
-  SRV = static_cast<int>(llvm::dxil::ResourceClass::SRV),
-  UAV = static_cast<int>(llvm::dxil::ResourceClass::UAV),
-  CBuffer = static_cast<int>(llvm::dxil::ResourceClass::CBuffer),
-  Sampler = static_cast<int>(llvm::dxil::ResourceClass::Sampler),
-  C,
-  I,
-  Invalid
-};
+enum class RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
 
 static RegisterType getRegisterType(llvm::dxil::ResourceClass RC) {
   switch (RC) {

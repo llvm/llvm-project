@@ -124,13 +124,13 @@ struct BuiltinTypeDeclBuilder {
 
     // add handle member with resource type attributes
     QualType AttributedResTy = QualType();
-    SmallVector<const Attr*> Attrs = {
-      HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
-      IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr
-    };
+    SmallVector<const Attr *> Attrs = {
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr};
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
-    if (SemaHLSL::CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy)) {
+    if (SemaHLSL::CreateHLSLAttributedResourceType(S, Ty, Attrs,
+                                                   AttributedResTy)) {
       addMemberVariable("h", AttributedResTy, {ResourceAttr}, Access);
     }
     return *this;

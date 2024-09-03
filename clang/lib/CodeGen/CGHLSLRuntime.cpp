@@ -17,7 +17,6 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
