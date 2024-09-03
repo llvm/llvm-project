@@ -10307,7 +10307,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                            "Not supported shufflevector usage.");
                     auto *SV = cast<ShuffleVectorInst>(V);
                     int Index;
-                    bool isExtractSubvectorMask =
+                    [[maybe_unused]] bool isExtractSubvectorMask =
                         SV->isExtractSubvectorMask(Index);
                     assert(isExtractSubvectorMask &&
                            "Not supported shufflevector usage.");
