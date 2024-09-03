@@ -39,7 +39,7 @@ std::forward_list<int[2]> C10;
 
 // Spurious errors below
 
-// expected-error@*:*  7  {{'std::allocator'}}
-// expected-error@*:* 77+ {{no type named}}
-// expected-error@*:*  9+ {{cannot form a reference to 'void'}}
 // expected-error@*:*  0+ {{multiple overloads of}}
+// expected-error@*:*  7+ {{'std::allocator'}}
+// expected-error@*:*  9+ {{cannot form a reference to 'void'}}
+// expected-error@*:* 77+ {{no type named}}

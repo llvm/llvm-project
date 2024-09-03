@@ -550,13 +550,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__ranges/from_range.h>
 #include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/is_volatile.h>
-#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <version>
 
@@ -587,7 +580,7 @@ class unordered_multiset;
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_set {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("unordered_set", _Value);
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("unordered_set", _Value);
 
 public:
   // types
@@ -1184,7 +1177,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_set<_Value, _Hash, 
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_multiset {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("unordered_multiset", _Value);
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("unordered_multiset", _Value);
 
 public:
   // types

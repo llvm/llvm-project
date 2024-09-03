@@ -136,7 +136,6 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_reference.h>
 #include <__utility/empty.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>

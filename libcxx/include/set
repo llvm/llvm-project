@@ -532,13 +532,6 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__tree>
 #include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/is_volatile.h>
-#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <version>
 
@@ -569,7 +562,7 @@ class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("set", _Key);
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("set", _Key);
 
 public:
   // types:
@@ -1025,7 +1018,7 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
-  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS_FULL("multiset", _Key);
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("multiset", _Key);
 
 public:
   // types:

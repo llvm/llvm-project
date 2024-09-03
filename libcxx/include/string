@@ -620,23 +620,18 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
-#include <__type_traits/is_const.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
 #include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/is_volatile.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
-#include <__type_traits/remove_reference.h>
 #include <__type_traits/void_t.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
@@ -757,12 +752,12 @@ struct __init_with_sentinel_tag {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
-  static_assert(!is_const<_CharT>::value, "'std::basic_string' cannot hold const types");
-  static_assert(!is_volatile<_CharT>::value, "'std::basic_string' cannot hold volatile types");
-  static_assert(!is_reference<_CharT>::value, "'std::basic_string' cannot hold references");
-  static_assert(!is_function<_CharT>::value, "'std::basic_string' cannot hold functions");
-  static_assert(!is_void<_CharT>::value, "'std::basic_string' cannot hold 'void'");
+  // This is_array check precedes _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS since basic_string
+  // never permits arrays, and earlier static_asserts suppress later ones (meaning that this one is
+  // always emitted for both 'basic_string<char[]>' and 'basic_string<char[10]>', and doesn't say
+  // "before C++20").
   static_assert(!is_array<_CharT>::value, "'std::basic_string' cannot hold C arrays");
+  _LIBCPP_CHECK_CONTAINER_VALUE_TYPE_REQUIREMENTS("basic_string", _CharT);
 
   using __default_allocator_type = allocator<_CharT>;
 

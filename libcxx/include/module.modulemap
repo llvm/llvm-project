@@ -1505,7 +1505,17 @@ module std_private_memory_align                           [system] { header "__m
 module std_private_memory_aligned_alloc                   [system] { header "__memory/aligned_alloc.h" }
 module std_private_memory_allocate_at_least               [system] { header "__memory/allocate_at_least.h" }
 module std_private_memory_allocation_guard                [system] { header "__memory/allocation_guard.h" }
-module std_private_memory_allocator                       [system] { header "__memory/allocator.h" }
+module std_private_memory_allocator                       [system] {
+  header "__memory/allocator.h"
+  export std_private_type_traits_diagnostic_utilities
+  export std_private_type_traits_is_array
+  export std_private_type_traits_is_const
+  export std_private_type_traits_is_function
+  export std_private_type_traits_is_reference
+  export std_private_type_traits_is_unbounded_array
+  export std_private_type_traits_is_void
+  export std_private_type_traits_is_volatile
+}
 module std_private_memory_allocator_arg_t                 [system] { header "__memory/allocator_arg_t.h" }
 module std_private_memory_allocator_destructor            [system] { header "__memory/allocator_destructor.h" }
 module std_private_memory_allocator_traits                [system] { header "__memory/allocator_traits.h" }

@@ -40,6 +40,6 @@ std::list<int[2]> C10;
 // Spurious errors below
 
 // expected-error@*:*   0+ {{multiple overloads of}}
-// expected-error@*:*   7  {{'std::allocator'}}
+// expected-error@*:*   7+ {{'std::allocator'}}
 // expected-error@*:*  11+ {{cannot form a reference to 'void'}}
 // expected-error@*:* 130+ {{no type named}}
