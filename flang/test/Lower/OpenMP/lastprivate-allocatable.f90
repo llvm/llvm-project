@@ -47,7 +47,7 @@ end program
 ! CHECK:            omp.sections {
 ! CHECK:              omp.section {
 ! CHECK:                %[[TEMP:.*]] = fir.load %[[A_PRIV:.*]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>
-! CHECK:                hlfir.assign %[[TEMP]] to %[[A]]#0 realloc temporary_lhs : !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>,
+! CHECK:                hlfir.assign %[[TEMP]] to %[[A]]#0 realloc : !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>,
 ! CHECK-SAME:             !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>
 ! CHECK:              }
 ! CHECK:            }

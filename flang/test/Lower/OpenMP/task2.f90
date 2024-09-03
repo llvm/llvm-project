@@ -19,7 +19,7 @@ subroutine omp_task_nested_allocatable_firstprivate
 !CHECK-SAME:        (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME:        (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !CHECK:           %[[TEMP:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK:           hlfir.assign %[[TEMP]] to %[[PRIV_A]]#0 realloc temporary_lhs :
+!CHECK:           hlfir.assign %[[TEMP]] to %[[PRIV_A]]#0 realloc :
 !CHECK-SAME:        !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     !$omp task default(firstprivate)
       a = 2

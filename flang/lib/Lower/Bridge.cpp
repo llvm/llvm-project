@@ -1251,18 +1251,9 @@ private:
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
     } else {
-      // Temporary_lhs is set to true in hlfir.assign below to avoid user
-      // assignment to be used and finalization to be called on the LHS.
-      // This may or may not be correct but mimics the current behaviour
-      // without HLFIR.
-      //
       // Dereference RHS and load it if trivial scalar.
       rhs = hlfir::loadTrivialScalar(loc, *builder, rhs);
-      builder->create<hlfir::AssignOp>(
-          loc, rhs, lhs,
-          /*isWholeAllocatableAssignment=*/isAllocatable,
-          /*keepLhsLengthInAllocatableAssignment=*/false,
-          /*temporary_lhs=*/true);
+      builder->create<hlfir::AssignOp>(loc, rhs, lhs, isAllocatable);
     }
   }
 

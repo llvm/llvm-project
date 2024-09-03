@@ -53,6 +53,6 @@ end subroutine
 ! CHECK-NEXT: } copy {
 ! CHECK-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
 ! CHECK-NEXT:   %[[PRIV_ORIG_ARG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]]
-! CHECK-NEXT:   hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]] realloc temporary_lhs
+! CHECK-NEXT:   hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]] realloc
 ! CHECK-NEXT:   omp.yield
 ! CHECK-NEXT: }

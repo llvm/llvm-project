@@ -25,7 +25,7 @@
 !CHECK-SAME:      uniq_name = "_copy_box_heap_Uxi32_src"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME:      (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !CHECK-NEXT:    %[[SRC_BOX:.*]] = fir.load %[[SRC]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK-NEXT:    hlfir.assign %[[SRC_BOX]] to %[[DST]]#0 realloc temporary_lhs : !fir.box<!fir.heap<!fir.array<?xi32>>>,
+!CHECK-NEXT:    hlfir.assign %[[SRC_BOX]] to %[[DST]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xi32>>>,
 !CHECK-SAME:      !fir.box<!fir.heap<!fir.array<?xi32>>>
 !CHECK-NEXT:    return
 !CHECK-NEXT:  }
