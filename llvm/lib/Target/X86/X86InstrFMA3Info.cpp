@@ -163,8 +163,8 @@ const X86InstrFMA3Group *llvm::getFMA3Group(unsigned Opcode, uint64_t TSFlags) {
                         ((TSFlags & X86II::EncodingMask) == X86II::EVEX &&
                          ((TSFlags & X86II::OpMapMask) == X86II::T8 ||
                           (TSFlags & X86II::OpMapMask) == X86II::T_MAP6));
-  bool IsFMA3Prefix = ((TSFlags & X86II::OpPrefixMask) == X86II::PD) ||
-                      ((TSFlags & X86II::OpPrefixMask) == 0); // X86II::PS
+  bool IsFMA3Prefix = (TSFlags & X86II::OpPrefixMask) == X86II::PD ||
+                      (TSFlags & X86II::OpPrefixMask) == 0; // X86II::PS
   if (!IsFMA3Opcode || !IsFMA3Encoding || !IsFMA3Prefix)
     return nullptr;
 
