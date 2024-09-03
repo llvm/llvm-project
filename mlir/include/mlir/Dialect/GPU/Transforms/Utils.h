@@ -29,6 +29,8 @@ class LaunchOp;
 
 /// Returns the matching vector combining kind.
 vector::CombiningKind convertReductionKind(gpu::AllReduceOperation mode);
+/// Returns the matching reduce operation.
+gpu::AllReduceOperation convertReductionKind(vector::CombiningKind mode);
 } // namespace gpu
 
 /// Get a gpu.func created from outlining the region of a gpu.launch op with the
