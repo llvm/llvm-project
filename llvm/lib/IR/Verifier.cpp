@@ -6335,6 +6335,18 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(size == 128, " The only supported value for size operand is 128");
     break;
   }
+  case Intrinsic::
+      nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_cta_sync_aligned:
+  case Intrinsic::
+      nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_cluster_sync_aligned:
+  case Intrinsic::
+      nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_gpu_sync_aligned:
+  case Intrinsic::
+      nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_sys_sync_aligned: {
+    unsigned size = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    Check(size == 128, " The only supported value for size operand is 128");
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
