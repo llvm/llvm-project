@@ -1995,7 +1995,7 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
 
   EVT VT = EVT::getEVT(I->getType());
   return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::v4i32 &&
-      VT != MVT::v2i32;
+         VT != MVT::v2i32;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -21783,7 +21783,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
          "Expected a partial reduction node");
 
   if (!Subtarget->isSVEorStreamingSVEAvailable() &&
-          !(Subtarget->isNeonAvailable() && Subtarget->hasDotProd()))
+      !(Subtarget->isNeonAvailable() && Subtarget->hasDotProd()))
     return SDValue();
 
   SDLoc DL(N);
