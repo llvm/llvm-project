@@ -434,19 +434,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   static const unsigned ZfhminZfbfminPromoteOps[] = {
-      ISD::FMINNUM,       ISD::FMAXNUM,
-      ISD::FMAXIMUMNUM,   ISD::FMINIMUMNUM,
-      ISD::FADD,          ISD::FSUB,
-      ISD::FMUL,          ISD::FMA,
-      ISD::FDIV,          ISD::FSQRT,
-      ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,   ISD::STRICT_FMUL,
-      ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
-      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
-      ISD::SETCC,         ISD::FCEIL,
-      ISD::FFLOOR,        ISD::FTRUNC,
-      ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,    ISD::SELECT};
+      ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FMAXIMUMNUM,
+      ISD::FMINIMUMNUM,  ISD::FADD,          ISD::FSUB,
+      ISD::FMUL,         ISD::FMA,           ISD::FDIV,
+      ISD::FSQRT,        ISD::STRICT_FMA,    ISD::STRICT_FADD,
+      ISD::STRICT_FSUB,  ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
+      ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
+      ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
+      ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
+      ISD::FROUNDEVEN};
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -454,6 +450,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
+    setOperationAction(ISD::SELECT, MVT::bf16, Custom);
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
     setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
@@ -469,7 +466,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
       setOperationAction(FPRndMode, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
-      setOperationAction(ISD::SELECT, MVT::f16, Custom);
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
@@ -488,6 +484,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
+    setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
     setOperationAction(ISD::FNEARBYINT, MVT::f16,
