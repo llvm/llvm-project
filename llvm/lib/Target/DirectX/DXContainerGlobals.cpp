@@ -145,7 +145,6 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
   PSVRuntimeInfo PSV;
-  Triple TT(M.getTargetTriple());
   PSV.BaseData.MinimumWaveLaneCount = 0;
   PSV.BaseData.MaximumWaveLaneCount = std::numeric_limits<uint32_t>::max();
 
@@ -161,7 +160,7 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   // TODO: Lots more stuff to do here!
   //
   // See issue https://github.com/llvm/llvm-project/issues/96674.
-  switch (TT.getEnvironment()) {
+  switch (MMI.ShaderStage) {
   case Triple::Compute:
     PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
     PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
@@ -171,10 +170,10 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     break;
   }
 
-  if (TT.getEnvironment() != Triple::Library)
+  if (MMI.ShaderStage != Triple::Library)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  PSV.finalize(TT.getEnvironment());
+  PSV.finalize(MMI.ShaderStage);
   PSV.write(OS);
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
