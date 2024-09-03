@@ -19,10 +19,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -378,8 +376,6 @@ ErrorOr<StringRef> MCPseudoProbeDecoder::readString(uint32_t Size) {
 
 bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
                                                  std::size_t Size) {
-  Timer T("buildGUID2FDMap", "build GUID to FuncDesc map");
-  T.startTimer();
   // The pseudo_probe_desc section has a format like:
   // .section .pseudo_probe_desc,"",@progbits
   // .quad -5182264717993193164   // GUID
@@ -434,12 +430,6 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
   llvm::sort(GUID2FuncDescMap, [](const auto &LHS, const auto &RHS) {
     return LHS.FuncGUID < RHS.FuncGUID;
   });
-  T.stopTimer();
-  auto TT = T.getTotalTime();
-  T.clear();
-  dbgs() << "func desc ";
-  TT.print(TT, dbgs());
-  dbgs() << '\n';
   return true;
 }
 
@@ -633,20 +623,12 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   Data = Start;
   End = Data + Size;
   bool Discard = false;
-  Timer T("countRecords", "pre-parsing function records");
-  T.startTimer();
   while (Data < End) {
     if (!countRecords<true>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
     TopLevelFuncs += !Discard;
   }
-  T.stopTimer();
-  auto TT = T.getTotalTime();
-  T.clear();
-  dbgs() << "pre-parsing ";
-  TT.print(TT, dbgs());
   assert(Data == End && "Have unprocessed data in pseudo_probe section");
-  T.startTimer();
   PseudoProbeVec.reserve(ProbeCount);
   InlineTreeVec.reserve(InlinedCount);
 
@@ -654,13 +636,6 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   InlineTreeVec.resize(TopLevelFuncs);
   DummyInlineRoot.getChildren() = MutableArrayRef(InlineTreeVec);
 
-  T.stopTimer();
-  TT = T.getTotalTime();
-  T.clear();
-  dbgs() << "\nalloc ";
-  TT.print(TT, dbgs());
-
-  T.startTimer();
   Data = Start;
   End = Data + Size;
   uint64_t LastAddr = 0;
@@ -668,18 +643,12 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   while (Data < End)
     CurChildIndex += buildAddress2ProbeMap<true>(
         &DummyInlineRoot, LastAddr, GuidFilter, FuncStartAddrs, CurChildIndex);
-  T.stopTimer();
-  TT = T.getTotalTime();
-  T.clear();
-  dbgs() << "\nparsing ";
-  TT.print(TT, dbgs());
   assert(Data == End && "Have unprocessed data in pseudo_probe section");
   assert(PseudoProbeVec.size() == ProbeCount &&
          "Mismatching probe count pre- and post-parsing");
   assert(InlineTreeVec.size() == InlinedCount &&
          "Mismatching function records count pre- and post-parsing");
 
-  T.startTimer();
   std::vector<std::pair<uint64_t, uint32_t>> SortedA2P(ProbeCount);
   for (const auto &[I, Probe] : llvm::enumerate(PseudoProbeVec))
     SortedA2P[I] = {Probe.getAddress(), I};
@@ -688,25 +657,6 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   for (const uint32_t I : llvm::make_second_range(SortedA2P))
     Address2ProbesMap.emplace_back(PseudoProbeVec[I]);
   SortedA2P.clear();
-  T.stopTimer();
-  TT = T.getTotalTime();
-  T.clear();
-  dbgs() << "\nsorting ";
-  TT.print(TT, dbgs());
-  dbgs() << '\n';
-  size_t PPVecSize = 32 * PseudoProbeVec.capacity();
-  size_t ITVecSize = 48 * InlineTreeVec.capacity();
-  size_t G2FDMapSize = 32 * GUID2FuncDescMap.capacity();
-  size_t StringSize = FuncNameAllocator.getBytesAllocated();
-  size_t A2PSize = 8 * Address2ProbesMap.capacity();
-  dbgs() << formatv("PPVec size: {0} GiB\n", 1.f * PPVecSize / (1 << 30))
-         << formatv("ITVec size: {0} GiB\n", 1.f * ITVecSize / (1 << 30))
-         << formatv("G2FDMap size: {0} GiB\n", 1.f * G2FDMapSize / (1 << 30))
-         << formatv("  (strings {0} GiB)\n", 1.f * StringSize / (1 << 30))
-         << formatv("A2P size: {0} GiB\n", 1.f * A2PSize / (1 << 30))
-         << formatv("Total size: {0} GiB\n",
-                    1.f * (PPVecSize + ITVecSize + G2FDMapSize + A2PSize) /
-                        (1 << 30));
   return true;
 }
 

@@ -35,12 +35,12 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
-FunctionPass *createSIFoldOperandsPass();
+FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsPass();
-FunctionPass *createSILoadStoreOptimizerPass();
+FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
@@ -157,11 +157,11 @@ private:
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
-void initializeGCNDPPCombinePass(PassRegistry &);
-extern char &GCNDPPCombineID;
+void initializeGCNDPPCombineLegacyPass(PassRegistry &);
+extern char &GCNDPPCombineLegacyID;
 
-void initializeSIFoldOperandsPass(PassRegistry &);
-extern char &SIFoldOperandsID;
+void initializeSIFoldOperandsLegacyPass(PassRegistry &);
+extern char &SIFoldOperandsLegacyID;
 
 void initializeSIPeepholeSDWAPass(PassRegistry &);
 extern char &SIPeepholeSDWAID;
@@ -190,8 +190,8 @@ extern char &AMDGPUMarkLastScratchLoadID;
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;
 
-void initializeSILoadStoreOptimizerPass(PassRegistry &);
-extern char &SILoadStoreOptimizerID;
+void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
+extern char &SILoadStoreOptimizerLegacyID;
 
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;

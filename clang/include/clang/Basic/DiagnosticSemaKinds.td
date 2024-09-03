@@ -5603,7 +5603,7 @@ def note_checking_constraints_for_function_here : Note<
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
 def note_constraint_normalization_here : Note<
-  "while calculating associated constraint of template '%0' here">;
+  "while calculating associated constraint of template %0 here">;
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
@@ -12380,9 +12380,21 @@ def warn_hlsl_availability : Warning<
 def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
+def error_hlsl_inout_scalar_extension : Error<"illegal scalar extension cast on argument %0 to %select{|in}1out paramemter">;
+def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %select{|in}1out paramemter">;
 
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;
+
+def err_hlsl_attribute_in_wrong_shader_model: Error<
+  "attribute %0 requires shader model %1 or greater">;
+
+def warn_attr_min_eq_max:  Warning<
+  "%0 attribute minimum and maximum arguments are equal">,
+  InGroup<HLSLAttributeStatement>, DefaultError;
+
+def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
+  "attribute %0 with %1 arguments requires shader model %2 or greater">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

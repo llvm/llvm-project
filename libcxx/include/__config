@@ -888,7 +888,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
-      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
+      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__) || defined(__LLVM_LIBC__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 

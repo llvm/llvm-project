@@ -210,6 +210,14 @@ void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
           .addImm(Inst.Imm)
           .setMIFlag(Flag);
       break;
+    case LoongArch::BSTRINS_D:
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(Inst.Imm >> 32)
+          .addImm(Inst.Imm & 0xFF)
+          .setMIFlag(Flag);
+      break;
     default:
       assert(false && "Unknown insn emitted by LoongArchMatInt");
     }

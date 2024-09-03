@@ -7459,6 +7459,13 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
   llvm_unreachable("Unexpected TreeTransform for BTFTagAttributedType");
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
+    TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
+  llvm_unreachable(
+      "Unexpected TreeTransform for HLSLAttributedResourceTypeLoc");
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
@@ -16690,6 +16697,13 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   }
 
   return getSema().ActOnCapturedRegionEnd(Body.get());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformHLSLOutArgExpr(HLSLOutArgExpr *E) {
+  // We can transform the base expression and allow argument resolution to fill
+  // in the rest.
+  return getDerived().TransformExpr(E->getArgLValue());
 }
 
 } // end namespace clang
