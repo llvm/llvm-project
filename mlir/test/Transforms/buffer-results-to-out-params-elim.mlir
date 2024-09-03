@@ -36,10 +36,12 @@ func.func @basic_dynamic(%d: index) -> (memref<?xf32>) {
   return %b : memref<?xf32>
 }
 
+// no change due to writing to func args
+
 // CHECK-LABEL:   func @return_arg(
 // CHECK-SAME:        %[[ARG0:.*]]: memref<128x256xf32>, %[[ARG1:.*]]: memref<128x256xf32>, %[[ARG2:.*]]: memref<128x256xf32>) {
 // CHECK:           "test.source"(%[[ARG0]], %[[ARG1]])
-// CHECK-NOT:       memref.copy
+// CHECK:           memref.copy
 // CHECK:           return
 // CHECK:         }
 func.func @return_arg(%arg0: memref<128x256xf32>, %arg1: memref<128x256xf32>) -> memref<128x256xf32> {

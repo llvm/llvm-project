@@ -102,16 +102,6 @@ updateFuncOp(func::FuncOp func,
   return success();
 }
 
-static bool isFunctionArgument(mlir::Value value) {
-  // Check if the value is a Function argument
-  if (auto blockArg = dyn_cast<mlir::BlockArgument>(value)) {
-    return blockArg.getOwner()->isEntryBlock() &&
-           isa_and_nonnull<mlir::func::FuncOp>(
-               blockArg.getOwner()->getParentOp());
-  }
-  return false;
-}
-
 // Updates all ReturnOps in the scope of the given func::FuncOp by either
 // keeping them as return values or copying the associated buffer contents into
 // the given out-params.
@@ -130,15 +120,11 @@ static LogicalResult updateReturnOps(func::FuncOp func,
     }
     OpBuilder builder(op);
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
-      bool mayHoistStaticAlloc =
-          hoistStaticAllocs &&
-          mlir::cast<MemRefType>(orig.getType()).hasStaticShape();
-      if (mayHoistStaticAlloc &&
-          isa_and_nonnull<memref::AllocOp>(orig.getDefiningOp())) {
+      if (hoistStaticAllocs &&
+          isa_and_nonnull<memref::AllocOp>(orig.getDefiningOp()) &&
+          mlir::cast<MemRefType>(orig.getType()).hasStaticShape()) {
         orig.replaceAllUsesWith(arg);
         orig.getDefiningOp()->erase();
-      } else if (mayHoistStaticAlloc && isFunctionArgument(orig)) {
-        // do nothing but remove the value from the return op.
       } else {
         if (failed(memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
