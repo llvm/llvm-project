@@ -62,6 +62,9 @@ struct TimeConstants {
   static constexpr int ASCTIME_BUFFER_SIZE = 256;
   static constexpr int ASCTIME_MAX_BYTES = 26;
 
+  static constexpr int CTIME_BUFFER_SIZE = 256;
+  static constexpr int CTIME_MAX_BYTES = 26;
+
   /* 2000-03-01 (mod 400 year, immediately after feb29 */
   static constexpr int64_t SECONDS_UNTIL2000_MARCH_FIRST =
       (946684800LL + SECONDS_PER_DAY * (31 + 29));
@@ -144,6 +147,49 @@ LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
   }
   return buffer;
 }
+
+LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer,
+                        size_t bufferLength) {
+  if (timeptr == nullptr || buffer == nullptr) {
+    invalid_value();
+    return nullptr;
+  }
+  if (timeptr->tm_wday < 0 ||
+      timeptr->tm_wday > (TimeConstants::DAYS_PER_WEEK - 1)) {
+    invalid_value();
+    return nullptr;
+  }
+  if (timeptr->tm_mon < 0 ||
+      timeptr->tm_mon > (TimeConstants::MONTHS_PER_YEAR - 1)) {
+    invalid_value();
+    return nullptr;
+  }
+
+  // TODO(rtenneti): i18n the following strings.
+  static const char *week_days_name[TimeConstants::DAYS_PER_WEEK] = {
+      "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+  static const char *months_name[TimeConstants::MONTHS_PER_YEAR] = {
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+  // TODO(michaelr): look into removing this call to __builtin_snprintf that may
+  // be emitted as a call to snprintf. Alternatively, look into using our
+  // internal printf machinery.
+  int written_size = __builtin_snprintf(
+      buffer, bufferLength, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
+      week_days_name[timeptr->tm_wday], months_name[timeptr->tm_mon],
+      timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
+      TimeConstants::TIME_YEAR_BASE + timeptr->tm_year);
+  if (written_size < 0)
+    return nullptr;
+  if (static_cast<size_t>(written_size) >= bufferLength) {
+    out_of_range();
+    return nullptr;
+  }
+  return buffer;
+}
+
 
 LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
   int64_t seconds = *timer;
