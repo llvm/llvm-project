@@ -52,35 +52,35 @@ namespace std {
 }
 
 void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
-  memcpy();                   // expected-warning{{function 'memcpy' introduces unsafe buffer access}}
-  std::memcpy();              // expected-warning{{function 'memcpy' introduces unsafe buffer access}}
-  __builtin_memcpy(p, q, 64); // expected-warning{{function '__builtin_memcpy' introduces unsafe buffer access}}
-  __builtin___memcpy_chk(p, q, 8, 64);  // expected-warning{{function '__builtin___memcpy_chk' introduces unsafe buffer access}}
-  __asan_memcpy();                      // expected-warning{{function '__asan_memcpy' introduces unsafe buffer access}}
-  strcpy();                   // expected-warning{{function 'strcpy' introduces unsafe buffer access}}
-  std::strcpy();              // expected-warning{{function 'strcpy' introduces unsafe buffer access}}
-  strcpy_s();                 // expected-warning{{function 'strcpy_s' introduces unsafe buffer access}}
-  wcscpy_s();                 // expected-warning{{function 'wcscpy_s' introduces unsafe buffer access}}
+  memcpy();                   // expected-warning{{function 'memcpy' is unsafe}}
+  std::memcpy();              // expected-warning{{function 'memcpy' is unsafe}}
+  __builtin_memcpy(p, q, 64); // expected-warning{{function '__builtin_memcpy' is unsafe}}
+  __builtin___memcpy_chk(p, q, 8, 64);  // expected-warning{{function '__builtin___memcpy_chk' is unsafe}}
+  __asan_memcpy();                      // expected-warning{{function '__asan_memcpy' is unsafe}}
+  strcpy();                   // expected-warning{{function 'strcpy' is unsafe}}
+  std::strcpy();              // expected-warning{{function 'strcpy' is unsafe}}
+  strcpy_s();                 // expected-warning{{function 'strcpy_s' is unsafe}}
+  wcscpy_s();                 // expected-warning{{function 'wcscpy_s' is unsafe}}
 
 
   /* Test printfs */
-  fprintf((FILE*)p, "%s%d", p, *p);  // expected-warning{{function 'fprintf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination}}
-  printf("%s%d", // expected-warning{{function 'printf' introduces unsafe buffer access}}
-	 p,    // expected-note{{use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination}} note attached to the unsafe argument
+  fprintf((FILE*)p, "%s%d", p, *p);  // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  printf("%s%d", // expected-warning{{function 'printf' is unsafe}}
+	 p,    // expected-note{{string argument is not guaranteed to be null-terminated}} note attached to the unsafe argument
 	 *p);
-  sprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'sprintf' introduces unsafe buffer access}} expected-note{{change to 'snprintf' for explicit bounds checking}}
-  swprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'swprintf' introduces unsafe buffer access}} expected-note{{change to 'snprintf' for explicit bounds checking}}
-  snprintf(q, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
-  snprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
-  snwprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
-  snwprintf_s(                      // expected-warning{{function 'snwprintf_s' introduces unsafe buffer access}}
+  sprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'sprintf' is unsafe}} expected-note{{change to 'snprintf' for explicit bounds checking}}
+  swprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'swprintf' is unsafe}} expected-note{{change to 'snprintf' for explicit bounds checking}}
+  snprintf(q, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snwprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snwprintf_s(                      // expected-warning{{function 'snwprintf_s' is unsafe}}
 	      s.data(),             // expected-note{{buffer pointer and size may not match}} // note attached to the buffer
 	      s2.size(),
 	      "%s%d", "hello", *p);
-  vsnprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // expected-warning{{function 'vsnprintf' introduces unsafe buffer access}} expected-note{{do not use va_list, which cannot be checked at compile-time for bounds safety}}
-  sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function 'sscanf' introduces unsafe buffer access}}
-  sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function 'sscanf_s' introduces unsafe buffer access}}
-  fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or a string literal as string pointer to guarantee null-termination}}
+  vsnprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // expected-warning{{function 'vsnprintf' is unsafe}} expected-note{{'va_list' is unsafe}}
+  sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function 'sscanf' is unsafe}}
+  sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function 'sscanf_s' is unsafe}}
+  fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   printf("%s%d", "hello", *p); // no warn
   snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn

@@ -1460,14 +1460,15 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
       "UnsafeLibcFunctionCall_va_list";
 
   enum UnsafeKind {
-    OTHERS = 0,   // no specific information, the callee function is unsafe
-    SPRINTF = 1,  // never call `-sprintf`s, call `-snprintf`s instead.
-    SIZED_BY = 2, // the first two arguments of `snprintf` function have
-                  // "__sized_by" relation but they do not conform to safe patterns
-    STRING = 3,   // an argument is a pointer-to-char-as-string but does not
-                  // guarantee null-termination
-    VA_LIST = 4,  // one of the `-printf`s function that take va_list, which is
-                  // considered unsafe as it is not compile-time check
+    OTHERS = 0,  // no specific information, the callee function is unsafe
+    SPRINTF = 1, // never call `-sprintf`s, call `-snprintf`s instead.
+    SIZED_BY =
+        2, // the first two arguments of `snprintf` function have
+           // "__sized_by" relation but they do not conform to safe patterns
+    STRING = 3,  // an argument is a pointer-to-char-as-string but does not
+                 // guarantee null-termination
+    VA_LIST = 4, // one of the `-printf`s function that take va_list, which is
+                 // considered unsafe as it is not compile-time check
   } WarnedFunKind = OTHERS;
 
 public:
