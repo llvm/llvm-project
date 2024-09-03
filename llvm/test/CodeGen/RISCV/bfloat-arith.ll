@@ -73,42 +73,26 @@ declare bfloat @llvm.copysign.bf16(bfloat, bfloat)
 define bfloat @fsgnj_bf16(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: fsgnj_bf16:
 ; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    fsh fa1, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a0, 13(sp)
+; RV32IZFBFMIN-NEXT:    fmv.x.h a0, fa1
+; RV32IZFBFMIN-NEXT:    lui a1, 1048568
+; RV32IZFBFMIN-NEXT:    and a0, a0, a1
 ; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFBFMIN-NEXT:    slli a1, a1, 17
-; RV32IZFBFMIN-NEXT:    andi a2, a0, 128
-; RV32IZFBFMIN-NEXT:    srli a0, a1, 17
-; RV32IZFBFMIN-NEXT:    beqz a2, .LBB5_2
-; RV32IZFBFMIN-NEXT:  # %bb.1:
-; RV32IZFBFMIN-NEXT:    lui a1, 1048568
-; RV32IZFBFMIN-NEXT:    or a0, a0, a1
-; RV32IZFBFMIN-NEXT:  .LBB5_2:
-; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
+; RV32IZFBFMIN-NEXT:    srli a1, a1, 17
+; RV32IZFBFMIN-NEXT:    or a0, a1, a0
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFBFMIN-NEXT:    ret
 ;
 ; RV64IZFBFMIN-LABEL: fsgnj_bf16:
 ; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV64IZFBFMIN-NEXT:    fsh fa1, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a0, 9(sp)
+; RV64IZFBFMIN-NEXT:    fmv.x.h a0, fa1
+; RV64IZFBFMIN-NEXT:    lui a1, 1048568
+; RV64IZFBFMIN-NEXT:    and a0, a0, a1
 ; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFBFMIN-NEXT:    slli a1, a1, 49
-; RV64IZFBFMIN-NEXT:    andi a2, a0, 128
-; RV64IZFBFMIN-NEXT:    srli a0, a1, 49
-; RV64IZFBFMIN-NEXT:    beqz a2, .LBB5_2
-; RV64IZFBFMIN-NEXT:  # %bb.1:
-; RV64IZFBFMIN-NEXT:    lui a1, 1048568
-; RV64IZFBFMIN-NEXT:    or a0, a0, a1
-; RV64IZFBFMIN-NEXT:  .LBB5_2:
-; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
+; RV64IZFBFMIN-NEXT:    srli a1, a1, 49
+; RV64IZFBFMIN-NEXT:    or a0, a1, a0
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
   ret bfloat %1
@@ -138,62 +122,36 @@ define i32 @fneg_bf16(bfloat %a, bfloat %b) nounwind {
 define bfloat @fsgnjn_bf16(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: fsgnjn_bf16:
 ; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa5
-; RV32IZFBFMIN-NEXT:    lui a0, 1048568
-; RV32IZFBFMIN-NEXT:    xor a1, a1, a0
-; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a1
-; RV32IZFBFMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFBFMIN-NEXT:    lbu a1, 13(sp)
-; RV32IZFBFMIN-NEXT:    fmv.x.h a2, fa0
-; RV32IZFBFMIN-NEXT:    slli a2, a2, 17
-; RV32IZFBFMIN-NEXT:    andi a3, a1, 128
-; RV32IZFBFMIN-NEXT:    srli a1, a2, 17
-; RV32IZFBFMIN-NEXT:    bnez a3, .LBB7_2
-; RV32IZFBFMIN-NEXT:  # %bb.1:
-; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a1
-; RV32IZFBFMIN-NEXT:    j .LBB7_3
-; RV32IZFBFMIN-NEXT:  .LBB7_2:
+; RV32IZFBFMIN-NEXT:    fmv.x.h a0, fa5
+; RV32IZFBFMIN-NEXT:    not a0, a0
+; RV32IZFBFMIN-NEXT:    lui a1, 1048568
+; RV32IZFBFMIN-NEXT:    and a0, a0, a1
+; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IZFBFMIN-NEXT:    slli a1, a1, 17
+; RV32IZFBFMIN-NEXT:    srli a1, a1, 17
 ; RV32IZFBFMIN-NEXT:    or a0, a1, a0
-; RV32IZFBFMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFBFMIN-NEXT:  .LBB7_3:
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
+; RV32IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFBFMIN-NEXT:    ret
 ;
 ; RV64IZFBFMIN-LABEL: fsgnjn_bf16:
 ; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64IZFBFMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa5
-; RV64IZFBFMIN-NEXT:    lui a0, 1048568
-; RV64IZFBFMIN-NEXT:    xor a1, a1, a0
-; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a1
-; RV64IZFBFMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFBFMIN-NEXT:    lbu a1, 9(sp)
-; RV64IZFBFMIN-NEXT:    fmv.x.h a2, fa0
-; RV64IZFBFMIN-NEXT:    slli a2, a2, 49
-; RV64IZFBFMIN-NEXT:    andi a3, a1, 128
-; RV64IZFBFMIN-NEXT:    srli a1, a2, 49
-; RV64IZFBFMIN-NEXT:    bnez a3, .LBB7_2
-; RV64IZFBFMIN-NEXT:  # %bb.1:
-; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a1
-; RV64IZFBFMIN-NEXT:    j .LBB7_3
-; RV64IZFBFMIN-NEXT:  .LBB7_2:
+; RV64IZFBFMIN-NEXT:    fmv.x.h a0, fa5
+; RV64IZFBFMIN-NEXT:    not a0, a0
+; RV64IZFBFMIN-NEXT:    lui a1, 1048568
+; RV64IZFBFMIN-NEXT:    and a0, a0, a1
+; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa0
+; RV64IZFBFMIN-NEXT:    slli a1, a1, 49
+; RV64IZFBFMIN-NEXT:    srli a1, a1, 49
 ; RV64IZFBFMIN-NEXT:    or a0, a1, a0
-; RV64IZFBFMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFBFMIN-NEXT:  .LBB7_3:
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
-; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
+; RV64IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = fadd bfloat %a, %b
   %2 = fneg bfloat %1
