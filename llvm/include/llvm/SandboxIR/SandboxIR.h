@@ -1143,7 +1143,7 @@ public:
 
   /// Swap the operands and adjust the mask to preserve the semantics of the
   /// instruction.
-  void commute() { cast<llvm::ShuffleVectorInst>(Val)->commute(); }
+  void commute();
 
   /// Return true if a shufflevector instruction can be formed with the
   /// specified operands.
