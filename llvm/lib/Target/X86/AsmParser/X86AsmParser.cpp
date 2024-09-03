@@ -1956,7 +1956,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (DotOffset != StringRef::npos) {
           consumeToken();
           StringRef LHS = Identifier.slice(0, DotOffset);
-          StringRef Dot = Identifier.slice(DotOffset, DotOffset + 1);
+          StringRef Dot = Identifier.substr(DotOffset, 1);
           StringRef RHS = Identifier.substr(DotOffset + 1);
           if (!RHS.empty()) {
             getLexer().UnLex(AsmToken(AsmToken::Identifier, RHS));
@@ -2789,7 +2789,7 @@ bool X86AsmParser::parseATTOperand(OperandVector &Operands) {
       if (auto *RE = dyn_cast<X86MCExpr>(Expr)) {
         // Segment Register. Reset Expr and copy value to register.
         Expr = nullptr;
-        Reg = RE->getRegNo();
+        Reg = RE->getReg();
 
         // Check the register.
         if (Reg == X86::EIZ || Reg == X86::RIZ)
@@ -3052,7 +3052,7 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
       return true;
 
     // Check the register.
-    BaseReg = cast<X86MCExpr>(E)->getRegNo();
+    BaseReg = cast<X86MCExpr>(E)->getReg();
     if (BaseReg == X86::EIZ || BaseReg == X86::RIZ)
       return Error(BaseLoc, "eiz and riz can only be used as index registers",
                    SMRange(BaseLoc, EndLoc));
@@ -3079,7 +3079,7 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
           Warning(Loc, "scale factor without index register is ignored");
         Scale = 1;
       } else { // IndexReg Found.
-        IndexReg = cast<X86MCExpr>(E)->getRegNo();
+        IndexReg = cast<X86MCExpr>(E)->getReg();
 
         if (BaseReg == X86::RIP)
           return Error(Loc,

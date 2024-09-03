@@ -19,6 +19,7 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -183,7 +184,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
     return error;
   }
 
-  error.SetErrorString("Failed to connect port");
+  error = Status::FromErrorString("Failed to connect port");
   return error;
 }
 
@@ -254,67 +255,63 @@ void TCPSocket::CloseListenSockets() {
   m_listen_sockets.clear();
 }
 
-Status TCPSocket::Accept(Socket *&conn_socket) {
-  Status error;
-  if (m_listen_sockets.size() == 0) {
-    error.SetErrorString("No open listening sockets!");
-    return error;
-  }
+llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
+    MainLoopBase &loop,
+    std::function<void(std::unique_ptr<TCPSocket> socket)> sock_cb) {
+  if (m_listen_sockets.size() == 0)
+    return llvm::createStringError("No open listening sockets!");
 
-  NativeSocket sock = kInvalidSocketValue;
-  NativeSocket listen_sock = kInvalidSocketValue;
-  lldb_private::SocketAddress AcceptAddr;
-  MainLoop accept_loop;
   std::vector<MainLoopBase::ReadHandleUP> handles;
   for (auto socket : m_listen_sockets) {
     auto fd = socket.first;
-    auto inherit = this->m_child_processes_inherit;
-    auto io_sp = IOObjectSP(new TCPSocket(socket.first, false, inherit));
-    handles.emplace_back(accept_loop.RegisterReadObject(
-        io_sp, [fd, inherit, &sock, &AcceptAddr, &error,
-                        &listen_sock](MainLoopBase &loop) {
-          socklen_t sa_len = AcceptAddr.GetMaxLength();
-          sock = AcceptSocket(fd, &AcceptAddr.sockaddr(), &sa_len, inherit,
-                              error);
-          listen_sock = fd;
-          loop.RequestTermination();
-        }, error));
-    if (error.Fail())
-      return error;
-  }
-
-  bool accept_connection = false;
-  std::unique_ptr<TCPSocket> accepted_socket;
-  // Loop until we are happy with our connection
-  while (!accept_connection) {
-    accept_loop.Run();
-
-    if (error.Fail())
-        return error;
-
-    lldb_private::SocketAddress &AddrIn = m_listen_sockets[listen_sock];
-    if (!AddrIn.IsAnyAddr() && AcceptAddr != AddrIn) {
-      if (sock != kInvalidSocketValue) {
-        CLOSE_SOCKET(sock);
-        sock = kInvalidSocketValue;
+    auto io_sp =
+        std::make_shared<TCPSocket>(fd, false, this->m_child_processes_inherit);
+    auto cb = [this, fd, sock_cb](MainLoopBase &loop) {
+      lldb_private::SocketAddress AcceptAddr;
+      socklen_t sa_len = AcceptAddr.GetMaxLength();
+      Status error;
+      NativeSocket sock = AcceptSocket(fd, &AcceptAddr.sockaddr(), &sa_len,
+                                       m_child_processes_inherit, error);
+      Log *log = GetLog(LLDBLog::Host);
+      if (error.Fail()) {
+        LLDB_LOG(log, "AcceptSocket({0}): {1}", fd, error);
+        return;
       }
-      llvm::errs() << llvm::formatv(
-          "error: rejecting incoming connection from {0} (expecting {1})",
-          AcceptAddr.GetIPAddress(), AddrIn.GetIPAddress());
-      continue;
-    }
-    accept_connection = true;
-    accepted_socket.reset(new TCPSocket(sock, *this));
+
+      const lldb_private::SocketAddress &AddrIn = m_listen_sockets[fd];
+      if (!AddrIn.IsAnyAddr() && AcceptAddr != AddrIn) {
+        CLOSE_SOCKET(sock);
+        LLDB_LOG(log, "rejecting incoming connection from {0} (expecting {1})",
+                 AcceptAddr.GetIPAddress(), AddrIn.GetIPAddress());
+        return;
+      }
+      std::unique_ptr<TCPSocket> sock_up(new TCPSocket(sock, *this));
+
+      // Keep our TCP packets coming without any delays.
+      sock_up->SetOptionNoDelay();
+
+      sock_cb(std::move(sock_up));
+    };
+    Status error;
+    handles.emplace_back(loop.RegisterReadObject(io_sp, cb, error));
+    if (error.Fail())
+      return error.ToError();
   }
 
-  if (!accepted_socket)
-    return error;
+  return handles;
+}
 
-  // Keep our TCP packets coming without any delays.
-  accepted_socket->SetOptionNoDelay();
-  error.Clear();
-  conn_socket = accepted_socket.release();
-  return error;
+Status TCPSocket::Accept(Socket *&conn_socket) {
+  MainLoop accept_loop;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
+      Accept(accept_loop,
+             [&accept_loop, &conn_socket](std::unique_ptr<TCPSocket> sock) {
+               conn_socket = sock.release();
+               accept_loop.RequestTermination();
+             });
+  if (!expected_handles)
+    return Status(expected_handles.takeError());
+  return accept_loop.Run();
 }
 
 int TCPSocket::SetOptionNoDelay() {

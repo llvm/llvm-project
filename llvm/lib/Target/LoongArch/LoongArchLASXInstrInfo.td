@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_loongArchV1RUimm>;
+def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
 
 def lasxsplati8
   : PatFrag<(ops node:$e0),

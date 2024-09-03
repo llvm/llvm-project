@@ -491,6 +491,14 @@ public:
     }
     return false;
   }
+  /// Checks if the storage has been dynamically allocated.
+  bool isDynamic() const {
+    if (isBlockPointer()) {
+      assert(asBlockPointer().Pointee);
+      return asBlockPointer().Pointee->isDynamic();
+    }
+    return false;
+  }
   /// Checks if the storage is a static temporary.
   bool isStaticTemporary() const { return isStatic() && isTemporary(); }
 
@@ -683,6 +691,10 @@ public:
   static bool hasSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
+
+  /// Whether this points to a block that's been created for a "literal lvalue",
+  /// i.e. a non-MaterializeTemporaryExpr Expr.
+  bool pointsToLiteral() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
