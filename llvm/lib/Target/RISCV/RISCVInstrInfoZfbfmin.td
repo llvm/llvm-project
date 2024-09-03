@@ -63,10 +63,6 @@ let Predicates = [HasStdExtZfbfmin] in {
 // rounding mode has no effect for bf16->f32.
 def : Pat<(i32 (any_fp_to_sint (bf16 FPR16:$rs1))), (FCVT_W_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
 def : Pat<(i32 (any_fp_to_uint (bf16 FPR16:$rs1))), (FCVT_WU_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
-
-// [u]int->bf16. Match GCC and default to using dynamic rounding mode.
-def : Pat<(bf16 (any_sint_to_fp (i32 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_W $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(bf16 (any_uint_to_fp (i32 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_WU $rs1, FRM_DYN), FRM_DYN)>;
 }
 
 let Predicates = [HasStdExtZfbfmin, IsRV64] in {
@@ -74,10 +70,6 @@ let Predicates = [HasStdExtZfbfmin, IsRV64] in {
 // rounding mode has no effect for bf16->f32.
 def : Pat<(i64 (any_fp_to_sint (bf16 FPR16:$rs1))), (FCVT_L_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
 def : Pat<(i64 (any_fp_to_uint (bf16 FPR16:$rs1))), (FCVT_LU_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
-
-// [u]int->bf16. Match GCC and default to using dynamic rounding mode.
-def : Pat<(bf16 (any_sint_to_fp (i64 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_L $rs1, FRM_DYN), FRM_DYN)>;
-def : Pat<(bf16 (any_uint_to_fp (i64 GPR:$rs1))), (FCVT_BF16_S (FCVT_S_LU $rs1, FRM_DYN), FRM_DYN)>;
 }
 
 let Predicates = [HasStdExtZfbfmin, HasStdExtD] in {
