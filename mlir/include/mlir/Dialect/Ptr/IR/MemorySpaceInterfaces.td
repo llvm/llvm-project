@@ -23,8 +23,7 @@ include "mlir/IR/OpBase.td"
 def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
   let description = [{
     This interface defines a common API for interacting with the memory model of
-    a memory space and the operations in the pointer dialect, giving proper
-    semantical meaning to the ops.
+    a memory space and the operations in the pointer dialect.
 
     Furthermore, this interface allows concepts such as read-only memory to be
     adequately modeled and enforced.
@@ -124,19 +123,4 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
   ];
 }
 
-def MemorySpaceOpInterface : OpInterface<"MemorySpaceOpInterface"> {
-  let description = [{
-    An interface for operations with a memory space.
-  }];
-
-  let cppNamespace = "::mlir::ptr";
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns the memory space of the op.",
-      /*returnType=*/  "::mlir::ptr::MemorySpaceAttrInterface",
-      /*methodName=*/  "getMemorySpace"
-      >,
-  ];
-}
 #endif // PTR_MEMORYSPACEINTERFACES
