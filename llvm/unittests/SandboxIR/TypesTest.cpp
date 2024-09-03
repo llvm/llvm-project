@@ -251,3 +251,19 @@ define void @foo() {
   [[maybe_unused]] auto *FTy =
       cast<sandboxir::FunctionType>(F->getFunctionType());
 }
+
+TEST_F(SandboxTypeTest, IntegerType) {
+  parseIR(C, R"IR(
+define void @foo(i32 %v0) {
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  // Check classof(), creation.
+  auto *Int32Ty = cast<sandboxir::IntegerType>(F->getArg(0)->getType());
+  // Check get().
+  auto *NewInt32Ty = sandboxir::IntegerType::get(Ctx, 32u);
+  EXPECT_EQ(NewInt32Ty, Int32Ty);
+}

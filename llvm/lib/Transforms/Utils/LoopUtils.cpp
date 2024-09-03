@@ -1213,7 +1213,8 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   auto getIdentity = [&]() {
     Intrinsic::ID ID = getReductionIntrinsicID(RdxKind);
     unsigned Opc = getArithmeticReductionInstruction(ID);
-    return ConstantExpr::getBinOpIdentity(Opc, SrcVecEltTy);
+    bool NSZ = Builder.getFastMathFlags().noSignedZeros();
+    return ConstantExpr::getBinOpIdentity(Opc, SrcVecEltTy, false, NSZ);
   };
   switch (RdxKind) {
   case RecurKind::Add:
