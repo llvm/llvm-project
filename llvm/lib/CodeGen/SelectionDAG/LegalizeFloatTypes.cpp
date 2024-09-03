@@ -2438,9 +2438,14 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
       report_fatal_error("Do not know how to promote this operator's operand!");
 
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
+    case ISD::FAKE_USE:
+      R = PromoteFloatOp_FAKE_USE(N, OpNo);
+      break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
+    case ISD::LROUND:
+    case ISD::LLROUND:
     case ISD::LRINT:
     case ISD::LLRINT:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
     case ISD::FP_TO_SINT_SAT:
@@ -2476,6 +2481,13 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo) {
   // The final result type might not be an scalar so we need a bitcast. The
   // bitcast will be further legalized if needed.
   return DAG.getBitcast(N->getValueType(0), Convert);
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatOp_FAKE_USE(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Only Operand 1 must need promotion here");
+  SDValue Op = GetPromotedFloat(N->getOperand(OpNo));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), MVT::Other, N->getOperand(0),
+                     Op);
 }
 
 // Promote Operand 1 of FCOPYSIGN.  Operand 0 ought to be handled by
@@ -3431,6 +3443,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
                        "operand!");
 
   case ISD::BITCAST:    Res = SoftPromoteHalfOp_BITCAST(N); break;
+  case ISD::FAKE_USE:
+    Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
+    break;
   case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT: Res = SoftPromoteHalfOp_FP_TO_XINT(N); break;
@@ -3469,6 +3484,13 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BITCAST(SDNode *N) {
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
 
   return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Only Operand 1 must need promotion here");
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(OpNo));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), MVT::Other, N->getOperand(0),
+                     Op);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FCOPYSIGN(SDNode *N,

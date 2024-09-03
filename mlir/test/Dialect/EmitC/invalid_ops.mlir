@@ -212,7 +212,7 @@ func.func @sub_pointer_float(%arg0: !emitc.ptr<f32>, %arg1: f32) {
 // -----
 
 func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
-    // expected-error @+1 {{'emitc.sub' op requires that the result is an integer or of opaque type if lhs and rhs are pointers}}
+    // expected-error @+1 {{'emitc.sub' op requires that the result is an integer, ptrdiff_t or of opaque type if lhs and rhs are pointers}}
     %1 = "emitc.sub" (%arg0, %arg1) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> !emitc.ptr<f32>
     return
 }

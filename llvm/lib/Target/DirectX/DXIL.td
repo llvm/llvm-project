@@ -42,6 +42,8 @@ def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
 def ResRetTy : DXILOpParamType;
 def HandleTy : DXILOpParamType;
+def ResBindTy : DXILOpParamType;
+def ResPropsTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -323,6 +325,16 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 def Abs :  DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
   let LLVMIntrinsic = int_fabs;
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Saturate :  DXILOp<7, unary> {
+  let Doc = "Clamps a single or double precision floating point value to [0.0f...1.0f].";
+  let LLVMIntrinsic = int_dx_saturate;
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
@@ -642,7 +654,7 @@ def UMad :  DXILOp<49, tertiary> {
 
 def Dot2 :  DXILOp<54, dot2> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 1";
+            "a[n]*b[n] where n is 0 to 1 inclusive";
   let LLVMIntrinsic = int_dx_dot2;
   let arguments = !listsplat(OverloadTy, 4);
   let result = OverloadTy;
@@ -653,7 +665,7 @@ def Dot2 :  DXILOp<54, dot2> {
 
 def Dot3 :  DXILOp<55, dot3> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 2";
+            "a[n]*b[n] where n is 0 to 2 inclusive";
   let LLVMIntrinsic = int_dx_dot3;
   let arguments = !listsplat(OverloadTy, 6);
   let result = OverloadTy;
@@ -664,13 +676,21 @@ def Dot3 :  DXILOp<55, dot3> {
 
 def Dot4 :  DXILOp<56, dot4> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 3";
+            "a[n]*b[n] where n is 0 to 3 inclusive";
   let LLVMIntrinsic = int_dx_dot4;
   let arguments = !listsplat(OverloadTy, 8);
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def CreateHandle : DXILOp<57, createHandle> {
+  let Doc = "creates the handle to a resource";
+  // ResourceClass, RangeID, Index, NonUniform
+  let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {
@@ -711,4 +731,18 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def AnnotateHandle : DXILOp<217, annotateHandle> {
+  let Doc = "annotate handle with resource properties";
+  let arguments = [HandleTy, ResPropsTy];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
+  let Doc = "create resource handle from binding";
+  let arguments = [ResBindTy, Int32Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
 }

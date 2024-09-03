@@ -11,7 +11,6 @@
 
 #include "DXILOpBuilder.h"
 #include "DXILConstants.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -209,6 +208,23 @@ static StructType *getHandleType(LLVMContext &Ctx) {
                                Ctx);
 }
 
+static StructType *getResBindType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.ResBind"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int8Ty = Type::getInt8Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty, Int32Ty, Int8Ty},
+                            "dx.types.ResBind");
+}
+
+static StructType *getResPropsType(LLVMContext &Context) {
+  if (auto *ST =
+          StructType::getTypeByName(Context, "dx.types.ResourceProperties"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.ResourceProperties");
+}
+
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
                                     Type *OverloadTy) {
   switch (Kind) {
@@ -236,6 +252,10 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResRetType(OverloadTy, Ctx);
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
+  case OpParamType::ResBindTy:
+    return getResBindType(Ctx);
+  case OpParamType::ResPropsTy:
+    return getResPropsType(Ctx);
   }
   llvm_unreachable("Invalid parameter kind");
   return nullptr;
@@ -335,7 +355,7 @@ namespace dxil {
 // Triple is well-formed or that the target is supported since these checks
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
-DXILOpBuilder::DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {
+DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M.getContext()) {
   Triple TT(Triple(M.getTargetTriple()));
   DXILVersion = TT.getDXILVersion();
   ShaderStage = TT.getEnvironment();
@@ -417,10 +437,10 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
 
   // We need to inject the opcode as the first argument.
   SmallVector<Value *> OpArgs;
-  OpArgs.push_back(B.getInt32(llvm::to_underlying(OpCode)));
+  OpArgs.push_back(IRB.getInt32(llvm::to_underlying(OpCode)));
   OpArgs.append(Args.begin(), Args.end());
 
-  return B.CreateCall(DXILFn, OpArgs);
+  return IRB.CreateCall(DXILFn, OpArgs);
 }
 
 CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
@@ -429,6 +449,29 @@ CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
   if (Error E = Result.takeError())
     llvm_unreachable("Invalid arguments for operation");
   return *Result;
+}
+
+StructType *DXILOpBuilder::getHandleType() {
+  return ::getHandleType(IRB.getContext());
+}
+
+Constant *DXILOpBuilder::getResBind(uint32_t LowerBound, uint32_t UpperBound,
+                                    uint32_t SpaceID, dxil::ResourceClass RC) {
+  Type *Int32Ty = IRB.getInt32Ty();
+  Type *Int8Ty = IRB.getInt8Ty();
+  return ConstantStruct::get(
+      getResBindType(IRB.getContext()),
+      {ConstantInt::get(Int32Ty, LowerBound),
+       ConstantInt::get(Int32Ty, UpperBound),
+       ConstantInt::get(Int32Ty, SpaceID),
+       ConstantInt::get(Int8Ty, llvm::to_underlying(RC))});
+}
+
+Constant *DXILOpBuilder::getResProps(uint32_t Word0, uint32_t Word1) {
+  Type *Int32Ty = IRB.getInt32Ty();
+  return ConstantStruct::get(
+      getResPropsType(IRB.getContext()),
+      {ConstantInt::get(Int32Ty, Word0), ConstantInt::get(Int32Ty, Word1)});
 }
 
 const char *DXILOpBuilder::getOpCodeName(dxil::OpCode DXILOp) {

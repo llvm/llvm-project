@@ -22,7 +22,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -154,6 +153,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       MVT::nxv1f32, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv8f32, MVT::nxv16f32};
   static const MVT::SimpleValueType F64VecVTs[] = {
       MVT::nxv1f64, MVT::nxv2f64, MVT::nxv4f64, MVT::nxv8f64};
+  static const MVT::SimpleValueType VecTupleVTs[] = {
+      MVT::riscv_nxv1i8x2,  MVT::riscv_nxv1i8x3,  MVT::riscv_nxv1i8x4,
+      MVT::riscv_nxv1i8x5,  MVT::riscv_nxv1i8x6,  MVT::riscv_nxv1i8x7,
+      MVT::riscv_nxv1i8x8,  MVT::riscv_nxv2i8x2,  MVT::riscv_nxv2i8x3,
+      MVT::riscv_nxv2i8x4,  MVT::riscv_nxv2i8x5,  MVT::riscv_nxv2i8x6,
+      MVT::riscv_nxv2i8x7,  MVT::riscv_nxv2i8x8,  MVT::riscv_nxv4i8x2,
+      MVT::riscv_nxv4i8x3,  MVT::riscv_nxv4i8x4,  MVT::riscv_nxv4i8x5,
+      MVT::riscv_nxv4i8x6,  MVT::riscv_nxv4i8x7,  MVT::riscv_nxv4i8x8,
+      MVT::riscv_nxv8i8x2,  MVT::riscv_nxv8i8x3,  MVT::riscv_nxv8i8x4,
+      MVT::riscv_nxv8i8x5,  MVT::riscv_nxv8i8x6,  MVT::riscv_nxv8i8x7,
+      MVT::riscv_nxv8i8x8,  MVT::riscv_nxv16i8x2, MVT::riscv_nxv16i8x3,
+      MVT::riscv_nxv16i8x4, MVT::riscv_nxv32i8x2};
 
   if (Subtarget.hasVInstructions()) {
     auto addRegClassForRVV = [this](MVT VT) {
@@ -219,6 +230,39 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (useRVVForFixedLengthVectorVT(VT))
           addRegClassForFixedVectors(VT);
     }
+
+    addRegisterClass(MVT::riscv_nxv1i8x2, &RISCV::VRN2M1RegClass);
+    addRegisterClass(MVT::riscv_nxv1i8x3, &RISCV::VRN3M1RegClass);
+    addRegisterClass(MVT::riscv_nxv1i8x4, &RISCV::VRN4M1RegClass);
+    addRegisterClass(MVT::riscv_nxv1i8x5, &RISCV::VRN5M1RegClass);
+    addRegisterClass(MVT::riscv_nxv1i8x6, &RISCV::VRN6M1RegClass);
+    addRegisterClass(MVT::riscv_nxv1i8x7, &RISCV::VRN7M1RegClass);
+    addRegisterClass(MVT::riscv_nxv1i8x8, &RISCV::VRN8M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x2, &RISCV::VRN2M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x3, &RISCV::VRN3M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x4, &RISCV::VRN4M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x5, &RISCV::VRN5M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x6, &RISCV::VRN6M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x7, &RISCV::VRN7M1RegClass);
+    addRegisterClass(MVT::riscv_nxv2i8x8, &RISCV::VRN8M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x2, &RISCV::VRN2M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x3, &RISCV::VRN3M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x4, &RISCV::VRN4M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x5, &RISCV::VRN5M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x6, &RISCV::VRN6M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x7, &RISCV::VRN7M1RegClass);
+    addRegisterClass(MVT::riscv_nxv4i8x8, &RISCV::VRN8M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x2, &RISCV::VRN2M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x3, &RISCV::VRN3M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x4, &RISCV::VRN4M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x5, &RISCV::VRN5M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x6, &RISCV::VRN6M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x7, &RISCV::VRN7M1RegClass);
+    addRegisterClass(MVT::riscv_nxv8i8x8, &RISCV::VRN8M1RegClass);
+    addRegisterClass(MVT::riscv_nxv16i8x2, &RISCV::VRN2M2RegClass);
+    addRegisterClass(MVT::riscv_nxv16i8x3, &RISCV::VRN3M2RegClass);
+    addRegisterClass(MVT::riscv_nxv16i8x4, &RISCV::VRN4M2RegClass);
+    addRegisterClass(MVT::riscv_nxv32i8x2, &RISCV::VRN2M4RegClass);
   }
 
   // Compute derived properties from the register classes.
@@ -365,12 +409,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   static const unsigned FPLegalNodeTypes[] = {
-      ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
-      ISD::LLRINT,         ISD::LROUND,        ISD::LLROUND,
-      ISD::STRICT_LRINT,   ISD::STRICT_LLRINT, ISD::STRICT_LROUND,
-      ISD::STRICT_LLROUND, ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,    ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
-      ISD::STRICT_FSQRT,   ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
+      ISD::FMINNUM,       ISD::FMAXNUM,       ISD::FMINIMUMNUM,
+      ISD::FMAXIMUMNUM,   ISD::LRINT,         ISD::LLRINT,
+      ISD::LROUND,        ISD::LLROUND,       ISD::STRICT_LRINT,
+      ISD::STRICT_LLRINT, ISD::STRICT_LROUND, ISD::STRICT_LLROUND,
+      ISD::STRICT_FMA,    ISD::STRICT_FADD,   ISD::STRICT_FSUB,
+      ISD::STRICT_FMUL,   ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
+      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
 
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
@@ -389,15 +434,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   static const unsigned ZfhminZfbfminPromoteOps[] = {
-      ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FADD,
-      ISD::FSUB,         ISD::FMUL,          ISD::FMA,
-      ISD::FDIV,         ISD::FSQRT,         ISD::FABS,
-      ISD::FNEG,         ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,  ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
-      ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
-      ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
-      ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,   ISD::SELECT};
+      ISD::FMINNUM,       ISD::FMAXNUM,
+      ISD::FMAXIMUMNUM,   ISD::FMINIMUMNUM,
+      ISD::FADD,          ISD::FSUB,
+      ISD::FMUL,          ISD::FMA,
+      ISD::FDIV,          ISD::FSQRT,
+      ISD::STRICT_FMA,    ISD::STRICT_FADD,
+      ISD::STRICT_FSUB,   ISD::STRICT_FMUL,
+      ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
+      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
+      ISD::SETCC,         ISD::FCEIL,
+      ISD::FFLOOR,        ISD::FTRUNC,
+      ISD::FRINT,         ISD::FROUND,
+      ISD::FROUNDEVEN,    ISD::SELECT};
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -410,8 +459,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
     setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
-    // FIXME: Need to promote bf16 FCOPYSIGN to f32, but the
-    // DAGCombiner::visitFP_ROUND probably needs improvements first.
+    setOperationAction(ISD::FABS, MVT::bf16, Custom);
+    setOperationAction(ISD::FNEG, MVT::bf16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   }
 
@@ -424,11 +473,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
-      setOperationAction({ISD::STRICT_LRINT, ISD::STRICT_LLRINT,
-                          ISD::STRICT_LROUND, ISD::STRICT_LLROUND},
-                         MVT::f16, Legal);
-      // FIXME: Need to promote f16 FCOPYSIGN to f32, but the
-      // DAGCombiner::visitFP_ROUND probably needs improvements first.
+      for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
+                      ISD::STRICT_LROUND, ISD::STRICT_LLROUND,
+                      ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
+        setOperationAction(Op, MVT::f16, Custom);
+      setOperationAction(ISD::FABS, MVT::f16, Custom);
+      setOperationAction(ISD::FNEG, MVT::f16, Custom);
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     }
 
@@ -862,6 +912,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     }
 
+    for (MVT VT : VecTupleVTs) {
+      if (!isTypeLegal(VT))
+        continue;
+
+      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+    }
+
     // Expand various CCs to best match the RVV ISA, which natively supports UNE
     // but no other unordered comparisons, and supports all ordered comparisons
     // except ONE. Additionally, we expand GT,OGT,GE,OGE for optimization
@@ -886,16 +943,30 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA};
 
     // TODO: support more vp ops.
-    static const unsigned ZvfhminPromoteVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FSUB,         ISD::VP_FMUL,
-        ISD::VP_FDIV,        ISD::VP_FNEG,         ISD::VP_FABS,
-        ISD::VP_FMA,         ISD::VP_REDUCE_FADD,  ISD::VP_REDUCE_SEQ_FADD,
-        ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX,  ISD::VP_SQRT,
-        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,      ISD::VP_FCEIL,
-        ISD::VP_FFLOOR,      ISD::VP_FROUND,       ISD::VP_FROUNDEVEN,
-        ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO, ISD::VP_FRINT,
-        ISD::VP_FNEARBYINT,  ISD::VP_SETCC,        ISD::VP_FMINIMUM,
-        ISD::VP_FMAXIMUM,    ISD::VP_REDUCE_FMINIMUM, ISD::VP_REDUCE_FMAXIMUM};
+    static const unsigned ZvfhminPromoteVPOps[] = {ISD::VP_FADD,
+                                                   ISD::VP_FSUB,
+                                                   ISD::VP_FMUL,
+                                                   ISD::VP_FDIV,
+                                                   ISD::VP_FMA,
+                                                   ISD::VP_REDUCE_FADD,
+                                                   ISD::VP_REDUCE_SEQ_FADD,
+                                                   ISD::VP_REDUCE_FMIN,
+                                                   ISD::VP_REDUCE_FMAX,
+                                                   ISD::VP_SQRT,
+                                                   ISD::VP_FMINNUM,
+                                                   ISD::VP_FMAXNUM,
+                                                   ISD::VP_FCEIL,
+                                                   ISD::VP_FFLOOR,
+                                                   ISD::VP_FROUND,
+                                                   ISD::VP_FROUNDEVEN,
+                                                   ISD::VP_FROUNDTOZERO,
+                                                   ISD::VP_FRINT,
+                                                   ISD::VP_FNEARBYINT,
+                                                   ISD::VP_SETCC,
+                                                   ISD::VP_FMINIMUM,
+                                                   ISD::VP_FMAXIMUM,
+                                                   ISD::VP_REDUCE_FMINIMUM,
+                                                   ISD::VP_REDUCE_FMAXIMUM};
 
     // Sets common operation actions on RVV floating-point vector types.
     const auto SetCommonVFPActions = [&](MVT VT) {
@@ -1279,8 +1350,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
-          // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
-          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          if (Subtarget.hasStdExtZfbfmin()) {
+            // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          } else {
+            // We need to custom legalize bf16 build vectors if Zfbfmin isn't
+            // available.
+            setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
+          }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -1514,7 +1591,10 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       MemTy = MemTy->getScalarType();
 
     Info.memVT = getValueType(DL, MemTy);
-    Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
+    if (MemTy->isTargetExtTy())
+      Info.align = DL.getABITypeAlign(MemTy);
+    else
+      Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
@@ -1611,7 +1691,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg6ff:
   case Intrinsic::riscv_vlseg7ff:
   case Intrinsic::riscv_vlseg8ff:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlseg2_mask:
@@ -1628,7 +1708,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg6ff_mask:
   case Intrinsic::riscv_vlseg7ff_mask:
   case Intrinsic::riscv_vlseg8ff_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlsseg2:
@@ -1652,7 +1732,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vluxseg6:
   case Intrinsic::riscv_vluxseg7:
   case Intrinsic::riscv_vluxseg8:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vlsseg2_mask:
@@ -1676,7 +1756,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vluxseg6_mask:
   case Intrinsic::riscv_vluxseg7_mask:
   case Intrinsic::riscv_vluxseg8_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 6,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vsseg2:
@@ -1686,7 +1766,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsseg6:
   case Intrinsic::riscv_vsseg7:
   case Intrinsic::riscv_vsseg8:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vsseg2_mask:
@@ -1696,7 +1776,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsseg6_mask:
   case Intrinsic::riscv_vsseg7_mask:
   case Intrinsic::riscv_vsseg8_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vssseg2:
@@ -1720,7 +1800,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsuxseg6:
   case Intrinsic::riscv_vsuxseg7:
   case Intrinsic::riscv_vsuxseg8:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vssseg2_mask:
@@ -1744,7 +1824,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsuxseg6_mask:
   case Intrinsic::riscv_vsuxseg7_mask:
   case Intrinsic::riscv_vsuxseg8_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   }
@@ -2359,6 +2439,27 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
 }
 
 RISCVII::VLMUL RISCVTargetLowering::getLMUL(MVT VT) {
+  if (VT.isRISCVVectorTuple()) {
+    if (VT.SimpleTy >= MVT::riscv_nxv1i8x2 &&
+        VT.SimpleTy <= MVT::riscv_nxv1i8x8)
+      return RISCVII::LMUL_F8;
+    if (VT.SimpleTy >= MVT::riscv_nxv2i8x2 &&
+        VT.SimpleTy <= MVT::riscv_nxv2i8x8)
+      return RISCVII::LMUL_F4;
+    if (VT.SimpleTy >= MVT::riscv_nxv4i8x2 &&
+        VT.SimpleTy <= MVT::riscv_nxv4i8x8)
+      return RISCVII::LMUL_F2;
+    if (VT.SimpleTy >= MVT::riscv_nxv8i8x2 &&
+        VT.SimpleTy <= MVT::riscv_nxv8i8x8)
+      return RISCVII::LMUL_1;
+    if (VT.SimpleTy >= MVT::riscv_nxv16i8x2 &&
+        VT.SimpleTy <= MVT::riscv_nxv16i8x4)
+      return RISCVII::LMUL_2;
+    if (VT.SimpleTy == MVT::riscv_nxv32i8x2)
+      return RISCVII::LMUL_4;
+    llvm_unreachable("Invalid vector tuple type LMUL.");
+  }
+
   assert(VT.isScalableVector() && "Expecting a scalable vector type");
   unsigned KnownSize = VT.getSizeInBits().getKnownMinValue();
   if (VT.getVectorElementType() == MVT::i1)
@@ -2426,6 +2527,44 @@ unsigned RISCVTargetLowering::getSubregIndexByMVT(MVT VT, unsigned Index) {
 }
 
 unsigned RISCVTargetLowering::getRegClassIDForVecVT(MVT VT) {
+  if (VT.isRISCVVectorTuple()) {
+    unsigned NF = VT.getRISCVVectorTupleNumFields();
+    unsigned RegsPerField = std::max(1U, (unsigned)VT.getSizeInBits() /
+                                             (NF * RISCV::RVVBitsPerBlock));
+    switch (RegsPerField) {
+    case 1:
+      if (NF == 2)
+        return RISCV::VRN2M1RegClassID;
+      if (NF == 3)
+        return RISCV::VRN3M1RegClassID;
+      if (NF == 4)
+        return RISCV::VRN4M1RegClassID;
+      if (NF == 5)
+        return RISCV::VRN5M1RegClassID;
+      if (NF == 6)
+        return RISCV::VRN6M1RegClassID;
+      if (NF == 7)
+        return RISCV::VRN7M1RegClassID;
+      if (NF == 8)
+        return RISCV::VRN8M1RegClassID;
+      break;
+    case 2:
+      if (NF == 2)
+        return RISCV::VRN2M2RegClassID;
+      if (NF == 3)
+        return RISCV::VRN3M2RegClassID;
+      if (NF == 4)
+        return RISCV::VRN4M2RegClassID;
+      break;
+    case 4:
+      assert(NF == 2);
+      return RISCV::VRN2M4RegClassID;
+    default:
+      break;
+    }
+    llvm_unreachable("Invalid vector tuple type RegClass.");
+  }
+
   if (VT.getVectorElementType() == MVT::i1)
     return RISCV::VRRegClassID;
   return getRegClassIDForLMUL(getLMUL(VT));
@@ -2446,6 +2585,21 @@ RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
                 "Register classes not ordered");
   unsigned VecRegClassID = getRegClassIDForVecVT(VecVT);
   unsigned SubRegClassID = getRegClassIDForVecVT(SubVecVT);
+
+  // If VecVT is a vector tuple type, either it's the tuple type with same
+  // RegClass with SubVecVT or SubVecVT is a actually a subvector of the VecVT.
+  if (VecVT.isRISCVVectorTuple()) {
+    if (VecRegClassID == SubRegClassID)
+      return {RISCV::NoSubRegister, 0};
+
+    assert(SubVecVT.isScalableVector() &&
+           "Only allow scalable vector subvector.");
+    assert(getLMUL(VecVT) == getLMUL(SubVecVT) &&
+           "Invalid vector tuple insert/extract for vector and subvector with "
+           "different LMUL.");
+    return {getSubregIndexByMVT(VecVT, InsertExtractIdx), 0};
+  }
+
   // Try to compose a subregister index that takes us from the incoming
   // LMUL>1 register class down to the outgoing one. At each step we half
   // the LMUL:
@@ -3929,9 +4083,9 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
-  // If we don't have scalar f16, we need to bitcast to an i16 vector.
-  if (VT.getVectorElementType() == MVT::f16 &&
-      !Subtarget.hasStdExtZfhmin())
+  // If we don't have scalar f16/bf16, we need to bitcast to an i16 vector.
+  if ((VT.getVectorElementType() == MVT::f16 && !Subtarget.hasStdExtZfhmin()) ||
+      (VT.getVectorElementType() == MVT::bf16 && !Subtarget.hasStdExtZfbfmin()))
     return lowerBUILD_VECTORvXf16(Op, DAG);
 
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
@@ -5789,6 +5943,29 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   return Res;
 }
 
+static SDValue lowerFABSorFNEG(SDValue Op, SelectionDAG &DAG,
+                               const RISCVSubtarget &Subtarget) {
+  bool IsFABS = Op.getOpcode() == ISD::FABS;
+  assert((IsFABS || Op.getOpcode() == ISD::FNEG) &&
+         "Wrong opcode for lowering FABS or FNEG.");
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT VT = Op.getSimpleValueType();
+  assert((VT == MVT::f16 || VT == MVT::bf16) && "Unexpected type");
+
+  SDLoc DL(Op);
+  SDValue Fmv =
+      DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op.getOperand(0));
+
+  APInt Mask = IsFABS ? APInt::getSignedMaxValue(16) : APInt::getSignMask(16);
+  Mask = Mask.sext(Subtarget.getXLen());
+
+  unsigned LogicOpc = IsFABS ? ISD::AND : ISD::XOR;
+  SDValue Logic =
+      DAG.getNode(LogicOpc, DL, XLenVT, Fmv, DAG.getConstant(Mask, DL, XLenVT));
+  return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, Logic);
+}
+
 /// Get a RISC-V target specified VL op for a given SDNode.
 static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
@@ -6142,31 +6319,21 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Op0 = Op.getOperand(0);
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
-    if (VT == MVT::f16 && Op0VT == MVT::i16 &&
-        Subtarget.hasStdExtZfhminOrZhinxmin()) {
+    if (Op0VT == MVT::i16 &&
+        ((VT == MVT::f16 && Subtarget.hasStdExtZfhminOrZhinxmin()) ||
+         (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()))) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
-      return FPConv;
-    }
-    if (VT == MVT::bf16 && Op0VT == MVT::i16 &&
-        Subtarget.hasStdExtZfbfmin()) {
-      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::bf16, NewOp0);
-      return FPConv;
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, NewOp0);
     }
     if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
         Subtarget.hasStdExtFOrZfinx()) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
-      SDValue FPConv =
-          DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
-      return FPConv;
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
     }
     if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32) {
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitScalar(Op0, DL, MVT::i32, MVT::i32);
-      SDValue RetReg =
-          DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
-      return RetReg;
+      return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
     }
 
     // Consider other scalar<->scalar casts as legal if the types are legal.
@@ -6615,7 +6782,29 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:
-    return lowerVectorXRINT(Op, DAG, Subtarget);
+    if (Op.getValueType().isVector())
+      return lowerVectorXRINT(Op, DAG, Subtarget);
+    [[fallthrough]];
+  case ISD::LROUND:
+  case ISD::LLROUND: {
+    assert(Op.getOperand(0).getValueType() == MVT::f16 &&
+           "Unexpected custom legalisation");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0));
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), Ext);
+  }
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND: {
+    assert(Op.getOperand(1).getValueType() == MVT::f16 &&
+           "Unexpected custom legalisation");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
+                              {Op.getOperand(0), Op.getOperand(1)});
+    return DAG.getNode(Op.getOpcode(), DL, {Op.getValueType(), MVT::Other},
+                       {Ext.getValue(1), Ext.getValue(0)});
+  }
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMAX:
@@ -6750,18 +6939,92 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     }
     return Vec;
   }
-  case ISD::LOAD:
+  case ISD::LOAD: {
+    auto *Load = cast<LoadSDNode>(Op);
+    EVT VecTy = Load->getMemoryVT();
+    // Handle normal vector tuple load.
+    if (VecTy.isRISCVVectorTuple()) {
+      SDLoc DL(Op);
+      MVT XLenVT = Subtarget.getXLenVT();
+      unsigned NF = VecTy.getRISCVVectorTupleNumFields();
+      unsigned Sz = VecTy.getSizeInBits();
+      unsigned NumElts = Sz / (NF * 8);
+      int Log2LMUL = Log2_64(NumElts) - 3;
+
+      auto Flag = SDNodeFlags();
+      Flag.setNoUnsignedWrap(true);
+      SDValue Ret = DAG.getUNDEF(VecTy);
+      SDValue BasePtr = Load->getBasePtr();
+      SDValue VROffset = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
+      VROffset =
+          DAG.getNode(ISD::SHL, DL, XLenVT, VROffset,
+                      DAG.getConstant(std::max(Log2LMUL, 0), DL, XLenVT));
+      SmallVector<SDValue, 8> OutChains;
+
+      // Load NF vector registers and combine them to a vector tuple.
+      for (unsigned i = 0; i < NF; ++i) {
+        SDValue LoadVal = DAG.getLoad(
+            MVT::getScalableVectorVT(MVT::i8, NumElts), DL, Load->getChain(),
+            BasePtr, MachinePointerInfo(Load->getAddressSpace()), Align(8));
+        OutChains.push_back(LoadVal.getValue(1));
+        Ret = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTy, Ret, LoadVal,
+                          DAG.getVectorIdxConstant(i, DL));
+        BasePtr = DAG.getNode(ISD::ADD, DL, XLenVT, BasePtr, VROffset, Flag);
+      }
+      return DAG.getMergeValues(
+          {Ret, DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains)}, DL);
+    }
+
     if (auto V = expandUnalignedRVVLoad(Op, DAG))
       return V;
     if (Op.getValueType().isFixedLengthVector())
       return lowerFixedLengthVectorLoadToRVV(Op, DAG);
     return Op;
-  case ISD::STORE:
+  }
+  case ISD::STORE: {
+    auto *Store = cast<StoreSDNode>(Op);
+    SDValue StoredVal = Store->getValue();
+    EVT VecTy = StoredVal.getValueType();
+    // Handle normal vector tuple store.
+    if (VecTy.isRISCVVectorTuple()) {
+      SDLoc DL(Op);
+      MVT XLenVT = Subtarget.getXLenVT();
+      unsigned NF = VecTy.getRISCVVectorTupleNumFields();
+      unsigned Sz = VecTy.getSizeInBits();
+      unsigned NumElts = Sz / (NF * 8);
+      int Log2LMUL = Log2_64(NumElts) - 3;
+
+      auto Flag = SDNodeFlags();
+      Flag.setNoUnsignedWrap(true);
+      SDValue Ret;
+      SDValue Chain = Store->getChain();
+      SDValue BasePtr = Store->getBasePtr();
+      SDValue VROffset = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
+      VROffset =
+          DAG.getNode(ISD::SHL, DL, XLenVT, VROffset,
+                      DAG.getConstant(std::max(Log2LMUL, 0), DL, XLenVT));
+
+      // Extract subregisters in a vector tuple and store them individually.
+      for (unsigned i = 0; i < NF; ++i) {
+        auto Extract = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL,
+                                   MVT::getScalableVectorVT(MVT::i8, NumElts),
+                                   StoredVal, DAG.getVectorIdxConstant(i, DL));
+        Ret = DAG.getStore(Chain, DL, Extract, BasePtr,
+                           MachinePointerInfo(Store->getAddressSpace()),
+                           Store->getOriginalAlign(),
+                           Store->getMemOperand()->getFlags());
+        Chain = Ret.getValue(0);
+        BasePtr = DAG.getNode(ISD::ADD, DL, XLenVT, BasePtr, VROffset, Flag);
+      }
+      return Ret;
+    }
+
     if (auto V = expandUnalignedRVVStore(Op, DAG))
       return V;
     if (Op.getOperand(1).getValueType().isFixedLengthVector())
       return lowerFixedLengthVectorStoreToRVV(Op, DAG);
     return Op;
+  }
   case ISD::MLOAD:
   case ISD::VP_LOAD:
     return lowerMaskedLoad(Op, DAG);
@@ -6854,12 +7117,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
+  case ISD::FABS:
+  case ISD::FNEG:
+    if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
+      return lowerFABSorFNEG(Op, DAG, Subtarget);
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FDIV:
-  case ISD::FNEG:
-  case ISD::FABS:
   case ISD::FSQRT:
   case ISD::FMA:
   case ISD::FMINNUM:
@@ -6877,10 +7143,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-    return lowerToScalableOp(Op, DAG);
   case ISD::UADDSAT:
   case ISD::USUBSAT:
-    return lowerToScalableOp(Op, DAG);
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
     return lowerToScalableOp(Op, DAG);
@@ -8926,6 +9190,21 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     break; // Don't custom lower most intrinsics.
+  case Intrinsic::riscv_tuple_insert: {
+    SDValue Vec = Op.getOperand(1);
+    SDValue SubVec = Op.getOperand(2);
+    SDValue Index = Op.getOperand(3);
+
+    return DAG.getNode(RISCVISD::TUPLE_INSERT, DL, Op.getValueType(), Vec,
+                       SubVec, Index);
+  }
+  case Intrinsic::riscv_tuple_extract: {
+    SDValue Vec = Op.getOperand(1);
+    SDValue Index = Op.getOperand(2);
+
+    return DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, Op.getValueType(), Vec,
+                       Index);
+  }
   case Intrinsic::thread_pointer: {
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getRegister(RISCV::X4, PtrVT);
@@ -9206,25 +9485,33 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MVT XLenVT = Subtarget.getXLenVT();
     MVT VT = Op->getSimpleValueType(0);
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
+    unsigned Sz = NF * ContainerVT.getVectorMinNumElements() *
+                  ContainerVT.getScalarSizeInBits();
+    EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, NF);
 
     SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
     SDValue IntID = DAG.getTargetConstant(VlsegInts[NF - 2], DL, XLenVT);
     auto *Load = cast<MemIntrinsicSDNode>(Op);
-    SmallVector<EVT, 9> ContainerVTs(NF, ContainerVT);
-    ContainerVTs.push_back(MVT::Other);
-    SDVTList VTs = DAG.getVTList(ContainerVTs);
-    SmallVector<SDValue, 12> Ops = {Load->getChain(), IntID};
-    Ops.insert(Ops.end(), NF, DAG.getUNDEF(ContainerVT));
-    Ops.push_back(Op.getOperand(2));
-    Ops.push_back(VL);
+
+    SDVTList VTs = DAG.getVTList({VecTupTy, MVT::Other});
+    SDValue Ops[] = {
+        Load->getChain(),
+        IntID,
+        DAG.getUNDEF(VecTupTy),
+        Op.getOperand(2),
+        VL,
+        DAG.getTargetConstant(Log2_64(VT.getScalarSizeInBits()), DL, XLenVT)};
     SDValue Result =
         DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
                                 Load->getMemoryVT(), Load->getMemOperand());
     SmallVector<SDValue, 9> Results;
-    for (unsigned int RetIdx = 0; RetIdx < NF; RetIdx++)
-      Results.push_back(convertFromScalableVector(VT, Result.getValue(RetIdx),
-                                                  DAG, Subtarget));
-    Results.push_back(Result.getValue(NF));
+    for (unsigned int RetIdx = 0; RetIdx < NF; RetIdx++) {
+      SDValue SubVec =
+          DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, ContainerVT,
+                      Result.getValue(0), DAG.getVectorIdxConstant(RetIdx, DL));
+      Results.push_back(convertFromScalableVector(VT, SubVec, DAG, Subtarget));
+    }
+    Results.push_back(Result.getValue(1));
     return DAG.getMergeValues(Results, DL);
   }
   case Intrinsic::riscv_sf_vc_v_x_se:
@@ -9285,17 +9572,31 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MVT XLenVT = Subtarget.getXLenVT();
     MVT VT = Op->getOperand(2).getSimpleValueType();
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
+    unsigned Sz = NF * ContainerVT.getVectorMinNumElements() *
+                  ContainerVT.getScalarSizeInBits();
+    EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, NF);
 
     SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
     SDValue IntID = DAG.getTargetConstant(VssegInts[NF - 2], DL, XLenVT);
     SDValue Ptr = Op->getOperand(NF + 2);
 
     auto *FixedIntrinsic = cast<MemIntrinsicSDNode>(Op);
-    SmallVector<SDValue, 12> Ops = {FixedIntrinsic->getChain(), IntID};
+
+    SDValue StoredVal = DAG.getUNDEF(VecTupTy);
     for (unsigned i = 0; i < NF; i++)
-      Ops.push_back(convertToScalableVector(
-          ContainerVT, FixedIntrinsic->getOperand(2 + i), DAG, Subtarget));
-    Ops.append({Ptr, VL});
+      StoredVal = DAG.getNode(
+          RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
+          convertToScalableVector(
+              ContainerVT, FixedIntrinsic->getOperand(2 + i), DAG, Subtarget),
+          DAG.getVectorIdxConstant(i, DL));
+
+    SDValue Ops[] = {
+        FixedIntrinsic->getChain(),
+        IntID,
+        StoredVal,
+        Ptr,
+        VL,
+        DAG.getTargetConstant(Log2_64(VT.getScalarSizeInBits()), DL, XLenVT)};
 
     return DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
@@ -9403,10 +9704,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
   }
 
-  unsigned BaseOpc;
   ISD::CondCode CC;
-  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Unhandled reduction");
@@ -9417,7 +9715,6 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
-    BaseOpc = ISD::AND;
     break;
   }
   case ISD::VECREDUCE_OR:
@@ -9425,7 +9722,6 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     // vcpop x != 0
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETNE;
-    BaseOpc = ISD::OR;
     break;
   case ISD::VECREDUCE_XOR:
   case ISD::VP_REDUCE_XOR: {
@@ -9434,11 +9730,11 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     Vec = DAG.getNode(ISD::AND, DL, XLenVT, Vec, One);
     CC = ISD::SETNE;
-    BaseOpc = ISD::XOR;
     break;
   }
   }
 
+  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
   SDValue SetCC = DAG.getSetCC(DL, XLenVT, Vec, Zero, CC);
   SetCC = DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), SetCC);
 
@@ -9451,6 +9747,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   // 0 for an inactive vector, and so we've already received the neutral value:
   // AND gives us (0 == 0) -> 1 and OR/XOR give us (0 != 0) -> 0. Therefore we
   // can simply include the start value.
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   return DAG.getNode(BaseOpc, DL, Op.getValueType(), SetCC, Op.getOperand(0));
 }
 
@@ -10322,6 +10619,50 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+
+  // On some uarchs vrgather.vv will read from every input register for each
+  // output register, regardless of the indices. However to reverse a vector
+  // each output register only needs to read from one register. So decompose it
+  // into LMUL * M1 vrgather.vvs, so we get O(LMUL) performance instead of
+  // O(LMUL^2).
+  //
+  // vsetvli a1, zero, e64, m4, ta, ma
+  // vrgatherei16.vv v12, v8, v16
+  // ->
+  // vsetvli a1, zero, e64, m1, ta, ma
+  // vrgather.vv v15, v8, v16
+  // vrgather.vv v14, v9, v16
+  // vrgather.vv v13, v10, v16
+  // vrgather.vv v12, v11, v16
+  if (ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+      ContainerVT.getVectorElementCount().isKnownMultipleOf(2)) {
+    auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
+    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);
+    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, Hi.getSimpleValueType(), Hi);
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ContainerVT, Hi, Lo);
+
+    // Fixed length vectors might not fit exactly into their container, and so
+    // leave a gap in the front of the vector after being reversed. Slide this
+    // away.
+    //
+    // x x x x 3 2 1 0 <- v4i16 @ vlen=128
+    // 0 1 2 3 x x x x <- reverse
+    // x x x x 0 1 2 3 <- vslidedown.vx
+    if (VecVT.isFixedLengthVector()) {
+      SDValue Offset = DAG.getNode(
+          ISD::SUB, DL, XLenVT,
+          DAG.getElementCount(DL, XLenVT, ContainerVT.getVectorElementCount()),
+          DAG.getElementCount(DL, XLenVT, VecVT.getVectorElementCount()));
+      Concat =
+          getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Concat, Offset, Mask, VL);
+      Concat = convertFromScalableVector(VecVT, Concat, DAG, Subtarget);
+    }
+    return Concat;
+  }
+
   unsigned EltSize = ContainerVT.getScalarSizeInBits();
   unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
   unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
@@ -10368,9 +10709,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IntVT = IntVT.changeVectorElementType(MVT::i16);
   }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
   SDValue VLMinus1 = DAG.getNode(
@@ -12268,12 +12606,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op0 = N->getOperand(0);
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
-    if (VT == MVT::i16 && Op0VT == MVT::f16 &&
-        Subtarget.hasStdExtZfhminOrZhinxmin()) {
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
-    } else if (VT == MVT::i16 && Op0VT == MVT::bf16 &&
-               Subtarget.hasStdExtZfbfmin()) {
+    if (VT == MVT::i16 &&
+        ((Op0VT == MVT::f16 && Subtarget.hasStdExtZfhminOrZhinxmin()) ||
+         (Op0VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()))) {
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
     } else if (VT == MVT::i32 && Op0VT == MVT::f32 && Subtarget.is64Bit() &&
@@ -16394,6 +16729,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDLoc DL(N);
     SDValue Op0 = N->getOperand(0);
     MVT VT = N->getSimpleValueType(0);
+
+    // Constant fold.
+    if (auto *CFP = dyn_cast<ConstantFPSDNode>(Op0)) {
+      APInt Val = CFP->getValueAPF().bitcastToAPInt().sext(VT.getSizeInBits());
+      return DAG.getConstant(Val, DL, VT);
+    }
+
     // If the input to FMV_X_ANYEXTW_RV64 is just FMV_W_X_RV64 then the
     // conversion is unnecessary and can be replaced with the FMV_W_X_RV64
     // operand. Similar for FMV_X_ANYEXTH and FMV_H_X.
@@ -18529,6 +18871,66 @@ static const MCPhysReg ArgVRM2s[] = {RISCV::V8M2,  RISCV::V10M2, RISCV::V12M2,
 static const MCPhysReg ArgVRM4s[] = {RISCV::V8M4, RISCV::V12M4, RISCV::V16M4,
                                      RISCV::V20M4};
 static const MCPhysReg ArgVRM8s[] = {RISCV::V8M8, RISCV::V16M8};
+static const MCPhysReg ArgVRN2M1s[] = {
+    RISCV::V8_V9,   RISCV::V9_V10,  RISCV::V10_V11, RISCV::V11_V12,
+    RISCV::V12_V13, RISCV::V13_V14, RISCV::V14_V15, RISCV::V15_V16,
+    RISCV::V16_V17, RISCV::V17_V18, RISCV::V18_V19, RISCV::V19_V20,
+    RISCV::V20_V21, RISCV::V21_V22, RISCV::V22_V23};
+static const MCPhysReg ArgVRN3M1s[] = {
+    RISCV::V8_V9_V10,   RISCV::V9_V10_V11,  RISCV::V10_V11_V12,
+    RISCV::V11_V12_V13, RISCV::V12_V13_V14, RISCV::V13_V14_V15,
+    RISCV::V14_V15_V16, RISCV::V15_V16_V17, RISCV::V16_V17_V18,
+    RISCV::V17_V18_V19, RISCV::V18_V19_V20, RISCV::V19_V20_V21,
+    RISCV::V20_V21_V22, RISCV::V21_V22_V23};
+static const MCPhysReg ArgVRN4M1s[] = {
+    RISCV::V8_V9_V10_V11,   RISCV::V9_V10_V11_V12,  RISCV::V10_V11_V12_V13,
+    RISCV::V11_V12_V13_V14, RISCV::V12_V13_V14_V15, RISCV::V13_V14_V15_V16,
+    RISCV::V14_V15_V16_V17, RISCV::V15_V16_V17_V18, RISCV::V16_V17_V18_V19,
+    RISCV::V17_V18_V19_V20, RISCV::V18_V19_V20_V21, RISCV::V19_V20_V21_V22,
+    RISCV::V20_V21_V22_V23};
+static const MCPhysReg ArgVRN5M1s[] = {
+    RISCV::V8_V9_V10_V11_V12,   RISCV::V9_V10_V11_V12_V13,
+    RISCV::V10_V11_V12_V13_V14, RISCV::V11_V12_V13_V14_V15,
+    RISCV::V12_V13_V14_V15_V16, RISCV::V13_V14_V15_V16_V17,
+    RISCV::V14_V15_V16_V17_V18, RISCV::V15_V16_V17_V18_V19,
+    RISCV::V16_V17_V18_V19_V20, RISCV::V17_V18_V19_V20_V21,
+    RISCV::V18_V19_V20_V21_V22, RISCV::V19_V20_V21_V22_V23};
+static const MCPhysReg ArgVRN6M1s[] = {
+    RISCV::V8_V9_V10_V11_V12_V13,   RISCV::V9_V10_V11_V12_V13_V14,
+    RISCV::V10_V11_V12_V13_V14_V15, RISCV::V11_V12_V13_V14_V15_V16,
+    RISCV::V12_V13_V14_V15_V16_V17, RISCV::V13_V14_V15_V16_V17_V18,
+    RISCV::V14_V15_V16_V17_V18_V19, RISCV::V15_V16_V17_V18_V19_V20,
+    RISCV::V16_V17_V18_V19_V20_V21, RISCV::V17_V18_V19_V20_V21_V22,
+    RISCV::V18_V19_V20_V21_V22_V23};
+static const MCPhysReg ArgVRN7M1s[] = {
+    RISCV::V8_V9_V10_V11_V12_V13_V14,   RISCV::V9_V10_V11_V12_V13_V14_V15,
+    RISCV::V10_V11_V12_V13_V14_V15_V16, RISCV::V11_V12_V13_V14_V15_V16_V17,
+    RISCV::V12_V13_V14_V15_V16_V17_V18, RISCV::V13_V14_V15_V16_V17_V18_V19,
+    RISCV::V14_V15_V16_V17_V18_V19_V20, RISCV::V15_V16_V17_V18_V19_V20_V21,
+    RISCV::V16_V17_V18_V19_V20_V21_V22, RISCV::V17_V18_V19_V20_V21_V22_V23};
+static const MCPhysReg ArgVRN8M1s[] = {RISCV::V8_V9_V10_V11_V12_V13_V14_V15,
+                                       RISCV::V9_V10_V11_V12_V13_V14_V15_V16,
+                                       RISCV::V10_V11_V12_V13_V14_V15_V16_V17,
+                                       RISCV::V11_V12_V13_V14_V15_V16_V17_V18,
+                                       RISCV::V12_V13_V14_V15_V16_V17_V18_V19,
+                                       RISCV::V13_V14_V15_V16_V17_V18_V19_V20,
+                                       RISCV::V14_V15_V16_V17_V18_V19_V20_V21,
+                                       RISCV::V15_V16_V17_V18_V19_V20_V21_V22,
+                                       RISCV::V16_V17_V18_V19_V20_V21_V22_V23};
+static const MCPhysReg ArgVRN2M2s[] = {RISCV::V8M2_V10M2,  RISCV::V10M2_V12M2,
+                                       RISCV::V12M2_V14M2, RISCV::V14M2_V16M2,
+                                       RISCV::V16M2_V18M2, RISCV::V18M2_V20M2,
+                                       RISCV::V20M2_V22M2};
+static const MCPhysReg ArgVRN3M2s[] = {
+    RISCV::V8M2_V10M2_V12M2,  RISCV::V10M2_V12M2_V14M2,
+    RISCV::V12M2_V14M2_V16M2, RISCV::V14M2_V16M2_V18M2,
+    RISCV::V16M2_V18M2_V20M2, RISCV::V18M2_V20M2_V22M2};
+static const MCPhysReg ArgVRN4M2s[] = {
+    RISCV::V8M2_V10M2_V12M2_V14M2, RISCV::V10M2_V12M2_V14M2_V16M2,
+    RISCV::V12M2_V14M2_V16M2_V18M2, RISCV::V14M2_V16M2_V18M2_V20M2,
+    RISCV::V16M2_V18M2_V20M2_V22M2};
+static const MCPhysReg ArgVRN2M4s[] = {RISCV::V8M4_V12M4, RISCV::V12M4_V16M4,
+                                       RISCV::V16M4_V20M4};
 
 ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVABI::ABI ABI) {
   // The GPRs used for passing arguments in the ILP32* and LP64* ABIs, except
@@ -18610,12 +19012,56 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   return false;
 }
 
+static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo,
+                                 std::optional<unsigned> FirstMaskArgument,
+                                 CCState &State,
+                                 const RISCVTargetLowering &TLI) {
+  const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
+  if (RC == &RISCV::VRRegClass) {
+    // Assign the first mask argument to V0.
+    // This is an interim calling convention and it may be changed in the
+    // future.
+    if (FirstMaskArgument && ValNo == *FirstMaskArgument)
+      return State.AllocateReg(RISCV::V0);
+    return State.AllocateReg(ArgVRs);
+  }
+  if (RC == &RISCV::VRM2RegClass)
+    return State.AllocateReg(ArgVRM2s);
+  if (RC == &RISCV::VRM4RegClass)
+    return State.AllocateReg(ArgVRM4s);
+  if (RC == &RISCV::VRM8RegClass)
+    return State.AllocateReg(ArgVRM8s);
+  if (RC == &RISCV::VRN2M1RegClass)
+    return State.AllocateReg(ArgVRN2M1s);
+  if (RC == &RISCV::VRN3M1RegClass)
+    return State.AllocateReg(ArgVRN3M1s);
+  if (RC == &RISCV::VRN4M1RegClass)
+    return State.AllocateReg(ArgVRN4M1s);
+  if (RC == &RISCV::VRN5M1RegClass)
+    return State.AllocateReg(ArgVRN5M1s);
+  if (RC == &RISCV::VRN6M1RegClass)
+    return State.AllocateReg(ArgVRN6M1s);
+  if (RC == &RISCV::VRN7M1RegClass)
+    return State.AllocateReg(ArgVRN7M1s);
+  if (RC == &RISCV::VRN8M1RegClass)
+    return State.AllocateReg(ArgVRN8M1s);
+  if (RC == &RISCV::VRN2M2RegClass)
+    return State.AllocateReg(ArgVRN2M2s);
+  if (RC == &RISCV::VRN3M2RegClass)
+    return State.AllocateReg(ArgVRN3M2s);
+  if (RC == &RISCV::VRN4M2RegClass)
+    return State.AllocateReg(ArgVRN4M2s);
+  if (RC == &RISCV::VRN2M4RegClass)
+    return State.AllocateReg(ArgVRN2M4s);
+  llvm_unreachable("Unhandled register class for ValueType");
+}
+
 // Implements the RISC-V calling convention. Returns true upon failure.
 bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
                      MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
                      ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
                      bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     RVVArgDispatcher &RVVDispatcher) {
+                     std::optional<unsigned> FirstMaskArgument) {
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
@@ -18623,7 +19069,7 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // Static chain parameter must not be passed in normal argument registers,
   // so we assign t2 for it as done in GCC's __builtin_call_with_static_chain
   if (ArgFlags.isNest()) {
-    if (unsigned Reg = State.AllocateReg(RISCV::X7)) {
+    if (MCRegister Reg = State.AllocateReg(RISCV::X7)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -18783,8 +19229,8 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     Reg = State.AllocateReg(ArgFPR32s);
   else if (ValVT == MVT::f64 && !UseGPRForF64)
     Reg = State.AllocateReg(ArgFPR64s);
-  else if (ValVT.isVector()) {
-    Reg = RVVDispatcher.getNextPhysReg();
+  else if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
+    Reg = allocateRVVReg(ValVT, ValNo, FirstMaskArgument, State, TLI);
     if (!Reg) {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
@@ -18834,7 +19280,8 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   }
 
   assert((!UseGPRForF16_F32 || !UseGPRForF64 || LocVT == XLenVT ||
-          (TLI.getSubtarget().hasVInstructions() && ValVT.isVector())) &&
+          (TLI.getSubtarget().hasVInstructions() &&
+           (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
          "Expected an XLenVT or vector types at this stage");
 
   if (Reg) {
@@ -18870,15 +19317,9 @@ void RISCVTargetLowering::analyzeInputArgs(
   unsigned NumArgs = Ins.size();
   FunctionType *FType = MF.getFunction().getFunctionType();
 
-  RVVArgDispatcher Dispatcher;
-  if (IsRet) {
-    Dispatcher = RVVArgDispatcher{&MF, this, ArrayRef(Ins)};
-  } else {
-    SmallVector<Type *, 4> TypeList;
-    for (const Argument &Arg : MF.getFunction().args())
-      TypeList.push_back(Arg.getType());
-    Dispatcher = RVVArgDispatcher{&MF, this, ArrayRef(TypeList)};
-  }
+  std::optional<unsigned> FirstMaskArgument;
+  if (Subtarget.hasVInstructions())
+    FirstMaskArgument = preAssignMask(Ins);
 
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Ins[i].VT;
@@ -18893,7 +19334,7 @@ void RISCVTargetLowering::analyzeInputArgs(
     RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
            ArgFlags, CCInfo, /*IsFixed=*/true, IsRet, ArgTy, *this,
-           Dispatcher)) {
+           FirstMaskArgument)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -18907,13 +19348,9 @@ void RISCVTargetLowering::analyzeOutputArgs(
     CallLoweringInfo *CLI, RISCVCCAssignFn Fn) const {
   unsigned NumArgs = Outs.size();
 
-  SmallVector<Type *, 4> TypeList;
-  if (IsRet)
-    TypeList.push_back(MF.getFunction().getReturnType());
-  else if (CLI)
-    for (const TargetLowering::ArgListEntry &Arg : CLI->getArgs())
-      TypeList.push_back(Arg.Ty);
-  RVVArgDispatcher Dispatcher{&MF, this, ArrayRef(TypeList)};
+  std::optional<unsigned> FirstMaskArgument;
+  if (Subtarget.hasVInstructions())
+    FirstMaskArgument = preAssignMask(Outs);
 
   for (unsigned i = 0; i != NumArgs; i++) {
     MVT ArgVT = Outs[i].VT;
@@ -18923,7 +19360,7 @@ void RISCVTargetLowering::analyzeOutputArgs(
     RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
            ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy, *this,
-           Dispatcher)) {
+           FirstMaskArgument)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -19094,9 +19531,9 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             ISD::ArgFlagsTy ArgFlags, CCState &State,
                             bool IsFixed, bool IsRet, Type *OrigTy,
                             const RISCVTargetLowering &TLI,
-                            RVVArgDispatcher &RVVDispatcher) {
+                            std::optional<unsigned> FirstMaskArgument) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
-    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19104,14 +19541,13 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
 
   const RISCVSubtarget &Subtarget = TLI.getSubtarget();
 
-  if (LocVT == MVT::f16 &&
-      (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZfhmin())) {
+  if (LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
         RISCV::F2_H,  RISCV::F3_H,  RISCV::F4_H,  RISCV::F5_H,  RISCV::F6_H,
         RISCV::F7_H,  RISCV::F28_H, RISCV::F29_H, RISCV::F30_H, RISCV::F31_H};
-    if (unsigned Reg = State.AllocateReg(FPR16List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR16List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19123,7 +19559,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
         RISCV::F15_F, RISCV::F16_F, RISCV::F17_F, RISCV::F0_F,  RISCV::F1_F,
         RISCV::F2_F,  RISCV::F3_F,  RISCV::F4_F,  RISCV::F5_F,  RISCV::F6_F,
         RISCV::F7_F,  RISCV::F28_F, RISCV::F29_F, RISCV::F30_F, RISCV::F31_F};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19135,19 +19571,20 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
         RISCV::F15_D, RISCV::F16_D, RISCV::F17_D, RISCV::F0_D,  RISCV::F1_D,
         RISCV::F2_D,  RISCV::F3_D,  RISCV::F4_D,  RISCV::F5_D,  RISCV::F6_D,
         RISCV::F7_D,  RISCV::F28_D, RISCV::F29_D, RISCV::F30_D, RISCV::F31_D};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
   // Check if there is an available GPR before hitting the stack.
-  if ((LocVT == MVT::f16 &&
-       (Subtarget.hasStdExtZhinx() || Subtarget.hasStdExtZhinxmin())) ||
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) ||
       (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.is64Bit() &&
        Subtarget.hasStdExtZdinx())) {
-    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      LocInfo = CCValAssign::BCvt;
+      LocVT = Subtarget.getXLenVT();
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19172,17 +19609,16 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
   }
 
   if (LocVT.isVector()) {
-    MCPhysReg AllocatedVReg = RVVDispatcher.getNextPhysReg();
-    if (AllocatedVReg) {
+    if (MCRegister Reg =
+            allocateRVVReg(ValVT, ValNo, FirstMaskArgument, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
       if (ValVT.isFixedLengthVector())
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
-      State.addLoc(
-          CCValAssign::getReg(ValNo, ValVT, AllocatedVReg, LocVT, LocInfo));
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
       // Try and pass the address via a "fast" GPR.
-      if (unsigned GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
         LocInfo = CCValAssign::Indirect;
         LocVT = TLI.getSubtarget().getXLenVT();
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
@@ -19220,7 +19656,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, R6, R7, SpLim
     //                        s1    s2  s3  s4  s5  s6  s7  s8  s9  s10 s11
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19235,7 +19671,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     static const MCPhysReg FPR32List[] = {RISCV::F8_F, RISCV::F9_F,
                                           RISCV::F18_F, RISCV::F19_F,
                                           RISCV::F20_F, RISCV::F21_F};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19247,7 +19683,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     static const MCPhysReg FPR64List[] = {RISCV::F22_D, RISCV::F23_D,
                                           RISCV::F24_D, RISCV::F25_D,
                                           RISCV::F26_D, RISCV::F27_D};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19256,7 +19692,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
   if ((LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.hasStdExtZdinx() &&
        Subtarget.is64Bit())) {
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19807,7 +20243,9 @@ bool RISCVTargetLowering::CanLowerReturn(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
-  RVVArgDispatcher Dispatcher{&MF, this, ArrayRef(Outs)};
+  std::optional<unsigned> FirstMaskArgument;
+  if (Subtarget.hasVInstructions())
+    FirstMaskArgument = preAssignMask(Outs);
 
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
@@ -19815,7 +20253,7 @@ bool RISCVTargetLowering::CanLowerReturn(
     RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (RISCV::CC_RISCV(MF.getDataLayout(), ABI, i, VT, VT, CCValAssign::Full,
                         ArgFlags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
-                        nullptr, *this, Dispatcher))
+                        nullptr, *this, FirstMaskArgument))
       return false;
   }
   return true;
@@ -20212,6 +20650,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
   NODE_NAME_CASE(SW_GUARDED_BRIND)
+  NODE_NAME_CASE(TUPLE_INSERT)
+  NODE_NAME_CASE(TUPLE_EXTRACT)
   NODE_NAME_CASE(SF_VC_XV_SE)
   NODE_NAME_CASE(SF_VC_IV_SE)
   NODE_NAME_CASE(SF_VC_VV_SE)
@@ -20302,8 +20742,14 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     }
   } else if (Constraint == "vr") {
-    for (const auto *RC : {&RISCV::VRRegClass, &RISCV::VRM2RegClass,
-                           &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
+    for (const auto *RC :
+         {&RISCV::VRRegClass, &RISCV::VRM2RegClass, &RISCV::VRM4RegClass,
+          &RISCV::VRM8RegClass, &RISCV::VRN2M1RegClass, &RISCV::VRN3M1RegClass,
+          &RISCV::VRN4M1RegClass, &RISCV::VRN5M1RegClass,
+          &RISCV::VRN6M1RegClass, &RISCV::VRN7M1RegClass,
+          &RISCV::VRN8M1RegClass, &RISCV::VRN2M2RegClass,
+          &RISCV::VRN3M2RegClass, &RISCV::VRN4M2RegClass,
+          &RISCV::VRN2M4RegClass}) {
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
     }
@@ -21143,6 +21589,23 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
       return true;
     }
   }
+
+  if (ValueVT.isRISCVVectorTuple() && PartVT.isRISCVVectorTuple()) {
+    unsigned ValNF = ValueVT.getRISCVVectorTupleNumFields();
+    [[maybe_unused]] unsigned ValLMUL =
+        divideCeil(ValueVT.getSizeInBits(), ValNF * RISCV::RVVBitsPerBlock);
+    unsigned PartNF = PartVT.getRISCVVectorTupleNumFields();
+    [[maybe_unused]] unsigned PartLMUL =
+        divideCeil(PartVT.getSizeInBits(), PartNF * RISCV::RVVBitsPerBlock);
+    assert(ValNF == PartNF && ValLMUL == PartLMUL &&
+           "RISC-V vector tuple type only accepts same register class type "
+           "TUPLE_INSERT");
+
+    Val = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, PartVT, DAG.getUNDEF(PartVT),
+                      Val, DAG.getVectorIdxConstant(0, DL));
+    Parts[0] = Val;
+    return true;
+  }
   return false;
 }
 
@@ -21420,7 +21883,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
 
   Function *VlsegNFunc;
-  Value *VL;
+  Value *VL, *Return;
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
   SmallVector<Value *, 10> Ops;
 
@@ -21429,6 +21892,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         LI->getModule(), FixedVlsegIntrIds[Factor - 2],
         {ResVTy, LI->getPointerOperandType(), XLenTy});
     VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Ops.append({LI->getPointerOperand(), VL});
+    Return = Builder.CreateCall(VlsegNFunc, Ops);
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
@@ -21436,16 +21901,34 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
         Intrinsic::riscv_vlseg8};
 
+    unsigned SEW = ResVTy->getElementType()->getScalarSizeInBits();
+    unsigned NumElts = ResVTy->getElementCount().getKnownMinValue();
+    Type *VecTupTy = TargetExtType::get(
+        LI->getContext(), "riscv.vector.tuple",
+        ScalableVectorType::get(Type::getInt8Ty(LI->getContext()),
+                                NumElts * SEW / 8),
+        2);
+
     VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
-                                           {ResVTy, XLenTy});
+                                           {VecTupTy, XLenTy});
     VL = Constant::getAllOnesValue(XLenTy);
-    Ops.append(Factor, PoisonValue::get(ResVTy));
+
+    Ops.append({PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
+                ConstantInt::get(XLenTy, Log2_64(SEW))});
+    Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
+
+    SmallVector<Type *, 2> AggrTypes{Factor, ResVTy};
+    Return = PoisonValue::get(StructType::get(LI->getContext(), AggrTypes));
+    Function *VecExtractFunc = Intrinsic::getDeclaration(
+        LI->getModule(), Intrinsic::riscv_tuple_extract, {ResVTy, VecTupTy});
+    for (unsigned i = 0; i < Factor; ++i) {
+      Value *VecExtract =
+          Builder.CreateCall(VecExtractFunc, {Vlseg, Builder.getInt32(i)});
+      Return = Builder.CreateInsertValue(Return, VecExtract, i);
+    }
   }
 
-  Ops.append({LI->getPointerOperand(), VL});
-
-  Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
-  DI->replaceAllUsesWith(Vlseg);
+  DI->replaceAllUsesWith(Return);
 
   return true;
 }
@@ -21479,6 +21962,8 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         SI->getModule(), FixedVssegIntrIds[Factor - 2],
         {InVTy, SI->getPointerOperandType(), XLenTy});
     VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
+                                    SI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
@@ -21486,13 +21971,29 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
         Intrinsic::riscv_vsseg8};
 
-    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
-                                           {InVTy, XLenTy});
-    VL = Constant::getAllOnesValue(XLenTy);
-  }
+    unsigned SEW = InVTy->getElementType()->getScalarSizeInBits();
+    unsigned NumElts = InVTy->getElementCount().getKnownMinValue();
+    Type *VecTupTy = TargetExtType::get(
+        SI->getContext(), "riscv.vector.tuple",
+        ScalableVectorType::get(Type::getInt8Ty(SI->getContext()),
+                                NumElts * SEW / 8),
+        2);
 
-  Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
-                                  SI->getPointerOperand(), VL});
+    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
+                                           {VecTupTy, XLenTy});
+
+    VL = Constant::getAllOnesValue(XLenTy);
+
+    Function *VecInsertFunc = Intrinsic::getDeclaration(
+        SI->getModule(), Intrinsic::riscv_tuple_insert, {VecTupTy, InVTy});
+    Value *StoredVal = PoisonValue::get(VecTupTy);
+    for (unsigned i = 0; i < Factor; ++i)
+      StoredVal = Builder.CreateCall(
+          VecInsertFunc, {StoredVal, II->getOperand(i), Builder.getInt32(i)});
+
+    Builder.CreateCall(VssegNFunc, {StoredVal, SI->getPointerOperand(), VL,
+                                    ConstantInt::get(XLenTy, Log2_64(SEW))});
+  }
 
   return true;
 }
@@ -21655,181 +22156,6 @@ bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
 
 unsigned RISCVTargetLowering::getMinimumJumpTableEntries() const {
   return Subtarget.getMinimumJumpTableEntries();
-}
-
-// Handle single arg such as return value.
-template <typename Arg>
-void RVVArgDispatcher::constructArgInfos(ArrayRef<Arg> ArgList) {
-  // This lambda determines whether an array of types are constructed by
-  // homogeneous vector types.
-  auto isHomogeneousScalableVectorType = [](ArrayRef<Arg> ArgList) {
-    // First, extract the first element in the argument type.
-    auto It = ArgList.begin();
-    MVT FirstArgRegType = It->VT;
-
-    // Return if there is no return or the type needs split.
-    if (It == ArgList.end() || It->Flags.isSplit())
-      return false;
-
-    ++It;
-
-    // Return if this argument type contains only 1 element, or it's not a
-    // vector type.
-    if (It == ArgList.end() || !FirstArgRegType.isScalableVector())
-      return false;
-
-    // Second, check if the following elements in this argument type are all the
-    // same.
-    for (; It != ArgList.end(); ++It)
-      if (It->Flags.isSplit() || It->VT != FirstArgRegType)
-        return false;
-
-    return true;
-  };
-
-  if (isHomogeneousScalableVectorType(ArgList)) {
-    // Handle as tuple type
-    RVVArgInfos.push_back({(unsigned)ArgList.size(), ArgList[0].VT, false});
-  } else {
-    // Handle as normal vector type
-    bool FirstVMaskAssigned = false;
-    for (const auto &OutArg : ArgList) {
-      MVT RegisterVT = OutArg.VT;
-
-      // Skip non-RVV register type
-      if (!RegisterVT.isVector())
-        continue;
-
-      if (RegisterVT.isFixedLengthVector())
-        RegisterVT = TLI->getContainerForFixedLengthVector(RegisterVT);
-
-      if (!FirstVMaskAssigned && RegisterVT.getVectorElementType() == MVT::i1) {
-        RVVArgInfos.push_back({1, RegisterVT, true});
-        FirstVMaskAssigned = true;
-        continue;
-      }
-
-      RVVArgInfos.push_back({1, RegisterVT, false});
-    }
-  }
-}
-
-// Handle multiple args.
-template <>
-void RVVArgDispatcher::constructArgInfos<Type *>(ArrayRef<Type *> TypeList) {
-  const DataLayout &DL = MF->getDataLayout();
-  const Function &F = MF->getFunction();
-  LLVMContext &Context = F.getContext();
-
-  bool FirstVMaskAssigned = false;
-  for (Type *Ty : TypeList) {
-    StructType *STy = dyn_cast<StructType>(Ty);
-    if (STy && STy->containsHomogeneousScalableVectorTypes()) {
-      Type *ElemTy = STy->getTypeAtIndex(0U);
-      EVT VT = TLI->getValueType(DL, ElemTy);
-      MVT RegisterVT =
-          TLI->getRegisterTypeForCallingConv(Context, F.getCallingConv(), VT);
-      unsigned NumRegs =
-          TLI->getNumRegistersForCallingConv(Context, F.getCallingConv(), VT);
-
-      RVVArgInfos.push_back(
-          {NumRegs * STy->getNumElements(), RegisterVT, false});
-    } else {
-      SmallVector<EVT, 4> ValueVTs;
-      ComputeValueVTs(*TLI, DL, Ty, ValueVTs);
-
-      for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
-           ++Value) {
-        EVT VT = ValueVTs[Value];
-        MVT RegisterVT =
-            TLI->getRegisterTypeForCallingConv(Context, F.getCallingConv(), VT);
-        unsigned NumRegs =
-            TLI->getNumRegistersForCallingConv(Context, F.getCallingConv(), VT);
-
-        // Skip non-RVV register type
-        if (!RegisterVT.isVector())
-          continue;
-
-        if (RegisterVT.isFixedLengthVector())
-          RegisterVT = TLI->getContainerForFixedLengthVector(RegisterVT);
-
-        if (!FirstVMaskAssigned &&
-            RegisterVT.getVectorElementType() == MVT::i1) {
-          RVVArgInfos.push_back({1, RegisterVT, true});
-          FirstVMaskAssigned = true;
-          --NumRegs;
-        }
-
-        RVVArgInfos.insert(RVVArgInfos.end(), NumRegs, {1, RegisterVT, false});
-      }
-    }
-  }
-}
-
-void RVVArgDispatcher::allocatePhysReg(unsigned NF, unsigned LMul,
-                                       unsigned StartReg) {
-  assert((StartReg % LMul) == 0 &&
-         "Start register number should be multiple of lmul");
-  const MCPhysReg *VRArrays;
-  switch (LMul) {
-  default:
-    report_fatal_error("Invalid lmul");
-  case 1:
-    VRArrays = ArgVRs;
-    break;
-  case 2:
-    VRArrays = ArgVRM2s;
-    break;
-  case 4:
-    VRArrays = ArgVRM4s;
-    break;
-  case 8:
-    VRArrays = ArgVRM8s;
-    break;
-  }
-
-  for (unsigned i = 0; i < NF; ++i)
-    if (StartReg)
-      AllocatedPhysRegs.push_back(VRArrays[(StartReg - 8) / LMul + i]);
-    else
-      AllocatedPhysRegs.push_back(MCPhysReg());
-}
-
-/// This function determines if each RVV argument is passed by register, if the
-/// argument can be assigned to a VR, then give it a specific register.
-/// Otherwise, assign the argument to 0 which is a invalid MCPhysReg.
-void RVVArgDispatcher::compute() {
-  uint32_t AssignedMap = 0;
-  auto allocate = [&](const RVVArgInfo &ArgInfo) {
-    // Allocate first vector mask argument to V0.
-    if (ArgInfo.FirstVMask) {
-      AllocatedPhysRegs.push_back(RISCV::V0);
-      return;
-    }
-
-    unsigned RegsNeeded = divideCeil(
-        ArgInfo.VT.getSizeInBits().getKnownMinValue(), RISCV::RVVBitsPerBlock);
-    unsigned TotalRegsNeeded = ArgInfo.NF * RegsNeeded;
-    for (unsigned StartReg = 0; StartReg + TotalRegsNeeded <= NumArgVRs;
-         StartReg += RegsNeeded) {
-      uint32_t Map = ((1 << TotalRegsNeeded) - 1) << StartReg;
-      if ((AssignedMap & Map) == 0) {
-        allocatePhysReg(ArgInfo.NF, RegsNeeded, StartReg + 8);
-        AssignedMap |= Map;
-        return;
-      }
-    }
-
-    allocatePhysReg(ArgInfo.NF, RegsNeeded, 0);
-  };
-
-  for (unsigned i = 0; i < RVVArgInfos.size(); ++i)
-    allocate(RVVArgInfos[i]);
-}
-
-MCPhysReg RVVArgDispatcher::getNextPhysReg() {
-  assert(CurIdx < AllocatedPhysRegs.size() && "Index out of range");
-  return AllocatedPhysRegs[CurIdx++];
 }
 
 SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,

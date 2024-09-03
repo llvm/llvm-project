@@ -769,6 +769,15 @@ void AccStructureChecker::Enter(const parser::AccClause::Link &x) {
   CheckMultipleOccurrenceInDeclare(x.v, llvm::acc::Clause::ACCC_link);
 }
 
+void AccStructureChecker::Enter(const parser::AccClause::Shortloop &x) {
+  if (CheckAllowed(llvm::acc::Clause::ACCC_shortloop) &&
+      context_.languageFeatures().ShouldWarn(
+          common::UsageWarning::OpenAccUsage)) {
+    context_.Say(GetContext().clauseSource,
+        "Non-standard shortloop clause ignored"_warn_en_US);
+  }
+}
+
 void AccStructureChecker::Enter(const parser::AccClause::If &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_if);
   if (const auto *expr{GetExpr(x.v)}) {

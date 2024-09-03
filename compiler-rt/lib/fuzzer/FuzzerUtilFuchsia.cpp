@@ -607,11 +607,9 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  if (name.size() > 31)
-    name.resize(31);
-  zx_status_t s;
-  if ((s = zx_object_set_property(thread.native_handle(), ZX_PROP_NAME,
-                                  name.c_str(), name.size())) != ZX_OK)
+  if (zx_status_t s = zx_object_set_property(
+          thread.native_handle(), ZX_PROP_NAME, name.data(), name.size());
+      s != ZX_OK)
     Printf("SetThreadName for name %s failed: %s", name.c_str(),
            zx_status_get_string(s));
 }

@@ -1585,43 +1585,24 @@ entry:
 }
 
 define i8 @local_alloca_not_simplifiable_2(i64 %index1, i64 %index2, i1 %cnd) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
-; TUNIT-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_2
-; TUNIT-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    store i8 7, ptr [[BYTES]], align 16
-; TUNIT-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
-; TUNIT:       left:
-; TUNIT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX1]]
-; TUNIT-NEXT:    br label [[JOIN:%.*]]
-; TUNIT:       right:
-; TUNIT-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX2]]
-; TUNIT-NEXT:    br label [[JOIN]]
-; TUNIT:       join:
-; TUNIT-NEXT:    [[GEP_JOIN:%.*]] = phi ptr [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
-; TUNIT-NEXT:    store i8 9, ptr [[GEP_JOIN]], align 4
-; TUNIT-NEXT:    [[I:%.*]] = load i8, ptr [[BYTES]], align 16
-; TUNIT-NEXT:    ret i8 [[I]]
-;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
-; CGSCC-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_2
-; CGSCC-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR5]] {
-; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CGSCC-NEXT:    store i8 7, ptr [[BYTES]], align 16
-; CGSCC-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
-; CGSCC:       left:
-; CGSCC-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX1]]
-; CGSCC-NEXT:    br label [[JOIN:%.*]]
-; CGSCC:       right:
-; CGSCC-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX2]]
-; CGSCC-NEXT:    br label [[JOIN]]
-; CGSCC:       join:
-; CGSCC-NEXT:    [[GEP_JOIN:%.*]] = phi ptr [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
-; CGSCC-NEXT:    store i8 9, ptr [[GEP_JOIN]], align 4
-; CGSCC-NEXT:    [[I:%.*]] = load i8, ptr [[BYTES]], align 16
-; CGSCC-NEXT:    ret i8 [[I]]
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_2
+; CHECK-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CHECK-NEXT:    store i8 7, ptr [[BYTES]], align 16
+; CHECK-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX1]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX2]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP_JOIN:%.*]] = phi ptr [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
+; CHECK-NEXT:    store i8 9, ptr [[GEP_JOIN]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[BYTES]], align 16
+; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16

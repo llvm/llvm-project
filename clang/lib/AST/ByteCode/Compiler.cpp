@@ -505,14 +505,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_MemberPointerToBoolean: {
     PrimType PtrT = classifyPrim(SubExpr->getType());
 
-    // Just emit p != nullptr for this.
     if (!this->visit(SubExpr))
       return false;
-
-    if (!this->emitNull(PtrT, nullptr, CE))
-      return false;
-
-    return this->emitNE(PtrT, CE);
+    return this->emitIsNonNull(PtrT, CE);
   }
 
   case CK_IntegralComplexToBoolean:
@@ -885,12 +880,21 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   if (!LT || !RT)
     return false;
 
+  // Visit the given pointer expression and optionally convert to a PT_Ptr.
+  auto visitAsPointer = [&](const Expr *E, PrimType T) -> bool {
+    if (!this->visit(E))
+      return false;
+    if (T != PT_Ptr)
+      return this->emitDecayPtr(T, PT_Ptr, E);
+    return true;
+  };
+
   if (LHS->getType()->isPointerType() && RHS->getType()->isPointerType()) {
     if (Op != BO_Sub)
       return false;
 
     assert(E->getType()->isIntegerType());
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
     return this->emitSubPtr(classifyPrim(E->getType()), E);
@@ -898,21 +902,38 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   PrimType OffsetType;
   if (LHS->getType()->isIntegerType()) {
-    if (!visit(RHS) || !visit(LHS))
+    if (!visitAsPointer(RHS, *RT))
+      return false;
+    if (!this->visit(LHS))
       return false;
     OffsetType = *LT;
   } else if (RHS->getType()->isIntegerType()) {
-    if (!visit(LHS) || !visit(RHS))
+    if (!visitAsPointer(LHS, *LT))
+      return false;
+    if (!this->visit(RHS))
       return false;
     OffsetType = *RT;
   } else {
     return false;
   }
 
-  if (Op == BO_Add)
-    return this->emitAddOffset(OffsetType, E);
-  else if (Op == BO_Sub)
-    return this->emitSubOffset(OffsetType, E);
+  // Do the operation and optionally transform to
+  // result pointer type.
+  if (Op == BO_Add) {
+    if (!this->emitAddOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  } else if (Op == BO_Sub) {
+    if (!this->emitSubOffset(OffsetType, E))
+      return false;
+
+    if (classifyPrim(E) != PT_Ptr)
+      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
+    return true;
+  }
 
   return false;
 }
@@ -1318,14 +1339,15 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
-
   QualType QT = E->getType();
-
   if (const auto *AT = QT->getAs<AtomicType>())
     QT = AT->getValueType();
 
-  if (QT->isVoidType())
+  if (QT->isVoidType()) {
+    if (Inits.size() == 0)
+      return true;
     return this->emitInvalid(E);
+  }
 
   // Handle discarding first.
   if (DiscardResult) {
@@ -2296,8 +2318,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(
-        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+                                                 /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -2556,7 +2578,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (T->isArrayType()) {
@@ -3238,9 +3260,6 @@ template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
@@ -3276,9 +3295,6 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
-
-  if (E->containsErrors())
-    return this->emitError(E);
 
   if (!this->checkLiteralType(E))
     return false;
@@ -3756,7 +3772,6 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
-      DeclScope<Emitter> LocalScope(this, VD);
 
       if (VarT) {
         if (!this->visit(Init))
@@ -3779,6 +3794,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
       return this->emitPopPtr(Init);
     };
+
+    DeclScope<Emitter> LocalScope(this, VD);
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
@@ -4364,11 +4381,6 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
-  if (IS->isNonNegatedConsteval())
-    return visitStmt(IS->getThen());
-  if (IS->isNegatedConsteval())
-    return IS->getElse() ? visitStmt(IS->getElse()) : true;
-
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -4377,8 +4389,19 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  if (!this->visitBool(IS->getCond()))
-    return false;
+  // Compile condition.
+  if (IS->isNonNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+  } else if (IS->isNegatedConsteval()) {
+    if (!this->emitIsConstantContext(IS))
+      return false;
+    if (!this->emitInv(IS))
+      return false;
+  } else {
+    if (!this->visitBool(IS->getCond()))
+      return false;
+  }
 
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
@@ -4964,6 +4987,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
+  if (SubExpr->getType()->isVectorType())
+    return this->VisitVectorUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -5282,6 +5307,110 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
     return this->emitInvalid(E);
   }
 
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isVectorType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  auto UnaryOp = E->getOpcode();
+  if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
+      UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
+    return this->emitInvalid(E);
+
+  // Nothing to do here.
+  if (UnaryOp == UO_Plus || UnaryOp == UO_AddrOf)
+    return this->delegate(SubExpr);
+
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset =
+      this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SubExprOffset, E))
+    return false;
+
+  const auto *VecTy = SubExpr->getType()->getAs<VectorType>();
+  PrimType ElemT = classifyVectorElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (UnaryOp) {
+  case UO_Minus:
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  case UO_LNot: { // !x
+    // In C++, the logic operators !, &&, || are available for vectors. !v is
+    // equivalent to v == 0.
+    //
+    // The result of the comparison is a vector of the same width and number of
+    // elements as the comparison operands with a signed integral element type.
+    //
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    QualType ResultVecTy = E->getType();
+    PrimType ResultVecElemT =
+        classifyPrim(ResultVecTy->getAs<VectorType>()->getElementType());
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      if (!this->emitPrimCast(ElemT, PT_Bool, Ctx.getASTContext().BoolTy, E))
+        return false;
+      if (!this->emitInv(E))
+        return false;
+      if (!this->emitPrimCast(PT_Bool, ElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (ElemT != ResultVecElemT &&
+          !this->emitPrimCast(ElemT, ResultVecElemT, ResultVecTy, E))
+        return false;
+      if (!this->emitInitElem(ResultVecElemT, I, E))
+        return false;
+    }
+    break;
+  }
+  case UO_Not: // ~x
+    for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (ElemT == PT_Bool) {
+        if (!this->emitInv(E))
+          return false;
+      } else {
+        if (!this->emitComp(ElemT, E))
+          return false;
+      }
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported unary operators should be handled up front");
+  }
   return true;
 }
 

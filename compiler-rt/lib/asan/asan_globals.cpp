@@ -22,7 +22,6 @@
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_dense_map.h"
-#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
@@ -180,7 +179,7 @@ int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
   int res = 0;
   for (const auto &l : list_of_all_globals) {
     const Global &g = *l.g;
-    if (UNLIKELY(common_flags()->verbosity >= 3))
+    if (flags()->report_globals >= 2)
       ReportGlobal(g, "Search");
     if (IsAddressNearGlobal(addr, g)) {
       internal_memcpy(&globals[res], &g, sizeof(g));
@@ -271,7 +270,7 @@ static inline bool UseODRIndicator(const Global *g) {
 // so we store the globals in a map.
 static void RegisterGlobal(const Global *g) SANITIZER_REQUIRES(mu_for_globals) {
   CHECK(AsanInited());
-  if (UNLIKELY(common_flags()->verbosity >= 3))
+  if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Added");
   CHECK(flags()->report_globals);
   CHECK(AddrIsInMem(g->beg));
@@ -308,7 +307,7 @@ static void RegisterGlobal(const Global *g) SANITIZER_REQUIRES(mu_for_globals) {
 static void UnregisterGlobal(const Global *g)
     SANITIZER_REQUIRES(mu_for_globals) {
   CHECK(AsanInited());
-  if (UNLIKELY(common_flags()->verbosity >= 3))
+  if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Removed");
   CHECK(flags()->report_globals);
   CHECK(AddrIsInMem(g->beg));
@@ -439,7 +438,7 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};
   global_registration_site_vector->push_back(site);
-  if (UNLIKELY(common_flags()->verbosity >= 3)) {
+  if (flags()->report_globals >= 2) {
     PRINT_CURRENT_STACK();
     Printf("=== ID %d; %p %p\n", stack_id, (void *)&globals[0],
            (void *)&globals[n - 1]);
@@ -498,7 +497,9 @@ void __asan_before_dynamic_init(const char *module_name) {
   Lock lock(&mu_for_globals);
   if (current_dynamic_init_module_name == module_name)
     return;
-  VPrintf(2, "DynInitPoison module: %s\n", module_name);
+  if (flags()->report_globals >= 3)
+    Printf("DynInitPoison module: %s\n", module_name);
+
   if (current_dynamic_init_module_name == nullptr) {
     // First call, poison all globals from other modules.
     DynInitGlobals().forEach([&](auto &kv) {
@@ -544,7 +545,8 @@ static void UnpoisonBeforeMain(void) {
       return;
     allow_after_dynamic_init = true;
   }
-  VPrintf(2, "UnpoisonBeforeMain\n");
+  if (flags()->report_globals >= 3)
+    Printf("UnpoisonBeforeMain\n");
   __asan_after_dynamic_init();
 }
 
@@ -568,7 +570,8 @@ void __asan_after_dynamic_init() {
   if (!current_dynamic_init_module_name)
     return;
 
-  VPrintf(2, "DynInitUnpoison\n");
+  if (flags()->report_globals >= 3)
+    Printf("DynInitUnpoison\n");
 
   DynInitGlobals().forEach([&](auto &kv) {
     UnpoisonDynamicGlobals(kv.second, /*mark_initialized=*/false);

@@ -203,7 +203,12 @@ public:
   bool VisitUsingDecl(UsingDecl *UD) {
     for (const auto *Shadow : UD->shadows()) {
       auto *TD = Shadow->getTargetDecl();
-      auto IsUsed = TD->isUsed() || TD->isReferenced();
+      // For function-decls, we might have overloads brought in due to
+      // transitive dependencies. Hence we only want to report explicit
+      // references for those if they're used.
+      // But for record decls, spelling of the type always refers to primary
+      // decl non-ambiguously. Hence spelling is already a use.
+      auto IsUsed = TD->isUsed() || TD->isReferenced() || !TD->getAsFunction();
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
 
@@ -351,11 +356,11 @@ public:
   }
 
   bool VisitCXXNewExpr(CXXNewExpr *E) {
-    report(E->getExprLoc(), E->getOperatorNew());
+    report(E->getExprLoc(), E->getOperatorNew(), RefType::Ambiguous);
     return true;
   }
   bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
-    report(E->getExprLoc(), E->getOperatorDelete());
+    report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
 };

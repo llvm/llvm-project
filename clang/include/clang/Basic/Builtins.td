@@ -2518,7 +2518,7 @@ def IsoVolatileStore : MSLangBuiltin, Int8_16_32_64Template {
 
 def Noop : MSLangBuiltin {
   let Spellings = ["__noop"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "int(...)";
 }
 
@@ -4741,6 +4741,12 @@ def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_saturate"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

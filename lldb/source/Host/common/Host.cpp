@@ -501,11 +501,12 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   const lldb::pid_t pid = launch_info.GetProcessID();
 
   if (error.Success() && pid == LLDB_INVALID_PROCESS_ID)
-    error.SetErrorString("failed to get process ID");
+    error = Status::FromErrorString("failed to get process ID");
 
   if (error.Success()) {
     if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
-      error.SetErrorString("timed out waiting for shell command to complete");
+      error = Status::FromErrorString(
+          "timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
       Kill(pid, SIGKILL);
@@ -525,7 +526,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             FileSystem::Instance().GetByteSize(output_file_spec);
         if (file_size > 0) {
           if (file_size > command_output_ptr->max_size()) {
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
             WritableDataBufferSP Buffer =

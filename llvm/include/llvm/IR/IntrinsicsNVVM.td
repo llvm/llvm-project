@@ -4707,6 +4707,14 @@ def int_nvvm_match_all_sync_i64p :
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.match.all.sync.i64p">;
 
 //
+// ELECT.SYNC
+//
+// elect.sync dst|pred, membermask
+def int_nvvm_elect_sync :
+  DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty],
+                        [IntrInaccessibleMemOnly, IntrConvergent]>;
+
+//
 // REDUX.SYNC
 //
 // redux.sync.min.u32 dst, src, membermask;

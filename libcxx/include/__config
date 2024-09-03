@@ -788,6 +788,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_CONSTEXPR_SINCE_CXX26 constexpr
+#  else
+#    define _LIBCPP_CONSTEXPR_SINCE_CXX26
+#  endif
+
 #  ifndef _LIBCPP_WEAK
 #    define _LIBCPP_WEAK __attribute__((__weak__))
 #  endif
@@ -882,7 +888,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
-      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
+      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__) || defined(__LLVM_LIBC__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
