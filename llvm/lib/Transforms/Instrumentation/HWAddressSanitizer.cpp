@@ -1586,10 +1586,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction *, 8> LandingPadVec;
   const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
 
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (auto &Inst : instructions(F)) {
     if (InstrumentStack) {
-      SIB.visit(Inst);
+      SIB.visit(ORE, Inst);
     }
 
     if (InstrumentLandingPads && isa<LandingPadInst>(Inst))

@@ -373,6 +373,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
     return errorCodeToError(EC);
   }
   yaml::Input YamlInput(MB.get()->getBuffer());
+  YamlInput.setAllowUnknownKeys(true);
 
   // Consume YAML file.
   YamlInput >> YamlBP;

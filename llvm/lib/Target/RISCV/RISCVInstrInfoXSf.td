@@ -75,7 +75,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
-  let ActiveElementsAffectResult = 1;
+  let ElementsDependOn = EltDepsVLMask;
 }
 
 class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
@@ -99,7 +99,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
-  let ActiveElementsAffectResult = 1;
+  let ElementsDependOn = EltDepsVLMask;
 }
 
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
@@ -308,7 +308,7 @@ class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
 multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
                        Operand OpClass = payload2> {
   let VLMul = m.value in {
-    let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in {
+    let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in {
       def "PseudoVC_" # NAME # "_SE_" # m.MX
         : VPseudoVC_X<OpClass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
@@ -325,7 +325,7 @@ multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
 multiclass VPseudoVC_XV<LMULInfo m, DAGOperand RS1Class,
                         Operand OpClass = payload2> {
   let VLMul = m.value in {
-    let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in {
+    let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in {
       def "PseudoVC_" # NAME # "_SE_" # m.MX
         : VPseudoVC_XV<OpClass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
@@ -342,7 +342,7 @@ multiclass VPseudoVC_XV<LMULInfo m, DAGOperand RS1Class,
 multiclass VPseudoVC_XVV<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
   let VLMul = m.value in {
-    let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in {
+    let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in {
       def "PseudoVC_" # NAME # "_SE_" # m.MX
         : VPseudoVC_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
@@ -359,12 +359,12 @@ multiclass VPseudoVC_XVV<LMULInfo m, DAGOperand RS1Class,
 multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
   let VLMul = m.value in {
-    let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in
+    let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in
     def "PseudoVC_" # NAME # "_SE_" # m.MX
       : VPseudoVC_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
         Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
     let Constraints = "@earlyclobber $rd, $rd = $rs3" in {
-      let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in
+      let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in
       def "PseudoVC_V_" # NAME # "_SE_" # m.MX
         : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;

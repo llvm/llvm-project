@@ -38,11 +38,10 @@ static void SetGlobalStackTraceFormat() {
   OverrideCommonFlags(cf);
 }
 
-void __rtsan::PrintStackTrace() {
+void __rtsan::PrintStackTrace(uptr pc, uptr bp) {
 
   BufferedStackTrace stack{};
 
-  GET_CURRENT_PC_BP;
   stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
 
   SetGlobalStackTraceFormat();
