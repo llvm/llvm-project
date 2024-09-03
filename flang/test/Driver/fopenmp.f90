@@ -62,8 +62,8 @@
 ! RUN: %flang -target x86_64-freebsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
 ! RUN: %flang -target x86_64-windows-gnu -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANYMD
 !
-! RUN: %flang -fno-openmp -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
-! RUN: %flang -fopenmp -fno-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-LD-ANY
+! RUN: %flang -target x86_64-linux-gnu -fno-openmp -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-linux-gnu -fopenmp -fno-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-LD-ANY
 !
 ! CHECK-LD-ANY: "{{.*}}ld{{(.exe)?}}"
 ! CHECK-LD-ANY: "-l{{(omp|gomp|iomp5)}}"
