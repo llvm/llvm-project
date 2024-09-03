@@ -795,10 +795,10 @@ bool GCNDPPCombine::run(MachineFunction &MF) {
 
 PreservedAnalyses GCNDPPCombinePass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   if (MF.getFunction().hasOptNone())
     return PreservedAnalyses::all();
-
-  MFPropsModifier _(*this, MF);
 
   bool Changed = GCNDPPCombine().run(MF);
   if (!Changed)
