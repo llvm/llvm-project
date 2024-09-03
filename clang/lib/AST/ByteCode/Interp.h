@@ -246,7 +246,7 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
 /// Checks if the result of a floating-point operation is valid
 /// in the current context.
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
-                      APFloat::opStatus Status);
+                      APFloat::opStatus Status, FPOptions FPO);
 
 /// Checks why the given DeclRefExpr is invalid.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
@@ -376,14 +376,22 @@ bool Add(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::add, std::plus>(S, OpPC, Bits, LHS, RHS);
 }
 
-inline bool Addf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
+  auto RM = FPO.getRoundingMode();
+  if (RM == llvm::RoundingMode::Dynamic)
+    return llvm::RoundingMode::NearestTiesToEven;
+  return RM;
+}
+
+inline bool Addf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result;
-  auto Status = Floating::add(LHS, RHS, RM, &Result);
+  auto Status = Floating::add(LHS, RHS, getRoundingMode(FPO), &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Result, Status);
+  return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -394,14 +402,15 @@ bool Sub(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, Bits, LHS, RHS);
 }
 
-inline bool Subf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool Subf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result;
-  auto Status = Floating::sub(LHS, RHS, RM, &Result);
+  auto Status = Floating::sub(LHS, RHS, getRoundingMode(FPO), &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Result, Status);
+  return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -412,14 +421,15 @@ bool Mul(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::mul, std::multiplies>(S, OpPC, Bits, LHS, RHS);
 }
 
-inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool Mulf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result;
-  auto Status = Floating::mul(LHS, RHS, RM, &Result);
+  auto Status = Floating::mul(LHS, RHS, getRoundingMode(FPO), &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Result, Status);
+  return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -647,17 +657,18 @@ bool Div(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool Divf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
 
   if (!CheckDivRem(S, OpPC, LHS, RHS))
     return false;
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result;
-  auto Status = Floating::div(LHS, RHS, RM, &Result);
+  auto Status = Floating::div(LHS, RHS, getRoundingMode(FPO), &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Result, Status);
+  return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
 
 //===----------------------------------------------------------------------===//
@@ -822,54 +833,55 @@ bool DecPop(InterpState &S, CodePtr OpPC) {
 
 template <IncDecOp Op, PushVal DoPush>
 bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                       llvm::RoundingMode RM) {
+                       uint32_t FPOI) {
   Floating Value = Ptr.deref<Floating>();
   Floating Result;
 
   if constexpr (DoPush == PushVal::Yes)
     S.Stk.push<Floating>(Value);
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   llvm::APFloat::opStatus Status;
   if constexpr (Op == IncDecOp::Inc)
-    Status = Floating::increment(Value, RM, &Result);
+    Status = Floating::increment(Value, getRoundingMode(FPO), &Result);
   else
-    Status = Floating::decrement(Value, RM, &Result);
+    Status = Floating::decrement(Value, getRoundingMode(FPO), &Result);
 
   Ptr.deref<Floating>() = Result;
 
-  return CheckFloatResult(S, OpPC, Result, Status);
+  return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
 
-inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool Incf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
-  return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
+  return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, FPOI);
 }
 
-inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool IncfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
-  return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
+  return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, FPOI);
 }
 
-inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool Decf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
-  return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
+  return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, FPOI);
 }
 
-inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+inline bool DecfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
-  return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
+  return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, FPOI);
 }
 
 /// 1) Pops the value from the stack.
@@ -2126,20 +2138,21 @@ bool CastAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
-                          const llvm::fltSemantics *Sem,
-                          llvm::RoundingMode RM) {
+                          const llvm::fltSemantics *Sem, uint32_t FPOI) {
   const T &From = S.Stk.pop<T>();
   APSInt FromAP = From.toAPSInt();
   Floating Result;
 
-  auto Status = Floating::fromIntegral(FromAP, *Sem, RM, Result);
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
+  auto Status =
+      Floating::fromIntegral(FromAP, *Sem, getRoundingMode(FPO), Result);
   S.Stk.push<Floating>(Result);
 
-  return CheckFloatResult(S, OpPC, Result, Status);
+  return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
+bool CastFloatingIntegral(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Floating &F = S.Stk.pop<Floating>();
 
   if constexpr (std::is_same_v<T, Boolean>) {
@@ -2163,13 +2176,14 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
       return false;
     }
 
+    FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
     S.Stk.push<T>(T(Result));
-    return CheckFloatResult(S, OpPC, F, Status);
+    return CheckFloatResult(S, OpPC, F, Status, FPO);
   }
 }
 
 static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
-                                          uint32_t BitWidth) {
+                                          uint32_t BitWidth, uint32_t FPOI) {
   const Floating &F = S.Stk.pop<Floating>();
 
   APSInt Result(BitWidth, /*IsUnsigned=*/true);
@@ -2184,12 +2198,13 @@ static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
     return S.noteUndefinedBehavior();
   }
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
-  return CheckFloatResult(S, OpPC, F, Status);
+  return CheckFloatResult(S, OpPC, F, Status, FPO);
 }
 
 static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
-                                           uint32_t BitWidth) {
+                                           uint32_t BitWidth, uint32_t FPOI) {
   const Floating &F = S.Stk.pop<Floating>();
 
   APSInt Result(BitWidth, /*IsUnsigned=*/false);
@@ -2204,8 +2219,9 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
     return S.noteUndefinedBehavior();
   }
 
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
-  return CheckFloatResult(S, OpPC, F, Status);
+  return CheckFloatResult(S, OpPC, F, Status, FPO);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
