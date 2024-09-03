@@ -12,17 +12,26 @@
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
+#include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <deque>
+#include <queue>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
 
 namespace opts {
-extern llvm::cl::opt<bool> ProfileUseDFS;
-extern llvm::cl::opt<bool> ProfileUsePseudoProbes;
+using namespace llvm;
+extern cl::opt<bool> ProfileUseDFS;
+cl::opt<bool> ProfileWritePseudoProbes(
+    "profile-write-pseudo-probes",
+    cl::desc("Use pseudo probes in profile generation"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -59,7 +68,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
@@ -72,13 +81,6 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
-  if (PseudoProbeDecoder) {
-    if ((YamlBF.GUID = BF.getGUID())) {
-      const MCPseudoProbeFuncDesc *FuncDesc =
-          PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
-      YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
-    }
-  }
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
@@ -86,6 +88,40 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
 
   const FunctionLayout Layout = BF.getLayout();
   Layout.updateLayoutIndices(Order);
+
+  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
+  if (PseudoProbeDecoder && BF.getGUID()) {
+    std::queue<const MCDecodedPseudoProbeInlineTree *> ITWorklist;
+    // FIXME: faster inline tree lookup by top-level GUID
+    if (const MCDecodedPseudoProbeInlineTree *InlineTree = llvm::find_if(
+            PseudoProbeDecoder->getDummyInlineRoot().getChildren(),
+            [&](const auto &InlineTree) {
+              return InlineTree.Guid == BF.getGUID();
+            })) {
+      ITWorklist.push(InlineTree);
+      InlineTreeNodeId[InlineTree] = 0;
+      auto Hash =
+          PseudoProbeDecoder->getFuncDescForGUID(BF.getGUID())->FuncHash;
+      YamlBF.InlineTree.emplace_back(
+          yaml::bolt::InlineTreeInfo{0, 0, 0, BF.getGUID(), Hash});
+    }
+    uint32_t ParentId = 0;
+    uint32_t NodeId = 1;
+    while (!ITWorklist.empty()) {
+      const MCDecodedPseudoProbeInlineTree *Cur = ITWorklist.front();
+      for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren()) {
+        InlineTreeNodeId[&Child] = NodeId;
+        auto Hash =
+            PseudoProbeDecoder->getFuncDescForGUID(Child.Guid)->FuncHash;
+        YamlBF.InlineTree.emplace_back(yaml::bolt::InlineTreeInfo{
+            NodeId++, ParentId, std::get<1>(Child.getInlineSite()), Child.Guid,
+            Hash});
+        ITWorklist.push(&Child);
+      }
+      ITWorklist.pop();
+      ++ParentId;
+    }
+  }
 
   for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
@@ -193,10 +229,18 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       const uint64_t FuncAddr = BF.getAddress();
       const std::pair<uint64_t, uint64_t> &BlockRange =
           BB->getInputAddressRange();
-      for (const MCDecodedPseudoProbe &Probe : ProbeMap.find(
-               FuncAddr + BlockRange.first, FuncAddr + BlockRange.second))
+      const std::pair<uint64_t, uint64_t> BlockAddrRange = {
+          FuncAddr + BlockRange.first, FuncAddr + BlockRange.second};
+      for (const MCDecodedPseudoProbe &Probe :
+           ProbeMap.find(BlockAddrRange.first, BlockAddrRange.second)) {
+        uint32_t NodeId = InlineTreeNodeId[Probe.getInlineTreeNode()];
+        uint32_t Offset = Probe.getAddress() - BlockAddrRange.first;
         YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
-            Probe.getGuid(), Probe.getIndex(), Probe.getType()});
+            Probe.getIndex(), NodeId, Offset, Probe.getType()});
+      }
+      llvm::sort(YamlBB.PseudoProbes);
+      YamlBB.PseudoProbes.erase(llvm::unique(YamlBB.PseudoProbes),
+                                YamlBB.PseudoProbes.end());
     }
 
     YamlBF.Blocks.emplace_back(YamlBB);
