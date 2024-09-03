@@ -596,9 +596,9 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
     // optimization. For dynamic, non-hidden symbols, the weak guard variable
     // remains to ensure that other DSOs do not re-initialize the global.
     //
-    // For PE-COFF platforms, there is no guard variable, and COMDAT associativity
-    // is the only way to ensure vauge linkage globals are initialized exactly
-    // once.
+    // For PE-COFF platforms, there is no guard variable, and COMDAT
+    // associativity is the only way to ensure vauge linkage globals are
+    // initialized exactly once.
     //
     // MachO is the only remaining platform with no comdats that doesn't
     // benefit from this optimization. The rest are mainly modeled on ELF
