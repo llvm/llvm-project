@@ -17778,12 +17778,10 @@ public:
       // Emit code for constant values.
       if (Candidates.size() > 1 && allConstant(Candidates)) {
         Value *Res = Candidates.front();
-        Value *OrigV = TrackedToOrig.find(Candidates.front())->second;
-        ++VectorizedVals.try_emplace(OrigV).first->getSecond();
+        ++VectorizedVals.try_emplace(Candidates.front(), 0).first->getSecond();
         for (Value *VC : ArrayRef(Candidates).drop_front()) {
           Res = createOp(Builder, RdxKind, Res, VC, "const.rdx", ReductionOps);
-          Value *OrigV = TrackedToOrig.find(VC)->second;
-          ++VectorizedVals.try_emplace(OrigV).first->getSecond();
+          ++VectorizedVals.try_emplace(VC, 0).first->getSecond();
           if (auto *ResI = dyn_cast<Instruction>(Res))
             V.analyzedReductionRoot(ResI);
         }
@@ -17804,10 +17802,8 @@ public:
       // Gather same values.
       MapVector<Value *, unsigned> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
-        for (Value *V : Candidates) {
-          Value *OrigV = TrackedToOrig.find(V)->second;
-          ++SameValuesCounter.try_emplace(OrigV).first->second;
-        }
+        for (Value *V : Candidates)
+          ++SameValuesCounter.insert(std::make_pair(V, 0)).first->second;
       // Used to check if the reduced values used same number of times. In this
       // case the compiler may produce better code. E.g. if reduced values are
       // aabbccdd (8 x values), then the first node of the tree will have a node
@@ -17831,12 +17827,12 @@ public:
                    });
         Candidates.resize(SameValuesCounter.size());
         transform(SameValuesCounter, Candidates.begin(),
-                  [&](const auto &P) { return TrackedVals.at(P.first); });
+                  [](const auto &P) { return P.first; });
         NumReducedVals = Candidates.size();
         // Have a reduction of the same element.
         if (NumReducedVals == 1) {
           Value *OrigV = TrackedToOrig.find(Candidates.front())->second;
-          unsigned Cnt = SameValuesCounter.find(OrigV)->second;
+          unsigned Cnt = SameValuesCounter.lookup(OrigV);
           Value *RedVal =
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
           VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
@@ -17941,7 +17937,7 @@ public:
               continue;
             Value *V = Candidates[Cnt];
             Value *OrigV = TrackedToOrig.find(V)->second;
-            ++SameValuesCounter.find(OrigV)->second;
+            ++SameValuesCounter[OrigV];
           }
         }
         SmallPtrSet<Value *, 4> VLScalars(VL.begin(), VL.end());
@@ -17960,8 +17956,8 @@ public:
             continue;
           }
           Value *OrigV = TrackedToOrig.find(RdxVal)->second;
-          unsigned NumOps = VectorizedVals.lookup(OrigV) +
-                            SameValuesCounter.find(OrigV)->second;
+          unsigned NumOps =
+              VectorizedVals.lookup(RdxVal) + SameValuesCounter[OrigV];
           if (NumOps != ReducedValsToOps.find(OrigV)->second.size())
             LocalExternallyUsedValues[RdxVal];
         }
@@ -18089,11 +18085,10 @@ public:
         for (Value *RdxVal : VL) {
           Value *OrigV = TrackedToOrig.find(RdxVal)->second;
           if (IsSupportedHorRdxIdentityOp) {
-            VectorizedVals.try_emplace(OrigV,
-                                       SameValuesCounter.find(OrigV)->second);
+            VectorizedVals.try_emplace(OrigV, SameValuesCounter[RdxVal]);
             continue;
           }
-          ++VectorizedVals.try_emplace(OrigV).first->getSecond();
+          ++VectorizedVals.try_emplace(OrigV, 0).first->getSecond();
           if (!V.isVectorized(RdxVal))
             RequiredExtract.insert(RdxVal);
         }
@@ -18104,10 +18099,10 @@ public:
       }
       if (OptReusedScalars && !AnyVectorized) {
         for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
-          Value *RdxVal = TrackedVals.find(P.first)->second;
-          Value *RedVal = emitScaleForReusedOps(RdxVal, Builder, P.second);
+          Value *RedVal = emitScaleForReusedOps(P.first, Builder, P.second);
           VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
-          VectorizedVals.try_emplace(P.first, P.second);
+          Value *OrigV = TrackedToOrig.find(P.first)->second;
+          VectorizedVals.try_emplace(OrigV, P.second);
         }
         continue;
       }
