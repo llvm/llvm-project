@@ -55,11 +55,6 @@ bool TrySymInitialize() {
 
 }  // namespace
 
-#  if defined(__clang__)
-#    pragma clang diagnostic push
-#    pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
-#  endif
-
 // Initializes DbgHelp library, if it's not yet initialized. Calls to this
 // function should be synchronized with respect to other calls to DbgHelp API
 // (e.g. from WinSymbolizerTool).
@@ -70,12 +65,13 @@ void InitializeDbgHelpIfNeeded() {
   HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
   CHECK(dbghelp && "failed to load dbghelp.dll");
 
-#define DBGHELP_IMPORT(name)                                                  \
-  do {                                                                        \
-    name =                                                                    \
-        reinterpret_cast<decltype(::name) *>(GetProcAddress(dbghelp, #name)); \
-    CHECK(name != nullptr);                                                   \
-  } while (0)
+#  define DBGHELP_IMPORT(name)                     \
+    do {                                           \
+      name = reinterpret_cast<decltype(::name) *>( \
+          (void *)GetProcAddress(dbghelp, #name)); \
+      CHECK(name != nullptr);                      \
+    } while (0)
+
   DBGHELP_IMPORT(StackWalk64);
   DBGHELP_IMPORT(SymCleanup);
   DBGHELP_IMPORT(SymFromAddr);
@@ -137,10 +133,6 @@ void InitializeDbgHelpIfNeeded() {
     return;
   }
 }
-
-#  if defined(__clang__)
-#    pragma clang diagnostic pop
-#  endif
 
 bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   InitializeDbgHelpIfNeeded();

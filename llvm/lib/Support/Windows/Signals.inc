@@ -167,39 +167,34 @@ static bool isDebugHelpInitialized() {
   return fStackWalk64 && fSymInitialize && fSymSetOptions && fMiniDumpWriteDump;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
-#endif
-
 static bool load64BitDebugHelp(void) {
   HMODULE hLib =
       ::LoadLibraryExA("Dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
   if (hLib) {
-    fMiniDumpWriteDump =
-        (fpMiniDumpWriteDump)::GetProcAddress(hLib, "MiniDumpWriteDump");
-    fStackWalk64 = (fpStackWalk64)::GetProcAddress(hLib, "StackWalk64");
-    fSymGetModuleBase64 =
-        (fpSymGetModuleBase64)::GetProcAddress(hLib, "SymGetModuleBase64");
-    fSymGetSymFromAddr64 =
-        (fpSymGetSymFromAddr64)::GetProcAddress(hLib, "SymGetSymFromAddr64");
-    fSymGetLineFromAddr64 =
-        (fpSymGetLineFromAddr64)::GetProcAddress(hLib, "SymGetLineFromAddr64");
-    fSymGetModuleInfo64 =
-        (fpSymGetModuleInfo64)::GetProcAddress(hLib, "SymGetModuleInfo64");
-    fSymFunctionTableAccess64 = (fpSymFunctionTableAccess64)::GetProcAddress(
-        hLib, "SymFunctionTableAccess64");
-    fSymSetOptions = (fpSymSetOptions)::GetProcAddress(hLib, "SymSetOptions");
-    fSymInitialize = (fpSymInitialize)::GetProcAddress(hLib, "SymInitialize");
-    fEnumerateLoadedModules = (fpEnumerateLoadedModules)::GetProcAddress(
-        hLib, "EnumerateLoadedModules64");
+    fMiniDumpWriteDump = (fpMiniDumpWriteDump)(void *)::GetProcAddress(
+        hLib, "MiniDumpWriteDump");
+    fStackWalk64 = (fpStackWalk64)(void *)::GetProcAddress(hLib, "StackWalk64");
+    fSymGetModuleBase64 = (fpSymGetModuleBase64)(void *)::GetProcAddress(
+        hLib, "SymGetModuleBase64");
+    fSymGetSymFromAddr64 = (fpSymGetSymFromAddr64)(void *)::GetProcAddress(
+        hLib, "SymGetSymFromAddr64");
+    fSymGetLineFromAddr64 = (fpSymGetLineFromAddr64)(void *)::GetProcAddress(
+        hLib, "SymGetLineFromAddr64");
+    fSymGetModuleInfo64 = (fpSymGetModuleInfo64)(void *)::GetProcAddress(
+        hLib, "SymGetModuleInfo64");
+    fSymFunctionTableAccess64 =
+        (fpSymFunctionTableAccess64)(void *)::GetProcAddress(
+            hLib, "SymFunctionTableAccess64");
+    fSymSetOptions =
+        (fpSymSetOptions)(void *)::GetProcAddress(hLib, "SymSetOptions");
+    fSymInitialize =
+        (fpSymInitialize)(void *)::GetProcAddress(hLib, "SymInitialize");
+    fEnumerateLoadedModules =
+        (fpEnumerateLoadedModules)(void *)::GetProcAddress(
+            hLib, "EnumerateLoadedModules64");
   }
   return isDebugHelpInitialized();
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 using namespace llvm;
 

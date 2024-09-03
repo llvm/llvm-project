@@ -88,18 +88,36 @@ public:
     // For each use whose type changed, cast the value with the new type back to
     // the old type.
     for (auto [value, oldType] : oldTypes) {
-      tensor::CastOp castedValue;
-      for (auto &use : value.getUses()) {
-        if (canBeRefined(use.getOwner()))
+      // The call to 'use->set()' in the body of the loop below invalidates the
+      // iterator used to traverse op uses, so it is important to make a copy of
+      // these first.
+      llvm::SmallVector<OpOperand *> uses = llvm::map_to_vector(
+          value.getUses(),
+          [](OpOperand &use) -> OpOperand * {
+            return &use;
+          });
+
+      // A 'tensor.cast' op is emitted only if needed. Once emitted, it is
+      // cached and reused by all consumers.
+      tensor::CastOp castValue;
+
+      // Traverse all uses
+      for (OpOperand *use : uses) {
+        if (canBeRefined(use->getOwner()))
           continue;
 
-        // Cache the cast to avoid generating duplicates
-        if (!castedValue) {
-          ImplicitLocOpBuilder builder{value.getLoc(), use.getOwner()};
-          castedValue = builder.create<tensor::CastOp>(oldType, value);
+        if (!castValue) {
+          // Set the insertion point as far back as possible, since new
+          // consumers of the 'tensor.cast' op generated in future iterations
+          // are likely to be further up in the code due to the order in which
+          // they appear in the use list.
+          OpBuilder builder{value.getContext()};
+          builder.setInsertionPointAfter(value.getDefiningOp());
+          castValue =
+              builder.create<tensor::CastOp>(value.getLoc(), oldType, value);
         }
 
-        use.set(castedValue);
+        use->set(castValue);
       }
     }
 

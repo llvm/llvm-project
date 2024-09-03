@@ -560,11 +560,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
     return false;
 
-  auto *Writer = Asm.getWriterPtr();
-  if (!Writer)
-    return false;
-
-  bool IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(
+  bool IsResolved = Asm.getWriter().isSymbolRefDifferenceFullyResolvedImpl(
       Asm, SA, *AUIPCDF, false, true);
   if (!IsResolved)
     return false;

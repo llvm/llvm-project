@@ -120,37 +120,20 @@ public:
     if (!FD)
       return;
 
-    const auto *TA = FD->getAttr<TargetAttr>();
-    if (TA == nullptr)
-      return;
+    TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    ParsedTargetAttr Attr =
-        CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
-    if (Attr.BranchProtection.empty())
-      return;
-
-    TargetInfo::BranchProtectionInfo BPI;
-    StringRef Error;
-    (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                   Attr.CPU, BPI, Error);
-    assert(Error.empty());
-
-    auto *Fn = cast<llvm::Function>(GV);
-    Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
-
-    if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
-      Fn->addFnAttr("sign-return-address-key",
-                    BPI.SignKey == LangOptions::SignReturnAddressKeyKind::AKey
-                        ? "a_key"
-                        : "b_key");
+    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+      ParsedTargetAttr Attr =
+          CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
+      if (!Attr.BranchProtection.empty()) {
+        StringRef Error;
+        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
+                                                       Attr.CPU, BPI, Error);
+        assert(Error.empty());
+      }
     }
-
-    Fn->addFnAttr("branch-target-enforcement",
-                  BPI.BranchTargetEnforcement ? "true" : "false");
-    Fn->addFnAttr("branch-protection-pauth-lr",
-                  BPI.BranchProtectionPAuthLR ? "true" : "false");
-    Fn->addFnAttr("guarded-control-stack",
-                  BPI.GuardedControlStack ? "true" : "false");
+    auto *Fn = cast<llvm::Function>(GV);
+    setBranchProtectionFnAttributes(BPI, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -857,12 +840,13 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
 static void diagnoseIfNeedsFPReg(DiagnosticsEngine &Diags,
                                  const StringRef ABIName,
                                  const AArch64ABIInfo &ABIInfo,
-                                 const QualType &Ty, const NamedDecl *D) {
+                                 const QualType &Ty, const NamedDecl *D,
+                                 SourceLocation loc) {
   const Type *HABase = nullptr;
   uint64_t HAMembers = 0;
   if (Ty->isFloatingType() || Ty->isVectorType() ||
       ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
-    Diags.Report(D->getLocation(), diag::err_target_unsupported_type_for_abi)
+    Diags.Report(loc, diag::err_target_unsupported_type_for_abi)
         << D->getDeclName() << Ty << ABIName;
   }
 }
@@ -877,10 +861,11 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
 
   if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo,
-                         FuncDecl->getReturnType(), FuncDecl);
+                         FuncDecl->getReturnType(), FuncDecl,
+                         FuncDecl->getLocation());
     for (ParmVarDecl *PVD : FuncDecl->parameters()) {
       diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, PVD->getType(),
-                           PVD);
+                           PVD, FuncDecl->getLocation());
     }
   }
 }
@@ -900,8 +885,10 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
 
   if (!CalleeIsStreamingCompatible &&
       (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
-    CGM.getDiags().Report(CallLoc,
-                          diag::err_function_always_inline_attribute_mismatch)
+    CGM.getDiags().Report(
+        CallLoc, CalleeIsStreaming
+                     ? diag::err_function_always_inline_attribute_mismatch
+                     : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())
@@ -923,11 +910,11 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABISoftFloat(
     return;
 
   diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, ReturnType,
-                       Caller);
+                       Callee ? Callee : Caller, CallLoc);
 
   for (const CallArg &Arg : Args)
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, Arg.getType(),
-                         Caller);
+                         Callee ? Callee : Caller, CallLoc);
 }
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,

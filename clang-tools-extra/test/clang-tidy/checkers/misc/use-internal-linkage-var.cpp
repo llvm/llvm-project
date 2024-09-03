@@ -42,3 +42,6 @@ int global_in_extern_c_1;
 }
 
 extern "C" int global_in_extern_c_2;
+
+const int const_global = 123;
+constexpr int constexpr_global = 123;

@@ -60,6 +60,11 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
                          const TargetMachine &TM) const override;
+
+  MCSymbol *getAuthPtrSlotSymbol(const TargetMachine &TM,
+                                 MachineModuleInfo *MMI, const MCSymbol *RawSym,
+                                 AArch64PACKey::ID Key,
+                                 uint16_t Discriminator) const;
 };
 
 /// This implementation is used for AArch64 COFF targets.

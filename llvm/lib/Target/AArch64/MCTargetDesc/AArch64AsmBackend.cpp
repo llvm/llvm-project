@@ -599,7 +599,7 @@ public:
   }
 
   /// Generate the compact unwind encoding from the CFI directives.
-  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty())
@@ -609,10 +609,10 @@ public:
       return CU::UNWIND_ARM64_MODE_DWARF;
 
     bool HasFP = false;
-    unsigned StackSize = 0;
+    uint64_t StackSize = 0;
 
-    uint32_t CompactUnwindEncoding = 0;
-    int CurOffset = 0;
+    uint64_t CompactUnwindEncoding = 0;
+    int64_t CurOffset = 0;
     for (size_t i = 0, e = Instrs.size(); i != e; ++i) {
       const MCCFIInstruction &Inst = Instrs[i];
 

@@ -46,6 +46,8 @@ operator==(const UnwindPlan::Row::RegisterLocation &rhs) const {
         return !memcmp(m_location.expr.opcodes, rhs.m_location.expr.opcodes,
                        m_location.expr.length);
       break;
+    case isConstant:
+      return m_location.constant_value == rhs.m_location.constant_value;
     }
   }
   return false;
@@ -153,6 +155,9 @@ void UnwindPlan::Row::RegisterLocation::Dump(Stream &s,
     if (m_type == atDWARFExpression)
       s.PutChar(']');
   } break;
+  case isConstant:
+    s.Printf("=0x%" PRIx64, m_location.constant_value);
+    break;
   }
 }
 
@@ -347,6 +352,18 @@ bool UnwindPlan::Row::SetRegisterLocationToSame(uint32_t reg_num,
     return false;
   RegisterLocation reg_loc;
   reg_loc.SetSame();
+  m_register_locations[reg_num] = reg_loc;
+  return true;
+}
+
+bool UnwindPlan::Row::SetRegisterLocationToIsConstant(uint32_t reg_num,
+                                                      uint64_t constant,
+                                                      bool can_replace) {
+  if (!can_replace &&
+      m_register_locations.find(reg_num) != m_register_locations.end())
+    return false;
+  RegisterLocation reg_loc;
+  reg_loc.SetIsConstant(constant);
   m_register_locations[reg_num] = reg_loc;
   return true;
 }

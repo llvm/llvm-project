@@ -879,15 +879,66 @@ struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// Fold a concat with all elements being fills of the same value
+/// into a fill of the concat result shape.
+struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    auto concatOperands = concatOp.getInputs();
+    if (concatOperands.empty()) {
+      return failure();
+    }
+
+    auto firstFillOp = concatOperands.front().getDefiningOp<linalg::FillOp>();
+    if (!firstFillOp) {
+      return failure();
+    }
+    // Prefetch the fill value.
+    OpFoldResult firstFillVal =
+        getAsOpFoldResult(firstFillOp.getDpsInputOperand(0)->get());
+    // Collect all the outs values for the fill operations.
+    SmallVector<Value> allOuts;
+    allOuts.push_back(firstFillOp.getDpsInitOperand(0)->get());
+
+    auto isDefinedByCompatibleFillOp = [&](Value v) -> bool {
+      auto fillOp = v.getDefiningOp<linalg::FillOp>();
+      if (!fillOp) {
+        return false;
+      }
+
+      OpFoldResult fillVal =
+          getAsOpFoldResult(fillOp.getDpsInputOperand(0)->get());
+      if (fillVal != firstFillVal)
+        return false;
+
+      allOuts.push_back(fillOp.getDpsInitOperand(0)->get());
+      return true;
+    };
+    if (!llvm::all_of(concatOperands.drop_front(),
+                      isDefinedByCompatibleFillOp)) {
+      return rewriter.notifyMatchFailure(
+          concatOp, "not all operands are defined by a compatible fill op");
+    }
+
+    Value outsConcat = rewriter.create<tensor::ConcatOp>(
+        concatOp.getLoc(), concatOp.getDim(), allOuts);
+    rewriter.replaceOpWithNewOp<linalg::FillOp>(
+        concatOp, firstFillOp.getDpsInputOperand(0)->get(), outsConcat);
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results
-      .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
-           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
+  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithTensorExtract,
+              FoldFillWithPack, FoldFillWithPad,
+              FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+              FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+              FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1166,9 +1217,8 @@ struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy linalgOp,
                                 PatternRewriter &rewriter) const override {
-    // Check all indexing maps are identity.
-    if (llvm::any_of(linalgOp.getIndexingMapsArray(),
-                     [](AffineMap map) { return !map.isIdentity(); }))
+    // All indexing maps must be equal. It follows that they are permutations.
+    if (!llvm::all_equal(linalgOp.getIndexingMapsArray()))
       return failure();
 
     // Check that the body of the linalg operation is just a linalg.yield
@@ -1356,8 +1406,12 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   if (payloadOpName.has_value()) {
-    addBodyWithPayloadOp(parser, result, payloadOpName.value(), payloadOpAttrs,
-                         ArrayRef(result.operands).drop_back());
+    if (!result.operands.empty())
+      addBodyWithPayloadOp(parser, result, payloadOpName.value(),
+                           payloadOpAttrs,
+                           ArrayRef(result.operands).drop_back());
+    else
+      result.addRegion();
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,
@@ -1739,7 +1793,8 @@ static void buildIdentityRegion(OpBuilder &builder, Location loc,
                                 ValueRange outputs) {
   buildGenericRegion(builder, loc, region, inputs, outputs,
                      [](OpBuilder &b, Location loc, ValueRange args) {
-                       b.create<linalg::YieldOp>(loc, args[0]);
+                       if (!args.empty())
+                         b.create<linalg::YieldOp>(loc, args[0]);
                      });
 }
 
@@ -1853,6 +1908,10 @@ void TransposeOp::getEffects(
 
 LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
                                 SmallVectorImpl<OpFoldResult> &result) {
+  // Only the tensor type is supported.
+  if (!isa<TensorType>(getInput().getType()))
+    return failure();
+
   // Single dimension transpose.
   if (getPermutation().size() == 0) {
     result.push_back(getInput());
@@ -1890,9 +1949,68 @@ struct FoldTransposeWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// This pattern canonicalize transpose by swapping the order of
+/// broadcast and transpose:
+///   transpose(broadcast(input)) -> broadcast(transpose(input))
+struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    Value input = transposeOp.getInput();
+    BroadcastOp broadcastOp = input.getDefiningOp<BroadcastOp>();
+    if (!input.hasOneUse() || !broadcastOp)
+      return failure();
+
+    ArrayRef<int64_t> dimensions = broadcastOp.getDimensions();
+    ArrayRef<int64_t> perms = transposeOp.getPermutation();
+
+    // Get new perms and new dimensions.
+    SmallVector<int64_t> resultPerms = dropDims(perms, dimensions);
+    SmallVector<int64_t> invertPerm = invertPermutationVector(perms);
+    SmallVector<int64_t> resultDimensions;
+    unsigned dimensionSize = dimensions.size();
+    for (unsigned i = 0; i < dimensionSize; ++i)
+      resultDimensions.push_back(invertPerm[dimensions[i]]);
+
+    // Create transpose result.
+    Value broadcastInput = broadcastOp.getInput();
+    Location loc = transposeOp.getLoc();
+    MLIRContext *ctx = transposeOp.getContext();
+    SmallVector<OpFoldResult> dims;
+    auto broadcastInputTy =
+        mlir::cast<RankedTensorType>(broadcastInput.getType());
+    unsigned inputRank = broadcastInputTy.getRank();
+    for (unsigned i = 0; i < inputRank; ++i) {
+      if (broadcastInputTy.isDynamicDim(i)) {
+        dims.push_back(rewriter.create<tensor::DimOp>(loc, broadcastInput, i)
+                           ->getResult(0));
+      } else {
+        dims.push_back(IntegerAttr::get(IndexType::get(ctx),
+                                        broadcastInputTy.getDimSize(i)));
+      }
+    }
+    SmallVector<OpFoldResult> transposeResultShapes =
+        applyPermutation(dims, resultPerms);
+    Value transposeInit = rewriter.create<tensor::EmptyOp>(
+        transposeOp.getLoc(), transposeResultShapes,
+        broadcastInputTy.getElementType());
+
+    // Create broadcast(transpose(input)).
+    Value transposeResult =
+        rewriter
+            .create<TransposeOp>(loc, broadcastOp.getInput(), transposeInit,
+                                 resultPerms)
+            ->getResult(0);
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
+        transposeOp, transposeResult, transposeOp.getInit(), resultDimensions);
+    return success();
+  }
+};
+
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldTransposeWithTranspose>(context);
+  results.add<FoldTransposeWithTranspose, SwapTransposeWithBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2732,6 +2850,465 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value result =
       buildDivOp(b, loc, numerator, denominator, output, reductionDim);
   return SmallVector<Value>{result};
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradFilterTransformOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WinogradFilterTransformOp::verify() {
+  auto filterType = cast<ShapedType>(getFilter().getType());
+  ArrayRef<int64_t> filterShape = filterType.getShape();
+  int64_t filterH = filterShape[getFilterHDim()];
+  int64_t filterW = filterShape[getFilterWDim()];
+  int64_t r = getR();
+  int64_t m = getM();
+
+  if (filterH != r && filterH != 1)
+    return emitOpError("expect filter height either equals to r or 1");
+  if (filterW != r && filterW != 1)
+    return emitOpError("expect filter width either equals to r or 1");
+  if (filterH == 1 && filterW == 1)
+    return emitOpError("expect either filter height or width equals to r");
+
+  SmallVector<int64_t> expectedOutputShape;
+  expectedOutputShape.push_back(filterH == r ? m + r - 1 : 1);
+  expectedOutputShape.push_back(filterW == r ? m + r - 1 : 1);
+  expectedOutputShape.push_back(filterShape[getFilterCDim()]);
+  expectedOutputShape.push_back(filterShape[getFilterFDim()]);
+
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
+    return emitOpError("the output shape is not expected");
+  }
+  return success();
+}
+
+SmallVector<Range>
+WinogradFilterTransformOp::getIterationDomain(OpBuilder &builder) {
+  Location loc = getLoc();
+  IntegerAttr zeroAttr = builder.getIndexAttr(0);
+  IntegerAttr oneAttr = builder.getIndexAttr(1);
+  Value filter = getFilter();
+  int64_t filterRank = getFilterOperandRank();
+  SmallVector<Range> loopBounds(filterRank);
+  for (unsigned dim = 0; dim < filterRank; ++dim) {
+    loopBounds[dim].offset = zeroAttr;
+    loopBounds[dim].size = getDimValue(builder, loc, filter, dim);
+    loopBounds[dim].stride = oneAttr;
+  }
+  return loopBounds;
+}
+
+SmallVector<utils::IteratorType>
+WinogradFilterTransformOp::getLoopIteratorTypes() {
+  int64_t filterRank = getFilterOperandRank();
+  SmallVector<utils::IteratorType> iteratorTypes(filterRank,
+                                                 utils::IteratorType::parallel);
+  return iteratorTypes;
+}
+
+LogicalResult WinogradFilterTransformOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  ShapedType filterType = getFilterOperandType();
+  ArrayRef<int64_t> filterShape = filterType.getShape();
+  int64_t filterH = filterShape[getFilterHDim()];
+  int64_t filterW = filterShape[getFilterWDim()];
+  int64_t m = getM();
+  int64_t r = getR();
+  int64_t alpha = m + r - 1;
+  int64_t alphaH = filterH != 1 ? alpha : 1;
+  int64_t alphaW = filterW != 1 ? alpha : 1;
+  IntegerAttr alphaHAttr = builder.getI64IntegerAttr(alphaH);
+  IntegerAttr alphaWAttr = builder.getI64IntegerAttr(alphaW);
+
+  resultOffsets.append(
+      {zeroAttr, zeroAttr, offsets[getFilterCDim()], offsets[getFilterFDim()]});
+  resultSizes.append(
+      {alphaHAttr, alphaWAttr, sizes[getFilterCDim()], sizes[getFilterFDim()]});
+
+  return success();
+}
+
+/// Implement tiling for winograd_filter_transform
+/// The input of winograd_filter_transform is (F, KH, KW, C).
+/// The output of winograd_filter_transform is (alphaH, alphaW, C, F)
+/// Users can specify the tile sizes of F and C.
+/// `offsets` are the values for the offsets of F, KH, KW, C for one tile.
+/// `sizes` are the values for the sizes of F, KH, KW, C for one tile.
+FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes) {
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  ShapedType filterType = getFilterOperandType();
+  ArrayRef<int64_t> filterShape = filterType.getShape();
+  int64_t filterH = filterShape[getFilterHDim()];
+  int64_t filterW = filterShape[getFilterWDim()];
+  IntegerAttr filterHAttr = builder.getI64IntegerAttr(filterH);
+  IntegerAttr filterWAttr = builder.getI64IntegerAttr(filterW);
+  SmallVector<Value> tiledOperands;
+  SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
+
+  sliceOffsets.append(
+      {offsets[getFilterFDim()], zeroAttr, zeroAttr, offsets[getFilterCDim()]});
+  sliceSizes.append({sizes[getFilterFDim()], filterHAttr, filterWAttr,
+                     sizes[getFilterCDim()]});
+  int64_t filterRank = getFilterOperandRank();
+  SmallVector<OpFoldResult> filterStrides(filterRank, oneAttr);
+  Location loc = getLoc();
+  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
+      loc, getFilter(), sliceOffsets, sliceSizes, filterStrides));
+
+  SmallVector<OpFoldResult> resultOffsets, resultSizes;
+  if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
+                                   resultSizes)))
+    return failure();
+
+  int64_t outputRank = getOutputOperandRank();
+  SmallVector<OpFoldResult> outputStrides(outputRank, oneAttr);
+  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
+      loc, getOutput(), resultOffsets, resultSizes, outputStrides));
+
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(tiledOperands[1].getType());
+  Operation *tiledOp =
+      mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
+
+  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradInputTransformOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WinogradInputTransformOp::verify() {
+  auto inputType = cast<ShapedType>(getInput().getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputH = inputShape[getInputHDim()];
+  int64_t inputW = inputShape[getInputWDim()];
+  int m = getM();
+  int r = getR();
+  int64_t tileSize = m + r - 1;
+  bool leftTransform = inputH != 1;
+  bool rightTransform = inputW != 1;
+
+  SmallVector<int64_t> expectedOutputShape(6, inputH);
+  if (ShapedType::isDynamic(inputH)) {
+    expectedOutputShape[getOutputAlphaHDim()] = tileSize;
+    expectedOutputShape[getOutputTileHDim()] = ShapedType::kDynamic;
+  } else {
+    expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
+    expectedOutputShape[getOutputTileHDim()] =
+        leftTransform ? (inputH - (r - 1)) / m : 1;
+  }
+  if (ShapedType::isDynamic(inputW)) {
+    expectedOutputShape[getOutputAlphaWDim()] = tileSize;
+    expectedOutputShape[getOutputTileWDim()] = ShapedType::kDynamic;
+  } else {
+    expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
+    expectedOutputShape[getOutputTileWDim()] =
+        rightTransform ? (inputW - (r - 1)) / m : 1;
+  }
+  expectedOutputShape[getOutputNDim()] = inputShape[getInputNDim()];
+  expectedOutputShape[getOutputCDim()] = inputShape[getInputCDim()];
+
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
+    return emitOpError("the output shape is not expected");
+  }
+  return success();
+}
+
+SmallVector<Range>
+WinogradInputTransformOp::getIterationDomain(OpBuilder &builder) {
+  Location loc = getLoc();
+  IntegerAttr zeroAttr = builder.getIndexAttr(0);
+  IntegerAttr oneAttr = builder.getIndexAttr(1);
+  Value output = getOutput();
+  int64_t outputRank = getOutputOperandRank();
+  SmallVector<Range> loopBounds(outputRank);
+  for (unsigned dim = 0; dim < outputRank; ++dim) {
+    loopBounds[dim].offset = zeroAttr;
+    // alphaH, alphaW, tileH, tileW, N, C
+    loopBounds[dim].size = getDimValue(builder, loc, output, dim);
+    loopBounds[dim].stride = oneAttr;
+  }
+  return loopBounds;
+}
+
+SmallVector<utils::IteratorType>
+WinogradInputTransformOp::getLoopIteratorTypes() {
+  int64_t outputRank = getOutputOperandRank();
+  SmallVector<utils::IteratorType> iteratorTypes(outputRank,
+                                                 utils::IteratorType::parallel);
+  return iteratorTypes;
+}
+
+LogicalResult WinogradInputTransformOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  ShapedType inputType = getInputOperandType();
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputH = inputShape[getInputHDim()];
+  int64_t inputW = inputShape[getInputWDim()];
+  int64_t m = getM();
+  int64_t r = getR();
+  int64_t alpha = m + r - 1;
+  int64_t alphaH = inputH != 1 ? alpha : 1;
+  int64_t alphaW = inputW != 1 ? alpha : 1;
+  IntegerAttr alphaHAttr = builder.getI64IntegerAttr(alphaH);
+  IntegerAttr alphaWAttr = builder.getI64IntegerAttr(alphaW);
+
+  resultOffsets.append({zeroAttr, zeroAttr, offsets[getOutputTileHDim()],
+                        offsets[getOutputTileWDim()], offsets[getOutputNDim()],
+                        offsets[getOutputCDim()]});
+  resultSizes.append({alphaHAttr, alphaWAttr, sizes[getOutputTileHDim()],
+                      sizes[getOutputTileWDim()], sizes[getOutputNDim()],
+                      sizes[getOutputCDim()]});
+
+  return success();
+}
+
+/// Implement tiling for winograd_input_transform
+/// The input of winograd_input_transform is (N, H, W, C).
+/// The output of winograd_input_transform is (alphaH, alphaW, tileH, tileW, N,
+/// C) Users can specify the tile sizes of tileH, tileW, N, and C. `offsets` are
+/// the values for the offsets of tileH, tileW, N, C for one tile. `sizes` are
+/// the values for the sizes of tileH, tileW, N, C for one tile.
+FailureOr<TilingResult>
+WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
+                                                 ArrayRef<OpFoldResult> offsets,
+                                                 ArrayRef<OpFoldResult> sizes) {
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  ShapedType inputType = getInputOperandType();
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputH = inputShape[getInputHDim()];
+  int64_t inputW = inputShape[getInputWDim()];
+  int64_t m = getM();
+  int64_t r = getR();
+
+  Location loc = getLoc();
+  MLIRContext *context = builder.getContext();
+  auto offsetAffineMap =
+      AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
+  Value mappedOffsetH = affine::makeComposedAffineApply(
+      builder, loc, offsetAffineMap, offsets[getOutputTileHDim()]);
+  Value mappedOffsetW = affine::makeComposedAffineApply(
+      builder, loc, offsetAffineMap, offsets[getOutputTileWDim()]);
+  auto sizeAffineMap = AffineMap::get(
+      1, 0, {builder.getAffineDimExpr(0) * m + (r - 1)}, context);
+  Value mappedSizeH = affine::makeComposedAffineApply(
+      builder, loc, sizeAffineMap, sizes[getOutputTileHDim()]);
+  Value mappedSizeW = affine::makeComposedAffineApply(
+      builder, loc, sizeAffineMap, sizes[getOutputTileWDim()]);
+
+  SmallVector<Value> tiledOperands;
+  SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
+
+  OpFoldResult offsetH =
+      inputH != 1 ? OpFoldResult(mappedOffsetH) : OpFoldResult(zeroAttr);
+  OpFoldResult offsetW =
+      inputW != 1 ? OpFoldResult(mappedOffsetW) : OpFoldResult(zeroAttr);
+  sliceOffsets.append(
+      {offsets[getOutputNDim()], offsetH, offsetW, offsets[getOutputCDim()]});
+  OpFoldResult sizeH =
+      inputH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
+  OpFoldResult sizeW =
+      inputW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
+  sliceSizes.append(
+      {sizes[getOutputNDim()], sizeH, sizeW, sizes[getOutputCDim()]});
+  int64_t inputRank = getInputOperandRank();
+  SmallVector<OpFoldResult> inputStrides(inputRank, oneAttr);
+  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
+      loc, getInput(), sliceOffsets, sliceSizes, inputStrides));
+
+  SmallVector<OpFoldResult> resultOffsets, resultSizes;
+  if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
+                                   resultSizes)))
+    return failure();
+
+  int64_t outputRank = getOutputOperandRank();
+  SmallVector<OpFoldResult> outputStrides(outputRank, oneAttr);
+  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
+      loc, getOutput(), resultOffsets, resultSizes, outputStrides));
+
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(tiledOperands[1].getType());
+  Operation *tiledOp =
+      mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
+
+  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradOutputTransformOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WinogradOutputTransformOp::verify() {
+  auto valueType = cast<ShapedType>(getValue().getType());
+  ArrayRef<int64_t> valueShape = valueType.getShape();
+  int64_t valueH = valueShape[getValueAlphaHDim()];
+  int64_t valueW = valueShape[getValueAlphaWDim()];
+  int64_t valueTileH = valueShape[getValueTileHDim()];
+  int64_t valueTileW = valueShape[getValueTileWDim()];
+  int m = getM();
+  int r = getR();
+  bool leftTransform = valueH != 1;
+  bool rightTransform = valueW != 1;
+
+  int64_t outputRank = getOutputOperandRank();
+  SmallVector<int64_t> expectedOutputShape(outputRank, valueH);
+  if (ShapedType::isDynamic(valueH) || ShapedType::isDynamic(valueTileH)) {
+    expectedOutputShape[getOutputHDim()] = ShapedType::kDynamic;
+  } else {
+    if (valueH != (leftTransform ? m + r - 1 : 1))
+      return emitOpError("expect input height equals to input tile size");
+    expectedOutputShape[getOutputHDim()] = (leftTransform ? m : 1) * valueTileH;
+  }
+  if (ShapedType::isDynamic(valueW) || ShapedType::isDynamic(valueTileW)) {
+    expectedOutputShape[getOutputWDim()] = ShapedType::kDynamic;
+  } else {
+    if (valueW != (rightTransform ? m + r - 1 : 1))
+      return emitOpError("expect input width equals to input tile size");
+    expectedOutputShape[getOutputWDim()] =
+        (rightTransform ? m : 1) * valueTileW;
+  }
+  expectedOutputShape[getOutputNDim()] = valueShape[getValueNDim()];
+  expectedOutputShape[getOutputFDim()] = valueShape[getValueFDim()];
+
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
+    return emitOpError("the output shape is not expected");
+  }
+  return success();
+}
+
+SmallVector<Range>
+WinogradOutputTransformOp::getIterationDomain(OpBuilder &builder) {
+  Location loc = getLoc();
+  IntegerAttr zeroAttr = builder.getIndexAttr(0);
+  IntegerAttr oneAttr = builder.getIndexAttr(1);
+  Value value = getValue();
+  int64_t valueRank = getValueOperandRank();
+  SmallVector<Range> loopBounds(valueRank);
+  for (unsigned dim = 0; dim < valueRank; ++dim) {
+    loopBounds[dim].offset = zeroAttr;
+    // alphaH, alphaW, tileH, tileW, N, F
+    loopBounds[dim].size = getDimValue(builder, loc, value, dim);
+    loopBounds[dim].stride = oneAttr;
+  }
+  return loopBounds;
+}
+
+SmallVector<utils::IteratorType>
+WinogradOutputTransformOp::getLoopIteratorTypes() {
+  int64_t valueRank = getValueOperandRank();
+  SmallVector<utils::IteratorType> iteratorTypes(valueRank,
+                                                 utils::IteratorType::parallel);
+  return iteratorTypes;
+}
+
+LogicalResult WinogradOutputTransformOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  int64_t m = getM();
+
+  Location loc = getLoc();
+  MLIRContext *context = builder.getContext();
+  auto affineMap =
+      AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
+
+  Value mappedOffsetH = affine::makeComposedAffineApply(
+      builder, loc, affineMap, offsets[getValueTileHDim()]);
+  Value mappedOffsetW = affine::makeComposedAffineApply(
+      builder, loc, affineMap, offsets[getValueTileWDim()]);
+  Value mappedSizeH = affine::makeComposedAffineApply(
+      builder, loc, affineMap, sizes[getValueTileHDim()]);
+  Value mappedSizeW = affine::makeComposedAffineApply(
+      builder, loc, affineMap, sizes[getValueTileWDim()]);
+
+  ShapedType valueType = getValueOperandType();
+  ArrayRef<int64_t> valueShape = valueType.getShape();
+  int64_t valueH = valueShape[0];
+  int64_t valueW = valueShape[1];
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  OpFoldResult offsetH =
+      valueH != 1 ? OpFoldResult(mappedOffsetH) : OpFoldResult(zeroAttr);
+  OpFoldResult offsetW =
+      valueW != 1 ? OpFoldResult(mappedOffsetW) : OpFoldResult(zeroAttr);
+  OpFoldResult sizeH =
+      valueH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
+  OpFoldResult sizeW =
+      valueW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
+
+  resultOffsets.append(
+      {offsets[getValueNDim()], offsetH, offsetW, offsets[getValueFDim()]});
+  resultSizes.append(
+      {sizes[getValueNDim()], sizeH, sizeW, sizes[getValueFDim()]});
+  return success();
+}
+
+/// Implement tiling for winograd_output_transform
+/// The input of winograd_output_transform is (alphaH, alphaW, tileH, tileW, N,
+/// F). The output of winograd_output_transform is (N, H, W, F) Users can
+/// specify the tile sizes of tileH, tileW, N, and F. `offsets` are the values
+/// for the offsets of tileH, tileW, N, F for one tile. `sizes` are the values
+/// for the sizes of tileH, tileW, N, F for one tile.
+FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes) {
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  Location loc = getLoc();
+  SmallVector<Value> tiledOperands;
+  SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
+
+  ShapedType valueType = getValueOperandType();
+  ArrayRef<int64_t> valueShape = valueType.getShape();
+  int64_t alphaH = valueShape[getValueAlphaHDim()];
+  int64_t alphaW = valueShape[getValueAlphaWDim()];
+  IntegerAttr alphaHAttr = builder.getI64IntegerAttr(alphaH);
+  IntegerAttr alphaWAttr = builder.getI64IntegerAttr(alphaW);
+
+  sliceOffsets.append({zeroAttr, zeroAttr, offsets[getValueTileHDim()],
+                       offsets[getValueTileWDim()], offsets[getValueNDim()],
+                       offsets[getValueFDim()]});
+  sliceSizes.append({alphaHAttr, alphaWAttr, sizes[getValueTileHDim()],
+                     sizes[getValueTileWDim()], sizes[getValueNDim()],
+                     sizes[getValueFDim()]});
+  int64_t valueRank = getValueOperandRank();
+  SmallVector<OpFoldResult> sliceStrides(valueRank, oneAttr);
+  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
+      loc, getValue(), sliceOffsets, sliceSizes, sliceStrides));
+
+  SmallVector<OpFoldResult> resultOffsets, resultSizes;
+  if (failed(getResultTilePosition(builder, 1, offsets, sizes, resultOffsets,
+                                   resultSizes)))
+    return failure();
+
+  int64_t outputRank = getOutputOperandRank();
+  SmallVector<OpFoldResult> strides(outputRank, oneAttr);
+  tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
+      loc, getOutput(), resultOffsets, resultSizes, strides));
+
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(tiledOperands[1].getType());
+  Operation *tiledOp =
+      mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
+
+  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
 }
 
 //===----------------------------------------------------------------------===//

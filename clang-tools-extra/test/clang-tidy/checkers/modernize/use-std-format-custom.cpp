@@ -63,4 +63,5 @@ std::string unsupported_format_parameter_type()
   // No fixes here because the format parameter of the function called is not a
   // string.
   return bad_format_type_strprintf("");
+// CHECK-MESSAGES: [[@LINE-1]]:10: warning: unable to use 'fmt::format' instead of 'bad_format_type_strprintf' because first argument is not a narrow string literal [modernize-use-std-format]
 }

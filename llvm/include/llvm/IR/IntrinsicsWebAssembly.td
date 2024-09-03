@@ -346,7 +346,7 @@ def int_wasm_relaxed_dot_bf16x8_add_f32:
 // TODO: Replace these intrinsic with normal ISel patterns once the XXX
 // instructions are merged to the proposal.
 def int_wasm_loadf16_f32:
-  Intrinsic<[llvm_float_ty],
+  DefaultAttrsIntrinsic<[llvm_float_ty],
             [llvm_ptr_ty],
             [IntrReadMem, IntrArgMemOnly],
              "", [SDNPMemOperand]>;
@@ -362,6 +362,10 @@ def int_wasm_splat_f16x8:
 def int_wasm_extract_lane_f16x8:
   DefaultAttrsIntrinsic<[llvm_float_ty],
                         [llvm_v8f16_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_replace_lane_f16x8:
+  DefaultAttrsIntrinsic<[llvm_v8f16_ty],
+                        [llvm_v8f16_ty, llvm_i32_ty, llvm_float_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
 

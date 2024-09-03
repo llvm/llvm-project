@@ -166,9 +166,6 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   // From this point forward we know that there is no thread state used.
   ASSERT(state::HasThreadState == false, nullptr);
 
-  uint32_t NumThreads = determineNumberOfThreads(num_threads);
-  uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
-  uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
   if (mapping::isSPMDMode()) {
     // This was moved to its own routine so it could be called directly
     // in certain situations to avoid resource consumption of unused
@@ -177,6 +174,10 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
     return;
   }
+
+  uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
+  uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
 
   // We do *not* create a new data environment because all threads in the team
   // that are active are now running this parallel region. They share the

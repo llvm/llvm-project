@@ -18,7 +18,6 @@ extern "C" {
 
 int memcmp(const void *lhs, const void *rhs, size_t count);
 void memset(void *dst, int C, size_t count);
-
 int printf(const char *format, ...);
 }
 

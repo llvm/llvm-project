@@ -1,4 +1,11 @@
-add_executable(amdhsa-loader Loader.cpp)
+set(LLVM_LINK_COMPONENTS
+  BinaryFormat
+  Object
+  Option
+  Support
+  )
+
+add_llvm_executable(amdhsa-loader amdhsa-loader.cpp)
 
 target_link_libraries(amdhsa-loader
   PRIVATE

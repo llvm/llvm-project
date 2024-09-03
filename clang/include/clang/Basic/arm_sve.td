@@ -2092,7 +2092,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
   def SVCNTP_COUNT : SInst<"svcntp_{d}", "n}i", "QcQsQiQl", MergeNone, "aarch64_sve_cntp_{d}", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<1, ImmCheck2_4_Mul2>]>;
 }
 
-let SVETargetGuard = "sve2,b16b16", SMETargetGuard = "sme2,b16b16" in {
+let SVETargetGuard = "sve2,sve-b16b16", SMETargetGuard = "sme2,sve-b16b16" in {
 defm SVMUL_BF  : SInstZPZZ<"svmul",  "b", "aarch64_sve_fmul",   "aarch64_sve_fmul_u", [VerifyRuntimeMode]>;
 defm SVADD_BF  : SInstZPZZ<"svadd",  "b", "aarch64_sve_fadd",   "aarch64_sve_fadd_u", [VerifyRuntimeMode]>;
 defm SVSUB_BF  : SInstZPZZ<"svsub",  "b", "aarch64_sve_fsub",   "aarch64_sve_fsub_u", [VerifyRuntimeMode]>;
@@ -2116,7 +2116,7 @@ def SVFCLAMP_BF   : SInst<"svclamp[_{d}]", "dddd", "b", MergeNone, "aarch64_sve_
 multiclass MinMaxIntr<string i, string zm, string mul, string t> {
   def SVS # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "csil",     MergeNone, "aarch64_sve_s" # i # zm # "_" # mul, [IsStreaming], []>;
   def SVU # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "UcUsUiUl", MergeNone, "aarch64_sve_u" # i # zm # "_" # mul, [IsStreaming], []>;
-  def SVF # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "bhfd",      MergeNone, "aarch64_sve_f" # i # zm # "_" # mul, [IsStreaming], []>;
+  def SVF # NAME : SInst<"sv" # i # "[" # zm # "_{d}_" # mul # "]", t, "hfd",      MergeNone, "aarch64_sve_f" # i # zm # "_" # mul, [IsStreaming], []>;
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
@@ -2134,11 +2134,11 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
 }
 
 multiclass SInstMinMaxByVector<string name> {
-  def NAME # _SINGLE_X2 : SInst<"sv" # name # "nm[_single_{d}_x2]", "22d", "bhfd", MergeNone, "aarch64_sve_f" # name # "nm_single_x2", [IsStreaming], []>;
-  def NAME # _SINGLE_X4 : SInst<"sv" # name # "nm[_single_{d}_x4]", "44d", "bhfd", MergeNone, "aarch64_sve_f" # name # "nm_single_x4", [IsStreaming], []>;
+  def NAME # _SINGLE_X2 : SInst<"sv" # name # "nm[_single_{d}_x2]", "22d", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_single_x2", [IsStreaming], []>;
+  def NAME # _SINGLE_X4 : SInst<"sv" # name # "nm[_single_{d}_x4]", "44d", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_single_x4", [IsStreaming], []>;
 
-  def NAME # _X2 : SInst<"sv" # name # "nm[_{d}_x2]", "222", "bhfd", MergeNone, "aarch64_sve_f" # name # "nm_x2", [IsStreaming], []>;
-  def NAME # _X4 : SInst<"sv" # name # "nm[_{d}_x4]", "444", "bhfd", MergeNone, "aarch64_sve_f" # name # "nm_x4", [IsStreaming], []>;
+  def NAME # _X2 : SInst<"sv" # name # "nm[_{d}_x2]", "222", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_x2", [IsStreaming], []>;
+  def NAME # _X4 : SInst<"sv" # name # "nm[_{d}_x4]", "444", "hfd", MergeNone, "aarch64_sve_f" # name # "nm_x4", [IsStreaming], []>;
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
@@ -2172,9 +2172,25 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
   def SVFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x4",  [IsStreaming], []>;
 }
 
-let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,b16b16"in {
-  def SVBFCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "b",      MergeNone, "aarch64_sve_bfclamp_single_x2",  [IsStreaming], []>;
-  def SVBFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "b",      MergeNone, "aarch64_sve_bfclamp_single_x4",  [IsStreaming], []>;
+multiclass BfSingleMultiVector<string name> {
+  def NAME # _SINGLE_X2 : SInst<"sv" # name # "[_single_{d}_x2]", "22d", "b", MergeNone, "aarch64_sve_f" # name # "_single_x2", [IsStreaming], []>;
+  def NAME # _SINGLE_X4 : SInst<"sv" # name # "[_single_{d}_x4]", "44d", "b", MergeNone, "aarch64_sve_f" # name # "_single_x4", [IsStreaming], []>;
+
+  def NAME # _X2 : SInst<"sv" # name # "[_{d}_x2]", "222", "b", MergeNone, "aarch64_sve_f" # name # "_x2", [IsStreaming], []>;
+  def NAME # _X4 : SInst<"sv" # name # "[_{d}_x4]", "444", "b", MergeNone, "aarch64_sve_f" # name # "_x4", [IsStreaming], []>;
+}
+
+let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,sve-b16b16"in {
+  def SVBFCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "b", MergeNone, "aarch64_sve_bfclamp_single_x2",  [IsStreaming], []>;
+  def SVBFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "b", MergeNone, "aarch64_sve_bfclamp_single_x4",  [IsStreaming], []>;
+
+  // bfmin, bfmax (single, multi)
+  defm SVBFMIN : BfSingleMultiVector<"min">;
+  defm SVBFMAX : BfSingleMultiVector<"max">;
+
+  // bfminnm, bfmaxnm (single, multi)
+  defm SVBFMINNM : BfSingleMultiVector<"minnm">;
+  defm SVBFMAXNM : BfSingleMultiVector<"maxnm">;
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {

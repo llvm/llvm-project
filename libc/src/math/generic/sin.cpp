@@ -15,29 +15,10 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/math/generic/sincos_eval.h"
-
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-#include "range_reduction_double_fma.h"
-
-using LIBC_NAMESPACE::fma::FAST_PASS_EXPONENT;
-using LIBC_NAMESPACE::fma::ONE_TWENTY_EIGHT_OVER_PI;
-using LIBC_NAMESPACE::fma::range_reduction_small;
-using LIBC_NAMESPACE::fma::SIN_K_PI_OVER_128;
-
-LIBC_INLINE constexpr bool NO_FMA = false;
-#else
-#include "range_reduction_double_nofma.h"
-
-using LIBC_NAMESPACE::nofma::FAST_PASS_EXPONENT;
-using LIBC_NAMESPACE::nofma::ONE_TWENTY_EIGHT_OVER_PI;
-using LIBC_NAMESPACE::nofma::range_reduction_small;
-using LIBC_NAMESPACE::nofma::SIN_K_PI_OVER_128;
-
-LIBC_INLINE constexpr bool NO_FMA = true;
-#endif // LIBC_TARGET_CPU_HAS_FMA
 
 // TODO: We might be able to improve the performance of large range reduction of
 // non-FMA targets further by operating directly on 25-bit chunks of 128/pi and
@@ -49,7 +30,7 @@ LIBC_INLINE constexpr bool NO_FMA = true;
 #define LIBC_MATH_SIN_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -62,7 +43,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large;
+  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
 
   // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
@@ -204,4 +185,4 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
 #endif // !LIBC_MATH_SIN_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

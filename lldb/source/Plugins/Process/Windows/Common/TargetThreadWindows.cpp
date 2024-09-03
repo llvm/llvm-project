@@ -175,18 +175,14 @@ Status TargetThreadWindows::DoResume() {
   return Status();
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
-#endif
-
 const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
   static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
     HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
-    return hModule ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
-                         ::GetProcAddress(hModule, "GetThreadDescription"))
-                   : nullptr;
+    return hModule
+               ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
+                     (void *)::GetProcAddress(hModule, "GetThreadDescription"))
+               : nullptr;
   }();
   LLDB_LOGF(log, "GetProcAddress: %p",
             reinterpret_cast<void *>(GetThreadDescription));
@@ -205,7 +201,3 @@ const char *TargetThreadWindows::GetName() {
 
   return m_name.c_str();
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif

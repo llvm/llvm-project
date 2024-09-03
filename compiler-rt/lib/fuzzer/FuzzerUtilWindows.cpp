@@ -238,16 +238,11 @@ size_t PageSize() {
   return PageSizeCached;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
-#endif
-
 void SetThreadName(std::thread &thread, const std::string &name) {
   typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
-  proc ThreadNameProc =
-      reinterpret_cast<proc>(GetProcAddress(kbase, "SetThreadDescription"));
+  proc ThreadNameProc = reinterpret_cast<proc>(
+      (void *)GetProcAddress(kbase, "SetThreadDescription"));
   if (ThreadNameProc) {
     std::wstring buf;
     auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
@@ -259,10 +254,6 @@ void SetThreadName(std::thread &thread, const std::string &name) {
     }
   }
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 } // namespace fuzzer
 

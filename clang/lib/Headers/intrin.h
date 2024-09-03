@@ -408,7 +408,10 @@ unsigned int _CountLeadingSigns64(__int64);
 unsigned int _CountOneBits(unsigned long);
 unsigned int _CountOneBits64(unsigned __int64);
 
+unsigned int __hlt(unsigned int, ...);
+
 void __cdecl __prefetch(const void *);
+
 #endif
 
 /*----------------------------------------------------------------------------*\

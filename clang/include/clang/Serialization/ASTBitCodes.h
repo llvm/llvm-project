@@ -1124,6 +1124,9 @@ enum PredefinedTypeIDs {
 // \brief AMDGPU types with auto numeration
 #define AMDGPU_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/AMDGPUTypes.def"
+// \brief HLSL intangible types with auto numeration
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   /// The placeholder type for unresolved templates.
   PREDEF_TYPE_UNRESOLVED_TEMPLATE,
@@ -1136,7 +1139,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 504;
+const unsigned NUM_PREDEF_TYPE_IDS = 505;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1898,6 +1901,8 @@ enum StmtCode {
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
+  STMT_OMP_REVERSE_DIRECTIVE,
+  STMT_OMP_INTERCHANGE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,
   STMT_OMP_FOR_SIMD_DIRECTIVE,
   STMT_OMP_SECTIONS_DIRECTIVE,
@@ -1965,6 +1970,7 @@ enum StmtCode {
   STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE,
+  STMT_OMP_ASSUME_DIRECTIVE,
   EXPR_ARRAY_SECTION,
   EXPR_OMP_ARRAY_SHAPING,
   EXPR_OMP_ITERATOR,
@@ -1989,6 +1995,9 @@ enum StmtCode {
   // OpenACC Constructs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+
+  // HLSL Constructs
+  EXPR_HLSL_OUT_ARG,
 };
 
 /// The kinds of designators that can occur in a

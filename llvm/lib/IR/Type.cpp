@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cassert>
 #include <utility>
 
@@ -45,7 +46,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case PPC_FP128TyID : return getPPC_FP128Ty(C);
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
-  case X86_MMXTyID   : return getX86_MMXTy(C);
   case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
@@ -111,6 +111,13 @@ Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
   return Ty;
 }
 
+bool Type::isRISCVVectorTupleTy() const {
+  if (!isTargetExtTy())
+    return false;
+
+  return cast<TargetExtType>(this)->getName() == "riscv.vector.tuple";
+}
+
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // Identity cast means no change so return true
   if (this == Ty)
@@ -124,14 +131,6 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // have the same size, otherwise not.
   if (isa<VectorType>(this) && isa<VectorType>(Ty))
     return getPrimitiveSizeInBits() == Ty->getPrimitiveSizeInBits();
-
-  //  64-bit fixed width vector types can be losslessly converted to x86mmx.
-  if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
-      getPrimitiveSizeInBits().getFixedValue() == 64)
-    return true;
-  if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedValue() == 64)
-    return true;
 
   //  8192-bit fixed width vector types can be losslessly converted to x86amx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
@@ -179,8 +178,6 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     return TypeSize::getFixed(128);
   case Type::PPC_FP128TyID:
     return TypeSize::getFixed(128);
-  case Type::X86_MMXTyID:
-    return TypeSize::getFixed(64);
   case Type::X86_AMXTyID:
     return TypeSize::getFixed(8192);
   case Type::IntegerTyID:
@@ -245,7 +242,6 @@ Type *Type::getTokenTy(LLVMContext &C) { return &C.pImpl->TokenTy; }
 Type *Type::getX86_FP80Ty(LLVMContext &C) { return &C.pImpl->X86_FP80Ty; }
 Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
-Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
 Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
 
 IntegerType *Type::getInt1Ty(LLVMContext &C) { return &C.pImpl->Int1Ty; }
@@ -844,6 +840,19 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit);
+
+  // RISC-V vector tuple type. The layout is represented as the type that needs
+  // the same number of vector registers(VREGS) as this tuple type, represented
+  // as <vscale x (RVVBitsPerBlock * VREGS / 8) x i8>.
+  if (Name == "riscv.vector.tuple") {
+    unsigned TotalNumElts =
+        std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
+                     ->getMinNumElements(),
+                 RISCV::RVVBitsPerBlock / 8) *
+        Ty->getIntParameter(0);
+    return TargetTypeInfo(
+        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
+  }
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }
