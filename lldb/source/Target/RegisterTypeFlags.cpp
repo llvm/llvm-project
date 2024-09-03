@@ -127,7 +127,7 @@ RegisterTypeFlags::RegisterTypeFlags(std::string id, unsigned size,
 }
 
 void RegisterTypeFlags::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\" Size: {1}", GetID().c_str(), m_size);
+  LLDB_LOG(log, "flags ID: \"{0}\" Size: {1}", GetID().c_str(), m_size);
   for (const Field &field : m_fields)
     field.DumpToLog(log);
 }
@@ -362,7 +362,7 @@ void RegisterTypeEnum::Enumerator::DumpToLog(Log *log) const {
 }
 
 void RegisterTypeEnum::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\"", GetID().c_str());
+  LLDB_LOG(log, "enum ID: \"{0}\"", GetID().c_str());
   for (const auto &enumerator : GetEnumerators())
     enumerator.DumpToLog(log);
 }
