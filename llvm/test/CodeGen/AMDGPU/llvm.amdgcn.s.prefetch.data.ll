@@ -119,6 +119,18 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @prefetch_data_vgpr_base_imm_len(ptr addrspace(4) %ptr) {
+; GCN-LABEL: prefetch_data_vgpr_base_imm_len:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    v_readfirstlane_b32 s1, v1
+; GCN-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GCN-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.amdgcn.s.prefetch.data.p4(ptr addrspace(4) %ptr, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.s.prefetch.data.p4(ptr addrspace(4) %ptr, i32 %len)
 declare void @llvm.amdgcn.s.prefetch.data.p1(ptr addrspace(1) %ptr, i32 %len)
 declare void @llvm.amdgcn.s.prefetch.data.p0(ptr %ptr, i32 %len)
