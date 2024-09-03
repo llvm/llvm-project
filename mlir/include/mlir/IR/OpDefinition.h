@@ -1629,7 +1629,7 @@ verifyTrait(Operation *) {
 
 /// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
-LogicalResult verifyTraits([[maybe_unused]] Operation *op) {
+LogicalResult verifyTraits(Operation *op) {
   return success((succeeded(verifyTrait<Ts>(op)) && ...));
 }
 
