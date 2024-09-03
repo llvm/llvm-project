@@ -75,7 +75,12 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         PointerType *AllocInstPtrTy =
             cast<PointerType>(allocaInst->getType()->getScalarType());
         Instruction *NewASCToGeneric = allocaInst;
-        if (AllocInstPtrTy->getAddressSpace() != ADDRESS_SPACE_LOCAL) {
+        unsigned AllocAddrSpace = AllocInstPtrTy->getAddressSpace();
+        assert((AllocAddrSpace == ADDRESS_SPACE_GENERIC ||
+                AllocAddrSpace == ADDRESS_SPACE_LOCAL) &&
+               "AllocaInst can only be in Generic or Local address space for "
+               "NVPTX.");
+        if (AllocAddrSpace != ADDRESS_SPACE_LOCAL) {
           // Only insert a new AddrSpaceCastInst if
           // allocaInst is not already in ADDRESS_SPACE_LOCAL.
           auto NewASCToLocal =
