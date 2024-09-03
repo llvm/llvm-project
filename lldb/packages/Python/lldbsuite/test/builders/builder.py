@@ -152,10 +152,6 @@ class Builder:
 
         cc_dir = cc_path.parent
 
-        def getLlvmUtil(util_name):
-            llvm_tools_dir = os.getenv("LLVM_TOOLS_DIR", cc_dir)
-            return os.path.join(llvm_tools_dir, util_name + exe_ext)
-
         def getToolchainUtil(util_name):
             return cc_dir / (cc_prefix + util_name + cc_ext)
 
@@ -169,20 +165,8 @@ class Builder:
         }
         utils = []
 
-        # Note: LLVM_AR is currently required by API TestBSDArchives.py tests.
-        # Assemble a full path to llvm-ar for given LLVM_TOOLS_DIR;
-        # otherwise assume we have llvm-ar at the same place where is CC specified.
-        if not os.getenv("LLVM_AR"):
-            llvm_ar = getLlvmUtil("llvm-ar")
-            utils.extend(["LLVM_AR=%s" % llvm_ar])
-
         if not lldbplatformutil.platformIsDarwin():
-            if os.getenv("USE_LLVM_TOOLS"):
-                # Use the llvm project tool instead of the system defaults.
-                for var, name in util_names.items():
-                    utils.append("%s=%s" % (var, getLlvmUtil("llvm-" + name)))
-                utils.extend(["AR=%s" % llvm_ar])
-            elif cc_type in ["clang", "cc", "gcc"]:
+            if cc_type in ["clang", "cc", "gcc"]:
                 util_paths = {}
                 # Assembly a toolchain side tool cmd based on passed CC.
                 for var, name in util_names.items():
