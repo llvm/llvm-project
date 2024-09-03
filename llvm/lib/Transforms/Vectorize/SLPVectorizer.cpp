@@ -409,7 +409,7 @@ static bool isVectorLikeInstWithConstOps(Value *V) {
 /// total number of elements \p Size and number of registers (parts) \p
 /// NumParts.
 static unsigned getPartNumElems(unsigned Size, unsigned NumParts) {
-  return PowerOf2Ceil(divideCeil(Size, NumParts));
+  return std::min<unsigned>(Size, PowerOf2Ceil(divideCeil(Size, NumParts)));
 }
 
 /// Returns correct remaining number of elements, considering total amount \p
@@ -7022,7 +7022,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         UniqueValues.emplace_back(V);
     }
     size_t NumUniqueScalarValues = UniqueValues.size();
-    if (NumUniqueScalarValues == VL.size()) {
+    bool IsFullVectors =
+        hasFullVectorsOnly(*TTI, UniqueValues.front()->getType(),
+                           NumUniqueScalarValues);
+    if (NumUniqueScalarValues == VL.size() &&
+        (VectorizeNonPowerOf2 || IsFullVectors)) {
       ReuseShuffleIndices.clear();
     } else {
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
@@ -7033,14 +7037,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         return false;
       }
       LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-      if (NumUniqueScalarValues <= 1 ||
-          (UniquePositions.size() == 1 && all_of(UniqueValues,
-                                                 [](Value *V) {
-                                                   return isa<UndefValue>(V) ||
-                                                          !isConstant(V);
-                                                 })) ||
-          !hasFullVectorsOnly(*TTI, UniqueValues.front()->getType(),
-                              NumUniqueScalarValues)) {
+      if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
+          (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
+             return isa<UndefValue>(V) || !isConstant(V);
+           }))) {
         if (DoNotFail && UniquePositions.size() > 1 &&
             NumUniqueScalarValues > 1 && S.MainOp->isSafeToRemove() &&
             all_of(UniqueValues, [=](Value *V) {
@@ -9144,9 +9144,6 @@ public:
       return nullptr;
     Value *VecBase = nullptr;
     ArrayRef<Value *> VL = E->Scalars;
-    // If the resulting type is scalarized, do not adjust the cost.
-    if (NumParts == VL.size())
-      return nullptr;
     // Check if it can be considered reused if same extractelements were
     // vectorized already.
     bool PrevNodeFound = any_of(
@@ -9799,7 +9796,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InsertMask[Idx] = I + 1;
     }
     unsigned VecScalarsSz = PowerOf2Ceil(NumElts);
-    if (NumOfParts > 0)
+    if (NumOfParts > 0 && NumOfParts < NumElts)
       VecScalarsSz = PowerOf2Ceil((NumElts + NumOfParts - 1) / NumOfParts);
     unsigned VecSz = (1 + OffsetEnd / VecScalarsSz - OffsetBeg / VecScalarsSz) *
                      VecScalarsSz;
