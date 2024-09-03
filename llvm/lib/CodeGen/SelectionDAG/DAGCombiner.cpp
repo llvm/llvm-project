@@ -15170,7 +15170,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       TLI.isTruncateFree(SrcVT, VT)) {
     if (!LegalOperations ||
         (TLI.isOperationLegal(ISD::SELECT, SrcVT) &&
-         TLI.isNarrowingProfitable(N0.getNode(), N0.getValueType(), VT))) {
+         TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))) {
       SDLoc SL(N0);
       SDValue Cond = N0.getOperand(0);
       SDValue TruncOp0 = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));

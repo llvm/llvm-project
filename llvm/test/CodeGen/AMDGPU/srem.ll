@@ -17,7 +17,6 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_mulk_i32 s0, 0x4925
 ; GCN-NEXT:    s_lshr_b32 s1, s0, 31
 ; GCN-NEXT:    s_ashr_i32 s0, s0, 17
-; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GCN-NEXT:    s_add_i32 s0, s0, s1
 ; GCN-NEXT:    s_mul_i32 s0, s0, 7
 ; GCN-NEXT:    v_subrev_u32_e32 v1, s0, v1
@@ -63,7 +62,6 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    s_mulk_i32 s0, 0x4925
 ; TONGA-NEXT:    s_lshr_b32 s1, s0, 31
 ; TONGA-NEXT:    s_ashr_i32 s0, s0, 17
-; TONGA-NEXT:    s_and_b32 s0, s0, 0xffff
 ; TONGA-NEXT:    s_add_i32 s0, s0, s1
 ; TONGA-NEXT:    s_mul_i32 s0, s0, 7
 ; TONGA-NEXT:    v_subrev_u32_e32 v2, vcc, s0, v2

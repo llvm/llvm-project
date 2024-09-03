@@ -6741,12 +6741,12 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   case ISD::SMIN:
   case ISD::SMAX:
     return ISD::SIGN_EXTEND;
-  case ISD::ADD:
-  case ISD::SUB:
   case ISD::SRL:
   case ISD::UMIN:
   case ISD::UMAX:
     return ISD::ZERO_EXTEND;
+  case ISD::ADD:
+  case ISD::SUB:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -6811,7 +6811,13 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
   const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
   LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
-  RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
+
+  // Special case: for shifts, the RHS always needs a zext.
+  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL ||
+      Op.getOpcode() == ISD::SRA)
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
+  else
+    RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
 
   // setcc always return i1/i1 vec so no need to truncate after.
   if (Opc == ISD::SETCC) {
@@ -6819,34 +6825,13 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
     return DAG.getSetCC(DL, Op.getValueType(), LHS, RHS, CC);
   }
 
-  SDNodeFlags Flags;
-  switch (Op->getOpcode()) {
-  case ISD::ADD:
-  case ISD::SHL:
-    Flags.setNoUnsignedWrap(true);
-    Flags.setNoSignedWrap(true);
-    break;
-  case ISD::SUB:
-    Flags.setNoUnsignedWrap(Op->getFlags().hasNoUnsignedWrap());
-    Flags.setNoSignedWrap(true);
-    break;
-  case ISD::MUL:
-    Flags.setNoUnsignedWrap(true);
-    Flags.setNoSignedWrap(Op->getFlags().hasNoUnsignedWrap());
-    break;
-  default:
-    break;
-  }
-
-  Flags.setExact(Op->getFlags().hasExact());
-
   // For other ops, we extend the operation's return type as well so we need to
   // truncate back to the original type.
   SDValue NewVal;
   if (Opc == ISD::SELECT)
     NewVal = DAG.getSelect(DL, ExtTy, Op->getOperand(0), LHS, RHS);
   else
-    NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS}, Flags);
+    NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
 
   return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
 }
