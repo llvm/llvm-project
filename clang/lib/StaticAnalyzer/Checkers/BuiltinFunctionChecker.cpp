@@ -100,6 +100,7 @@ public:
   const NoteTag *createBuiltinNoOverflowNoteTag(CheckerContext &C,
                                                 bool bothFeasible, SVal Arg1,
                                                 SVal Arg2, SVal Result) const;
+  const NoteTag *createBuiltinOverflowNoteTag(CheckerContext &C) const;
   std::pair<bool, bool> checkOverflow(CheckerContext &C, SVal RetVal,
                                       QualType Res) const;
 
@@ -136,6 +137,15 @@ const NoteTag *BuiltinFunctionChecker::createBuiltinNoOverflowNoteTag(
     if (bothFeasible)
       OS << "Assuming overflow does not happen";
   });
+}
+
+const NoteTag *
+BuiltinFunctionChecker::createBuiltinOverflowNoteTag(CheckerContext &C) const {
+  return C.getNoteTag(
+      [](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+        OS << "Assuming overflow does happen";
+      },
+      /*isPrunable=*/true);
 }
 
 std::pair<bool, bool>
@@ -205,9 +215,12 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
     C.addTransition(StateNoOverflow, tag);
   }
 
-  if (Overflow)
+  if (Overflow) {
+    const NoteTag *tag = createBuiltinOverflowNoteTag(C);
     C.addTransition(
-        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)));
+        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)),
+        tag);
+  }
 }
 
 bool BuiltinFunctionChecker::isBuiltinLikeFunction(
