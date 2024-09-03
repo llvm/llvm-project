@@ -2181,8 +2181,8 @@ void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
 }
 
 VectorType *ShuffleVectorInst::getType() const {
-    return cast<VectorType>(
-              Ctx.getType(cast<llvm::ShuffleVectorInst>(Val)->getType()));
+  return cast<VectorType>(
+      Ctx.getType(cast<llvm::ShuffleVectorInst>(Val)->getType()));
 }
 
 void ShuffleVectorInst::commute() {
