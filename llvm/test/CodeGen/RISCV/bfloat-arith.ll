@@ -7,8 +7,8 @@
 ; These tests descend from float-arith.ll, where each function was targeted at
 ; a particular RISC-V FPU instruction.
 
-define bfloat @fadd_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fadd_s:
+define bfloat @fadd_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fadd_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -19,8 +19,8 @@ define bfloat @fadd_s(bfloat %a, bfloat %b) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fsub_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fsub_s:
+define bfloat @fsub_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fsub_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -31,8 +31,8 @@ define bfloat @fsub_s(bfloat %a, bfloat %b) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fmul_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fmul_s:
+define bfloat @fmul_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fmul_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -43,8 +43,8 @@ define bfloat @fmul_s(bfloat %a, bfloat %b) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fdiv_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fdiv_s:
+define bfloat @fdiv_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fdiv_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -57,8 +57,8 @@ define bfloat @fdiv_s(bfloat %a, bfloat %b) nounwind {
 
 declare bfloat @llvm.sqrt.bf16(bfloat)
 
-define bfloat @fsqrt_s(bfloat %a) nounwind {
-; CHECK-LABEL: fsqrt_s:
+define bfloat @fsqrt_bf16(bfloat %a) nounwind {
+; CHECK-LABEL: fsqrt_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fsqrt.s fa5, fa5
@@ -70,8 +70,8 @@ define bfloat @fsqrt_s(bfloat %a) nounwind {
 
 declare bfloat @llvm.copysign.bf16(bfloat, bfloat)
 
-define bfloat @fsgnj_s(bfloat %a, bfloat %b) nounwind {
-; RV32IZFBFMIN-LABEL: fsgnj_s:
+define bfloat @fsgnj_bf16(bfloat %a, bfloat %b) nounwind {
+; RV32IZFBFMIN-LABEL: fsgnj_bf16:
 ; RV32IZFBFMIN:       # %bb.0:
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    fsh fa1, 12(sp)
@@ -91,7 +91,7 @@ define bfloat @fsgnj_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFBFMIN-NEXT:    ret
 ;
-; RV64IZFBFMIN-LABEL: fsgnj_s:
+; RV64IZFBFMIN-LABEL: fsgnj_bf16:
 ; RV64IZFBFMIN:       # %bb.0:
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    fsh fa1, 8(sp)
@@ -114,8 +114,8 @@ define bfloat @fsgnj_s(bfloat %a, bfloat %b) nounwind {
   ret bfloat %1
 }
 
-define i32 @fneg_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fneg_s:
+define i32 @fneg_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fneg_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa5
@@ -135,8 +135,8 @@ define i32 @fneg_s(bfloat %a, bfloat %b) nounwind {
   ret i32 %4
 }
 
-define bfloat @fsgnjn_s(bfloat %a, bfloat %b) nounwind {
-; RV32IZFBFMIN-LABEL: fsgnjn_s:
+define bfloat @fsgnjn_bf16(bfloat %a, bfloat %b) nounwind {
+; RV32IZFBFMIN-LABEL: fsgnjn_bf16:
 ; RV32IZFBFMIN:       # %bb.0:
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
@@ -166,7 +166,7 @@ define bfloat @fsgnjn_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFBFMIN-NEXT:    ret
 ;
-; RV64IZFBFMIN-LABEL: fsgnjn_s:
+; RV64IZFBFMIN-LABEL: fsgnjn_bf16:
 ; RV64IZFBFMIN:       # %bb.0:
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
@@ -203,8 +203,8 @@ define bfloat @fsgnjn_s(bfloat %a, bfloat %b) nounwind {
 
 declare bfloat @llvm.fabs.bf16(bfloat)
 
-define bfloat @fabs_s(bfloat %a, bfloat %b) nounwind {
-; RV32IZFBFMIN-LABEL: fabs_s:
+define bfloat @fabs_bf16(bfloat %a, bfloat %b) nounwind {
+; RV32IZFBFMIN-LABEL: fabs_bf16:
 ; RV32IZFBFMIN:       # %bb.0:
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -220,7 +220,7 @@ define bfloat @fabs_s(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; RV32IZFBFMIN-NEXT:    ret
 ;
-; RV64IZFBFMIN-LABEL: fabs_s:
+; RV64IZFBFMIN-LABEL: fabs_bf16:
 ; RV64IZFBFMIN:       # %bb.0:
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -243,8 +243,8 @@ define bfloat @fabs_s(bfloat %a, bfloat %b) nounwind {
 
 declare bfloat @llvm.minnum.bf16(bfloat, bfloat)
 
-define bfloat @fmin_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fmin_s:
+define bfloat @fmin_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fmin_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -257,8 +257,8 @@ define bfloat @fmin_s(bfloat %a, bfloat %b) nounwind {
 
 declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
 
-define bfloat @fmax_s(bfloat %a, bfloat %b) nounwind {
-; CHECK-LABEL: fmax_s:
+define bfloat @fmax_bf16(bfloat %a, bfloat %b) nounwind {
+; CHECK-LABEL: fmax_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -271,8 +271,8 @@ define bfloat @fmax_s(bfloat %a, bfloat %b) nounwind {
 
 declare bfloat @llvm.fma.bf16(bfloat, bfloat, bfloat)
 
-define bfloat @fmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fmadd_s:
+define bfloat @fmadd_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fmadd_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
@@ -284,8 +284,8 @@ define bfloat @fmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fmsub_s:
+define bfloat @fmsub_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fmsub_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
 ; CHECK-NEXT:    fmv.w.x fa4, zero
@@ -307,8 +307,8 @@ define bfloat @fmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fnmadd_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fnmadd_s:
+define bfloat @fnmadd_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fnmadd_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
@@ -406,8 +406,8 @@ define bfloat @fnmadd_nsz(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %neg
 }
 
-define bfloat @fnmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fnmsub_s:
+define bfloat @fnmsub_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fnmsub_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
@@ -429,8 +429,8 @@ define bfloat @fnmsub_s(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fnmsub_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fnmsub_s_2:
+define bfloat @fnmsub_bf16_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fnmsub_bf16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fmv.w.x fa4, zero
@@ -452,8 +452,8 @@ define bfloat @fnmsub_s_2(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %1
 }
 
-define bfloat @fmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fmadd_s_contract:
+define bfloat @fmadd_bf16_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fmadd_bf16_contract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
@@ -469,8 +469,8 @@ define bfloat @fmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %2
 }
 
-define bfloat @fmsub_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fmsub_s_contract:
+define bfloat @fmsub_bf16_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fmsub_bf16_contract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa2
 ; CHECK-NEXT:    fmv.w.x fa4, zero
@@ -491,8 +491,8 @@ define bfloat @fmsub_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %2
 }
 
-define bfloat @fnmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fnmadd_s_contract:
+define bfloat @fnmadd_bf16_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fnmadd_bf16_contract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
@@ -526,8 +526,8 @@ define bfloat @fnmadd_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
   ret bfloat %3
 }
 
-define bfloat @fnmsub_s_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
-; CHECK-LABEL: fnmsub_s_contract:
+define bfloat @fnmsub_bf16_contract(bfloat %a, bfloat %b, bfloat %c) nounwind {
+; CHECK-LABEL: fnmsub_bf16_contract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, zero
