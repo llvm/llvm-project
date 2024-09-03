@@ -61,6 +61,7 @@ class Expr;
 class FunctionTemplateDecl;
 class FunctionTemplateSpecializationInfo;
 class FunctionTypeLoc;
+enum class IntangibleResult : unsigned char;
 class LabelStmt;
 class MemberSpecializationInfo;
 class Module;
@@ -4297,6 +4298,11 @@ public:
   void setIsRandomized(bool V) { RecordDeclBits.IsRandomized = V; }
 
   void reorderDecls(const SmallVectorImpl<Decl *> &Decls);
+
+  // Intangible types
+  IntangibleResult getIntangible() const { return static_cast<IntangibleResult>(RecordDeclBits.Intangible); }
+
+  void setIntangible(IntangibleResult R) { RecordDeclBits.Intangible = llvm::to_underlying(R); }
 
   /// Determines whether this declaration represents the
   /// injected class name.

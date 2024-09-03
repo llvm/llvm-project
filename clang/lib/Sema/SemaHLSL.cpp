@@ -10,6 +10,7 @@
 
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -29,7 +30,7 @@
 
 using namespace clang;
 
-SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S), IsIntangibleTypeCache() {}
+SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
 
 Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
                                  SourceLocation KwLoc, IdentifierInfo *Ident,
@@ -1527,11 +1528,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
-static bool calculateIsIntangibleType(QualType Ty) {
-  assert(!Ty.getCanonicalType().getUnqualifiedType()->isBuiltinType() &&
+static bool calculateIsIntangibleType(const Type *Ty) {
+  assert(!Ty->isBuiltinType() &&
          "builtin types should be taken care of in IsIntangibleType");
 
-  llvm::SmallVector<QualType> TypesToScan;
+  llvm::SmallVector<const Type *> TypesToScan;
   TypesToScan.push_back(Ty);
   while (!TypesToScan.empty()) {
     QualType T = TypesToScan.pop_back_val()->getCanonicalTypeUnqualified();
@@ -1542,7 +1543,7 @@ static bool calculateIsIntangibleType(QualType Ty) {
     }
 
     if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
-      TypesToScan.push_back(AT->getElementType());
+      TypesToScan.push_back(AT->getElementType().getTypePtr());
       continue;
     }
 
@@ -1566,12 +1567,15 @@ static bool calculateIsIntangibleType(QualType Ty) {
 
     if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *RD = RT->getDecl();
+      if (RD->getIntangible() == IntangibleResult::Intangible)
+        return true;
+      
       for (const auto *FD : RD->fields())
-        TypesToScan.push_back(FD->getType());
+        TypesToScan.push_back(FD->getType().getTypePtr());
 
       if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
         for (const CXXBaseSpecifier &B : CXXRD->bases())
-          TypesToScan.push_back(B.getType());
+          TypesToScan.push_back(B.getType().getTypePtr());
       }
       continue;
     }
@@ -1579,27 +1583,30 @@ static bool calculateIsIntangibleType(QualType Ty) {
   return false;
 }
 
-bool SemaHLSL::IsIntangibleType(const clang::QualType Ty) {
-  if (Ty.isNull())
+bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
+  if (QT.isNull())
     return false;
 
   // check if it's a builtin type first (simple check, no need to cache it)
-  QualType CT = Ty->getCanonicalTypeUnqualified();
-  if (CT->isBuiltinType())
-    return CT->isHLSLIntangibleType();
+  const Type *Ty = QT->getCanonicalTypeUnqualified()->getTypePtr();
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLIntangibleType();
 
-  // more complex type -> check if we already have it in the cache
-  const auto CachedEntry = IsIntangibleTypeCache.find(Ty.getTypePtr());
-  if (CachedEntry != IsIntangibleTypeCache.end()) {
-    assert(CachedEntry->second == calculateIsIntangibleType(Ty) &&
-           "IsIntangibleType mismatch");
-    return CachedEntry->second;
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+
+  const RecordType *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return false;
+
+  RecordDecl *RD = RT->getAsRecordDecl();
+  IntangibleResult Result = RD->getIntangible();
+  if (Result == IntangibleResult::Invalid) {
+    Result = calculateIsIntangibleType(Ty) ? IntangibleResult::Intangible
+                                           : IntangibleResult::NotIntangible; 
+    RD->setIntangible(Result);
   }
-
-  // calculate and add to cache
-  bool IsIntangible = calculateIsIntangibleType(Ty);
-  IsIntangibleTypeCache[Ty.getTypePtr()] = IsIntangible;
-  return IsIntangible;
+  return Result == IntangibleResult::Intangible;
 }
 
 static void BuildFlattenedTypeList(QualType BaseTy,

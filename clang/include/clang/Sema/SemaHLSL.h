@@ -64,10 +64,7 @@ public:
 
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
-  bool IsIntangibleType(const QualType T1);
-
-private:
-  llvm::DenseMap<const Type *, bool> IsIntangibleTypeCache;
+  bool IsIntangibleType(QualType T1);
 };
 
 } // namespace clang
