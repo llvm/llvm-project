@@ -136,78 +136,78 @@ declare i16 @llvm.experimental.constrained.fptosi.i16.f16(half, metadata)
 define i16 @fcvt_ui_h(half %a) nounwind strictfp {
 ; RV32IZFH-LABEL: fcvt_ui_h:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_ui_h:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
+; RV64IZFH-NEXT:    fcvt.l.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32IZHINX-LABEL: fcvt_ui_h:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    fcvt.wu.h a0, a0, rtz
+; RV32IZHINX-NEXT:    fcvt.w.h a0, a0, rtz
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fcvt_ui_h:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    fcvt.lu.h a0, a0, rtz
+; RV64IZHINX-NEXT:    fcvt.l.h a0, a0, rtz
 ; RV64IZHINX-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_ui_h:
 ; RV32IDZFH:       # %bb.0:
-; RV32IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IDZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_ui_h:
 ; RV64IDZFH:       # %bb.0:
-; RV64IDZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    fcvt.l.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
 ;
 ; RV32IZDINXZHINX-LABEL: fcvt_ui_h:
 ; RV32IZDINXZHINX:       # %bb.0:
-; RV32IZDINXZHINX-NEXT:    fcvt.wu.h a0, a0, rtz
+; RV32IZDINXZHINX-NEXT:    fcvt.w.h a0, a0, rtz
 ; RV32IZDINXZHINX-NEXT:    ret
 ;
 ; RV64IZDINXZHINX-LABEL: fcvt_ui_h:
 ; RV64IZDINXZHINX:       # %bb.0:
-; RV64IZDINXZHINX-NEXT:    fcvt.lu.h a0, a0, rtz
+; RV64IZDINXZHINX-NEXT:    fcvt.l.h a0, a0, rtz
 ; RV64IZDINXZHINX-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32-IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_ui_h:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECK64-IZFHMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
+; CHECK64-IZFHMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64-IZFHMIN-NEXT:    ret
 ;
 ; CHECK32-IZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZHINXMIN:       # %bb.0:
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK64-IZHINXMIN:       # %bb.0:
 ; CHECK64-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK64-IZHINXMIN-NEXT:    fcvt.lu.s a0, a0, rtz
+; CHECK64-IZHINXMIN-NEXT:    fcvt.l.s a0, a0, rtz
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK32-IZDINXZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: fcvt_ui_h:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
 ; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.lu.s a0, a0, rtz
+; CHECK64-IZDINXZHINXMIN-NEXT:    fcvt.l.s a0, a0, rtz
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = call i16 @llvm.experimental.constrained.fptoui.i16.f16(half %a, metadata !"fpexcept.strict")
   ret i16 %1
