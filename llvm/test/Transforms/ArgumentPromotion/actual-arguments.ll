@@ -68,8 +68,6 @@ define internal i32 @test_cannot_promote_3(ptr %p, ptr nocapture readonly %test_
   ret i32 %sum
 }
 
-; FIXME: We should perform ArgPromotion here!
-;
 ; This is called only by @caller_safe_args_1, from which we can prove that
 ; %test_c does not alias %p for any Call to the function, so we can promote it.
 ;
@@ -89,8 +87,6 @@ define internal i32 @test_can_promote_1(ptr %p, ptr nocapture readonly %test_c) 
   ret i32 %sum
 }
 
-; FIXME: We should perform ArgPromotion here!
-;
 ; This is called by multiple callers (@caller_safe_args_1, @caller_safe_args_2),
 ; from which we can prove that %test_c does not alias %p for any Call to the
 ; function, so we can promote it.
