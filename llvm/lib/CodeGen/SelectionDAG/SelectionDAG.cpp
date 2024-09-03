@@ -13297,7 +13297,7 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::SMIN:
     return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
   case ISD::FADD:
-    // If flags allow, prefer positive zero single it's generally cheaper
+    // If flags allow, prefer positive zero since it's generally cheaper
     // to materialize on most targets.
     return getConstantFP(Flags.hasNoSignedZeros() ? 0.0 : -0.0, DL, VT);
   case ISD::FMUL:
