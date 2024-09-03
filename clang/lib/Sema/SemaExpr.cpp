@@ -5451,10 +5451,10 @@ struct EnsureImmediateInvocationInDefaultArgs
     // is not always done in the context of the template instantiator,
     // we run the risk of producing a dependent source location
     // that would never be rebuilt.
-    // This usually happen during overload resolution, or in contexts
+    // This usually happens during overload resolution, or in contexts
     // where the value of the source location does not matter.
     // However, we should find a better way to deal with source location
-    // of function template.
+    // of function templates.
     if (!SemaRef.CurrentInstantiationScope ||
         !SemaRef.CurContext->isDependentContext() || DC->isDependentContext())
       DC = SemaRef.CurContext;
