@@ -34,8 +34,6 @@ generator = module_test_generator(
     "std.compat",
 )
 
-
-print("//--- module_std_compat.sh.cpp")
 generator.write_test(
     "std.compat",
     module_c_headers,

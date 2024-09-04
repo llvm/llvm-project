@@ -283,13 +283,13 @@ class module_test_generator:
         )
 
     def write_test(self, module, c_headers=[]):
-        self.write_lit_configuration()
-
-        # Validate all module parts.
         for header in module_headers:
+            print(f"//--- {header}.sh.cpp")
+            self.write_lit_configuration()
+
             is_c_header = header in c_headers
             include = self.process_module_partition(header, is_c_header)
             self.process_header(header, include, is_c_header)
 
-        self.process_module(module)
-        self.test_module(module)
+            self.process_module(module)
+            self.test_module(module)

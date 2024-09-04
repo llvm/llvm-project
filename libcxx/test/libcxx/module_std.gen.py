@@ -33,6 +33,4 @@ generator = module_test_generator(
     "std",
 )
 
-
-print("//--- module_std.sh.cpp")
 generator.write_test("std")
