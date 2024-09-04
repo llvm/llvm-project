@@ -17,21 +17,22 @@ define i64 @test_duplicated_phis(i64 noundef %N) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[FOR_END_LOOPEXIT_UNR_LCSSA:.*]], label %[[FOR_BODY_PREHEADER_NEW:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[MUL]], -4
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UNROLL_ITER]], -4
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = sub i64 -3, [[TMP3]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ -1, %[[FOR_BODY_PREHEADER_NEW]] ]
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_3:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INC_3]] = add i64 [[I_07]], 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
 ; CHECK-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i64 [[UNROLL_ITER]], [[INC_3]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_NEXT]], 1
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT_UNR_LCSSA]]
 ; CHECK:       [[FOR_END_LOOPEXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_1_LCSSA_PH:%.*]] = phi i64 [ undef, %[[FOR_BODY_PREHEADER]] ], [ [[TMP1]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[RES_09_UNR:%.*]] = phi i64 [ -1, %[[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT_LCSSA]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES_09_UNR:%.*]] = phi i64 [ -1, %[[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LCMP_MOD_NOT]], i64 [[RES_1_LCSSA_PH]], i64 [[RES_09_UNR]]
