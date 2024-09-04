@@ -1995,7 +1995,7 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
 bool AArch64InstructionSelector::selectVaStartAAPCS(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
 
-  if (MF.getSubtarget<AArch64Subtarget>().isCallingConvWin64(
+  if (STI.isCallingConvWin64(
           MF.getFunction().getCallingConv(), MF.getFunction().isVarArg()))
     return false;
 
