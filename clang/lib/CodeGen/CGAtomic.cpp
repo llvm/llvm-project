@@ -766,7 +766,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   // LLVM atomic instructions always have synch scope. If clang atomic
   // expression has no scope operand, use default LLVM synch scope.
   if (!ScopeModel) {
-    llvm::SyncScope::ID SS = CGF.getLLVMContext().getOrInsertSyncScopeID("");
+    llvm::SyncScope::ID SS;
     if (CGF.getLangOpts().OpenCL)
       // OpenCL approach is: "The functions that do not have memory_scope
       // argument have the same semantics as the corresponding functions with
@@ -775,6 +775,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
       SS = CGF.getTargetHooks().getLLVMSyncScopeID(CGF.getLangOpts(),
                                                    SyncScope::OpenCLDevice,
                                                    Order, CGF.getLLVMContext());
+    else
+      SS = CGF.getLLVMContext().getOrInsertSyncScopeID("");
     EmitAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
                  Order, SS);
     return;

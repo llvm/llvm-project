@@ -63,6 +63,30 @@ public:
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
 };
+
+inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
+  switch (Scope) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return "subgroup";
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return "workgroup";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return "device";
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return "all_svm_devices";
+  }
+}
 } // End anonymous namespace.
 
 void CommonSPIRABIInfo::setCCs() {
@@ -196,35 +220,7 @@ llvm::SyncScope::ID
 SPIRVTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &, SyncScope Scope,
                                            llvm::AtomicOrdering,
                                            llvm::LLVMContext &Ctx) const {
-  std::string Name;
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    Name = "singlethread";
-    break;
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    Name = "subgroup";
-    break;
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    Name = "workgroup";
-    break;
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    Name = "device";
-    break;
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    Name = "all_svm_devices";
-    break;
-  }
-
-  return Ctx.getOrInsertSyncScopeID(Name);
+  return Ctx.getOrInsertSyncScopeID(mapClangSyncScopeToLLVM(Scope));
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.
