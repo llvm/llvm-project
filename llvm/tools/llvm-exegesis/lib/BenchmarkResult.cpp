@@ -282,6 +282,64 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
   static const bool flow = true;
 };
 
+template <> struct ScalarTraits<APInt> {
+  static constexpr const unsigned kRadix = 16;
+  static constexpr const bool kSigned = false;
+
+  static void output(const APInt &Input, void *Ctx, raw_ostream &Out) {
+    std::string OutputString = toString(Input, kRadix, kSigned);
+    // The snippet parsing infrastructure and other frontends should only
+    // create APInts with a bit width of a multiple of four for memory
+    // values.
+    assert(Input.getBitWidth() % 4 == 0);
+    for (size_t I = OutputString.size(); I < Input.getBitWidth() / 4; ++I) {
+      Out << "0";
+    }
+    Out << OutputString;
+  }
+
+  static StringRef input(StringRef String, void *Ctx, APInt &Output) {
+    Output = APInt(String.size() * 4, String, kRadix);
+    return StringRef();
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct MappingTraits<exegesis::MemoryValue> {
+  static void mapping(IO &Io, exegesis::MemoryValue &MV) {
+    Io.mapRequired("size", MV.SizeBytes);
+    Io.mapRequired("value", MV.Value);
+  }
+};
+
+template <>
+struct CustomMappingTraits<
+    std::unordered_map<std::string, exegesis::MemoryValue>> {
+  static void
+  inputOne(IO &Io, StringRef Key,
+           std::unordered_map<std::string, exegesis::MemoryValue> &MVM) {
+    Io.mapRequired(Key.str().c_str(), MVM[Key.str()]);
+  }
+
+  static void
+  output(IO &Io, std::unordered_map<std::string, exegesis::MemoryValue> &MVM) {
+    for (auto &MV : MVM)
+      Io.mapRequired(MV.first.c_str(), MV.second);
+  }
+};
+
+template <> struct SequenceElementTraits<exegesis::MemoryMapping> {
+  static const bool flow = false;
+};
+
+template <> struct MappingTraits<exegesis::MemoryMapping> {
+  static void mapping(IO &Io, exegesis::MemoryMapping &MM) {
+    Io.mapRequired("address", MM.Address);
+    Io.mapRequired("memory_value", MM.MemoryValueName);
+  }
+};
+
 template <>
 struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   static void mapping(IO &Io, exegesis::BenchmarkKey &Obj,
@@ -290,6 +348,8 @@ struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
     Io.mapRequired("instructions", Obj.Instructions);
     Io.mapOptional("config", Obj.Config);
     Io.mapRequired("register_initial_values", Obj.RegisterInitialValues);
+    Io.mapRequired("memory_values", Obj.MemoryValues);
+    Io.mapRequired("memory_mappings", Obj.MemoryMappings);
   }
 };
 
