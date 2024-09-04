@@ -2117,23 +2117,29 @@ multiclass sve2p1_bf_2op_p_zds<bits<4> opc, string asm, string Ps,
                             SDPatternOperator op, DestructiveInstTypeEnum flags,
                             string revname="", bit isReverseInstr=0> {
 let DestructiveInstType = flags in {
-  def NAME : sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>,
-           SVEPseudo2Instr<Ps, 1>, SVEInstr2Rev<NAME , revname , isReverseInstr>;
+  def _H: sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>,
+          SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isReverseInstr>;
   }
 
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4bf16, op, nxv4i1, nxv4bf16, nxv4bf16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv2bf16, op, nxv2i1, nxv2bf16, nxv2bf16, !cast<Instruction>(NAME # _H)>;
 }
 
 multiclass sve2p1_bf_bin_pred_zds<SDPatternOperator op> {
-  def _UNDEF : PredTwoOpPseudo<NAME, ZPR16, FalseLanesUndef>;
+  def _H_UNDEF : PredTwoOpPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
 
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, nxv8bf16, !cast<Pseudo>(NAME # _UNDEF)>;
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, nxv8bf16, !cast<Pseudo>(NAME # _H_UNDEF)>;
+  def : SVE_3_Op_Pat<nxv4bf16, op, nxv4i1,  nxv4bf16, nxv4bf16, !cast<Pseudo>(NAME # _H_UNDEF)>;
+  def : SVE_3_Op_Pat<nxv2bf16, op, nxv2i1,  nxv2bf16, nxv2bf16, !cast<Pseudo>(NAME # _H_UNDEF)>;
 }
 
 multiclass sve2p1_bf_2op_p_zds_zeroing<SDPatternOperator op> {
-  def _ZERO : PredTwoOpPseudo<NAME, ZPR16, FalseLanesZero>;
+  def _H_ZERO : PredTwoOpPseudo<NAME # _H, ZPR16, FalseLanesZero>;
 
-  def : SVE_3_Op_Pat_SelZero<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Pseudo>(NAME # _ZERO)>;
+  def : SVE_3_Op_Pat_SelZero<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Pseudo>(NAME # _H_ZERO)>;
+  def : SVE_3_Op_Pat_SelZero<nxv4bf16, op, nxv4i1, nxv4bf16, nxv4bf16, !cast<Pseudo>(NAME # _H_ZERO)>;
+  def : SVE_3_Op_Pat_SelZero<nxv2bf16, op, nxv2i1, nxv2bf16, nxv2bf16, !cast<Pseudo>(NAME # _H_ZERO)>;
 }
 
 multiclass sve_fp_2op_p_zds<bits<4> opc, string asm, string Ps,

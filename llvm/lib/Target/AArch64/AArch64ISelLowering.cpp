@@ -1585,7 +1585,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
-                    MVT::nxv4f32, MVT::nxv2f64}) {
+                    MVT::nxv4f32, MVT::nxv2f64, MVT::nxv2bf16, MVT::nxv4bf16,
+                    MVT::nxv8f16}) {
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
