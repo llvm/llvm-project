@@ -37,12 +37,13 @@ struct CoreFileMemoryRange {
   }
 };
 
-
-class CoreFileMemoryRanges : public lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, CoreFileMemoryRange> {
-  public:
-    /// Finalize and merge all overlapping ranges in this collection. Ranges
-    /// will be seperated based on permissions.
-    Status FinalizeCoreFileSaveRanges();
+class CoreFileMemoryRanges
+    : public lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t,
+                                           CoreFileMemoryRange> {
+public:
+  /// Finalize and merge all overlapping ranges in this collection. Ranges
+  /// will be seperated based on permissions.
+  Status FinalizeCoreFileSaveRanges();
 };
 } // namespace lldb_private
 

@@ -1,4 +1,5 @@
-//===-- CoreFileMemoryRangesTests.cpp ---------------------------------------------===//
+//===-- CoreFileMemoryRangesTests.cpp
+//---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +10,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "lldb/lldb-types.h"
 #include "lldb/Target/CoreFileMemoryRanges.h"
+#include "lldb/lldb-types.h"
 
 using namespace lldb_private;
 
@@ -88,7 +89,8 @@ TEST(CoreFileMemoryRangesTest, MapPartialOverlappingRanges) {
   const uint32_t permissions = 0x3;
   const CoreFileMemoryRange core_range = {range, permissions};
   // The range data is Start, Size, While the range is start-end.
-  CoreFileMemoryRanges::Entry entry = {unique_start, unique_end - unique_start, core_range};
+  CoreFileMemoryRanges::Entry entry = {unique_start, unique_end - unique_start,
+                                       core_range};
   ranges.Append(entry);
 
   Status error = ranges.FinalizeCoreFileSaveRanges();
@@ -97,7 +99,8 @@ TEST(CoreFileMemoryRangesTest, MapPartialOverlappingRanges) {
   const auto merged_range = ranges.GetEntryAtIndex(0);
   ASSERT_TRUE(merged_range);
   ASSERT_THAT(start_addr, merged_range->GetRangeBase());
-  ASSERT_THAT(start_addr + (iterations * increment_addr), merged_range->GetRangeEnd());
+  ASSERT_THAT(start_addr + (iterations * increment_addr),
+              merged_range->GetRangeEnd());
   const auto unique_range = ranges.GetEntryAtIndex(1);
   ASSERT_TRUE(unique_range);
   ASSERT_THAT(unique_start, unique_range->GetRangeBase());

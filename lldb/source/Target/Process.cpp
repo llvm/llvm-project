@@ -6563,10 +6563,11 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
-static void SaveOffRegionsWithStackPointers(
-    Process &process, const SaveCoreOptions &core_options,
-    const MemoryRegionInfos &regions, CoreFileMemoryRanges &ranges,
-    std::set<addr_t> &stack_ends) {
+static void SaveOffRegionsWithStackPointers(Process &process,
+                                            const SaveCoreOptions &core_options,
+                                            const MemoryRegionInfos &regions,
+                                            CoreFileMemoryRanges &ranges,
+                                            std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
 
   // Before we take any dump, we want to save off the used portions of the
@@ -6620,9 +6621,10 @@ static void GetCoreFileSaveRangesFull(Process &process,
 // least some dirty pages, as some OS versions don't support reporting what
 // pages are dirty within an memory region. If no memory regions have dirty
 // page information fall back to saving out all ranges with write permissions.
-static void GetCoreFileSaveRangesDirtyOnly(
-    Process &process, const MemoryRegionInfos &regions,
-    CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+static void GetCoreFileSaveRangesDirtyOnly(Process &process,
+                                           const MemoryRegionInfos &regions,
+                                           CoreFileMemoryRanges &ranges,
+                                           std::set<addr_t> &stack_ends) {
 
   // Iterate over the regions and find all dirty pages.
   bool have_dirty_page_info = false;
@@ -6651,9 +6653,10 @@ static void GetCoreFileSaveRangesDirtyOnly(
 // dirty regions as this will make the core file smaller. If the process
 // doesn't support dirty regions, then it will fall back to adding the full
 // stack region.
-static void GetCoreFileSaveRangesStackOnly(
-    Process &process, const MemoryRegionInfos &regions,
-    CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+static void GetCoreFileSaveRangesStackOnly(Process &process,
+                                           const MemoryRegionInfos &regions,
+                                           CoreFileMemoryRanges &ranges,
+                                           std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
   // Some platforms support annotating the region information that tell us that
   // it comes from a thread stack. So look for those regions first.
@@ -6666,9 +6669,10 @@ static void GetCoreFileSaveRangesStackOnly(
   }
 }
 
-static void GetUserSpecifiedCoreFileSaveRanges(
-    Process &process, const MemoryRegionInfos &regions,
-    const SaveCoreOptions &options, CoreFileMemoryRanges &ranges) {
+static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
+                                               const MemoryRegionInfos &regions,
+                                               const SaveCoreOptions &options,
+                                               CoreFileMemoryRanges &ranges) {
   const auto &option_ranges = options.GetCoreFileMemoryRanges();
   if (option_ranges.IsEmpty())
     return;
