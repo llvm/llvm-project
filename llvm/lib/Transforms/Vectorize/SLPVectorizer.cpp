@@ -7021,9 +7021,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         UniqueValues.emplace_back(V);
     }
     size_t NumUniqueScalarValues = UniqueValues.size();
-    bool IsFullVectors =
-        hasFullVectorsOnly(*TTI, UniqueValues.front()->getType(),
-                           NumUniqueScalarValues);
+    bool IsFullVectors = hasFullVectorsOnly(
+        *TTI, UniqueValues.front()->getType(), NumUniqueScalarValues);
     if (NumUniqueScalarValues == VL.size() &&
         (VectorizeNonPowerOf2 || IsFullVectors)) {
       ReuseShuffleIndices.clear();
