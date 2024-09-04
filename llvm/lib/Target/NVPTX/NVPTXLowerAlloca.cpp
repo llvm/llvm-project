@@ -74,7 +74,7 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
         PointerType *AllocInstPtrTy =
             cast<PointerType>(allocaInst->getType()->getScalarType());
-        Instruction *NewASCToGeneric = allocaInst;
+        Instruction *NewASCToLocal = allocaInst;
         unsigned AllocAddrSpace = AllocInstPtrTy->getAddressSpace();
         assert((AllocAddrSpace == ADDRESS_SPACE_GENERIC ||
                 AllocAddrSpace == ADDRESS_SPACE_LOCAL) &&
@@ -83,14 +83,13 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         if (AllocAddrSpace != ADDRESS_SPACE_LOCAL) {
           // Only insert a new AddrSpaceCastInst if
           // allocaInst is not already in ADDRESS_SPACE_LOCAL.
-          auto NewASCToLocal =
-              new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
-          auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
-          NewASCToGeneric =
-              new AddrSpaceCastInst(NewASCToLocal, GenericAddrTy, "");
-          NewASCToLocal->insertAfter(allocaInst);
-          NewASCToGeneric->insertAfter(NewASCToLocal);
+          NewASCToLocal = new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
         }
+
+        auto NewASCToGeneric = new AddrSpaceCastInst(
+            NewASCToLocal, PointerType::get(ETy, ADDRESS_SPACE_GENERIC), "");
+        NewASCToLocal->insertAfter(allocaInst);
+        NewASCToGeneric->insertAfter(NewASCToLocal);
 
         for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
           // Check Load, Store, GEP, and BitCast Uses on alloca and make them
