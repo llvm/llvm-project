@@ -4304,8 +4304,8 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
 
     if (SrcVal.getValueType().getScalarType() == MVT::bf16) {
       // bf16 and f32 share the same exponent range so the conversion requires
-      // them to be aligned with the new mantissa bits zero'd, which is just a
-      // left shift that is best to isel drectly.
+      // them to be aligned with the new mantissa bits zero'd. This is just a
+      // left shift that is best to isel directly.
       if (VT == MVT::nxv2f32 || VT == MVT::nxv4f32)
         return Op;
 
