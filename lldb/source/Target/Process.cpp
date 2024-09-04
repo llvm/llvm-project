@@ -3377,7 +3377,8 @@ lldb::addr_t Process::FindInMemory(lldb::addr_t low, lldb::addr_t high,
       mem.resize_for_overwrite(max_read_size);
       Status error;
       mem.resize(ReadMemory(cur_addr, mem.data(),
-                            std::min(mem.size(), high - cur_addr), error));
+                            std::min<addr_t>(mem.size(), high - cur_addr),
+                            error));
       mem_pos = cur_addr;
       if (size > mem.size()) {
         // We didn't read enough data. Skip to the next memory region.
