@@ -102,23 +102,24 @@ define i64 @test_duplicated_phis(i64 noundef %N) {
 ; LEGACYPM-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; LEGACYPM:       for.body.preheader.new:
 ; LEGACYPM-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[MUL]], -4
+; LEGACYPM-NEXT:    [[TMP1:%.*]] = add i64 [[UNROLL_ITER]], -4
+; LEGACYPM-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
+; LEGACYPM-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 1
+; LEGACYPM-NEXT:    [[TMP4:%.*]] = sub i64 -3, [[TMP3]]
 ; LEGACYPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; LEGACYPM:       for.body:
-; LEGACYPM-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ -1, [[FOR_BODY_PREHEADER_NEW]] ]
 ; LEGACYPM-NEXT:    [[I_07:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_3:%.*]], [[FOR_BODY]] ]
 ; LEGACYPM-NEXT:    [[INC_3]] = add i64 [[I_07]], 4
-; LEGACYPM-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
 ; LEGACYPM-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i64 [[UNROLL_ITER]], [[INC_3]]
 ; LEGACYPM-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; LEGACYPM:       for.end.loopexit.unr-lcssa.loopexit:
-; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[FOR_BODY]] ]
-; LEGACYPM-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_NEXT]], 1
+; LEGACYPM-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
 ; LEGACYPM-NEXT:    br label [[FOR_END_LOOPEXIT_UNR_LCSSA]]
 ; LEGACYPM:       for.end.loopexit.unr-lcssa:
-; LEGACYPM-NEXT:    [[RES_1_LCSSA_PH:%.*]] = phi i64 [ undef, [[FOR_BODY_PREHEADER]] ], [ [[TMP1]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; LEGACYPM-NEXT:    [[RES_09_UNR:%.*]] = phi i64 [ -1, [[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT_LCSSA]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; LEGACYPM-NEXT:    [[TMP2:%.*]] = and i64 [[N]], 1
-; LEGACYPM-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[TMP2]], 0
+; LEGACYPM-NEXT:    [[RES_1_LCSSA_PH:%.*]] = phi i64 [ undef, [[FOR_BODY_PREHEADER]] ], [ [[TMP5]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; LEGACYPM-NEXT:    [[RES_09_UNR:%.*]] = phi i64 [ -1, [[FOR_BODY_PREHEADER]] ], [ [[TMP4]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; LEGACYPM-NEXT:    [[TMP6:%.*]] = and i64 [[N]], 1
+; LEGACYPM-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[TMP6]], 0
 ; LEGACYPM-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LCMP_MOD_NOT]], i64 [[RES_1_LCSSA_PH]], i64 [[RES_09_UNR]]
 ; LEGACYPM-NEXT:    br label [[FOR_END]]
 ; LEGACYPM:       for.end:
