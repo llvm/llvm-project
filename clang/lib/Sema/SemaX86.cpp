@@ -46,14 +46,14 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvttsh2si64:
   case X86::BI__builtin_ia32_vcvttsh2usi32:
   case X86::BI__builtin_ia32_vcvttsh2usi64:
-  case X86::BI__builtin_ia32_vcvttssd2si32:
-  case X86::BI__builtin_ia32_vcvttssd2usi32:
-  case X86::BI__builtin_ia32_vcvttsss2si32:
-  case X86::BI__builtin_ia32_vcvttsss2usi32:
-  case X86::BI__builtin_ia32_vcvttssd2si64:
-  case X86::BI__builtin_ia32_vcvttssd2usi64:
-  case X86::BI__builtin_ia32_vcvttsss2si64:
-  case X86::BI__builtin_ia32_vcvttsss2usi64:
+  case X86::BI__builtin_ia32_vcvttsd2sis32:
+  case X86::BI__builtin_ia32_vcvttsd2usis32:
+  case X86::BI__builtin_ia32_vcvttss2sis32:
+  case X86::BI__builtin_ia32_vcvttss2usis32:
+  case X86::BI__builtin_ia32_vcvttsd2sis64:
+  case X86::BI__builtin_ia32_vcvttsd2usis64:
+  case X86::BI__builtin_ia32_vcvttss2sis64:
+  case X86::BI__builtin_ia32_vcvttss2usis64:
     ArgNum = 1;
     break;
   case X86::BI__builtin_ia32_maxpd512:

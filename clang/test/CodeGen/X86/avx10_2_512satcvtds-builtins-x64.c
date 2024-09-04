@@ -5,37 +5,37 @@
 
 long long test_mm_cvttssd_si64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvttssd_si64(
-  // CHECK: @llvm.x86.avx512.vcvttssd2si64(<2 x double>
+  // CHECK: @llvm.x86.avx512.vcvttsd2sis64(<2 x double>
   return _mm_cvtts_roundsd_si64(__A, _MM_FROUND_NO_EXC);
 }
 
 long long test_mm_cvttssd_i64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvttssd_i64(
-  // CHECK: @llvm.x86.avx512.vcvttssd2si64(<2 x double>
+  // CHECK: @llvm.x86.avx512.vcvttsd2sis64(<2 x double>
   return _mm_cvtts_roundsd_i64(__A, _MM_FROUND_NO_EXC);
 }
 
 unsigned long long test_mm_cvttssd_u64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvttssd_u64(
-  // CHECK: @llvm.x86.avx512.vcvttssd2usi64(<2 x double>
+  // CHECK: @llvm.x86.avx512.vcvttsd2usis64(<2 x double>
   return _mm_cvtts_roundsd_u64(__A, _MM_FROUND_NO_EXC);
 }
 
 float test_mm_cvttsss_i64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvttsss_i64(
-  // CHECK: @llvm.x86.avx512.vcvttsss2si64(<4 x float>
+  // CHECK: @llvm.x86.avx512.vcvttss2sis64(<4 x float>
   return _mm_cvtts_roundss_i64(__A, _MM_FROUND_NO_EXC);
 }
 
 long long test_mm_cvttsss_si64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvttsss_si64(
-  // CHECK: @llvm.x86.avx512.vcvttsss2si64(<4 x float>
+  // CHECK: @llvm.x86.avx512.vcvttss2sis64(<4 x float>
   return _mm_cvtts_roundss_si64(__A, _MM_FROUND_NO_EXC);
 }
 
 unsigned long long test_mm_cvttsss_u64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvttsss_u64(
-  // CHECK: @llvm.x86.avx512.vcvttsss2usi64(<4 x float>
+  // CHECK: @llvm.x86.avx512.vcvttss2usis64(<4 x float>
   return _mm_cvtts_roundss_u64(__A, _MM_FROUND_NO_EXC);
 }
 

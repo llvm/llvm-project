@@ -5522,28 +5522,28 @@ let TargetPrefix = "x86" in {
 
 // conversion with saturation
 let TargetPrefix = "x86" in {
-  def int_x86_avx512_vcvttsss2si : ClangBuiltin<"__builtin_ia32_vcvttsss2si32">,
+  def int_x86_avx512_vcvttss2sis : ClangBuiltin<"__builtin_ia32_vcvttss2sis32">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v4f32_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttsss2si64 : ClangBuiltin<"__builtin_ia32_vcvttsss2si64">,
+  def int_x86_avx512_vcvttss2sis64 : ClangBuiltin<"__builtin_ia32_vcvttss2sis64">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_v4f32_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttsss2usi : ClangBuiltin<"__builtin_ia32_vcvttsss2usi32">,
+  def int_x86_avx512_vcvttss2usis : ClangBuiltin<"__builtin_ia32_vcvttss2usis32">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v4f32_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttsss2usi64 : ClangBuiltin<"__builtin_ia32_vcvttsss2usi64">,
+  def int_x86_avx512_vcvttss2usis64 : ClangBuiltin<"__builtin_ia32_vcvttss2usis64">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_v4f32_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttssd2si : ClangBuiltin<"__builtin_ia32_vcvttssd2si32">,
+  def int_x86_avx512_vcvttsd2sis : ClangBuiltin<"__builtin_ia32_vcvttsd2sis32">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v2f64_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttssd2si64 : ClangBuiltin<"__builtin_ia32_vcvttssd2si64">,
+  def int_x86_avx512_vcvttsd2sis64 : ClangBuiltin<"__builtin_ia32_vcvttsd2sis64">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_v2f64_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttssd2usi : ClangBuiltin<"__builtin_ia32_vcvttssd2usi32">,
+  def int_x86_avx512_vcvttsd2usis : ClangBuiltin<"__builtin_ia32_vcvttsd2usis32">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v2f64_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx512_vcvttssd2usi64 : ClangBuiltin<"__builtin_ia32_vcvttssd2usi64">,
+  def int_x86_avx512_vcvttsd2usis64 : ClangBuiltin<"__builtin_ia32_vcvttsd2usis64">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_v2f64_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   def int_x86_avx512_mask_vcvttpd2dqs_128 : ClangBuiltin<"__builtin_ia32_vcvttpd2dqs128_mask">,

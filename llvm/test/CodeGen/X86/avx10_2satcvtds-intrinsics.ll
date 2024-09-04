@@ -2,77 +2,77 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown --show-mc-encoding -mattr=+avx10.2-256 | FileCheck %s --check-prefixes=CHECK,X64
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i686-unknown-unknown --show-mc-encoding -mattr=+avx10.2-256 | FileCheck %s --check-prefixes=CHECK,X86
 
-define i32 @test_x86_avx512_vcvttssd2usi(<2 x double> %a0) {
-; CHECK-LABEL: test_x86_avx512_vcvttssd2usi:
+define i32 @test_x86_avx512_vcvttsd2usis(<2 x double> %a0) {
+; CHECK-LABEL: test_x86_avx512_vcvttsd2usis:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttsd2usis %xmm0, %ecx # encoding: [0x62,0xf5,0x7f,0x08,0x6c,0xc8]
 ; CHECK-NEXT:    vcvttsd2usis {sae}, %xmm0, %eax # encoding: [0x62,0xf5,0x7f,0x18,0x6c,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res0 = call i32 @llvm.x86.avx512.vcvttssd2usi(<2 x double> %a0, i32 4) ;
-  %res1 = call i32 @llvm.x86.avx512.vcvttssd2usi(<2 x double> %a0, i32 8) ;
+  %res0 = call i32 @llvm.x86.avx512.vcvttsd2usis(<2 x double> %a0, i32 4) ;
+  %res1 = call i32 @llvm.x86.avx512.vcvttsd2usis(<2 x double> %a0, i32 8) ;
   %res2 = add i32 %res0, %res1
   ret i32 %res2
 }
-declare i32 @llvm.x86.avx512.vcvttssd2usi(<2 x double>, i32) nounwind readnone
+declare i32 @llvm.x86.avx512.vcvttsd2usis(<2 x double>, i32) nounwind readnone
 
-define i32 @test_x86_avx512_vcvttssd2si(<2 x double> %a0) {
-; CHECK-LABEL: test_x86_avx512_vcvttssd2si:
+define i32 @test_x86_avx512_vcvttsd2sis(<2 x double> %a0) {
+; CHECK-LABEL: test_x86_avx512_vcvttsd2sis:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttsd2sis %xmm0, %ecx # encoding: [0x62,0xf5,0x7f,0x08,0x6d,0xc8]
 ; CHECK-NEXT:    vcvttsd2sis {sae}, %xmm0, %eax # encoding: [0x62,0xf5,0x7f,0x18,0x6d,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res0 = call i32 @llvm.x86.avx512.vcvttssd2si(<2 x double> %a0, i32 4) ;
-  %res1 = call i32 @llvm.x86.avx512.vcvttssd2si(<2 x double> %a0, i32 8) ;
+  %res0 = call i32 @llvm.x86.avx512.vcvttsd2sis(<2 x double> %a0, i32 4) ;
+  %res1 = call i32 @llvm.x86.avx512.vcvttsd2sis(<2 x double> %a0, i32 8) ;
   %res2 = add i32 %res0, %res1
   ret i32 %res2
 }
-declare i32 @llvm.x86.avx512.vcvttssd2si(<2 x double>, i32) nounwind readnone
+declare i32 @llvm.x86.avx512.vcvttsd2sis(<2 x double>, i32) nounwind readnone
 
-define i32 @test_x86_avx512_vcvttsss2si(<4 x float> %a0) {
-; CHECK-LABEL: test_x86_avx512_vcvttsss2si:
+define i32 @test_x86_avx512_vcvttss2sis(<4 x float> %a0) {
+; CHECK-LABEL: test_x86_avx512_vcvttss2sis:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttss2sis {sae}, %xmm0, %ecx # encoding: [0x62,0xf5,0x7e,0x18,0x6d,0xc8]
 ; CHECK-NEXT:    vcvttss2sis %xmm0, %eax # encoding: [0x62,0xf5,0x7e,0x08,0x6d,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res0 = call i32 @llvm.x86.avx512.vcvttsss2si(<4 x float> %a0, i32 8) ;
-  %res1 = call i32 @llvm.x86.avx512.vcvttsss2si(<4 x float> %a0, i32 4) ;
+  %res0 = call i32 @llvm.x86.avx512.vcvttss2sis(<4 x float> %a0, i32 8) ;
+  %res1 = call i32 @llvm.x86.avx512.vcvttss2sis(<4 x float> %a0, i32 4) ;
   %res2 = add i32 %res0, %res1
   ret i32 %res2
 }
-declare i32 @llvm.x86.avx512.vcvttsss2si(<4 x float>, i32) nounwind readnone
+declare i32 @llvm.x86.avx512.vcvttss2sis(<4 x float>, i32) nounwind readnone
 
-define i32 @test_x86_avx512_vcvttsss2si_load(ptr %a0) {
-; X64-LABEL: test_x86_avx512_vcvttsss2si_load:
+define i32 @test_x86_avx512_vcvttss2sis_load(ptr %a0) {
+; X64-LABEL: test_x86_avx512_vcvttss2sis_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttss2sis (%rdi), %eax # encoding: [0x62,0xf5,0x7e,0x08,0x6d,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_x86_avx512_vcvttsss2si_load:
+; X86-LABEL: test_x86_avx512_vcvttss2sis_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttss2sis (%eax), %eax # encoding: [0x62,0xf5,0x7e,0x08,0x6d,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a1 = load <4 x float>, ptr %a0
-  %res = call i32 @llvm.x86.avx512.vcvttsss2si(<4 x float> %a1, i32 4) ;
+  %res = call i32 @llvm.x86.avx512.vcvttss2sis(<4 x float> %a1, i32 4) ;
   ret i32 %res
 }
 
-define i32 @test_x86_avx512_vcvttsss2usi(<4 x float> %a0) {
-; CHECK-LABEL: test_x86_avx512_vcvttsss2usi:
+define i32 @test_x86_avx512_vcvttss2usis(<4 x float> %a0) {
+; CHECK-LABEL: test_x86_avx512_vcvttss2usis:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttss2usis {sae}, %xmm0, %ecx # encoding: [0x62,0xf5,0x7e,0x18,0x6c,0xc8]
 ; CHECK-NEXT:    vcvttss2usis %xmm0, %eax # encoding: [0x62,0xf5,0x7e,0x08,0x6c,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res0 = call i32 @llvm.x86.avx512.vcvttsss2usi(<4 x float> %a0, i32 8) ;
-  %res1 = call i32 @llvm.x86.avx512.vcvttsss2usi(<4 x float> %a0, i32 4) ;
+  %res0 = call i32 @llvm.x86.avx512.vcvttss2usis(<4 x float> %a0, i32 8) ;
+  %res1 = call i32 @llvm.x86.avx512.vcvttss2usis(<4 x float> %a0, i32 4) ;
   %res2 = add i32 %res0, %res1
   ret i32 %res2
 }
-declare i32 @llvm.x86.avx512.vcvttsss2usi(<4 x float>, i32) nounwind readnone
+declare i32 @llvm.x86.avx512.vcvttss2usis(<4 x float>, i32) nounwind readnone
 
 define <4 x i32> @test_int_x86_mask_vcvtt_pd2dqs_256(<4 x double> %x0, <4 x i32> %src, i8 %mask) {
 ; X64-LABEL: test_int_x86_mask_vcvtt_pd2dqs_256:
