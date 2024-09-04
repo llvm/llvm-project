@@ -4949,7 +4949,7 @@ class FunctionEffectKindSet {
   explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
 
   constexpr static size_t kindToPos(FunctionEffect::Kind K) {
-    return size_t(K);
+    return static_assert<size_t>(K);
   }
 
 public:
@@ -4983,7 +4983,7 @@ public:
     }
 
     FunctionEffect operator*() const {
-      assert(Idx < EndBitPos);
+      assert(Idx < EndBitPos && "Dereference of end iterator");
       return FunctionEffect(FunctionEffect::Kind(Idx));
     }
   };
