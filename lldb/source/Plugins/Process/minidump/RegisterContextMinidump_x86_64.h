@@ -154,7 +154,8 @@ struct MinidumpContext_x86_64 {
   llvm::support::ulittle64_t last_exception_to_rip;
   llvm::support::ulittle64_t last_exception_from_rip;
 
-  // These registers are LLDB specific.
+  // LLDB can save core files and save extra information that isn't available from
+  // Google breakpad, or similar, minidump files. 
   llvm::support::ulittle64_t fs_base;
   llvm::support::ulittle64_t gs_base;
 };
