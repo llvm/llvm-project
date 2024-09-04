@@ -182,8 +182,8 @@ namespace {
     unsigned SpeculationState = SpeculateUnknown;
 
   public:
-    MachineLICMBase(char &PassID, bool PreRegAlloc)
-        : MachineFunctionPass(PassID), PreRegAlloc(PreRegAlloc) {}
+    static char ID;
+    MachineLICMBase() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -297,29 +297,15 @@ namespace {
                                        MachineBasicBlock *CurPreheader);
   };
 
-  class MachineLICM : public MachineLICMBase {
-  public:
-    static char ID;
-    MachineLICM() : MachineLICMBase(ID, false) {
-      initializeMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
-  };
-
-  class EarlyMachineLICM : public MachineLICMBase {
-  public:
-    static char ID;
-    EarlyMachineLICM() : MachineLICMBase(ID, true) {
-      initializeEarlyMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
-  };
+  using MachineLICM = MachineLICMBase;
+  using EarlyMachineLICM = MachineLICMBase;
 
 } // end anonymous namespace
 
-char MachineLICM::ID;
-char EarlyMachineLICM::ID;
+char MachineLICMBase::ID;
 
-char &llvm::MachineLICMID = MachineLICM::ID;
-char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
+char &llvm::MachineLICMID = MachineLICMBase::ID;
+char &llvm::EarlyMachineLICMID = MachineLICMBase::ID;
 
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
