@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_SOURCEMANAGER_H
 #define LLDB_CORE_SOURCEMANAGER_H
 
+#include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
@@ -71,6 +72,8 @@ public:
 
     llvm::sys::TimePoint<> GetTimestamp() const { return m_mod_time; }
 
+    const Checksum &GetChecksum() const { return m_checksum; }
+
   protected:
     /// Set file and update modification time.
     void SetSupportFile(lldb::SupportFileSP support_file_sp);
@@ -80,6 +83,9 @@ public:
     /// The support file. If the target has source mappings, this might be
     /// different from the original support file passed to the constructor.
     lldb::SupportFileSP m_support_file_sp;
+
+    /// Keep track of the on-disk checksum.
+    Checksum m_checksum;
 
     // Keep the modification time that this file data is valid for
     llvm::sys::TimePoint<> m_mod_time;

@@ -2185,6 +2185,13 @@ VectorType *ShuffleVectorInst::getType() const {
       Ctx.getType(cast<llvm::ShuffleVectorInst>(Val)->getType()));
 }
 
+void ShuffleVectorInst::commute() {
+  Ctx.getTracker().emplaceIfTracking<ShuffleVectorSetMask>(this);
+  Ctx.getTracker().emplaceIfTracking<UseSwap>(getOperandUse(0),
+                                              getOperandUse(1));
+  cast<llvm::ShuffleVectorInst>(Val)->commute();
+}
+
 Constant *ShuffleVectorInst::getShuffleMaskForBitcode() const {
   return Ctx.getOrCreateConstant(
       cast<llvm::ShuffleVectorInst>(Val)->getShuffleMaskForBitcode());
@@ -2243,9 +2250,70 @@ void Constant::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+ConstantInt *ConstantInt::getTrue(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantInt::getTrue(Ctx.LLVMCtx);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::getFalse(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantInt::getFalse(Ctx.LLVMCtx);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::getBool(Context &Ctx, bool V) {
+  auto *LLVMC = llvm::ConstantInt::getBool(Ctx.LLVMCtx, V);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+Constant *ConstantInt::getTrue(Type *Ty) {
+  auto *LLVMC = llvm::ConstantInt::getTrue(Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+Constant *ConstantInt::getFalse(Type *Ty) {
+  auto *LLVMC = llvm::ConstantInt::getFalse(Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+Constant *ConstantInt::getBool(Type *Ty, bool V) {
+  auto *LLVMC = llvm::ConstantInt::getBool(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
 ConstantInt *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned) {
   auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V, IsSigned);
   return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool IsSigned) {
+  auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V, IsSigned);
+  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::getSigned(IntegerType *Ty, int64_t V) {
+  auto *LLVMC =
+      llvm::ConstantInt::getSigned(cast<llvm::IntegerType>(Ty->LLVMTy), V);
+  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantInt::getSigned(Type *Ty, int64_t V) {
+  auto *LLVMC = llvm::ConstantInt::getSigned(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+ConstantInt *ConstantInt::get(Context &Ctx, const APInt &V) {
+  auto *LLVMC = llvm::ConstantInt::get(Ctx.LLVMCtx, V);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::get(IntegerType *Ty, StringRef Str, uint8_t Radix) {
+  auto *LLVMC =
+      llvm::ConstantInt::get(cast<llvm::IntegerType>(Ty->LLVMTy), Str, Radix);
+  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantInt::get(Type *Ty, const APInt &V) {
+  auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+IntegerType *ConstantInt::getIntegerType() const {
+  auto *LLVMTy = cast<llvm::ConstantInt>(Val)->getIntegerType();
+  return cast<IntegerType>(Ctx.getType(LLVMTy));
+}
+
+bool ConstantInt::isValueValidForType(Type *Ty, uint64_t V) {
+  return llvm::ConstantInt::isValueValidForType(Ty->LLVMTy, V);
+}
+bool ConstantInt::isValueValidForType(Type *Ty, int64_t V) {
+  return llvm::ConstantInt::isValueValidForType(Ty->LLVMTy, V);
 }
 
 Constant *ConstantFP::get(Type *Ty, double V) {
@@ -2294,6 +2362,44 @@ Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
 }
 bool ConstantFP::isValueValidForType(Type *Ty, const APFloat &V) {
   return llvm::ConstantFP::isValueValidForType(Ty->LLVMTy, V);
+}
+
+Constant *ConstantArray::get(ArrayType *T, ArrayRef<Constant *> V) {
+  auto &Ctx = T->getContext();
+  SmallVector<llvm::Constant *> LLVMValues;
+  LLVMValues.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMValues.push_back(cast<llvm::Constant>(Elm->Val));
+  auto *LLVMC =
+      llvm::ConstantArray::get(cast<llvm::ArrayType>(T->LLVMTy), LLVMValues);
+  return cast<ConstantArray>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+ArrayType *ConstantArray::getType() const {
+  return cast<ArrayType>(
+      Ctx.getType(cast<llvm::ConstantArray>(Val)->getType()));
+}
+
+Constant *ConstantStruct::get(StructType *T, ArrayRef<Constant *> V) {
+  auto &Ctx = T->getContext();
+  SmallVector<llvm::Constant *> LLVMValues;
+  LLVMValues.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMValues.push_back(cast<llvm::Constant>(Elm->Val));
+  auto *LLVMC =
+      llvm::ConstantStruct::get(cast<llvm::StructType>(T->LLVMTy), LLVMValues);
+  return cast<ConstantStruct>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+StructType *ConstantStruct::getTypeForElements(Context &Ctx,
+                                               ArrayRef<Constant *> V,
+                                               bool Packed) {
+  unsigned VecSize = V.size();
+  SmallVector<Type *, 16> EltTypes;
+  EltTypes.reserve(VecSize);
+  for (Constant *Elm : V)
+    EltTypes.push_back(Elm->getType());
+  return StructType::get(Ctx, EltTypes, Packed);
 }
 
 FunctionType *Function::getFunctionType() const {
@@ -2391,7 +2497,15 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantFP>(new ConstantFP(CF, *this));
       return It->second.get();
     }
-    if (auto *F = dyn_cast<llvm::Function>(LLVMV))
+    if (auto *CA = dyn_cast<llvm::ConstantArray>(C))
+      It->second = std::unique_ptr<ConstantArray>(new ConstantArray(CA, *this));
+    else if (auto *CS = dyn_cast<llvm::ConstantStruct>(C))
+      It->second =
+          std::unique_ptr<ConstantStruct>(new ConstantStruct(CS, *this));
+    else if (auto *CV = dyn_cast<llvm::ConstantVector>(C))
+      It->second =
+          std::unique_ptr<ConstantVector>(new ConstantVector(CV, *this));
+    else if (auto *F = dyn_cast<llvm::Function>(LLVMV))
       It->second = std::unique_ptr<Function>(new Function(F, *this));
     else
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
