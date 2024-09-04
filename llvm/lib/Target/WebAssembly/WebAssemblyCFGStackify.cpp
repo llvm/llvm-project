@@ -1552,8 +1552,7 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   // Fix mismatches in unwind destinations induced by linearizing the code.
   if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
       MF.getFunction().hasPersonalityFn()) {
-    bool MismatchFixed = false;
-    MismatchFixed = fixCallUnwindMismatches(MF);
+    bool MismatchFixed = fixCallUnwindMismatches(MF);
     MismatchFixed |= fixCatchUnwindMismatches(MF);
     if (MismatchFixed)
       recalculateScopeTops(MF);
