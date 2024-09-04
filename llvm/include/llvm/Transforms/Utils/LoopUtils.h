@@ -393,32 +393,28 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
                            TargetTransformInfo::ReductionShuffle RS,
                            RecurKind MinMaxKind = RecurKind::None);
 
-/// Create a target reduction of the given vector. The reduction operation
+/// Create a reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
 /// additional information supplied in \p RdxKind.
-/// The target is queried to determine if intrinsics or shuffle sequences are
-/// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
-                                   RecurKind RdxKind);
-/// Overloaded function to generate vector-predication intrinsics for target
+Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
+                             RecurKind RdxKind);
+/// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
-Value *createSimpleTargetReduction(VectorBuilder &VB, Value *Src,
-                                   const RecurrenceDescriptor &Desc);
+Value *createSimpleReduction(VectorBuilder &VB, Value *Src,
+                             const RecurrenceDescriptor &Desc);
 
-/// Create a target reduction of the given vector \p Src for a reduction of the
+/// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
 /// described by \p Desc.
-Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
-                                  const RecurrenceDescriptor &Desc,
-                                  PHINode *OrigPhi);
+Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
+                            const RecurrenceDescriptor &Desc,
+                            PHINode *OrigPhi);
 
-/// Create a generic target reduction using a recurrence descriptor \p Desc
-/// The target is queried to determine if intrinsics or shuffle sequences are
-/// required to implement the reduction.
+/// Create a generic reduction using a recurrence descriptor \p Desc
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                             Value *Src, PHINode *OrigPhi = nullptr);
+Value *createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
+                       Value *Src, PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
