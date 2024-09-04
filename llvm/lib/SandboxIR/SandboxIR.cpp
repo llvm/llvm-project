@@ -2402,6 +2402,30 @@ StructType *ConstantStruct::getTypeForElements(Context &Ctx,
   return StructType::get(Ctx, EltTypes, Packed);
 }
 
+ConstantAggregateZero *ConstantAggregateZero::get(Type *Ty) {
+  auto *LLVMC = llvm::ConstantAggregateZero::get(Ty->LLVMTy);
+  return cast<ConstantAggregateZero>(
+      Ty->getContext().getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantAggregateZero::getSequentialElement() const {
+  return cast<Constant>(Ctx.getValue(
+      cast<llvm::ConstantAggregateZero>(Val)->getSequentialElement()));
+}
+Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
+  return cast<Constant>(Ctx.getValue(
+      cast<llvm::ConstantAggregateZero>(Val)->getStructElement(Elt)));
+}
+Constant *ConstantAggregateZero::getElementValue(Constant *C) const {
+  return cast<Constant>(
+      Ctx.getValue(cast<llvm::ConstantAggregateZero>(Val)->getElementValue(
+          cast<llvm::Constant>(C->Val))));
+}
+Constant *ConstantAggregateZero::getElementValue(unsigned Idx) const {
+  return cast<Constant>(Ctx.getValue(
+      cast<llvm::ConstantAggregateZero>(Val)->getElementValue(Idx)));
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2489,26 +2513,48 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
 
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
-    if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
-      It->second = std::unique_ptr<ConstantInt>(new ConstantInt(CI, *this));
+    switch (C->getValueID()) {
+    case llvm::Value::ConstantIntVal:
+      It->second = std::unique_ptr<ConstantInt>(
+          new ConstantInt(cast<llvm::ConstantInt>(C), *this));
       return It->second.get();
-    }
-    if (auto *CF = dyn_cast<llvm::ConstantFP>(C)) {
-      It->second = std::unique_ptr<ConstantFP>(new ConstantFP(CF, *this));
+    case llvm::Value::ConstantFPVal:
+      It->second = std::unique_ptr<ConstantFP>(
+          new ConstantFP(cast<llvm::ConstantFP>(C), *this));
       return It->second.get();
+    case llvm::Value::ConstantAggregateZeroVal: {
+      auto *CAZ = cast<llvm::ConstantAggregateZero>(C);
+      It->second = std::unique_ptr<ConstantAggregateZero>(
+          new ConstantAggregateZero(CAZ, *this));
+      auto *Ret = It->second.get();
+      // Must create sandboxir for elements.
+      auto EC = CAZ->getElementCount();
+      if (EC.isFixed()) {
+        for (auto ElmIdx : seq<unsigned>(0, EC.getFixedValue()))
+          getOrCreateValueInternal(CAZ->getElementValue(ElmIdx), CAZ);
+      }
+      return Ret;
     }
-    if (auto *CA = dyn_cast<llvm::ConstantArray>(C))
-      It->second = std::unique_ptr<ConstantArray>(new ConstantArray(CA, *this));
-    else if (auto *CS = dyn_cast<llvm::ConstantStruct>(C))
-      It->second =
-          std::unique_ptr<ConstantStruct>(new ConstantStruct(CS, *this));
-    else if (auto *CV = dyn_cast<llvm::ConstantVector>(C))
-      It->second =
-          std::unique_ptr<ConstantVector>(new ConstantVector(CV, *this));
-    else if (auto *F = dyn_cast<llvm::Function>(LLVMV))
-      It->second = std::unique_ptr<Function>(new Function(F, *this));
-    else
+    case llvm::Value::ConstantArrayVal:
+      It->second = std::unique_ptr<ConstantArray>(
+          new ConstantArray(cast<llvm::ConstantArray>(C), *this));
+      break;
+    case llvm::Value::ConstantStructVal:
+      It->second = std::unique_ptr<ConstantStruct>(
+          new ConstantStruct(cast<llvm::ConstantStruct>(C), *this));
+      break;
+    case llvm::Value::ConstantVectorVal:
+      It->second = std::unique_ptr<ConstantVector>(
+          new ConstantVector(cast<llvm::ConstantVector>(C), *this));
+      break;
+    case llvm::Value::FunctionVal:
+      It->second = std::unique_ptr<Function>(
+          new Function(cast<llvm::Function>(C), *this));
+      break;
+    default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
+      break;
+    }
     auto *NewC = It->second.get();
     for (llvm::Value *COp : C->operands())
       getOrCreateValueInternal(COp, C);

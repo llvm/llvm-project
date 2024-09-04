@@ -107,13 +107,10 @@ getInstrForIntrinsic(const CodeGenTarget &CGT, const CodeGenIntrinsic *I) {
 static const CodeGenIntrinsic *getCodeGenIntrinsic(Record *R) {
   // Intrinsics need to have a static lifetime because the match table keeps
   // references to CodeGenIntrinsic objects.
-  static DenseMap<const Record *, std::unique_ptr<CodeGenIntrinsic>>
-      AllIntrinsics;
-
-  auto &Ptr = AllIntrinsics[R];
-  if (!Ptr)
-    Ptr = std::make_unique<CodeGenIntrinsic>(R);
-  return Ptr.get();
+  static CodeGenIntrinsicMap *AllIntrinsics;
+  if (!AllIntrinsics)
+    AllIntrinsics = new CodeGenIntrinsicMap(R->getRecords());
+  return &(*AllIntrinsics)[R];
 }
 
 std::unique_ptr<Pattern>
