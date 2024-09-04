@@ -661,8 +661,6 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks) {
 
 namespace {
 class EarlyIfConverter : public MachineFunctionPass {
-  const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
@@ -1025,8 +1023,6 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   if (!STI.enableEarlyIfConversion())
     return false;
 
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
   SchedModel = STI.getSchedModel();
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -1056,9 +1052,7 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
 namespace {
 class EarlyIfPredicator : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   TargetSchedModel SchedModel;
-  MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
@@ -1203,8 +1197,6 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  MRI = &MF.getRegInfo();
   SchedModel.init(&STI);
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
