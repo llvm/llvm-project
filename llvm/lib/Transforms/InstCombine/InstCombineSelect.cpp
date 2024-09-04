@@ -3598,8 +3598,7 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
     }
   }
 
-  Intrinsic::ID IID =
-      IsSigned ? Intrinsic::scmp : Intrinsic::ucmp;
+  Intrinsic::ID IID = IsSigned ? Intrinsic::scmp : Intrinsic::ucmp;
   if (Replace)
     return replaceInstUsesWith(
         SI, Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS}));
