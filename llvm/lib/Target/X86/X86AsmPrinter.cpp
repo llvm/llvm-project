@@ -134,8 +134,8 @@ void processInstructions(
       const Register Reg = MO.getReg();
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        SpillMap[Reg] = Offset;
         clearRhs(Reg, SpillMap);
+        SpillMap[Reg] = Offset;
       }
       continue;
     }
@@ -149,8 +149,8 @@ void processInstructions(
       const Register Reg = Lhs.getReg();
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
-        SpillMap[Reg] = Offset;
         clearRhs(Reg, SpillMap);
+        SpillMap[Reg] = Offset;
       }
       continue;
     }
