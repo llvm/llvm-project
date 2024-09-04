@@ -1247,7 +1247,8 @@ public:
     if (!bytes_written)
       return Status(bytes_written.takeError());
     if (bytes_written.get() < 0)
-      return Status(".write() method returned a negative number!");
+      return Status::FromErrorString(
+          ".write() method returned a negative number!");
     static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
     num_bytes = bytes_written.get();
     return Status();
@@ -1301,7 +1302,8 @@ public:
     if (!bytes_written)
       return Status(bytes_written.takeError());
     if (bytes_written.get() < 0)
-      return Status(".write() method returned a negative number!");
+      return Status::FromErrorString(
+          ".write() method returned a negative number!");
     static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
     num_bytes = bytes_written.get();
     return Status();
@@ -1313,7 +1315,8 @@ public:
     size_t orig_num_bytes = num_bytes;
     num_bytes = 0;
     if (orig_num_bytes < 6) {
-      return Status("can't read less than 6 bytes from a utf8 text stream");
+      return Status::FromErrorString(
+          "can't read less than 6 bytes from a utf8 text stream");
     }
     auto pystring = As<PythonString>(
         m_py_obj.CallMethod("read", (unsigned long long)num_chars));

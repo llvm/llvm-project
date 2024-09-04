@@ -48,7 +48,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -1812,12 +1811,10 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       if (cast<Instruction>(InVal)->getParent() == NonSimplifiedBB)
         return nullptr;
 
-    // If the incoming non-constant value is reachable from the phis block,
-    // we'll push the operation across a loop backedge. This could result in
+    // Do not push the operation across a loop backedge. This could result in
     // an infinite combine loop, and is generally non-profitable (especially
     // if the operation was originally outside the loop).
-    if (isPotentiallyReachable(PN->getParent(), NonSimplifiedBB, nullptr, &DT,
-                               LI))
+    if (isBackEdge(NonSimplifiedBB, PN->getParent()))
       return nullptr;
   }
 
@@ -3705,6 +3702,23 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return nullptr;
   }
 
+  // Replace all dominated uses of the condition with true/false
+  if (BI.getSuccessor(0) != BI.getSuccessor(1)) {
+    for (auto &U : make_early_inc_range(Cond->uses())) {
+      BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
+      if (DT.dominates(Edge0, U)) {
+        replaceUse(U, ConstantInt::getTrue(Cond->getType()));
+        addToWorklist(cast<Instruction>(U.getUser()));
+        continue;
+      }
+      BasicBlockEdge Edge1(BI.getParent(), BI.getSuccessor(1));
+      if (DT.dominates(Edge1, U)) {
+        replaceUse(U, ConstantInt::getFalse(Cond->getType()));
+        addToWorklist(cast<Instruction>(U.getUser()));
+      }
+    }
+  }
+
   DC.registerBranch(&BI);
   return nullptr;
 }
@@ -5373,11 +5387,23 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
   return MadeIRChange;
 }
 
+void InstCombiner::computeBackEdges() {
+  // Collect backedges.
+  SmallPtrSet<BasicBlock *, 16> Visited;
+  for (BasicBlock *BB : RPOT) {
+    Visited.insert(BB);
+    for (BasicBlock *Succ : successors(BB))
+      if (Visited.contains(Succ))
+        BackEdges.insert({BB, Succ});
+  }
+  ComputedBackEdges = true;
+}
+
 static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
+    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
     const InstCombineOptions &Opts) {
   auto &DL = F.getDataLayout();
 
@@ -5416,7 +5442,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, LI, RPOT);
+                        ORE, BFI, BPI, PSI, DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
@@ -5453,7 +5479,6 @@ void InstCombinePass::printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
   OS << "max-iterations=" << Options.MaxIterations << ";";
-  OS << (Options.UseLoopInfo ? "" : "no-") << "use-loop-info;";
   OS << (Options.VerifyFixpoint ? "" : "no-") << "verify-fixpoint";
   OS << '>';
 }
@@ -5466,12 +5491,6 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  // TODO: Only use LoopInfo when the option is set. This requires that the
-  //       callers in the pass pipeline explicitly set the option.
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
-  if (!LI && Options.UseLoopInfo)
-    LI = &AM.getResult<LoopAnalysis>(F);
-
   auto *AA = &AM.getResult<AAManager>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
@@ -5481,7 +5500,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, BPI, PSI, LI, Options))
+                                       BFI, BPI, PSI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -5520,8 +5539,6 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
   // Optional analyses.
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI =
@@ -5534,8 +5551,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
     BPI = &WrapperPass->getBPI();
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, BPI, PSI, LI,
-                                         InstCombineOptions());
+                                         BFI, BPI, PSI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

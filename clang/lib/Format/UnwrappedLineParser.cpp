@@ -2326,7 +2326,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
+      FormatTok->setFinalizedType(TT_LambdaArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2682,6 +2682,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
       break;
     }
     case tok::at:
+    case tok::colon:
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         nextToken();
@@ -3992,6 +3993,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
   };
+  // JavaScript/TypeScript supports anonymous classes like:
+  // a = class extends foo { }
+  bool JSPastExtendsOrImplements = false;
   // The actual identifier can be a nested name specifier, and in macros
   // it is often token-pasted.
   // An [[attribute]] can be before the identifier.
@@ -4002,6 +4006,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
+      JSPastExtendsOrImplements = true;
       // JavaScript/TypeScript supports inline object types in
       // extends/implements positions:
       //     class Foo implements {bar: number} { }
@@ -4025,10 +4030,11 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       break;
     case tok::coloncolon:
+    case tok::hashhash:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier) &&
-          Previous->isNot(TT_AttributeMacro)) {
+      if (!JSPastExtendsOrImplements && !ClassName &&
+          Previous->is(tok::identifier) && Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
       }
     }

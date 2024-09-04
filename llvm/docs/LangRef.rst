@@ -2189,10 +2189,6 @@ example:
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.
-``nosanitize_realtime``
-    This attribute indicates that the Realtime Sanitizer instrumentation is
-    disabled for this function.
-    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``null_pointer_is_valid``
    If ``null_pointer_is_valid`` is set, then the ``null`` address
    in address-space 0 is considered to be a valid address for memory loads and
@@ -2319,7 +2315,6 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-    This attribute is incompatible with the ``nosanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -19581,27 +19576,27 @@ vector <N x eltty>, imm is a signed integer constant in the range
 -N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
 integer constant in the range -X <= imm < X where X=vscale_range_min * N.
 
-'``llvm.experimental.stepvector``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.stepvector``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is an overloaded intrinsic. You can use ``llvm.experimental.stepvector``
+This is an overloaded intrinsic. You can use ``llvm.stepvector``
 to generate a vector whose lane values comprise the linear sequence
 <0, 1, 2, ...>. It is primarily intended for scalable vectors.
 
 ::
 
-      declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
-      declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+      declare <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+      declare <vscale x 8 x i16> @llvm.stepvector.nxv8i16()
 
-The '``llvm.experimental.stepvector``' intrinsics are used to create vectors
+The '``llvm.stepvector``' intrinsics are used to create vectors
 of integers whose elements contain a linear sequence of values starting from 0
-with a step of 1.  This experimental intrinsic can only be used for vectors
-with integer elements that are at least 8 bits in size. If the sequence value
-exceeds the allowed limit for the element type then the result for that lane is
-undefined.
+with a step of 1. This intrinsic can only be used for vectors with integer
+elements that are at least 8 bits in size. If the sequence value exceeds
+the allowed limit for the element type then the result for that lane is
+a poison value.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
-is marked as experimental, the recommended way to express this operation for
+supports all vector types, the recommended way to express this operation for
 fixed-width vectors is still to generate a constant vector instead.
 
 
@@ -19641,7 +19636,7 @@ vectorization factor should be multiplied by vscale.
 Semantics:
 """"""""""
 
-Returns a positive i32 value (explicit vector length) that is unknown at compile
+Returns a non-negative i32 value (explicit vector length) that is unknown at compile
 time and depends on the hardware specification.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
@@ -19651,13 +19646,23 @@ in order to get the number of elements to process on each loop iteration. The
 result should be used to decrease the count for the next iteration until the
 count reaches zero.
 
-If the count is larger than the number of lanes in the type described by the
-last 2 arguments, this intrinsic may return a value less than the number of
-lanes implied by the type. The result will be at least as large as the result
-will be on any later loop iteration.
+Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
+``%scalable``, here are the constraints on the returned value:
 
-This intrinsic will only return 0 if the input count is also 0. A non-zero input
-count will produce a non-zero result.
+-  If ``%cnt`` equals to 0, returns 0.
+-  The returned value is always less than or equal to ``%max_lanes``.
+-  The returned value is always greater than or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``,
+   if ``%cnt`` is non-zero.
+-  The returned values are monotonically non-increasing in each loop iteration. That is,
+   the returned value of an iteration is at least as large as that of any later
+   iteration.
+
+Note that it has the following implications:
+
+-  For a loop that uses this intrinsic, the number of iterations is equal to
+   ``ceil(%C / %max_lanes)`` where ``%C`` is the initial ``%cnt`` value.
+-  If ``%cnt`` is non-zero, the return value is non-zero as well.
+-  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -29466,6 +29471,42 @@ Semantics:
 execution, but is unknown at compile time.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
+
+.. _llvm_fake_use:
+
+'``llvm.fake.use``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.fake.use(...)
+
+Overview:
+"""""""""
+
+The ``llvm.fake.use`` intrinsic is a no-op. It takes a single
+value as an operand and is treated as a use of that operand, to force the
+optimizer to preserve that value prior to the fake use. This is used for
+extending the lifetimes of variables, where this intrinsic placed at the end of
+a variable's scope helps prevent that variable from being optimized out.
+
+Arguments:
+""""""""""
+
+The ``llvm.fake.use`` intrinsic takes one argument, which may be any
+function-local SSA value. Note that the signature is variadic so that the
+intrinsic can take any type of argument, but passing more than one argument will
+result in an error.
+
+Semantics:
+""""""""""
+
+This intrinsic does nothing, but optimizers must consider it a use of its single
+operand and should try to preserve the intrinsic and its position in the
+function.
 
 
 Stack Map Intrinsics

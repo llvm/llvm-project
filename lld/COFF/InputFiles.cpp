@@ -100,6 +100,20 @@ void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   file = CHECK(Archive::create(mb), this);
 
+  // Try to read symbols from ECSYMBOLS section on ARM64EC.
+  if (isArm64EC(ctx.config.machine)) {
+    iterator_range<Archive::symbol_iterator> symbols =
+        CHECK(file->ec_symbols(), this);
+    if (!symbols.empty()) {
+      for (const Archive::Symbol &sym : symbols)
+        ctx.symtab.addLazyArchive(this, sym);
+
+      // Read both EC and native symbols on ARM64X.
+      if (ctx.config.machine != ARM64X)
+        return;
+    }
+  }
+
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols())
     ctx.symtab.addLazyArchive(this, sym);
@@ -1045,8 +1059,7 @@ void ImportFile::parse() {
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
   if (hdr->getType() == llvm::COFF::IMPORT_CODE)
-    thunkSym = ctx.symtab.addImportThunk(
-        name, cast_or_null<DefinedImportData>(impSym), hdr->Machine);
+    thunkSym = ctx.symtab.addImportThunk(name, impSym, hdr->Machine);
 }
 
 BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,

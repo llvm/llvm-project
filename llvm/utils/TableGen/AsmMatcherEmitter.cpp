@@ -1013,7 +1013,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
         InTok = false;
         IsIsolatedToken = false;
       }
-      addAsmOperand(String.slice(i, i + 1), IsIsolatedToken);
+      addAsmOperand(String.substr(i, 1), IsIsolatedToken);
       Prev = i + 1;
       IsIsolatedToken = true;
       continue;
@@ -1037,7 +1037,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       }
       ++i;
       assert(i != String.size() && "Invalid quoted character");
-      addAsmOperand(String.slice(i, i + 1), IsIsolatedToken);
+      addAsmOperand(String.substr(i, 1), IsIsolatedToken);
       Prev = i + 1;
       IsIsolatedToken = false;
       break;

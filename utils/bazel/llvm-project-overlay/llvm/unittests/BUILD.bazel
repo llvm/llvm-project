@@ -776,6 +776,7 @@ cc_test(
         "//llvm:IPO",
         "//llvm:IRReader",
         "//llvm:Passes",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",

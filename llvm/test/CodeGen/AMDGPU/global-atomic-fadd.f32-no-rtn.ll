@@ -186,8 +186,9 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_1]], 0, killed [[V_MOV_B32_dpp2]], 0, 0, implicit $mode, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_dpp3:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_2]], 360, 15, 15, 0, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_3:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_2]], 0, killed [[V_MOV_B32_dpp3]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11_GFX12-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; GFX11_GFX12-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_1]], 0, [[S_MOV_B32_1]], [[V_ADD_F32_e64_3]], 0, implicit $exec
+  ; GFX11_GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; GFX11_GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+  ; GFX11_GFX12-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_]], 0, [[S_MOV_B32_]], [[COPY5]], 0, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_3]], 0, killed [[V_PERMLANEX16_B32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GFX11_GFX12-NEXT:   early-clobber %1:vgpr_32 = STRICT_WWM killed [[V_ADD_F32_e64_4]], implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
