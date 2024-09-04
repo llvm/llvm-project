@@ -70,11 +70,16 @@ Key components
 The framework is consisted of four important classes:
 
 * `llvm::telemetry::Telemeter`: The class responsible for collecting and
-  forwarding telemetry data. This is the main point of interaction between the
+  transmitting telemetry data. This is the main point of interaction between the
   framework and any tool that wants to enable telemery.
 * `llvm::telemetry::TelemetryInfo`: Data courier
+* `llvm::telemetry::Destination`: Data sink to which the Telemetry framework
+  sends data.
+  Its implementation is transparent to the framework.
+  It is up to the vendor to decide which pieces of data to forward and where
+  to forward them to their final storage.
 * `llvm::telemetry::Config`: Configurations on the `Telemeter`.
-
+  
 .. image:: llvm_telemetry_design.png
 
 How to implement and interact with the API
