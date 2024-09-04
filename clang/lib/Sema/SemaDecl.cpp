@@ -19558,8 +19558,12 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         // an int (C99 6.7.2.2p2). However C23 permits enumerator values that
         // are representable in some larger integral type and we allow it in
         // older language modes as an extension.
-        if (!getLangOpts().CPlusPlus && !getLangOpts().C23 && !T.isNull())
-          Diag(IdLoc, diag::warn_enum_value_overflow);
+        // Exclude fixed enumerators since they are diagnosed with an error for
+        // this case.
+        if (!getLangOpts().CPlusPlus && !T.isNull() && !Enum->isFixed())
+          Diag(IdLoc, (getLangOpts().C23)
+                          ? diag::warn_c17_compat_enum_value_int_overflow
+                          : diag::ext_c23_enum_value_int_overflow);
       } else if (!getLangOpts().CPlusPlus && !EltTy->isDependentType() &&
                  !isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
         // Enforce C99 6.7.2.2p2 even when we compute the next value.

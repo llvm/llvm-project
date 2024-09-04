@@ -19,7 +19,7 @@
 
 enum x {
 a = INT_MAX,
-b = ULLONG_MAX, // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
+b = ULLONG_MAX, // expected-warning {{enumerator values exceeding range of 'int' are incompatible with C standards before C23}}
 a_type = GET_TYPE_INT(a),
 b_type = GET_TYPE_INT(b)
 };
@@ -31,7 +31,7 @@ extern __typeof(b) e_a;
 extern __typeof(a) e_a;
 
 enum a {
-  a0 = 0xFFFFFFFFFFFFFFFFULL // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
+  a0 = 0xFFFFFFFFFFFFFFFFULL // expected-warning {{enumerator values exceeding range of 'int' are incompatible with C standards before C23}}
 };
 
 _Bool e () {
@@ -51,9 +51,9 @@ unsigned long long h () {
 }
 
 enum big_enum {
-  big_enum_a = LONG_MAX, // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
-  big_enum_b = a + 1, // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
-  big_enum_c = ULLONG_MAX // expected-warning {{enumerator values exceeding range of 'int' is incompatible with C standards before C23}}
+  big_enum_a = LONG_MAX, // expected-warning {{enumerator values exceeding range of 'int' are incompatible with C standards before C23}}
+  big_enum_b = a + 1, // expected-warning {{enumerator values exceeding range of 'int' are incompatible with C standards before C23}}
+  big_enum_c = ULLONG_MAX // expected-warning {{enumerator values exceeding range of 'int' are incompatible with C standards before C23}}
 };
 
 _Static_assert(GET_TYPE_INT(big_enum_a) == GET_TYPE_INT(big_enum_b), "ok");
