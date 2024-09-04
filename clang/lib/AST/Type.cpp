@@ -5290,21 +5290,24 @@ FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
   return Combined;
 }
 
+namespace clang {
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const FunctionEffectWithCondition &CFE) {
+  OS << CFE.Effect.name();
+  if (Expr *E = CFE.Cond.getCondition()) {
+    OS << '(';
+    E->dump();
+    OS << ')';
+  }
+  return OS;
+}
+
+} // namespace clang
+
 LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
-  bool First = true;
-  for (const auto &CFE : *this) {
-    if (!First)
-      OS << ", ";
-    else
-      First = false;
-    OS << CFE.Effect.name();
-    if (Expr *E = CFE.Cond.getCondition()) {
-      OS << '(';
-      E->dump();
-      OS << ')';
-    }
-  }
+  llvm::interleaveComma(*this, OS);
   OS << "}";
 }
 
@@ -5314,14 +5317,7 @@ LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
-  bool First = true;
-  for (const auto &Effect : *this) {
-    if (!First)
-      OS << ", ";
-    else
-      First = false;
-    OS << Effect.name();
-  }
+  llvm::interleaveComma(*this, OS);
   OS << "}";
 }
 

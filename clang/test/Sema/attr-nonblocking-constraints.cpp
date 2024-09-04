@@ -9,21 +9,21 @@
 
 void nb1() [[clang::nonblocking]]
 {
-	int *pInt = new int; // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
-	delete pInt; // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
+	int *pInt = new int; // expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
+	delete pInt; // expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
 }
 
 void nb2() [[clang::nonblocking]]
 {
-	static int global; // expected-warning {{'nonblocking' function must not have static local variables}}
+	static int global; // expected-warning {{function with 'nonblocking' attribute must not have static local variables}}
 }
 
 void nb3() [[clang::nonblocking]]
 {
 	try {
-		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
+		throw 42; // expected-warning {{function with 'nonblocking' attribute must not throw or catch exceptions}}
 	}
-	catch (...) { // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
+	catch (...) { // expected-warning {{function with 'nonblocking' attribute must not throw or catch exceptions}}
 	}
 }
 
@@ -33,7 +33,7 @@ void nb4_not_inline(); // expected-note {{declaration cannot be inferred 'nonblo
 void nb4() [[clang::nonblocking]]
 {
 	nb4_inline(); // OK
-	nb4_not_inline(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	nb4_not_inline(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
 
 
@@ -44,7 +44,7 @@ struct HasVirtual {
 void nb5() [[clang::nonblocking]]
 {
  	HasVirtual hv;
- 	hv.unsafe(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+ 	hv.unsafe(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
 
 void nb6_unsafe(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
@@ -55,21 +55,21 @@ void nb6_transitively_unsafe()
 
 void nb6() [[clang::nonblocking]]
 {
-	nb6_transitively_unsafe(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	nb6_transitively_unsafe(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
 
 thread_local int tl_var{ 42 };
 
 bool tl_test() [[clang::nonblocking]]
 {
-	return tl_var > 0; // expected-warning {{'nonblocking' function must not use thread-local variables}}
+	return tl_var > 0; // expected-warning {{function with 'nonblocking' attribute must not use thread-local variables}}
 }
 
 void nb7()
 {
 	// Make sure we verify blocks
 	auto blk = ^() [[clang::nonblocking]] {
-		throw 42; // expected-warning {{'nonblocking' block must not throw or catch exceptions}}
+		throw 42; // expected-warning {{block with 'nonblocking' attribute must not throw or catch exceptions}}
 	};
 }
 
@@ -77,7 +77,7 @@ void nb8()
 {
 	// Make sure we verify lambdas
 	auto lambda = []() [[clang::nonblocking]] {
-		throw 42; // expected-warning {{'nonblocking' lambda must not throw or catch exceptions}}
+		throw 42; // expected-warning {{lambda with 'nonblocking' attribute must not throw or catch exceptions}}
 	};
 }
 
@@ -92,7 +92,7 @@ void nb8a() [[clang::nonblocking]]
 void nb8b() [[clang::nonblocking]]
 {
 	// An unsafe lambda capture makes the outer function unsafe.
-	auto unsafeCapture = [foo = new int]() { // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
+	auto unsafeCapture = [foo = new int]() { // expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
 		delete foo;
 	};
 }
@@ -109,7 +109,7 @@ void nb8c()
 	struct Adder {
 		static T add_explicit(T x, T y) [[clang::nonblocking]]
 		{
-			return x + y; // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+			return x + y; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 		}
 		static T add_implicit(T x, T y)
 		{
@@ -140,7 +140,7 @@ void nb9() [[clang::nonblocking]]
 	Adder<int>::add_implicit(1, 2);
 
 	Adder<Stringy>::add_explicit({}, {}); // expected-note {{in template expansion here}}
-	Adder<Stringy2>::add_implicit({}, {}); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}} \
+	Adder<Stringy2>::add_implicit({}, {}); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}} \
 		expected-note {{in template expansion here}}
 }
 
@@ -149,7 +149,7 @@ void nb10(
 	void (*fp2)() [[clang::nonblocking]]
 	) [[clang::nonblocking]]
 {
-	fp1(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	fp1(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 	fp2();
 }
 
@@ -166,19 +166,19 @@ struct ComputedNB {
 
 void nb11() [[clang::nonblocking]]
 {
-	nb11_no_inference_1(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
-	nb11_no_inference_2(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	nb11_no_inference_1(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
+	nb11_no_inference_2(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 
 	ComputedNB<true> CNB_true;
 	CNB_true.method();
 	
 	ComputedNB<false> CNB_false;
-	CNB_false.method(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	CNB_false.method(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
 
 // Verify that when attached to a redeclaration, the attribute successfully attaches.
 void nb12() {
-	static int x; // expected-warning {{'nonblocking' function must not have static local variables}}
+	static int x; // expected-warning {{function with 'nonblocking' attribute must not have static local variables}}
 }
 void nb12() [[clang::nonblocking]];
 void nb13() [[clang::nonblocking]] { nb12(); }
@@ -212,18 +212,18 @@ void nb18(void (^block)() [[clang::nonblocking]]) [[clang::nonblocking]]
 // Builtin functions
 void nb19() [[clang::nonblocking]] {
 	__builtin_assume(1);
-	void *ptr = __builtin_malloc(1); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_malloc'}}
-	__builtin_free(ptr); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_free'}}
+	void *ptr = __builtin_malloc(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_malloc'}}
+	__builtin_free(ptr); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_free'}}
 	
-	void *p2 = __builtin_operator_new(1); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_operator_new'}}
-	__builtin_operator_delete(p2); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_operator_delete'}}
+	void *p2 = __builtin_operator_new(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_new'}}
+	__builtin_operator_delete(p2); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_delete'}}
 }
 
 // Function try-block
 void catches() try {} catch (...) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
 
 void nb20() [[clang::nonblocking]] {
-	catches(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'catches'}}
+	catches(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'catches'}}
 }
 
 struct S {
@@ -245,14 +245,14 @@ struct B {
 };
 
 void f() [[clang::nonblocking]] {
-    S s1(3);   // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'S::S'}}
-    S s2(3.0); // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'S::S'}}
-    A a;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'A::A'}}
-    B b;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'B::B'}}
+    S s1(3);   // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'S::S'}}
+    S s2(3.0); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'S::S'}}
+    A a;       // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'A::A'}}
+    B b;       // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'B::B'}}
 }
 
 struct T {
-	int x = badi();               // expected-warning {{'nonblocking' constructor's member initializer must not call non-'nonblocking' function 'badi'}}
+	int x = badi();               // expected-warning {{member initializer of constructor with 'nonblocking' attribute must not call non-'nonblocking' function 'badi'}}
 	T() [[clang::nonblocking]] {} // expected-note {{in constructor here}}
 	T(int x) [[clang::nonblocking]] : x(x) {} // OK
 };
@@ -262,16 +262,16 @@ int badForDefaultArg(); // expected-note {{declaration cannot be inferred 'nonbl
                            expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} \
 						   expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
-void hasDefaultArg(int param = badForDefaultArg()) { // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'badForDefaultArg'}} \
+void hasDefaultArg(int param = badForDefaultArg()) { // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForDefaultArg'}} \
                                                         expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'badForDefaultArg'}}
 }
 
 void nb21() [[clang::nonblocking]] {
 	hasDefaultArg(); // expected-note {{in evaluating default argument here}} \
-	                    expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'hasDefaultArg'}}
+	                    expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'hasDefaultArg'}}
 }
 
-void nb22(int param = badForDefaultArg()) [[clang::nonblocking]] { // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'badForDefaultArg'}}
+void nb22(int param = badForDefaultArg()) [[clang::nonblocking]] { // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForDefaultArg'}}
 }
 
 // Verify traversal of implicit code paths - constructors and destructors.
@@ -285,13 +285,13 @@ struct Unsafe {
   Unsafe(int x); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
   // Delegating initializer.
-  Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
+  Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
 };
 
 struct DerivedFromUnsafe : public Unsafe {
-  DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
-  DerivedFromUnsafe(int x) [[clang::nonblocking]] : Unsafe(x) {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
-  ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' destructor must not call non-'nonblocking' destructor 'Unsafe::~Unsafe'}}
+  DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
+  DerivedFromUnsafe(int x) [[clang::nonblocking]] : Unsafe(x) {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
+  ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{destructor with 'nonblocking' attribute must not call non-'nonblocking' destructor 'Unsafe::~Unsafe'}}
 };
 
 // Virtual inheritance
@@ -303,9 +303,9 @@ struct VBase {
 };
 
 struct VDerived : virtual VBase {
-  VDerived() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'VBase::VBase'}}
+  VDerived() [[clang::nonblocking]] {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'VBase::VBase'}}
 
-  ~VDerived() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' destructor must not call non-'nonblocking' destructor 'VBase::~VBase'}}
+  ~VDerived() [[clang::nonblocking]] {} // expected-warning {{destructor with 'nonblocking' attribute must not call non-'nonblocking' destructor 'VBase::~VBase'}}
 };
 
 // Contexts where there is no function call, no diagnostic.
@@ -329,6 +329,6 @@ void g() [[clang::nonblocking]] {
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
 
-void needs_noexcept() [[clang::nonblocking]] // expected-warning {{'nonblocking' function should be declared noexcept}}
+void needs_noexcept() [[clang::nonblocking]] // expected-warning {{function with 'nonblocking' attribute should be declared noexcept}}
 {
 }

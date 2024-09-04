@@ -90,10 +90,9 @@ struct Violation {
   Violation(FunctionEffect Effect, ViolationID ID, ViolationSite VS,
             SourceLocation Loc, const Decl *Callee = nullptr,
             std::optional<FunctionEffect> CalleeEffect = std::nullopt)
-      : Effect(Effect), ID(ID), Site(VS), Loc(Loc), Callee(Callee) {
-    if (CalleeEffect)
-      CalleeEffectPreventingInference = *CalleeEffect;
-  }
+      : Effect(Effect), CalleeEffectPreventingInference(
+                            CalleeEffect.value_or(FunctionEffect())),
+        ID(ID), Site(VS), Loc(Loc), Callee(Callee) {}
 
   unsigned diagnosticSelectIndex() const {
     return unsigned(ID) - unsigned(ViolationID::BaseDiagnosticIndex);
@@ -102,7 +101,7 @@ struct Violation {
 
 enum class SpecialFuncType : uint8_t { None, OperatorNew, OperatorDelete };
 enum class CallableType : uint8_t {
-  // Unknown: probably function pointer
+  // Unknown: probably function pointer.
   Unknown,
   Function,
   Virtual,
@@ -847,14 +846,14 @@ private:
       case ViolationID::AccessesThreadLocalVariable:
       case ViolationID::AccessesObjCMethodOrProperty:
         S.Diag(Viol1.Loc, diag::warn_func_effect_violation)
-            << effectName << SiteDescIndex(CInfo.CDecl, &Viol1)
+            << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName
             << Viol1.diagnosticSelectIndex();
         MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsExprWithoutEffect:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_expr_without_effect)
-            << effectName << SiteDescIndex(CInfo.CDecl, &Viol1);
+            << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName;
         MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
@@ -864,7 +863,7 @@ private:
         std::string CalleeName = CalleeInfo.name(S);
 
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
-            << effectName << SiteDescIndex(CInfo.CDecl, &Viol1)
+            << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName
             << SiteDescIndex(CalleeInfo.CDecl, nullptr) << CalleeName;
         MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
@@ -1362,7 +1361,6 @@ void Sema::diagnoseFunctionEffectMergeConflicts(
   }
 }
 
-// Should only be called when getFunctionEffects() returns a non-empty set.
 // Decl should be a FunctionDecl or BlockDecl.
 void Sema::maybeAddDeclWithEffects(const Decl *D,
                                    const FunctionEffectsRef &FX) {

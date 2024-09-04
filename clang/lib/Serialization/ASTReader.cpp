@@ -8397,19 +8397,14 @@ void ASTReader::InitializeSema(Sema &S) {
         NewOverrides.applyOverrides(SemaObj->getLangOpts());
   }
 
-  if (!DeclsWithEffectsToVerify.empty()) {
-    for (GlobalDeclID ID : DeclsWithEffectsToVerify) {
-      Decl *D = GetDecl(ID);
-      FunctionEffectsRef FX;
-      if (auto *FD = dyn_cast<FunctionDecl>(D))
-        FX = FD->getFunctionEffects();
-      else if (auto *BD = dyn_cast<BlockDecl>(D))
-        FX = BD->getFunctionEffects();
-      if (!FX.empty())
-        SemaObj->addDeclWithEffects(D, FX);
-    }
-    DeclsWithEffectsToVerify.clear();
+  for (GlobalDeclID ID : DeclsWithEffectsToVerify) {
+    Decl *D = GetDecl(ID);
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      SemaObj->addDeclWithEffects(FD, FD->getFunctionEffects());
+    else if (auto *BD = dyn_cast<BlockDecl>(D))
+      SemaObj->addDeclWithEffects(BD, BD->getFunctionEffects());
   }
+  DeclsWithEffectsToVerify.clear();
 
   SemaObj->OpenCLFeatures = OpenCLExtensions;
 

@@ -4,7 +4,7 @@
 
 // These need '-fms-extensions' (and maybe '-fdeclspec')
 void f1() [[clang::nonblocking]] {
-    __try {} __except (1) {} // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
+    __try {} __except (1) {} // expected-warning {{function with 'nonblocking' attribute must not throw or catch exceptions}}
 }
 
 struct S {
@@ -20,7 +20,7 @@ struct S {
 
 void f2() [[clang::nonblocking]] {
     S a;
-    a.x; // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'S::get_x'}}
+    a.x; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'S::get_x'}}
     a.nb;
     a.nb2;
 }

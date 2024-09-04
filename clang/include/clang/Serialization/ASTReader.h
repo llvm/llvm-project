@@ -967,7 +967,7 @@ private:
   llvm::SmallSetVector<GlobalDeclID, 4> DeclsToCheckForDeferredDiags;
 
   /// The IDs of all decls with function effects to be checked.
-  SmallVector<GlobalDeclID, 0> DeclsWithEffectsToVerify;
+  SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
 
 private:
   struct ImportedSubmodule {

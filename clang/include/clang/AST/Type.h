@@ -4777,6 +4777,12 @@ public:
   /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const FunctionEffect &Effect) {
+    OS << Effect.name();
+    return OS;
+  }
+
   /// Determine whether the effect is allowed to be inferred on the callee,
   /// which is either a FunctionDecl or BlockDecl. If the returned optional
   /// is empty, inference is permitted; otherwise it holds the effect which
@@ -4834,6 +4840,9 @@ struct FunctionEffectWithCondition {
 
   /// Return a textual description of the effect, and its condition, if any.
   std::string description() const;
+
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const FunctionEffectWithCondition &CFE);
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
@@ -4949,7 +4958,7 @@ class FunctionEffectKindSet {
   explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
 
   constexpr static size_t kindToPos(FunctionEffect::Kind K) {
-    return static_assert<size_t>(K);
+    return static_cast<size_t>(K);
   }
 
 public:

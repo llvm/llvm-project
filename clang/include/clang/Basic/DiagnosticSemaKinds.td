@@ -10951,7 +10951,8 @@ def warn_imp_cast_drops_unaligned : Warning<
 
 // Function effects
 def warn_func_effect_violation : Warning<
-  "'%0' %select{function|constructor|destructor|lambda|block|constructor's member initializer}1 "
+  "%select{function|constructor|destructor|lambda|block|member initializer of constructor}0 "
+  "with '%1' attribute "
   "must not %select{allocate or deallocate memory|throw or catch exceptions|"
   "have static local variables|use thread-local variables|access ObjC methods or properties}2">,
   InGroup<FunctionEffects>;
@@ -10962,8 +10963,9 @@ def note_func_effect_violation : Note<
   "has a static local variable|uses a thread-local variable|"
   "accesses an ObjC method or property}2">;
 def warn_func_effect_calls_func_without_effect : Warning<
-  "'%0' %select{function|constructor|destructor|lambda|block|constructor's member initializer}1 "
-  "must not call non-'%0' "
+  "%select{function|constructor|destructor|lambda|block|member initializer of constructor}0 "
+  "with '%1' attribute "
+  "must not call non-'%1' "
   "%select{function|constructor|destructor|lambda|block}2 "
   "'%3'">,
   InGroup<FunctionEffects>;
@@ -10973,7 +10975,8 @@ def note_func_effect_calls_func_without_effect : Note<
   "%select{function|constructor|destructor|lambda|block}2 "
   "'%3'">;
 def warn_func_effect_calls_expr_without_effect : Warning<
-  "'%0' %select{function|constructor|destructor|lambda|block|constructor's member initializer}1 "
+  "%select{function|constructor|destructor|lambda|block|member initializer of constructor}0 "
+  "with '%1' attribute "
   "must not call non-'%0' expression">,
   InGroup<FunctionEffects>;
 def note_func_effect_call_extern : Note<
@@ -10984,7 +10987,7 @@ def note_func_effect_call_disallows_inference : Note<
 def note_func_effect_call_indirect : Note<
   "%select{virtual method|function pointer}0 cannot be inferred '%1'">;
 def warn_perf_constraint_implies_noexcept : Warning<
-  "'%0' function should be declared noexcept">,
+  "function with '%0' attribute should be declared noexcept">,
   InGroup<PerfConstraintImpliesNoexcept>;
 
 // FIXME: It would be nice if we could provide fuller template expansion notes.

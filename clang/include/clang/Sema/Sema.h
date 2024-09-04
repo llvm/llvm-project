@@ -15053,8 +15053,8 @@ public:
 
     FunctionEffect::Kind EffectKind;
     Kind DiffKind;
-    FunctionEffectWithCondition Old; // invalid when Added.
-    FunctionEffectWithCondition New; // invalid when Removed.
+    FunctionEffectWithCondition Old; // invalid when Kind is Added.
+    FunctionEffectWithCondition New; // invalid when Kind is Removed.
 
     StringRef effectName() const {
       if (Old.Effect.kind() != FunctionEffect::Kind::None)
