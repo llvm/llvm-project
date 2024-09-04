@@ -18,7 +18,6 @@
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/promote.h>
-#include <__utility/pair.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
