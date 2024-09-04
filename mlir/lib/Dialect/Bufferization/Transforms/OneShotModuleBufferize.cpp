@@ -456,12 +456,12 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
     return failure();
-  SmallVector<FunctionOpInterface> ops;
 
   // Bufferize functions.
   for (FunctionOpInterface funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
+
     if (llvm::is_contained(options.noAnalysisFuncFilter, funcOp.getName())) {
       // This function was not analyzed and RaW conflicts were not resolved.
       // Buffer copies must be inserted before every write.
