@@ -223,7 +223,7 @@ def build_vector_to_dup : GICombineRule<
 >;
 
 def build_vector_to_vector_insert : GICombineRule<
-  (defs root:$root, register_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
           [{ return matchLowerBuildToInsertVecElt(*${root}, MRI); }]),
   (apply [{ applyLowerBuildToInsertVecElt(*${root}, MRI, B); }])
