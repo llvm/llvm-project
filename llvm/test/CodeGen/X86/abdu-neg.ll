@@ -824,8 +824,8 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    sbbl %edx, %ebx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    sbbl %esi, %edx
-; X86-NEXT:    cmovbl %edi, %eax
-; X86-NEXT:    cmovbl %ebx, %edx
+; X86-NEXT:    cmovael %edi, %eax
+; X86-NEXT:    cmovael %ebx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -837,12 +837,12 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; X64-NEXT:    subq %rsi, %rax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    subq %rsi, %rdi
-; X64-NEXT:    cmovaeq %rdi, %rax
+; X64-NEXT:    cmovbq %rdi, %rax
 ; X64-NEXT:    retq
   %cmp = icmp ult i64 %a, %b
   %ab = sub i64 %a, %b
   %ba = sub i64 %b, %a
-  %sel = select i1 %cmp, i64 %ba, i64 %ab
+  %sel = select i1 %cmp, i64 %ab, i64 %ba
   ret i64 %sel
 }
 
@@ -871,10 +871,10 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmovbl (%esp), %edx # 4-byte Folded Reload
-; X86-NEXT:    cmovbl %ebx, %esi
-; X86-NEXT:    cmovbl %ebp, %ecx
-; X86-NEXT:    cmovbl %eax, %edi
+; X86-NEXT:    cmovael (%esp), %edx # 4-byte Folded Reload
+; X86-NEXT:    cmovael %ebx, %esi
+; X86-NEXT:    cmovael %ebp, %ecx
+; X86-NEXT:    cmovael %eax, %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %edi, 12(%eax)
 ; X86-NEXT:    movl %ecx, 8(%eax)
@@ -895,14 +895,14 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; X64-NEXT:    sbbq %rsi, %r8
 ; X64-NEXT:    subq %rdx, %rdi
 ; X64-NEXT:    sbbq %rcx, %rsi
-; X64-NEXT:    cmovaeq %rdi, %rax
-; X64-NEXT:    cmovaeq %rsi, %r8
+; X64-NEXT:    cmovbq %rdi, %rax
+; X64-NEXT:    cmovbq %rsi, %r8
 ; X64-NEXT:    movq %r8, %rdx
 ; X64-NEXT:    retq
   %cmp = icmp ult i128 %a, %b
   %ab = sub i128 %a, %b
   %ba = sub i128 %b, %a
-  %sel = select i1 %cmp, i128 %ba, i128 %ab
+  %sel = select i1 %cmp, i128 %ab, i128 %ba
   ret i128 %sel
 }
 
