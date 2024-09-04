@@ -32,17 +32,17 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* start_lifetime_as(void* __p) _NOEXC
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const _Tp* start_lifetime_as(const void* __p) _NOEXCEPT {
-  return start_lifetime_as<_Tp>(const_cast<void*>(__p));
+  return std::start_lifetime_as<_Tp>(const_cast<void*>(__p));
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR volatile _Tp* start_lifetime_as(volatile void* __p) _NOEXCEPT {
-  return start_lifetime_as<_Tp>(const_cast<void*>(__p));
+  return std::start_lifetime_as<_Tp>(const_cast<void*>(__p));
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const volatile _Tp* start_lifetime_as(const volatile void* __p) _NOEXCEPT {
-  return start_lifetime_as<_Tp>(const_cast<void*>(__p));
+  return std::start_lifetime_as<_Tp>(const_cast<void*>(__p));
 }
 
 _LIBCPP_END_NAMESPACE_STD

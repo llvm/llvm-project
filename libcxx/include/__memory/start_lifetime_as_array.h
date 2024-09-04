@@ -21,25 +21,26 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* start_lifetime_as_array(void* __p, [[maybe_unused]] size_t __n) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp*
+start_lifetime_as_array(void* __p, [[__maybe_unused__]] size_t __n) _NOEXCEPT {
   return static_cast<_Tp*>(__p);
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const _Tp* start_lifetime_as_array(const void* __p, size_t __n) _NOEXCEPT {
-  return start_lifetime_as_array<_Tp>(const_cast<void*>(__p), __n);
+  return std::start_lifetime_as_array<_Tp>(const_cast<void*>(__p), __n);
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR volatile _Tp*
 start_lifetime_as_array(volatile void* __p, size_t __n) _NOEXCEPT {
-  return start_lifetime_as_array<_Tp>(const_cast<void*>(__p), __n);
+  return std::start_lifetime_as_array<_Tp>(const_cast<void*>(__p), __n);
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const volatile _Tp*
 start_lifetime_as_array(const volatile void* __p, size_t __n) _NOEXCEPT {
-  return start_lifetime_as_array<_Tp>(const_cast<void*>(__p), __n);
+  return std::start_lifetime_as_array<_Tp>(const_cast<void*>(__p), __n);
 }
 
 _LIBCPP_END_NAMESPACE_STD
