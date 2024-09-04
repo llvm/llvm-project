@@ -511,4 +511,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_CONSTEXPR_OPERATOR_NEW
 #endif
 
+#if __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+#  define TEST_LONG_DOUBLE_IS_DOUBLE
+#endif
+
 #endif // SUPPORT_TEST_MACROS_HPP

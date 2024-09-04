@@ -968,7 +968,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// generated.
 static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  if (!args.hasArg(clang::driver::options::OPT_fopenmp))
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
+                                        clang::driver::options::OPT_fno_openmp);
+  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
     return true;
 
   unsigned numErrorsBefore = diags.getNumErrors();

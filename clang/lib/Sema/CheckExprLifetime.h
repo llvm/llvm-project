@@ -22,6 +22,7 @@ namespace clang::sema {
 struct AssignedEntity {
   // The left-hand side expression of the assignment.
   Expr *LHS = nullptr;
+  CXXMethodDecl *AssignmentOperator = nullptr;
 };
 
 /// Check that the lifetime of the given expr (and its subobjects) is

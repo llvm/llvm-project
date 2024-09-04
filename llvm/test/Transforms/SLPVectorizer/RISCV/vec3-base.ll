@@ -437,7 +437,7 @@ define float @reduce_fadd(ptr %src) {
 ; NON-POW2-LABEL: @reduce_fadd(
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP1]])
+; NON-POW2-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP1]])
 ; NON-POW2-NEXT:    ret float [[TMP2]]
 ;
 ; POW2-ONLY-LABEL: @reduce_fadd(
@@ -616,7 +616,7 @@ define float @dot_product_fp32(ptr %a, ptr %b) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[GEP_A_0]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[GEP_B_0]], align 4
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul fast <3 x float> [[TMP1]], [[TMP2]]
-; NON-POW2-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP3]])
+; NON-POW2-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP3]])
 ; NON-POW2-NEXT:    ret float [[TMP4]]
 ;
 ; POW2-ONLY-LABEL: @dot_product_fp32(
@@ -668,7 +668,7 @@ define float @dot_product_fp32_reorder(ptr %a, ptr %b) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[GEP_A_0]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[GEP_B_0]], align 4
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul fast <3 x float> [[TMP1]], [[TMP2]]
-; NON-POW2-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP3]])
+; NON-POW2-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP3]])
 ; NON-POW2-NEXT:    ret float [[TMP4]]
 ;
 ; POW2-ONLY-LABEL: @dot_product_fp32_reorder(
@@ -719,7 +719,7 @@ define double @dot_product_fp64(ptr %a, ptr %b) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x double>, ptr [[GEP_A_0]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = load <3 x double>, ptr [[GEP_B_0]], align 4
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul fast <3 x double> [[TMP1]], [[TMP2]]
-; NON-POW2-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v3f64(double -0.000000e+00, <3 x double> [[TMP3]])
+; NON-POW2-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v3f64(double 0.000000e+00, <3 x double> [[TMP3]])
 ; NON-POW2-NEXT:    ret double [[TMP4]]
 ;
 ; POW2-ONLY-LABEL: @dot_product_fp64(
