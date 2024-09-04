@@ -11,6 +11,22 @@
 #include "llvm/IR/DebugInfo.h"
 using namespace llvm;
 
+#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
+    : TrackingMDNodeRef(const_cast<DILocation *>(L)),
+      Kind(DebugLocKind::Normal) {}
+
+DebugLoc DebugLoc::getTemporary() { return DebugLoc(DebugLocKind::Temporary); }
+DebugLoc DebugLoc::getUnknown() { return DebugLoc(DebugLocKind::Unknown); }
+DebugLoc DebugLoc::getLineZero() { return DebugLoc(DebugLocKind::LineZero); }
+
+#else
+
+DebugLoc DebugLoc::getTemporary() { return DebugLoc(); }
+DebugLoc DebugLoc::getUnknown() { return DebugLoc(); }
+DebugLoc DebugLoc::getLineZero() { return DebugLoc(); }
+#endif // ENABLE_DEBUGLOC_COVERAGE_TRACKING
+
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
 //===----------------------------------------------------------------------===//
