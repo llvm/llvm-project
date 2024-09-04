@@ -4069,12 +4069,17 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         assert(OldSeg && "segment not found for instruction in LiveInterval");
 
         if (OldSeg->end == OldUseIdx.getRegSlot()) {
-          DefLI.removeSegment(*OldSeg, true);
+          // We only want to leave the dead def.
+          DefLI.removeSegment(OldSeg->start.getDeadSlot(), OldUseIdx.getRegSlot(),
+                              true);
 
           for (auto &SR : DefLI.subranges()) {
             LiveRange::Segment *OldSegSR = SR.getSegmentContaining(OldUseIdx);
-            if (OldSegSR->end == OldUseIdx.getRegSlot())
-              SR.removeSegment(*OldSegSR, true);
+            if (OldSegSR->end == OldUseIdx.getRegSlot()) {
+              // We only want to leave the dead def.
+              SR.removeSegment(OldSegSR->start.getDeadSlot(),
+                               OldUseIdx.getRegSlot(), true);
+            }
           }
 
           DefLI.removeEmptySubRanges();
