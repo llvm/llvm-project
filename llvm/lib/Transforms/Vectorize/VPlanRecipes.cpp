@@ -1295,6 +1295,8 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
   Builder.setMask(Mask).setEVL(EVLArg);
   Value *VPInst =
       Builder.createVectorInstruction(Opcode, Ops[0]->getType(), Ops, "vp.op");
+  // Currently vp-intrinsics only accept FMF flags.
+  // TODO: Enable other flags when support is added.
   if (isa<FPMathOperator>(VPInst))
     setFlags(cast<Instruction>(VPInst));
 
