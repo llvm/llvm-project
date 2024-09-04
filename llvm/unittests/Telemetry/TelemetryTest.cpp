@@ -47,9 +47,9 @@ static std::string nextUuid() {
 }
 
 struct VendorEntryKind {
-  static const KindType VendorCommon = 0b010101000;
-  static const KindType Startup      = 0b010101001;
-  static const KindType Exit         = 0b010101010;
+  static const KindType VendorCommon = 168; // 0b010101000
+  static const KindType Startup = 169;      // 0b010101001
+  static const KindType Exit = 170;         // 0b010101010
 };
 
 // Demonstrates that the TelemetryInfo (data courier) struct can be extended
@@ -64,9 +64,7 @@ struct VendorCommonTelemetryInfo : public TelemetryInfo {
            VendorEntryKind::VendorCommon;
   }
 
-  KindType getKind() const override {
-    return VendorEntryKind::VendorCommon;
-  }
+  KindType getKind() const override { return VendorEntryKind::VendorCommon; }
 
   virtual void serializeToStream(llvm::raw_ostream &OS) const = 0;
 };
@@ -303,8 +301,7 @@ class TestTelemeter : public Telemeter {
 public:
   TestTelemeter(std::string SessionId) : Uuid(SessionId), Counter(0) {}
 
-  static std::unique_ptr<TestTelemeter>
-  createInstance(Config *config) {
+  static std::unique_ptr<TestTelemeter> createInstance(Config *config) {
     llvm::errs() << "============================== createInstance is called"
                  << "\n";
     if (!config->EnableTelemetry)
@@ -496,8 +493,7 @@ static std::string ValueToString(const json::Value *V) {
 // Without vendor's implementation, telemetry is not enabled by default.
 TEST(TelemetryTest, TelemetryDefault) {
   HasVendorConfig = false;
-  std::shared_ptr<llvm::telemetry::Config> Config =
-      GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
   auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
 
   EXPECT_EQ(nullptr, Tool.get());
@@ -512,8 +508,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   Buffer.clear();
   EmittedJsons.clear();
 
-  std::shared_ptr<llvm::telemetry::Config> Config =
-      GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
 
   // Add some destinations
   Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST);
@@ -531,11 +526,11 @@ TEST(TelemetryTest, TelemetryEnabled) {
   // Check that the StringDestination emitted properly
   {
     std::string ExpectedBuffer =
-        ("SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
-         llvm::Twine(ToolName) + "\n" + "SessionId:" + llvm::Twine(ExpectedUuid) +
-         "\n" + "MSG_0:Two\n" + "MSG_1:Deux\n" + "MSG_2:Zwei\n" +
-         "SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicExitMsg:Three_" +
-         llvm::Twine(ToolName) + "\n")
+        ("SessionId:" + llvm::Twine(ExpectedUuid) + "\n" +
+         "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" + "SessionId:" +
+         llvm::Twine(ExpectedUuid) + "\n" + "MSG_0:Two\n" + "MSG_1:Deux\n" +
+         "MSG_2:Zwei\n" + "SessionId:" + llvm::Twine(ExpectedUuid) + "\n" +
+         "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n")
             .str();
 
     EXPECT_STREQ(ExpectedBuffer.c_str(), Buffer.c_str());
@@ -590,8 +585,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   Buffer.clear();
   EmittedJsons.clear();
 
-  std::shared_ptr<llvm::telemetry::Config> Config =
-      GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
 
   // Add some destinations
   Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST);
@@ -608,9 +602,10 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     // The StringDestination should have removed the odd-positioned msgs.
 
     std::string ExpectedBuffer =
-        ("SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
-         llvm::Twine(ToolName) + "\n" + "SessionId:" + llvm::Twine(ExpectedUuid) +
-         "\n" + "MSG_0:Two\n" + "MSG_1:\n" + // <<< was sanitized away.
+        ("SessionId:" + llvm::Twine(ExpectedUuid) + "\n" +
+         "MagicStartupMsg:One_" + llvm::Twine(ToolName) + "\n" +
+         "SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MSG_0:Two\n" +
+         "MSG_1:\n" + // <<< was sanitized away.
          "MSG_2:Zwei\n" + "SessionId:" + llvm::Twine(ExpectedUuid) + "\n" +
          "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n")
             .str();
