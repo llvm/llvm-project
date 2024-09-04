@@ -3222,6 +3222,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                      Op1Info.getNoProps(), Op2Info.getNoProps());
       return Cost;
     }
+    if (TLI->getValueType(DL, Ty) == MVT::i128)
+      return 16;
     [[fallthrough]];
   case ISD::UDIV: {
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
@@ -3239,6 +3241,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
+
+    auto VT = TLI->getValueType(DL, Ty);
+    if (VT == MVT::i128)
+      return 14;
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);

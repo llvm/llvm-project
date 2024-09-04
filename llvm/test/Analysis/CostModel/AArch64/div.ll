@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define i32 @sdiv() {
 ; CHECK-LABEL: 'sdiv'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = sdiv i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %I128 = sdiv i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sdiv i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = sdiv <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = sdiv <4 x i64> undef, undef
@@ -51,7 +51,7 @@ define i32 @sdiv() {
 
 define i32 @udiv() {
 ; CHECK-LABEL: 'udiv'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = udiv i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, undef
@@ -97,7 +97,7 @@ define i32 @udiv() {
 
 define i32 @sdiv_const() {
 ; CHECK-LABEL: 'sdiv_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = sdiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %I128 = sdiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = sdiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 6, i64 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
@@ -143,7 +143,7 @@ define i32 @sdiv_const() {
 
 define i32 @udiv_const() {
 ; CHECK-LABEL: 'udiv_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
@@ -190,7 +190,7 @@ define i32 @udiv_const() {
 
 define i32 @sdiv_uniformconst() {
 ; CHECK-LABEL: 'sdiv_uniformconst'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = sdiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %I128 = sdiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = sdiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 7, i64 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 7, i64 7, i64 7, i64 7>
@@ -236,7 +236,7 @@ define i32 @sdiv_uniformconst() {
 
 define i32 @udiv_uniformconst() {
 ; CHECK-LABEL: 'udiv_uniformconst'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 7, i64 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 7, i64 7, i64 7, i64 7>
@@ -328,7 +328,7 @@ define i32 @sdiv_constpow2() {
 
 define i32 @udiv_constpow2() {
 ; CHECK-LABEL: 'udiv_constpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
@@ -420,7 +420,7 @@ define i32 @sdiv_uniformconstpow2() {
 
 define i32 @udiv_uniformconstpow2() {
 ; CHECK-LABEL: 'udiv_uniformconstpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 16, i64 16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 16, i64 16, i64 16, i64 16>
@@ -466,7 +466,7 @@ define i32 @udiv_uniformconstpow2() {
 
 define i32 @sdiv_constnegpow2() {
 ; CHECK-LABEL: 'sdiv_constnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = sdiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %I128 = sdiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = sdiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 -8, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
@@ -512,7 +512,7 @@ define i32 @sdiv_constnegpow2() {
 
 define i32 @udiv_constnegpow2() {
 ; CHECK-LABEL: 'udiv_constnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
@@ -558,7 +558,7 @@ define i32 @udiv_constnegpow2() {
 
 define i32 @sdiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'sdiv_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = sdiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %I128 = sdiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = sdiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 -16, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
@@ -604,7 +604,7 @@ define i32 @sdiv_uniformconstnegpow2() {
 
 define i32 @udiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'udiv_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I128 = udiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 -16, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
