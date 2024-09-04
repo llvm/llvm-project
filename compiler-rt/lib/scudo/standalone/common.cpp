@@ -15,6 +15,8 @@ namespace scudo {
 #if !defined(SCUDO_PAGE_SIZE)
 uptr PageSizeCached = 0;
 uptr PageSizeLogCached = 0;
+
+// Must be defined in platform specific code.
 uptr getPageSize();
 
 // This must be called in the init path or there could be a race if multiple
@@ -22,7 +24,7 @@ uptr getPageSize();
 uptr getPageSizeSlow() {
   PageSizeCached = getPageSize();
   CHECK_NE(PageSizeCached, 0);
-  PageSizeLogCached = static_cast<uptr>(__builtin_ctzl(PageSizeCached));
+  PageSizeLogCached = getLog2(PageSizeCached);
   return PageSizeCached;
 }
 #endif

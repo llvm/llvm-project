@@ -157,10 +157,11 @@ inline uptr getPageSizeCached() {
 }
 
 inline uptr getPageSizeLogCached() {
-  if (LIKELY(PageSizeLogCached)) {
+  if (LIKELY(PageSizeLogCached))
     return PageSizeLogCached;
-  }
+  // PageSizeLogCached and PageSizeCached are both set in getPageSizeSlow()
   getPageSizeSlow();
+  DCHECK_NE(PageSizeLogCached, 0);
   return PageSizeLogCached;
 }
 
