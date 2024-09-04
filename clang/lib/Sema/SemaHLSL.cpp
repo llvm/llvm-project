@@ -10,8 +10,11 @@
 
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1607,6 +1610,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   }
   return false;
+}
+
+bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+
+  // check if it's a builtin type first (simple check, no need to cache it)
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLIntangibleType();
+
+  // unwrap arrays
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+
+  const RecordType *RT =
+      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
+  if (!RT)
+    return false;
+
+  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+  assert(RD != nullptr &&
+         "all HLSL struct and classes should be CXXRecordDecl");
+  return RD->isHLSLIntangible();
 }
 
 static void BuildFlattenedTypeList(QualType BaseTy,
