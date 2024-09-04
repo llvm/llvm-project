@@ -707,15 +707,16 @@ private:
       const auto &CB = cast<CallBase>(I);
       const Function *Callee = CB.getCalledFunction();
 
-      if (Callee && Callee->isIntrinsic())
+      // Callee == 0 for inline asm or indirect call with known callees.
+      // In the latter case, updateImpl() already checked the callees and we
+      // know their FLAT_SCRATCH_INIT bit is set.
+      // If function has indirect call with unknown callees, the bit is
+      // already removed in updateImpl() and execution won't reach here.
+      if (!Callee)
+        return true;
+      else
         return Callee->getIntrinsicID() !=
                Intrinsic::amdgcn_addrspacecast_nonnull;
-
-      // Return true for all other cases, including (1)inline asm, (2)direct
-      // call, and (3)indirect call with known callees. For (2) and (3)
-      // updateImpl() already checked the callees and we know their
-      // FLAT_SCRATCH_INIT bit is set.
-      return true;
     };
 
     bool UsedAssumedInformation = false;
