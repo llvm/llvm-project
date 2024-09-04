@@ -685,6 +685,13 @@ def FeatureFP8ConversionInsts : SubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
 >;
 
+def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
+  "HasCvtFP8Vop1Bug",
+  "true",
+  "FP8/BF8 VOP1 form of conversion to F32 is unreliable",
+  [FeatureFP8ConversionInsts]
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -1438,7 +1445,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
    FeatureFP8Insts,
-   FeatureFP8ConversionInsts,
+   FeatureFP8ConversionInsts, FeatureCvtFP8VOP1Bug,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1648,7 +1655,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
-   FeatureFP8ConversionInsts,
+   FeatureFP8ConversionInsts, FeatureCvtFP8VOP1Bug,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
