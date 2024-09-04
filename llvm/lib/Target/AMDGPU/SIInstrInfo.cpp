@@ -4059,42 +4059,37 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
     const auto killDef = [&](SlotIndex OldUseIdx) -> void {
-      const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+      MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
       // The only user is the instruction which will be killed.
       Register DefReg = DefMI->getOperand(0).getReg();
 
-      if (LIS) {
-        LiveInterval &DefLI = LIS->getInterval(DefReg);
-        LiveRange::Segment *OldSeg = DefLI.getSegmentContaining(OldUseIdx);
-        assert(OldSeg && "segment not found for instruction in LiveInterval");
-
-        if (OldSeg->end == OldUseIdx.getRegSlot()) {
-          // We only want to leave the dead def.
-          DefLI.removeSegment(OldSeg->start.getDeadSlot(), OldUseIdx.getRegSlot(),
-                              true);
-
-          for (auto &SR : DefLI.subranges()) {
-            LiveRange::Segment *OldSegSR = SR.getSegmentContaining(OldUseIdx);
-            if (OldSegSR->end == OldUseIdx.getRegSlot()) {
-              // We only want to leave the dead def.
-              SR.removeSegment(OldSegSR->start.getDeadSlot(),
-                               OldUseIdx.getRegSlot(), true);
-            }
-          }
-
-          DefLI.removeEmptySubRanges();
-        }
+      if (MRI.hasOneNonDBGUse(DefReg)) {
+        // We cannot just remove the DefMI here, calling pass will crash.
+        DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
+        DefMI->getOperand(0).setIsDead(true);
+        for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
+          DefMI->removeOperand(I);
+        if (LV)
+          LV->getVarInfo(DefReg).AliveBlocks.clear();
       }
 
-      if (!MRI.hasOneNonDBGUse(DefReg))
-        return;
-      // We cannot just remove the DefMI here, calling pass will crash.
-      DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
-      DefMI->getOperand(0).setIsDead(true);
-      for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
-        DefMI->removeOperand(I);
-      if (LV)
-        LV->getVarInfo(DefReg).AliveBlocks.clear();
+      if (LIS) {
+        LiveInterval &DefLI = LIS->getInterval(DefReg);
+
+        // We cannot delete the original instruction here, so hack out the use
+        // in the original instruction with a dummy register so we can use
+        // shrinkToUses to deal with any multi-use edge cases. Other targets do
+        // not have the complexity of deleting a use to consider here.
+        Register DummyReg = MRI.cloneVirtualRegister(DefReg);
+        for (MachineOperand &MIOp : MI.uses()) {
+          if (MIOp.isReg() && MIOp.getReg() == DefReg) {
+            MIOp.setIsUndef(true);
+            MIOp.setReg(DummyReg);
+          }
+        }
+
+        LIS->shrinkToUses(&DefLI);
+      }
     };
 
     int64_t Imm;
