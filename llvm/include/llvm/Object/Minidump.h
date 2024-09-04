@@ -236,12 +236,12 @@ class ExceptionStreamsIterator {
 
     bool operator!=(const ExceptionStreamsIterator &R) const { return !(*this == R); }
 
-    const Expected<const minidump::ExceptionStream &>
+    Expected<const minidump::ExceptionStream &>
     operator*() {
       return ReadCurrent();
     }
 
-    const Expected<const minidump::ExceptionStream &>
+    Expected<const minidump::ExceptionStream &>
     operator->() {
       return ReadCurrent();
     }

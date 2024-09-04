@@ -150,13 +150,11 @@ MinidumpFile::create(MemoryBufferRef Source) {
       continue;
     }
 
-    // We treat exceptions differently here because the LLDB minidump
-    // makes some assumptions about uniqueness, all the streams other than
-    // exceptions are lists. But exceptions are not a list, they are single
-    // streams that point back to their thread So we will omit them here, and
-    // will find them when needed in the MinidumpFile.
+    // Exceptions can be treated as a special case of streams. Other streams
+    // represent a list of entities, but exceptions are unique per stream.
     if (Type == StreamType::Exception) {
       ExceptionStreams.push_back(StreamDescriptor.value());
+      continue;
     }
 
     if (Type == DenseMapInfo<StreamType>::getEmptyKey() ||

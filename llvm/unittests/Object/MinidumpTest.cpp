@@ -751,8 +751,10 @@ TEST(MinidumpFile, getExceptionStream) {
   auto ExpectedFile = create(Data);
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   const MinidumpFile &File = **ExpectedFile;
-  Expected<const minidump::ExceptionStream &> ExpectedStream =
-      File.getExceptionStream();
+  auto ExceptionIterator =
+      File.getExceptionStreams().begin();
+
+  Expected<const ExceptionStream &> ExpectedStream = *ExceptionIterator;
   ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
   EXPECT_EQ(0x04030201u, ExpectedStream->ThreadId);
   const minidump::Exception &Exception = ExpectedStream->ExceptionRecord;
