@@ -3223,8 +3223,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       return Cost;
     }
 
-    // sdiv i128 are lowered as a libcall, which was microbenchmarked on an Apple M2
-    // Max as taking around 16 cycles.
+    // sdiv i128 are lowered as a libcall, which was microbenchmarked on an
+    // Apple M2 Max as taking around 16 cycles.
     if (TLI->getValueType(DL, Ty) == MVT::i128)
       return 16;
 
@@ -3246,8 +3246,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       }
     }
 
-    // udiv i128 are lowered as a libcall, which was microbenchmarked on an Apple M2
-    // Max as taking around 14 cycles.
+    // udiv i128 are lowered as a libcall, which was microbenchmarked on an
+    // Apple M2 Max as taking around 14 cycles.
     if (TLI->getValueType(DL, Ty) == MVT::i128)
       return 14;
 
