@@ -331,19 +331,12 @@ private:
     if (!opts::StaleMatchingWithBlockPseudoProbes)
       return {nullptr, false};
 
-    auto logIf = [](bool Expr, StringRef Message) {
-      LLVM_DEBUG(if (Expr) errs() << Message << '\n');
-      return Expr;
-    };
-
     DenseMap<const FlowBlock *, uint32_t> FlowBlockMatchCount;
 
     for (const yaml::bolt::PseudoProbeInfo &Probe : BlockPseudoProbes) {
       const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
           getInlineTreeNode(Probe.InlineTreeIndex);
-      if (logIf(!InlineTreeNode,
-                formatv("no matching inline tree node for {0} {1}",
-                        Probe.InlineTreeIndex, Probe.Index).str())) {
+      if (!InlineTreeNode) {
         ++FlowBlockMatchCount[nullptr];
         continue;
       }
@@ -355,17 +348,12 @@ private:
         BinaryProbe = &FuncProbe;
         break;
       }
-      if (logIf(!BinaryProbe, formatv("no matching binary probe for {0} {1}",
-                                      Probe.InlineTreeIndex, Probe.Index)
-                                  .str())) {
+      if (!BinaryProbe) {
         ++FlowBlockMatchCount[nullptr];
         continue;
       }
       auto It = BBPseudoProbeToBlock.find(BinaryProbe);
-      if (logIf(It == BBPseudoProbeToBlock.end(),
-                formatv("no probe->block for {0} {1}", Probe.InlineTreeIndex,
-                        Probe.Index)
-                    .str())) {
+      if (It == BBPseudoProbeToBlock.end()) {
         ++FlowBlockMatchCount[nullptr];
         continue;
       }
@@ -376,9 +364,6 @@ private:
     uint32_t TotalMatchCount = 0;
     const FlowBlock *BestMatchBlock = nullptr;
     for (auto &[Block, Count] : FlowBlockMatchCount) {
-      logIf(true, formatv("block {0} count {1}",
-                          Block ? Block->Index : UINT64_MAX, Count)
-                      .str());
       TotalMatchCount += Count;
       if (Count > BestMatchCount ||
           (Count == BestMatchCount && !BestMatchBlock)) {
