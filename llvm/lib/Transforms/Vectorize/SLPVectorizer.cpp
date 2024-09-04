@@ -7780,6 +7780,8 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
   Type *EltTy = T;
 
   while (isa<StructType, ArrayType, FixedVectorType>(EltTy)) {
+    if (EltTy->isEmptyTy())
+      return 0;
     if (auto *ST = dyn_cast<StructType>(EltTy)) {
       // Check that struct is homogeneous.
       for (const auto *Ty : ST->elements())
