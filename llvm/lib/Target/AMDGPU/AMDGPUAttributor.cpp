@@ -441,7 +441,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     }
 
     for (Instruction &I : instructions(F)) {
-      if (isa<AllocaInst>(I) || isa<AddrSpaceCastInst>(I)) {
+      if (isa<AddrSpaceCastInst>(I) &&
+          cast<AddrSpaceCastInst &>(I).getSrcAddressSpace() ==
+              AMDGPUAS::PRIVATE_ADDRESS) {
         removeAssumedBits(FLAT_SCRATCH_INIT);
         return;
       }
