@@ -148,11 +148,14 @@ LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
   return buffer;
 }
 
-LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer, size_t buffer_length) {
-  if (timeptr == nullptr || buffer == nullptr) {
+LIBC_INLINE char *ctime(const time_t *t_ptr, char *buffer,
+                        size_t buffer_length) {
+  if (t_ptr == nullptr || buffer == nullptr) {
     invalid_value();
     return nullptr;
   }
+  const struct tm *timeptr;
+  timeptr = localtime(t_ptr);
   if (timeptr->tm_wday < 0 ||
       timeptr->tm_wday > (TimeConstants::DAYS_PER_WEEK - 1)) {
     invalid_value();
@@ -188,7 +191,6 @@ LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer, size_t buffer_le
   }
   return buffer;
 }
-
 
 LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
   int64_t seconds = *timer;
