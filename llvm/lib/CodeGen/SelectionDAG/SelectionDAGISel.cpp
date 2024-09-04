@@ -1477,7 +1477,6 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
       // Report IP range only for blocks with Faulty inst
       auto MBBb = MBB.getFirstNonPHI();
 
-      // Avoids attempting to dereference a sentintel which fails an assert
       if (MBBb == MBB.end())
         continue;
 
