@@ -3388,6 +3388,8 @@ private:
     TreeEntry *Last = VectorizableTree.back().get();
     Last->Idx = VectorizableTree.size() - 1;
     Last->State = EntryState;
+    // FIXME: Remove once support for ReuseShuffleIndices has been implemented
+    // for non-power-of-two vectors.
     assert((has_single_bit(VL.size()) || ReuseShuffleIndices.empty()) &&
            "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
@@ -4817,9 +4819,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   // representation is better than just gather.
   auto CheckForShuffledLoads = [&, &TTI = *TTI](Align CommonAlignment,
                                                 bool ProfitableGatherPointers) {
-    // The following code has not been updated for non-power-of-2 vectors.
-    // The splitting logic here does not cover the original vector if the
-    // vector factor is not a power of two.
+    // FIXME: The following code has not been updated for non-power-of-2
+    // vectors.  The splitting logic here does not cover the original
+    // vector if the vector factor is not a power of two.  FIXME
     if (!has_single_bit(VL.size()))
       return false;
 
@@ -5197,6 +5199,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
+    // FIXME: Support ReuseShuffleIndices for non-power-of-two vectors.
     assert(!TE.isNonPowOf2Vec() &&
            "Reshuffling scalars not yet supported for nodes with padding");
 
@@ -5426,6 +5429,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       if (std::optional<OrdersType> Order = findPartiallyOrderedLoads(TE))
         return Order;
 
+    // FIXME: Remove the non-power-of-two check once findReusedOrderedScalars
+    // has been auditted for correctness with non-power-of-two vectors.
     if (!TE.isNonPowOf2Vec())
       if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
         return CurrentOrder;
