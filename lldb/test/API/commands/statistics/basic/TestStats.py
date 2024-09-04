@@ -942,7 +942,8 @@ class TestCase(TestBase):
         self.assertIn("string", summary_provider_str)
         self.assertIn("'count': 1", summary_provider_str)
         self.assertIn("'totalTime':", summary_provider_str)
-        self.assertIn("'type': 'c++'", summary_provider_str)
+        # We may hit the std::string C++ provider, or a summary provider string
+        self.assertRegex(r"'type': '(c++|string)'", summary_provider_str)
 
         self.runCmd("continue")
         self.runCmd("command script import BoxFormatter.py")
@@ -974,7 +975,9 @@ class TestCase(TestBase):
         self.assertIn("summaryProviderStatistics", stats)
         summary_providers = stats["summaryProviderStatistics"]
         summary_provider_str = str(summary_providers)
-        self.assertIn("std::vector", summary_provider_str)
         self.assertIn("'count': 2", summary_provider_str)
         self.assertIn("'totalTime':", summary_provider_str)
-        self.assertIn("'type': 'c++'", summary_provider_str)
+        self.assertRegex(r"'type': '(c++|string)'", summary_provider_str)
+        # We may hit the std::vector C++ provider, or a summary provider string
+        if "c++" in summary_provider_str:
+            self.assertIn("std::vector", summary_provider_str)
