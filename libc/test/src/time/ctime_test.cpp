@@ -12,12 +12,12 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-static inline char *call_ctime(struct tm *tm_data, int year, int month,
+static inline char *call_ctime(struct time_t *t, int year, int month,
                                int mday, int hour, int min, int sec, int wday,
                                int yday) {
   LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
-      tm_data, year, month, mday, hour, min, sec, wday, yday);
-  return LIBC_NAMESPACE::ctime(tm_data);
+      localtime(t), year, month, mday, hour, min, sec, wday, yday);
+  return LIBC_NAMESPACE::ctime(t);
 }
 
 TEST(LlvmLibcCtime, Nullptr) {
@@ -29,10 +29,10 @@ TEST(LlvmLibcCtime, Nullptr) {
 
 // Weekdays are in the range 0 to 6. Test passing invalid value in wday.
 TEST(LlvmLibcCtime, InvalidWday) {
-  struct tm tm_data;
+  struct time_t t;
 
   // Test with wday = -1.
-  call_ctime(&tm_data,
+  call_ctime(&t,
              1970, // year
              1,    // month
              1,    // day
@@ -44,7 +44,7 @@ TEST(LlvmLibcCtime, InvalidWday) {
   ASSERT_ERRNO_EQ(EINVAL);
 
   // Test with wday = 7.
-  call_ctime(&tm_data,
+  call_ctime(&t,
              1970, // year
              1,    // month
              1,    // day
@@ -58,10 +58,10 @@ TEST(LlvmLibcCtime, InvalidWday) {
 
 // Months are from January to December. Test passing invalid value in month.
 TEST(LlvmLibcCtime, InvalidMonth) {
-  struct tm tm_data;
+  struct time_t t;
 
   // Test with month = 0.
-  call_ctime(&tm_data,
+  call_ctime(&t,
              1970, // year
              0,    // month
              1,    // day
@@ -73,7 +73,7 @@ TEST(LlvmLibcCtime, InvalidMonth) {
   ASSERT_ERRNO_EQ(EINVAL);
 
   // Test with month = 13.
-  call_ctime(&tm_data,
+  call_ctime(&t,
              1970, // year
              13,   // month
              1,    // day
@@ -86,10 +86,10 @@ TEST(LlvmLibcCtime, InvalidMonth) {
 }
 
 TEST(LlvmLibcCtime, ValidWeekdays) {
-  struct tm tm_data;
+  struct time_t t;
   char *result;
   // 1970-01-01 00:00:00.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       1970, // year
                       1,    // month
                       1,    // day
@@ -101,7 +101,7 @@ TEST(LlvmLibcCtime, ValidWeekdays) {
   ASSERT_STREQ("Thu Jan  1 00:00:00 1970\n", result);
 
   // 1970-01-03 00:00:00.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       1970, // year
                       1,    // month
                       3,    // day
@@ -113,7 +113,7 @@ TEST(LlvmLibcCtime, ValidWeekdays) {
   ASSERT_STREQ("Sat Jan  3 00:00:00 1970\n", result);
 
   // 1970-01-04 00:00:00.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       1970, // year
                       1,    // month
                       4,    // day
@@ -126,10 +126,10 @@ TEST(LlvmLibcCtime, ValidWeekdays) {
 }
 
 TEST(LlvmLibcCtime, ValidMonths) {
-  struct tm tm_data;
+  struct time_t t;
   char *result;
   // 1970-01-01 00:00:00.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       1970, // year
                       1,    // month
                       1,    // day
@@ -141,7 +141,7 @@ TEST(LlvmLibcCtime, ValidMonths) {
   ASSERT_STREQ("Thu Jan  1 00:00:00 1970\n", result);
 
   // 1970-02-01 00:00:00.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       1970, // year
                       2,    // month
                       1,    // day
@@ -153,7 +153,7 @@ TEST(LlvmLibcCtime, ValidMonths) {
   ASSERT_STREQ("Sun Feb  1 00:00:00 1970\n", result);
 
   // 1970-12-31 23:59:59.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       1970, // year
                       12,   // month
                       31,   // day
@@ -166,11 +166,11 @@ TEST(LlvmLibcCtime, ValidMonths) {
 }
 
 TEST(LlvmLibcCtime, EndOf32BitEpochYear) {
-  struct tm tm_data;
+  struct time_t t;
   char *result;
   // Test for maximum value of a signed 32-bit integer.
   // Test implementation can encode time for Tue 19 January 2038 03:14:07 UTC.
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       2038, // year
                       1,    // month
                       19,   // day
@@ -186,9 +186,9 @@ TEST(LlvmLibcCtime, Max64BitYear) {
   if (sizeof(time_t) == 4)
     return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
-  struct tm tm_data;
+  struct time_t t;
   char *result;
-  result = call_ctime(&tm_data,
+  result = call_ctime(&t,
                       2170, // year
                       1,    // month
                       1,    // day
@@ -200,8 +200,8 @@ TEST(LlvmLibcCtime, Max64BitYear) {
   ASSERT_STREQ("Mon Jan  1 12:50:50 2170\n", result);
 
   // Test for Tue Jan 1 12:50:50 in 2,147,483,647th year.
-  // This test would cause buffer overflow and thus asctime returns nullptr.
-  result = call_ctime(&tm_data,
+  // This test would cause buffer overflow and thus ctime returns nullptr.
+  result = call_ctime(&t,
                       2147483647, // year
                       1,          // month
                       1,          // day
