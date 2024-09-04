@@ -391,7 +391,6 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s14, 0x41000000
 ; GFX12-GISEL-NEXT:    s_mov_b32 s13, 0x40e00000
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v6, s12
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s14 :: v_dual_mov_b32 v7, s13
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -700,7 +699,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s9, 4.0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s14, 0x41000000
 ; GFX12-GISEL-NEXT:    s_mov_b32 s13, 0x40e00000
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v6, s12
 ; GFX12-GISEL-NEXT:    v_bfrev_b32_e32 v10, 4.0
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s14 :: v_dual_mov_b32 v3, s8
@@ -850,7 +848,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX12-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x34
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v6, 0xb36211c6
 ; GFX12-GISEL-NEXT:    v_bfrev_b32_e32 v7, 4.0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s8
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s10 :: v_dual_mov_b32 v4, s9
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0

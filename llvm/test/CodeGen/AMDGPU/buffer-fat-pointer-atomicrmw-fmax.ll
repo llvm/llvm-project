@@ -27,7 +27,6 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_g
 ; GFX12-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory:
@@ -228,7 +227,6 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_f32__offset__amdgpu_no_fine_
 ; GFX12-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], null offen offset:1024
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: buffer_fat_ptr_agent_atomic_fmax_noret_f32__offset__amdgpu_no_fine_grained_memory:
@@ -820,7 +818,6 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_remote
 ; GFX12-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_remote_memory:
@@ -1103,7 +1100,6 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_g
 ; GFX12-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -8615,7 +8611,6 @@ define float @buffer_fat_ptr_system_atomic_fmax_ret_f32__offset__amdgpu_no_fine_
 ; GFX12-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: buffer_fat_ptr_system_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory:

@@ -45,6 +45,10 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
                      cl::desc("Fill a percentage of the latency between "
                               "neighboring MFMA with s_nops."));
 
+static cl::opt<unsigned> MaxExhaustiveHazardSearch(
+    "amdgpu-max-exhaustive-hazard-search", cl::init(128), cl::Hidden,
+    cl::desc("Maximum function size for exhausive hazard search"));
+
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
 //===----------------------------------------------------------------------===//
@@ -52,15 +56,11 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
 static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
                                                  const GCNSubtarget &ST);
 
-GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
-  IsHazardRecognizerMode(false),
-  CurrCycleInstr(nullptr),
-  MF(MF),
-  ST(MF.getSubtarget<GCNSubtarget>()),
-  TII(*ST.getInstrInfo()),
-  TRI(TII.getRegisterInfo()),
-  ClauseUses(TRI.getNumRegUnits()),
-  ClauseDefs(TRI.getNumRegUnits()) {
+GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF)
+    : IsHazardRecognizerMode(false), CurrCycleInstr(nullptr), MF(MF),
+      ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
+      TRI(TII.getRegisterInfo()), UseVALUReadHazardExhaustiveSearch(false),
+      ClauseUses(TRI.getNumRegUnits()), ClauseDefs(TRI.getNumRegUnits()) {
   MaxLookAhead = MF.getRegInfo().isPhysRegUsed(AMDGPU::AGPR0) ? 19 : 5;
   TSchedModel.init(&ST);
   RunLdsBranchVmemWARHazardFixup = shouldRunLdsBranchVmemWARHazardFixup(MF, ST);
@@ -1205,8 +1205,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixWMMAHazards(MI);
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
-  fixRequiredExportPriority(MI);
   fixVALUReadSGPRHazard(MI);
+  fixRequiredExportPriority(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII,
@@ -3114,9 +3114,24 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   return true;
 }
 
-static unsigned baseSGPRNumber(Register Reg, const SIRegisterInfo &TRI) {
+// Return the numeric ID 0-63 of an 64b SGPR pair for a given SGPR.
+// i.e. SGPR0 = SGPR0_SGPR1 = 0, SGPR3 = SGPR2_SGPR3 = 1, etc
+static std::optional<unsigned> sgprPairNumber(Register Reg,
+                                              const SIRegisterInfo &TRI) {
+  switch (Reg) {
+  case AMDGPU::M0:
+  case AMDGPU::EXEC:
+  case AMDGPU::EXEC_LO:
+  case AMDGPU::EXEC_HI:
+  case AMDGPU::SGPR_NULL:
+  case AMDGPU::SGPR_NULL64:
+    return {};
+  default:
+    break;
+  }
   unsigned RegN = TRI.getEncodingValue(Reg);
-  assert(RegN <= 127);
+  if (RegN > 127)
+    return {};
   return (RegN >> 1) & 0x3f;
 }
 
@@ -3128,13 +3143,19 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
   if (!VALUReadHazardSGPRs.empty())
     return;
 
-  // Consider all SGPRs hazards if the shader uses function calls or is callee.
   auto CallingConv = MF.getFunction().getCallingConv();
-  bool UseVALUUseCache = AMDGPU::isShader(CallingConv) &&
-                         !AMDGPU::isChainCC(CallingConv) &&
-                         !MF.getFrameInfo().hasCalls() &&
-                         MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
+  bool IsCallFree =
+      AMDGPU::isEntryFunctionCC(CallingConv) && !MF.getFrameInfo().hasCalls();
 
+  // Exhaustive search is only viable in non-caller/callee functions where
+  // VALUs will be exposed to the hazard recognizer.
+  UseVALUReadHazardExhaustiveSearch =
+      IsCallFree && MF.getTarget().getOptLevel() > CodeGenOptLevel::None &&
+      MF.getInstructionCount() <= MaxExhaustiveHazardSearch;
+
+  // Consider all SGPRs hazards if the shader uses function calls or is callee.
+  bool UseVALUUseCache =
+      IsCallFree && MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
   VALUReadHazardSGPRs.resize(64, !UseVALUUseCache);
   if (!UseVALUUseCache)
     return;
@@ -3153,30 +3174,33 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
     for (auto &MI : reverse(MBB->instrs())) {
       bool IsVALU = SIInstrInfo::isVALU(MI);
       bool IsSALU = SIInstrInfo::isSALU(MI);
-      if (!(IsVALU || IsSALU))
+      if (!IsVALU && !IsSALU)
         continue;
 
       for (const MachineOperand &Op : MI.operands()) {
         if (!Op.isReg())
           continue;
         Register Reg = Op.getReg();
+        assert(!Op.getSubReg());
         // Only consider implicit operands of VCC.
         if (Op.isImplicit() && !(Reg == AMDGPU::VCC_LO ||
                                  Reg == AMDGPU::VCC_HI || Reg == AMDGPU::VCC))
           continue;
         if (!TRI.isSGPRReg(MRI, Reg))
           continue;
-        unsigned RegN = baseSGPRNumber(Reg, TRI);
+        auto RegN = sgprPairNumber(Reg, TRI);
+        if (!RegN)
+          continue;
         if (IsVALU && Op.isUse()) {
           // Note: any access within a cycle must be considered a hazard.
-          if (InCycle || (ReadSGPRs[RegN] && SALUWriteSGPRs[RegN]))
-            VALUReadHazardSGPRs.set(RegN);
-          ReadSGPRs.set(RegN);
+          if (InCycle || (ReadSGPRs[*RegN] && SALUWriteSGPRs[*RegN]))
+            VALUReadHazardSGPRs.set(*RegN);
+          ReadSGPRs.set(*RegN);
         } else if (IsSALU) {
           if (Op.isDef())
-            SALUWriteSGPRs.set(RegN);
+            SALUWriteSGPRs.set(*RegN);
           else
-            ReadSGPRs.set(RegN);
+            ReadSGPRs.set(*RegN);
         }
       }
     }
@@ -3191,10 +3215,9 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
   //   1. VALU reads SGPR
   //   2. SALU writes SGPR
   //   3. VALU/SALU reads SGPR
-  // We do not search for (1) because the expiry point of the hazard
-  // is indeterminate; however, the hazard between (2) and (3) can
-  // expire if the gap contains sufficient SALU instructions with no
-  // usage of SGPR from (1).
+  // Try to avoid searching for (1) because the expiry point of the hazard is
+  // indeterminate; however, the hazard between (2) and (3) can expire if the
+  // gap contains sufficient SALU instructions with no usage of SGPR from (1).
   // Note: SGPRs must be considered as 64-bit pairs as hazard exists
   // even if individual SGPRs are accessed.
 
@@ -3202,18 +3225,6 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
   bool MIIsVALU = SIInstrInfo::isVALU(*MI);
   if (!(MIIsSALU || MIIsVALU))
     return false;
-
-  // Always mitigate before a call/return as the callee/caller will not
-  // see the hazard chain, i.e. (2) to (3) described above.
-  if (MI->getOpcode() == AMDGPU::S_SETPC_B64 ||
-      MI->getOpcode() == AMDGPU::S_SETPC_B64_return ||
-      MI->getOpcode() == AMDGPU::S_SWAPPC_B64 ||
-      MI->getOpcode() == AMDGPU::S_CALL_B64) {
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-        .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
-    return true;
-  }
 
   // Avoid expensive search when compile time is priority by
   // mitigating every SALU which writes an SGPR.
@@ -3251,42 +3262,53 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
   if (VALUReadHazardSGPRs.none())
     return false;
 
+  // All SGPR writes before a call/return must be flushed as the callee/caller
+  // will not will not see the hazard chain, i.e. (2) to (3) described above.
+  const bool IsSetPC = (MI->isCall() || MI->isReturn()) &&
+                       !(MI->getOpcode() == AMDGPU::S_ENDPGM ||
+                         MI->getOpcode() == AMDGPU::S_ENDPGM_SAVED);
+
   // Collect all SGPR sources for MI which are read by a VALU.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallSet<Register, 4> SGPRsUsed;
 
-  for (const MachineOperand &Op : MI->all_uses()) {
-    Register OpReg = Op.getReg();
+  if (!IsSetPC) {
+    for (const MachineOperand &Op : MI->all_uses()) {
+      Register OpReg = Op.getReg();
 
-    // Only consider VCC implicit uses on VALUs.
-    // The only expected SALU implicit access is SCC which is no hazard.
-    if (MIIsSALU && Op.isImplicit())
-      continue;
+      // Only consider VCC implicit uses on VALUs.
+      // The only expected SALU implicit access is SCC which is no hazard.
+      if (MIIsSALU && Op.isImplicit())
+        continue;
 
-    if (!TRI.isSGPRReg(MRI, OpReg))
-      continue;
+      if (!TRI.isSGPRReg(MRI, OpReg))
+        continue;
 
-    // Ignore special purposes registers such as NULL, EXEC, and M0.
-    if (TRI.getEncodingValue(OpReg) >= /*SGPR_NULL*/ 124)
-      continue;
+      auto RegN = sgprPairNumber(OpReg, TRI);
+      if (!RegN)
+        continue;
 
-    unsigned RegN = baseSGPRNumber(OpReg, TRI);
-    if (!VALUReadHazardSGPRs[RegN])
-      continue;
+      if (!VALUReadHazardSGPRs[*RegN])
+        continue;
 
-    SGPRsUsed.insert(OpReg);
+      SGPRsUsed.insert(OpReg);
+    }
+
+    // No SGPRs -> nothing to do.
+    if (SGPRsUsed.empty())
+      return false;
   }
 
-  // No SGPRs -> nothing to do.
-  if (SGPRsUsed.empty())
-    return false;
-
   // A hazard is any SALU which writes one of the SGPRs read by MI.
-  auto IsHazardFn = [this, &SGPRsUsed](const MachineInstr &I) {
+  auto IsHazardFn = [this, IsSetPC, &SGPRsUsed](const MachineInstr &I) {
     if (!SIInstrInfo::isSALU(I))
       return false;
+    // Ensure SGPR flush before call/return by conservatively assuming every
+    // SALU writes an SGPR.
+    if (IsSetPC && I.getNumDefs() > 0)
+      return true;
     // Check for any register writes.
-    return llvm::any_of(SGPRsUsed, [this, &I](Register Reg) {
+    return any_of(SGPRsUsed, [this, &I](Register Reg) {
       return I.modifiesRegister(Reg, &TRI);
     });
   };
@@ -3307,9 +3329,8 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
     if (!SIInstrInfo::isSALU(I) || SIInstrInfo::isSOPP(I))
       return 0;
     // SALU must be unrelated to any hazard registers.
-    if (llvm::any_of(SGPRsUsed, [this, &I](Register Reg) {
-          return I.readsRegister(Reg, &TRI);
-        }))
+    if (any_of(SGPRsUsed,
+               [this, &I](Register Reg) { return I.readsRegister(Reg, &TRI); }))
       return 0;
     return 1;
   };
@@ -3322,6 +3343,33 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
 
   if (WaitStates >= SALUExpiryCount)
     return false;
+
+  // Validate hazard through an exhaustive search.
+  if (UseVALUReadHazardExhaustiveSearch) {
+    // A hazard is any VALU which reads one of the paired SGPRs read by MI.
+    // This is searching for (1) in the hazard description.
+    auto hazardPair = [this](Register Reg) {
+      if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+        return Register(AMDGPU::VCC);
+      auto RegN = sgprPairNumber(Reg, TRI);
+      return Register(AMDGPU::SGPR0_SGPR1 + *RegN);
+    };
+    auto SearchHazardFn = [this, hazardPair,
+                           &SGPRsUsed](const MachineInstr &I) {
+      if (!SIInstrInfo::isVALU(I))
+        return false;
+      // Check for any register reads.
+      return any_of(SGPRsUsed, [this, hazardPair, &I](Register Reg) {
+        return I.readsRegister(hazardPair(Reg), &TRI);
+      });
+    };
+    auto SearchExpiredFn = [&](const MachineInstr &I, int Count) {
+      return false;
+    };
+    if (::getWaitStatesSince(SearchHazardFn, MI, SearchExpiredFn) ==
+        std::numeric_limits<int>::max())
+      return false;
+  }
 
   // Add s_wait_alu sa_sdst(0) before SALU read.
   auto NewMI = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
