@@ -379,7 +379,7 @@ def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
 
-def err_os_unsupport_riscv_target_clones : Error<
-  "target_clones is currently only supported on Linux">;
+def err_os_unsupport_riscv_fmv : Error<
+  "fmv is currently only supported on Linux">;
 
 }
