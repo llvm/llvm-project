@@ -4058,22 +4058,22 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
-    const auto killDef = [&](SlotIndex OldDefIdx) -> void {
+    const auto killDef = [&](SlotIndex OldUseIdx) -> void {
       const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
       // The only user is the instruction which will be killed.
       Register DefReg = DefMI->getOperand(0).getReg();
 
       if (LIS) {
         LiveInterval &DefLI = LIS->getInterval(DefReg);
-        LiveRange::Segment *OldSeg = DefLI.getSegmentContaining(OldDefIdx);
+        LiveRange::Segment *OldSeg = DefLI.getSegmentContaining(OldUseIdx);
         assert(OldSeg && "segment not found for instruction in LiveInterval");
 
-        if (OldSeg->end == OldDefIdx.getRegSlot()) {
+        if (OldSeg->end == OldUseIdx.getRegSlot()) {
           DefLI.removeSegment(*OldSeg, true);
 
           for (auto &SR : DefLI.subranges()) {
-            LiveRange::Segment *OldSegSR = SR.getSegmentContaining(OldDefIdx);
-            if (OldSegSR->end == OldDefIdx.getRegSlot())
+            LiveRange::Segment *OldSegSR = SR.getSegmentContaining(OldUseIdx);
+            if (OldSegSR->end == OldUseIdx.getRegSlot())
               SR.removeSegment(*OldSegSR, true);
           }
 
