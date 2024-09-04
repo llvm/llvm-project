@@ -615,7 +615,7 @@ void HWAddressSanitizer::initializeModule() {
     if (!F.doesNotAccessMemory()) {
       bool WritesMemory = !F.onlyReadsMemory();
       bool ReadsMemory = !F.onlyWritesMemory();
-      if (WritesMemory && !ReadsMemory) {
+      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
         F.removeFnAttr(Attribute::Memory);
         Changed = true;
       }
