@@ -384,12 +384,11 @@ public:
   /// constructs it, if it's endpoints do not exist it also default constructs
   /// them.
   EdgeAttribute &operator[](const EdgeIdentifier &I) {
-    auto &Attr = Edges[I];
     Vertices.try_emplace(I.first);
     Vertices.try_emplace(I.second);
     InNeighbors[I.second].insert(I.first);
     OutNeighbors[I.first].insert(I.second);
-    return Attr;
+    return Edges[I];
   }
 
   /// Looks up a vertex with Identifier I, or an error if it does not exist.
