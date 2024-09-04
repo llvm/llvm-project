@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -nvptx-lower-alloca | FileCheck %s
+; RUN: opt < %s -S -nvptx-lower-alloca -infer-address-spaces | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
