@@ -25,8 +25,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=vptr -fsanitize-recover=vptr -fsanitize-ignorelist=%t-type.ignorelist -emit-llvm %s -o - | FileCheck %s --check-prefix=VPTR-TYPE
 
 class Bar {
-  public:
-    virtual ~Bar() {}
+public:
+  virtual ~Bar() {}
 };
 class Foo : public Bar {};
 
@@ -35,21 +35,21 @@ Bar bar;
 // VPTR: @_Z7checkmev
 // VPTR-TYPE: @_Z7checkmev
 void checkme() {
-  // VPTR: call void @__ubsan_handle_dynamic_type_cache_miss({{.*}} (ptr @bar to
-  // VPTR-TYPE-NOT: @__ubsan_handle_dynamic_type_cache_miss
+// VPTR: call void @__ubsan_handle_dynamic_type_cache_miss({{.*}} (ptr @bar to
+// VPTR-TYPE-NOT: @__ubsan_handle_dynamic_type_cache_miss
   Foo* foo = static_cast<Foo*>(&bar); // down-casting
-                                      // VPTR: ret void
-                                      // VPTR-TYPE: ret void
+// VPTR: ret void
+// VPTR-TYPE: ret void
   return;
 }
 
 // INT-LABEL: ignore_int
 void ignore_int(int A, int B, unsigned C, unsigned D, long E) {
-  // INT: llvm.uadd.with.overflow.i32
+// INT: llvm.uadd.with.overflow.i32
   (void)(C+D);
-  // INT-NOT: llvm.sadd.with.overflow.i32
+// INT-NOT: llvm.sadd.with.overflow.i32
   (void)(A+B);
-  // INT: llvm.sadd.with.overflow.i64
+// INT: llvm.sadd.with.overflow.i64
   (void)(++E);
 }
 
@@ -59,16 +59,16 @@ typedef myty derivative;
 // INT-LABEL: ignore_all_except_myty
 // MYTY-LABEL: ignore_all_except_myty
 void ignore_all_except_myty(myty A, myty B, int C, unsigned D, derivative E) {
-  // MYTY-NOT: llvm.sadd.with.overflow.i32
+// MYTY-NOT: llvm.sadd.with.overflow.i32
   (void)(++C);
 
-  // MYTY-NOT: llvm.uadd.with.overflow.i32
+// MYTY-NOT: llvm.uadd.with.overflow.i32
   (void)(D+D);
 
-  // MYTY-NOT: llvm.umul.with.overflow.i64
+// MYTY-NOT: llvm.umul.with.overflow.i64
   (void)(E*2);
 
-  // MYTY: llvm.uadd.with.overflow.i64
+// MYTY: llvm.uadd.with.overflow.i64
   (void)(A+B);
 }
 
@@ -76,14 +76,14 @@ void ignore_all_except_myty(myty A, myty B, int C, unsigned D, derivative E) {
 // MYTY-LABEL: truncation
 // TRUNC-LABEL: truncation
 void truncation(char A, int B, unsigned char C, short D) {
-  // TRUNC-NOT: %handler.implicit_conversion
+// TRUNC-NOT: %handler.implicit_conversion
   A = B;
-  // TRUNC-NOT: %handler.implicit_conversion
+// TRUNC-NOT: %handler.implicit_conversion
   A = C;
-  // TRUNC-NOT: %handler.implicit_conversion
+// TRUNC-NOT: %handler.implicit_conversion
   C = B;
 
-  // TRUNC: %handler.implicit_conversion
+// TRUNC: %handler.implicit_conversion
   D = B;
 
   (void)A;
