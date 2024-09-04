@@ -951,8 +951,8 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
   return 0;
 }
 
-void Instruction::applyMergedLocation(DILocation *LocA, DILocation *LocB) {
-  setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
+void Instruction::applyMergedLocation(DebugLoc LocA, DebugLoc LocB) {
+  setDebugLoc(DebugLoc::getMergedLocation(LocA, LocB));
 }
 
 void Instruction::mergeDIAssignID(
