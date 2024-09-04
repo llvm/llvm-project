@@ -12,9 +12,8 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-static inline char *call_ctime(struct time_t *t, int year, int month,
-                               int mday, int hour, int min, int sec, int wday,
-                               int yday) {
+static inline char *call_ctime(struct time_t *t, int year, int month, int mday,
+                               int hour, int min, int sec, int wday, int yday) {
   LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
       localtime(t), year, month, mday, hour, min, sec, wday, yday);
   return LIBC_NAMESPACE::ctime(t);
