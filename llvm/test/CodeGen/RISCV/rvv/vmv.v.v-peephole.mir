@@ -69,8 +69,7 @@ body: |
     ; CHECK: liveins: $v8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %passthru:vr = COPY $v8
-    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 %passthru, $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:vr = PseudoVMV_V_V_M1 $noreg, %x, 4, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 %passthru, $noreg, $noreg, 4, 5 /* e32 */, 1 /* ta, mu */
     %passthru:vr = COPY $v8
     %x:vr = PseudoVADD_VV_M1 %passthru, $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */
     %y:vr = PseudoVMV_V_V_M1 $noreg, %x, 4, 5 /* e32 */, 1 /* ta, mu */
