@@ -7126,8 +7126,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Don't handle vectors.
-  if (!SLPReVec && getValueType(S.OpValue)->isVectorTy() &&
-      !isa<InsertElementInst>(S.OpValue)) {
+  if (!SLPReVec && getValueType(S.OpValue)->isVectorTy()) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
     return;
@@ -13221,9 +13220,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   }
 
   Value *V = E->Scalars.front();
-  Type *ScalarTy = getValueType(V);
-  if (isa<CmpInst>(V))
-    ScalarTy = V->getType();
+  Type *ScalarTy = V->getType();
+  if (!isa<CmpInst>(V))
+    ScalarTy = getValueType(V);
   auto It = MinBWs.find(E);
   if (It != MinBWs.end()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
