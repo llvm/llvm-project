@@ -2312,8 +2312,8 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // present an issue.
     // Fallback to V_MOV base lowering in all but the common cases.
     const bool VMov64 = VMovOpc != AMDGPU::V_MOV_B32_e32;
-    const MachineFunction *MF = MBB.getParent();
-    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    MachineFunction *MF = MBB.getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
     const unsigned Opcode = AMDGPU::V_CNDMASK_B32_e64;
     const MCInstrDesc &Desc = get(Opcode);
 
@@ -2359,30 +2359,18 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
     if (UseVCndMask && VMov64) {
       // Dual V_CNDMASK_B32
-      MachineOperand ActiveLo =
-          ActiveSrc.isReg()
-              ? MachineOperand::CreateReg(
-                    RI.getSubReg(ActiveSrc.getReg(), AMDGPU::sub0), false,
-                    /*isImp=*/false, /*isKill=*/false)
-              : MachineOperand::CreateImm(ActiveImmLo.getSExtValue());
-      MachineOperand ActiveHi =
-          ActiveSrc.isReg()
-              ? MachineOperand::CreateReg(
-                    RI.getSubReg(ActiveSrc.getReg(), AMDGPU::sub1), false,
-                    /*isImp=*/false, /*isKill=*/ActiveSrc.isKill())
-              : MachineOperand::CreateImm(ActiveImmHi.getSExtValue());
-      MachineOperand InactiveLo =
-          InactiveSrc.isReg()
-              ? MachineOperand::CreateReg(
-                    RI.getSubReg(InactiveSrc.getReg(), AMDGPU::sub0), false,
-                    /*isImp=*/false, /*isKill=*/false)
-              : MachineOperand::CreateImm(InactiveImmLo.getSExtValue());
-      MachineOperand InactiveHi =
-          InactiveSrc.isReg()
-              ? MachineOperand::CreateReg(
-                    RI.getSubReg(InactiveSrc.getReg(), AMDGPU::sub1), false,
-                    /*isImp=*/false, /*isKill=*/InactiveSrc.isKill())
-              : MachineOperand::CreateImm(InactiveImmHi.getSExtValue());
+      MachineOperand ActiveLo = buildExtractSubRegOrImm(
+          MI, MRI, ActiveSrc, nullptr, AMDGPU::sub0, nullptr);
+      MachineOperand ActiveHi = buildExtractSubRegOrImm(
+          MI, MRI, ActiveSrc, nullptr, AMDGPU::sub1, nullptr);
+      MachineOperand InactiveLo = buildExtractSubRegOrImm(
+          MI, MRI, InactiveSrc, nullptr, AMDGPU::sub0, nullptr);
+      MachineOperand InactiveHi = buildExtractSubRegOrImm(
+          MI, MRI, InactiveSrc, nullptr, AMDGPU::sub1, nullptr);
+      if (ActiveSrc.isReg())
+        ActiveHi.setIsKill(ActiveSrc.isKill());
+      if (InactiveSrc.isReg())
+        InactiveHi.setIsKill(InactiveSrc.isKill());
       BuildMI(MBB, MI, DL, Desc, RI.getSubReg(DstReg, AMDGPU::sub0))
           .addImm(0)
           .add(InactiveLo)
@@ -5783,6 +5771,9 @@ unsigned SIInstrInfo::buildExtractSubReg(
     MachineBasicBlock::iterator MI, MachineRegisterInfo &MRI,
     const MachineOperand &SuperReg, const TargetRegisterClass *SuperRC,
     unsigned SubIdx, const TargetRegisterClass *SubRC) const {
+  if (!SuperReg.getReg().isVirtual())
+    return RI.getSubReg(SuperReg.getReg(), SubIdx);
+
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);

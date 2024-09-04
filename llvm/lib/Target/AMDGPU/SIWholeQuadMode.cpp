@@ -1082,8 +1082,9 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
       if (ActiveLanesReg) {
         MI.addOperand(*MBB.getParent(),
                       MachineOperand::CreateReg(ActiveLanesReg, false, true));
-      } else
+      } else {
         assert(State == StateExact || State == StateWQM);
+      }
       break;
     default:
       break;
