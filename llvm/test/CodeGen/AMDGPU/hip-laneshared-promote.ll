@@ -24,10 +24,14 @@ entry:
 ; CHECK-NEXT: V_STORE_IDX [[T8]], [[T10]], 0, implicit $exec
 ; SETIDX:     [[ZERO:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
 ; SETIDX-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[ZERO]]
-; SETIDX-NEXT: [[DAT0:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 8, implicit $exec
-; SETIDX-NEXT: V_STORE_IDX [[DAT0]], $idx1, 4, implicit $exec
+; SETIDX-NEXT: BUNDLE implicit-def [[DAT0:%[0-9]+]], implicit $idx1
+; SETIDX-NEXT: [[DAT0]]:vgpr_32 = V_LOAD_IDX $idx1, 8, implicit $exec
+; SETIDX-NEXT: V_STORE_IDX internal [[DAT0]], $idx1, 4, implicit $exec
+; SETIDX-NEXT: }
+; SETIDX-NEXT: BUNDLE implicit-def [[DAT1:%[0-9]+]], implicit $idx1
 ; SETIDX-NEXT: [[DAT1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 6, implicit $exec
-; SETIDX-NEXT: V_STORE_IDX [[DAT1]], $idx1, 0, implicit $exec
+; SETIDX-NEXT: V_STORE_IDX internal [[DAT1]], $idx1, 0, implicit $exec
+; SETIDX-NEXT: }
   %0 = load float, ptr addrspace(10) @v1, align 4, !tbaa !4
   store float %0, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12), align 4, !tbaa !4
   %1 = load float, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20), align 4, !tbaa !4

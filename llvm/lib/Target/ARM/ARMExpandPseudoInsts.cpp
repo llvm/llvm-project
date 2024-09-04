@@ -1578,7 +1578,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
                         // the encoding.
     // Mark non-live registers as undef
     for (MachineOperand &MO : VLSTM->implicit_operands()) {
-      if (MO.isReg() && MO.isImplicit() && !MO.isDef()) {
+      if (MO.isReg() && !MO.isDef()) {
         Register Reg = MO.getReg();
         MO.setIsUndef(!LiveRegs.contains(Reg));
       }

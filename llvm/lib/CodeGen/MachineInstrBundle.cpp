@@ -138,6 +138,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSet<Register, 32> LocalDefSet;
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
+  SmallSet<Register, 8> EarlyClobberDefSet;
   SmallVector<Register, 8> ExternUses;
   SmallSet<Register, 8> ExternUseSet;
   SmallSet<Register, 8> KilledUseSet;
@@ -194,6 +195,8 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           // Previously defined but dead.
           DeadDefSet.erase(Reg);
       }
+      if (MO->isEarlyClobber())
+        EarlyClobberDefSet.insert(Reg);
 
       if (!MO->isDead() && Reg.isPhysical()) {
         for (MCPhysReg SubReg : TRI->subregs(Reg)) {
@@ -211,8 +214,10 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     if (Added.insert(Reg).second) {
       // If it's not live beyond end of the bundle, mark it dead.
       bool isDead = DeadDefSet.count(Reg) || KilledDefSet.count(Reg);
+      bool isEarlyClobber = EarlyClobberDefSet.count(Reg);
       MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
-                 getImplRegState(true));
+                          getImplRegState(true) |
+                          getEarlyClobberRegState(isEarlyClobber));
     }
   }
 
@@ -272,6 +277,33 @@ bool llvm::finalizeBundles(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool llvm::updateReplacedRegInBundle(MachineInstr &BundledMI,
+                                     const MachineOperand &NewOp,
+                                     const MachineOperand &OldOp,
+                                     const TargetRegisterInfo *TRI,
+                                     bool UpdateUndef, bool UpdateKill) {
+  auto BundleHeader =
+      getBundleStart(MachineBasicBlock::instr_iterator(&BundledMI));
+  Register ReplacedReg = OldOp.getReg();
+  assert(ReplacedReg != NewOp.getReg() &&
+         "Old and New regs are same. Call this before OldOp is replaced");
+  for (auto &Op : BundleHeader->operands()) {
+    assert(Op.isReg() && "Expected register operand in bundle");
+    if (Op.getReg() != ReplacedReg || Op.getSubReg() != OldOp.getSubReg())
+      continue;
+    if (NewOp.getReg().isVirtual())
+      Op.substVirtReg(NewOp.getReg(), NewOp.getSubReg(), *TRI);
+    else
+      Op.substPhysReg(NewOp.getReg(), *TRI);
+    if (UpdateUndef)
+      Op.setIsUndef(NewOp.isUndef());
+    if (UpdateKill)
+      Op.setIsKill(NewOp.isKill());
+    return true;
+  }
+  return false;
 }
 
 VirtRegInfo llvm::AnalyzeVirtRegInBundle(

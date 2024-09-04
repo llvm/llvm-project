@@ -561,6 +561,9 @@ inline unsigned getDeadRegState(bool B) {
 inline unsigned getUndefRegState(bool B) {
   return B ? RegState::Undef : 0;
 }
+inline unsigned getEarlyClobberRegState(bool B) {
+  return B ? RegState::EarlyClobber : 0;
+}
 inline unsigned getInternalReadRegState(bool B) {
   return B ? RegState::InternalRead : 0;
 }

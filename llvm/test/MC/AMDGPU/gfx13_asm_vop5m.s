@@ -11,3 +11,6 @@ v_uniform_scale_activate_scatter4_f16 v5, v6, v7, v8, v[5:8], 4.0 aux_data:2
 
 v_uniform_scale_activate_scatter4_bf16 v5, v6, v7, v8, v[5:8], s1 aux_data:2
 // GFX13: v_uniform_scale_activate_scatter4_bf16 v5, v6, v7, v8, v[5:8], s1 aux_data:2 ; encoding: [0x05,0x80,0x13,0xde,0x05,0x04,0x00,0x08,0x06,0x00,0x00,0x01,0x07,0x80,0x00,0x00]
+
+v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 aux_data:1152 clamp
+// GFX13: v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 aux_data:1152 clamp ; encoding: [0x10,0x10,0x41,0xde,0x10,0x04,0x80,0x00,0x08,0x20,0x01,0x00,0x18,0x90,0x01,0x00]

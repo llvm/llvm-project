@@ -15,6 +15,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 
 #define DEBUG_TYPE "si-fold-operands"
@@ -453,6 +454,8 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   }
 
   MachineOperand *New = Fold.OpToFold;
+  if (MI->isBundled())
+    updateReplacedRegInBundle(*MI, *New, Old, TRI, true);
   if (New->getReg().isPhysical())
     Old.substPhysReg(New->getReg(), *TRI);
   else
@@ -1056,6 +1059,9 @@ void SIFoldOperandsImpl::foldOperand(
         // %sgpr1 = V_READFIRSTLANE_B32 %vgpr
         // =>
         // %sgpr1 = COPY %sgpr0
+        if (UseMI->isBundled())
+          updateReplacedRegInBundle(*UseMI, OpToFold, UseMI->getOperand(1),
+                                    TRI);
         UseMI->setDesc(TII->get(AMDGPU::COPY));
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());

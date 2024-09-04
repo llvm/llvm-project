@@ -178,6 +178,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUFixWaveGroupEntry.cpp
   AMDGPUMarkPromotableLaneShared.cpp
   AMDGPUIdxRegAlloc.cpp
+  AMDGPUBundleIdxLdSt.cpp
   SIWholeQuadMode.cpp
 
   LINK_COMPONENTS
