@@ -216,7 +216,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
     }
     auto &Elem = V.try_emplace(KeyInt, /*IsAnalysis=*/false).first->second;
     for (auto &FSum : FSums) {
-      std::vector<ValueInfo> Refs;
+      SmallVector<ValueInfo, 0> Refs;
       Refs.reserve(FSum.Refs.size());
       for (auto &RefGUID : FSum.Refs) {
         auto It = V.try_emplace(RefGUID, /*IsAnalysis=*/false).first;
