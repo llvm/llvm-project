@@ -53,25 +53,10 @@ Expected<std::string> MinidumpFile::getString(size_t Offset) const {
   return Result;
 }
 
-Expected<std::vector<const minidump::ExceptionStream *>>
+iterator_range<llvm::object::MinidumpFile::ExceptionStreamsIterator>
 MinidumpFile::getExceptionStreams() const {
-
-  std::vector<const minidump::ExceptionStream *> exceptionStreamList;
-  for (const auto &directory : Streams) {
-    if (directory.Type == StreamType::Exception) {
-      llvm::Expected<minidump::ExceptionStream *> ExpectedStream =
-          getStreamFromDirectory<minidump::ExceptionStream *>(directory);
-      if (!ExpectedStream)
-        return ExpectedStream.takeError();
-
-      exceptionStreamList.push_back(ExpectedStream.get());
-    }
-  }
-
-  if (exceptionStreamList.empty())
-    return createError("No exception streams found");
-
-  return exceptionStreamList;
+  return make_range(ExceptionStreamsIterator::begin(ExceptionStreams, this),
+                    ExceptionStreamsIterator::end());
 }
 
 Expected<iterator_range<MinidumpFile::MemoryInfoIterator>>
@@ -149,7 +134,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
     return ExpectedStreams.takeError();
 
   DenseMap<StreamType, std::size_t> StreamMap;
-  std::vector<std::size_t> ExceptionStreams;
+  std::vector<Directory> ExceptionStreams;
   for (const auto &StreamDescriptor : llvm::enumerate(*ExpectedStreams)) {
     StreamType Type = StreamDescriptor.value().Type;
     const LocationDescriptor &Loc = StreamDescriptor.value().Location;
@@ -171,7 +156,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
     // streams that point back to their thread So we will omit them here, and
     // will find them when needed in the MinidumpFile.
     if (Type == StreamType::Exception) {
-      continue;
+      ExceptionStreams.push_back(StreamDescriptor.value());
     }
 
     if (Type == DenseMapInfo<StreamType>::getEmptyKey() ||
@@ -184,7 +169,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
   }
 
   return std::unique_ptr<MinidumpFile>(
-      new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
+      new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap), ExceptionStreams));
 }
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
