@@ -590,19 +590,20 @@ void Lint::visitIndirectBrInst(IndirectBrInst &I) {
 
 void Lint::visitExtractElementInst(ExtractElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getIndexOperand(),
-                                                        /*OffsetOk=*/false)))
-    Check(
-        CI->getValue().ult(
-            cast<FixedVectorType>(I.getVectorOperandType())->getNumElements()),
-        "Undefined result: extractelement index out of range", &I);
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getVectorOperandType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
+          "Undefined result: extractelement index out of range", &I);
+  }
 }
 
 void Lint::visitInsertElementInst(InsertElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(2),
-                                                        /*OffsetOk=*/false)))
-    Check(CI->getValue().ult(
-              cast<FixedVectorType>(I.getType())->getNumElements()),
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
           "Undefined result: insertelement index out of range", &I);
+  }
 }
 
 void Lint::visitUnreachableInst(UnreachableInst &I) {
