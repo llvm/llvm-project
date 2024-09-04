@@ -5703,8 +5703,9 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
                                    diag::err_incomplete_type))
         return false;
-    DiagnoseVLAInCXXTypeTrait(Self, TInfo,
-                              tok::kw___builtin_hlsl_is_intangible);
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                                  tok::kw___builtin_hlsl_is_intangible))
+      return false;
     return Self.HLSL().IsIntangibleType(T);
   }
 }

@@ -1634,7 +1634,7 @@ bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
   CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
   assert(RD != nullptr &&
          "all HLSL struct and classes should be CXXRecordDecl");
-  return RD->isIntangible();
+  return RD->isHLSLIntangible();
 }
 
 static void BuildFlattenedTypeList(QualType BaseTy,

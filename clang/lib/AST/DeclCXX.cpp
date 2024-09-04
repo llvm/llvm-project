@@ -109,7 +109,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsIntangible(false), IsLambda(false),
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsLambda(false),
       IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
       HasODRHash(false), Definition(D) {}
 
@@ -431,8 +431,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (BaseClassDecl->isAnyDestructorNoReturn())
       data().IsAnyDestructorNoReturn = true;
 
-    if (BaseClassDecl->isIntangible())
-      data().IsIntangible = true;
+    if (BaseClassDecl->isHLSLIntangible())
+      data().IsHLSLIntangible = true;
 
     // C++11 [class.copy]p18:
     //   The implicitly-declared copy assignment operator for a class X will
@@ -1412,9 +1412,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
       Ty = Ty->getUnqualifiedDesugaredType();
       if (Ty->isBuiltinType())
-        data().IsIntangible |= Ty->isHLSLIntangibleType();
+        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
       else if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-        data().IsIntangible |= RT->getAsCXXRecordDecl()->isIntangible();
+        data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
     }
   }
 
