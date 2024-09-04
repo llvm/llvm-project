@@ -189,11 +189,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
       continue;
 
     // enable local address reuse
-    int option_value = 1;
-    set_socket_option_arg_type option_value_p =
-        reinterpret_cast<set_socket_option_arg_type>(&option_value);
-    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
-                     sizeof(option_value)) == -1) {
+    if (SetOption(fd, SOL_SOCKET, SO_REUSEADDR, 1) == -1) {
       CloseSocket(fd);
       continue;
     }

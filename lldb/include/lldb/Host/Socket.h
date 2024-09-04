@@ -34,11 +34,9 @@ namespace lldb_private {
 #if defined(_WIN32)
 typedef SOCKET NativeSocket;
 typedef lldb::pipe_t shared_fd_t;
-typedef const char *set_socket_option_arg_type;
 #else
 typedef int NativeSocket;
 typedef NativeSocket shared_fd_t;
-typedef const void *set_socket_option_arg_type;
 #endif
 class Socket;
 class TCPSocket;
@@ -114,8 +112,17 @@ public:
   static llvm::Expected<std::unique_ptr<UDPSocket>>
   UdpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
 
-  int GetOption(int level, int option_name, int &option_value);
-  int SetOption(int level, int option_name, int option_value);
+  static int GetOption(NativeSocket sockfd, int level, int option_name,
+                       int &option_value);
+  int GetOption(int level, int option_name, int &option_value) {
+    return GetOption(m_socket, level, option_name, option_value);
+  };
+
+  static int SetOption(NativeSocket sockfd, int level, int option_name,
+                       int option_value);
+  int SetOption(int level, int option_name, int option_value) {
+    return SetOption(m_socket, level, option_name, option_value);
+  };
 
   NativeSocket GetNativeSocket() const { return m_socket; }
   SocketProtocol GetSocketProtocol() const { return m_protocol; }

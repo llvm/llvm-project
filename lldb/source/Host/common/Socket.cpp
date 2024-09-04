@@ -396,18 +396,20 @@ Status Socket::Close() {
   return error;
 }
 
-int Socket::GetOption(int level, int option_name, int &option_value) {
+int Socket::GetOption(NativeSocket sockfd, int level, int option_name,
+                      int &option_value) {
   get_socket_option_arg_type option_value_p =
       reinterpret_cast<get_socket_option_arg_type>(&option_value);
   socklen_t option_value_size = sizeof(int);
-  return ::getsockopt(m_socket, level, option_name, option_value_p,
+  return ::getsockopt(sockfd, level, option_name, option_value_p,
                       &option_value_size);
 }
 
-int Socket::SetOption(int level, int option_name, int option_value) {
+int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
+                      int option_value) {
   set_socket_option_arg_type option_value_p =
-      reinterpret_cast<get_socket_option_arg_type>(&option_value);
-  return ::setsockopt(m_socket, level, option_name, option_value_p,
+      reinterpret_cast<set_socket_option_arg_type>(&option_value);
+  return ::setsockopt(sockfd, level, option_name, option_value_p,
                       sizeof(option_value));
 }
 
