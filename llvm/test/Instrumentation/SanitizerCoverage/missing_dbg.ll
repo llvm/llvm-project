@@ -16,7 +16,7 @@ entry:
 ; CHECK-LABEL: @with_dbg
 ; CHECK-NEXT:  entry:
 ; CHECK:       call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_) #1, !dbg [[DBG1:![0-9]+]]
-; CHECK:       call void @__sanitizer_cov_trace_pc_guard(ptr inttoptr (i64 add (i64 ptrtoint (ptr @__sancov_gen_ to i64), i64 4) to ptr)) #1, !dbg [[DBG2:![0-9]+]]
+; CHECK:       call void @__sanitizer_cov_trace_pc_guard(ptr inttoptr (i64 add (i64 ptrtoint (ptr @__sancov_gen_ to i64), i64 4) to ptr)) #1, !dbg [[DBG1]]
 
 define i32 @without_dbg(ptr %a, ptr %b) {
 entry:
@@ -46,5 +46,4 @@ entry:
 !6 = !DILocation(line: 192, scope: !3)
 !7 = !DILocation(line: 0, scope: !3)
 
-; CHECK:       [[DBG1]] = !DILocation(line: 192, scope: !3)
-; CHECK:       [[DBG2]] = !DILocation(line: 0, scope: !3)
+; CHECK:       [[DBG1]] = !DILocation(line: 0, scope: !3)

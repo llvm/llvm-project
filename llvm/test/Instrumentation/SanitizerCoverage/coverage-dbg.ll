@@ -16,7 +16,7 @@
 
 ; Test that __sanitizer_cov_trace_pc_guard call has !dbg pointing to the opening { of A::f().
 ; CHECK: call void @__sanitizer_cov_trace_pc_guard(ptr{{.*}}) #{{.*}}, !dbg [[A:!.*]]
-; CHECK: [[A]] = !DILocation(line: 6, scope: !{{.*}})
+; CHECK: [[A]] = !DILocation(line: 0, scope: !{{.*}})
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
