@@ -19631,7 +19631,7 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
 }
 
 // FastCC has less than 1% performance improvement for some particular
-// benchmark. But theoretically, it may has benenfit for some cases.
+// benchmark. But theoretically, it may have benefit for some cases.
 bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
