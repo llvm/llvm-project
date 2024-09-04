@@ -837,7 +837,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // exactly one of these two types should be set
   assert(((isa<VarDecl>(TheDecl) && !isa<HLSLBufferDecl>(TheDecl)) ||
           (!isa<VarDecl>(TheDecl) && isa<HLSLBufferDecl>(TheDecl))) &&
-         "either TheVarDecl or CBufferOrTBuffer should be set");
+         "expecting VarDecl or HLSLBufferDecl");
 
   RegisterBindingFlags Flags = HLSLFillRegisterBindingFlags(S, TheDecl);
   assert((int)Flags.Other + (int)Flags.Resource + (int)Flags.Basic +
