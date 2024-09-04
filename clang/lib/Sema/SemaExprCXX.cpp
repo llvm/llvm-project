@@ -8013,7 +8013,8 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     SmallVector<FunctionDecl*, 8> OperatorArrows;
     CTypes.insert(Context.getCanonicalType(BaseType));
 
-    while (BaseType->getAsRecordDecl()) {
+    while (
+        isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
       if (OperatorArrows.size() >= getLangOpts().ArrowDepth) {
         Diag(OpLoc, diag::err_operator_arrow_depth_exceeded)
           << StartingType << getLangOpts().ArrowDepth << Base->getSourceRange();
@@ -8100,7 +8101,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // it's legal for the type to be incomplete if this is a pseudo-destructor
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
-  if (!BaseType->getAsRecordDecl()) {
+  if (!isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
     ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
     return Base;
