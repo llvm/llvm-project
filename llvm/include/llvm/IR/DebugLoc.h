@@ -142,6 +142,15 @@ namespace llvm {
     static inline DebugLoc getDropped() { return DebugLoc(); }
 #endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
+#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+    DebugLoc(DebugLocKind Kind) : Loc(Kind) {}
+    DebugLocKind getKind() const { return Loc.Kind; }
+#endif
+
+    static DebugLoc getTemporary();
+    static DebugLoc getUnknown();
+    static DebugLoc getLineZero();
+
     /// Get the underlying \a DILocation.
     ///
     /// \pre !*this or \c isa<DILocation>(getAsMDNode()).
