@@ -436,8 +436,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
       Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized())
-        BaseSize = DL->getTypeAllocSize(ATy);
+      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
+        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
