@@ -309,7 +309,11 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     return;
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
+    // FIXME: We currently dont handle variables that are not in the entry
+    // blocks of the fuctions. These may be variable or arguments used in the
+    // OpenMP target regions.
+    if (&funcOp.front() == declOp->getBlock())
+      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
   });
 }
 

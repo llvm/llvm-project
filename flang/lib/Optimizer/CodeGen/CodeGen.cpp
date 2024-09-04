@@ -1273,7 +1273,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     } else {
       // Compute the value of the extra field based on allocator_idx and
       // addendum present using a Descriptor object.
-      Fortran::runtime::StaticDescriptor<0> staticDescriptor;
+      Fortran::runtime::StaticDescriptor staticDescriptor;
       Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
       desc.raw().extra = 0;
       desc.SetAllocIdx(allocatorIdx);

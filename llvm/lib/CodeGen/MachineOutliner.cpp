@@ -763,10 +763,9 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       BuildMI(MBB, MBB.end(), DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(MF.addFrameInst(CFI));
     } else {
-      MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
-      NewMI->dropMemRefs(MF);
-      NewMI->setDebugLoc(DL);
-      MBB.insert(MBB.end(), NewMI);
+      MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
+      NewMI.dropMemRefs(MF);
+      NewMI.setDebugLoc(DL);
     }
   }
 

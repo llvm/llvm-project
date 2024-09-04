@@ -2364,6 +2364,44 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat &V) {
   return llvm::ConstantFP::isValueValidForType(Ty->LLVMTy, V);
 }
 
+Constant *ConstantArray::get(ArrayType *T, ArrayRef<Constant *> V) {
+  auto &Ctx = T->getContext();
+  SmallVector<llvm::Constant *> LLVMValues;
+  LLVMValues.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMValues.push_back(cast<llvm::Constant>(Elm->Val));
+  auto *LLVMC =
+      llvm::ConstantArray::get(cast<llvm::ArrayType>(T->LLVMTy), LLVMValues);
+  return cast<ConstantArray>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+ArrayType *ConstantArray::getType() const {
+  return cast<ArrayType>(
+      Ctx.getType(cast<llvm::ConstantArray>(Val)->getType()));
+}
+
+Constant *ConstantStruct::get(StructType *T, ArrayRef<Constant *> V) {
+  auto &Ctx = T->getContext();
+  SmallVector<llvm::Constant *> LLVMValues;
+  LLVMValues.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMValues.push_back(cast<llvm::Constant>(Elm->Val));
+  auto *LLVMC =
+      llvm::ConstantStruct::get(cast<llvm::StructType>(T->LLVMTy), LLVMValues);
+  return cast<ConstantStruct>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+StructType *ConstantStruct::getTypeForElements(Context &Ctx,
+                                               ArrayRef<Constant *> V,
+                                               bool Packed) {
+  unsigned VecSize = V.size();
+  SmallVector<Type *, 16> EltTypes;
+  EltTypes.reserve(VecSize);
+  for (Constant *Elm : V)
+    EltTypes.push_back(Elm->getType());
+  return StructType::get(Ctx, EltTypes, Packed);
+}
+
 FunctionType *Function::getFunctionType() const {
   return cast<FunctionType>(
       Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
@@ -2459,7 +2497,15 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantFP>(new ConstantFP(CF, *this));
       return It->second.get();
     }
-    if (auto *F = dyn_cast<llvm::Function>(LLVMV))
+    if (auto *CA = dyn_cast<llvm::ConstantArray>(C))
+      It->second = std::unique_ptr<ConstantArray>(new ConstantArray(CA, *this));
+    else if (auto *CS = dyn_cast<llvm::ConstantStruct>(C))
+      It->second =
+          std::unique_ptr<ConstantStruct>(new ConstantStruct(CS, *this));
+    else if (auto *CV = dyn_cast<llvm::ConstantVector>(C))
+      It->second =
+          std::unique_ptr<ConstantVector>(new ConstantVector(CV, *this));
+    else if (auto *F = dyn_cast<llvm::Function>(LLVMV))
       It->second = std::unique_ptr<Function>(new Function(F, *this));
     else
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
@@ -2689,6 +2735,16 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
     return It->second.get();
   }
+  case llvm::Instruction::ICmp: {
+    auto *LLVMICmp = cast<llvm::ICmpInst>(LLVMV);
+    It->second = std::unique_ptr<ICmpInst>(new ICmpInst(LLVMICmp, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::FCmp: {
+    auto *LLVMFCmp = cast<llvm::FCmpInst>(LLVMV);
+    It->second = std::unique_ptr<FCmpInst>(new FCmpInst(LLVMFCmp, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Unreachable: {
     auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
     It->second = std::unique_ptr<UnreachableInst>(
@@ -2876,6 +2932,79 @@ PHINode *Context::createPHINode(llvm::PHINode *I) {
   auto NewPtr = std::unique_ptr<PHINode>(new PHINode(I, *this));
   return cast<PHINode>(registerValue(std::move(NewPtr)));
 }
+ICmpInst *Context::createICmpInst(llvm::ICmpInst *I) {
+  auto NewPtr = std::unique_ptr<ICmpInst>(new ICmpInst(I, *this));
+  return cast<ICmpInst>(registerValue(std::move(NewPtr)));
+}
+FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
+  auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
+  return cast<FCmpInst>(registerValue(std::move(NewPtr)));
+}
+CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  if (dyn_cast<llvm::ICmpInst>(LLVMI))
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+}
+CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                        const Instruction *F,
+                                        Instruction *InsertBefore, Context &Ctx,
+                                        const Twine &Name) {
+  CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
+  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
+  return Inst;
+}
+
+Type *CmpInst::makeCmpResultType(Type *OpndType) {
+  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
+    // TODO: Cleanup when we have more complete support for
+    // sandboxir::VectorType
+    return OpndType->getContext().getType(llvm::VectorType::get(
+        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
+        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
+  }
+  return Type::getInt1Ty(OpndType->getContext());
+}
+
+void CmpInst::setPredicate(Predicate P) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
+  cast<llvm::CmpInst>(Val)->setPredicate(P);
+}
+
+void CmpInst::swapOperands() {
+  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
+    IC->swapOperands();
+  else
+    cast<FCmpInst>(this)->swapOperands();
+}
+
+void ICmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::ICmpInst>(Val)->swapOperands();
+}
+
+void FCmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::FCmpInst>(Val)->swapOperands();
+}
+
+#ifndef NDEBUG
+void CmpInst::dumpOS(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void CmpInst::dump() const {
+  dumpOS(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
 
 Value *Context::getValue(llvm::Value *V) const {
   auto It = LLVMValueToValueMap.find(V);
