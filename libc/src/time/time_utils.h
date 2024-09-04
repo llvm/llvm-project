@@ -148,7 +148,7 @@ LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
   return buffer;
 }
 
-LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer) {
+LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer, size_t buffer_length) {
   if (timeptr == nullptr || buffer == nullptr) {
     invalid_value();
     return nullptr;
@@ -176,13 +176,13 @@ LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer) {
   // be emitted as a call to snprintf. Alternatively, look into using our
   // internal printf machinery.
   int written_size = __builtin_snprintf(
-      buffer, strlen(buffer)+32, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
+      buffer, buffer_length, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
       week_days_name[timeptr->tm_wday], months_name[timeptr->tm_mon],
       timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
       TimeConstants::TIME_YEAR_BASE + timeptr->tm_year);
   if (written_size < 0)
     return nullptr;
-  if (static_cast<size_t>(written_size) >= strlen(buffer)) {
+  if (static_cast<size_t>(written_size) >= buffer_length) {
     out_of_range();
     return nullptr;
   }
