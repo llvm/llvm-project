@@ -457,7 +457,7 @@ jobs:
     - name: Upload Release
       shell: bash
       run: |
-        llvm/utils/release/github-upload-release.py \
+        ./llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \
