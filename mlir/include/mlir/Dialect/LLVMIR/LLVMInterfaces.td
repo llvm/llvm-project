@@ -406,7 +406,7 @@ def LLVM_DIRecursiveTypeAttrInterface
   let methods = [
     InterfaceMethod<[{
       Get whether this attr describes a recursive self reference.
-    }], "bool", "isRecSelf", (ins)>,
+    }], "bool", "getIsRecSelf", (ins)>,
     InterfaceMethod<[{
       Get the recursive ID used for matching "rec-decl" with "rec-self".
       If this attr instance is not recursive, return a null attribute.
