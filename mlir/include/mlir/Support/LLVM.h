@@ -50,8 +50,11 @@ class BitVector;
 namespace detail {
 template <typename KeyT, typename ValueT>
 struct DenseMapPair;
+template <typename KeyT, typename ValueT, typename Enable>
+struct DenseMapPairImpl;
 } // namespace detail
-template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
+template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT,
+          typename BucketBaseT>
 class DenseMap;
 template <typename T, typename Enable>
 struct DenseMapInfo;
@@ -122,8 +125,9 @@ template <typename T, typename Enable = void>
 using DenseMapInfo = llvm::DenseMapInfo<T, Enable>;
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
-          typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
-using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
+          typename BucketT = llvm::detail::DenseMapPairImpl<KeyT, ValueT, void>,
+          typename BucketBaseT = llvm::detail::DenseMapPair<KeyT, ValueT>>
+using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT, BucketBaseT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
 template <typename T, typename Vector = llvm::SmallVector<T, 0>,

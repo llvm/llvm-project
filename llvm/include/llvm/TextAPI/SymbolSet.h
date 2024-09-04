@@ -48,11 +48,12 @@ template <> struct DenseMapInfo<SymbolsMapKey> {
   }
 };
 
-template <typename DerivedT, typename KeyInfoT, typename BucketT>
+template <typename DerivedT, typename KeyInfoT, typename BucketT,
+          typename BucketBaseT>
 bool operator==(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
-                                   KeyInfoT, BucketT> &LHS,
+                                   KeyInfoT, BucketT, BucketBaseT> &LHS,
                 const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
-                                   KeyInfoT, BucketT> &RHS) {
+                                   KeyInfoT, BucketT, BucketBaseT> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
   for (const auto &KV : LHS) {
@@ -63,11 +64,12 @@ bool operator==(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
   return true;
 }
 
-template <typename DerivedT, typename KeyInfoT, typename BucketT>
+template <typename DerivedT, typename KeyInfoT, typename BucketT,
+          typename BucketBaseT>
 bool operator!=(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
-                                   KeyInfoT, BucketT> &LHS,
+                                   KeyInfoT, BucketT, BucketBaseT> &LHS,
                 const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
-                                   KeyInfoT, BucketT> &RHS) {
+                                   KeyInfoT, BucketT, BucketBaseT> &RHS) {
   return !(LHS == RHS);
 }
 

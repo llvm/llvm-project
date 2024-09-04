@@ -27,11 +27,25 @@ namespace llvm {
 
 namespace detail {
 
+// flag to indicate if key is constructed
+// this is necessary since assigning empty key or tombstone key throws for some
+// key types
+
+// Helpers to decide which specialization of DenseSetPair to use
+template <typename KeyT>
+using EnableIfTriviallyDestructibleSet =
+    typename std::enable_if_t<std::is_trivially_destructible_v<KeyT>>;
+template <typename KeyT>
+using EnableIfNotTriviallyDestructibleSet =
+    typename std::enable_if_t<!std::is_trivially_destructible_v<KeyT>>;
+
 struct DenseSetEmpty {};
 
 // Use the empty base class trick so we can create a DenseMap where the buckets
 // contain only a single item.
+
 template <typename KeyT> class DenseSetPair : public DenseSetEmpty {
+private:
   KeyT key;
 
 public:
@@ -39,6 +53,43 @@ public:
   const KeyT &getFirst() const { return key; }
   DenseSetEmpty &getSecond() { return *this; }
   const DenseSetEmpty &getSecond() const { return *this; }
+
+public:
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setKeyConstructed(bool) {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isKeyConstructed() const { return false; }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setValueConstructed(bool) {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isValueConstructed() const { return false; }
+};
+
+template <typename KeyT, typename Enabled = void> class DenseSetPairImpl;
+
+// First specialization for trivially destructible types
+template <typename KeyT>
+class DenseSetPairImpl<KeyT, EnableIfTriviallyDestructibleSet<KeyT>>
+    : public DenseSetPair<KeyT> {
+public:
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setKeyConstructed(bool) {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isKeyConstructed() const { return false; }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setValueConstructed(bool) {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isValueConstructed() const { return false; }
+};
+
+// Second specialization for non-trivially destructible types
+template <typename KeyT>
+class DenseSetPairImpl<KeyT, EnableIfNotTriviallyDestructibleSet<KeyT>>
+    : public DenseSetPair<KeyT> {
+public:
+  bool KeyConstructed;
+
+public:
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setKeyConstructed(bool Constructed) {
+    KeyConstructed = Constructed;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isKeyConstructed() const {
+    return KeyConstructed;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setValueConstructed(bool) {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isValueConstructed() const { return false; }
 };
 
 /// Base class for DenseSet and DenseSmallSet.
@@ -52,8 +103,6 @@ public:
 /// DenseMapInfo "concept".
 template <typename ValueT, typename MapTy, typename ValueInfoT>
 class DenseSetImpl {
-  static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
-                "DenseMap buckets unexpectedly large!");
   MapTy TheMap;
 
   template <typename T>
@@ -274,13 +323,14 @@ template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 class DenseSet : public detail::DenseSetImpl<
                      ValueT,
                      DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+                              detail::DenseSetPairImpl<ValueT>,
                               detail::DenseSetPair<ValueT>>,
                      ValueInfoT> {
-  using BaseT =
-      detail::DenseSetImpl<ValueT,
-                           DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                                    detail::DenseSetPair<ValueT>>,
-                           ValueInfoT>;
+  using BaseT = detail::DenseSetImpl<
+      ValueT,
+      DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+               detail::DenseSetPairImpl<ValueT>, detail::DenseSetPair<ValueT>>,
+      ValueInfoT>;
 
 public:
   using BaseT::BaseT;
@@ -294,11 +344,13 @@ class SmallDenseSet
     : public detail::DenseSetImpl<
           ValueT,
           SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
-                        ValueInfoT, detail::DenseSetPair<ValueT>>,
+                        ValueInfoT, detail::DenseSetPairImpl<ValueT>,
+                        detail::DenseSetPair<ValueT>>,
           ValueInfoT> {
   using BaseT = detail::DenseSetImpl<
       ValueT,
       SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets, ValueInfoT,
+                    detail::DenseSetPairImpl<ValueT>,
                     detail::DenseSetPair<ValueT>>,
       ValueInfoT>;
 
