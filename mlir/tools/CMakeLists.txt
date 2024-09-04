@@ -10,6 +10,7 @@ add_subdirectory(mlir-translate)
 add_subdirectory(mlir-vulkan-runner)
 add_subdirectory(tblgen-lsp-server)
 add_subdirectory(tblgen-to-irdl)
+add_subdirectory(tosa-fuser-opt)
 
 # mlir-cpu-runner requires ExecutionEngine.
 if(MLIR_ENABLE_EXECUTION_ENGINE)
