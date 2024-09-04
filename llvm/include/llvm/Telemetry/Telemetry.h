@@ -36,8 +36,13 @@
 namespace llvm {
 namespace telemetry {
 
-// Configuration for the Telemeter class.
-// This struct can be extended as needed.
+/// Configuration for the Telemeter class.
+/// This stores configurations from both users and vendors and is passed
+/// to the Telemeter upon contruction. (Any changes to the config after
+/// the Telemeter's construction will not have effect on it).
+///
+/// This struct can be extended as needed to add additional configuration
+/// points specific to a vendor's implementation.
 struct Config {
   // If true, telemetry will be enabled.
   bool EnableTelemetry;
@@ -51,11 +56,11 @@ struct Config {
   std::vector<std::string> AdditionalDestinations;
 };
 
-// Defines a convenient type for timestamp of various events.
-// This is used by the EventStats below.
+/// Defines a convenient type for timestamp of various events.
+/// This is used by the EventStats below.
 using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
-// Various time (and possibly memory) statistics of an event.
+/// Various time (and possibly memory) statistics of an event.
 struct EventStats {
   // REQUIRED: Start time of an event
   SteadyTimePoint Start;
@@ -69,25 +74,34 @@ struct EventStats {
       : Start(Start), End(End) {}
 };
 
+/// Describes the exit signal of an event.
+/// This is used by TelemetryInfo below.
 struct ExitDescription {
   int ExitCode;
   std::string Description;
 };
 
-// For isa, dyn_cast, etc operations on TelemetryInfo.
+/// For isa, dyn_cast, etc operations on TelemetryInfo.
 typedef unsigned KindType;
-// The EntryKind is defined as a struct because it is expectend to be
-// extended by subclasses which may have additional TelemetryInfo
-// types defined.
+/// This struct is used by TelemetryInfo to support isa<>, dyn_cast<>
+/// operations.
+/// It is defined as a struct(rather than an enum) because it is
+/// expectend to be extended by subclasses which may have
+/// additional TelemetryInfo types defined to describe different events.
 struct EntryKind {
   static const KindType Base = 0;
 };
 
-// TelemetryInfo is the data courier, used to forward data from
-// the tool being monitored to the Telemery framework.
-//
-// This base class contains only the basic set of telemetry data.
-// Downstream implementations can add more fields as needed.
+/// TelemetryInfo is the data courier, used to move instrumented data
+/// the tool being monitored to the Telemery framework.
+///
+/// This base class contains only the basic set of telemetry data.
+/// Downstream implementations can add more fields as needed to describe
+/// additional events.
+///
+/// For eg., The LLDB debugger can define a DebugCommandInfo subclass
+/// which has additional fields about the debug-command being instrumented,
+/// such as `CommandArguments` or `CommandName`.
 struct TelemetryInfo {
   // This represents a unique-id, conventionally corresponding to
   // a tools' session - ie., every time the tool starts until it exits.
@@ -123,12 +137,12 @@ struct TelemetryInfo {
   }
 };
 
-// This class presents a data sink to which the Telemetry framework
-// sends data.
-//
-// Its implementation is transparent to the framework.
-// It is up to the vendor to decide which pieces of data to forward
-// and where to forward them.
+/// This class presents a data sink to which the Telemetry framework
+/// sends data.
+///
+/// Its implementation is transparent to the framework.
+/// It is up to the vendor to decide which pieces of data to forward
+/// and where to forward them.
 class Destination {
 public:
   virtual ~Destination() = default;
@@ -136,10 +150,10 @@ public:
   virtual std::string name() const = 0;
 };
 
-// This class is the main interaction point between any LLVM tool
-// and this framework.
-// It is responsible for collecting telemetry data from the tool being
-// monitored.
+/// This class is the main interaction point between any LLVM tool
+/// and this framework.
+/// It is responsible for collecting telemetry data from the tool being
+/// monitored and transmitting the data elsewhere.
 class Telemeter {
 public:
   // Invoked upon tool startup

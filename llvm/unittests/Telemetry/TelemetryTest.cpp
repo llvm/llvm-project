@@ -19,7 +19,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-
 #include <chrono>
 #include <ctime>
 #include <vector>
