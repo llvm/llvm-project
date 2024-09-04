@@ -290,6 +290,8 @@ struct BuiltinTypeDeclBuilder {
                                              SourceLocation()));
     MethodDecl->setLexicalDeclContext(Record);
     MethodDecl->setAccess(AccessSpecifier::AS_public);
+    MethodDecl->addAttr(AlwaysInlineAttr::CreateImplicit(
+        AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
     Record->addDecl(MethodDecl);
 
     return *this;
