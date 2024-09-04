@@ -2346,6 +2346,14 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // End if-block.
   VPRegionBlock *Parent = RepRecipe->getParent()->getParent();
   bool IfPredicateInstr = Parent ? Parent->isReplicator() : false;
+  assert((Parent ||
+          (RepRecipe->getOpcode() == Instruction::Store &&
+           isa<VPInstruction>(RepRecipe->getOperand(0)) &&
+           cast<VPInstruction>(RepRecipe->getOperand(0))->isVectorToScalar() &&
+           RepRecipe->getOperand(1)->isDefinedOutsideLoopRegions())) &&
+         "Expected a recipe either in a region, or a uniform store with a "
+         "vector-to-scalar stored value and an address defined outside "
+         "vectorized region.");
   if (IfPredicateInstr)
     PredicatedInstructions.push_back(Cloned);
 }
