@@ -30,12 +30,6 @@ static void RegisterRtsanFlags(FlagParser *parser, Flags *f) {
 #undef RTSAN_FLAG
 }
 
-void Flags::SetDefaults() {
-#define RTSAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
-#include "rtsan_flags.inc"
-#undef RTSAN_FLAG
-}
-
 void __rtsan::InitializeFlags() {
   SetCommonFlagsDefaults();
   {
@@ -44,8 +38,6 @@ void __rtsan::InitializeFlags() {
     cf.external_symbolizer_path = GetEnv("RTSAN_SYMBOLIZER_PATH");
     OverrideCommonFlags(cf);
   }
-
-  flags().SetDefaults();
 
   FlagParser parser;
   RegisterRtsanFlags(&parser, &flags());

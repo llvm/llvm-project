@@ -14,11 +14,10 @@
 namespace __rtsan {
 
 struct Flags {
-#define RTSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
+#define RTSAN_FLAG(Type, Name, DefaultValue, Description)                      \
+  Type Name{DefaultValue};
 #include "rtsan_flags.inc"
 #undef RTSAN_FLAG
-
-  void SetDefaults();
 };
 
 extern Flags flags_data;
