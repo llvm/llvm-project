@@ -62,7 +62,6 @@ class MemoryHolesTestCase(TestBase):
         self.assertEqual(content[0:7], b"needle\0")
         self.assertTrue(error.Fail())
 
-    @expectedFailureWindows
     def test_memory_find(self):
         self._prepare_inferior()
 
