@@ -212,7 +212,6 @@ private:
   /// Update LoopInfo after if-conversion.
   void updateLoops(ArrayRef<MachineBasicBlock *> Removed);
 };
-} // end anonymous namespace
 
 /// Check that there is no dependencies preventing if conversion.
 ///
@@ -370,8 +369,6 @@ bool SSAIfConv::findInsertionPoint() {
   return false;
 }
 
-
-
 /// canConvertIf - analyze the sub-cfg rooted in MBB, and return true if it is
 /// a potential candidate for if-conversion. Fill out the internal state.
 ///
@@ -490,9 +487,8 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
 }
 
 /// \return true iff the two registers are known to have the same value.
-static bool hasSameValue(const MachineRegisterInfo &MRI,
-                         const TargetInstrInfo *TII, Register TReg,
-                         Register FReg) {
+bool hasSameValue(const MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+                  Register TReg, Register FReg) {
   if (TReg == FReg)
     return true;
 
@@ -682,42 +678,6 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks) {
   LLVM_DEBUG(dbgs() << *Head);
 }
 
-//===----------------------------------------------------------------------===//
-//                           EarlyIfConverter Pass
-//===----------------------------------------------------------------------===//
-
-namespace {
-struct EarlyIfConverter : MachineFunctionPass {
-  static char ID;
-  EarlyIfConverter() : MachineFunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  StringRef getPassName() const override { return "Early If-Conversion"; }
-};
-} // end anonymous namespace
-
-char EarlyIfConverter::ID = 0;
-char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
-
-INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE,
-                      "Early If Converter", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
-INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE,
-                    "Early If Converter", false, false)
-
-void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
-  MachineFunctionPass::getAnalysisUsage(AU);
-}
-
 void SSAIfConv::updateDomTree(ArrayRef<MachineBasicBlock *> Removed) {
   // convertIf can remove TBB, FBB, and Tail can be merged into Head.
   // TBB and FBB should not dominate any blocks.
@@ -752,14 +712,68 @@ void SSAIfConv::invalidateTraces() {
   Traces->verifyAnalysis();
 }
 
+// Visit blocks in dominator tree post-order. The post-order enables nested
+// if-conversion in a single pass. The tryConvertIf() function may erase
+// blocks, but only blocks dominated by the head block. This makes it safe to
+// update the dominator tree while the post-order iterator is still active.
+bool SSAIfConv::run() {
+  bool Changed = false;
+  for (auto *DomNode : post_order(DomTree))
+    if (tryConvertIf(DomNode->getBlock()))
+      Changed = true;
+  return Changed;
+}
+
+bool SSAIfConv::tryConvertIf(MachineBasicBlock *MBB) {
+  bool Changed = false;
+  while (canConvertIf(MBB) && Predicate.shouldConvertIf(*this)) {
+    // If-convert MBB and update analyses.
+    invalidateTraces();
+    SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
+    convertIf(RemoveBlocks);
+    Changed = true;
+    updateDomTree(RemoveBlocks);
+    for (MachineBasicBlock *MBB : RemoveBlocks)
+      MBB->eraseFromParent();
+    updateLoops(RemoveBlocks);
+  }
+  return Changed;
+}
+} // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+//                           EarlyIfConverter Pass
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct EarlyIfConverter : MachineFunctionPass {
+  static char ID;
+  EarlyIfConverter() : MachineFunctionPass(ID) {}
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override { return "Early If-Conversion"; }
+};
+
+char EarlyIfConverter::ID = 0;
+
+void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineTraceMetrics>();
+  AU.addPreserved<MachineTraceMetrics>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
 // Adjust cycles with downward saturation.
-static unsigned adjCycles(unsigned Cyc, int Delta) {
+unsigned adjCycles(unsigned Cyc, int Delta) {
   if (Delta < 0 && Cyc + Delta > Cyc)
     return 0;
   return Cyc + Delta;
 }
 
-namespace {
 /// Helper class to simplify emission of cycle counts into optimization remarks.
 struct Cycles {
   const char *Key;
@@ -768,7 +782,6 @@ struct Cycles {
 template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
   return R << ore::NV(C.Key, C.Value) << (C.Value == 1 ? " cycle" : " cycles");
 }
-} // anonymous namespace
 
 struct SpeculateStrategy : SSAIfConv::PredicationStrategyBase {
   MachineLoopInfo *Loops = nullptr;
@@ -1011,34 +1024,6 @@ bool SpeculateStrategy::shouldConvertIf(SSAIfConv &IfConv) {
   return ShouldConvert;
 }
 
-// Visit blocks in dominator tree post-order. The post-order enables nested
-// if-conversion in a single pass. The tryConvertIf() function may erase
-// blocks, but only blocks dominated by the head block. This makes it safe to
-// update the dominator tree while the post-order iterator is still active.
-bool SSAIfConv::run() {
-  bool Changed = false;
-  for (auto *DomNode : post_order(DomTree))
-    if (tryConvertIf(DomNode->getBlock()))
-      Changed = true;
-  return Changed;
-}
-
-bool SSAIfConv::tryConvertIf(MachineBasicBlock *MBB) {
-  bool Changed = false;
-  while (canConvertIf(MBB) && Predicate.shouldConvertIf(*this)) {
-    // If-convert MBB and update analyses.
-    invalidateTraces();
-    SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
-    convertIf(RemoveBlocks);
-    Changed = true;
-    updateDomTree(RemoveBlocks);
-    for (MachineBasicBlock *MBB : RemoveBlocks)
-      MBB->eraseFromParent();
-    updateLoops(RemoveBlocks);
-  }
-  return Changed;
-}
-
 bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
@@ -1059,6 +1044,17 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   SSAIfConv IfConv(Speculate, MF, DomTree, Loops, Traces);
   return IfConv.run();
 }
+} // end anonymous namespace
+
+char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
+
+INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE, "Early If Converter", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
+INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE, "Early If Converter", false,
+                    false)
 
 //===----------------------------------------------------------------------===//
 //                           EarlyIfPredicator Pass
@@ -1072,20 +1068,11 @@ struct EarlyIfPredicator : MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override { return "Early If-predicator"; }
 };
-} // end anonymous namespace
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "early-if-predicator"
 
 char EarlyIfPredicator::ID = 0;
-char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
-
-INITIALIZE_PASS_BEGIN(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_END(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator", false,
-                    false)
 
 void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
@@ -1199,3 +1186,13 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   SSAIfConv IfConv(Predicate, MF, DomTree, Loops);
   return IfConv.run();
 }
+
+} // end anonymous namespace
+char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
+
+INITIALIZE_PASS_BEGIN(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_END(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator", false,
+                    false)
