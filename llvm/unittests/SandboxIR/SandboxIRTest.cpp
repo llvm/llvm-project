@@ -4577,6 +4577,8 @@ static void checkSwapOperands(sandboxir::Context &Ctx,
   Cmp->swapOperands();
   EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp0);
   EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp0);
   // Undo it to keep the rest of the test consistent
   Cmp->swapOperands();
 }
@@ -4654,8 +4656,14 @@ define void @foo(i32 %i0, i32 %i1) {
   }
   auto *NewCmp =
       sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
-                                 F.getArg(1), &*BB->begin(), Ctx, "");
+                                 F.getArg(1), &*BB->begin(), Ctx, "NewCmp");
   EXPECT_EQ(NewCmp, &*BB->begin());
+  EXPECT_EQ(NewCmp->getPredicate(), llvm::CmpInst::ICMP_ULE);
+  EXPECT_EQ(NewCmp->getOperand(0), F.getArg(0));
+  EXPECT_EQ(NewCmp->getOperand(1), F.getArg(1));
+#ifndef NDEBUG
+  EXPECT_EQ(NewCmp->getName(), "NewCmp");
+#endif // NDEBUG
   // TODO: Improve this test when sandboxir::VectorType is more completely
   // implemented.
   sandboxir::Type *RT =
@@ -4712,15 +4720,27 @@ bb1:
 
   // create with default flags
   auto *NewFCmp = sandboxir::CmpInst::create(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), &*It1, Ctx, "");
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), &*It1, Ctx, "NewFCmp");
+  EXPECT_EQ(NewFCmp->getPredicate(), llvm::CmpInst::FCMP_ONE);
+  EXPECT_EQ(NewFCmp->getOperand(0), F.getArg(0));
+  EXPECT_EQ(NewFCmp->getOperand(1), F.getArg(1));
+#ifndef NDEBUG
+  EXPECT_EQ(NewFCmp->getName(), "NewFCmp");
+#endif // NDEBUG
   FastMathFlags DefaultFMF = NewFCmp->getFastMathFlags();
   EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
   // create with copied flags
   auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
       llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, &*It1, Ctx,
-      "");
+      "NewFCmpFlags");
   EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
                CopyFrom->getFastMathFlags());
+  EXPECT_EQ(NewFCmpFlags->getPredicate(), llvm::CmpInst::FCMP_ONE);
+  EXPECT_EQ(NewFCmpFlags->getOperand(0), F.getArg(0));
+  EXPECT_EQ(NewFCmpFlags->getOperand(1), F.getArg(1));
+#ifndef NDEBUG
+  EXPECT_EQ(NewFCmpFlags->getName(), "NewFCmpFlags");
+#endif // NDEBUG
 }
 
 TEST_F(SandboxIRTest, UnreachableInst) {
