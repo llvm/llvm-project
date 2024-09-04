@@ -831,6 +831,37 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   return CanonTTP;
 }
 
+/// Check if a type can have its sanitizer instrumentation elided.
+/// Determine this by its presence in a SCL alongside its specified categories.
+/// For example:
+/// ignorelist.txt>
+/// [{unsigned-integer-overflow,signed-integer-overflow}]
+/// type:*
+/// type:size_t=skip
+/// <ignorelist.txt
+/// Supplying the above ignorelist.txt will disable overflow sanitizer
+/// instrumentation for all types except "size_t".
+bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
+                                          const QualType &Ty) const {
+  // One may specifically allow a type "type:foo=allow"
+  bool isAllowedBySCL =
+      NoSanitizeL->containsType(Mask, Ty.getAsString(), "allow");
+
+  // There could also be no category present "type:foo", which is the same as
+  // "allow"
+  isAllowedBySCL |= NoSanitizeL->containsType(Mask, Ty.getAsString());
+
+  // Explicitly specifying "skip" is also possible "type:foo=skip"
+  bool isSkippedBySCL =
+      NoSanitizeL->containsType(Mask, Ty.getAsString(), "skip");
+
+  // Or "forbid", as there is currently no distinction between "skip" and
+  // "forbid" for the purposes of the overflow/truncation sanitizer ignorelist.
+  isSkippedBySCL |= NoSanitizeL->containsType(Mask, Ty.getAsString(), "forbid");
+
+  return isAllowedBySCL && !isSkippedBySCL;
+}
+
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
   auto Kind = getTargetInfo().getCXXABI().getKind();
   return getLangOpts().CXXABI.value_or(Kind);
