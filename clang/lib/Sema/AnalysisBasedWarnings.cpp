@@ -2304,6 +2304,20 @@ public:
     }
   }
 
+  void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
+                            ASTContext &Ctx,
+                            const Expr *UnsafeArg = nullptr) override {
+    S.Diag(Call->getBeginLoc(), diag::warn_unsafe_buffer_libc_call)
+        << Call->getDirectCallee() // We've checked there is a direct callee
+        << Call->getSourceRange();
+    if (PrintfInfo > 0) {
+      SourceRange R =
+          UnsafeArg ? UnsafeArg->getSourceRange() : Call->getSourceRange();
+      S.Diag(R.getBegin(), diag::note_unsafe_buffer_printf_call)
+          << PrintfInfo << R;
+    }
+  }
+
   void handleUnsafeOperationInContainer(const Stmt *Operation,
                                         bool IsRelatedToDecl,
                                         ASTContext &Ctx) override {
