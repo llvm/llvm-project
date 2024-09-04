@@ -90,8 +90,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; MIPSEL-LABEL: test_srem_pow2_setne:
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    sll $1, $4, 26
-; MIPSEL-NEXT:    sra $1, $1, 26
-; MIPSEL-NEXT:    srl $1, $1, 9
+; MIPSEL-NEXT:    sra $1, $1, 31
 ; MIPSEL-NEXT:    andi $1, $1, 3
 ; MIPSEL-NEXT:    addu $1, $4, $1
 ; MIPSEL-NEXT:    andi $1, $1, 60
@@ -104,8 +103,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; MIPS64EL:       # %bb.0:
 ; MIPS64EL-NEXT:    sll $1, $4, 0
 ; MIPS64EL-NEXT:    sll $2, $1, 26
-; MIPS64EL-NEXT:    sra $2, $2, 26
-; MIPS64EL-NEXT:    srl $2, $2, 9
+; MIPS64EL-NEXT:    sra $2, $2, 31
 ; MIPS64EL-NEXT:    andi $2, $2, 3
 ; MIPS64EL-NEXT:    addu $2, $1, $2
 ; MIPS64EL-NEXT:    andi $2, $2, 60

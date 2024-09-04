@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/Support/VCSRevision.h"
+#include "VCSVersion.inc"
 
 using namespace llvm;
 
 namespace llvm {
 namespace bolt {
 const char *BoltRevision =
-#ifdef LLVM_REVISION
-    LLVM_REVISION;
+#ifdef BOLT_REVISION
+    BOLT_REVISION;
 #else
     "<unknown>";
 #endif

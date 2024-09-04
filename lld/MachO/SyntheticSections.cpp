@@ -2010,11 +2010,8 @@ void ObjCMethListSection::setUp() {
     while (methodNameOff < isec->data.size()) {
       const Reloc *reloc = isec->getRelocAt(methodNameOff);
       assert(reloc && "Relocation expected at method list name slot");
-      auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
-      assert(def && "Expected valid Defined at method list name slot");
-      auto *cisec = cast<CStringInputSection>(def->isec());
-      assert(cisec && "Expected method name to be in a CStringInputSection");
-      auto methname = cisec->getStringRefAtOffset(def->value);
+
+      StringRef methname = reloc->getReferentString();
       if (!ObjCSelRefsHelper::getSelRef(methname))
         ObjCSelRefsHelper::makeSelRef(methname);
 
@@ -2114,19 +2111,23 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     uint32_t &outSecOff, bool useSelRef) const {
   const Reloc *reloc = isec->getRelocAt(inSecOff);
   assert(reloc && "Relocation expected at __objc_methlist Offset");
-  auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
-  assert(def && "Expected all syms in __objc_methlist to be defined");
-  uint32_t symVA = def->getVA();
 
+  uint32_t symVA = 0;
   if (useSelRef) {
-    auto *cisec = cast<CStringInputSection>(def->isec());
-    auto methname = cisec->getStringRefAtOffset(def->value);
+    StringRef methname = reloc->getReferentString();
     ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef && "Expected all selector names to already be already be "
                      "present in __objc_selrefs");
     symVA = selRef->getVA();
-    assert(selRef->data.size() == sizeof(target->wordSize) &&
+    assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
+  } else if (reloc->referent.is<Symbol *>()) {
+    auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
+    assert(def && "Expected all syms in __objc_methlist to be defined");
+    symVA = def->getVA();
+  } else {
+    auto *isec = reloc->referent.get<InputSection *>();
+    symVA = isec->getVA(reloc->addend);
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;

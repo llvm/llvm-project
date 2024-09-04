@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = false} {
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.addressof @_QFEi : !llvm.ptr
     %1 = llvm.mlir.addressof @_QFEsp : !llvm.ptr

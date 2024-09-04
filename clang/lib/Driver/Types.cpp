@@ -170,6 +170,9 @@ bool types::isAcceptedByFlang(ID Id) {
   case TY_LLVM_IR:
   case TY_LLVM_BC:
     return true;
+  case TY_PP_CUDA:
+  case TY_CUDA:
+    return true;
   }
 }
 
@@ -242,7 +245,9 @@ bool types::isCXX(ID Id) {
   case TY_CXXHUHeader:
   case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
-  case TY_CXXModule: case TY_PP_CXXModule:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
+  case TY_ModuleFile:
   case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
   case TY_HIP:

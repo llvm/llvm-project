@@ -301,7 +301,7 @@ struct __optional_destruct_base<_Tp, false> {
 
 #  if _LIBCPP_STD_VER >= 23
   template <class _Fp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_destruct_base(
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_destruct_base(
       __optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
       : __val_(std::invoke(std::forward<_Fp>(__f), std::forward<_Args>(__args)...)), __engaged_(true) {}
 #  endif
@@ -707,8 +707,11 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 23
-  template <class _Fp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
+  template <class _Tag,
+            class _Fp,
+            class... _Args,
+            __enable_if_t<_IsSame<_Tag, __optional_construct_from_invoke_tag>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_Tag, _Fp&& __f, _Args&&... __args)
       : __base(__optional_construct_from_invoke_tag{}, std::forward<_Fp>(__f), std::forward<_Args>(__args)...) {}
 #  endif
 

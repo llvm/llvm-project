@@ -1041,8 +1041,8 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (const MachineOperand &MO : operands()) {
-    if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == Reg)
+  for (const MachineOperand &MO : implicit_operands()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == Reg)
       return true;
   }
   return false;
@@ -1293,7 +1293,7 @@ void MachineInstr::substituteRegister(Register FromReg, Register ToReg,
 /// isSafeToMove - Return true if it is safe to move this instruction. If
 /// SawStore is set to true, it means that there is a store (or call) between
 /// the instruction's location and its intended destination.
-bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
+bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Ignore stuff that we obviously can't move.
   //
   // Treat volatile loads as stores. This is not strictly necessary for
@@ -2125,19 +2125,15 @@ bool MachineInstr::addRegisterDead(Register Reg,
 }
 
 void MachineInstr::clearRegisterDeads(Register Reg) {
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg)
-      continue;
-    MO.setIsDead(false);
-  }
+  for (MachineOperand &MO : all_defs())
+    if (MO.getReg() == Reg)
+      MO.setIsDead(false);
 }
 
 void MachineInstr::setRegisterDefReadUndef(Register Reg, bool IsUndef) {
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg || MO.getSubReg() == 0)
-      continue;
-    MO.setIsUndef(IsUndef);
-  }
+  for (MachineOperand &MO : all_defs())
+    if (MO.getReg() == Reg && MO.getSubReg() != 0)
+      MO.setIsUndef(IsUndef);
 }
 
 void MachineInstr::addRegisterDefined(Register Reg,
@@ -2147,9 +2143,8 @@ void MachineInstr::addRegisterDefined(Register Reg,
     if (MO)
       return;
   } else {
-    for (const MachineOperand &MO : operands()) {
-      if (MO.isReg() && MO.getReg() == Reg && MO.isDef() &&
-          MO.getSubReg() == 0)
+    for (const MachineOperand &MO : all_defs()) {
+      if (MO.getReg() == Reg && MO.getSubReg() == 0)
         return;
     }
   }
@@ -2296,9 +2291,9 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
 
 /// Compute the new DIExpression to use with a DBG_VALUE for a spill slot.
 /// This prepends DW_OP_deref when spilling an indirect DBG_VALUE.
-static const DIExpression *
-computeExprForSpill(const MachineInstr &MI,
-                    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+static const DIExpression *computeExprForSpill(
+    const MachineInstr &MI,
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
@@ -2353,7 +2348,7 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
 MachineInstr *llvm::buildDbgValueForSpill(
     MachineBasicBlock &BB, MachineBasicBlock::iterator I,
     const MachineInstr &Orig, int FrameIndex,
-    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   const DIExpression *Expr = computeExprForSpill(Orig, SpilledOperands);
   MachineInstrBuilder NewMI =
       BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc());

@@ -93,6 +93,7 @@ public:
       processOperation(getOperation());
       emitAllEdgeStmts();
     });
+    markAllAnalysesPreserved();
   }
 
   /// Create a CFG graph for a region. Used in `Region::viewGraph`.

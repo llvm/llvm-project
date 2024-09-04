@@ -17,7 +17,7 @@ struct S {
 
 // CHECK-LABEL: @get_offset_of_y_naively(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
 //
 uintptr_t get_offset_of_y_naively(void) {
   return ((uintptr_t)(&(((struct S *)0)->y)));

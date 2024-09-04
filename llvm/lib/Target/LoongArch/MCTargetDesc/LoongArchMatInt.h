@@ -16,6 +16,7 @@ namespace llvm {
 namespace LoongArchMatInt {
 struct Inst {
   unsigned Opc;
+  // Imm: Opc's imm operand, if Opc == BSTRINS_D, Imm = MSB << 32 | LSB.
   int64_t Imm;
   Inst(unsigned Opc, int64_t Imm) : Opc(Opc), Imm(Imm) {}
 };

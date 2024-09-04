@@ -615,20 +615,22 @@ private:
   COFFLinkerContext &ctx;
 };
 
+// A ragnge extension thunk used for both ARM64EC and ARM64 machine types.
 class RangeExtensionThunkARM64 : public NonSectionCodeChunk {
 public:
-  explicit RangeExtensionThunkARM64(COFFLinkerContext &ctx, Defined *t)
-      : target(t), ctx(ctx) {
+  explicit RangeExtensionThunkARM64(MachineTypes machine, Defined *t)
+      : target(t), machine(machine) {
     setAlignment(4);
+    assert(llvm::COFF::isAnyArm64(machine));
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
-  MachineTypes getMachine() const override { return ARM64; }
+  MachineTypes getMachine() const override { return machine; }
 
   Defined *target;
 
 private:
-  COFFLinkerContext &ctx;
+  MachineTypes machine;
 };
 
 // Windows-specific.
@@ -747,6 +749,48 @@ public:
 
 private:
   std::vector<ECCodeMapEntry> &map;
+};
+
+class CHPECodeRangesChunk : public NonSectionChunk {
+public:
+  CHPECodeRangesChunk(std::vector<std::pair<Chunk *, Defined *>> &exportThunks)
+      : exportThunks(exportThunks) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  std::vector<std::pair<Chunk *, Defined *>> &exportThunks;
+};
+
+class CHPERedirectionChunk : public NonSectionChunk {
+public:
+  CHPERedirectionChunk(std::vector<std::pair<Chunk *, Defined *>> &exportThunks)
+      : exportThunks(exportThunks) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  std::vector<std::pair<Chunk *, Defined *>> &exportThunks;
+};
+
+static const uint8_t ECExportThunkCode[] = {
+    0x48, 0x8b, 0xc4,          // movq    %rsp, %rax
+    0x48, 0x89, 0x58, 0x20,    // movq    %rbx, 0x20(%rax)
+    0x55,                      // pushq   %rbp
+    0x5d,                      // popq    %rbp
+    0xe9, 0,    0,    0,    0, // jmp *0x0
+    0xcc,                      // int3
+    0xcc                       // int3
+};
+
+class ECExportThunkChunk : public NonSectionCodeChunk {
+public:
+  explicit ECExportThunkChunk(Defined *targetSym) : target(targetSym) {}
+  size_t getSize() const override { return sizeof(ECExportThunkCode); };
+  void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return AMD64; }
+
+  Defined *target;
 };
 
 // MinGW specific, for the "automatic import of variables from DLLs" feature.

@@ -196,11 +196,13 @@ public:
   }
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
-                       bool OnlyOptimizeForSize, bool MergeExternalGlobals)
+                       bool OnlyOptimizeForSize, bool MergeExternalGlobals,
+                       bool MergeConstantGlobals)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
+    Opt.MergeConstantGlobals = MergeConstantGlobals;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -475,7 +477,8 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   auto &DL = M.getDataLayout();
 
   LLVM_DEBUG(dbgs() << " Trying to merge set, starts with #"
-                    << GlobalSet.find_first() << "\n");
+                    << GlobalSet.find_first() << ", total of " << Globals.size()
+                    << "\n");
 
   bool Changed = false;
   ssize_t i = GlobalSet.find_first();
@@ -550,6 +553,8 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
     MergedGV->setAlignment(MaxAlign);
     MergedGV->setSection(Globals[i]->getSection());
+
+    LLVM_DEBUG(dbgs() << "MergedGV:  " << *MergedGV << "\n");
 
     const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
@@ -664,7 +669,7 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     if (!(Opt.MergeExternal && GV.hasExternalLinkage()) &&
-        !GV.hasInternalLinkage())
+        !GV.hasLocalLinkage())
       continue;
 
     PointerType *PT = dyn_cast<PointerType>(GV.getType());
@@ -700,6 +705,11 @@ bool GlobalMergeImpl::run(Module &M) {
       else
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
+    LLVM_DEBUG(dbgs() << "GV "
+                      << ((DL.getTypeAllocSize(Ty) < Opt.MaxOffset)
+                              ? "to merge: "
+                              : "not to merge: ")
+                      << GV << "\n");
   }
 
   for (auto &P : Globals)
@@ -710,7 +720,7 @@ bool GlobalMergeImpl::run(Module &M) {
     if (P.second.size() > 1)
       Changed |= doMerge(P.second, M, false, P.first.first);
 
-  if (EnableGlobalMergeOnConst)
+  if (Opt.MergeConstantGlobals)
     for (auto &P : ConstGlobals)
       if (P.second.size() > 1)
         Changed |= doMerge(P.second, M, true, P.first.first);
@@ -720,8 +730,11 @@ bool GlobalMergeImpl::run(Module &M) {
 
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
-                                  bool MergeExternalByDefault) {
+                                  bool MergeExternalByDefault,
+                                  bool MergeConstantByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
-  return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal);
+  bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
+  return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
+                         MergeConstant);
 }
