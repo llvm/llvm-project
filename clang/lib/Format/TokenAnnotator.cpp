@@ -3588,8 +3588,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
 
     // Make sure the name is followed by a pair of parentheses.
     if (Name) {
-      if (Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
-          Tok->MatchingParen) {
+      if (Tok->is(tok::l_paren) && Tok->is(TT_Unknown) && Tok->MatchingParen) {
         OpeningParen = Tok;
         return Name;
       }
