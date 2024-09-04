@@ -460,6 +460,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FABS, MVT::bf16, Custom);
     setOperationAction(ISD::FNEG, MVT::bf16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Custom);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
   }
 
   if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
@@ -478,6 +480,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FABS, MVT::f16, Custom);
       setOperationAction(ISD::FNEG, MVT::f16, Custom);
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
     }
 
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
@@ -590,9 +594,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
                        Custom);
 
-    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT,
-                        ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
-                       XLenVT, Legal);
+    // f16/bf16 require custom handling.
+    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT}, XLenVT,
+                       Custom);
+    setOperationAction({ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP}, XLenVT,
+                       Custom);
 
     setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
@@ -2953,6 +2959,33 @@ InstructionCost RISCVTargetLowering::getVSlideVICost(MVT VT) const {
   return getLMULCost(VT);
 }
 
+static SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
+  // f16 conversions are promoted to f32 when Zfh/Zhinx are not supported.
+  // bf16 conversions are always promoted to f32.
+  if ((Op.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx()) ||
+      Op.getValueType() == MVT::bf16) {
+    bool IsStrict = Op->isStrictFPOpcode();
+
+    SDLoc DL(Op);
+    if (IsStrict) {
+      SDValue Val = DAG.getNode(Op.getOpcode(), DL, {MVT::f32, MVT::Other},
+                                {Op.getOperand(0), Op.getOperand(1)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
+    }
+    return DAG.getNode(
+        ISD::FP_ROUND, DL, Op.getValueType(),
+        DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0)),
+        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  }
+
+  // Other operations are legal.
+  return Op;
+}
+
 static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
   // RISC-V FP-to-int conversions saturate to the destination register size, but
@@ -3064,6 +3097,31 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     Res = convertFromScalableVector(DstVT, Res, DAG, Subtarget);
 
   return Res;
+}
+
+static SDValue lowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+
+  // f16 conversions are promoted to f32 when Zfh/Zhinx is not enabled.
+  // bf16 conversions are always promoted to f32.
+  if ((SrcVal.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx()) ||
+      SrcVal.getValueType() == MVT::bf16) {
+    SDLoc DL(Op);
+    if (IsStrict) {
+      SDValue Ext =
+          DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
+                      {Op.getOperand(0), SrcVal});
+      return DAG.getNode(Op.getOpcode(), DL, {Op.getValueType(), MVT::Other},
+                         {Ext.getValue(1), Ext.getValue(0)});
+    }
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                       DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, SrcVal));
+  }
+
+  // Other operations are legal.
+  return Op;
 }
 
 static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
@@ -6631,13 +6689,17 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // the source. We custom-lower any conversions that do two hops into
     // sequences.
     MVT VT = Op.getSimpleValueType();
+    if (VT.isScalarInteger())
+      return lowerFP_TO_INT(Op, DAG, Subtarget);
+    bool IsStrict = Op->isStrictFPOpcode();
+    SDValue Src = Op.getOperand(0 + IsStrict);
+    MVT SrcVT = Src.getSimpleValueType();
+    if (SrcVT.isScalarInteger())
+      return lowerINT_TO_FP(Op, DAG, Subtarget);
     if (!VT.isVector())
       return Op;
     SDLoc DL(Op);
-    bool IsStrict = Op->isStrictFPOpcode();
-    SDValue Src = Op.getOperand(0 + IsStrict);
     MVT EltVT = VT.getVectorElementType();
-    MVT SrcVT = Src.getSimpleValueType();
     MVT SrcEltVT = SrcVT.getVectorElementType();
     unsigned EltSize = EltVT.getSizeInBits();
     unsigned SrcEltSize = SrcEltVT.getSizeInBits();
