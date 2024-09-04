@@ -434,19 +434,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   static const unsigned ZfhminZfbfminPromoteOps[] = {
-      ISD::FMINNUM,       ISD::FMAXNUM,
-      ISD::FMAXIMUMNUM,   ISD::FMINIMUMNUM,
-      ISD::FADD,          ISD::FSUB,
-      ISD::FMUL,          ISD::FMA,
-      ISD::FDIV,          ISD::FSQRT,
-      ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,   ISD::STRICT_FMUL,
-      ISD::STRICT_FDIV,   ISD::STRICT_FSQRT,
-      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
-      ISD::SETCC,         ISD::FCEIL,
-      ISD::FFLOOR,        ISD::FTRUNC,
-      ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,    ISD::SELECT};
+      ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FMAXIMUMNUM,
+      ISD::FMINIMUMNUM,  ISD::FADD,          ISD::FSUB,
+      ISD::FMUL,         ISD::FMA,           ISD::FDIV,
+      ISD::FSQRT,        ISD::STRICT_FMA,    ISD::STRICT_FADD,
+      ISD::STRICT_FSUB,  ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
+      ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
+      ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
+      ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
+      ISD::FROUNDEVEN};
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -454,12 +450,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
+    setOperationAction(ISD::SELECT, MVT::bf16, Custom);
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
     setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
     setOperationAction(ISD::FREM, MVT::bf16, Promote);
     setOperationAction(ISD::FABS, MVT::bf16, Custom);
     setOperationAction(ISD::FNEG, MVT::bf16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Custom);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
   }
 
@@ -468,7 +466,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
       setOperationAction(FPRndMode, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
-      setOperationAction(ISD::SELECT, MVT::f16, Custom);
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
@@ -479,6 +476,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FABS, MVT::f16, Custom);
       setOperationAction(ISD::FNEG, MVT::f16, Custom);
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
     }
 
@@ -486,6 +484,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
+    setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
     setOperationAction(ISD::FNEARBYINT, MVT::f16,
@@ -592,8 +591,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
                        Custom);
 
+    // f16/bf16 require custom handling.
     setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT}, XLenVT,
-                       Legal);
+                       Custom);
     setOperationAction({ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP}, XLenVT,
                        Custom);
 
@@ -3094,6 +3094,31 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     Res = convertFromScalableVector(DstVT, Res, DAG, Subtarget);
 
   return Res;
+}
+
+static SDValue lowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+
+  // f16 conversions are promoted to f32 when Zfh/Zhinx is not enabled.
+  // bf16 conversions are always promoted to f32.
+  if ((SrcVal.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx()) ||
+      SrcVal.getValueType() == MVT::bf16) {
+    SDLoc DL(Op);
+    if (IsStrict) {
+      SDValue Ext =
+          DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
+                      {Op.getOperand(0), SrcVal});
+      return DAG.getNode(Op.getOpcode(), DL, {Op.getValueType(), MVT::Other},
+                         {Ext.getValue(1), Ext.getValue(0)});
+    }
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                       DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, SrcVal));
+  }
+
+  // Other operations are legal.
+  return Op;
 }
 
 static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
@@ -6661,6 +6686,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // the source. We custom-lower any conversions that do two hops into
     // sequences.
     MVT VT = Op.getSimpleValueType();
+    if (VT.isScalarInteger())
+      return lowerFP_TO_INT(Op, DAG, Subtarget);
     bool IsStrict = Op->isStrictFPOpcode();
     SDValue Src = Op.getOperand(0 + IsStrict);
     MVT SrcVT = Src.getSimpleValueType();
