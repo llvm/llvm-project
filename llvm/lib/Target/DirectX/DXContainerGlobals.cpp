@@ -150,7 +150,7 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
 
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-  assert(MMI.EntryPropertyVec.size() != 0 ||
+  assert(MMI.EntryPropertyVec.size() == 1 ||
          MMI.ShaderStage == Triple::Library);
   PSV.BaseData.ShaderStage =
       static_cast<uint8_t>(MMI.ShaderStage - Triple::Pixel);
