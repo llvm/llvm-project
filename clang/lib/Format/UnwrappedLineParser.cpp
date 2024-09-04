@@ -609,8 +609,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             ProbablyBracedList = NextTok->isNot(tok::l_square);
           }
 
-          // Cpp macro definition body containing nonempty braced list or block:
+          // Cpp macro definition body that is a nonempty braced list or block:
           if (IsCpp && Line->InMacroBody && PrevTok != FormatTok &&
+              !FormatTok->Previous && NextTok->is(tok::eof) &&
               // A statement can end with only `;` (simple statement), a block
               // closing brace (compound statement), or `:` (label statement).
               // If PrevTok is a block opening brace, Tok ends an empty block.
