@@ -270,6 +270,9 @@ Improvements to Clang's diagnostics
 
 - Clang now respects lifetimebound attribute for the assignment operator parameter. (#GH106372).
 
+- The lifetimebound and GSL analysis in clang are coherent, allowing clang to
+  detect more use-after-free bugs. (#GH100549).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
