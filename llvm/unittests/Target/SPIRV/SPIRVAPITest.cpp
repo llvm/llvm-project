@@ -17,8 +17,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+#include <gmock/gmock.h>
 #include <string>
 #include <utility>
+
+using ::testing::StartsWith;
 
 namespace llvm {
 
@@ -36,7 +39,10 @@ protected:
       ParseError.print("IR parsing failed: ", errs());
       report_fatal_error("Can't parse input assembly.");
     }
-    return SPIRVTranslateModule(M.get(), Result, ErrMsg, Opts);
+    bool Status = SPIRVTranslateModule(M.get(), Result, ErrMsg, Opts);
+    if (!Status)
+      errs() << ErrMsg;
+    return Status;
   }
 
   LLVMContext Context;
@@ -51,10 +57,7 @@ protected:
 
     declare dso_local spir_func i32  @_Z26__spirv_GroupBitwiseAndKHR(i32, i32, i32)
   )";
-};
-
-TEST_F(SPIRVAPITest, checkTranslateOk) {
-  StringRef Assemblies[] = {"", R"(
+  static constexpr StringRef OkAssembly = R"(
     %struct = type { [1 x i64] }
 
     define spir_kernel void @foo(ptr noundef byval(%struct) %arg) {
@@ -67,14 +70,34 @@ TEST_F(SPIRVAPITest, checkTranslateOk) {
     entry:
       ret void
     }
-  )"};
-  for (StringRef &Assembly : Assemblies) {
-    std::string Result, Error;
-    std::vector<std::string> Opts;
-    bool Status = toSpirv(Assembly, Result, Error, Opts);
-    EXPECT_TRUE(Status && Error.empty() && !Result.empty());
-    EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+  )";
+};
+
+TEST_F(SPIRVAPITest, checkTranslateOk) {
+  StringRef Assemblies[] = {"", OkAssembly};
+  // Those command line arguments that overlap with registered by llc/codegen
+  // are to be started with the ' ' symbol.
+  std::vector<std::string> SetOfOpts[] = {
+      {}, {"- mtriple=spirv32-unknown-unknown"}};
+  for (const auto &Opts : SetOfOpts) {
+    for (StringRef &Assembly : Assemblies) {
+      std::string Result, Error;
+      bool Status = toSpirv(Assembly, Result, Error, Opts);
+      EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+      EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+    }
   }
+}
+
+TEST_F(SPIRVAPITest, checkTranslateError) {
+  std::string Result, Error;
+  bool Status =
+      toSpirv(OkAssembly, Result, Error, {"-mtriple=spirv32-unknown-unknown"});
+  EXPECT_FALSE(Status);
+  EXPECT_TRUE(Result.empty());
+  EXPECT_THAT(Error,
+              StartsWith("SPIRVTranslateModule: Unknown command line argument "
+                         "'-mtriple=spirv32-unknown-unknown'"));
 }
 
 TEST_F(SPIRVAPITest, checkTranslateSupportExtension) {

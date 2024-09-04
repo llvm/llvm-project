@@ -1,4 +1,4 @@
-//===-- SPIRV.cpp - SPIR-V Backend API ------------------------*- C++ -*---===//
+//===-- SPIRVAPI.cpp - SPIR-V Backend API ---------------------*- C++ -*---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,10 +32,19 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 using namespace llvm;
 
 namespace {
+
+// Mimic limited number of command line flags from llc to provide a better
+// user experience when passing options into the translate API call.
+static cl::opt<char> SpvOptLevel(" O", cl::Hidden, cl::Prefix, cl::init('0'));
+static cl::opt<std::string> SpvTargetTriple(" mtriple", cl::Hidden,
+                                            cl::init(""));
+
+// Utility to accept options in a command line style.
 void parseSPIRVCommandLineOptions(const std::vector<std::string> &Options,
                                   raw_ostream *Errs) {
   static constexpr const char *Origin = "SPIRVTranslateModule";
@@ -68,10 +77,9 @@ namespace llvm {
 extern "C" LLVM_EXTERNAL_VISIBILITY bool
 SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
                      const std::vector<std::string> &Opts) {
-  // Fallbacks for a Triple, MArch, Opt-level values.
+  // Fallbacks for option values.
   static const std::string DefaultTriple = "spirv64-unknown-unknown";
   static const std::string DefaultMArch = "";
-  static const llvm::CodeGenOptLevel OLevel = llvm::CodeGenOptLevel::None;
 
   // Parse Opts as if it'd be command line arguments.
   std::string Errors;
@@ -82,10 +90,20 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
     return false;
   }
 
+  llvm::CodeGenOptLevel OLevel;
+  if (auto Level = CodeGenOpt::parseLevel(SpvOptLevel)) {
+    OLevel = *Level;
+  } else {
+    ErrMsg = "Invalid optimization level!";
+    return false;
+  }
+
   // SPIR-V-specific target initialization.
   InitializeSPIRVTarget();
 
-  Triple TargetTriple(M->getTargetTriple());
+  Triple TargetTriple(SpvTargetTriple.empty()
+                          ? M->getTargetTriple()
+                          : Triple::normalize(SpvTargetTriple));
   if (TargetTriple.getTriple().empty()) {
     TargetTriple.setTriple(DefaultTriple);
     M->setTargetTriple(DefaultTriple);
