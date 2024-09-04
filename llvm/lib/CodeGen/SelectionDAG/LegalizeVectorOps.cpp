@@ -142,6 +142,8 @@ class VectorLegalizer {
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
   SDValue ExpandFNEG(SDNode *Node);
+  SDValue ExpandFABS(SDNode *Node);
+  SDValue ExpandFCOPYSIGN(SDNode *Node);
   void ExpandFSUB(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandSETCC(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandBITREVERSE(SDNode *Node, SmallVectorImpl<SDValue> &Results);
@@ -938,6 +940,18 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     return;
   case ISD::FNEG:
     if (SDValue Expanded = ExpandFNEG(Node)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
+  case ISD::FABS:
+    if (SDValue Expanded = ExpandFABS(Node)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
+  case ISD::FCOPYSIGN:
+    if (SDValue Expanded = ExpandFCOPYSIGN(Node)) {
       Results.push_back(Expanded);
       return;
     }
@@ -1781,7 +1795,7 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
 
   // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
   if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) ||
-      !TLI.isOperationLegalOrCustom(ISD::FSUB, VT))
+      !(TLI.isOperationLegalOrCustom(ISD::FSUB, VT) || VT.isScalableVector()))
     return SDValue();
 
   SDLoc DL(Node);
@@ -1790,6 +1804,53 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
       APInt::getSignMask(IntVT.getScalarSizeInBits()), DL, IntVT);
   SDValue Xor = DAG.getNode(ISD::XOR, DL, IntVT, Cast, SignMask);
   return DAG.getNode(ISD::BITCAST, DL, VT, Xor);
+}
+
+SDValue VectorLegalizer::ExpandFABS(SDNode *Node) {
+  EVT VT = Node->getValueType(0);
+  EVT IntVT = VT.changeVectorElementTypeToInteger();
+
+  // FIXME: We shouldn't restrict this to scalable vectors.
+  if (!TLI.isOperationLegalOrCustom(ISD::AND, IntVT) || !VT.isScalableVector())
+    return SDValue();
+
+  SDLoc DL(Node);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
+  SDValue ClearSignMask = DAG.getConstant(
+      APInt::getSignedMaxValue(IntVT.getScalarSizeInBits()), DL, IntVT);
+  SDValue ClearedSign = DAG.getNode(ISD::AND, DL, IntVT, Cast, ClearSignMask);
+  return DAG.getNode(ISD::BITCAST, DL, VT, ClearedSign);
+}
+
+SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
+  EVT VT = Node->getValueType(0);
+  EVT IntVT = VT.changeVectorElementTypeToInteger();
+
+  // FIXME: We shouldn't restrict this to scalable vectors.
+  if (VT != Node->getOperand(1).getValueType() ||
+      !TLI.isOperationLegalOrCustom(ISD::AND, IntVT) ||
+      !TLI.isOperationLegalOrCustom(ISD::OR, IntVT) || !VT.isScalableVector())
+    return SDValue();
+
+  SDLoc DL(Node);
+  SDValue Mag = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
+  SDValue Sign = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(1));
+
+  SDValue SignMask = DAG.getConstant(
+      APInt::getSignMask(IntVT.getScalarSizeInBits()), DL, IntVT);
+  SDValue SignBit = DAG.getNode(ISD::AND, DL, IntVT, Sign, SignMask);
+
+  SDValue ClearSignMask = DAG.getConstant(
+      APInt::getSignedMaxValue(IntVT.getScalarSizeInBits()), DL, IntVT);
+  SDValue ClearedSign = DAG.getNode(ISD::AND, DL, IntVT, Mag, ClearSignMask);
+
+  SDNodeFlags Flags;
+  Flags.setDisjoint(true);
+
+  SDValue CopiedSign =
+      DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit, Flags);
+
+  return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
 
 void VectorLegalizer::ExpandFSUB(SDNode *Node,
