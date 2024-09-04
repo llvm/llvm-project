@@ -12,15 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/Module.h"
-// #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/SourceMgr.h"
-// #include "llvm/Support/TargetSelect.h"
-// #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <utility>
@@ -33,12 +28,6 @@ extern "C" bool SPIRVTranslateModule(Module *M, std::string &Buffer,
 
 class SPIRVAPITest : public testing::Test {
 protected:
-  /*
-    void SetUp() override {
-      EXPECT_TRUE(Status && Error.empty() && !Result.empty());
-    }
-  */
-
   bool toSpirv(StringRef Assembly, std::string &Result, std::string &ErrMsg,
                const std::vector<std::string> &Opts) {
     SMDiagnostic ParseError;
@@ -52,10 +41,8 @@ protected:
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
-};
 
-TEST_F(SPIRVAPITest, checkTranslateExtError) {
-  StringRef Assembly = R"(
+  static constexpr StringRef ExtensionAssembly = R"(
     define dso_local spir_func void @test1() {
     entry:
       %res1 = tail call spir_func i32 @_Z26__spirv_GroupBitwiseAndKHR(i32 2, i32 0, i32 0)
@@ -64,12 +51,7 @@ TEST_F(SPIRVAPITest, checkTranslateExtError) {
 
     declare dso_local spir_func i32  @_Z26__spirv_GroupBitwiseAndKHR(i32, i32, i32)
   )";
-  std::string Result, Error;
-  std::vector<std::string> Opts;
-  bool Status = toSpirv(Assembly, Result, Error, Opts);
-  EXPECT_TRUE(Status && Error.empty() && !Result.empty());
-  EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
-}
+};
 
 TEST_F(SPIRVAPITest, checkTranslateOk) {
   StringRef Assemblies[] = {"", R"(
@@ -94,5 +76,50 @@ TEST_F(SPIRVAPITest, checkTranslateOk) {
     EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
   }
 }
+
+TEST_F(SPIRVAPITest, checkTranslateSupportExtension) {
+  std::string Result, Error;
+  std::vector<std::string> Opts{
+      "--spirv-ext=+SPV_KHR_uniform_group_instructions"};
+  bool Status = toSpirv(ExtensionAssembly, Result, Error, Opts);
+  EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+  EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+}
+
+TEST_F(SPIRVAPITest, checkTranslateAllExtensions) {
+  std::string Result, Error;
+  std::vector<std::string> Opts{"--spirv-ext=all"};
+  bool Status = toSpirv(ExtensionAssembly, Result, Error, Opts);
+  EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+  EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+}
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+TEST_F(SPIRVAPITest, checkTranslateExtensionError) {
+  std::string Result, Error;
+  std::vector<std::string> Opts;
+  EXPECT_DEATH_IF_SUPPORTED(
+      { toSpirv(ExtensionAssembly, Result, Error, Opts); },
+      "LLVM ERROR: __spirv_GroupBitwiseAndKHR: the builtin requires the "
+      "following SPIR-V extension: SPV_KHR_uniform_group_instructions");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateUnknownExtension) {
+  std::string Result, Error;
+  std::vector<std::string> Opts{"--spirv-ext=+SPV_XYZ_my_unknown_extension"};
+  EXPECT_DEATH_IF_SUPPORTED(
+      { toSpirv(ExtensionAssembly, Result, Error, Opts); },
+      "SPIRVTranslateModule: for the --spirv-ext option: Unknown SPIR-V");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateWrongExtension) {
+  std::string Result, Error;
+  std::vector<std::string> Opts{"--spirv-ext=+SPV_KHR_subgroup_rotate"};
+  EXPECT_DEATH_IF_SUPPORTED(
+      { toSpirv(ExtensionAssembly, Result, Error, Opts); },
+      "LLVM ERROR: __spirv_GroupBitwiseAndKHR: the builtin requires the "
+      "following SPIR-V extension: SPV_KHR_uniform_group_instructions");
+}
+#endif
 
 } // end namespace llvm
