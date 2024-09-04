@@ -1073,6 +1073,18 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Simplify operation where predicate has all inactive lanes by replacing
+// instruction with given constant
+static std::optional<Instruction *>
+instCombineSVENoActiveLanesConstant(InstCombiner &IC, IntrinsicInst &II,
+                                    Constant *NewVal) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    IC.replaceInstUsesWith(II, NewVal);
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
 // Erase unary operation where predicate has all inactive lanes
 static std::optional<Instruction *>
 instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
@@ -2131,6 +2143,45 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st4q:
     return instCombineSVENoActiveUnaryErase(IC, II, 4);
+  case Intrinsic::aarch64_sve_andqv:
+  case Intrinsic::aarch64_sve_andv:
+    return instCombineSVENoActiveLanesConstant(
+        IC, II, ConstantInt::getAllOnesValue(II.getType()));
+  case Intrinsic::aarch64_sve_fmaxnmqv:
+  case Intrinsic::aarch64_sve_fmaxnmv:
+  case Intrinsic::aarch64_sve_fminnmqv:
+  case Intrinsic::aarch64_sve_fminnmv:
+    return instCombineSVENoActiveLanesConstant(
+        IC, II, ConstantFP::getNaN(II.getType()));
+  case Intrinsic::aarch64_sve_fmaxqv:
+  case Intrinsic::aarch64_sve_fmaxv:
+    return instCombineSVENoActiveLanesConstant(
+        IC, II, ConstantFP::getInfinity(II.getType(), true));
+  case Intrinsic::aarch64_sve_fminqv:
+  case Intrinsic::aarch64_sve_fminv:
+    return instCombineSVENoActiveLanesConstant(
+        IC, II, ConstantFP::getInfinity(II.getType()));
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_smaxqv: {
+    auto RetTy = II.getType();
+    auto *MinSInt = ConstantInt::get(
+        RetTy, APInt::getSignedMinValue(RetTy->getScalarSizeInBits()));
+    return instCombineSVENoActiveLanesConstant(IC, II, MinSInt);
+  }
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_sminqv: {
+    auto RetTy = II.getType();
+    auto *MaxSInt = ConstantInt::get(
+        RetTy, APInt::getSignedMaxValue(RetTy->getScalarSizeInBits()));
+    return instCombineSVENoActiveLanesConstant(IC, II, MaxSInt);
+  }
+  case Intrinsic::aarch64_sve_uminv:
+  case Intrinsic::aarch64_sve_uminqv: {
+    auto RetTy = II.getType();
+    auto *MaxUInt = ConstantInt::get(
+        RetTy, APInt::getMaxValue(RetTy->getScalarSizeInBits()));
+    return instCombineSVENoActiveLanesConstant(IC, II, MaxUInt);
+  }
   case Intrinsic::aarch64_sve_ld1_gather:
   case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ld1_gather_sxtw:
