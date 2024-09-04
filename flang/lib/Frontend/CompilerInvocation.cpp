@@ -1358,6 +1358,24 @@ bool CompilerInvocation::createFromArgs(
     }
   }
 
+  // Process the timing-related options.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_ftime_report,
+                          clang::driver::options::OPT_ftime_report_EQ)) {
+    invoc.enableTimers = true;
+    if (a->getOption().getID() == clang::driver::options::OPT_ftime_report_EQ) {
+      llvm::StringRef val = a->getValue();
+      if (val == "per-pass") {
+        invoc.timeLLVMPassesPerRun = false;
+      } else if (val == "per-pass-run") {
+        invoc.timeLLVMPassesPerRun = true;
+      } else {
+        diags.Report(clang::diag::err_drv_invalid_value)
+            << a->getAsString(args) << a->getValue();
+      }
+    }
+  }
+
   invoc.setArgv0(argv0);
 
   return success;

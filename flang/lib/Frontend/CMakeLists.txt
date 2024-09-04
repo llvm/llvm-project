@@ -30,6 +30,7 @@ add_flang_library(flangFrontend
   FortranEvaluate
   FortranCommon
   FortranLower
+  FortranSupport
   FIRDialect
   FIRDialectSupport
   FIRSupport
