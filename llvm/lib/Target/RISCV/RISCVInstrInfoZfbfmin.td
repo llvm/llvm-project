@@ -39,6 +39,19 @@ def FCVT_S_BF16 : FPUnaryOp_r_frmlegacy<0b0100000, 0b00110, FPR32, FPR16, "fcvt.
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfbfmin] in {
+def : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), GPR:$rhs, cond,
+                                   (bf16 FPR16:$truev), FPR16:$falsev),
+          (Select_FPR16_Using_CC_GPR GPR:$lhs, GPR:$rhs,
+           (IntCCtoRISCVCC $cc), FPR16:$truev, FPR16:$falsev)>;
+
+// Explicitly select 0 in the condition to X0. The register coalescer doesn't
+// always do it.
+def : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), 0, cond,
+                                   (bf16 FPR16:$truev),
+                                   FPR16:$falsev),
+          (Select_FPR16_Using_CC_GPR GPR:$lhs, (XLenVT X0),
+           (IntCCtoRISCVCC $cc), FPR16:$truev, FPR16:$falsev)>;
+
 /// Loads
 def : LdPat<load, FLH, bf16>;
 
@@ -57,20 +70,6 @@ def : Pat<(bf16 (riscv_fmv_h_x GPR:$src)), (FMV_H_X GPR:$src)>;
 def : Pat<(riscv_fmv_x_anyexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 def : Pat<(riscv_fmv_x_signexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 } // Predicates = [HasStdExtZfbfmin]
-
-let Predicates = [HasStdExtZfbfmin] in {
-// bf16->[u]int. Round-to-zero must be used for the f32->int step, the
-// rounding mode has no effect for bf16->f32.
-def : Pat<(i32 (any_fp_to_sint (bf16 FPR16:$rs1))), (FCVT_W_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
-def : Pat<(i32 (any_fp_to_uint (bf16 FPR16:$rs1))), (FCVT_WU_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
-}
-
-let Predicates = [HasStdExtZfbfmin, IsRV64] in {
-// bf16->[u]int64. Round-to-zero must be used for the f32->int step, the
-// rounding mode has no effect for bf16->f32.
-def : Pat<(i64 (any_fp_to_sint (bf16 FPR16:$rs1))), (FCVT_L_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
-def : Pat<(i64 (any_fp_to_uint (bf16 FPR16:$rs1))), (FCVT_LU_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;
-}
 
 let Predicates = [HasStdExtZfbfmin, HasStdExtD] in {
 // bf16 -> f64
