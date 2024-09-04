@@ -31,22 +31,22 @@ body: |
   bb.1 (landing-pad):
     successors: %bb.2
     ; CHECK: bb.1 (landing-pad):
-    ; CHECK: CATCH
+    ; CHECK: CATCH_P3
     ; CHECK: TRY
-    ; This RETHROW rethrows the exception caught by this BB's CATCH, but after
-    ; CFGStackify a TRY is placed between the CATCH and this RETHROW, so after
-    ; CFGStackify its immediate argument should become not 0, but 1.
+    ; This RETHROW rethrows the exception caught by this BB's CATCH_P3, but
+    ; after CFGStackify a TRY is placed between the CATCH_P3 and this RETHROW,
+    ; so after CFGStackify its immediate argument should become not 0, but 1.
     ; CHECK: RETHROW 1
     EH_LABEL <mcsymbol .Ltmp2>
-    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    %0:i32 = CATCH_P3 &__cpp_exception, implicit-def dead $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.2 (landing-pad):
     ; CHECK: bb.2 (landing-pad):
-    ; CHECK: CATCH
+    ; CHECK: CATCH_P3
     ; CHECK: RETHROW 0
     EH_LABEL <mcsymbol .Ltmp3>
-    %1:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    %1:i32 = CATCH_P3 &__cpp_exception, implicit-def dead $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.3:
@@ -78,13 +78,13 @@ body: |
   ; CHECK:       CALL @foo
   ; CHECK:     DELEGATE
   ; CHECK:     RETURN
-  ; CHECK:   CATCH
+  ; CHECK:   CATCH_P3
   ;; This TRY should have the return type i32 (127)
   ; CHECK:     TRY 127
   ; CHECK:       RETHROW
   ; CHECK:     DELEGATE
   ; CHECK:   END_TRY
-  ; CHECK: CATCH
+  ; CHECK: CATCH_P3
   ; CHECK:   RETHROW
   ; CHECK: END_TRY
   bb.0:
@@ -105,11 +105,11 @@ body: |
 
   bb.3 (landing-pad):
     EH_LABEL <mcsymbol .Ltmp4>
-    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    %0:i32 = CATCH_P3 &__cpp_exception, implicit-def dead $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.4 (landing-pad):
     EH_LABEL <mcsymbol .Ltmp5>
-    %1:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    %1:i32 = CATCH_P3 &__cpp_exception, implicit-def dead $arguments
     RETHROW 0, implicit-def dead $arguments
 ...
