@@ -746,6 +746,7 @@ class LinuxCoreTestCase(TestBase):
             "fa2",
             "fa3",
             "fa4",
+            # fa5 is non-zero and checked in the list above.
             "fa6",
             "fa7",
             "fs0",
