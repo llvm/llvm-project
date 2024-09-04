@@ -277,6 +277,7 @@ def testIfWithoutElse():
 # CHECK:   %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
 # CHECK: return
 
+
 @constructAndPrintInModule
 def testNestedIf():
     bool = IntegerType.get_signless(1)
