@@ -1077,7 +1077,8 @@ private:
 
       if (Ty->isRecordType()) {
         if (const CXXRecordDecl *Class = Ty->getAsCXXRecordDecl()) {
-          if (CXXDestructorDecl *Dtor = Class->getDestructor()) {
+          if (CXXDestructorDecl *Dtor = Class->getDestructor();
+              Dtor && !Dtor->isDeleted()) {
             CallableInfo CI(*Dtor);
             followCall(CI, CallSite);
           }

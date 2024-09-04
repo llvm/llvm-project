@@ -294,6 +294,29 @@ struct DerivedFromUnsafe : public Unsafe {
   ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{destructor with 'nonblocking' attribute must not call non-'nonblocking' destructor 'Unsafe::~Unsafe'}}
 };
 
+// Don't try to follow a deleted destructor, as with std::optional<T>.
+struct HasDtor {
+	~HasDtor() {}
+};
+
+template <typename T>
+struct Optional {
+	union {
+		char __null_state_;
+		T __val_;
+	};
+	bool engaged = false;
+
+	~Optional() {
+		if (engaged)
+			__val_.~T();
+	}
+};
+
+void nb_opt() [[clang::nonblocking]] {
+	Optional<HasDtor> x;
+}
+
 // Virtual inheritance
 struct VBase {
   int *Ptr;
