@@ -172,7 +172,7 @@
 "`LWG3221 <https://wg21.link/LWG3221>`__","Result of ``year_month``\  arithmetic with ``months``\  is ambiguous","2019-11 (Belfast)","|Complete|","8.0",""
 "`LWG3235 <https://wg21.link/LWG3235>`__","``parse``\  manipulator without abbreviation is not callable","2019-11 (Belfast)","","",""
 "`LWG3246 <https://wg21.link/LWG3246>`__","LWG3246: What are the constraints on the template parameter of `basic_format_arg`?","2019-11 (Belfast)","|Nothing To Do|","",""
-"`LWG3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","2019-11 (Belfast)","","",""
+"`LWG3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","2019-11 (Belfast)","|Complete|","20.0",""
 "`LWG3245 <https://wg21.link/LWG3245>`__","Unnecessary restriction on ``'%p'``\  parse specifier","2019-11 (Belfast)","","",""
 "`LWG3244 <https://wg21.link/LWG3244>`__","Constraints for ``Source``\  in |sect|\ [fs.path.req] insufficiently constrainty","2019-11 (Belfast)","","",""
 "`LWG3241 <https://wg21.link/LWG3241>`__","``chrono-spec``\  grammar ambiguity in |sect|\ [time.format]","2019-11 (Belfast)","|Complete|","16.0",""

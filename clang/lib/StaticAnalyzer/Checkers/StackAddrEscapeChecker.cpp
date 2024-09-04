@@ -308,7 +308,10 @@ static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
 const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
   Reg = Reg->getBaseRegion();
   while (const auto *SymReg = dyn_cast<SymbolicRegion>(Reg)) {
-    Reg = SymReg->getSymbol()->getOriginRegion()->getBaseRegion();
+    const auto *OriginReg = SymReg->getSymbol()->getOriginRegion();
+    if (!OriginReg)
+      break;
+    Reg = OriginReg->getBaseRegion();
   }
   return Reg;
 }
@@ -417,6 +420,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
         return true;
       }
       if (isa<StackArgumentsSpaceRegion>(ReferrerMemSpace) &&
+          // Not a simple ptr (int*) but something deeper, e.g. int**
+          isa<SymbolicRegion>(Referrer->getBaseRegion()) &&
           ReferrerStackSpace->getStackFrame() == PoppedFrame && TopFrame) {
         // Output parameter of a top-level function
         V.emplace_back(Referrer, Referred);

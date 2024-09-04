@@ -341,6 +341,10 @@ private:
     return FPO.getRoundingMode();
   }
 
+  uint32_t getFPOptions(const Expr *E) const {
+    return E->getFPFeaturesInEffect(Ctx.getLangOpts()).getAsOpaqueInt();
+  }
+
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
