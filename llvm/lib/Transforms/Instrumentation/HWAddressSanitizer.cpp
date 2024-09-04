@@ -591,12 +591,6 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
-static bool onlyReadsArgMemory(const Function &F) {
-  return F.onlyAccessesArgMemory() && llvm::all_of(F.args(), [](const auto &A) {
-           return A.onlyReadsMemory();
-         });
-}
-
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
@@ -614,16 +608,29 @@ void HWAddressSanitizer::initializeModule() {
     // infer those attributes on libc functions, which is not true if those
     // are instrumented (Android) or intercepted.
 
-    // nobuiltin makes sure later passes don't restore assumptions about
-    // the function.
-    if (F.doesNotAccessMemory() || F.onlyReadsMemory() || onlyReadsArgMemory(F))
-      continue;
-    F.addFnAttr(llvm::Attribute::NoBuiltin);
-    F.removeFnAttr(llvm::Attribute::Memory);
-    // F.setMemoryEffects(F.getMemoryEffects() | MemoryEffects::writeOnly() |
-    // MemoryEffects::readOnly());
-    for (auto &A : F.args())
-      A.removeAttr(llvm::Attribute::WriteOnly);
+    // The API is weird. `onlyReadsMemory` actually means "does not write", and
+    // `onlyWritesMemory` actually means "does not read". So we reconstruct
+    // "accesses memory" && "does not read" <=> "writes".
+    bool Changed = false;
+    if (!F.doesNotAccessMemory()) {
+      bool WritesMemory = !F.onlyReadsMemory();
+      bool ReadsMemory = !F.onlyWritesMemory();
+      if (WritesMemory && !ReadsMemory) {
+        F.removeFnAttr(Attribute::Memory);
+        Changed = true;
+      }
+    }
+    for (Argument &A : F.args()) {
+      if (A.hasAttribute(Attribute::WriteOnly)) {
+        Changed = true;
+        A.removeAttr(Attribute::WriteOnly);
+      }
+    }
+    if (Changed) {
+      // nobuiltin makes sure later passes don't restore assumptions about
+      // the function.
+      F.addFnAttr(Attribute::NoBuiltin);
+    }
   }
 
   // x86_64 currently has two modes:
@@ -1649,14 +1656,6 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   assert(!ShadowBase);
-
-  // Remove memory attributes that are about to become invalid.
-  // HWASan checks read from shadow, which invalidates memory(argmem: *)
-  // Short granule checks on function arguments read from the argument memory
-  // (last byte of the granule), which invalidates writeonly.
-  F.removeFnAttr(llvm::Attribute::Memory);
-  for (auto &A : F.args())
-    A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);

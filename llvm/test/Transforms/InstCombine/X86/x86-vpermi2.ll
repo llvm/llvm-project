@@ -28,8 +28,7 @@ define <2 x i64> @shuffle_vpermv3_v2i64_unary(<2 x i64> %x0) {
 define <2 x i64> @shuffle_vpermv3_v2i64_demandedbits(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %m) {
 ; CHECK-LABEL: define <2 x i64> @shuffle_vpermv3_v2i64_demandedbits(
 ; CHECK-SAME: <2 x i64> [[X0:%.*]], <2 x i64> [[X1:%.*]], <2 x i64> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <2 x i64> [[M]], <i64 0, i64 4>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.x86.avx512.vpermi2var.q.128(<2 x i64> [[X0]], <2 x i64> [[T]], <2 x i64> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.x86.avx512.vpermi2var.q.128(<2 x i64> [[X0]], <2 x i64> [[M]], <2 x i64> [[X1]])
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %t = or <2 x i64> %m, <i64 0, i64 4>
@@ -72,8 +71,7 @@ define <4 x i64> @shuffle_vpermv3_v4i64_unary(<4 x i64> %x0) {
 define <4 x i64> @shuffle_vpermv3_v4i64_demandedbits(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %m) {
 ; CHECK-LABEL: define <4 x i64> @shuffle_vpermv3_v4i64_demandedbits(
 ; CHECK-SAME: <4 x i64> [[X0:%.*]], <4 x i64> [[X1:%.*]], <4 x i64> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <4 x i64> [[M]], <i64 0, i64 8, i64 16, i64 32>
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i64> @llvm.x86.avx512.vpermi2var.q.256(<4 x i64> [[X0]], <4 x i64> [[T]], <4 x i64> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i64> @llvm.x86.avx512.vpermi2var.q.256(<4 x i64> [[X0]], <4 x i64> [[M]], <4 x i64> [[X1]])
 ; CHECK-NEXT:    ret <4 x i64> [[R]]
 ;
   %t = or <4 x i64> %m, <i64 0, i64 8, i64 16, i64 32>
@@ -104,8 +102,7 @@ define <8 x i64> @shuffle_vpermv3_v8i64_unary(<8 x i64> %x0) {
 define <8 x i64> @shuffle_vpermv3_v8i64_demandedbits(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %m) {
 ; CHECK-LABEL: define <8 x i64> @shuffle_vpermv3_v8i64_demandedbits(
 ; CHECK-SAME: <8 x i64> [[X0:%.*]], <8 x i64> [[X1:%.*]], <8 x i64> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <8 x i64> [[M]], <i64 0, i64 16, i64 32, i64 64, i64 256, i64 512, i64 1024, i64 -16>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> [[X0]], <8 x i64> [[T]], <8 x i64> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> [[X0]], <8 x i64> [[M]], <8 x i64> [[X1]])
 ; CHECK-NEXT:    ret <8 x i64> [[R]]
 ;
   %t = or <8 x i64> %m, <i64 0, i64 16, i64 32, i64 64, i64 256, i64 512, i64 1024, i64 -16>
@@ -140,8 +137,7 @@ define <4 x i32> @shuffle_vpermv3_v4i32_unary(<4 x i32> %x0) {
 define <4 x i32> @shuffle_vpermv3_v4i32_demandedbits(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %m) {
 ; CHECK-LABEL: define <4 x i32> @shuffle_vpermv3_v4i32_demandedbits(
 ; CHECK-SAME: <4 x i32> [[X0:%.*]], <4 x i32> [[X1:%.*]], <4 x i32> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <4 x i32> [[M]], <i32 0, i32 8, i32 16, i32 32>
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.x86.avx512.vpermi2var.d.128(<4 x i32> [[X0]], <4 x i32> [[T]], <4 x i32> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.x86.avx512.vpermi2var.d.128(<4 x i32> [[X0]], <4 x i32> [[M]], <4 x i32> [[X1]])
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %t = or <4 x i32> %m, <i32 0, i32 8, i32 16, i32 32>
@@ -172,8 +168,7 @@ define <8 x i32> @shuffle_vpermv3_v8i32_unary(<8 x i32> %x0) {
 define <8 x i32> @shuffle_vpermv3_v8i32_demandedbits(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %m) {
 ; CHECK-LABEL: define <8 x i32> @shuffle_vpermv3_v8i32_demandedbits(
 ; CHECK-SAME: <8 x i32> [[X0:%.*]], <8 x i32> [[X1:%.*]], <8 x i32> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <8 x i32> [[M]], <i32 0, i32 16, i32 32, i32 64, i32 256, i32 512, i32 -16, i32 -32>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.x86.avx512.vpermi2var.d.256(<8 x i32> [[X0]], <8 x i32> [[T]], <8 x i32> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.x86.avx512.vpermi2var.d.256(<8 x i32> [[X0]], <8 x i32> [[M]], <8 x i32> [[X1]])
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %t = or <8 x i32> %m, <i32 0, i32 16, i32 32, i32 64, i32 256, i32 512, i32 -16, i32 -32>
@@ -204,8 +199,7 @@ define <16 x i32> @shuffle_vpermv3_v16i32_unary(<16 x i32> %x0) {
 define <16 x i32> @shuffle_vpermv3_v16i32_demandedbits(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %m) {
 ; CHECK-LABEL: define <16 x i32> @shuffle_vpermv3_v16i32_demandedbits(
 ; CHECK-SAME: <16 x i32> [[X0:%.*]], <16 x i32> [[X1:%.*]], <16 x i32> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <16 x i32> [[M]], <i32 0, i32 32, i32 64, i32 256, i32 512, i32 1024, i32 2048, i32 4096, i32 8192, i32 -32, i32 -64, i32 -128, i32 -256, i32 -512, i32 -1024, i32 -2048>
-; CHECK-NEXT:    [[R:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X0]], <16 x i32> [[T]], <16 x i32> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X0]], <16 x i32> [[M]], <16 x i32> [[X1]])
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %t = or <16 x i32> %m, <i32 0, i32 32, i32 64, i32 256, i32 512, i32 1024, i32 2048, i32 4096, i32 8192, i32 -32, i32 -64, i32 -128, i32 -256, i32 -512, i32 -1024, i32 -2048>
@@ -240,8 +234,7 @@ define <8 x i16> @shuffle_vpermv3_v8i16_unary(<8 x i16> %x0) {
 define <8 x i16> @shuffle_vpermv3_v8i16_demandedbits(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %m) {
 ; CHECK-LABEL: define <8 x i16> @shuffle_vpermv3_v8i16_demandedbits(
 ; CHECK-SAME: <8 x i16> [[X0:%.*]], <8 x i16> [[X1:%.*]], <8 x i16> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <8 x i16> [[M]], <i16 0, i16 16, i16 32, i16 64, i16 256, i16 512, i16 -16, i16 -32>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.avx512.vpermi2var.hi.128(<8 x i16> [[X0]], <8 x i16> [[T]], <8 x i16> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.avx512.vpermi2var.hi.128(<8 x i16> [[X0]], <8 x i16> [[M]], <8 x i16> [[X1]])
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %t = or <8 x i16> %m, <i16 0, i16 16, i16 32, i16 64, i16 256, i16 512, i16 -16, i16 -32>
@@ -272,8 +265,7 @@ define <16 x i16> @shuffle_vpermv3_v16i16_unary(<16 x i16> %x0) {
 define <16 x i16> @shuffle_vpermv3_v16i16_demandedbits(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %m) {
 ; CHECK-LABEL: define <16 x i16> @shuffle_vpermv3_v16i16_demandedbits(
 ; CHECK-SAME: <16 x i16> [[X0:%.*]], <16 x i16> [[X1:%.*]], <16 x i16> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <16 x i16> [[M]], <i16 0, i16 32, i16 64, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 -32, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096>
-; CHECK-NEXT:    [[R:%.*]] = call <16 x i16> @llvm.x86.avx512.vpermi2var.hi.256(<16 x i16> [[X0]], <16 x i16> [[T]], <16 x i16> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <16 x i16> @llvm.x86.avx512.vpermi2var.hi.256(<16 x i16> [[X0]], <16 x i16> [[M]], <16 x i16> [[X1]])
 ; CHECK-NEXT:    ret <16 x i16> [[R]]
 ;
   %t = or <16 x i16> %m, <i16 0, i16 32, i16 64, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 -32, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096>
@@ -304,8 +296,7 @@ define <32 x i16> @shuffle_vpermv3_v32i16_unary(<32 x i16> %x0) {
 define <32 x i16> @shuffle_vpermv3_v32i16_demandedbits(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %m) {
 ; CHECK-LABEL: define <32 x i16> @shuffle_vpermv3_v32i16_demandedbits(
 ; CHECK-SAME: <32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]], <32 x i16> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <32 x i16> [[M]], <i16 0, i16 64, i16 128, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 0, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096, i16 0, i16 64, i16 128, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 0, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096>
-; CHECK-NEXT:    [[R:%.*]] = call <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> [[X0]], <32 x i16> [[T]], <32 x i16> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> [[X0]], <32 x i16> [[M]], <32 x i16> [[X1]])
 ; CHECK-NEXT:    ret <32 x i16> [[R]]
 ;
   %t = or <32 x i16> %m, <i16 0, i16 64, i16 128, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 0, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096, i16 0, i16 64, i16 128, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 0, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096>
@@ -340,8 +331,7 @@ define <16 x i8> @shuffle_vpermv3_v16i8_unary(<16 x i8> %x0) {
 define <16 x i8> @shuffle_vpermv3_v16i8_demandedbits(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %m) {
 ; CHECK-LABEL: define <16 x i8> @shuffle_vpermv3_v16i8_demandedbits(
 ; CHECK-SAME: <16 x i8> [[X0:%.*]], <16 x i8> [[X1:%.*]], <16 x i8> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <16 x i8> [[M]], <i8 0, i8 32, i8 64, i8 -128, i8 0, i8 -32, i8 -64, i8 -128, i8 0, i8 32, i8 64, i8 -128, i8 0, i8 -32, i8 -64, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <16 x i8> @llvm.x86.avx512.vpermi2var.qi.128(<16 x i8> [[X0]], <16 x i8> [[T]], <16 x i8> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <16 x i8> @llvm.x86.avx512.vpermi2var.qi.128(<16 x i8> [[X0]], <16 x i8> [[M]], <16 x i8> [[X1]])
 ; CHECK-NEXT:    ret <16 x i8> [[R]]
 ;
   %t = or <16 x i8> %m, <i8 0, i8 32, i8 64, i8 128, i8 0, i8 -32, i8 -64, i8 -128, i8 0, i8 32, i8 64, i8 128, i8 0, i8 -32, i8 -64, i8 -128>
@@ -372,8 +362,7 @@ define <32 x i8> @shuffle_vpermv3_v32i8_unary(<32 x i8> %x0) {
 define <32 x i8> @shuffle_vpermv3_v32i8_demandedbits(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %m) {
 ; CHECK-LABEL: define <32 x i8> @shuffle_vpermv3_v32i8_demandedbits(
 ; CHECK-SAME: <32 x i8> [[X0:%.*]], <32 x i8> [[X1:%.*]], <32 x i8> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <32 x i8> [[M]], <i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <32 x i8> @llvm.x86.avx512.vpermi2var.qi.256(<32 x i8> [[X0]], <32 x i8> [[T]], <32 x i8> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <32 x i8> @llvm.x86.avx512.vpermi2var.qi.256(<32 x i8> [[X0]], <32 x i8> [[M]], <32 x i8> [[X1]])
 ; CHECK-NEXT:    ret <32 x i8> [[R]]
 ;
   %t = or <32 x i8> %m, <i8 0, i8 0, i8 64, i8 128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 128, i8 0, i8 0, i8 -64, i8 -128>
@@ -404,8 +393,7 @@ define <64 x i8> @shuffle_vpermv3_v64i8_unary(<64 x i8> %x0) {
 define <64 x i8> @shuffle_vpermv3_v64i8_demandedbits(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %m) {
 ; CHECK-LABEL: define <64 x i8> @shuffle_vpermv3_v64i8_demandedbits(
 ; CHECK-SAME: <64 x i8> [[X0:%.*]], <64 x i8> [[X1:%.*]], <64 x i8> [[M:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = or <64 x i8> [[M]], <i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8> [[X0]], <64 x i8> [[T]], <64 x i8> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = call <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8> [[X0]], <64 x i8> [[M]], <64 x i8> [[X1]])
 ; CHECK-NEXT:    ret <64 x i8> [[R]]
 ;
   %t = or <64 x i8> %m, <i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128, i8 0, i8 128, i8 0, i8 -128>

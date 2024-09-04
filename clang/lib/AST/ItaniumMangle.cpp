@@ -3518,6 +3518,12 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
   case ParameterABI::Ordinary:
     break;
 
+  // HLSL parameter mangling.
+  case ParameterABI::HLSLOut:
+  case ParameterABI::HLSLInOut:
+    mangleVendorQualifier(getParameterABISpelling(PI.getABI()));
+    break;
+
   // All of these start with "swift", so they come before "ns_consumed".
   case ParameterABI::SwiftContext:
   case ParameterABI::SwiftAsyncContext:
@@ -5730,6 +5736,9 @@ recurse:
     Out << "E";
     break;
   }
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable(
+        "cannot mangle hlsl temporary value; mangling wrong thing?");
   }
 
   if (AsTemplateArg && !IsPrimaryExpr)

@@ -333,8 +333,8 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
+// Transform (VMERGE_VVM_<LMUL> pt, false, true, allones, vl, sew) to
+// (VMV_V_V_<LMUL> pt, true, vl, sew). It may decrease uses of VMSET.
 bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
@@ -353,21 +353,12 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
     CASE_VMERGE_TO_VMV(M8)
   }
 
-  Register PassthruReg = MI.getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
-  // Check passthru == false (or passthru == undef)
-  if (PassthruReg != RISCV::NoRegister &&
-      TRI->lookThruCopyLike(PassthruReg, MRI) !=
-          TRI->lookThruCopyLike(FalseReg, MRI))
-    return false;
-
   assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
   if (!isAllOnesMask(V0Defs.lookup(&MI)))
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.removeOperand(1);  // Passthru operand
-  MI.tieOperands(0, 1); // Tie false to dest
+  MI.removeOperand(2);  // False operand
   MI.removeOperand(3);  // Mask operand
   MI.addOperand(
       MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
@@ -375,7 +366,8 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
   // register class for the destination and passthru operands e.g. VRNoV0 -> VR
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
-  MRI->recomputeRegClass(MI.getOperand(1).getReg());
+  if (MI.getOperand(1).getReg() != RISCV::NoRegister)
+    MRI->recomputeRegClass(MI.getOperand(1).getReg());
   return true;
 }
 
