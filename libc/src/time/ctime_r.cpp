@@ -1,4 +1,4 @@
-//===-- Implementation of ctime function ----------------------------------===//
+//===-- Implementation of ctime_r function --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/ctime.h"
+#include "src/time/ctime_r.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
@@ -15,9 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-LLVM_LIBC_FUNCTION(char *, ctime, (const time_t *t)) {
-  static char buffer[TimeConstants::CTIME_BUFFER_SIZE];
-  return time_utils::ctime(&t, buffer, TimeConstants::CTIME_MAX_BYTES);
+LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t, char *buffer)) {
+  return time_utils::ctime(t, buffer, TimeConstants::CTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
