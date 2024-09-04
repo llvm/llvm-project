@@ -1478,7 +1478,7 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
       auto MBBb = MBB.getFirstNonPHI();
 
       // Avoids attempting to dereference a sentintel which fails an assert
-      if (MBBb == MBB.instr_end())
+      if (MBBb == MBB.end())
         continue;
 
       MachineInstr *MIb = &*MBBb;
@@ -4435,3 +4435,4 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   }
   report_fatal_error(Twine(msg));
 }
+
