@@ -219,70 +219,67 @@ public:
     bool IsEnd;
   };
 
-class ExceptionStreamsIterator {
+  class ExceptionStreamsIterator {
   public:
-
-    static ExceptionStreamsIterator begin(ArrayRef<minidump::Directory> Streams, const MinidumpFile *File) {
+    static ExceptionStreamsIterator begin(ArrayRef<minidump::Directory> Streams,
+                                          const MinidumpFile *File) {
       return ExceptionStreamsIterator(Streams, File);
     }
 
-    static ExceptionStreamsIterator end() {
-      return ExceptionStreamsIterator();
-    }
+    static ExceptionStreamsIterator end() { return ExceptionStreamsIterator(); }
 
     bool operator==(const ExceptionStreamsIterator &R) const {
       return Streams.empty() && R.Streams.empty();
     }
 
-    bool operator!=(const ExceptionStreamsIterator &R) const { return !(*this == R); }
+    bool operator!=(const ExceptionStreamsIterator &R) const {
+      return !(*this == R);
+    }
 
-    Expected<const minidump::ExceptionStream &>
-    operator*() {
+    Expected<const minidump::ExceptionStream &> operator*() {
       return ReadCurrent();
     }
 
-    Expected<const minidump::ExceptionStream &>
-    operator->() {
+    Expected<const minidump::ExceptionStream &> operator->() {
       return ReadCurrent();
     }
 
-    ExceptionStreamsIterator &
-    operator++ () {
+    ExceptionStreamsIterator &operator++() {
       if (!Streams.empty())
         Streams = Streams.drop_front();
-
 
       return *this;
     }
 
   private:
-    ExceptionStreamsIterator(ArrayRef<minidump::Directory> Streams, const MinidumpFile *File)
-      : Streams(Streams), File(File) {}
+    ExceptionStreamsIterator(ArrayRef<minidump::Directory> Streams,
+                             const MinidumpFile *File)
+        : Streams(Streams), File(File) {}
 
-    ExceptionStreamsIterator() : Streams(ArrayRef<minidump::Directory>()), File(nullptr) {}
+    ExceptionStreamsIterator()
+        : Streams(ArrayRef<minidump::Directory>()), File(nullptr) {}
 
     ArrayRef<minidump::Directory> Streams;
     const MinidumpFile *File;
 
-    Expected<const minidump::ExceptionStream&> ReadCurrent() {
+    Expected<const minidump::ExceptionStream &> ReadCurrent() {
       assert(!Streams.empty());
       Expected<const minidump::ExceptionStream &> ExceptionStream =
           File->getExceptionStream(Streams.front());
       if (!ExceptionStream)
         return ExceptionStream.takeError();
-      
+
       return ExceptionStream;
     }
   };
 
   using FallibleMemory64Iterator = llvm::fallible_iterator<Memory64Iterator>;
 
-  /// Returns an iterator that reads each exception stream independently. The 
-  /// contents of the exception strema are not validated before being read, an 
+  /// Returns an iterator that reads each exception stream independently. The
+  /// contents of the exception strema are not validated before being read, an
   /// error will be returned if the stream is not large enough to contain an
   /// exception stream, or if the stream points beyond the end of the file.
-  iterator_range<ExceptionStreamsIterator>
-  getExceptionStreams() const;
+  iterator_range<ExceptionStreamsIterator> getExceptionStreams() const;
 
   /// Returns an iterator that pairs each descriptor with it's respective
   /// content from the Memory64List stream. An error is returned if the file
@@ -325,7 +322,8 @@ private:
                DenseMap<minidump::StreamType, std::size_t> StreamMap,
                std::vector<minidump::Directory> ExceptionStreams)
       : Binary(ID_Minidump, Source), Header(Header), Streams(Streams),
-        StreamMap(std::move(StreamMap)), ExceptionStreams(std::move(ExceptionStreams)) {}
+        StreamMap(std::move(StreamMap)),
+        ExceptionStreams(std::move(ExceptionStreams)) {}
 
   ArrayRef<uint8_t> getData() const {
     return arrayRefFromStringRef(Data.getBuffer());

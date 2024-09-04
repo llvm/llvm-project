@@ -166,8 +166,8 @@ MinidumpFile::create(MemoryBufferRef Source) {
       return createError("Duplicate stream type");
   }
 
-  return std::unique_ptr<MinidumpFile>(
-      new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap), ExceptionStreams));
+  return std::unique_ptr<MinidumpFile>(new MinidumpFile(
+      Source, Hdr, *ExpectedStreams, std::move(StreamMap), ExceptionStreams));
 }
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
