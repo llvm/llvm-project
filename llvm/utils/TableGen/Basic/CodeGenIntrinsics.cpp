@@ -25,20 +25,20 @@ using namespace llvm;
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
 
-CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
-  std::vector<Record *> IntrProperties =
-      RC.getAllDerivedDefinitions("IntrinsicProperty");
-
-  std::vector<const Record *> DefaultProperties;
-  for (const Record *Rec : IntrProperties)
+CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
+  for (const Record *Rec : RC.getAllDerivedDefinitions("IntrinsicProperty"))
     if (Rec->getValueAsBit("IsDefault"))
       DefaultProperties.push_back(Rec);
+}
+
+CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
+  CodeGenIntrinsicContext Ctx(RC);
 
   std::vector<Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
   Intrinsics.reserve(Defs.size());
 
   for (const Record *Def : Defs)
-    Intrinsics.push_back(CodeGenIntrinsic(Def, DefaultProperties));
+    Intrinsics.push_back(CodeGenIntrinsic(Def, Ctx));
 
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
@@ -54,8 +54,18 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
 }
 
+CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
+  if (!Record->isSubClassOf("Intrinsic"))
+    PrintFatalError("Intrinsic defs should be subclass of 'Intrinsic' class");
+
+  auto [Iter, Inserted] = Map.try_emplace(Record);
+  if (Inserted)
+    Iter->second = std::make_unique<CodeGenIntrinsic>(Record, Ctx);
+  return *Iter->second;
+}
+
 CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
-                                   ArrayRef<const Record *> DefaultProperties)
+                                   const CodeGenIntrinsicContext &Ctx)
     : TheDef(R) {
   StringRef DefName = TheDef->getName();
   ArrayRef<SMLoc> DefLoc = R->getLoc();
@@ -119,7 +129,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   }
 
   // Set default properties to true.
-  setDefaultProperties(DefaultProperties);
+  setDefaultProperties(Ctx.DefaultProperties);
 
   // Also record the SDPatternOperator Properties.
   Properties = parseSDPatternOperatorProperties(R);
