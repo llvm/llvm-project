@@ -129,10 +129,8 @@ struct BuiltinTypeDeclBuilder {
         IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr};
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
-    if (SemaHLSL::CreateHLSLAttributedResourceType(S, Ty, Attrs,
-                                                   AttributedResTy)) {
+    if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
       addMemberVariable("h", AttributedResTy, {ResourceAttr}, Access);
-    }
     return *this;
   }
 

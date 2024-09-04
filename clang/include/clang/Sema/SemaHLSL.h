@@ -28,6 +28,12 @@ class IdentifierInfo;
 class ParsedAttr;
 class Scope;
 
+// FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
+// longer need to create builtin buffer types in HLSLExternalSemaSource.
+bool CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
+                                      llvm::SmallVector<const Attr *> &AttrList,
+                                      QualType &ResType);
+
 class SemaHLSL : public SemaBase {
 public:
   SemaHLSL(Sema &S);
@@ -77,13 +83,6 @@ public:
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
-
-  // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
-  // longer need to create builtin buffer types in HLSLExternalSemaSource.
-  static bool
-  CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
-                                   llvm::SmallVector<const Attr *> &AttrList,
-                                   QualType &ResType);
 
 private:
   // HLSL resource type attributes need to be processed all at once.

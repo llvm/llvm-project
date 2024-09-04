@@ -16,17 +16,17 @@ void f() {
 }
 
 // CHECK: ClassTemplateDecl 0x{{[0-9a-f]+}} <line:23:1, line:25:1> line:23:29 MyBuffer2
-// CHECK: TemplateTypeParmDecl 0x{{[0-9a-f]+}} <col:10, col:19> col:19 referenced typename depth 0 index 0 T
+// CHECK: TemplateTypeParmDecl 0x{{[0-9a-f]+}} <col:10, col:19> col:19 typename depth 0 index 0 T
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, line:25:1> line:23:29 struct MyBuffer2 definition
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, col:29> col:29 implicit struct MyBuffer2
-// CHECK: FieldDecl 0x{{[0-9a-f]+}} <line:24:3, col:35> col:35 h 'T {{\[\[}}hlsl::resource_class(UAV)]]':'T'
+// CHECK: FieldDecl 0x{{[0-9a-f]+}} <line:24:3, col:51> col:51 h '__hlsl_resource_t {{\[\[}}hlsl::resource_class(UAV)]]':'__hlsl_resource_t'
 template<typename T> struct MyBuffer2 {
-  T [[hlsl::resource_class(UAV)]] h;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] h;
 };
 
 // CHECK: ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <line:23:1, line:25:1> line:23:29 struct MyBuffer2 definition implicit_instantiation
 // CHECK: TemplateArgument type 'float'
 // CHECK: BuiltinType 0x{{[0-9a-f]+}} 'float'
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, col:29> col:29 implicit struct MyBuffer2
-// CHECK: FieldDecl 0x{{[0-9a-f]+}} <line:24:3, col:35> col:35 h 'float {{\[\[}}hlsl::resource_class(UAV)]]':'float'
+// CHECK: FieldDecl 0x{{[0-9a-f]+}} <line:24:3, col:51> col:51 h '__hlsl_resource_t {{\[\[}}hlsl::resource_class(UAV)]]':'__hlsl_resource_t'
 MyBuffer2<float> myBuffer2;

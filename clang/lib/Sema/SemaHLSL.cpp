@@ -562,7 +562,7 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-bool SemaHLSL::CreateHLSLAttributedResourceType(
+bool clang::CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, llvm::SmallVector<const Attr *> &AttrList,
     QualType &ResType) {
   assert(AttrList.size() && "expected list of resource attributes");
@@ -673,7 +673,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
   auto I = LocsForHLSLAttributedResources.find(RT);
   if (I != LocsForHLSLAttributedResources.end()) {
     SourceLocation Loc = I->second;
-    LocsForHLSLAttributedResources.erase(RT);
+    LocsForHLSLAttributedResources.erase(I);
     return Loc;
   }
   return SourceLocation();

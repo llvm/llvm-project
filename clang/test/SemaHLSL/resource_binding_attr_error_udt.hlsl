@@ -2,23 +2,23 @@
 
 template<typename T>
 struct MyTemplatedUAV {
-  T [[hlsl::resource_class(UAV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
 };
 
 struct MySRV {
-  int [[hlsl::resource_class(SRV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
 };
 
 struct MySampler {
-  int [[hlsl::resource_class(Sampler)]] x;
+  __hlsl_resource_t [[hlsl::resource_class(Sampler)]] x;
 };
 
 struct MyUAV {
-  int [[hlsl::resource_class(UAV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
 };
 
 struct MyCBuffer {
-  int [[hlsl::resource_class(CBuffer)]] x;
+  __hlsl_resource_t [[hlsl::resource_class(CBuffer)]] x;
 };
 
 // Valid: f is skipped, SRVBuf is bound to t0, UAVBuf is bound to u0
