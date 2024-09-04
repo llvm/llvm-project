@@ -56,6 +56,7 @@ def ext_no_newline_eof : Extension<"no newline at end of file">,
   InGroup<NewlineEOF>;
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
+def note_backslash_newline_eof : Note<"last newline deleted by splice here">;
 
 def warn_cxx98_compat_no_newline_eof : Warning<
   "C++98 requires newline at end of file">,

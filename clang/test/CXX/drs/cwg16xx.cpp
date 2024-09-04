@@ -536,3 +536,12 @@ namespace cwg1696 { // cwg1696: 7
   };
 #endif
 }
+
+// cwg1698: 2.7
+// This file intentionally does not end in a newline
+// to facilitate the CWG1698 test
+
+// cxx98-error@+3 {{no newline at end of file}}
+// expected-error@+2 {{expected unqualified-id}}
+
+\

@@ -3165,7 +3165,17 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
 
   // C99 5.1.1.2p2: If the file is non-empty and didn't end in a newline, issue
   // a pedwarn.
-  if (CurPtr != BufferStart && (CurPtr[-1] != '\n' && CurPtr[-1] != '\r')) {
+  if (CurPtr != BufferStart) {
+    StringRef LastNewline;
+    if (CurPtr[-1] == '\r' || CurPtr[-1] == '\n') {
+      LastNewline = StringRef(CurPtr - 1, 1);
+      if (CurPtr - 1 != BufferStart && CurPtr[-2] != CurPtr[-1] &&
+          (CurPtr[-2] == '\r' || CurPtr[-2] == '\n')) {
+        // \r\n or \n\r is one newline
+        LastNewline = StringRef(CurPtr - 2, 2);
+      }
+    }
+
     DiagnosticsEngine &Diags = PP->getDiagnostics();
     SourceLocation EndLoc = getSourceLocation(BufferEnd);
     unsigned DiagID;
@@ -3183,8 +3193,34 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
       DiagID = diag::ext_no_newline_eof;
     }
 
-    Diag(BufferEnd, DiagID)
-      << FixItHint::CreateInsertion(EndLoc, "\n");
+    if (LastNewline.empty()) {
+      Diag(BufferEnd, DiagID) << FixItHint::CreateInsertion(EndLoc, "\n");
+    } else {
+      // While the file physically ends in a newline, the previous
+      // line might have ended in a splice, so it would be deleted
+      StringRef WithoutLastNewline =
+          StringRef(BufferStart, LastNewline.data() - BufferStart);
+      while (!WithoutLastNewline.empty()) {
+        if (isHorizontalWhitespace(WithoutLastNewline.back())) {
+          WithoutLastNewline = WithoutLastNewline.drop_back();
+        } else {
+          break;
+        }
+      }
+
+      if (WithoutLastNewline.ends_with('\\') ||
+          (LangOpts.Trigraphs && WithoutLastNewline.ends_with("?\?/"))) {
+        PP->Diag(getSourceLocation(LastNewline.data(), LastNewline.size()),
+                 DiagID);
+        std::size_t SpliceSize = WithoutLastNewline.back() == '\\' ? 1 : 3;
+        SourceLocation LastSpliceLocation =
+            getSourceLocation(WithoutLastNewline.data() +
+                                  (WithoutLastNewline.size() - SpliceSize),
+                              SpliceSize);
+        PP->Diag(LastSpliceLocation, diag::note_backslash_newline_eof)
+            << FixItHint::CreateRemoval(LastSpliceLocation);
+      }
+    }
   }
 
   BufferPtr = CurPtr;
