@@ -731,12 +731,16 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Subtlety: When an identifier is split across three or more continuation
       // lines (or two continuation lines, immediately preceded or followed
       // by '&' free form continuation line markers, its parts are kept as
-      // distinct pp-tokens so that macro operates on them independently.
-      // This trick accommodates the historic practice of using line
-      // continuation for token pasting after replacement.
+      // distinct pp-tokens so that macro replacement operates on them
+      // independently.  This trick accommodates the historic practice of
+      // using line continuation for token pasting after replacement.
     } else if (parts == 2) {
+      if (afterLast && afterLast < limit_) {
+        afterLast = SkipWhiteSpace(afterLast);
+      }
       if ((start > start_ && start[-1] == '&') ||
-          (afterLast < limit_ && (*afterLast == '&' || *afterLast == '\n'))) {
+          (afterLast && afterLast < limit_ &&
+              (*afterLast == '&' || *afterLast == '\n'))) {
         // call &                call foo&        call foo&
         //   &MACRO&      OR       &MACRO&   OR     &MACRO
         //   &foo(...)             &(...)
