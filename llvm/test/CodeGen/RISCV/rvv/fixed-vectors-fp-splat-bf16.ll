@@ -7,11 +7,9 @@
 define <8 x bfloat> @splat_v8bf16(ptr %x, bfloat %y) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_v8bf16:
 ; ZFBFMIN-ZVFBFMIN:       # %bb.0:
-; ZFBFMIN-ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; ZFBFMIN-ZVFBFMIN-NEXT:    vfmv.v.f v10, fa5
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZFBFMIN-ZVFBFMIN-NEXT:    vfncvtbf16.f.f.w v8, v10
+; ZFBFMIN-ZVFBFMIN-NEXT:    fmv.x.h a0, fa0
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZFBFMIN-ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: splat_v8bf16:
@@ -28,11 +26,9 @@ define <8 x bfloat> @splat_v8bf16(ptr %x, bfloat %y) {
 define <16 x bfloat> @splat_16bf16(ptr %x, bfloat %y) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_16bf16:
 ; ZFBFMIN-ZVFBFMIN:       # %bb.0:
-; ZFBFMIN-ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZFBFMIN-ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZFBFMIN-ZVFBFMIN-NEXT:    vfncvtbf16.f.f.w v8, v12
+; ZFBFMIN-ZVFBFMIN-NEXT:    fmv.x.h a0, fa0
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZFBFMIN-ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFMIN-LABEL: splat_16bf16:
@@ -46,10 +42,31 @@ define <16 x bfloat> @splat_16bf16(ptr %x, bfloat %y) {
   ret <16 x bfloat> %b
 }
 
+define <64 x bfloat> @splat_64bf16(ptr %x, bfloat %y) {
+; ZFBFMIN-ZVFBFMIN-LABEL: splat_64bf16:
+; ZFBFMIN-ZVFBFMIN:       # %bb.0:
+; ZFBFMIN-ZVFBFMIN-NEXT:    fmv.x.h a0, fa0
+; ZFBFMIN-ZVFBFMIN-NEXT:    li a1, 64
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.x v8, a0
+; ZFBFMIN-ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFMIN-LABEL: splat_64bf16:
+; ZVFBFMIN:       # %bb.0:
+; ZVFBFMIN-NEXT:    fmv.x.w a0, fa0
+; ZVFBFMIN-NEXT:    li a1, 64
+; ZVFBFMIN-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; ZVFBFMIN-NEXT:    vmv.v.x v8, a0
+; ZVFBFMIN-NEXT:    ret
+  %a = insertelement <64 x bfloat> poison, bfloat %y, i32 0
+  %b = shufflevector <64 x bfloat> %a, <64 x bfloat> poison, <64 x i32> zeroinitializer
+  ret <64 x bfloat> %b
+}
+
 define <8 x bfloat> @splat_zero_v8bf16(ptr %x) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_zero_v8bf16:
 ; ZFBFMIN-ZVFBFMIN:       # %bb.0:
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.i v8, 0
 ; ZFBFMIN-ZVFBFMIN-NEXT:    ret
 ;
@@ -64,7 +81,7 @@ define <8 x bfloat> @splat_zero_v8bf16(ptr %x) {
 define <16 x bfloat> @splat_zero_16bf16(ptr %x) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_zero_16bf16:
 ; ZFBFMIN-ZVFBFMIN:       # %bb.0:
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.i v8, 0
 ; ZFBFMIN-ZVFBFMIN-NEXT:    ret
 ;
@@ -80,7 +97,7 @@ define <8 x bfloat> @splat_negzero_v8bf16(ptr %x) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_negzero_v8bf16:
 ; ZFBFMIN-ZVFBFMIN:       # %bb.0:
 ; ZFBFMIN-ZVFBFMIN-NEXT:    lui a0, 1048568
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZFBFMIN-ZVFBFMIN-NEXT:    ret
 ;
@@ -97,7 +114,7 @@ define <16 x bfloat> @splat_negzero_16bf16(ptr %x) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_negzero_16bf16:
 ; ZFBFMIN-ZVFBFMIN:       # %bb.0:
 ; ZFBFMIN-ZVFBFMIN-NEXT:    lui a0, 1048568
-; ZFBFMIN-ZVFBFMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZFBFMIN-ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZFBFMIN-ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZFBFMIN-ZVFBFMIN-NEXT:    ret
 ;

@@ -1172,9 +1172,9 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
 }
 
-Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                        const RecurrenceDescriptor &Desc,
-                                        PHINode *OrigPhi) {
+Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
+                                  const RecurrenceDescriptor &Desc,
+                                  PHINode *OrigPhi) {
   assert(
       RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
       "Unexpected reduction kind");
@@ -1207,8 +1207,8 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
-Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                         RecurKind RdxKind) {
+Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
+                                   RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   auto getIdentity = [&]() {
     Intrinsic::ID ID = getReductionIntrinsicID(RdxKind);
@@ -1241,8 +1241,8 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
-Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
-                                         const RecurrenceDescriptor &Desc) {
+Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
+                                   const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          "AnyOf reduction is not supported.");
@@ -1252,12 +1252,12 @@ Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
   Value *Iden =
       Desc.getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
-  return VBuilder.createSimpleTargetReduction(Id, SrcTy, Ops);
+  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
-Value *llvm::createTargetReduction(IRBuilderBase &B,
-                                   const RecurrenceDescriptor &Desc, Value *Src,
-                                   PHINode *OrigPhi) {
+Value *llvm::createReduction(IRBuilderBase &B,
+                             const RecurrenceDescriptor &Desc, Value *Src,
+                             PHINode *OrigPhi) {
   // TODO: Support in-order reductions based on the recurrence descriptor.
   // All ops in the reduction inherit fast-math-flags from the recurrence
   // descriptor.
@@ -1266,9 +1266,9 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
 
   RecurKind RK = Desc.getRecurrenceKind();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfTargetReduction(B, Src, Desc, OrigPhi);
+    return createAnyOfReduction(B, Src, Desc, OrigPhi);
 
-  return createSimpleTargetReduction(B, Src, RK);
+  return createSimpleReduction(B, Src, RK);
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
@@ -1295,7 +1295,7 @@ Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Value *Ops[] = {Start, Src};
-  return VBuilder.createSimpleTargetReduction(Id, SrcTy, Ops);
+  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
