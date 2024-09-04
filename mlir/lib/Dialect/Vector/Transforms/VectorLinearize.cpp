@@ -337,6 +337,10 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
+    if (!dstTy)
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "expected n-D vector type.");
+
     if (extractOp.getVector().getType().isScalable() ||
         cast<VectorType>(dstTy).isScalable())
       return rewriter.notifyMatchFailure(extractOp,

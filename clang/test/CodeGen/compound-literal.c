@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fexperimental-new-constant-interpreter -emit-llvm %s -o - | FileCheck %s
 
 // Capture the type and name so matching later is cleaner.
 struct CompoundTy { int a; };

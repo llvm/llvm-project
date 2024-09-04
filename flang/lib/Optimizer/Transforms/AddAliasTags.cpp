@@ -103,8 +103,8 @@ void PassState::processFunctionScopes(mlir::func::FuncOp func) {
   if (scopeNames.contains(func))
     return;
 
-  auto &scopeMap = scopeNames.getOrInsertDefault(func);
-  auto &scopeOps = sortedScopeOperations.getOrInsertDefault(func);
+  auto &scopeMap = scopeNames[func];
+  auto &scopeOps = sortedScopeOperations[func];
   func.walk([&](fir::DummyScopeOp op) { scopeOps.push_back(op); });
   llvm::stable_sort(scopeOps, [&](const fir::DummyScopeOp &op1,
                                   const fir::DummyScopeOp &op2) {

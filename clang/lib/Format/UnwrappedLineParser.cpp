@@ -2326,7 +2326,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
+      FormatTok->setFinalizedType(TT_LambdaArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2682,6 +2682,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
       break;
     }
     case tok::at:
+    case tok::colon:
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         nextToken();
@@ -4029,6 +4030,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       break;
     case tok::coloncolon:
+    case tok::hashhash:
       break;
     default:
       if (!JSPastExtendsOrImplements && !ClassName &&

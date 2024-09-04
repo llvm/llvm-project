@@ -878,6 +878,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     // value with the others blended into it.
 
     unsigned StartIndex = 0;
+    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+      // If a value's mask is used only by the blend then is can be deadcoded.
+      // TODO: Find the most expensive mask that can be deadcoded, or a mask
+      // that's used by multiple blends where it can be removed from them all.
+      VPValue *Mask = Blend->getMask(I);
+      if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
+        StartIndex = I;
+        break;
+      }
+    }
+
     SmallVector<VPValue *, 4> OperandsWithMask;
     OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
 
@@ -956,6 +967,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                          m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
       X == X1 && Y == Y1) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
+    R.eraseFromParent();
     return;
   }
 
@@ -1518,5 +1530,40 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         }
       }
     }
+  }
+}
+
+void VPlanTransforms::createInterleaveGroups(
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+    VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  for (const auto *IG : InterleaveGroups) {
+    auto *Recipe =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
+    SmallVector<VPValue *, 4> StoredValues;
+    for (unsigned i = 0; i < IG->getFactor(); ++i)
+      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
+        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
+        StoredValues.push_back(StoreR->getStoredValue());
+      }
+
+    bool NeedsMaskForGaps =
+        IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed;
+    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
+                                        Recipe->getMask(), NeedsMaskForGaps);
+    VPIG->insertBefore(Recipe);
+    unsigned J = 0;
+    for (unsigned i = 0; i < IG->getFactor(); ++i)
+      if (Instruction *Member = IG->getMember(i)) {
+        VPRecipeBase *MemberR = RecipeBuilder.getRecipe(Member);
+        if (!Member->getType()->isVoidTy()) {
+          VPValue *OriginalV = MemberR->getVPSingleValue();
+          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
+          J++;
+        }
+        MemberR->eraseFromParent();
+      }
   }
 }
