@@ -3222,8 +3222,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                      Op1Info.getNoProps(), Op2Info.getNoProps());
       return Cost;
     }
+
+    // sdiv i128 are lowered as a libcall, which was microbenchmarked on an Apple M2
+    // Max as taking around 16 cycles.
     if (TLI->getValueType(DL, Ty) == MVT::i128)
       return 16;
+
     [[fallthrough]];
   case ISD::UDIV: {
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
@@ -3242,8 +3246,9 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       }
     }
 
-    auto VT = TLI->getValueType(DL, Ty);
-    if (VT == MVT::i128)
+    // udiv i128 are lowered as a libcall, which was microbenchmarked on an Apple M2
+    // Max as taking around 14 cycles.
+    if (TLI->getValueType(DL, Ty) == MVT::i128)
       return 14;
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
