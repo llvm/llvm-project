@@ -878,10 +878,8 @@ define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
 define i32 @lsb_mask_sign_zext(i32 %x) {
 ; CHECK-LABEL: @lsb_mask_sign_zext(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
 entry:
@@ -895,10 +893,8 @@ entry:
 define i32 @lsb_mask_sign_zext_commuted(i32 %x) {
 ; CHECK-LABEL: @lsb_mask_sign_zext_commuted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
 entry:
@@ -983,10 +979,8 @@ entry:
 define i32 @lsb_mask_sign_sext(i32 %x) {
 ; CHECK-LABEL: @lsb_mask_sign_sext(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
 entry:
@@ -1000,10 +994,8 @@ entry:
 define i32 @lsb_mask_sign_sext_commuted(i32 %x) {
 ; CHECK-LABEL: @lsb_mask_sign_sext_commuted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
 entry:
