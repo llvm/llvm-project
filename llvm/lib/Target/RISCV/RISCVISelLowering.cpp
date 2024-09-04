@@ -1099,7 +1099,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     // TODO: Could we merge some code with zvfhmin?
-    if (Subtarget.hasVInstructionsBF16Minimal()) { for (MVT VT : BF16VecVTs) {
+    if (Subtarget.hasVInstructionsBF16Minimal()) {
+      for (MVT VT : BF16VecVTs) {
         if (!isTypeLegal(VT))
           continue;
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
