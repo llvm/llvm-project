@@ -230,6 +230,11 @@ Attribute Changes in Clang
   more cases where the returned reference outlives the object.
   (#GH100567)
 
+- Clang now correctly diagnoses the use of ``btf_type_tag`` in C++ and ignores
+  it; this attribute is a C-only attribute, and caused crashes with template
+  instantiation by accidentally allowing it in C++ in some circumstances.
+  (#GH106864)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -274,6 +279,9 @@ Improvements to Clang's diagnostics
 - Improved diagnostic when trying to overload a function in an ``extern "C"`` context. (#GH80235)
 
 - Clang now respects lifetimebound attribute for the assignment operator parameter. (#GH106372).
+
+- The lifetimebound and GSL analysis in clang are coherent, allowing clang to
+  detect more use-after-free bugs. (#GH100549).
 
 Improvements to Clang's time-trace
 ----------------------------------

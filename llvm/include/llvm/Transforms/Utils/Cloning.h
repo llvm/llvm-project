@@ -41,6 +41,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class Module;
+class PGOContextualProfile;
 class ProfileSummaryInfo;
 class ReturnInst;
 class DomTreeUpdater;
