@@ -236,6 +236,10 @@ define void @foo([2 x i8] %v0) {
   // Check classof(), creation.
   [[maybe_unused]] auto *ArrayTy =
       cast<sandboxir::ArrayType>(F->getArg(0)->getType());
+  // Check get().
+  auto *NewArrayTy =
+      sandboxir::ArrayType::get(sandboxir::Type::getInt8Ty(Ctx), 2u);
+  EXPECT_EQ(NewArrayTy, ArrayTy);
 }
 
 TEST_F(SandboxTypeTest, StructType) {

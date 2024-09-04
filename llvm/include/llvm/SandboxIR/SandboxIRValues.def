@@ -30,6 +30,7 @@ DEF_CONST(ConstantFP, ConstantFP)
 DEF_CONST(ConstantArray, ConstantArray)
 DEF_CONST(ConstantStruct, ConstantStruct)
 DEF_CONST(ConstantVector, ConstantVector)
+DEF_CONST(ConstantAggregateZero, ConstantAggregateZero)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
