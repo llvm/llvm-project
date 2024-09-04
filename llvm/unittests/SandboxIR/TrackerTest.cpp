@@ -964,7 +964,7 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
 }
 
-TEST_F(TrackerTest, ShuffleVectorInstSetters) {
+TEST_F(TrackerTest, ShuffleVectorInst) {
   parseIR(C, R"IR(
 define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 1, i32 2>
@@ -983,10 +983,22 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
   Ctx.save();
   SVI->setShuffleMask(ArrayRef<int>({0, 0}));
-  EXPECT_THAT(SVI->getShuffleMask(),
-              testing::Not(testing::ElementsAreArray(OrigMask)));
+  EXPECT_NE(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
   Ctx.revert();
-  EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
+  EXPECT_EQ(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+
+  // Check commute.
+  auto *Op0 = SVI->getOperand(0);
+  auto *Op1 = SVI->getOperand(1);
+  Ctx.save();
+  SVI->commute();
+  EXPECT_EQ(SVI->getOperand(0), Op1);
+  EXPECT_EQ(SVI->getOperand(1), Op0);
+  EXPECT_NE(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+  Ctx.revert();
+  EXPECT_EQ(SVI->getOperand(0), Op0);
+  EXPECT_EQ(SVI->getOperand(1), Op1);
+  EXPECT_EQ(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
 }
 
 TEST_F(TrackerTest, PossiblyDisjointInstSetters) {

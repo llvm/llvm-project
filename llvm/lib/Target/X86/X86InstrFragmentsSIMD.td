@@ -211,6 +211,7 @@ def X86CmpMaskCC :
       SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCVecEltisVT<0, i1>,
                        SDTCisVec<1>, SDTCisSameAs<2, 1>,
                        SDTCisSameNumEltsAs<0, 1>, SDTCisVT<3, i8>]>;
+
 def X86MaskCmpMaskCC :
       SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCVecEltisVT<0, i1>,
                        SDTCisVec<1>, SDTCisSameAs<2, 1>,
@@ -1139,6 +1140,10 @@ def X86SubVBroadcastld256 : PatFrag<(ops node:$src),
 // only load a single element.
 // FIXME: We should add more canolicalizing in DAGCombine. Particulary removing
 // the simple_load case.
+def sse_load_bf16 : PatFrags<(ops node:$ptr),
+                            [(v8bf16 (simple_load node:$ptr)),
+                             (v8bf16 (X86vzload16 node:$ptr)),
+                             (v8bf16 (scalar_to_vector (loadf16 node:$ptr)))]>;
 def sse_load_f16 : PatFrags<(ops node:$ptr),
                             [(v8f16 (simple_load node:$ptr)),
                              (v8f16 (X86vzload16 node:$ptr)),

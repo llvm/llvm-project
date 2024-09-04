@@ -8641,6 +8641,32 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     WantDebug = !A->getOption().matches(options::OPT_g0) &&
                 !A->getOption().matches(options::OPT_ggdb0);
 
+  // If a -gdwarf argument appeared, remember it.
+  bool EmitDwarf = false;
+  if (const Arg *A = getDwarfNArg(Args))
+    EmitDwarf = checkDebugInfoOption(A, Args, D, getToolChain());
+
+  bool EmitCodeView = false;
+  if (const Arg *A = Args.getLastArg(options::OPT_gcodeview))
+    EmitCodeView = checkDebugInfoOption(A, Args, D, getToolChain());
+
+  // If the user asked for debug info but did not explicitly specify -gcodeview
+  // or -gdwarf, ask the toolchain for the default format.
+  if (!EmitCodeView && !EmitDwarf && WantDebug) {
+    switch (getToolChain().getDefaultDebugFormat()) {
+    case llvm::codegenoptions::DIF_CodeView:
+      EmitCodeView = true;
+      break;
+    case llvm::codegenoptions::DIF_DWARF:
+      EmitDwarf = true;
+      break;
+    }
+  }
+
+  // If the arguments don't imply DWARF, don't emit any debug info here.
+  if (!EmitDwarf)
+    WantDebug = false;
+
   llvm::codegenoptions::DebugInfoKind DebugInfoKind =
       llvm::codegenoptions::NoDebugInfo;
 
