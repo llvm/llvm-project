@@ -55,6 +55,7 @@ Important notes
       
   * Data ownership and data collection consents are hard to accommodate from
     LLVM developers' point of view:
+  
     * Eg., data collected by Telemetry is not neccessarily owned by the user
       of an LLVM tool with Telemetry enabled, hence the user's consent to data
       collection is not meaningful. On the other hand, LLVM developers have no
