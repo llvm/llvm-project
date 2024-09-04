@@ -19,12 +19,12 @@
 #define LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 #include <optional>
 
 namespace llvm {
 
 class Function;
+class FunctionPass;
 
 struct ScalarizerPassOptions {
   // These options correspond 1:1 to cl::opt options defined in
@@ -53,17 +53,8 @@ public:
 };
 
 /// Create a legacy pass manager instance of the Scalarizer pass
-FunctionPass *createScalarizerPass();
-
-class ScalarizerLegacyPass : public FunctionPass {
-public:
-  static char ID;
-  ScalarizerPassOptions Options;
-  ScalarizerLegacyPass();
-  bool runOnFunction(Function &F) override;
-  void getAnalysisUsage(AnalysisUsage& AU) const override;
-};
-
+FunctionPass *createScalarizerPass(
+    const ScalarizerPassOptions &Options = ScalarizerPassOptions());
 }
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */

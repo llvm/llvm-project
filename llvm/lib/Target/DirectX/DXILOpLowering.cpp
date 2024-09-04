@@ -24,7 +24,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Transforms/Scalar/Scalarizer.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
@@ -522,7 +521,6 @@ public:
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILIntrinsicExpansionLegacy>();
-    AU.addRequired<ScalarizerLegacyPass>();
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
   }

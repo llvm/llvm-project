@@ -340,16 +340,25 @@ private:
   const bool ScalarizeLoadStore;
   const unsigned ScalarizeMinBits;
 };
+
+class ScalarizerLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  ScalarizerPassOptions Options;
+  ScalarizerLegacyPass() : FunctionPass(ID), Options() {}
+  ScalarizerLegacyPass(const ScalarizerPassOptions &Options);
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
 } // end anonymous namespace
 
-ScalarizerLegacyPass::ScalarizerLegacyPass() : FunctionPass(ID) {
-    Options.ScalarizeVariableInsertExtract = true;
-    Options.ScalarizeLoadStore = true;
-}
+ScalarizerLegacyPass::ScalarizerLegacyPass(const ScalarizerPassOptions &Options)
+    : FunctionPass(ID), Options(Options) {}
 
-void ScalarizerLegacyPass::getAnalysisUsage(AnalysisUsage& AU) const {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
+void ScalarizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
 char ScalarizerLegacyPass::ID = 0;
@@ -440,8 +449,8 @@ bool ScalarizerLegacyPass::runOnFunction(Function &F) {
   return Impl.visit(F);
 }
 
-FunctionPass *llvm::createScalarizerPass() {
-  return new ScalarizerLegacyPass();
+FunctionPass *llvm::createScalarizerPass(const ScalarizerPassOptions &Options) {
+  return new ScalarizerLegacyPass(Options);
 }
 
 bool ScalarizerVisitor::visit(Function &F) {
