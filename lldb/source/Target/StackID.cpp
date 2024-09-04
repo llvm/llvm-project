@@ -13,18 +13,20 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 
 bool StackID::IsCFAOnStack(Process &process) const {
   if (m_cfa_on_stack == eLazyBoolCalculate) {
-    m_cfa_on_stack = eLazyBoolNo;
+    // Conservatively assume stack memory
+    m_cfa_on_stack = eLazyBoolYes;
     if (m_cfa != LLDB_INVALID_ADDRESS) {
       MemoryRegionInfo mem_info;
       if (process.GetMemoryRegionInfo(m_cfa, mem_info).Success())
-        if (mem_info.IsStackMemory() == MemoryRegionInfo::eYes)
-          m_cfa_on_stack = eLazyBoolYes;
+        if (mem_info.IsStackMemory() == MemoryRegionInfo::eNo)
+          m_cfa_on_stack = eLazyBoolNo;
     }
   }
   return m_cfa_on_stack == eLazyBoolYes;
@@ -84,14 +86,43 @@ IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
   if (lhs_cfa_on_stack && rhs_cfa_on_stack)
     return HeapCFAComparisonResult::NoOpinion;
 
-  // FIXME: rdar://76119439
-  // At the boundary between an async parent frame calling a regular child
-  // frame, the CFA of the parent async function is a heap addresses, and the
-  // CFA of concrete child function is a stack address. Therefore, if lhs is
-  // on stack, and rhs is not, lhs is considered less than rhs, independent of
-  // address values.
+  // If one of the frames has a CFA on the stack and the other doesn't, we are
+  // at the boundary between an asynchronous and a synchronous function.
+  // Synchronous functions cannot call asynchronous functions, therefore the
+  // synchronous frame is always younger.
   if (lhs_cfa_on_stack && !rhs_cfa_on_stack)
     return HeapCFAComparisonResult::Younger;
+  if (!lhs_cfa_on_stack && rhs_cfa_on_stack)
+    return HeapCFAComparisonResult::Older;
+
+  const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
+  const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
+  // If the cfas are the same, fallback to the usual scope comparison.
+  if (lhs_cfa == rhs_cfa)
+    return HeapCFAComparisonResult::NoOpinion;
+
+  // Both CFAs are on the heap and they are distinct.
+  // LHS is younger if and only if its continuation async context is (directly
+  // or indirectly) RHS. Chase continuation pointers to check this case, until
+  // we hit the end of the chain (parent_ctx == 0) or a safety limit in case of
+  // an invalid continuation chain.
+  auto max_num_frames = 512;
+  for (lldb::addr_t parent_ctx = lhs_cfa; parent_ctx && max_num_frames;
+       max_num_frames--) {
+    Status error;
+    lldb::addr_t old_parent_ctx = parent_ctx;
+    // The continuation's context is the first field of an async context.
+    parent_ctx = process.ReadPointerFromMemory(old_parent_ctx, error);
+    if (error.Fail()) {
+      Log *log = GetLog(LLDBLog::Unwind);
+      LLDB_LOGF(log, "Failed to read parent async context of: 0x%8.8" PRIx64,
+                old_parent_ctx);
+      break;
+    }
+    if (parent_ctx == rhs_cfa)
+      return HeapCFAComparisonResult::Younger;
+  }
+
   return HeapCFAComparisonResult::NoOpinion;
 }
 // END SWIFT
