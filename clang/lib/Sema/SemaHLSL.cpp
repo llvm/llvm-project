@@ -1612,8 +1612,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
-
-
 bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
   if (QT.isNull())
     return false;
@@ -1628,12 +1626,14 @@ bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
   while (isa<ConstantArrayType>(Ty))
     Ty = Ty->getArrayElementTypeNoTypeQual();
 
-  const RecordType *RT = dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
+  const RecordType *RT =
+      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
   if (!RT)
     return false;
 
   CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-  assert(RD != nullptr && "all HLSL struct and classes should be CXXRecordDecl");
+  assert(RD != nullptr &&
+         "all HLSL struct and classes should be CXXRecordDecl");
   return RD->isIntangible();
 }
 

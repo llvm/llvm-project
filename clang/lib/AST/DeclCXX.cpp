@@ -1406,7 +1406,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       data().Empty = false;
 
     if (getLangOpts().HLSL) {
-      const Type* Ty = Field->getType().getTypePtr();
+      const Type *Ty = Field->getType()->getUnqualifiedDesugaredType();
       while (isa<ConstantArrayType>(Ty))
         Ty = Ty->getArrayElementTypeNoTypeQual();
 
