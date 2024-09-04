@@ -3160,10 +3160,8 @@ void TreePattern::dump() const { print(errs()); }
 
 CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R,
                                        PatternRewriterFn PatternRewriter)
-    : Records(R), Target(R), LegalVTS(Target.getLegalValueTypes()),
-      PatternRewriter(PatternRewriter) {
-
-  Intrinsics = CodeGenIntrinsicTable(Records);
+    : Records(R), Target(R), Intrinsics(R),
+      LegalVTS(Target.getLegalValueTypes()), PatternRewriter(PatternRewriter) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
