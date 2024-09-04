@@ -90,12 +90,23 @@ public:
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
   /// Pairs of (metadata kind, MDNode *) that should be added to all newly
-  /// created instructions, like !dbg metadata.
+  /// created instructions, excluding !dbg metadata, which is stored in the
+  // StoredDL field.
   SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
+  // The DebugLoc that will be applied to instructions inserted by this builder.
+  DebugLoc StoredDL;
+  // Tracks whether we have explicitly set a DebugLoc - valid or empty - in this
+  // builder, to determine whether to copy StoredDL to inserted instructions.
+  // We use this bool instead of an optional because we may stil want to copy
+  // the default (empty) StoredDL to some instructions.
+  bool HasExplicitDL = false;
 
   /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
   /// null. If \p MD is null, remove the entry with \p Kind.
   void AddOrRemoveMetadataToCopy(unsigned Kind, MDNode *MD) {
+    assert(Kind != LLVMContext::MD_dbg &&
+           "MD_dbg metadata must be stored in StoredDL");
+
     if (!MD) {
       erase_if(MetadataToCopy, [Kind](const std::pair<unsigned, MDNode *> &KV) {
         return KV.first == Kind;
@@ -215,7 +226,10 @@ public:
 
   /// Set location information used by debugging information.
   void SetCurrentDebugLocation(DebugLoc L) {
-    AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = std::move(L);
+    HasExplicitDL = true;
   }
 
   /// Set nosanitize metadata.
@@ -229,8 +243,12 @@ public:
   /// not on \p Src will be dropped from MetadataToCopy.
   void CollectMetadataToCopy(Instruction *Src,
                              ArrayRef<unsigned> MetadataKinds) {
-    for (unsigned K : MetadataKinds)
-      AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+    for (unsigned K : MetadataKinds) {
+      if (K == LLVMContext::MD_dbg)
+        SetCurrentDebugLocation(Src->getDebugLoc());
+      else
+        AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+    }
   }
 
   /// Get location information used by debugging information.
@@ -244,6 +262,11 @@ public:
   void AddMetadataToInst(Instruction *I) const {
     for (const auto &KV : MetadataToCopy)
       I->setMetadata(KV.first, KV.second);
+    // If I does not have an existing DebugLoc and no DebugLoc has been set
+    // here, we copy our DebugLoc to I anyway, because more likely than not I
+    // is a new instruction whose DL should originate from this builder.
+    if (HasExplicitDL || !I->getDebugLoc())
+      I->setDebugLoc(StoredDL.getCopied());
   }
 
   /// Get the return type of the current function that we're emitting
