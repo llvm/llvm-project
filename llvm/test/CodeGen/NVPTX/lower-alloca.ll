@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -nvptx-lower-alloca -infer-address-spaces | FileCheck %s
+; RUN: opt < %s -S -nvptx-lower-alloca | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
@@ -33,5 +33,6 @@ declare void @callee(ptr)
 declare void @callee_addrspace5(ptr addrspace(5))
 
 !nvvm.annotations = !{!0}
+!nvvm.annotations = !{!1}
 !0 = !{ptr @kernel, !"kernel", i32 1}
 !1 = !{ptr @alloc_already_in_addrspace5, !"alloc_already_in_addrspace5", i32 1}
