@@ -29,6 +29,8 @@ namespace Fortran::tools {
 
   // Figure out if we can support F128: see
   // flang/runtime/Float128Math/math-entries.h
+  // TODO: this should be taken from TargetInfo::getLongDoubleFormat to support
+  // cross-compilation
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
   // we can use libquadmath wrappers
   constexpr bool f128Support = true;
