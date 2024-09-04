@@ -62,6 +62,17 @@ SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
   initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
 }
 
+enum BaseTypeAttributeEncoding {
+  Unspecified = 0,
+  Address = 1,
+  Boolean = 2,
+  Float = 3,
+  Signed = 4,
+  SignedChar = 5,
+  Unsigned = 6,
+  UnsignedChar = 7
+};
+
 bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // If this MachineFunction doesn't have any BB repeat procedure
   // for the next
@@ -119,9 +130,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
             if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
               DILocalVariable *LocalVariable = DVR->getVariable();
               if (auto *BasicType =
-                      dyn_cast<DIBasicType>(LocalVariable->getType())) {
+                      dyn_cast<DIBasicType>(LocalVariable->getType()))
                 BasicTypes.insert(BasicType);
-              }
             }
           }
         }
@@ -212,28 +222,28 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       const Register ConstIntBitwidthReg = GR->buildConstantInt(
           BasicType->getSizeInBits(), MIRBuilder, I32Ty, false);
 
-      uint64_t AttributeEncoding = 0;
+      uint64_t AttributeEncoding = BaseTypeAttributeEncoding::Unspecified;
       switch (BasicType->getEncoding()) {
       case dwarf::DW_ATE_signed:
-        AttributeEncoding = 4;
+        AttributeEncoding = BaseTypeAttributeEncoding::Signed;
         break;
       case dwarf::DW_ATE_unsigned:
-        AttributeEncoding = 6;
+        AttributeEncoding = BaseTypeAttributeEncoding::Unsigned;
         break;
       case dwarf::DW_ATE_unsigned_char:
-        AttributeEncoding = 7;
+        AttributeEncoding = BaseTypeAttributeEncoding::UnsignedChar;
         break;
       case dwarf::DW_ATE_signed_char:
-        AttributeEncoding = 5;
+        AttributeEncoding = BaseTypeAttributeEncoding::SignedChar;
         break;
       case dwarf::DW_ATE_float:
-        AttributeEncoding = 3;
+        AttributeEncoding = BaseTypeAttributeEncoding::Float;
         break;
       case dwarf::DW_ATE_boolean:
-        AttributeEncoding = 2;
+        AttributeEncoding = BaseTypeAttributeEncoding::Boolean;
         break;
       case dwarf::DW_ATE_address:
-        AttributeEncoding = 1;
+        AttributeEncoding = BaseTypeAttributeEncoding::Address;
       }
 
       const Register AttributeEncodingReg =
