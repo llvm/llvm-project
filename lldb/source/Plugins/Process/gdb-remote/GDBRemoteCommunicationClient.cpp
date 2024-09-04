@@ -1638,7 +1638,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           for (llvm::StringRef entry : llvm::split(value, ',')) {
             if (entry == "stack")
               region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
-            if (entry == "heap")
+            else if (entry == "heap")
               region_info.SetIsStackMemory(MemoryRegionInfo::eNo);
           }
         } else if (name == "error") {
