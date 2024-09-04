@@ -137,7 +137,7 @@ public:
 
   bool isErrorOrFatal() const {
     return getSeverity() == diag::Severity::Error ||
-            getSeverity() == diag::Severity::Fatal;
+           getSeverity() == diag::Severity::Fatal;
   }
 
   bool hasNoWarningAsError() const { return HasNoWarningAsError; }
@@ -155,8 +155,7 @@ public:
   /// Serialize this mapping as a raw integer.
   unsigned serialize() const {
     return (IsUser << 7) | (IsPragma << 6) | (HasNoWarningAsError << 5) |
-            (HasNoErrorAsFatal << 4) | (WasUpgradedFromWarning << 3) |
-            Severity;
+           (HasNoErrorAsFatal << 4) | (WasUpgradedFromWarning << 3) | Severity;
   }
   /// Deserialize a mapping.
   static DiagnosticMapping deserialize(unsigned Bits) {
