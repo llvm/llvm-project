@@ -84,10 +84,6 @@ Reverts: break componsableKernels
 contact: RonL
 
 ---
-Reverts:
-[CtxProf] Replace include with forward declaration (NFC)
-Contacts: RonL and Hulk
----
 needs previous SEMA patches
 584e431a4b25 [Clang][Sema] Treat explicit specializations of static data member templates declared without '
 ---
@@ -132,10 +128,6 @@ Revert: causing issues with IRVerifiery heterodebug
 [IR] Don't verify module flags on every access (#102153)
 Ron
 ---
-Revert: Depends upon older [ctx_prof] reverts (e.g. c99bd3ce)
-6807ca8e937e [nfc][ctx_prof] Use one flag for the "use" scenario (#103377)
-contact : mhalk (Michael Halkenhaeuser)
----
 revert:  1ca9fe6db334  Reapply "[Attributor][AMDGPU] Enable AAIndirectCallInfo for AMDAttributor
 ---
 revert: breadks rocSPARSE build
@@ -150,7 +142,3 @@ c46b41aaa6ea LSV: forbid load-cycles when vectorizing; fix bug (#104815)
 revert : breaks build of amdgpu flat intrinsics
 ee08d9cba561 AMDGPU: Remove global/flat atomic fadd intrinics (#97051) 
 ---
-Revert: Depends upon older [ctx_prof] reverts
-73c3b7337b0a [ctx_prof] Add support for ICP (#105469)
-1022323c9b7c [ctx_prof] Move the "from json" logic more centrally to reuse it from test. (#106129)
-contact : mhalk (Michael Halkenhaeuser)
