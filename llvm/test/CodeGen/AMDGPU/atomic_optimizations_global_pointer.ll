@@ -1604,7 +1604,7 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1232_DPP-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1232_DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1232_DPP-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX1232_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1232_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1232_DPP-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1232_DPP-NEXT:    s_wait_alu 0xfffe
 ; GFX1232_DPP-NEXT:    s_mov_b32 exec_lo, s4
@@ -5351,7 +5351,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1232_DPP-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1232_DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1232_DPP-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX1232_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1232_DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1232_DPP-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1232_DPP-NEXT:    s_wait_alu 0xfffe
 ; GFX1232_DPP-NEXT:    s_mov_b32 exec_lo, s4
