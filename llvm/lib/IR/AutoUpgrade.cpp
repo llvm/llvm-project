@@ -5461,6 +5461,13 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
+  if (T.isSPARC()) {
+    // Add "-i128:128"
+    if (!DL.empty() && !DL.contains("-i128:128"))
+      Res.append("-i128:128");
+    return Res;
+  }
+
   if (!T.isX86())
     return Res;
 
