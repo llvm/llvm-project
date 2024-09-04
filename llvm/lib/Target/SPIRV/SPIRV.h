@@ -12,7 +12,6 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Target/TargetMachine.h"
-#include "SPIRVAPI.h"
 
 namespace llvm {
 class SPIRVTargetMachine;
