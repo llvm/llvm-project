@@ -9168,7 +9168,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    StoreInst *IntermediateStore = RdxDesc.IntermediateStore;
     RecurKind Kind = RdxDesc.getRecurrenceKind();
     assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
            "AnyOf reductions are not allowed for in-loop reductions");
@@ -9185,7 +9184,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                                m_VPValue(), m_VPValue())) ||
                   (isa<VPReplicateRecipe>(U) &&
                    cast<VPReplicateRecipe>(U)->getUnderlyingValue() ==
-                       IntermediateStore)) &&
+                       RdxDesc.IntermediateStore)) &&
                  "U must be either an ExtractFromEnd VPInstruction or a "
                  "uniform store sourced from the intermediate store.");
           continue;
