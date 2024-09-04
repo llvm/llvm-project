@@ -1077,6 +1077,8 @@ If you have questions or comments about these topics, please ask on the
 please realize that most compiler developers are not lawyers, and therefore you
 will not be getting official legal advice.
 
+.. _LLVM Discourse forums: https://discourse.llvm.org
+
 Copyright
 ---------
 
@@ -1320,4 +1322,9 @@ intelligence tools to produce contributions, provided that they have the right
 to license that code under the project license. Contributions found to violate
 this policy will be removed just like any other offending contribution.
 
-.. _LLVM Discourse forums: https://discourse.llvm.org
+While the LLVM project has a liberal policy on AI tool use, contributors are
+considered responsible for their contributions. We encourage contributors to
+review all generated code before sending it for review to verify its
+correctness and to understand it so that they can answer questions during code
+review. Reviewing and maintaining generated code that the original contributor
+does not understand is not a good use of limited project resources.
