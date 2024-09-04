@@ -99,7 +99,10 @@ void foo() {
 #endif
 
 #if __cplusplus >= 202002L
-void GH107048() {
+namespace {
+struct S {};
+constexpr S gs;
+void f() {
   constexpr int x{};
   const int y{};
   auto b = []<int=x, int=y>{};
@@ -115,11 +118,16 @@ void GH107048() {
     return t;
   }();
 
-  struct S {};
+  auto class_type_global = []<S=gs>{};
+
+  static constexpr S static_s;
+  auto class_type_static = []<S=static_s>{};
+
   constexpr S s;  // expected-note {{'s' declared here}}
   auto class_type = []<S=s>{};
   // expected-error@-1 {{variable 's' cannot be implicitly captured in a lambda with no capture-default specified}} \
   // expected-note@-1 {{lambda expression begins here}} \
   // expected-note@-1 4{{capture}}
+}
 }
 #endif
