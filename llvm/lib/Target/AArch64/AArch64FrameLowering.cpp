@@ -3050,7 +3050,7 @@ static void computeCalleeSaveRegisterPairs(
           // Calculate offset of register pair to see if pair instruction can be
           // used.
           int Offset = (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
-          if ((-17 < Offset && Offset < 15) && (Offset % 2 == 0))
+          if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
             RPI.Reg2 = NextReg;
         }
         break;
