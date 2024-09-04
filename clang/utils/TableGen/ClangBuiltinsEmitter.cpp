@@ -40,9 +40,31 @@ private:
     ParseTypes(Prototype);
   }
 
+  void ParseTypeAttributeList(StringRef &T, SMLoc Loc) {
+    if (T.consume_front("addrspace")) {
+      unsigned long long AS = 0;
+      if (!T.consume_front("["))
+        PrintFatalError(Loc, "Expected opening bracket '[' after 'addrspace'");
+
+      if (llvm::consumeUnsignedInteger(T, 10, AS))
+        PrintFatalError(Loc,
+                        "Expecetd valid integer for 'addrspace' attribute");
+
+      if (!T.consume_front("]"))
+        PrintFatalError(
+            Loc,
+            "Expected closing bracket ']' after address space specification");
+      AddrSpace = AS;
+    } else
+      PrintFatalError(Loc, "Unknown attribute name specified");
+
+    if (!T.consume_front("]]"))
+      PrintFatalError(Loc, "Expected closing brackets ']]' for attribute list");
+  }
+
   void ParseTypes(StringRef &Prototype) {
     auto ReturnType = Prototype.take_until([](char c) { return c == '('; });
-    ParseType(ReturnType);
+    ParseTypeAndValidateAttributes(ReturnType);
     Prototype = Prototype.drop_front(ReturnType.size() + 1);
     if (!Prototype.ends_with(")"))
       PrintFatalError(Loc, "Expected closing brace at end of prototype");
@@ -66,7 +88,7 @@ private:
       // we cannot have nested _ExtVector.
       if (Current.starts_with("_ExtVector<")) {
         const size_t EndTemplate = Current.find('>', 0);
-        ParseType(Current.substr(0, EndTemplate + 1));
+        ParseTypeAndValidateAttributes(Current.substr(0, EndTemplate + 1));
         // Move the prototype beyond _ExtVector<...>
         I += EndTemplate + 1;
         continue;
@@ -77,7 +99,7 @@ private:
       if (size_t CommaPos = Current.find(',', 0)) {
         if (CommaPos != StringRef::npos) {
           StringRef T = Current.substr(0, CommaPos);
-          ParseType(T);
+          ParseTypeAndValidateAttributes(T);
           // Move the prototype beyond the comma.
           I += CommaPos + 1;
           continue;
@@ -85,9 +107,20 @@ private:
       }
 
       // No more commas, parse final parameter.
-      ParseType(Current);
+      ParseTypeAndValidateAttributes(Current);
       I = end;
     }
+  }
+
+  void ParseTypeAndValidateAttributes(StringRef T) {
+    ParseType(T);
+    if (!IsPointerOrReference && AddrSpace)
+      PrintFatalError(
+          Loc, "Address space attribute can only be specified with a pointer"
+               " or reference type");
+
+    IsPointerOrReference = false;
+    AddrSpace = std::nullopt;
   }
 
   void ParseType(StringRef T) {
@@ -95,6 +128,9 @@ private:
     if (T.consume_back("*")) {
       ParseType(T);
       Type += "*";
+      IsPointerOrReference = true;
+      if (AddrSpace)
+        Type += std::to_string(*AddrSpace);
     } else if (T.consume_back("const")) {
       ParseType(T);
       Type += "C";
@@ -107,6 +143,12 @@ private:
     } else if (T.consume_back("&")) {
       ParseType(T);
       Type += "&";
+      IsPointerOrReference = true;
+      if (AddrSpace)
+        Type += std::to_string(*AddrSpace);
+    } else if (T.consume_front("[[")) {
+      ParseTypeAttributeList(T, Loc);
+      ParseType(T);
     } else if (T.consume_front("long")) {
       Type += "L";
       ParseType(T);
@@ -193,6 +235,8 @@ private:
   SMLoc Loc;
   StringRef Substitution;
   std::string Type;
+  std::optional<unsigned long long> AddrSpace;
+  bool IsPointerOrReference = false;
 };
 
 class HeaderNameParser {

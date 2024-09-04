@@ -6,6 +6,12 @@
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_B 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_B
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_C 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_C
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_D 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_D
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_E 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_E
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_F 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_F
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_G 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_G
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_H 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_H
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_I 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_I
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_J 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_J
 
 include "clang/Basic/BuiltinsBase.td"
 
@@ -113,3 +119,68 @@ def : Builtin {
 }
 #endif
 
+def : Builtin {
+// CHECK: BUILTIN(__builtin_test_addrspace_attribute_01, "di*3", "")
+  let Prototype = "double( [[addrspace[3]]] int*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_01"];
+}
+
+def : Builtin {
+// CHECK: BUILTIN(__builtin_test_addrspace_attribute_02, "Ii*5i*d", "")
+  let Prototype = "_Constant [[addrspace[5]]] int* (int*, double)";
+  let Spellings = ["__builtin_test_addrspace_attribute_02"];
+}
+
+def : Builtin {
+// CHECK: BUILTIN(__builtin_test_addrspace_attribute_04, "Ii&4id*7", "")
+  let Prototype = "_Constant [[addrspace[4]]] int& (int , [[addrspace[7]]] double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+
+#ifdef ERROR_EXPECTED_E
+def : Builtin {
+// ERROR_EXPECTED_E: :[[# @LINE + 1]]:7: error: Expected opening bracket '[' after 'addrspace'
+  let Prototype = "_Constant [[addrspace]] int& (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_F
+def : Builtin {
+// ERROR_EXPECTED_F: :[[# @LINE + 1]]:7: error: Address space attribute can only be specified with a pointer or reference type
+  let Prototype = "_Constant [[addrspace[4]]] int (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_G
+def : Builtin {
+// ERROR_EXPECTED_G: :[[# @LINE + 1]]:7: error: Expecetd valid integer for 'addrspace' attribute
+  let Prototype = "_Constant [[addrspace[k]]] int* (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_H
+def : Builtin {
+// ERROR_EXPECTED_H: :[[# @LINE + 1]]:7: error: Expected closing bracket ']' after address space specification
+  let Prototype = "_Constant [[addrspace[6 int* (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_I
+def : Builtin {
+// ERROR_EXPECTED_I: :[[# @LINE + 1]]:7: error: Expected closing brackets ']]' for attribute list
+  let Prototype = "_Constant [[addrspace[6] int* (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_J
+def : Builtin {
+// ERROR_EXPECTED_J: :[[# @LINE + 1]]:7: error: Unknown attribute name specified
+  let Prototype = "_Constant [[invalid]] int* (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+}
+#endif
