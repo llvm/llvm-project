@@ -143,7 +143,7 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
 } // isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
   // isPseudo = 1, isEHScopeReturn = 1
 
-// Below are instructions from the old Phase 3 exception. Can be deprecated.
+// Below are instructions from the legacy EH proposal. Can be deprecated.
 
 // Rethrowing an exception: rethrow
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
