@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_TIME_ASCTIME_R_H
-#define LLVM_LIBC_SRC_TIME_ASCTIME_R_H
+#ifndef LLVM_LIBC_SRC_TIME_CTIME_R_H
+#define LLVM_LIBC_SRC_TIME_CTIME_R_H
 
 #include "src/__support/macros/config.h"
 #include <time.h>
