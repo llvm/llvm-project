@@ -68,7 +68,8 @@ class LinuxCoreTestCase(TestBase):
             "linux-riscv64.gpr_fpr",
             self._riscv64_gpr_fpr_pid,
             self._riscv64_regions,
-            "a.out")
+            "a.out",
+        )
 
     @skipIfLLVMTargetMissing("RISCV")
     def test_riscv64_gpr_only(self):
