@@ -17,9 +17,9 @@ define void @kernel() {
   ret void
 }
 
-define void @alloc_already_in_addrspace5() {
+define void @alloca_in_explicit_local_as() {
 ; LABEL: @lower_alloca_addrspace5
-; PTX-LABEL: .visible .func alloc_already_in_addrspace5(
+; PTX-LABEL: .visible .func alloca_in_explicit_local_as(
   %A = alloca i32, addrspace(5)
 ; CHECK-NOT: addrspacecast ptr %A to ptr addrspace(5)
 ; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
@@ -35,4 +35,4 @@ declare void @callee_addrspace5(ptr addrspace(5))
 !nvvm.annotations = !{!0}
 !nvvm.annotations = !{!1}
 !0 = !{ptr @kernel, !"kernel", i32 1}
-!1 = !{ptr @alloc_already_in_addrspace5, !"alloc_already_in_addrspace5", i32 1}
+!1 = !{ptr @alloca_in_explicit_local_as, !"alloca_in_explicit_local_as", i32 1}
