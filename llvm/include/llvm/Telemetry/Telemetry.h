@@ -63,9 +63,9 @@ struct EventStats {
   std::optional<SteadyTimePoint> End;
   // TBD: could add some memory stats here too?
 
-  TelemetryEventStats() = default;
-  TelemetryEventStats(SteadyTimePoint Start) : Start(Start) {}
-  TelemetryEventStats(SteadyTimePoint Start, SteadyTimePoint End)
+  EventStats() = default;
+  EventStats(SteadyTimePoint Start) : Start(Start) {}
+  EventStats(SteadyTimePoint Start, SteadyTimePoint End)
       : Start(Start), End(End) {}
 };
 
@@ -76,6 +76,9 @@ struct ExitDescription {
 
 // For isa, dyn_cast, etc operations on TelemetryInfo.
 typedef unsigned KindType;
+// The EntryKind is defined as a struct because it is expectend to be
+// extended by subclasses which may have additional TelemetryInfo
+// types defined.
 struct EntryKind {
   static const KindType Base = 0;
 };
@@ -97,7 +100,7 @@ struct TelemetryInfo {
   std::string SessionId;
 
   // Time/memory statistics of this event.
-  TelemetryEventStats Stats;
+  EventStats Stats;
 
   std::optional<ExitDescription> ExitDesc;
 
@@ -114,6 +117,8 @@ struct TelemetryInfo {
   // For isa, dyn_cast, etc, operations.
   virtual KindType getKind() const { return EntryKind::Base; }
   static bool classof(const TelemetryInfo *T) {
+    if (T == nullptr)
+      return false;
     return T->getKind() == EntryKind::Base;
   }
 };
@@ -126,7 +131,7 @@ struct TelemetryInfo {
 // and where to forward them.
 class Destination {
 public:
-  virtual ~TelemetryDestination() = default;
+  virtual ~Destination() = default;
   virtual Error emitEntry(const TelemetryInfo *Entry) = 0;
   virtual std::string name() const = 0;
 };
@@ -143,7 +148,7 @@ public:
   // Invoked upon tool exit.
   virtual void logExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
 
-  virtual void addDestination(TelemetryDestination *Destination) = 0;
+  virtual void addDestination(Destination *Destination) = 0;
 };
 
 } // namespace telemetry

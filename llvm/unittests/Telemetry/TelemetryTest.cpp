@@ -47,10 +47,9 @@ static std::string nextUuid() {
 }
 
 struct VendorEntryKind {
-  // TODO: should avoid dup with other vendors' Types?
   static const KindType VendorCommon = 0b010101000;
-  static const KindType Startup = 0b010101001;
-  static const KindType Exit = 0b010101010;
+  static const KindType Startup      = 0b010101001;
+  static const KindType Exit         = 0b010101010;
 };
 
 // Demonstrates that the TelemetryInfo (data courier) struct can be extended
@@ -58,12 +57,14 @@ struct VendorEntryKind {
 // It can also define additional data serialization method.
 struct VendorCommonTelemetryInfo : public TelemetryInfo {
   static bool classof(const TelemetryInfo *T) {
+    if (T == nullptr)
+      return false;
     // Subclasses of this is also acceptable.
-    return (T->getEntryKind() & VendorEntryKind::VendorCommon) ==
+    return (T->getKind() & VendorEntryKind::VendorCommon) ==
            VendorEntryKind::VendorCommon;
   }
 
-  KindType getEntryKind() const override {
+  KindType getKind() const override {
     return VendorEntryKind::VendorCommon;
   }
 
@@ -75,7 +76,7 @@ struct StartupEvent : public VendorCommonTelemetryInfo {
 
   StartupEvent() = default;
   StartupEvent(const StartupEvent &E) {
-    SessionUuid = E.SessionUuid;
+    SessionId = E.SessionId;
     Stats = E.Stats;
     ExitDesc = E.ExitDesc;
     Counter = E.Counter;
@@ -84,20 +85,22 @@ struct StartupEvent : public VendorCommonTelemetryInfo {
   }
 
   static bool classof(const TelemetryInfo *T) {
-    return T->getEntryKind() == VendorEntryKind::Startup;
+    if (T == nullptr)
+      return false;
+    return T->getKind() == VendorEntryKind::Startup;
   }
 
-  KindType getEntryKind() const override { return VendorEntryKind::Startup; }
+  KindType getKind() const override { return VendorEntryKind::Startup; }
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
-    OS << "UUID:" << SessionUuid << "\n";
+    OS << "SessionId:" << SessionId << "\n";
     OS << "MagicStartupMsg:" << MagicStartupMsg << "\n";
   }
 
   json::Object serializeToJson() const override {
     return json::Object{
         {"Startup",
-         {{"UUID", SessionUuid}, {"MagicStartupMsg", MagicStartupMsg}}},
+         {{"SessionId", SessionId}, {"MagicStartupMsg", MagicStartupMsg}}},
     };
   }
 };
@@ -109,7 +112,7 @@ struct ExitEvent : public VendorCommonTelemetryInfo {
   // Provide a copy ctor because we may need to make a copy
   // before sanitizing the Entry.
   ExitEvent(const ExitEvent &E) {
-    SessionUuid = E.SessionUuid;
+    SessionId = E.SessionId;
     Stats = E.Stats;
     ExitDesc = E.ExitDesc;
     Counter = E.Counter;
@@ -118,13 +121,15 @@ struct ExitEvent : public VendorCommonTelemetryInfo {
   }
 
   static bool classof(const TelemetryInfo *T) {
-    return T->getEntryKind() == VendorEntryKind::Exit;
+    if (T == nullptr)
+      return false;
+    return T->getKind() == VendorEntryKind::Exit;
   }
 
-  unsigned getEntryKind() const override { return VendorEntryKind::Exit; }
+  unsigned getKind() const override { return VendorEntryKind::Exit; }
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
-    OS << "UUID:" << SessionUuid << "\n";
+    OS << "SessionId:" << SessionId << "\n";
     if (ExitDesc.has_value())
       OS << "ExitCode:" << ExitDesc->ExitCode << "\n";
     OS << "MagicExitMsg:" << MagicExitMsg << "\n";
@@ -132,7 +137,7 @@ struct ExitEvent : public VendorCommonTelemetryInfo {
 
   json::Object serializeToJson() const override {
     json::Array I = json::Array{
-        {"UUID", SessionUuid},
+        {"SessionId", SessionId},
         {"MagicExitMsg", MagicExitMsg},
     };
     if (ExitDesc.has_value())
@@ -148,7 +153,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 
   CustomTelemetryEvent() = default;
   CustomTelemetryEvent(const CustomTelemetryEvent &E) {
-    SessionUuid = E.SessionUuid;
+    SessionId = E.SessionId;
     Stats = E.Stats;
     ExitDesc = E.ExitDesc;
     Counter = E.Counter;
@@ -157,7 +162,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
   }
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
-    OS << "UUID:" << SessionUuid << "\n";
+    OS << "SessionId:" << SessionId << "\n";
     int I = 0;
     for (const std::string &M : Msgs) {
       OS << "MSG_" << I << ":" << M << "\n";
@@ -167,7 +172,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 
   json::Object serializeToJson() const override {
     json::Object Inner;
-    Inner.try_emplace("UUID", SessionUuid);
+    Inner.try_emplace("SessionId", SessionId);
     int I = 0;
     for (const std::string &M : Msgs) {
       Inner.try_emplace(("MSG_" + llvm::Twine(I)).str(), M);
@@ -179,7 +184,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 };
 
 // The following classes demonstrate how downstream code can
-// define one or more custom TelemetryDestination(s) to handle
+// define one or more custom Destination(s) to handle
 // Telemetry data differently, specifically:
 //    + which data to send (fullset or sanitized)
 //    + where to send the data
@@ -189,7 +194,7 @@ const std::string STRING_DEST("STRING");
 const std::string JSON_DEST("JSON");
 
 // This Destination sends data to a std::string given at ctor.
-class StringDestination : public TelemetryDestination {
+class StringDestination : public Destination {
 public:
   // ShouldSanitize: if true, sanitize the data before emitting, otherwise, emit
   // the full set.
@@ -216,7 +221,7 @@ public:
       }
     } else {
       // Unfamiliar entries, just send the entry's UUID
-      OS << "UUID:" << Entry->SessionUuid << "\n";
+      OS << "SessionId:" << Entry->SessionId << "\n";
     }
     return Error::success();
   }
@@ -240,7 +245,7 @@ private:
 };
 
 // This Destination sends data to some "blackbox" in form of JSON.
-class JsonStreamDestination : public TelemetryDestination {
+class JsonStreamDestination : public Destination {
 public:
   JsonStreamDestination(bool ShouldSanitize) : ShouldSanitize(ShouldSanitize) {}
 
@@ -260,8 +265,8 @@ public:
         return SendToBlackbox(E->serializeToJson());
       }
     } else {
-      // Unfamiliar entries, just send the entry's UUID
-      return SendToBlackbox(json::Object{{"UUID", Entry->SessionUuid}});
+      // Unfamiliar entries, just send the entry's ID
+      return SendToBlackbox(json::Object{{"SessionId", Entry->SessionId}});
     }
     return make_error<StringError>("unhandled codepath in emitEntry",
                                    inconvertibleErrorCode());
@@ -296,10 +301,10 @@ private:
 // Custom vendor-defined Telemeter that has additional data-collection point.
 class TestTelemeter : public Telemeter {
 public:
-  TestTelemeter(std::string SessionUuid) : Uuid(SessionUuid), Counter(0) {}
+  TestTelemeter(std::string SessionId) : Uuid(SessionId), Counter(0) {}
 
   static std::unique_ptr<TestTelemeter>
-  createInstance(TelemetryConfig *config) {
+  createInstance(Config *config) {
     llvm::errs() << "============================== createInstance is called"
                  << "\n";
     if (!config->EnableTelemetry)
@@ -352,7 +357,7 @@ public:
     emitToDestinations(Entry);
   }
 
-  void addDestination(TelemetryDestination *Dest) override {
+  void addDestination(Destination *Dest) override {
     Destinations.push_back(Dest);
   }
 
@@ -376,14 +381,14 @@ public:
 
   template <typename T> T makeDefaultTelemetryInfo() {
     T Ret;
-    Ret.SessionUuid = Uuid;
+    Ret.SessionId = Uuid;
     Ret.Counter = Counter++;
     return Ret;
   }
 
 private:
   void emitToDestinations(TelemetryInfo *Entry) {
-    for (TelemetryDestination *Dest : Destinations) {
+    for (Destination *Dest : Destinations) {
       llvm::Error err = Dest->emitEntry(Entry);
       if (err) {
         // Log it and move on.
@@ -394,11 +399,11 @@ private:
   const std::string Uuid;
   size_t Counter;
   std::string ToolName;
-  std::vector<TelemetryDestination *> Destinations;
+  std::vector<Destination *> Destinations;
 };
 
 // Pretend to be a "weakly" defined vendor-specific function.
-void ApplyVendorSpecificConfigs(TelemetryConfig *config) {
+void ApplyVendorSpecificConfigs(Config *config) {
   config->EnableTelemetry = true;
 }
 
@@ -408,15 +413,15 @@ void ApplyVendorSpecificConfigs(TelemetryConfig *config) {
 
 namespace {
 
-void ApplyCommonConfig(llvm::telemetry::TelemetryConfig *config) {
+void ApplyCommonConfig(llvm::telemetry::Config *config) {
   // Any shareable configs for the upstream tool can go here.
   // .....
 }
 
-std::shared_ptr<llvm::telemetry::TelemetryConfig> GetTelemetryConfig() {
+std::shared_ptr<llvm::telemetry::Config> GetTelemetryConfig() {
   // Telemetry is disabled by default.
   // The vendor can enable in their config.
-  auto Config = std::make_shared<llvm::telemetry::TelemetryConfig>();
+  auto Config = std::make_shared<llvm::telemetry::Config>();
   Config->EnableTelemetry = false;
 
   ApplyCommonConfig(Config.get());
@@ -491,7 +496,7 @@ static std::string ValueToString(const json::Value *V) {
 // Without vendor's implementation, telemetry is not enabled by default.
 TEST(TelemetryTest, TelemetryDefault) {
   HasVendorConfig = false;
-  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
+  std::shared_ptr<llvm::telemetry::Config> Config =
       GetTelemetryConfig();
   auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
 
@@ -507,7 +512,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   Buffer.clear();
   EmittedJsons.clear();
 
-  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
+  std::shared_ptr<llvm::telemetry::Config> Config =
       GetTelemetryConfig();
 
   // Add some destinations
@@ -526,10 +531,10 @@ TEST(TelemetryTest, TelemetryEnabled) {
   // Check that the StringDestination emitted properly
   {
     std::string ExpectedBuffer =
-        ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
-         llvm::Twine(ToolName) + "\n" + "UUID:" + llvm::Twine(ExpectedUuid) +
+        ("SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
+         llvm::Twine(ToolName) + "\n" + "SessionId:" + llvm::Twine(ExpectedUuid) +
          "\n" + "MSG_0:Two\n" + "MSG_1:Deux\n" + "MSG_2:Zwei\n" +
-         "UUID:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicExitMsg:Three_" +
+         "SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicExitMsg:Three_" +
          llvm::Twine(ToolName) + "\n")
             .str();
 
@@ -544,7 +549,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
 
     const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+    EXPECT_STREQ(("[[\"SessionId\",\"" + llvm::Twine(ExpectedUuid) +
                   "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName) +
                   "\"]]")
                      .str()
@@ -557,7 +562,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
     // entries (for now), so the "UUID" field is put at the end of the array
     // even though it was emitted first.
     EXPECT_STREQ(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\","
-                  "\"UUID\":\"" +
+                  "\"SessionId\":\"" +
                   llvm::Twine(ExpectedUuid) + "\"}")
                      .str()
                      .c_str(),
@@ -565,7 +570,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
 
     const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+    EXPECT_STREQ(("[[\"SessionId\",\"" + llvm::Twine(ExpectedUuid) +
                   "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName) +
                   "\"]]")
                      .str()
@@ -585,7 +590,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   Buffer.clear();
   EmittedJsons.clear();
 
-  std::shared_ptr<llvm::telemetry::TelemetryConfig> Config =
+  std::shared_ptr<llvm::telemetry::Config> Config =
       GetTelemetryConfig();
 
   // Add some destinations
@@ -603,10 +608,10 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     // The StringDestination should have removed the odd-positioned msgs.
 
     std::string ExpectedBuffer =
-        ("UUID:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
-         llvm::Twine(ToolName) + "\n" + "UUID:" + llvm::Twine(ExpectedUuid) +
+        ("SessionId:" + llvm::Twine(ExpectedUuid) + "\n" + "MagicStartupMsg:One_" +
+         llvm::Twine(ToolName) + "\n" + "SessionId:" + llvm::Twine(ExpectedUuid) +
          "\n" + "MSG_0:Two\n" + "MSG_1:\n" + // <<< was sanitized away.
-         "MSG_2:Zwei\n" + "UUID:" + llvm::Twine(ExpectedUuid) + "\n" +
+         "MSG_2:Zwei\n" + "SessionId:" + llvm::Twine(ExpectedUuid) + "\n" +
          "MagicExitMsg:Three_" + llvm::Twine(ToolName) + "\n")
             .str();
     EXPECT_STREQ(ExpectedBuffer.c_str(), Buffer.c_str());
@@ -620,7 +625,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
 
     const json::Value *StartupEntry = EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+    EXPECT_STREQ(("[[\"SessionId\",\"" + llvm::Twine(ExpectedUuid) +
                   "\"],[\"MagicStartupMsg\",\"One_" + llvm::Twine(ToolName) +
                   "\"]]")
                      .str()
@@ -631,7 +636,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     ASSERT_NE(MidpointEntry, nullptr);
     // The JsonDestination should have removed the even-positioned msgs.
     EXPECT_STREQ(
-        ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"UUID\":\"" +
+        ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"SessionId\":\"" +
          llvm::Twine(ExpectedUuid) + "\"}")
             .str()
             .c_str(),
@@ -639,7 +644,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
 
     const json::Value *ExitEntry = EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ(("[[\"UUID\",\"" + llvm::Twine(ExpectedUuid) +
+    EXPECT_STREQ(("[[\"SessionId\",\"" + llvm::Twine(ExpectedUuid) +
                   "\"],[\"MagicExitMsg\",\"Three_" + llvm::Twine(ToolName) +
                   "\"]]")
                      .str()
