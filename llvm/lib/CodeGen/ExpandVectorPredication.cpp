@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <optional>
 
 using namespace llvm;
@@ -407,7 +408,9 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                  APFloat::getLargest(Semantics, Negative));
   }
   case Intrinsic::vp_reduce_fadd:
-    return ConstantFP::getNegativeZero(EltTy);
+    return ConstantExpr::getBinOpIdentity(
+        Instruction::FAdd, EltTy, false,
+        VPI.getFastMathFlags().noSignedZeros());
   case Intrinsic::vp_reduce_fmul:
     return ConstantFP::get(EltTy, 1.0);
   }
@@ -437,69 +440,33 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
   default:
     llvm_unreachable("Impossible reduction kind");
   case Intrinsic::vp_reduce_add:
-    Reduction = Builder.CreateAddReduce(RedOp);
-    Reduction = Builder.CreateAdd(Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_mul:
-    Reduction = Builder.CreateMulReduce(RedOp);
-    Reduction = Builder.CreateMul(Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_and:
-    Reduction = Builder.CreateAndReduce(RedOp);
-    Reduction = Builder.CreateAnd(Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_or:
-    Reduction = Builder.CreateOrReduce(RedOp);
-    Reduction = Builder.CreateOr(Reduction, Start);
+  case Intrinsic::vp_reduce_xor: {
+    Intrinsic::ID RedID = *VPI.getFunctionalIntrinsicID();
+    unsigned Opc = getArithmeticReductionInstruction(RedID);
+    assert(Instruction::isBinaryOp(Opc));
+    Reduction = Builder.CreateUnaryIntrinsic(RedID, RedOp);
+    Reduction =
+        Builder.CreateBinOp((Instruction::BinaryOps)Opc, Reduction, Start);
     break;
-  case Intrinsic::vp_reduce_xor:
-    Reduction = Builder.CreateXorReduce(RedOp);
-    Reduction = Builder.CreateXor(Reduction, Start);
-    break;
+  }
   case Intrinsic::vp_reduce_smax:
-    Reduction = Builder.CreateIntMaxReduce(RedOp, /*IsSigned*/ true);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::smax, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_smin:
-    Reduction = Builder.CreateIntMinReduce(RedOp, /*IsSigned*/ true);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::smin, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_umax:
-    Reduction = Builder.CreateIntMaxReduce(RedOp, /*IsSigned*/ false);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::umax, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_umin:
-    Reduction = Builder.CreateIntMinReduce(RedOp, /*IsSigned*/ false);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::umin, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_fmax:
-    Reduction = Builder.CreateFPMaxReduce(RedOp);
-    transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_fmin:
-    Reduction = Builder.CreateFPMinReduce(RedOp);
-    transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::minnum, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_fmaximum:
-    Reduction = Builder.CreateFPMaximumReduce(RedOp);
+  case Intrinsic::vp_reduce_fminimum: {
+    Intrinsic::ID RedID = *VPI.getFunctionalIntrinsicID();
+    Intrinsic::ID ScalarID = getMinMaxReductionIntrinsicOp(RedID);
+    Reduction = Builder.CreateUnaryIntrinsic(RedID, RedOp);
     transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::maximum, Reduction, Start);
+    Reduction = Builder.CreateBinaryIntrinsic(ScalarID, Reduction, Start);
     break;
-  case Intrinsic::vp_reduce_fminimum:
-    Reduction = Builder.CreateFPMinimumReduce(RedOp);
-    transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Reduction, Start);
-    break;
+  }
   case Intrinsic::vp_reduce_fadd:
     Reduction = Builder.CreateFAddReduce(Start, RedOp);
     break;

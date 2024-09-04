@@ -7049,6 +7049,11 @@ void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
@@ -7891,6 +7896,9 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     if (Context.TypePackElementDecl)
       return Context.TypePackElementDecl;
     NewLoaded = Context.getTypePackElementDecl();
+    break;
+  case NUM_PREDEF_DECL_IDS:
+    llvm_unreachable("Invalid decl ID");
     break;
   }
 

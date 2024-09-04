@@ -102,6 +102,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Tracker.h"
+#include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -112,6 +113,7 @@ namespace sandboxir {
 
 class BasicBlock;
 class ConstantInt;
+class ConstantFP;
 class Context;
 class Function;
 class Instruction;
@@ -302,6 +304,8 @@ protected:
   friend class PHINode;               // For getting `Val`.
   friend class UnreachableInst;       // For getting `Val`.
   friend class CatchSwitchAddHandler; // For `Val`.
+  friend class ConstantArray;         // For `Val`.
+  friend class ConstantStruct;        // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -386,7 +390,7 @@ public:
     return Cnt == Num;
   }
 
-  Type *getType() const { return Val->getType(); }
+  Type *getType() const;
 
   Context &getContext() const { return Ctx; }
 
@@ -562,8 +566,9 @@ public:
 #endif
 };
 
+// TODO: This should inherit from ConstantData.
 class ConstantInt : public Constant {
-  ConstantInt(llvm::ConstantInt *C, sandboxir::Context &Ctx)
+  ConstantInt(llvm::ConstantInt *C, Context &Ctx)
       : Constant(ClassID::ConstantInt, C, Ctx) {}
   friend class Context; // For constructor.
 
@@ -572,12 +577,164 @@ class ConstantInt : public Constant {
   }
 
 public:
+  static ConstantInt *getTrue(Context &Ctx);
+  static ConstantInt *getFalse(Context &Ctx);
+  static ConstantInt *getBool(Context &Ctx, bool V);
+  static Constant *getTrue(Type *Ty);
+  static Constant *getFalse(Type *Ty);
+  static Constant *getBool(Type *Ty, bool V);
+
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  static ConstantInt *get(Type *Ty, uint64_t V, Context &Ctx,
-                          bool IsSigned = false);
+  static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
-  // TODO: Implement missing functions.
+  /// Return a ConstantInt with the specified integer value for the specified
+  /// type. If the type is wider than 64 bits, the value will be zero-extended
+  /// to fit the type, unless IsSigned is true, in which case the value will
+  /// be interpreted as a 64-bit signed integer and sign-extended to fit
+  /// the type.
+  /// Get a ConstantInt for a specific value.
+  static ConstantInt *get(IntegerType *Ty, uint64_t V, bool IsSigned = false);
+
+  /// Return a ConstantInt with the specified value for the specified type. The
+  /// value V will be canonicalized to a an unsigned APInt. Accessing it with
+  /// either getSExtValue() or getZExtValue() will yield a correctly sized and
+  /// signed value for the type Ty.
+  /// Get a ConstantInt for a specific signed value.
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
+  static Constant *getSigned(Type *Ty, int64_t V);
+
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the integer type that corresponds to the bit width of the value.
+  static ConstantInt *get(Context &Ctx, const APInt &V);
+
+  /// Return a ConstantInt constructed from the string strStart with the given
+  /// radix.
+  static ConstantInt *get(IntegerType *Ty, StringRef Str, uint8_t Radix);
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantInt for the given value.
+  static Constant *get(Type *Ty, const APInt &V);
+
+  /// Return the constant as an APInt value reference. This allows clients to
+  /// obtain a full-precision copy of the value.
+  /// Return the constant's value.
+  inline const APInt &getValue() const {
+    return cast<llvm::ConstantInt>(Val)->getValue();
+  }
+
+  /// getBitWidth - Return the scalar bitwidth of this constant.
+  unsigned getBitWidth() const {
+    return cast<llvm::ConstantInt>(Val)->getBitWidth();
+  }
+  /// Return the constant as a 64-bit unsigned integer value after it
+  /// has been zero extended as appropriate for the type of this constant. Note
+  /// that this method can assert if the value does not fit in 64 bits.
+  /// Return the zero extended value.
+  inline uint64_t getZExtValue() const {
+    return cast<llvm::ConstantInt>(Val)->getZExtValue();
+  }
+
+  /// Return the constant as a 64-bit integer value after it has been sign
+  /// extended as appropriate for the type of this constant. Note that
+  /// this method can assert if the value does not fit in 64 bits.
+  /// Return the sign extended value.
+  inline int64_t getSExtValue() const {
+    return cast<llvm::ConstantInt>(Val)->getSExtValue();
+  }
+
+  /// Return the constant as an llvm::MaybeAlign.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline MaybeAlign getMaybeAlignValue() const {
+    return cast<llvm::ConstantInt>(Val)->getMaybeAlignValue();
+  }
+
+  /// Return the constant as an llvm::Align, interpreting `0` as `Align(1)`.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline Align getAlignValue() const {
+    return cast<llvm::ConstantInt>(Val)->getAlignValue();
+  }
+
+  /// A helper method that can be used to determine if the constant contained
+  /// within is equal to a constant.  This only works for very small values,
+  /// because this is all that can be represented with all types.
+  /// Determine if this constant's value is same as an unsigned char.
+  bool equalsInt(uint64_t V) const {
+    return cast<llvm::ConstantInt>(Val)->equalsInt(V);
+  }
+
+  /// Variant of the getType() method to always return an IntegerType, which
+  /// reduces the amount of casting needed in parts of the compiler.
+  IntegerType *getIntegerType() const;
+
+  /// This static method returns true if the type Ty is big enough to
+  /// represent the value V. This can be used to avoid having the get method
+  /// assert when V is larger than Ty can represent. Note that there are two
+  /// versions of this method, one for unsigned and one for signed integers.
+  /// Although ConstantInt canonicalizes everything to an unsigned integer,
+  /// the signed version avoids callers having to convert a signed quantity
+  /// to the appropriate unsigned type before calling the method.
+  /// @returns true if V is a valid value for type Ty
+  /// Determine if the value is in range for the given type.
+  static bool isValueValidForType(Type *Ty, uint64_t V);
+  static bool isValueValidForType(Type *Ty, int64_t V);
+
+  bool isNegative() const { return cast<llvm::ConstantInt>(Val)->isNegative(); }
+
+  /// This is just a convenience method to make client code smaller for a
+  /// common code. It also correctly performs the comparison without the
+  /// potential for an assertion from getZExtValue().
+  bool isZero() const { return cast<llvm::ConstantInt>(Val)->isZero(); }
+
+  /// This is just a convenience method to make client code smaller for a
+  /// common case. It also correctly performs the comparison without the
+  /// potential for an assertion from getZExtValue().
+  /// Determine if the value is one.
+  bool isOne() const { return cast<llvm::ConstantInt>(Val)->isOne(); }
+
+  /// This function will return true iff every bit in this constant is set
+  /// to true.
+  /// @returns true iff this constant's bits are all set to true.
+  /// Determine if the value is all ones.
+  bool isMinusOne() const { return cast<llvm::ConstantInt>(Val)->isMinusOne(); }
+
+  /// This function will return true iff this constant represents the largest
+  /// value that may be represented by the constant's type.
+  /// @returns true iff this is the largest value that may be represented
+  /// by this type.
+  /// Determine if the value is maximal.
+  bool isMaxValue(bool IsSigned) const {
+    return cast<llvm::ConstantInt>(Val)->isMaxValue(IsSigned);
+  }
+
+  /// This function will return true iff this constant represents the smallest
+  /// value that may be represented by this constant's type.
+  /// @returns true if this is the smallest value that may be represented by
+  /// this type.
+  /// Determine if the value is minimal.
+  bool isMinValue(bool IsSigned) const {
+    return cast<llvm::ConstantInt>(Val)->isMinValue(IsSigned);
+  }
+
+  /// This function will return true iff this constant represents a value with
+  /// active bits bigger than 64 bits or a value greater than the given uint64_t
+  /// value.
+  /// @returns true iff this constant is greater or equal to the given number.
+  /// Determine if the value is greater or equal to the given number.
+  bool uge(uint64_t Num) const {
+    return cast<llvm::ConstantInt>(Val)->uge(Num);
+  }
+
+  /// getLimitedValue - If the value is smaller than the specified limit,
+  /// return it, otherwise return the limit value.  This causes the value
+  /// to saturate to the limit.
+  /// @returns the min of the value of the constant and the specified value
+  /// Get the constant's value with a saturation limit
+  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
+    return cast<llvm::ConstantInt>(Val)->getLimitedValue(Limit);
+  }
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -595,6 +752,185 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantFP final : public Constant {
+  ConstantFP(llvm::ConstantFP *C, Context &Ctx)
+      : Constant(ClassID::ConstantFP, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// This returns a ConstantFP, or a vector containing a splat of a ConstantFP,
+  /// for the specified value in the specified type. This should only be used
+  /// for simple constant values like 2.0/1.0 etc, that are known-valid both as
+  /// host double and as the target format.
+  static Constant *get(Type *Ty, double V);
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantFP for the given value.
+  static Constant *get(Type *Ty, const APFloat &V);
+
+  static Constant *get(Type *Ty, StringRef Str);
+
+  static ConstantFP *get(const APFloat &V, Context &Ctx);
+
+  static Constant *getNaN(Type *Ty, bool Negative = false,
+                          uint64_t Payload = 0);
+  static Constant *getQNaN(Type *Ty, bool Negative = false,
+                           APInt *Payload = nullptr);
+  static Constant *getSNaN(Type *Ty, bool Negative = false,
+                           APInt *Payload = nullptr);
+  static Constant *getZero(Type *Ty, bool Negative = false);
+
+  static Constant *getNegativeZero(Type *Ty);
+  static Constant *getInfinity(Type *Ty, bool Negative = false);
+
+  /// Return true if Ty is big enough to represent V.
+  static bool isValueValidForType(Type *Ty, const APFloat &V);
+
+  inline const APFloat &getValueAPF() const {
+    return cast<llvm::ConstantFP>(Val)->getValueAPF();
+  }
+  inline const APFloat &getValue() const {
+    return cast<llvm::ConstantFP>(Val)->getValue();
+  }
+
+  /// Return true if the value is positive or negative zero.
+  bool isZero() const { return cast<llvm::ConstantFP>(Val)->isZero(); }
+
+  /// Return true if the sign bit is set.
+  bool isNegative() const { return cast<llvm::ConstantFP>(Val)->isNegative(); }
+
+  /// Return true if the value is infinity
+  bool isInfinity() const { return cast<llvm::ConstantFP>(Val)->isInfinity(); }
+
+  /// Return true if the value is a NaN.
+  bool isNaN() const { return cast<llvm::ConstantFP>(Val)->isNaN(); }
+
+  /// We don't rely on operator== working on double values, as it returns true
+  /// for things that are clearly not equal, like -0.0 and 0.0.
+  /// As such, this method can be used to do an exact bit-for-bit comparison of
+  /// two floating point values.  The version with a double operand is retained
+  /// because it's so convenient to write isExactlyValue(2.0), but please use
+  /// it only for simple constants.
+  bool isExactlyValue(const APFloat &V) const {
+    return cast<llvm::ConstantFP>(Val)->isExactlyValue(V);
+  }
+
+  bool isExactlyValue(double V) const {
+    return cast<llvm::ConstantFP>(Val)->isExactlyValue(V);
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantFP;
+  }
+
+  // TODO: Better name: getOperandNo(const Use&). Should be private.
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantFP has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantFP>(Val) && "Expected a ConstantFP!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+/// Base class for aggregate constants (with operands).
+class ConstantAggregate : public Constant {
+protected:
+  ConstantAggregate(ClassID ID, llvm::Constant *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    auto ID = From->getSubclassID();
+    return ID == ClassID::ConstantVector || ID == ClassID::ConstantStruct ||
+           ID == ClassID::ConstantArray;
+  }
+};
+
+class ConstantArray final : public ConstantAggregate {
+  ConstantArray(llvm::ConstantArray *C, Context &Ctx)
+      : ConstantAggregate(ClassID::ConstantArray, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
+  ArrayType *getType() const;
+
+  // TODO: Missing functions: getType(), getTypeForElements(), getAnon(), get().
+
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantArray;
+  }
+};
+
+class ConstantStruct final : public ConstantAggregate {
+  ConstantStruct(llvm::ConstantStruct *C, Context &Ctx)
+      : ConstantAggregate(ClassID::ConstantStruct, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static Constant *get(StructType *T, ArrayRef<Constant *> V);
+
+  template <typename... Csts>
+  static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
+  get(StructType *T, Csts *...Vs) {
+    return get(T, ArrayRef<Constant *>({Vs...}));
+  }
+  /// Return an anonymous struct that has the specified elements.
+  /// If the struct is possibly empty, then you must specify a context.
+  static Constant *getAnon(ArrayRef<Constant *> V, bool Packed = false) {
+    return get(getTypeForElements(V, Packed), V);
+  }
+  static Constant *getAnon(Context &Ctx, ArrayRef<Constant *> V,
+                           bool Packed = false) {
+    return get(getTypeForElements(Ctx, V, Packed), V);
+  }
+  /// This version of the method allows an empty list.
+  static StructType *getTypeForElements(Context &Ctx, ArrayRef<Constant *> V,
+                                        bool Packed = false);
+  /// Return an anonymous struct type to use for a constant with the specified
+  /// set of elements. The list must not be empty.
+  static StructType *getTypeForElements(ArrayRef<Constant *> V,
+                                        bool Packed = false) {
+    assert(!V.empty() &&
+           "ConstantStruct::getTypeForElements cannot be called on empty list");
+    return getTypeForElements(V[0]->getContext(), V, Packed);
+  }
+
+  /// Specialization - reduce amount of casting.
+  inline StructType *getType() const {
+    return cast<StructType>(Value::getType());
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantStruct;
+  }
+};
+
+class ConstantVector final : public ConstantAggregate {
+  ConstantVector(llvm::ConstantVector *C, Context &Ctx)
+      : ConstantAggregate(ClassID::ConstantVector, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  // TODO: Missing functions: getSplat(), getType(), getSplatValue(), get().
+
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantVector;
+  }
 };
 
 /// Iterator for `Instruction`s in a `BasicBlock.
@@ -1024,10 +1360,7 @@ public:
   Value *getIndexOperand() { return getOperand(1); }
   const Value *getVectorOperand() const { return getOperand(0); }
   const Value *getIndexOperand() const { return getOperand(1); }
-
-  VectorType *getVectorOperandType() const {
-    return cast<VectorType>(getVectorOperand()->getType());
-  }
+  VectorType *getVectorOperandType() const;
 };
 
 class ShuffleVectorInst final
@@ -1057,7 +1390,7 @@ public:
 
   /// Swap the operands and adjust the mask to preserve the semantics of the
   /// instruction.
-  void commute() { cast<llvm::ShuffleVectorInst>(Val)->commute(); }
+  void commute();
 
   /// Return true if a shufflevector instruction can be formed with the
   /// specified operands.
@@ -1072,9 +1405,7 @@ public:
   }
 
   /// Overload to return most specific vector type.
-  VectorType *getType() const {
-    return cast<llvm::ShuffleVectorInst>(Val)->getType();
-  }
+  VectorType *getType() const;
 
   /// Return the shuffle mask value of this instruction for the given element
   /// index. Return PoisonMaskElem if the element is undef.
@@ -1100,7 +1431,7 @@ public:
   Constant *getShuffleMaskForBitcode() const;
 
   static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
-                                                Type *ResultTy, Context &Ctx);
+                                                Type *ResultTy);
 
   void setShuffleMask(ArrayRef<int> Mask);
 
@@ -1646,9 +1977,7 @@ public:
   /// with an extractvalue instruction with the specified parameters.
   ///
   /// Null is returned if the indices are invalid for the specified type.
-  static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs) {
-    return llvm::ExtractValueInst::getIndexedType(Agg, Idxs);
-  }
+  static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs);
 
   using idx_iterator = llvm::ExtractValueInst::idx_iterator;
 
@@ -1843,9 +2172,7 @@ public:
            Opc == Instruction::ClassID::CallBr;
   }
 
-  FunctionType *getFunctionType() const {
-    return cast<llvm::CallBase>(Val)->getFunctionType();
-  }
+  FunctionType *getFunctionType() const;
 
   op_iterator data_operands_begin() { return op_begin(); }
   const_op_iterator data_operands_begin() const {
@@ -2261,12 +2588,8 @@ public:
     return From->getSubclassID() == ClassID::GetElementPtr;
   }
 
-  Type *getSourceElementType() const {
-    return cast<llvm::GetElementPtrInst>(Val)->getSourceElementType();
-  }
-  Type *getResultElementType() const {
-    return cast<llvm::GetElementPtrInst>(Val)->getResultElementType();
-  }
+  Type *getSourceElementType() const;
+  Type *getResultElementType() const;
   unsigned getAddressSpace() const {
     return cast<llvm::GetElementPtrInst>(Val)->getAddressSpace();
   }
@@ -2290,9 +2613,7 @@ public:
   static unsigned getPointerOperandIndex() {
     return llvm::GetElementPtrInst::getPointerOperandIndex();
   }
-  Type *getPointerOperandType() const {
-    return cast<llvm::GetElementPtrInst>(Val)->getPointerOperandType();
-  }
+  Type *getPointerOperandType() const;
   unsigned getPointerAddressSpace() const {
     return cast<llvm::GetElementPtrInst>(Val)->getPointerAddressSpace();
   }
@@ -2843,9 +3164,7 @@ public:
     return const_cast<AllocaInst *>(this)->getArraySize();
   }
   /// Overload to return most specific pointer type.
-  PointerType *getType() const {
-    return cast<llvm::AllocaInst>(Val)->getType();
-  }
+  PointerType *getType() const;
   /// Return the address space for the allocation.
   unsigned getAddressSpace() const {
     return cast<llvm::AllocaInst>(Val)->getAddressSpace();
@@ -2861,9 +3180,7 @@ public:
     return cast<llvm::AllocaInst>(Val)->getAllocationSizeInBits(DL);
   }
   /// Return the type that is being allocated by the instruction.
-  Type *getAllocatedType() const {
-    return cast<llvm::AllocaInst>(Val)->getAllocatedType();
-  }
+  Type *getAllocatedType() const;
   /// for use only in special circumstances that need to generically
   /// transform a whole instruction (eg: IR linking and vectorization).
   void setAllocatedType(Type *Ty);
@@ -2945,8 +3262,8 @@ public:
                        const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
-  Type *getSrcTy() const { return cast<llvm::CastInst>(Val)->getSrcTy(); }
-  Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
+  Type *getSrcTy() const;
+  Type *getDestTy() const;
 };
 
 /// Instruction that can have a nneg flag (zext/uitofp).
@@ -3126,12 +3443,26 @@ public:
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  friend class Type;        // For LLVMCtx.
+  friend class PointerType; // For LLVMCtx.
+  friend class IntegerType; // For LLVMCtx.
+  friend class StructType;  // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
   /// SandboxIR objects.
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
       LLVMValueToValueMap;
+
+  /// Type has a protected destructor to prohibit the user from managing the
+  /// lifetime of the Type objects. Context is friend of Type, and this custom
+  /// deleter can destroy Type.
+  struct TypeDeleter {
+    void operator()(Type *Ty) { delete Ty; }
+  };
+  /// Maps LLVM Type to the corresonding sandboxir::Type. Owns all Sandbox IR
+  /// Type objects.
+  DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
@@ -3163,11 +3494,13 @@ protected:
   Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
     return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
   }
-  friend class ConstantInt; // For getOrCreateConstant().
+  // Friends for getOrCreateConstant().
+#define DEF_CONST(ID, CLASS) friend class CLASS;
+#include "llvm/SandboxIR/SandboxIRValues.def"
+
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
-
   friend class BasicBlock; // For getOrCreateValue().
 
   IRBuilder<ConstantFolder> LLVMIRBuilder;
@@ -3257,6 +3590,17 @@ public:
   const sandboxir::Value *getValue(const llvm::Value *V) const {
     return getValue(const_cast<llvm::Value *>(V));
   }
+
+  Type *getType(llvm::Type *LLVMTy) {
+    if (LLVMTy == nullptr)
+      return nullptr;
+    auto Pair = LLVMTypeToTypeMap.insert({LLVMTy, nullptr});
+    auto It = Pair.first;
+    if (Pair.second)
+      It->second = std::unique_ptr<Type, TypeDeleter>(new Type(LLVMTy, *this));
+    return It->second.get();
+  }
+
   /// Create a sandboxir::Function for an existing LLVM IR \p F, including all
   /// blocks and instructions.
   /// This is the main API function for creating Sandbox IR.
@@ -3303,9 +3647,7 @@ public:
     LLVMBBToBB BBGetter(Ctx);
     return iterator(cast<llvm::Function>(Val)->end(), BBGetter);
   }
-  FunctionType *getFunctionType() const {
-    return cast<llvm::Function>(Val)->getFunctionType();
-  }
+  FunctionType *getFunctionType() const;
 
 #ifndef NDEBUG
   void verify() const final {

@@ -206,6 +206,12 @@ void MappingTraits<DXContainerYAML::Object>::mapping(
   IO.mapRequired("Parts", Obj.Parts);
 }
 
+void MappingTraits<DXContainerYAML::ResourceFlags>::mapping(
+    IO &IO, DXContainerYAML::ResourceFlags &Flags) {
+#define RESOURCE_FLAG(FlagIndex, Enum) IO.mapRequired(#Enum, Flags.Bits.Enum);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
 void MappingTraits<DXContainerYAML::ResourceBindInfo>::mapping(
     IO &IO, DXContainerYAML::ResourceBindInfo &Res) {
   IO.mapRequired("Type", Res.Type);
@@ -263,12 +269,6 @@ void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
 void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
     IO &IO, dxbc::PSV::ResourceKind &Value) {
   for (const auto &E : dxbc::PSV::getResourceKinds())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
-}
-
-void ScalarEnumerationTraits<dxbc::PSV::ResourceFlag>::enumeration(
-    IO &IO, dxbc::PSV::ResourceFlag &Value) {
-  for (const auto &E : dxbc::PSV::getResourceFlags())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

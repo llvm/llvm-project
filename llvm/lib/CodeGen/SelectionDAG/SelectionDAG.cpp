@@ -74,6 +74,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
 #include <limits>
 #include <optional>
 #include <set>
@@ -2437,6 +2438,35 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   if (OpTy == ShTy || OpTy.isVector()) return Op;
 
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
+}
+
+SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                                          SDValue Op2) {
+  EVT FullTy = Op2.getValueType();
+
+  unsigned Stride = ReducedTy.getVectorMinNumElements();
+  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+
+  // Collect all of the subvectors
+  std::deque<SDValue> Subvectors = {Op1};
+  for (unsigned I = 0; I < ScaleFactor; I++) {
+    auto SourceIndex = getVectorIdxConstant(I * Stride, DL);
+    Subvectors.push_back(
+        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
+  }
+
+  // Flatten the subvector tree
+  while (Subvectors.size() > 1) {
+    Subvectors.push_back(
+        getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+    Subvectors.pop_front();
+    Subvectors.pop_front();
+  }
+
+  assert(Subvectors.size() == 1 &&
+         "There should only be one subvector after tree flattening");
+
+  return Subvectors[0];
 }
 
 SDValue SelectionDAG::expandVAArg(SDNode *Node) {
@@ -13267,7 +13297,9 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::SMIN:
     return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
   case ISD::FADD:
-    return getConstantFP(-0.0, DL, VT);
+    // If flags allow, prefer positive zero since it's generally cheaper
+    // to materialize on most targets.
+    return getConstantFP(Flags.hasNoSignedZeros() ? 0.0 : -0.0, DL, VT);
   case ISD::FMUL:
     return getConstantFP(1.0, DL, VT);
   case ISD::FMINNUM:

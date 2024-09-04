@@ -1290,8 +1290,8 @@ public:
     if (VF.isScalar() || Uniforms.contains(VF))
       return;
     setCostBasedWideningDecision(VF);
-    setVectorizedCallDecision(VF);
     collectLoopUniforms(VF);
+    setVectorizedCallDecision(VF);
     collectLoopScalars(VF);
   }
 
@@ -5386,8 +5386,18 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // 3. Emulated masked memrefs, if a hacked cost is needed.
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
-            computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
+            computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
+          // Check if we decided to scalarize a call. If so, update the widening
+          // decision of the call to CM_Scalarize with the computed scalar cost.
+          for (const auto &[I, _] : ScalarCosts) {
+            auto *CI = dyn_cast<CallInst>(I);
+            if (!CI || !CallWideningDecisions.contains({CI, VF}))
+              continue;
+            CallWideningDecisions[{CI, VF}].Kind = CM_Scalarize;
+            CallWideningDecisions[{CI, VF}].Cost = ScalarCosts[CI];
+          }
+        }
         // Remember that BB will remain after vectorization.
         PredicatedBBsAfterVectorization[VF].insert(BB);
         for (auto *Pred : predecessors(BB)) {
@@ -6184,6 +6194,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
   assert(!VF.isScalar() &&
          "Trying to set a vectorization decision for a scalar VF");
 
+  auto ForcedScalar = ForcedScalars.find(VF);
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
@@ -6196,28 +6207,11 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       InstructionCost VectorCost = InstructionCost::getInvalid();
       InstructionCost IntrinsicCost = InstructionCost::getInvalid();
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-
       Function *ScalarFunc = CI->getCalledFunction();
       Type *ScalarRetTy = CI->getType();
       SmallVector<Type *, 4> Tys, ScalarTys;
-      bool MaskRequired = Legal->isMaskRequired(CI);
       for (auto &ArgOp : CI->args())
         ScalarTys.push_back(ArgOp->getType());
-
-      // Compute corresponding vector type for return value and arguments.
-      Type *RetTy = ToVectorTy(ScalarRetTy, VF);
-      for (Type *ScalarTy : ScalarTys)
-        Tys.push_back(ToVectorTy(ScalarTy, VF));
-
-      // An in-loop reduction using an fmuladd intrinsic is a special case;
-      // we don't want the normal cost for that intrinsic.
-      if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
-        if (auto RedCost = getReductionPatternCost(CI, VF, RetTy, CostKind)) {
-          setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
-                                  getVectorIntrinsicIDForCall(CI, TLI),
-                                  std::nullopt, *RedCost);
-          continue;
-        }
 
       // Estimate cost of scalarized vector call. The source operands are
       // assumed to be vectors, so we need to extract individual elements from
@@ -6232,6 +6226,32 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           getScalarizationOverhead(CI, VF, CostKind);
 
       ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
+      // Honor ForcedScalars decision.
+      // TODO: For calls, it might still be more profitable to widen. Use
+      // VPlan-based cost model to compare different options.
+      if (VF.isVector() && ForcedScalar != ForcedScalars.end() &&
+          ForcedScalar->second.contains(CI)) {
+        setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
+                                Intrinsic::not_intrinsic, std::nullopt,
+                                ScalarCost);
+        continue;
+      }
+
+      bool MaskRequired = Legal->isMaskRequired(CI);
+      // Compute corresponding vector type for return value and arguments.
+      Type *RetTy = ToVectorTy(ScalarRetTy, VF);
+      for (Type *ScalarTy : ScalarTys)
+        Tys.push_back(ToVectorTy(ScalarTy, VF));
+
+      // An in-loop reduction using an fmuladd intrinsic is a special case;
+      // we don't want the normal cost for that intrinsic.
+      if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
+        if (auto RedCost = getReductionPatternCost(CI, VF, RetTy, CostKind)) {
+          setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
+                                  getVectorIntrinsicIDForCall(CI, TLI),
+                                  std::nullopt, *RedCost);
+          continue;
+        }
 
       // Find the cost of vectorizing the call, if we can find a suitable
       // vector variant of the function.
@@ -6817,6 +6837,9 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     if (auto *Br = dyn_cast_or_null<BranchInst>(Op)) {
       BasicBlock *ThenBB = Br->getSuccessor(0);
       BasicBlock *ElseBB = Br->getSuccessor(1);
+      // Don't considers branches leaving the loop for simplification.
+      if (!TheLoop->contains(ThenBB) || !TheLoop->contains(ElseBB))
+        continue;
       bool ThenEmpty = IsEmptyBlock(ThenBB);
       bool ElseEmpty = IsEmptyBlock(ElseBB);
       if ((ThenEmpty && ElseEmpty) ||
@@ -7147,7 +7170,12 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     if (!OrigLoop->contains(CondI) ||
         !CostCtx.SkipCostComputation.insert(CondI).second)
       continue;
-    Cost += CostCtx.getLegacyCost(CondI, VF);
+    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
+    LLVM_DEBUG({
+      dbgs() << "Cost of " << CondICost << " for VF " << VF
+             << ": exit condition instruction " << *CondI << "\n";
+    });
+    Cost += CondICost;
     for (Value *Op : CondI->operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (!OpI || any_of(OpI->users(), [&ExitInstrs, this](User *U) {
@@ -7250,10 +7278,9 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
 /// not have corresponding recipes in \p Plan and are not marked to be ignored
 /// in \p CostCtx. This means the VPlan contains simplification that the legacy
 /// cost-model did not account for.
-static bool
-planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
-                                      VPCostContext &CostCtx, Loop *TheLoop,
-                                      LoopVectorizationCostModel &CM) {
+static bool planContainsAdditionalSimplifications(VPlan &Plan,
+                                                  VPCostContext &CostCtx,
+                                                  Loop *TheLoop) {
   // First collect all instructions for the recipes in Plan.
   auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
@@ -7284,16 +7311,13 @@ planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates
   // that the VPlan contains extra simplifications.
-  return any_of(
-      TheLoop->blocks(), [&SeenInstrs, VF, &CostCtx, &CM](BasicBlock *BB) {
-        return any_of(*BB, [&SeenInstrs, VF, &CostCtx, &CM](Instruction &I) {
-          if (isa<PHINode>(&I))
-            return false;
-          return !SeenInstrs.contains(&I) &&
-                 !CostCtx.skipCostComputation(&I, true) &&
-                 !CM.canTruncateToMinimalBitwidth(&I, VF);
-        });
-      });
+  return any_of(TheLoop->blocks(), [&SeenInstrs, &CostCtx](BasicBlock *BB) {
+    return any_of(*BB, [&SeenInstrs, &CostCtx](Instruction &I) {
+      if (isa<PHINode>(&I))
+        return false;
+      return !SeenInstrs.contains(&I) && !CostCtx.skipCostComputation(&I, true);
+    });
+  });
 }
 #endif
 
@@ -7364,8 +7388,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   assert((BestFactor.Width == LegacyVF.Width ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                BestFactor.Width, CostCtx,
-                                                OrigLoop, CM)) &&
+                                                CostCtx, OrigLoop)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
@@ -8390,6 +8413,20 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+    if (I->getOpcode() == Instruction::Mul) {
+      // Simplify operands of multiplications using SCEV. This is needed at the
+      // moment to match the behavior of the legacy cost-model.
+      // TODO: Generalize to any opcode and move to VPlan transformation.
+      SmallVector<VPValue *> NewOps(Operands);
+      ScalarEvolution &SE = *PSE.getSE();
+      for (unsigned I = 0; I < Operands.size(); ++I) {
+        Value *V = NewOps[I]->getUnderlyingValue();
+        if (!isa<Constant>(V) && SE.isSCEVable(V->getType()))
+          if (auto *C = dyn_cast<SCEVConstant>(PSE.getSE()->getSCEV(V)))
+            NewOps[I] = Plan.getOrAddLiveIn(C->getValue());
+      }
+      return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    }
     return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
   };
 }

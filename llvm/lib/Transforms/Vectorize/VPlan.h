@@ -1565,6 +1565,10 @@ public:
   /// Produce a widened version of the call instruction.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenCallRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
@@ -2534,6 +2538,10 @@ public:
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPWidenMemoryRecipe should not be instantiated.");
   }
+
+  /// Return the cost of this VPWidenMemoryRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   Instruction &getIngredient() const { return Ingredient; }
 };

@@ -313,12 +313,18 @@ enum class ResourceKind : uint32_t {
 
 ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
 
-#define RESOURCE_FLAG(Val, Enum) Enum = Val,
-enum class ResourceFlag : uint32_t {
-#include "DXContainerConstants.def"
+#define RESOURCE_FLAG(Index, Enum) bool Enum = false;
+struct ResourceFlags {
+  ResourceFlags() {};
+  struct FlagsBits {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  };
+  union {
+    uint32_t Flags;
+    FlagsBits Bits;
+  };
+  bool operator==(const uint32_t RFlags) const { return Flags == RFlags; }
 };
-
-ArrayRef<EnumEntry<ResourceFlag>> getResourceFlags();
 
 namespace v0 {
 struct RuntimeInfo {
@@ -439,12 +445,12 @@ struct RuntimeInfo : public v1::RuntimeInfo {
 
 struct ResourceBindInfo : public v0::ResourceBindInfo {
   ResourceKind Kind;
-  uint32_t Flags;
+  ResourceFlags Flags;
 
   void swapBytes() {
     v0::ResourceBindInfo::swapBytes();
     sys::swapByteOrder(Kind);
-    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(Flags.Flags);
   }
 };
 
