@@ -253,6 +253,122 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   return true;
 }
 
+#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+void sys::symbolizeAddresses(AddressSet &Addresses,
+                             SymbolizedAddressMap &SymbolizedAddresses) {
+  assert(!DisableSymbolicationFlag && !getenv(DisableSymbolizationEnv) &&
+         "Debugify origin stacktraces require symbolization to be enabled.");
+
+  // Convert Set of Addresses to ordered list.
+  SmallVector<void *, 0> AddressList(Addresses.begin(), Addresses.end());
+  if (AddressList.empty())
+    return;
+  int NumAddresses = AddressList.size();
+  llvm::sort(AddressList);
+
+  // Use llvm-symbolizer tool to symbolize the stack traces. First look for it
+  // alongside our binary, then in $PATH.
+  ErrorOr<std::string> LLVMSymbolizerPathOrErr = std::error_code();
+  if (const char *Path = getenv(LLVMSymbolizerPathEnv)) {
+    LLVMSymbolizerPathOrErr = sys::findProgramByName(Path);
+  }
+  if (!LLVMSymbolizerPathOrErr)
+    LLVMSymbolizerPathOrErr = sys::findProgramByName("llvm-symbolizer");
+  assert(!!LLVMSymbolizerPathOrErr &&
+         "Debugify origin stacktraces require llvm-symbolizer.");
+  const std::string &LLVMSymbolizerPath = *LLVMSymbolizerPathOrErr;
+
+  // Try to guess the main executable name, since we don't have argv0 available
+  // here.
+  std::string MainExecutableName = sys::fs::getMainExecutable(nullptr, nullptr);
+
+  BumpPtrAllocator Allocator;
+  StringSaver StrPool(Allocator);
+  std::vector<const char *> Modules(NumAddresses, nullptr);
+  std::vector<intptr_t> Offsets(NumAddresses, 0);
+  if (!findModulesAndOffsets(AddressList.data(), NumAddresses, Modules.data(),
+                             Offsets.data(), MainExecutableName.c_str(),
+                             StrPool))
+    return;
+  int InputFD;
+  SmallString<32> InputFile, OutputFile;
+  sys::fs::createTemporaryFile("symbolizer-input", "", InputFD, InputFile);
+  sys::fs::createTemporaryFile("symbolizer-output", "", OutputFile);
+  FileRemover InputRemover(InputFile.c_str());
+  FileRemover OutputRemover(OutputFile.c_str());
+
+  {
+    raw_fd_ostream Input(InputFD, true);
+    for (int i = 0; i < NumAddresses; i++) {
+      if (Modules[i])
+        Input << Modules[i] << " " << (void *)Offsets[i] << "\n";
+    }
+  }
+
+  std::optional<StringRef> Redirects[] = {InputFile.str(), OutputFile.str(),
+                                          StringRef("")};
+  StringRef Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
+#ifdef _WIN32
+                      // Pass --relative-address on Windows so that we don't
+                      // have to add ImageBase from PE file.
+                      // FIXME: Make this the default for llvm-symbolizer.
+                      "--relative-address",
+#endif
+                      "--demangle"};
+  int RunResult =
+      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, std::nullopt, Redirects);
+  if (RunResult != 0)
+    return;
+
+  // This report format is based on the sanitizer stack trace printer.  See
+  // sanitizer_stacktrace_printer.cc in compiler-rt.
+  auto OutputBuf = MemoryBuffer::getFile(OutputFile.c_str());
+  if (!OutputBuf)
+    return;
+  StringRef Output = OutputBuf.get()->getBuffer();
+  SmallVector<StringRef, 32> Lines;
+  Output.split(Lines, "\n");
+  auto CurLine = Lines.begin();
+  for (int i = 0; i < NumAddresses; i++) {
+    assert(!SymbolizedAddresses.contains(AddressList[i]));
+    std::string &SymbolizedAddr = SymbolizedAddresses[AddressList[i]];
+    raw_string_ostream OS(SymbolizedAddr);
+    if (!Modules[i]) {
+      OS << format_ptr(AddressList[i]) << '\n';
+      continue;
+    }
+    // Read pairs of lines (function name and file/line info) until we
+    // encounter empty line.
+    for (bool IsFirst = true;; IsFirst = false) {
+      if (CurLine == Lines.end())
+        return;
+      StringRef FunctionName = *CurLine++;
+      if (FunctionName.empty())
+        break;
+      // Add indentation for lines after the first; we use 3 spaces, because
+      // currently that aligns with the expected indentation that will be added
+      // to the first line by Debugify.
+      if (!IsFirst)
+        OS << "   ";
+      OS << format_ptr(AddressList[i]) << ' ';
+      if (!FunctionName.starts_with("??"))
+        OS << FunctionName << ' ';
+      if (CurLine == Lines.end()) {
+        OS << '\n';
+        return;
+      }
+      StringRef FileLineInfo = *CurLine++;
+      if (!FileLineInfo.starts_with("??"))
+        OS << FileLineInfo;
+      else
+        OS << "(" << Modules[i] << '+' << format_hex(Offsets[i], 0) << ")";
+      OS << '\n';
+    }
+  }
+  return;
+}
+#endif
+
 static bool printMarkupContext(raw_ostream &OS, const char *MainExecutableName);
 
 LLVM_ATTRIBUTE_USED

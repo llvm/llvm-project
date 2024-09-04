@@ -13,14 +13,15 @@ from collections import OrderedDict
 
 
 class DILocBug:
-    def __init__(self, action, bb_name, fn_name, instr):
+    def __init__(self, origin, action, bb_name, fn_name, instr):
+        self.origin = origin
         self.action = action
         self.bb_name = bb_name
         self.fn_name = fn_name
         self.instr = instr
 
     def __str__(self):
-        return self.action + self.bb_name + self.fn_name + self.instr
+        return self.action + self.bb_name + self.fn_name + self.instr + self.origin
 
 
 class DISPBug:
@@ -86,6 +87,7 @@ def generate_html_report(
         "Function Name",
         "Basic Block Name",
         "Action",
+        "Origin",
     ]
 
     for column in header_di_loc:
@@ -112,6 +114,7 @@ def generate_html_report(
                 row.append(x.fn_name)
                 row.append(x.bb_name)
                 row.append(x.action)
+                row.append(f"<details><summary>View Origin StackTrace</summary><pre>{x.origin}</pre></details>")
                 row.append("    </tr>\n")
             # Dump the bugs info into the table.
             for column in row:
@@ -428,9 +431,9 @@ def Main():
         sys.exit(1)
 
     # Use the defaultdict in order to make multidim dicts.
-    di_location_bugs = defaultdict(lambda: defaultdict(dict))
-    di_subprogram_bugs = defaultdict(lambda: defaultdict(dict))
-    di_variable_bugs = defaultdict(lambda: defaultdict(dict))
+    di_location_bugs = defaultdict(lambda: defaultdict(list))
+    di_subprogram_bugs = defaultdict(lambda: defaultdict(list))
+    di_variable_bugs = defaultdict(lambda: defaultdict(list))
 
     # Use the ordered dict to make a summary.
     di_location_bugs_summary = OrderedDict()
@@ -470,9 +473,9 @@ def Main():
                 skipped_lines += 1
                 continue
 
-            di_loc_bugs = []
-            di_sp_bugs = []
-            di_var_bugs = []
+            di_loc_bugs = di_location_bugs[bugs_file][bugs_pass]
+            di_sp_bugs = di_subprogram_bugs[bugs_file][bugs_pass]
+            di_var_bugs = di_variable_bugs[bugs_file][bugs_pass]
 
             # Omit duplicated bugs.
             di_loc_set = set()
@@ -487,6 +490,7 @@ def Main():
 
                 if bugs_metadata == "DILocation":
                     try:
+                        origin = bug["origin"]
                         action = bug["action"]
                         bb_name = bug["bb-name"]
                         fn_name = bug["fn-name"]
@@ -494,7 +498,7 @@ def Main():
                     except:
                         skipped_bugs += 1
                         continue
-                    di_loc_bug = DILocBug(action, bb_name, fn_name, instr)
+                    di_loc_bug = DILocBug(origin, action, bb_name, fn_name, instr)
                     if not str(di_loc_bug) in di_loc_set:
                         di_loc_set.add(str(di_loc_bug))
                         if opts.compress:

@@ -26,6 +26,22 @@ namespace llvm {
   class Function;
 
 #if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+  struct DbgLocOrigin {
+    static constexpr unsigned long MaxDepth = 16;
+    using StackTracesTy =
+        SmallVector<std::pair<int, std::array<void *, MaxDepth>>, 0>;
+    StackTracesTy StackTraces;
+    DbgLocOrigin(bool ShouldCollectTrace);
+    void addTrace();
+    const StackTracesTy &getOriginStackTraces() const { return StackTraces; };
+  };
+#else
+  struct DbgLocOrigin {
+    DbgLocOrigin(bool) {}
+  };
+#endif
+
   // Used to represent different "kinds" of DebugLoc, expressing that a DebugLoc
   // is either ordinary, containing a valid DILocation, or otherwise describing
   // the reason why the DebugLoc does not contain a valid DILocation.
@@ -48,22 +64,29 @@ namespace llvm {
     Temporary
   };
 
-  // Extends TrackingMDNodeRef to also store a DebugLocKind, allowing Debugify
-  // to ignore intentionally-empty DebugLocs.
-  class DILocAndCoverageTracking : public TrackingMDNodeRef {
+  // Extends TrackingMDNodeRef to also store a DebugLocKind and Origin,
+  // allowing Debugify to ignore intentionally-empty DebugLocs and display the
+  // code responsible for generating unintentionally-empty DebugLocs.
+  // Currently we only need to track the Origin of this DILoc when using a
+  // DebugLoc that is Normal and empty, so only collect the origin stacktrace in
+  // those cases.
+  class DILocAndCoverageTracking : public TrackingMDNodeRef,
+                                   public DbgLocOrigin {
   public:
     DebugLocKind Kind;
     // Default constructor for empty DebugLocs.
     DILocAndCoverageTracking()
-        : TrackingMDNodeRef(nullptr), Kind(DebugLocKind::Normal) {}
-    // Valid or nullptr MDNode*, normal DebugLocKind.
+        : TrackingMDNodeRef(nullptr), DbgLocOrigin(true),
+          Kind(DebugLocKind::Normal) {}
+    // Valid or nullptr MDNode*, normal DebugLocKind
     DILocAndCoverageTracking(const MDNode *Loc)
-        : TrackingMDNodeRef(const_cast<MDNode *>(Loc)),
+        : TrackingMDNodeRef(const_cast<MDNode *>(Loc)), DbgLocOrigin(!Loc),
           Kind(DebugLocKind::Normal) {}
     DILocAndCoverageTracking(const DILocation *Loc);
-    // Explicit DebugLocKind, which always means a nullptr MDNode*.
+    // Always nullptr MDNode*, any DebugLocKind
     DILocAndCoverageTracking(DebugLocKind Kind)
-        : TrackingMDNodeRef(nullptr), Kind(Kind) {}
+        : TrackingMDNodeRef(nullptr),
+          DbgLocOrigin(Kind == DebugLocKind::Normal), Kind(Kind) {}
   };
   template <> struct simplify_type<DILocAndCoverageTracking> {
     using SimpleType = MDNode *;
@@ -113,6 +136,23 @@ namespace llvm {
 #if ENABLE_DEBUGLOC_COVERAGE_TRACKING
     DebugLoc(DebugLocKind Kind) : Loc(Kind) {}
     DebugLocKind getKind() const { return Loc.Kind; }
+#endif
+
+#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+#if !ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#error Cannot enable DebugLoc origin-tracking without coverage-tracking!
+#endif
+
+    const DbgLocOrigin::StackTracesTy &getOriginStackTraces() const {
+      return Loc.getOriginStackTraces();
+    }
+    DebugLoc getCopied() const {
+      DebugLoc NewDL = *this;
+      NewDL.Loc.addTrace();
+      return NewDL;
+    }
+#else
+    DebugLoc getCopied() const { return *this; }
 #endif
 
     static DebugLoc getTemporary();
