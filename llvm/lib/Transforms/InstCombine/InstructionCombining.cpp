@@ -1793,7 +1793,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     if (!I)
       continue;
 
-    // Can phi-translate phi nodes in the same block.
+    // Phi-translate can handle phi nodes in the same block.
     if (isa<PHINode>(I))
       if (I->getParent() == PN->getParent())
         continue;
