@@ -21,8 +21,7 @@ define <8 x i8> @vld1dupi8_preinc(ptr noalias nocapture %a, i32 %b) nounwind {
 ; CHECK-NEXT:    add r3, r2, r1
 ; CHECK-NEXT:    str r3, [r0]
 ; CHECK-NEXT:    vld1.8 {d16[]}, [r3]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %0 = load ptr, ptr %a, align 4
@@ -40,8 +39,7 @@ define <8 x i8> @vld1dupi8_postinc_fixed(ptr noalias nocapture %a) nounwind {
 ; CHECK-NEXT:    ldr r3, [r0]
 ; CHECK-NEXT:    vld1.8 {d16[]}, [r3]!
 ; CHECK-NEXT:    str r3, [r0]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %0 = load ptr, ptr %a, align 4
@@ -59,8 +57,7 @@ define <8 x i8> @vld1dupi8_postinc_register(ptr noalias nocapture %a, i32 %n) no
 ; CHECK-NEXT:    ldr r3, [r0]
 ; CHECK-NEXT:    vld1.8 {d16[]}, [r3], r1
 ; CHECK-NEXT:    str r3, [r0]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %0 = load ptr, ptr %a, align 4
@@ -81,9 +78,8 @@ define <16 x i8> @vld1dupqi8_preinc(ptr noalias nocapture %a, i32 %b) nounwind {
 ; CHECK-NEXT:    add lr, r2, r1
 ; CHECK-NEXT:    str lr, [r0]
 ; CHECK-NEXT:    vld1.8 {d16[], d17[]}, [lr]
-; CHECK-NEXT:    vmov r12, r1, d16
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
-; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
 entry:
@@ -104,9 +100,8 @@ define <16 x i8> @vld1dupqi8_postinc_fixed(ptr noalias nocapture %a) nounwind {
 ; CHECK-NEXT:    ldr lr, [r0]
 ; CHECK-NEXT:    vld1.8 {d16[], d17[]}, [lr]!
 ; CHECK-NEXT:    str lr, [r0]
-; CHECK-NEXT:    vmov r12, r1, d16
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
-; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
 entry:
@@ -127,9 +122,8 @@ define <16 x i8> @vld1dupqi8_postinc_register(ptr noalias nocapture %a, i32 %n) 
 ; CHECK-NEXT:    ldr lr, [r0]
 ; CHECK-NEXT:    vld1.8 {d16[], d17[]}, [lr], r1
 ; CHECK-NEXT:    str lr, [r0]
-; CHECK-NEXT:    vmov r12, r1, d16
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
-; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
 entry:
@@ -420,8 +414,7 @@ define <4 x i16> @vld2dupi16_update(ptr %ptr) nounwind {
 ; CHECK-NEXT:    vadd.i16 d16, d16, d17
 ; CHECK-NEXT:    str r3, [r0]
 ; CHECK-NEXT:    vdup.16 d16, d16[0]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%A = load ptr, ptr %ptr
 	%tmp0 = tail call %struct.__neon_int4x16x2_t @llvm.arm.neon.vld2lane.v4i16.p0(ptr %A, <4 x i16> undef, <4 x i16> undef, i32 0, i32 2)
@@ -444,8 +437,7 @@ define <4 x i16> @vld2dupi16_odd_update(ptr %ptr) nounwind {
 ; CHECK-NEXT:    vadd.i16 d16, d16, d17
 ; CHECK-NEXT:    str r3, [r0]
 ; CHECK-NEXT:    vdup.16 d16, d16[0]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%A = load ptr, ptr %ptr
 	%tmp0 = tail call %struct.__neon_int4x16x2_t @llvm.arm.neon.vld2lane.v4i16.p0(ptr %A, <4 x i16> undef, <4 x i16> undef, i32 0, i32 2)
@@ -494,8 +486,7 @@ define <8 x i8> @vld3dupi8_update(ptr %ptr, i32 %inc) nounwind {
 ; CHECK-NEXT:    vadd.i8 d16, d20, d18
 ; CHECK-NEXT:    str r3, [r0]
 ; CHECK-NEXT:    vdup.8 d16, d16[0]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%A = load ptr, ptr %ptr
 	%tmp0 = tail call %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3lane.v8i8.p0(ptr %A, <8 x i8> undef, <8 x i8> undef, <8 x i8> undef, i32 0, i32 8)
@@ -551,8 +542,7 @@ define <4 x i16> @vld4dupi16_update(ptr %ptr) nounwind {
 ; CHECK-NEXT:    str r3, [r0]
 ; CHECK-NEXT:    vadd.i16 d16, d16, d20
 ; CHECK-NEXT:    vdup.16 d16, d16[0]
-; CHECK-NEXT:    vmov r2, r1, d16
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%A = load ptr, ptr %ptr
 	%tmp0 = tail call %struct.__neon_int16x4x4_t @llvm.arm.neon.vld4lane.v4i16.p0(ptr %A, <4 x i16> undef, <4 x i16> undef, <4 x i16> undef, <4 x i16> undef, i32 0, i32 1)

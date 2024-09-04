@@ -256,9 +256,8 @@ define dso_local i32 @load_between_stores(i32 %x, ptr %p, ptr %ptr) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    strh w0, [x1]
 ; CHECK-NEXT:    lsr w9, w0, #16
-; CHECK-NEXT:    ldr w8, [x2]
+; CHECK-NEXT:    ldr w0, [x2]
 ; CHECK-NEXT:    strh w9, [x1, #2]
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %t1 = trunc i32 %x to i16
   %sh = lshr i32 %x, 16

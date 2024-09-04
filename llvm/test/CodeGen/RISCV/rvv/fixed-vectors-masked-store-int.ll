@@ -466,8 +466,8 @@ define void @masked_store_v32i64(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vmseq.vi v8, v16, 0
 ; RV64-NEXT:    vse64.v v24, (a1), v0.t
+; RV64-NEXT:    vmseq.vi v8, v16, 0
 ; RV64-NEXT:    addi a0, a1, 128
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    addi a1, sp, 16
@@ -550,8 +550,8 @@ define void @masked_store_v64i32(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmseq.vi v8, v16, 0
 ; CHECK-NEXT:    vse32.v v24, (a1), v0.t
+; CHECK-NEXT:    vmseq.vi v8, v16, 0
 ; CHECK-NEXT:    addi a0, a1, 128
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a1, sp, 16
@@ -616,8 +616,8 @@ define void @masked_store_v128i16(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmseq.vi v8, v16, 0
 ; CHECK-NEXT:    vse16.v v24, (a1), v0.t
+; CHECK-NEXT:    vmseq.vi v8, v16, 0
 ; CHECK-NEXT:    addi a0, a1, 128
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a1, sp, 16
@@ -664,8 +664,8 @@ define void @masked_store_v256i8(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmseq.vi v8, v16, 0
 ; CHECK-NEXT:    vse8.v v24, (a1), v0.t
+; CHECK-NEXT:    vmseq.vi v8, v16, 0
 ; CHECK-NEXT:    addi a0, a1, 128
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a1, sp, 16

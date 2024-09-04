@@ -1469,13 +1469,12 @@ define <2 x i1> @isnan_v2f(<2 x float> %x) {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setp %cl
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    setp %al
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setp %dl
-; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isnan_v2f:
@@ -1498,13 +1497,12 @@ define <2 x i1> @isnot_nan_v2f(<2 x float> %x) {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setnp %cl
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    setnp %al
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setnp %dl
-; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isnot_nan_v2f:

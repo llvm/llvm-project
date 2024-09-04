@@ -353,10 +353,9 @@ define <2 x double> @ldexp_v2f64(<2 x double> %val, <2 x i32> %exp) {
 ; WIN64-NEXT:    .seh_savexmm %xmm6, 32
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    movaps (%rcx), %xmm6
-; WIN64-NEXT:    movl (%rdx), %eax
 ; WIN64-NEXT:    movl 4(%rdx), %esi
+; WIN64-NEXT:    movl (%rdx), %edx
 ; WIN64-NEXT:    movaps %xmm6, %xmm0
-; WIN64-NEXT:    movl %eax, %edx
 ; WIN64-NEXT:    callq ldexp
 ; WIN64-NEXT:    movaps %xmm0, %xmm7
 ; WIN64-NEXT:    movhlps {{.*#+}} xmm6 = xmm6[1,1]

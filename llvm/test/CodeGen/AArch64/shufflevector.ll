@@ -355,18 +355,11 @@ define <8 x i32> @shufflevector_v8i32(<8 x i32> %a, <8 x i32> %b) {
 }
 
 define <4 x i64> @shufflevector_v4i64(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-SD-LABEL: shufflevector_v4i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-SD-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    mov v1.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v4i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v1.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    ret
     %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
     ret <4 x i64> %c
 }

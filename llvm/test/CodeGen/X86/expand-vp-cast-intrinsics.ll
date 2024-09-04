@@ -154,9 +154,8 @@ define <4 x i64> @vsext_v4i64_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) 
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $31, %xmm0
 ; SSE-NEXT:    psrad $31, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,1,1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vsext_v4i64_v4i1:

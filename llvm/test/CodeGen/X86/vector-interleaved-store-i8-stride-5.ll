@@ -981,7 +981,6 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    movdqa (%rsi), %xmm8
 ; SSE-NEXT:    movdqa (%rdx), %xmm2
 ; SSE-NEXT:    movdqa (%rcx), %xmm4
-; SSE-NEXT:    movdqa (%r8), %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[3,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm2, %xmm9
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,4,4,4]
@@ -998,7 +997,6 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    pand %xmm2, %xmm5
 ; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm10[1,1,2,2]
 ; SSE-NEXT:    movdqa %xmm10, %xmm12
-; SSE-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,0,255,255,255,255,0,255,255,255,255,0,255]
 ; SSE-NEXT:    pand %xmm1, %xmm7
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm8[0,1,2,1]
@@ -1012,10 +1010,11 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
 ; SSE-NEXT:    pandn %xmm11, %xmm10
 ; SSE-NEXT:    por %xmm5, %xmm10
+; SSE-NEXT:    movdqa (%r8), %xmm5
+; SSE-NEXT:    movdqa %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [255,255,0,255,255,255,255,0,255,255,255,255,0,255,255,255]
 ; SSE-NEXT:    pand %xmm7, %xmm10
-; SSE-NEXT:    movdqa %xmm0, %xmm5
-; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm0[1,1,2,2]
+; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm5[1,1,2,2]
 ; SSE-NEXT:    movdqa %xmm7, %xmm0
 ; SSE-NEXT:    pandn %xmm11, %xmm0
 ; SSE-NEXT:    por %xmm10, %xmm0
@@ -1661,7 +1660,6 @@ define void @store_i8_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 16(%rdx), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa (%rcx), %xmm11
 ; SSE-NEXT:    movdqa 16(%rcx), %xmm12
 ; SSE-NEXT:    movdqa 16(%r8), %xmm14
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
@@ -1698,8 +1696,9 @@ define void @store_i8_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    movdqa %xmm10, %xmm4
 ; SSE-NEXT:    pandn %xmm1, %xmm4
 ; SSE-NEXT:    por %xmm0, %xmm4
-; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm2[3,3,3,3,4,5,6,7]
+; SSE-NEXT:    movdqa (%rcx), %xmm11
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
 ; SSE-NEXT:    pand %xmm13, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm11[2,1,2,3]

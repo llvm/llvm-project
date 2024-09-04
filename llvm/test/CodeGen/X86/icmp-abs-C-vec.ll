@@ -584,11 +584,10 @@ define <4 x i64> @eq_or_to_abs_vec4x64_sext(<4 x i64> %x) {
 ; SSE41-NEXT:    pcmpeqq %xmm4, %xmm1
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
-; SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE41-NEXT:    pmovsxdq %xmm0, %xmm0
 ; SSE41-NEXT:    pslld $31, %xmm1
 ; SSE41-NEXT:    psrad $31, %xmm1
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: eq_or_to_abs_vec4x64_sext:
@@ -724,11 +723,10 @@ define <4 x i64> @ne_and_to_abs_vec4x64_sext(<4 x i64> %x) {
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm4, %xmm0
-; SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE41-NEXT:    pmovsxdq %xmm0, %xmm0
 ; SSE41-NEXT:    pslld $31, %xmm1
 ; SSE41-NEXT:    psrad $31, %xmm1
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x64_sext:

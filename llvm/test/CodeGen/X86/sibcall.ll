@@ -714,9 +714,8 @@ define fastcc void @t21_sret_to_sret_more_args2(ptr noalias sret(%struct.foo) %a
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %edx, (%esp)
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    calll f_sret@PLT
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $8, %esp

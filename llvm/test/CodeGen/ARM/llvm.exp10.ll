@@ -279,16 +279,12 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl exp10
-; CHECK-NEXT:    ldrd r2, r3, [sp, #24]
 ; CHECK-NEXT:    vmov d8, r0, r1
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    ldrd r0, r1, [sp, #24]
 ; CHECK-NEXT:    bl exp10
-; CHECK-NEXT:    ldrd r2, r3, [sp, #32]
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    ldrd r0, r1, [sp, #32]
 ; CHECK-NEXT:    vst1.64 {d8, d9}, [r4:128]!
-; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl exp10
 ; CHECK-NEXT:    strd r0, r1, [r4]
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -309,10 +305,8 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; CHECK-NEXT:    add r2, sp, #64
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r5, r8, d16
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl exp10
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    mov r6, r1

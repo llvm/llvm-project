@@ -63,11 +63,10 @@ define <8 x double> @v8f2d_ext_vec(<8 x float> %v1) nounwind {
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm5
 ; SSE-NEXT:    cvtps2pd %xmm1, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-NEXT:    cvtps2pd %xmm0, %xmm4
 ; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm1, %xmm3
+; SSE-NEXT:    cvtps2pd %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm5, %xmm0
-; SSE-NEXT:    movaps %xmm4, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v8f2d_ext_vec:

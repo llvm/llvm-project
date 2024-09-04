@@ -4092,10 +4092,9 @@ entry:
 define %struct.uint8x8x2_t @test_uzp(<16 x i8> %y) {
 ; CHECK-SD-LABEL: test_uzp:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    xtn v2.8b, v0.8h
 ; CHECK-SD-NEXT:    uzp2 v1.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-SD-NEXT:    fmov d0, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_uzp:

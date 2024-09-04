@@ -4,9 +4,8 @@
 define <8 x half> @sel.v8f16.fmul(ptr %p, ptr %q, <8 x half> %a, <8 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: sel.v8f16.fmul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul v1.8h, v1.8h, v0.h[0]
 ; CHECK-NEXT:    fmul v2.4h, v2.4h, v0.h[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmul v0.8h, v1.8h, v0.h[0]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
@@ -21,9 +20,8 @@ define <8 x half> @sel.v8f16.fmul(ptr %p, ptr %q, <8 x half> %a, <8 x half> %b, 
 define <4 x float> @sel.v4f32.fmul(ptr %p, ptr %q, <4 x float> %a, <4 x float> %b, <2 x float> %c) {
 ; CHECK-LABEL: sel.v4f32.fmul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul v1.4s, v1.4s, v0.s[0]
 ; CHECK-NEXT:    fmul v2.2s, v2.2s, v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.s[0]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> zeroinitializer
@@ -38,9 +36,8 @@ define <4 x float> @sel.v4f32.fmul(ptr %p, ptr %q, <4 x float> %a, <4 x float> %
 define <8 x i16> @sel.v8i16.mul(ptr %p, ptr %q, <8 x i16> %a, <8 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: sel.v8i16.mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul v1.8h, v1.8h, v0.h[0]
 ; CHECK-NEXT:    mul v2.4h, v2.4h, v0.h[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mul v0.8h, v1.8h, v0.h[0]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -55,9 +52,8 @@ define <8 x i16> @sel.v8i16.mul(ptr %p, ptr %q, <8 x i16> %a, <8 x i16> %b, <4 x
 define <4 x i32> @sel.v4i32.mul(ptr %p, ptr %q, <4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: sel.v4i32.mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul v1.4s, v1.4s, v0.s[0]
 ; CHECK-NEXT:    mul v2.2s, v2.2s, v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mul v0.4s, v1.4s, v0.s[0]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer

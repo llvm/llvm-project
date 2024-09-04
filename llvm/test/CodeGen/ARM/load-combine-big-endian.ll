@@ -308,9 +308,7 @@ define i64 @load_i64_by_i8_bswap(ptr %arg) {
 define i64 @load_i64_by_i8(ptr %arg) {
 ; CHECK-LABEL: load_i64_by_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    ldr r2, [r0]
-; CHECK-NEXT:    ldr r1, [r0, #4]
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    ldm r0, {r0, r1}
 ; CHECK-NEXT:    mov pc, lr
 ;
 ; CHECK-ARMv6-LABEL: load_i64_by_i8:
@@ -320,16 +318,12 @@ define i64 @load_i64_by_i8(ptr %arg) {
 ;
 ; CHECK-THUMBv6-LABEL: load_i64_by_i8:
 ; CHECK-THUMBv6:       @ %bb.0:
-; CHECK-THUMBv6-NEXT:    ldr r2, [r0]
-; CHECK-THUMBv6-NEXT:    ldr r1, [r0, #4]
-; CHECK-THUMBv6-NEXT:    mov r0, r2
+; CHECK-THUMBv6-NEXT:    ldm r0, {r0, r1}
 ; CHECK-THUMBv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv7-LABEL: load_i64_by_i8:
 ; CHECK-THUMBv7:       @ %bb.0:
-; CHECK-THUMBv7-NEXT:    ldr r2, [r0]
-; CHECK-THUMBv7-NEXT:    ldr r1, [r0, #4]
-; CHECK-THUMBv7-NEXT:    mov r0, r2
+; CHECK-THUMBv7-NEXT:    ldm r0, {r0, r1}
 ; CHECK-THUMBv7-NEXT:    bx lr
 
   %tmp1 = load i8, ptr %arg, align 8

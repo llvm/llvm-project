@@ -7,9 +7,8 @@
 define i64 @load_i64(ptr %a) nounwind {
 ; RV32I-LABEL: load_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a2, 0(a0)
 ; RV32I-NEXT:    lw a1, 4(a0)
-; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    lw a0, 0(a0)
 ; RV32I-NEXT:    ret
   %1 = load i64, ptr %a
   ret i64 %1

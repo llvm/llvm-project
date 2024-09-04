@@ -8,15 +8,14 @@ define <16 x i32> @no_existing_zext(<16 x i8> %a, <16 x i32> %op) {
 ; CHECK-NEXT:    cmhi.16b v0, v0, v5
 ; CHECK-NEXT:    sshll.8h v5, v0, #0
 ; CHECK-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v16, v0, #0
 ; CHECK-NEXT:    sshll.4s v6, v5, #0
 ; CHECK-NEXT:    sshll.4s v7, v0, #0
 ; CHECK-NEXT:    sshll2.4s v5, v5, #0
-; CHECK-NEXT:    and.16b v4, v4, v16
+; CHECK-NEXT:    sshll2.4s v16, v0, #0
 ; CHECK-NEXT:    and.16b v0, v1, v6
 ; CHECK-NEXT:    and.16b v1, v2, v5
 ; CHECK-NEXT:    and.16b v2, v3, v7
-; CHECK-NEXT:    mov.16b v3, v4
+; CHECK-NEXT:    and.16b v3, v4, v16
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp ugt <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -333,8 +332,8 @@ define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_other_use(<16 
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_other_use:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.16b v16, #10
-; CHECK-NEXT:    ushll.8h v19, v0, #0
 ; CHECK-NEXT:    ldr q21, [sp]
+; CHECK-NEXT:    ushll.8h v19, v0, #0
 ; CHECK-NEXT:    ushll.4s v24, v19, #0
 ; CHECK-NEXT:    ushll2.4s v19, v19, #0
 ; CHECK-NEXT:    cmhi.16b v16, v0, v16
@@ -352,8 +351,8 @@ define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_other_use(<16 
 ; CHECK-NEXT:    sshll2.2d v26, v17, #0
 ; CHECK-NEXT:    sshll.2d v27, v17, #0
 ; CHECK-NEXT:    and.16b v20, v21, v20
-; CHECK-NEXT:    sshll2.2d v21, v22, #0
 ; CHECK-NEXT:    and.16b v7, v7, v23
+; CHECK-NEXT:    sshll2.2d v21, v22, #0
 ; CHECK-NEXT:    sshll.2d v23, v22, #0
 ; CHECK-NEXT:    and.16b v6, v6, v26
 ; CHECK-NEXT:    sshll2.2d v26, v16, #0
@@ -361,16 +360,14 @@ define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_other_use(<16 
 ; CHECK-NEXT:    stp q7, q20, [x0, #96]
 ; CHECK-NEXT:    sshll.2d v20, v16, #0
 ; CHECK-NEXT:    and.16b v21, v4, v21
-; CHECK-NEXT:    and.16b v4, v0, v18
 ; CHECK-NEXT:    and.16b v7, v3, v23
-; CHECK-NEXT:    and.16b v3, v19, v22
-; CHECK-NEXT:    stp q5, q6, [x0, #64]
+; CHECK-NEXT:    and.16b v3, v0, v18
 ; CHECK-NEXT:    and.16b v0, v24, v16
+; CHECK-NEXT:    stp q5, q6, [x0, #64]
 ; CHECK-NEXT:    and.16b v6, v2, v26
 ; CHECK-NEXT:    and.16b v2, v25, v17
 ; CHECK-NEXT:    and.16b v5, v1, v20
-; CHECK-NEXT:    mov.16b v1, v3
-; CHECK-NEXT:    mov.16b v3, v4
+; CHECK-NEXT:    and.16b v1, v19, v22
 ; CHECK-NEXT:    stp q7, q21, [x0, #32]
 ; CHECK-NEXT:    stp q5, q6, [x0]
 ; CHECK-NEXT:    ret

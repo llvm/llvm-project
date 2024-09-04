@@ -10,13 +10,13 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $w8 = ORRWrs $wzr, $w0, 0, implicit-def $x8
+  ; CHECK-NEXT:   $w8 = ORRWrs $wzr, killed $w0, 0, implicit-def $x8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x0 = ADDXri $x8, 1, 0
-  ; CHECK-NEXT:   RET undef $lr, implicit $x0
+  ; CHECK-NEXT:   $x0 = ADDXri killed $x8, 1, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $x0
   bb.0:
     successors: %bb.1(0x80000000)
     liveins: $w0

@@ -71,22 +71,19 @@ entry:
 define <32 x i16> @extadds_v32i8_i16(<32 x i8> %s0, <32 x i8> %s1) {
 ; CHECK-SD-LABEL: extadds_v32i8_i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    saddl2 v4.8h, v1.16b, v3.16b
-; CHECK-SD-NEXT:    saddl v5.8h, v0.8b, v2.8b
 ; CHECK-SD-NEXT:    saddl2 v6.8h, v0.16b, v2.16b
+; CHECK-SD-NEXT:    saddl v0.8h, v0.8b, v2.8b
 ; CHECK-SD-NEXT:    saddl v2.8h, v1.8b, v3.8b
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    saddl2 v3.8h, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NEXT:    mov v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extadds_v32i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    saddl v4.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    saddl2 v5.8h, v0.16b, v2.16b
+; CHECK-GI-NEXT:    saddl v0.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    saddl v2.8h, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    saddl2 v3.8h, v1.16b, v3.16b
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -99,22 +96,19 @@ entry:
 define <32 x i16> @extaddu_v32i8_i16(<32 x i8> %s0, <32 x i8> %s1) {
 ; CHECK-SD-LABEL: extaddu_v32i8_i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddl2 v4.8h, v1.16b, v3.16b
-; CHECK-SD-NEXT:    uaddl v5.8h, v0.8b, v2.8b
 ; CHECK-SD-NEXT:    uaddl2 v6.8h, v0.16b, v2.16b
+; CHECK-SD-NEXT:    uaddl v0.8h, v0.8b, v2.8b
 ; CHECK-SD-NEXT:    uaddl v2.8h, v1.8b, v3.8b
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    uaddl2 v3.8h, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NEXT:    mov v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extaddu_v32i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    uaddl v4.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    uaddl2 v5.8h, v0.16b, v2.16b
+; CHECK-GI-NEXT:    uaddl v0.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    uaddl v2.8h, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    uaddl2 v3.8h, v1.16b, v3.16b
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -821,22 +815,19 @@ entry:
 define <16 x i32> @extadds_v16i16_i32(<16 x i16> %s0, <16 x i16> %s1) {
 ; CHECK-SD-LABEL: extadds_v16i16_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    saddl2 v4.4s, v1.8h, v3.8h
-; CHECK-SD-NEXT:    saddl v5.4s, v0.4h, v2.4h
 ; CHECK-SD-NEXT:    saddl2 v6.4s, v0.8h, v2.8h
+; CHECK-SD-NEXT:    saddl v0.4s, v0.4h, v2.4h
 ; CHECK-SD-NEXT:    saddl v2.4s, v1.4h, v3.4h
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    saddl2 v3.4s, v1.8h, v3.8h
 ; CHECK-SD-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NEXT:    mov v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extadds_v16i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    saddl v4.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    saddl2 v5.4s, v0.8h, v2.8h
+; CHECK-GI-NEXT:    saddl v0.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    saddl v2.4s, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    saddl2 v3.4s, v1.8h, v3.8h
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -849,22 +840,19 @@ entry:
 define <16 x i32> @extaddu_v16i16_i32(<16 x i16> %s0, <16 x i16> %s1) {
 ; CHECK-SD-LABEL: extaddu_v16i16_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddl2 v4.4s, v1.8h, v3.8h
-; CHECK-SD-NEXT:    uaddl v5.4s, v0.4h, v2.4h
 ; CHECK-SD-NEXT:    uaddl2 v6.4s, v0.8h, v2.8h
+; CHECK-SD-NEXT:    uaddl v0.4s, v0.4h, v2.4h
 ; CHECK-SD-NEXT:    uaddl v2.4s, v1.4h, v3.4h
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    uaddl2 v3.4s, v1.8h, v3.8h
 ; CHECK-SD-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NEXT:    mov v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extaddu_v16i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    uaddl v4.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    uaddl2 v5.4s, v0.8h, v2.8h
+; CHECK-GI-NEXT:    uaddl v0.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    uaddl v2.4s, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    uaddl2 v3.4s, v1.8h, v3.8h
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1093,22 +1081,19 @@ entry:
 define <8 x i64> @extadds_v8i32_i64(<8 x i32> %s0, <8 x i32> %s1) {
 ; CHECK-SD-LABEL: extadds_v8i32_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    saddl2 v4.2d, v1.4s, v3.4s
-; CHECK-SD-NEXT:    saddl v5.2d, v0.2s, v2.2s
 ; CHECK-SD-NEXT:    saddl2 v6.2d, v0.4s, v2.4s
+; CHECK-SD-NEXT:    saddl v0.2d, v0.2s, v2.2s
 ; CHECK-SD-NEXT:    saddl v2.2d, v1.2s, v3.2s
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    saddl2 v3.2d, v1.4s, v3.4s
 ; CHECK-SD-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NEXT:    mov v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extadds_v8i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    saddl v4.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    saddl2 v5.2d, v0.4s, v2.4s
+; CHECK-GI-NEXT:    saddl v0.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    saddl v2.2d, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    saddl2 v3.2d, v1.4s, v3.4s
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1121,22 +1106,19 @@ entry:
 define <8 x i64> @extaddu_v8i32_i64(<8 x i32> %s0, <8 x i32> %s1) {
 ; CHECK-SD-LABEL: extaddu_v8i32_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddl2 v4.2d, v1.4s, v3.4s
-; CHECK-SD-NEXT:    uaddl v5.2d, v0.2s, v2.2s
 ; CHECK-SD-NEXT:    uaddl2 v6.2d, v0.4s, v2.4s
+; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v2.2s
 ; CHECK-SD-NEXT:    uaddl v2.2d, v1.2s, v3.2s
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
+; CHECK-SD-NEXT:    uaddl2 v3.2d, v1.4s, v3.4s
 ; CHECK-SD-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NEXT:    mov v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extaddu_v8i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    uaddl v4.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    uaddl2 v5.2d, v0.4s, v2.4s
+; CHECK-GI-NEXT:    uaddl v0.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    uaddl v2.2d, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    uaddl2 v3.2d, v1.4s, v3.4s
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:

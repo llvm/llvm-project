@@ -97,8 +97,7 @@ define <2 x i1> @saddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    vand q9, q9, q10
 ; CHECK-NEXT:    vmvn q9, q9
 ; CHECK-NEXT:    vmovn.i64 d18, q9
-; CHECK-NEXT:    vmov r2, r1, d18
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    bx lr
   %x = load <2 x i64>, ptr %ptr, align 8
   %y = load <2 x i64>, ptr %ptr2, align 8
@@ -122,8 +121,7 @@ define <2 x i1> @ssubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    vand q9, q9, q10
 ; CHECK-NEXT:    vmvn q9, q9
 ; CHECK-NEXT:    vmovn.i64 d18, q9
-; CHECK-NEXT:    vmov r2, r1, d18
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    bx lr
   %x = load <2 x i64>, ptr %ptr, align 8
   %y = load <2 x i64>, ptr %ptr2, align 8

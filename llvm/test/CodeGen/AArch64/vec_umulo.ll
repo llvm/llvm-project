@@ -60,8 +60,7 @@ define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    st1 { v1.s }[2], [x8]
 ; CHECK-NEXT:    str d1, [x0]
-; CHECK-NEXT:    cmtst v2.4s, v2.4s, v2.4s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    cmtst v0.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    ret
   %t = call {<3 x i32>, <3 x i1>} @llvm.umul.with.overflow.v3i32(<3 x i32> %a0, <3 x i32> %a1)
   %val = extractvalue {<3 x i32>, <3 x i1>} %t, 0
@@ -79,8 +78,7 @@ define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    str q1, [x0]
-; CHECK-NEXT:    cmtst v2.4s, v2.4s, v2.4s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    cmtst v0.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    ret
   %t = call {<4 x i32>, <4 x i1>} @llvm.umul.with.overflow.v4i32(<4 x i32> %a0, <4 x i32> %a1)
   %val = extractvalue {<4 x i32>, <4 x i1>} %t, 0
@@ -143,15 +141,13 @@ define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    umull v5.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    umull2 v6.2d, v1.4s, v3.4s
 ; CHECK-NEXT:    umull v7.2d, v1.2s, v3.2s
-; CHECK-NEXT:    mul v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-NEXT:    mul v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
 ; CHECK-NEXT:    uzp2 v5.4s, v7.4s, v6.4s
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    cmtst v4.4s, v4.4s, v4.4s
-; CHECK-NEXT:    cmtst v5.4s, v5.4s, v5.4s
-; CHECK-NEXT:    mov v0.16b, v4.16b
-; CHECK-NEXT:    mov v1.16b, v5.16b
+; CHECK-NEXT:    cmtst v0.4s, v4.4s, v4.4s
+; CHECK-NEXT:    cmtst v1.4s, v5.4s, v5.4s
 ; CHECK-NEXT:    ret
   %t = call {<8 x i32>, <8 x i1>} @llvm.umul.with.overflow.v8i32(<8 x i32> %a0, <8 x i32> %a1)
   %val = extractvalue {<8 x i32>, <8 x i1>} %t, 0

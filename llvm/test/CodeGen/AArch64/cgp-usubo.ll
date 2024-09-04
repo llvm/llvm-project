@@ -40,9 +40,8 @@ define i1 @usubo_ugt_constant_op0_i8(i8 %x, ptr %p) nounwind {
 ; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    cmp w8, #42
 ; CHECK-NEXT:    sub w9, w9, w0
-; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    strb w9, [x1]
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %s = sub i8 42, %x
   %ov = icmp ugt i8 %x, 42
@@ -59,9 +58,8 @@ define i1 @usubo_ult_constant_op0_i16(i16 %x, ptr %p) nounwind {
 ; CHECK-NEXT:    mov w9, #43 // =0x2b
 ; CHECK-NEXT:    cmp w8, #43
 ; CHECK-NEXT:    sub w9, w9, w0
-; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    strh w9, [x1]
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %s = sub i16 43, %x
   %ov = icmp ult i16 43, %x
@@ -78,8 +76,7 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, ptr %p) nounwind {
 ; CHECK-NEXT:    sub w9, w0, #44
 ; CHECK-NEXT:    cmp w8, #44
 ; CHECK-NEXT:    strh w9, [x1]
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %s = add i16 %x, -44
   %ov = icmp ult i16 %x, 44
@@ -94,8 +91,7 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) nounwind {
 ; CHECK-NEXT:    sub w9, w0, #45
 ; CHECK-NEXT:    cmp w8, #45
 ; CHECK-NEXT:    strb w9, [x1]
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %ov = icmp ugt i8 45, %x
   %s = add i8 %x, -45
@@ -110,9 +106,8 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, ptr %p) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    sub w9, w0, #1
-; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    str w9, [x1]
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %s = add i32 %x, -1
   %ov = icmp eq i32 %x, 0

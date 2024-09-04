@@ -216,10 +216,9 @@ define <3 x i8> @load_v3i8(ptr %ptr){
 ;
 ; CHECK-GI-LABEL: load_v3i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldrb w8, [x0]
 ; CHECK-GI-NEXT:    ldrb w1, [x0, #1]
 ; CHECK-GI-NEXT:    ldrb w2, [x0, #2]
-; CHECK-GI-NEXT:    mov w0, w8
+; CHECK-GI-NEXT:    ldrb w0, [x0]
 ; CHECK-GI-NEXT:    ret
     %a = load <3 x i8>, ptr %ptr
     ret <3 x i8> %a

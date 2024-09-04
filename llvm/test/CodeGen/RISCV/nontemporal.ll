@@ -16,10 +16,9 @@ define i64 @test_nontemporal_load_i64(ptr %p) {
 ; CHECK-RV32-LABEL: test_nontemporal_load_i64:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    lw a2, 0(a0)
-; CHECK-RV32-NEXT:    ntl.all
 ; CHECK-RV32-NEXT:    lw a1, 4(a0)
-; CHECK-RV32-NEXT:    mv a0, a2
+; CHECK-RV32-NEXT:    ntl.all
+; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_load_i64:
@@ -31,10 +30,9 @@ define i64 @test_nontemporal_load_i64(ptr %p) {
 ; CHECK-RV32C-LABEL: test_nontemporal_load_i64:
 ; CHECK-RV32C:       # %bb.0:
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    lw a2, 0(a0)
-; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    lw a1, 4(a0)
-; CHECK-RV32C-NEXT:    mv a0, a2
+; CHECK-RV32C-NEXT:    c.ntl.all
+; CHECK-RV32C-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
 ;
 ; CHECK-RV64V-LABEL: test_nontemporal_load_i64:
@@ -46,10 +44,9 @@ define i64 @test_nontemporal_load_i64(ptr %p) {
 ; CHECK-RV32V-LABEL: test_nontemporal_load_i64:
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    lw a2, 0(a0)
-; CHECK-RV32V-NEXT:    ntl.all
 ; CHECK-RV32V-NEXT:    lw a1, 4(a0)
-; CHECK-RV32V-NEXT:    mv a0, a2
+; CHECK-RV32V-NEXT:    ntl.all
+; CHECK-RV32V-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32V-NEXT:    ret
 
   %1 = load i64, ptr %p, !nontemporal !0
@@ -540,10 +537,9 @@ define <2 x i64> @test_nontemporal_load_v2i64(ptr %p) {
 ; CHECK-RV64-LABEL: test_nontemporal_load_v2i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    ld a2, 0(a0)
-; CHECK-RV64-NEXT:    ntl.all
 ; CHECK-RV64-NEXT:    ld a1, 8(a0)
-; CHECK-RV64-NEXT:    mv a0, a2
+; CHECK-RV64-NEXT:    ntl.all
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_load_v2i64:
@@ -565,10 +561,9 @@ define <2 x i64> @test_nontemporal_load_v2i64(ptr %p) {
 ; CHECK-RV64C-LABEL: test_nontemporal_load_v2i64:
 ; CHECK-RV64C:       # %bb.0:
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    ld a2, 0(a0)
-; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    ld a1, 8(a0)
-; CHECK-RV64C-NEXT:    mv a0, a2
+; CHECK-RV64C-NEXT:    c.ntl.all
+; CHECK-RV64C-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_load_v2i64:
@@ -1448,10 +1443,9 @@ define i64 @test_nontemporal_P1_load_i64(ptr %p) {
 ; CHECK-RV32-LABEL: test_nontemporal_P1_load_i64:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    lw a2, 0(a0)
-; CHECK-RV32-NEXT:    ntl.p1
 ; CHECK-RV32-NEXT:    lw a1, 4(a0)
-; CHECK-RV32-NEXT:    mv a0, a2
+; CHECK-RV32-NEXT:    ntl.p1
+; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_P1_load_i64:
@@ -1463,10 +1457,9 @@ define i64 @test_nontemporal_P1_load_i64(ptr %p) {
 ; CHECK-RV32C-LABEL: test_nontemporal_P1_load_i64:
 ; CHECK-RV32C:       # %bb.0:
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    lw a2, 0(a0)
-; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    lw a1, 4(a0)
-; CHECK-RV32C-NEXT:    mv a0, a2
+; CHECK-RV32C-NEXT:    c.ntl.p1
+; CHECK-RV32C-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
 ;
 ; CHECK-RV64V-LABEL: test_nontemporal_P1_load_i64:
@@ -1478,10 +1471,9 @@ define i64 @test_nontemporal_P1_load_i64(ptr %p) {
 ; CHECK-RV32V-LABEL: test_nontemporal_P1_load_i64:
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    lw a2, 0(a0)
-; CHECK-RV32V-NEXT:    ntl.p1
 ; CHECK-RV32V-NEXT:    lw a1, 4(a0)
-; CHECK-RV32V-NEXT:    mv a0, a2
+; CHECK-RV32V-NEXT:    ntl.p1
+; CHECK-RV32V-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32V-NEXT:    ret
   %1 = load i64, ptr %p, !nontemporal !0, !riscv-nontemporal-domain !1
   ret i64 %1
@@ -1962,10 +1954,9 @@ define <2 x i64> @test_nontemporal_P1_load_v2i64(ptr %p) {
 ; CHECK-RV64-LABEL: test_nontemporal_P1_load_v2i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    ld a2, 0(a0)
-; CHECK-RV64-NEXT:    ntl.p1
 ; CHECK-RV64-NEXT:    ld a1, 8(a0)
-; CHECK-RV64-NEXT:    mv a0, a2
+; CHECK-RV64-NEXT:    ntl.p1
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_P1_load_v2i64:
@@ -1987,10 +1978,9 @@ define <2 x i64> @test_nontemporal_P1_load_v2i64(ptr %p) {
 ; CHECK-RV64C-LABEL: test_nontemporal_P1_load_v2i64:
 ; CHECK-RV64C:       # %bb.0:
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    ld a2, 0(a0)
-; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    ld a1, 8(a0)
-; CHECK-RV64C-NEXT:    mv a0, a2
+; CHECK-RV64C-NEXT:    c.ntl.p1
+; CHECK-RV64C-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_P1_load_v2i64:
@@ -2862,10 +2852,9 @@ define i64 @test_nontemporal_PALL_load_i64(ptr %p) {
 ; CHECK-RV32-LABEL: test_nontemporal_PALL_load_i64:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    lw a2, 0(a0)
-; CHECK-RV32-NEXT:    ntl.pall
 ; CHECK-RV32-NEXT:    lw a1, 4(a0)
-; CHECK-RV32-NEXT:    mv a0, a2
+; CHECK-RV32-NEXT:    ntl.pall
+; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_PALL_load_i64:
@@ -2877,10 +2866,9 @@ define i64 @test_nontemporal_PALL_load_i64(ptr %p) {
 ; CHECK-RV32C-LABEL: test_nontemporal_PALL_load_i64:
 ; CHECK-RV32C:       # %bb.0:
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    lw a2, 0(a0)
-; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    lw a1, 4(a0)
-; CHECK-RV32C-NEXT:    mv a0, a2
+; CHECK-RV32C-NEXT:    c.ntl.pall
+; CHECK-RV32C-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
 ;
 ; CHECK-RV64V-LABEL: test_nontemporal_PALL_load_i64:
@@ -2892,10 +2880,9 @@ define i64 @test_nontemporal_PALL_load_i64(ptr %p) {
 ; CHECK-RV32V-LABEL: test_nontemporal_PALL_load_i64:
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    lw a2, 0(a0)
-; CHECK-RV32V-NEXT:    ntl.pall
 ; CHECK-RV32V-NEXT:    lw a1, 4(a0)
-; CHECK-RV32V-NEXT:    mv a0, a2
+; CHECK-RV32V-NEXT:    ntl.pall
+; CHECK-RV32V-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32V-NEXT:    ret
   %1 = load i64, ptr %p, !nontemporal !0, !riscv-nontemporal-domain !2
   ret i64 %1
@@ -3376,10 +3363,9 @@ define <2 x i64> @test_nontemporal_PALL_load_v2i64(ptr %p) {
 ; CHECK-RV64-LABEL: test_nontemporal_PALL_load_v2i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    ld a2, 0(a0)
-; CHECK-RV64-NEXT:    ntl.pall
 ; CHECK-RV64-NEXT:    ld a1, 8(a0)
-; CHECK-RV64-NEXT:    mv a0, a2
+; CHECK-RV64-NEXT:    ntl.pall
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_PALL_load_v2i64:
@@ -3401,10 +3387,9 @@ define <2 x i64> @test_nontemporal_PALL_load_v2i64(ptr %p) {
 ; CHECK-RV64C-LABEL: test_nontemporal_PALL_load_v2i64:
 ; CHECK-RV64C:       # %bb.0:
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    ld a2, 0(a0)
-; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    ld a1, 8(a0)
-; CHECK-RV64C-NEXT:    mv a0, a2
+; CHECK-RV64C-NEXT:    c.ntl.pall
+; CHECK-RV64C-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_PALL_load_v2i64:
@@ -4276,10 +4261,9 @@ define i64 @test_nontemporal_S1_load_i64(ptr %p) {
 ; CHECK-RV32-LABEL: test_nontemporal_S1_load_i64:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    lw a2, 0(a0)
-; CHECK-RV32-NEXT:    ntl.s1
 ; CHECK-RV32-NEXT:    lw a1, 4(a0)
-; CHECK-RV32-NEXT:    mv a0, a2
+; CHECK-RV32-NEXT:    ntl.s1
+; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_S1_load_i64:
@@ -4291,10 +4275,9 @@ define i64 @test_nontemporal_S1_load_i64(ptr %p) {
 ; CHECK-RV32C-LABEL: test_nontemporal_S1_load_i64:
 ; CHECK-RV32C:       # %bb.0:
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    lw a2, 0(a0)
-; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    lw a1, 4(a0)
-; CHECK-RV32C-NEXT:    mv a0, a2
+; CHECK-RV32C-NEXT:    c.ntl.s1
+; CHECK-RV32C-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
 ;
 ; CHECK-RV64V-LABEL: test_nontemporal_S1_load_i64:
@@ -4306,10 +4289,9 @@ define i64 @test_nontemporal_S1_load_i64(ptr %p) {
 ; CHECK-RV32V-LABEL: test_nontemporal_S1_load_i64:
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    lw a2, 0(a0)
-; CHECK-RV32V-NEXT:    ntl.s1
 ; CHECK-RV32V-NEXT:    lw a1, 4(a0)
-; CHECK-RV32V-NEXT:    mv a0, a2
+; CHECK-RV32V-NEXT:    ntl.s1
+; CHECK-RV32V-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32V-NEXT:    ret
   %1 = load i64, ptr %p, !nontemporal !0, !riscv-nontemporal-domain !3
   ret i64 %1
@@ -4790,10 +4772,9 @@ define <2 x i64> @test_nontemporal_S1_load_v2i64(ptr %p) {
 ; CHECK-RV64-LABEL: test_nontemporal_S1_load_v2i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    ld a2, 0(a0)
-; CHECK-RV64-NEXT:    ntl.s1
 ; CHECK-RV64-NEXT:    ld a1, 8(a0)
-; CHECK-RV64-NEXT:    mv a0, a2
+; CHECK-RV64-NEXT:    ntl.s1
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_S1_load_v2i64:
@@ -4815,10 +4796,9 @@ define <2 x i64> @test_nontemporal_S1_load_v2i64(ptr %p) {
 ; CHECK-RV64C-LABEL: test_nontemporal_S1_load_v2i64:
 ; CHECK-RV64C:       # %bb.0:
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    ld a2, 0(a0)
-; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    ld a1, 8(a0)
-; CHECK-RV64C-NEXT:    mv a0, a2
+; CHECK-RV64C-NEXT:    c.ntl.s1
+; CHECK-RV64C-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_S1_load_v2i64:
@@ -5690,10 +5670,9 @@ define i64 @test_nontemporal_ALL_load_i64(ptr %p) {
 ; CHECK-RV32-LABEL: test_nontemporal_ALL_load_i64:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    lw a2, 0(a0)
-; CHECK-RV32-NEXT:    ntl.all
 ; CHECK-RV32-NEXT:    lw a1, 4(a0)
-; CHECK-RV32-NEXT:    mv a0, a2
+; CHECK-RV32-NEXT:    ntl.all
+; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_ALL_load_i64:
@@ -5705,10 +5684,9 @@ define i64 @test_nontemporal_ALL_load_i64(ptr %p) {
 ; CHECK-RV32C-LABEL: test_nontemporal_ALL_load_i64:
 ; CHECK-RV32C:       # %bb.0:
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    lw a2, 0(a0)
-; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    lw a1, 4(a0)
-; CHECK-RV32C-NEXT:    mv a0, a2
+; CHECK-RV32C-NEXT:    c.ntl.all
+; CHECK-RV32C-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
 ;
 ; CHECK-RV64V-LABEL: test_nontemporal_ALL_load_i64:
@@ -5720,10 +5698,9 @@ define i64 @test_nontemporal_ALL_load_i64(ptr %p) {
 ; CHECK-RV32V-LABEL: test_nontemporal_ALL_load_i64:
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    lw a2, 0(a0)
-; CHECK-RV32V-NEXT:    ntl.all
 ; CHECK-RV32V-NEXT:    lw a1, 4(a0)
-; CHECK-RV32V-NEXT:    mv a0, a2
+; CHECK-RV32V-NEXT:    ntl.all
+; CHECK-RV32V-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32V-NEXT:    ret
   %1 = load i64, ptr %p, !nontemporal !0, !riscv-nontemporal-domain !4
   ret i64 %1
@@ -6204,10 +6181,9 @@ define <2 x i64> @test_nontemporal_ALL_load_v2i64(ptr %p) {
 ; CHECK-RV64-LABEL: test_nontemporal_ALL_load_v2i64:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    ld a2, 0(a0)
-; CHECK-RV64-NEXT:    ntl.all
 ; CHECK-RV64-NEXT:    ld a1, 8(a0)
-; CHECK-RV64-NEXT:    mv a0, a2
+; CHECK-RV64-NEXT:    ntl.all
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_ALL_load_v2i64:
@@ -6229,10 +6205,9 @@ define <2 x i64> @test_nontemporal_ALL_load_v2i64(ptr %p) {
 ; CHECK-RV64C-LABEL: test_nontemporal_ALL_load_v2i64:
 ; CHECK-RV64C:       # %bb.0:
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    ld a2, 0(a0)
-; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    ld a1, 8(a0)
-; CHECK-RV64C-NEXT:    mv a0, a2
+; CHECK-RV64C-NEXT:    c.ntl.all
+; CHECK-RV64C-NEXT:    ld a0, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_ALL_load_v2i64:

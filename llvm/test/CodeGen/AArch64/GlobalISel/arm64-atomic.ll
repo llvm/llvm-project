@@ -106,11 +106,10 @@ define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) #0 {
 ; CHECK-OUTLINE-O1-LABEL: val_compare_and_swap_from_load:
 ; CHECK-OUTLINE-O1:       ; %bb.0:
 ; CHECK-OUTLINE-O1-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-OUTLINE-O1-NEXT:    ldr w8, [x2]
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
 ; CHECK-OUTLINE-O1-NEXT:    mov w0, w1
+; CHECK-OUTLINE-O1-NEXT:    ldr w1, [x2]
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
-; CHECK-OUTLINE-O1-NEXT:    mov w1, w8
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_cas4_acq
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-OUTLINE-O1-NEXT:    ret

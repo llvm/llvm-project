@@ -186,9 +186,7 @@ define double @double_sub(i32 %a, i32 %b, double %x, double %y) {
 ; CHECK-V7-NEXT:    movw r1, :lower16:t
 ; CHECK-V7-NEXT:    movt r1, :upper16:t
 ; CHECK-V7-NEXT:    str r0, [r1]
-; CHECK-V7-NEXT:    vmov r2, r3, d16
-; CHECK-V7-NEXT:    mov r0, r2
-; CHECK-V7-NEXT:    mov r1, r3
+; CHECK-V7-NEXT:    vmov r0, r1, d16
 ; CHECK-V7-NEXT:    bx lr
 ;
 ; CHECK-V8-LABEL: double_sub:
@@ -197,13 +195,11 @@ define double @double_sub(i32 %a, i32 %b, double %x, double %y) {
 ; CHECK-V8-NEXT:    cmp r0, r1
 ; CHECK-V8-NEXT:    vmov d17, r2, r3
 ; CHECK-V8-NEXT:    sub r0, r0, r1
-; CHECK-V8-NEXT:    vselgt.f64 d16, d17, d16
 ; CHECK-V8-NEXT:    movw r1, :lower16:t
-; CHECK-V8-NEXT:    vmov r2, r3, d16
+; CHECK-V8-NEXT:    vselgt.f64 d16, d17, d16
 ; CHECK-V8-NEXT:    movt r1, :upper16:t
 ; CHECK-V8-NEXT:    str r0, [r1]
-; CHECK-V8-NEXT:    mov r0, r2
-; CHECK-V8-NEXT:    mov r1, r3
+; CHECK-V8-NEXT:    vmov r0, r1, d16
 ; CHECK-V8-NEXT:    bx lr
 entry:
   %cmp = icmp sgt i32 %a, %b
@@ -224,9 +220,7 @@ define double @double_sub_swap(i32 %a, i32 %b, double %x, double %y) {
 ; CHECK-V7-NEXT:    movw r1, :lower16:t
 ; CHECK-V7-NEXT:    movt r1, :upper16:t
 ; CHECK-V7-NEXT:    str r0, [r1]
-; CHECK-V7-NEXT:    vmov r2, r3, d16
-; CHECK-V7-NEXT:    mov r0, r2
-; CHECK-V7-NEXT:    mov r1, r3
+; CHECK-V7-NEXT:    vmov r0, r1, d16
 ; CHECK-V7-NEXT:    bx lr
 ;
 ; CHECK-V8-LABEL: double_sub_swap:
@@ -235,13 +229,11 @@ define double @double_sub_swap(i32 %a, i32 %b, double %x, double %y) {
 ; CHECK-V8-NEXT:    cmp r1, r0
 ; CHECK-V8-NEXT:    vmov d17, r2, r3
 ; CHECK-V8-NEXT:    sub r0, r1, r0
-; CHECK-V8-NEXT:    vselge.f64 d16, d16, d17
 ; CHECK-V8-NEXT:    movw r1, :lower16:t
-; CHECK-V8-NEXT:    vmov r2, r3, d16
+; CHECK-V8-NEXT:    vselge.f64 d16, d16, d17
 ; CHECK-V8-NEXT:    movt r1, :upper16:t
 ; CHECK-V8-NEXT:    str r0, [r1]
-; CHECK-V8-NEXT:    mov r0, r2
-; CHECK-V8-NEXT:    mov r1, r3
+; CHECK-V8-NEXT:    vmov r0, r1, d16
 ; CHECK-V8-NEXT:    bx lr
 entry:
   %cmp = icmp sgt i32 %a, %b

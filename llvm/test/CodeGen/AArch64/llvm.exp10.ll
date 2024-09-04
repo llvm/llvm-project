@@ -104,10 +104,9 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    mov h8, v0.h[1]
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt s1, h8
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; GISEL-NEXT:    fmov s0, s1
+; GISEL-NEXT:    fcvt s0, h8
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    fcvt h1, s0
 ; GISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -177,15 +176,13 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; GISEL-NEXT:    mov h9, v0.h[2]
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt s1, h8
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; GISEL-NEXT:    fmov s0, s1
+; GISEL-NEXT:    fcvt s0, h8
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt s1, h9
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; GISEL-NEXT:    fmov s0, s1
+; GISEL-NEXT:    fcvt s0, h9
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
 ; GISEL-NEXT:    fcvt h0, s0
@@ -260,20 +257,17 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; GISEL-NEXT:    mov h10, v0.h[3]
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt s1, h8
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; GISEL-NEXT:    fmov s0, s1
+; GISEL-NEXT:    fcvt s0, h8
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt s1, h9
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; GISEL-NEXT:    fmov s0, s1
+; GISEL-NEXT:    fcvt s0, h9
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt s1, h10
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; GISEL-NEXT:    fmov s0, s1
+; GISEL-NEXT:    fcvt s0, h10
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
 ; GISEL-NEXT:    fcvt h0, s0

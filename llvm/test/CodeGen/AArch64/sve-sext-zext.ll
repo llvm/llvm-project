@@ -192,9 +192,8 @@ define <vscale x 2 x i64> @zext_i32_i64(<vscale x 2 x i32> %a) {
 define <vscale x 16 x i16> @sext_b_to_h(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sext_b_to_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpklo z2.h, z0.b
 ; CHECK-NEXT:    sunpkhi z1.h, z0.b
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   ret <vscale x 16 x i16> %ext
@@ -203,9 +202,8 @@ define <vscale x 16 x i16> @sext_b_to_h(<vscale x 16 x i8> %a) {
 define <vscale x 8 x i32> @sext_h_to_s(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: sext_h_to_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpklo z2.s, z0.h
 ; CHECK-NEXT:    sunpkhi z1.s, z0.h
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %ext
@@ -214,9 +212,8 @@ define <vscale x 8 x i32> @sext_h_to_s(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i64> @sext_s_to_d(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sext_s_to_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpklo z2.d, z0.s
 ; CHECK-NEXT:    sunpkhi z1.d, z0.s
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %ext
@@ -261,9 +258,8 @@ define <vscale x 16 x i64> @sext_b_to_d(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i16> @zext_b_to_h(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: zext_b_to_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z2.h, z0.b
 ; CHECK-NEXT:    uunpkhi z1.h, z0.b
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   ret <vscale x 16 x i16> %ext
@@ -272,9 +268,8 @@ define <vscale x 16 x i16> @zext_b_to_h(<vscale x 16 x i8> %a) {
 define <vscale x 8 x i32> @zext_h_to_s(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: zext_h_to_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %ext
@@ -283,9 +278,8 @@ define <vscale x 8 x i32> @zext_h_to_s(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i64> @zext_s_to_d(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: zext_s_to_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %ext
@@ -333,9 +327,8 @@ define <vscale x 4 x i64> @zext_4i8_4i64(<vscale x 4 x i8> %aval) {
 ; CHECK-LABEL: zext_4i8_4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.s, z0.s, #0xff
-; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %aext = zext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %aext
@@ -345,9 +338,8 @@ define <vscale x 4 x i64> @zext_4i16_4i64(<vscale x 4 x i16> %aval) {
 ; CHECK-LABEL: zext_4i16_4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
-; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %aext = zext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %aext
@@ -357,9 +349,8 @@ define <vscale x 8 x i32> @zext_8i8_8i32(<vscale x 8 x i8> %aval) {
 ; CHECK-LABEL: zext_8i8_8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %aext

@@ -106,18 +106,15 @@ define <4 x fp128> @fpext_v4f16_v4f128(<4 x half> %a) {
 ; CHECK-SD-NEXT:    bl __extendhftf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    mov h1, v1.h[1]
-; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    mov h0, v1.h[1]
 ; CHECK-SD-NEXT:    bl __extendhftf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    mov h1, v1.h[2]
-; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    mov h0, v1.h[2]
 ; CHECK-SD-NEXT:    bl __extendhftf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    mov h1, v1.h[3]
-; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    mov h0, v1.h[3]
 ; CHECK-SD-NEXT:    bl __extendhftf2
 ; CHECK-SD-NEXT:    mov v3.16b, v0.16b
 ; CHECK-SD-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
@@ -179,8 +176,7 @@ define <4 x fp128> @fpext_v4f32_v4f128(<4 x float> %a) {
 ; CHECK-SD-NEXT:    bl __extendsftf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    mov s1, v1.s[1]
-; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    mov s0, v1.s[1]
 ; CHECK-SD-NEXT:    bl __extendsftf2
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
@@ -302,18 +298,11 @@ entry:
 }
 
 define <4 x double> @fpext_v4f32_v4f64(<4 x float> %a) {
-; CHECK-SD-LABEL: fpext_v4f32_v4f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtl2 v1.2d, v0.4s
-; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v4f32_v4f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-GI-NEXT:    fcvtl2 v1.2d, v0.4s
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v4f32_v4f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl2 v1.2d, v0.4s
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <4 x float> %a to <4 x double>
   ret <4 x double> %c
@@ -432,18 +421,11 @@ entry:
 }
 
 define <8 x float> @fpext_v8f16_v8f32(<8 x half> %a) {
-; CHECK-SD-LABEL: fpext_v8f16_v8f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtl2 v1.4s, v0.8h
-; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v8f16_v8f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fcvtl v2.4s, v0.4h
-; CHECK-GI-NEXT:    fcvtl2 v1.4s, v0.8h
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v8f16_v8f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl2 v1.4s, v0.8h
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <8 x half> %a to <8 x float>
   ret <8 x float> %c

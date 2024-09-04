@@ -813,29 +813,25 @@ define <7 x half> @pow_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NEXT:    fcvt s1, h1
 ; CHECK-GI-NEXT:    str h2, [sp, #174] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h14
 ; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h9
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h15
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h10
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h11
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h11
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h12
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h13
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h12
 ; CHECK-GI-NEXT:    bl powf
 ; CHECK-GI-NEXT:    ldr h1, [sp, #48] // 2-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -956,23 +952,20 @@ define <4 x half> @pow_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    fcvt s1, h1
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h11
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h8
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h12
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h9
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h13
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h10
 ; CHECK-GI-NEXT:    bl powf
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -1120,29 +1113,25 @@ define <8 x half> @pow_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-GI-NEXT:    fcvt s1, h1
 ; CHECK-GI-NEXT:    str h2, [sp, #190] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h11
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    str q0, [sp, #80] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h11
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h12
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h12
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h13
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h13
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h14
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h15
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h14
 ; CHECK-GI-NEXT:    bl powf
 ; CHECK-GI-NEXT:    ldr h1, [sp, #48] // 2-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -1437,37 +1426,32 @@ define <16 x half> @pow_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK-GI-NEXT:    str h1, [sp, #302] // 2-byte Folded Spill
 ; CHECK-GI-NEXT:    fcvt s1, h2
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h12
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h15
 ; CHECK-GI-NEXT:    str q0, [sp, #304] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h12
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h13
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    str q0, [sp, #208] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h13
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    fcvt s2, h14
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    str q0, [sp, #320] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h14
 ; CHECK-GI-NEXT:    bl powf
+; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    ldr h1, [sp, #272] // 2-byte Folded Reload
-; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    fcvt s2, h1
-; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    str q0, [sp, #272] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h1
+; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    ldr h1, [sp, #240] // 2-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    fcvt s2, h1
-; CHECK-GI-NEXT:    fcvt s1, h11
+; CHECK-GI-NEXT:    ldr h1, [sp, #240] // 2-byte Folded Reload
 ; CHECK-GI-NEXT:    str q0, [sp, #240] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    fcvt s0, h1
+; CHECK-GI-NEXT:    fcvt s1, h11
 ; CHECK-GI-NEXT:    bl powf
 ; CHECK-GI-NEXT:    ldr h1, [sp, #176] // 2-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0

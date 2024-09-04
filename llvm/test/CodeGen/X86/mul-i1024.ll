@@ -5292,6 +5292,7 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    mulq %r14
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movq %r11, %r13
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
 ; X64-NEXT:    movq %r12, %rax
 ; X64-NEXT:    mulq %r14
@@ -5300,7 +5301,6 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    addq %r8, %r14
 ; X64-NEXT:    adcq $0, %r10
 ; X64-NEXT:    movq %r9, %rax
-; X64-NEXT:    movq %r11, %r13
 ; X64-NEXT:    mulq %r11
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    addq %r14, %rax

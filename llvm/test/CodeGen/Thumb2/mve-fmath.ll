@@ -52,10 +52,8 @@ define arm_aapcs_vfpcc <2 x double> @sqrt_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl sqrt
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl sqrt
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -79,10 +77,9 @@ define arm_aapcs_vfpcc <4 x float> @cos_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -109,8 +106,7 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -163,10 +159,8 @@ define arm_aapcs_vfpcc <2 x double> @cos_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl cos
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -190,10 +184,9 @@ define arm_aapcs_vfpcc <4 x float> @sin_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -220,8 +213,7 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -274,10 +266,8 @@ define arm_aapcs_vfpcc <2 x double> @sin_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl sin
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -301,10 +291,9 @@ define arm_aapcs_vfpcc <4 x float> @tan_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl tanf
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl tanf
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -331,8 +320,7 @@ define arm_aapcs_vfpcc <8 x half> @tan_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl tanf
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl tanf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -385,10 +373,8 @@ define arm_aapcs_vfpcc <2 x double> @tan_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl tan
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl tan
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -412,10 +398,9 @@ define arm_aapcs_vfpcc <4 x float> @exp_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl expf
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -442,8 +427,7 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -496,10 +480,8 @@ define arm_aapcs_vfpcc <2 x double> @exp_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl exp
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl exp
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -523,10 +505,9 @@ define arm_aapcs_vfpcc <4 x float> @exp2_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl exp2f
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -553,8 +534,7 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -607,10 +587,8 @@ define arm_aapcs_vfpcc <2 x double> @exp2_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl exp2
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl exp2
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -634,10 +612,9 @@ define arm_aapcs_vfpcc <4 x float> @log_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl logf
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -664,8 +641,7 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -718,10 +694,8 @@ define arm_aapcs_vfpcc <2 x double> @log_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl log
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl log
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -745,10 +719,9 @@ define arm_aapcs_vfpcc <4 x float> @log2_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl log2f
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -775,8 +748,7 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -829,10 +801,8 @@ define arm_aapcs_vfpcc <2 x double> @log2_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl log2
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl log2
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -856,10 +826,9 @@ define arm_aapcs_vfpcc <4 x float> @log10_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl log10f
-; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d8
 ; CHECK-NEXT:    vmov s18, r5
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -886,8 +855,7 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
@@ -940,10 +908,8 @@ define arm_aapcs_vfpcc <2 x double> @log10_float64_t(<2 x double> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl log10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl log10
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -970,11 +936,10 @@ define arm_aapcs_vfpcc <4 x float> @pow_float32_t(<4 x float> %src1, <4 x float>
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl powf
-; CHECK-NEXT:    vmov r4, r2, d10
-; CHECK-NEXT:    vmov r5, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r4, r0, d10
+; CHECK-NEXT:    vmov r5, r1, d8
 ; CHECK-NEXT:    vmov s18, r6
-; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -1075,11 +1040,9 @@ define arm_aapcs_vfpcc <2 x double> @pow_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    vmov r0, r1, d11
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    bl pow
-; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, lr
-; CHECK-NEXT:    mov r1, r12
+; CHECK-NEXT:    vmov r0, r1, d10
+; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    bl pow
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4

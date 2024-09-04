@@ -131,13 +131,12 @@ entry:
 define <16 x i32> @mla_i32(<16 x i8> %a, <16 x i8> %b, <16 x i32> %c) {
 ; CHECK-SD-LABEL: mla_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull2 v7.8h, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    umull v6.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    uaddw2 v5.4s, v5.4s, v7.8h
+; CHECK-SD-NEXT:    umull2 v7.8h, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    uaddw v0.4s, v2.4s, v6.4h
 ; CHECK-SD-NEXT:    uaddw2 v1.4s, v3.4s, v6.8h
+; CHECK-SD-NEXT:    uaddw2 v3.4s, v5.4s, v7.8h
 ; CHECK-SD-NEXT:    uaddw v2.4s, v4.4s, v7.4h
-; CHECK-SD-NEXT:    mov v3.16b, v5.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mla_i32:
@@ -170,18 +169,17 @@ define <16 x i64> @mla_i64(<16 x i8> %a, <16 x i8> %b, <16 x i64> %c) {
 ; CHECK-SD-NEXT:    umull2 v0.8h, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ldp q20, q21, [sp]
 ; CHECK-SD-NEXT:    ushll v17.4s, v16.4h, #0
+; CHECK-SD-NEXT:    ushll v18.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    ushll2 v16.4s, v16.8h, #0
 ; CHECK-SD-NEXT:    ushll2 v19.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v18.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    uaddw2 v1.2d, v3.2d, v17.4s
 ; CHECK-SD-NEXT:    uaddw v0.2d, v2.2d, v17.2s
 ; CHECK-SD-NEXT:    uaddw2 v3.2d, v5.2d, v16.4s
 ; CHECK-SD-NEXT:    uaddw v2.2d, v4.2d, v16.2s
-; CHECK-SD-NEXT:    uaddw2 v16.2d, v21.2d, v19.4s
 ; CHECK-SD-NEXT:    uaddw v4.2d, v6.2d, v18.2s
 ; CHECK-SD-NEXT:    uaddw2 v5.2d, v7.2d, v18.4s
+; CHECK-SD-NEXT:    uaddw2 v7.2d, v21.2d, v19.4s
 ; CHECK-SD-NEXT:    uaddw v6.2d, v20.2d, v19.2s
-; CHECK-SD-NEXT:    mov v7.16b, v16.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mla_i64:
