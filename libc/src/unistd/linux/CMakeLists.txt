@@ -103,6 +103,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.thread
     libc.src.errno.errno
+    libc.src.__support.threads.identifier
 )
 
 add_entrypoint_object(

@@ -13,6 +13,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, ceilf, (float x)) { return fputil::ceil(x); }
+LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
+#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
+  return __builtin_ceilf(x);
+#else
+  return fputil::ceil(x);
+#endif
+}
 
 } // namespace LIBC_NAMESPACE_DECL

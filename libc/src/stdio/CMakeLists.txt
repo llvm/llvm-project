@@ -101,7 +101,7 @@ list(APPEND scanf_deps
       libc.hdr.types.FILE
 )
 
-if(LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   list(APPEND scanf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file
@@ -122,6 +122,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  vsscanf
+  SRCS
+    vsscanf.cpp
+  HDRS
+    vsscanf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.scanf_core.reader
+    libc.src.stdio.scanf_core.scanf_main
+)
+
+add_entrypoint_object(
   fscanf
   SRCS
     fscanf.cpp
@@ -132,11 +144,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  vfscanf
+  SRCS
+    vfscanf.cpp
+  HDRS
+    vfscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
   scanf
   SRCS
     scanf.cpp
   HDRS
     scanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    vscanf.h
   DEPENDS
     ${scanf_deps}
 )
@@ -164,15 +196,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fprintf
+  asprintf
   SRCS
-    fprintf.cpp
+    asprintf.cpp
   HDRS
-    fprintf.h
+    asprintf.h
   DEPENDS
-    libc.hdr.types.FILE
-    libc.src.__support.arg_list
-    libc.src.stdio.printf_core.vfprintf_internal
+    libc.src.stdio.printf_core.vasprintf_internal
 )
 
 add_entrypoint_object(
@@ -198,15 +228,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  vfprintf
+  vasprintf
   SRCS
-    vfprintf.cpp
+    vasprintf.cpp
   HDRS
-    vfprintf.h
+    vasprintf.h
   DEPENDS
-    libc.hdr.types.FILE
-    libc.src.__support.arg_list
-    libc.src.stdio.printf_core.vfprintf_internal
+    libc.src.stdio.printf_core.vasprintf_internal
 )
 
 add_subdirectory(printf_core)
@@ -258,6 +286,7 @@ add_stdio_entrypoint_object(fputc)
 add_stdio_entrypoint_object(putc)
 add_stdio_entrypoint_object(putchar)
 add_stdio_entrypoint_object(printf)
+add_stdio_entrypoint_object(fprintf)
 add_stdio_entrypoint_object(fgetc)
 add_stdio_entrypoint_object(fgetc_unlocked)
 add_stdio_entrypoint_object(getc)
@@ -270,3 +299,4 @@ add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)
 add_stdio_entrypoint_object(vprintf)
+add_stdio_entrypoint_object(vfprintf)

@@ -42,6 +42,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -126,6 +127,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // arguments.
   SmallVector<unsigned> NewArgIndices;
   AttributeList PAL = F->getAttributes();
+  OptimizationRemarkEmitter ORE(F);
 
   // First, determine the new argument list
   unsigned ArgNo = 0, NewArgNo = 0;
@@ -139,6 +141,12 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentRemoved", F)
+               << "eliminating argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ")";
+      });
+
       NewArgIndices.push_back((unsigned)-1);
     } else {
       const auto &ArgParts = ArgsToPromote.find(&*I)->second;
@@ -147,6 +155,13 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
         ArgAttrVec.push_back(AttributeSet());
       }
       ++NumArgumentsPromoted;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentPromoted", F)
+               << "promoting argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ")"
+               << " to pass by value";
+      });
+
       NewArgIndices.push_back((unsigned)-1);
       NewArgNo += ArgParts.size();
     }
@@ -371,7 +386,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     append_range(Worklist, Arg.users());
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
-      if (isa<BitCastInst>(V) || isa<GetElementPtrInst>(V)) {
+      if (isa<GetElementPtrInst>(V)) {
         DeadInsts.push_back(cast<Instruction>(V));
         append_range(Worklist, V->users());
         continue;
@@ -608,10 +623,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
     Value *V = U->getUser();
-    if (isa<BitCastInst>(V)) {
-      AppendUses(V);
-      continue;
-    }
 
     if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
       if (!GEP->hasAllConstantIndices())
@@ -640,8 +651,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     }
 
     auto *CB = dyn_cast<CallBase>(V);
-    Value *PtrArg = cast<Value>(U);
-    if (CB && PtrArg && CB->getCalledFunction() == CB->getFunction()) {
+    Value *PtrArg = U->get();
+    if (CB && CB->getCalledFunction() == CB->getFunction()) {
       if (PtrArg != Arg) {
         LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                           << "pointer offset is not equal to zero\n");
@@ -649,7 +660,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
       }
 
       unsigned int ArgNo = Arg->getArgNo();
-      if (CB->getArgOperand(ArgNo) != Arg || U->getOperandNo() != ArgNo) {
+      if (U->getOperandNo() != ArgNo) {
         LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                           << "arg position is different in callee\n");
         return false;

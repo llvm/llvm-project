@@ -9,6 +9,7 @@
 #ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
 #define LLDB_LLDB_PRIVATE_INTERFACES_H
 
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -24,6 +25,7 @@ class Value;
 } // namespace llvm
 
 namespace lldb_private {
+class ScriptedInterfaceUsages;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
@@ -55,8 +57,7 @@ typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
 typedef bool (*ObjectFileSaveCore)(const lldb::ProcessSP &process_sp,
-                                   const FileSpec &outfile,
-                                   lldb::SaveCoreStyle &core_style,
+                                   lldb_private::SaveCoreOptions &options,
                                    Status &error);
 typedef EmulateInstruction *(*EmulateInstructionCreateInstance)(
     const ArchSpec &arch, InstructionType inst_type);
@@ -124,6 +125,8 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            lldb::LanguageType language,
                                            Debugger *debugger, Target *target,
                                            const char *repl_options);
+typedef bool (*ScriptedInterfaceCreateInstance)(lldb::ScriptLanguage language,
+                                                ScriptedInterfaceUsages usages);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 /// Trace

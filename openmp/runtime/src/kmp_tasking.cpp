@@ -3245,7 +3245,7 @@ static kmp_task_t *__kmp_steal_task(kmp_int32 victim_tid, kmp_int32 gtid,
   threads_data = task_team->tt.tt_threads_data;
   KMP_DEBUG_ASSERT(threads_data != NULL); // Caller should check this condition
   KMP_DEBUG_ASSERT(victim_tid >= 0);
-  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_nproc);
+  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_max_threads);
 
   victim_td = &threads_data[victim_tid];
   victim_thr = victim_td->td.td_thr;
@@ -5276,7 +5276,7 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   switch (sched) {
   case 0: // no schedule clause specified, we can choose the default
     // let's try to schedule (team_size*10) tasks
-    grainsize = thread->th.th_team_nproc * 10;
+    grainsize = thread->th.th_team_nproc * static_cast<kmp_uint64>(10);
     KMP_FALLTHROUGH();
   case 2: // num_tasks provided
     if (grainsize > tc) {

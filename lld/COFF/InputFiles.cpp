@@ -61,7 +61,7 @@ static StringRef getBasename(StringRef path) {
 std::string lld::toString(const coff::InputFile *file) {
   if (!file)
     return "<internal>";
-  if (file->parentName.empty() || file->kind() == coff::InputFile::ImportKind)
+  if (file->parentName.empty())
     return std::string(file->getName());
 
   return (getBasename(file->parentName) + "(" + getBasename(file->getName()) +
@@ -99,6 +99,20 @@ ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   file = CHECK(Archive::create(mb), this);
+
+  // Try to read symbols from ECSYMBOLS section on ARM64EC.
+  if (isArm64EC(ctx.config.machine)) {
+    iterator_range<Archive::symbol_iterator> symbols =
+        CHECK(file->ec_symbols(), this);
+    if (!symbols.empty()) {
+      for (const Archive::Symbol &sym : symbols)
+        ctx.symtab.addLazyArchive(this, sym);
+
+      // Read both EC and native symbols on ARM64X.
+      if (ctx.config.machine != ARM64X)
+        return;
+    }
+  }
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols())
@@ -724,7 +738,7 @@ std::optional<Symbol *> ObjFile::createDefined(
   return createRegular(sym);
 }
 
-MachineTypes ObjFile::getMachineType() {
+MachineTypes ObjFile::getMachineType() const {
   if (coffObj)
     return static_cast<MachineTypes>(coffObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;
@@ -987,6 +1001,13 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
 ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
 
+MachineTypes ImportFile::getMachineType() const {
+  uint16_t machine =
+      reinterpret_cast<const coff_import_header *>(mb.getBufferStart())
+          ->Machine;
+  return MachineTypes(machine);
+}
+
 void ImportFile::parse() {
   const auto *hdr =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
@@ -1038,8 +1059,7 @@ void ImportFile::parse() {
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
   if (hdr->getType() == llvm::COFF::IMPORT_CODE)
-    thunkSym = ctx.symtab.addImportThunk(
-        name, cast_or_null<DefinedImportData>(impSym), hdr->Machine);
+    thunkSym = ctx.symtab.addImportThunk(name, impSym, hdr->Machine);
 }
 
 BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
@@ -1139,7 +1159,7 @@ void BitcodeFile::parseLazy() {
       ctx.symtab.addLazyObject(this, sym.getName());
 }
 
-MachineTypes BitcodeFile::getMachineType() {
+MachineTypes BitcodeFile::getMachineType() const {
   switch (Triple(obj->getTargetTriple()).getArch()) {
   case Triple::x86_64:
     return AMD64;
@@ -1220,7 +1240,7 @@ void DLLFile::parse() {
   }
 }
 
-MachineTypes DLLFile::getMachineType() {
+MachineTypes DLLFile::getMachineType() const {
   if (coffObj)
     return static_cast<MachineTypes>(coffObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;

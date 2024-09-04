@@ -32,6 +32,7 @@ template <typename T> auto create(Value value) {
   case MAX:
     return T::max();
   }
+  __builtin_unreachable();
 }
 
 using Types = testing::TypeList< //
@@ -264,7 +265,11 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat16) {
   static_assert(cpp::is_trivially_copyable<LL_UInt16>::value);
   static_assert(sizeof(LL_UInt16) == sizeof(float16));
-  const float16 array[] = {0, 0.1, 1};
+  const float16 array[] = {
+      static_cast<float16>(0.0),
+      static_cast<float16>(0.1),
+      static_cast<float16>(1.0),
+  };
   for (float16 value : array) {
     LL_UInt16 back = cpp::bit_cast<LL_UInt16>(value);
     float16 forth = cpp::bit_cast<float16>(back);

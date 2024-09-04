@@ -565,6 +565,41 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_vcmla_rot270 : AdvSIMD_3VectorArg_Intrinsic;
 }
 
+let TargetPrefix = "aarch64" in {
+def int_aarch64_neon_vluti2_lane : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [llvm_anyvector_ty, llvm_v8i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti2_laneq : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [llvm_anyvector_ty, llvm_v16i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti4q_lane: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [LLVMMatchType<0>, llvm_v8i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti4q_laneq: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [LLVMMatchType<0>, llvm_v16i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+
+def int_aarch64_neon_vluti4q_lane_x2:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, LLVMMatchType<0>,
+                           llvm_v8i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+def int_aarch64_neon_vluti4q_laneq_x2:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, LLVMMatchType<0>,
+                           llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+}
+
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_2Vector2Index_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1287,6 +1322,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>,
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
+
+  class SVE2_LUTI_Inrinsic
+    :  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_nxv16i8_ty,
+                 llvm_i32_ty],
+                 [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   class SVE2_1VectorArg_Long_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2681,6 +2723,19 @@ def int_aarch64_sve_sm4ekey : ClangBuiltin<"__builtin_sve_svsm4ekey_u32">,
 
 def int_aarch64_sve_tbl2 : AdvSIMD_SVE2_TBX_Intrinsic;
 def int_aarch64_sve_tbx  : AdvSIMD_SVE2_TBX_Intrinsic;
+
+//
+// SVE2 - Lookup Table
+//
+
+def int_aarch64_sve_luti2_lane : SVE2_LUTI_Inrinsic;
+def int_aarch64_sve_luti4_lane : SVE2_LUTI_Inrinsic;
+def int_aarch64_sve_luti4_lane_x2 : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                    [LLVMMatchType<0>,
+                                    LLVMMatchType<0>,
+                                    llvm_nxv16i8_ty,
+                                    llvm_i32_ty],
+                                    [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 //
 // SVE2 - Optional bit permutation

@@ -1000,6 +1000,10 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def MmapWriteExecChecker : Checker<"MmapWriteExec">,
+  HelpText<"Warn on mmap() calls with both writable and executable access">,
+  Documentation<HasDocumentation>;
+
 def PutenvStackArray : Checker<"PutenvStackArray">,
   HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
            "an automatic (stack-allocated) array as the argument.">,
@@ -1037,26 +1041,6 @@ def ArrayBoundChecker : Checker<"ArrayBound">,
 
 def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
-
-def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
-  HelpText<"Check for overflows in the arguments to malloc()">,
-  Documentation<HasDocumentation>;
-
-def MmapWriteExecChecker : Checker<"MmapWriteExec">,
-  HelpText<"Warn on mmap() calls that are both writable and executable">,
-  CheckerOptions<[
-    CmdLineOption<Integer,
-                  "MmapProtExec",
-                  "Specifies the value of PROT_EXEC",
-                  "0x04",
-                  Released>,
-    CmdLineOption<Integer,
-                  "MmapProtRead",
-                  "Specifies the value of PROT_READ",
-                  "0x01",
-                  Released>
-  ]>,
   Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,

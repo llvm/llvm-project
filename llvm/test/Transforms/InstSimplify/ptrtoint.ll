@@ -4,11 +4,7 @@
 define i64 @ptrtoint_gep_sub(ptr %ptr, i64 %end.addr) {
 ; CHECK-LABEL: define i64 @ptrtoint_gep_sub(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[END_ADDR:%.*]]) {
-; CHECK-NEXT:    [[PTR_ADDR:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    [[SIZE:%.*]] = sub i64 [[END_ADDR]], [[PTR_ADDR]]
-; CHECK-NEXT:    [[END:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[SIZE]]
-; CHECK-NEXT:    [[END_ADDR2:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    ret i64 [[END_ADDR2]]
+; CHECK-NEXT:    ret i64 [[END_ADDR]]
 ;
   %ptr.addr = ptrtoint ptr %ptr to i64
   %size = sub i64 %end.addr, %ptr.addr
@@ -20,11 +16,7 @@ define i64 @ptrtoint_gep_sub(ptr %ptr, i64 %end.addr) {
 define <2 x i64> @ptrtoint_gep_sub_vector(<2 x ptr> %ptr, <2 x i64> %end.addr) {
 ; CHECK-LABEL: define <2 x i64> @ptrtoint_gep_sub_vector(
 ; CHECK-SAME: <2 x ptr> [[PTR:%.*]], <2 x i64> [[END_ADDR:%.*]]) {
-; CHECK-NEXT:    [[PTR_ADDR:%.*]] = ptrtoint <2 x ptr> [[PTR]] to <2 x i64>
-; CHECK-NEXT:    [[SIZE:%.*]] = sub <2 x i64> [[END_ADDR]], [[PTR_ADDR]]
-; CHECK-NEXT:    [[END:%.*]] = getelementptr i8, <2 x ptr> [[PTR]], <2 x i64> [[SIZE]]
-; CHECK-NEXT:    [[END_ADDR2:%.*]] = ptrtoint <2 x ptr> [[END]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[END_ADDR2]]
+; CHECK-NEXT:    ret <2 x i64> [[END_ADDR]]
 ;
   %ptr.addr = ptrtoint <2 x ptr> %ptr to <2 x i64>
   %size = sub <2 x i64> %end.addr, %ptr.addr

@@ -1223,8 +1223,19 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
+  // Make sure that the in_bounds attribute corresponding to a broadcast dim
+  // is set to `true` - that's required by the xfer Op.
+  // FIXME: We're not veryfying whether the corresponding access is in bounds.
+  // TODO: Use masking instead.
+  SmallVector<unsigned> broadcastedDims = permutationMap.getBroadcastDims();
+  SmallVector<bool> inBounds(vectorType.getRank(), false);
+
+  for (auto idx : broadcastedDims)
+    inBounds[idx] = true;
+
   auto transfer = state.builder.create<vector::TransferReadOp>(
-      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices, permutationMap);
+      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices, permutationMap,
+      inBounds);
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);

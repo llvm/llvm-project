@@ -2554,10 +2554,9 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (const auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (auto *CB = dyn_cast<CallBase>(I)) {
-        assert((isa<IntrinsicInst>(CB) || isRunOn(*I->getFunction())) &&
-               "Cannot delete an instruction outside the current SCC!");
-      }
+      assert((!isa<CallBase>(I) || isa<IntrinsicInst>(I) ||
+              isRunOn(*I->getFunction())) &&
+             "Cannot delete an instruction outside the current SCC!");
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
       if (!I->getType()->isVoidTy())
@@ -3837,7 +3836,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   if (MaxSpecializationPerCB.getNumOccurrences()) {
     AC.IndirectCalleeSpecializationCallback =
         [&](Attributor &, const AbstractAttribute &AA, CallBase &CB,
-            Function &Callee) {
+            Function &Callee, unsigned) {
           if (MaxSpecializationPerCB == 0)
             return false;
           auto &Set = IndirectCalleeTrackingMap[&CB];

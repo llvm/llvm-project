@@ -30,7 +30,7 @@ protected:
   std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
 
 private:
-  bool FastUnalignedAccess;
+  bool FastScalarUnalignedAccess;
   bool HasExperimental = false;
 
 public:
@@ -126,6 +126,10 @@ public:
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
   }
+
+  bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
+  bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
+  bool validateCpuSupports(StringRef Feature) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

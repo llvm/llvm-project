@@ -148,6 +148,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     NoopCoro = new GlobalVariable(M, NoopCoroConst->getType(), /*isConstant=*/true,
                                 GlobalVariable::PrivateLinkage, NoopCoroConst,
                                 "NoopCoro.Frame.Const");
+    cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
   }
 
   Builder.SetInsertPoint(II);
@@ -202,7 +203,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
             assert(F.isPresplitCoroutine() &&
-                   "The frontend uses Swtich-Resumed ABI should emit "
+                   "The frontend uses Switch-Resumed ABI should emit "
                    "\"presplitcoroutine\" attribute for the coroutine.");
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();

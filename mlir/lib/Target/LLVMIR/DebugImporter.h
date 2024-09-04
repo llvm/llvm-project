@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/CyclicReplacerCache.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 namespace mlir {
@@ -74,6 +75,7 @@ private:
   DIVariableAttr translateImpl(llvm::DIVariable *node);
   DIModuleAttr translateImpl(llvm::DIModule *node);
   DINamespaceAttr translateImpl(llvm::DINamespace *node);
+  DIImportedEntityAttr translateImpl(llvm::DIImportedEntity *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);
   DISubprogramAttr translateImpl(llvm::DISubprogram *node);
   DISubrangeAttr translateImpl(llvm::DISubrange *node);

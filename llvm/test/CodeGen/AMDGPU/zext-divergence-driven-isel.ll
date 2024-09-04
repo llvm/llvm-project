@@ -4,7 +4,7 @@
 define amdgpu_kernel void @zext_i16_to_i32_uniform(ptr addrspace(1) %out, i16 %a, i32 %b) {
 ; GCN-LABEL: zext_i16_to_i32_uniform:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -25,9 +25,9 @@ define amdgpu_kernel void @zext_i16_to_i32_uniform(ptr addrspace(1) %out, i16 %a
 define amdgpu_kernel void @zext_i16_to_i64_uniform(ptr addrspace(1) %out, i16 %a, i64 %b) {
 ; GCN-LABEL: zext_i16_to_i64_uniform:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s6, s[0:1], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s6, s[2:3], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xd
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -47,8 +47,8 @@ define amdgpu_kernel void @zext_i16_to_i64_uniform(ptr addrspace(1) %out, i16 %a
 define amdgpu_kernel void @zext_i16_to_i32_divergent(ptr addrspace(1) %out, i16 %a, i32 %b) {
 ; GCN-LABEL: zext_i16_to_i32_divergent:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s4, s[2:3], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -68,8 +68,8 @@ define amdgpu_kernel void @zext_i16_to_i32_divergent(ptr addrspace(1) %out, i16 
 define amdgpu_kernel void @zext_i16_to_i64_divergent(ptr addrspace(1) %out, i16 %a, i64 %b) {
 ; GCN-LABEL: zext_i16_to_i64_divergent:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s4, s[2:3], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0

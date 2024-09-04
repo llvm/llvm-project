@@ -348,6 +348,26 @@ G_ICMP
 Perform integer comparison producing non-zero (true) or zero (false). It's
 target specific whether a true value is 1, ~0U, or some other non-zero value.
 
+G_SCMP
+^^^^^^
+
+Perform signed 3-way integer comparison producing -1 (smaller), 0 (equal), or 1 (larger).
+
+.. code-block:: none
+
+  %5:_(s32) = G_SCMP %6, %2
+
+
+G_UCMP
+^^^^^^
+
+Perform unsigned 3-way integer comparison producing -1 (smaller), 0 (equal), or 1 (larger).
+
+.. code-block:: none
+
+  %7:_(s32) = G_UCMP %2, %6
+
+
 G_SELECT
 ^^^^^^^^
 
@@ -725,6 +745,13 @@ Create a vector where all elements are the scalar from the source operand.
 The type of the operand must be equal to or larger than the vector element
 type. If the operand is larger than the vector element type, the scalar is
 implicitly truncated to the vector element type.
+
+G_VECTOR_COMPRESS
+^^^^^^^^^^^^^^^^^
+
+Given an input vector, a mask vector, and a passthru vector, continuously place
+all selected (i.e., where mask[i] = true) input lanes in an output vector. All
+remaining lanes in the output are taken from passthru, which may be undef.
 
 Vector Reduction Operations
 ---------------------------

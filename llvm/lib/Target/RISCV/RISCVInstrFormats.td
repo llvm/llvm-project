@@ -158,6 +158,15 @@ def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
 def OPC_OP_VE     : RISCVOpcode<"OP_VE",     0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 
+class EltDeps<bit vl, bit mask> {
+  bit VL = vl;
+  bit Mask = mask;
+}
+
+def EltDepsNone      : EltDeps<vl=0, mask=0>;
+def EltDepsVL        : EltDeps<vl=1, mask=0>;
+def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
+
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
   let Namespace = "RISCV";
@@ -223,6 +232,14 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
   let TSFlags{22-21} = TargetOverlapConstraintType;
+
+  // Most vector instructions are elementwise, but some may depend on the value
+  // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
+  // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
+  // changing their VL and/or mask.
+  EltDeps ElementsDependOn = EltDepsNone;
+  let TSFlags{23} = ElementsDependOn.VL;
+  let TSFlags{24} = ElementsDependOn.Mask;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

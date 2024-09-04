@@ -13,6 +13,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"
@@ -20,7 +21,6 @@
 
 #ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
-#warning "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY is not defined, defaulting to 1"
 #endif
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
@@ -29,8 +29,6 @@
 
 #ifndef LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT
 #define LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT 100
-#warning                                                                       \
-    "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT is not defined, defaulting to 100"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

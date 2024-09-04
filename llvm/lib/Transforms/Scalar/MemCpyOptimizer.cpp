@@ -980,12 +980,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   while (!srcUseList.empty()) {
     User *U = srcUseList.pop_back_val();
 
-    if (isa<BitCastInst>(U) || isa<AddrSpaceCastInst>(U)) {
-      append_range(srcUseList, U->users());
-      continue;
-    }
-    if (const auto *G = dyn_cast<GetElementPtrInst>(U);
-        G && G->hasAllZeroIndices()) {
+    if (isa<AddrSpaceCastInst>(U)) {
       append_range(srcUseList, U->users());
       continue;
     }
@@ -1188,15 +1183,19 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (MDestOffset == MForwardOffset)
       CopySource = M->getDest();
     else {
-      NewCopySource = cast<Instruction>(Builder.CreateInBoundsPtrAdd(
-          CopySource, Builder.getInt64(MForwardOffset)));
-      CopySource = NewCopySource;
+      CopySource = Builder.CreateInBoundsPtrAdd(
+          CopySource, Builder.getInt64(MForwardOffset));
+      NewCopySource = dyn_cast<Instruction>(CopySource);
     }
     // We need to update `MCopyLoc` if an offset exists.
     MCopyLoc = MCopyLoc.getWithNewPtr(CopySource);
     if (CopySourceAlign)
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
   }
+
+  // Avoid infinite loops
+  if (BAA.isMustAlias(M->getSource(), CopySource))
+    return false;
 
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
@@ -1296,6 +1295,15 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   if (!BAA.isMustAlias(MemSet->getDest(), MemCpy->getDest()))
     return false;
 
+  // Don't perform the transform if src_size may be zero. In that case, the
+  // transform is essentially a complex no-op and may lead to an infinite
+  // loop if BasicAA is smart enough to understand that dst and dst + src_size
+  // are still MustAlias after the transform.
+  Value *SrcSize = MemCpy->getLength();
+  if (!isKnownNonZero(SrcSize,
+                      SimplifyQuery(MemCpy->getDataLayout(), DT, AC, MemCpy)))
+    return false;
+
   // Check that src and dst of the memcpy aren't the same. While memcpy
   // operands cannot partially overlap, exact equality is allowed.
   if (isModSet(BAA.getModRefInfo(MemCpy, MemoryLocation::getForSource(MemCpy))))
@@ -1312,7 +1320,6 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   // Use the same i8* dest as the memcpy, killing the memset dest if different.
   Value *Dest = MemCpy->getRawDest();
   Value *DestSize = MemSet->getLength();
-  Value *SrcSize = MemCpy->getLength();
 
   if (mayBeVisibleThroughUnwinding(Dest, MemSet, MemCpy))
     return false;
@@ -1726,8 +1733,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     return true;
   }
 
-  // If the size is zero, remove the memcpy. This also prevents infinite loops
-  // in processMemSetMemCpyDependence, which is a no-op for zero-length memcpys.
+  // If the size is zero, remove the memcpy.
   if (isZeroSize(M->getLength())) {
     ++BBI;
     eraseInstruction(M);

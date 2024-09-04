@@ -118,11 +118,11 @@ void toolchains::PS5CPU::addSanitizerArgs(const ArgList &Args,
     CmdArgs.push_back(arg("SceThreadSanitizer_nosubmission_stub_weak"));
 }
 
-void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
-                                        const InputInfo &Output,
-                                        const InputInfoList &Inputs,
-                                        const ArgList &Args,
-                                        const char *LinkingOutput) const {
+void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                         const InputInfo &Output,
+                                         const InputInfoList &Inputs,
+                                         const ArgList &Args,
+                                         const char *LinkingOutput) const {
   auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
@@ -141,6 +141,8 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
 
+  if (Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))
@@ -152,61 +154,37 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   }
 
-  const bool UseLTO = D.isUsingLTO();
   const bool UseJMC =
       Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
-  const bool IsPS4 = TC.getTriple().isPS4();
 
-  const char *PS4LTOArgs = "";
-  auto AddCodeGenFlag = [&](Twine Flag) {
-    if (IsPS4)
-      PS4LTOArgs = Args.MakeArgString(Twine(PS4LTOArgs) + " " + Flag);
-    else
-      CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=") + Flag));
+  const char *LTOArgs = "";
+  auto AddLTOFlag = [&](Twine Flag) {
+    LTOArgs = Args.MakeArgString(Twine(LTOArgs) + " " + Flag);
   };
 
-  if (UseLTO) {
-    // We default to creating the arange section, but LTO does not. Enable it
-    // here.
-    AddCodeGenFlag("-generate-arange-section");
+  // If the linker sees bitcode objects it will perform LTO. We can't tell
+  // whether or not that will be the case at this point. So, unconditionally
+  // pass LTO options to ensure proper codegen, metadata production, etc if
+  // LTO indeed occurs.
+  if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
+                   true))
+    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
+                                                  : "--lto=full");
+  if (UseJMC)
+    AddLTOFlag("-enable-jmc-instrument");
 
-    // This tells LTO to perform JustMyCode instrumentation.
-    if (UseJMC)
-      AddCodeGenFlag("-enable-jmc-instrument");
+  if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+    AddLTOFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
 
-    if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
-      AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
+  if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
+    AddLTOFlag(Twine("-threads=") + Threads);
 
-    StringRef Parallelism = getLTOParallelism(Args, D);
-    if (!Parallelism.empty()) {
-      if (IsPS4)
-        AddCodeGenFlag(Twine("-threads=") + Parallelism);
-      else
-        CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=jobs=") + Parallelism));
-    }
-
-    if (IsPS4) {
-      const char *Prefix = nullptr;
-      if (D.getLTOMode() == LTOK_Thin)
-        Prefix = "-lto-thin-debug-options=";
-      else if (D.getLTOMode() == LTOK_Full)
-        Prefix = "-lto-debug-options=";
-      else
-        llvm_unreachable("new LTO mode?");
-
-      CmdArgs.push_back(Args.MakeArgString(Twine(Prefix) + PS4LTOArgs));
-    }
-  }
+  if (*LTOArgs)
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
-
-  if (D.isUsingLTO() && Args.hasArg(options::OPT_funified_lto)) {
-    if (D.getLTOMode() == LTOK_Thin)
-      CmdArgs.push_back("--lto=thin");
-    else if (D.getLTOMode() == LTOK_Full)
-      CmdArgs.push_back("--lto=full");
-  }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
@@ -222,10 +200,109 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (UseJMC) {
     CmdArgs.push_back("--whole-archive");
-    if (IsPS4)
-      CmdArgs.push_back("-lSceDbgJmc");
-    else
-      CmdArgs.push_back("-lSceJmc_nosubmission");
+    CmdArgs.push_back("-lSceDbgJmc");
+    CmdArgs.push_back("--no-whole-archive");
+  }
+
+  if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << "-fuse-ld" << TC.getTriple().str();
+  }
+
+  std::string LdName = TC.qualifyPSCmdName(TC.getLinkerBaseName());
+  const char *Exec = Args.MakeArgString(TC.GetProgramPath(LdName.c_str()));
+
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
+void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                         const InputInfo &Output,
+                                         const InputInfoList &Inputs,
+                                         const ArgList &Args,
+                                         const char *LinkingOutput) const {
+  auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
+  const Driver &D = TC.getDriver();
+  ArgStringList CmdArgs;
+
+  // Silence warning for "clang -g foo.o -o foo"
+  Args.ClaimAllArgs(options::OPT_g_Group);
+  // and "clang -emit-llvm foo.o -o foo"
+  Args.ClaimAllArgs(options::OPT_emit_llvm);
+  // and for "clang -w foo.o -o foo". Other warning options are already
+  // handled somewhere else.
+  Args.ClaimAllArgs(options::OPT_w);
+
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+
+  // Default to PIE for non-static executables.
+  const bool PIE =
+      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
+    CmdArgs.push_back("-pie");
+
+  if (Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-static");
+  if (Args.hasArg(options::OPT_rdynamic))
+    CmdArgs.push_back("-export-dynamic");
+  if (Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back("--shared");
+
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
+  if (Output.isFilename()) {
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  }
+
+  const bool UseJMC =
+      Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
+
+  auto AddLTOFlag = [&](Twine Flag) {
+    CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=") + Flag));
+  };
+
+  // If the linker sees bitcode objects it will perform LTO. We can't tell
+  // whether or not that will be the case at this point. So, unconditionally
+  // pass LTO options to ensure proper codegen, metadata production, etc if
+  // LTO indeed occurs.
+  if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
+                   true))
+    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
+                                                  : "--lto=full");
+
+  if (UseJMC)
+    AddLTOFlag("-enable-jmc-instrument");
+
+  if (Args.hasFlag(options::OPT_fstack_size_section,
+                   options::OPT_fno_stack_size_section, false))
+    AddLTOFlag("-stack-size-section");
+
+  if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+    AddLTOFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
+
+  if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
+    AddLTOFlag(Twine("jobs=") + Jobs);
+
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
+    TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
+
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t});
+
+  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+    CmdArgs.push_back("--no-demangle");
+
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
+  if (Args.hasArg(options::OPT_pthread)) {
+    CmdArgs.push_back("-lpthread");
+  }
+
+  if (UseJMC) {
+    CmdArgs.push_back("--whole-archive");
+    CmdArgs.push_back("-lSceJmc_nosubmission");
     CmdArgs.push_back("--no-whole-archive");
   }
 
@@ -246,10 +323,6 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args, StringRef Platform,
                                    const char *EnvVar)
     : Generic_ELF(D, Triple, Args) {
-  if (Args.hasArg(clang::driver::options::OPT_static))
-    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
-        << "-static" << Platform;
-
   // Determine where to find the PS4/PS5 libraries.
   // If -isysroot was passed, use that as the SDK base path.
   // If not, we use the EnvVar if it exists; otherwise use the driver's
@@ -321,14 +394,18 @@ Tool *toolchains::PS4CPU::buildAssembler() const {
   return new tools::PScpu::Assembler(*this);
 }
 
+Tool *toolchains::PS4CPU::buildLinker() const {
+  return new tools::PS4cpu::Linker(*this);
+}
+
 Tool *toolchains::PS5CPU::buildAssembler() const {
   // PS5 does not support an external assembler.
   getDriver().Diag(clang::diag::err_no_external_assembler);
   return nullptr;
 }
 
-Tool *toolchains::PS4PS5Base::buildLinker() const {
-  return new tools::PScpu::Linker(*this);
+Tool *toolchains::PS5CPU::buildLinker() const {
+  return new tools::PS5cpu::Linker(*this);
 }
 
 SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {

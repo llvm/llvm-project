@@ -24,11 +24,11 @@
 #if TEST_STD_VER >= 11
 #include <memory>
 
-struct indirect_less
-{
-    template <class P>
-    bool operator()(const P& x, const P& y)
-        {return *x < *y;}
+struct indirect_less {
+  template <class P>
+  bool operator()(const P& x, const P& y) const {
+    return *x < *y;
+  }
 };
 
 struct S {
@@ -119,7 +119,7 @@ test()
 
 struct less_by_first {
   template <typename Pair>
-  bool operator()(const Pair& lhs, const Pair& rhs) {
+  bool operator()(const Pair& lhs, const Pair& rhs) const {
     return std::less<typename Pair::first_type>()(lhs.first, rhs.first);
   }
 };

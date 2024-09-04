@@ -3,8 +3,8 @@
 ; of spirv-val in this case, because there is a difference of accepted return types
 ; between atomicrmw and OpAtomicExchange.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: %[[#LongTy:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#PtrLongTy:]] = OpTypePointer CrossWorkgroup %[[#LongTy]]

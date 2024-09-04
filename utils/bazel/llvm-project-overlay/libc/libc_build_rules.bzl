@@ -43,7 +43,7 @@ def _libc_library(name, hidden, copts = [], deps = [], local_defines = [], **kwa
         name = name,
         copts = copts + libc_common_copts(),
         local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
-        deps = deps + ["//libc:__support_macros_config"],
+        deps = deps,
         linkstatic = 1,
         **kwargs
     )
