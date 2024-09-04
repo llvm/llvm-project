@@ -834,17 +834,10 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
                                           Decl *TheDecl, RegisterType regType) {
 
-  // Samplers, UAVs, and SRVs are VarDecl types
-  VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
-  // Cbuffers and Tbuffers are HLSLBufferDecl types
-  HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
-
   // exactly one of these two types should be set
-  assert(((TheVarDecl && !CBufferOrTBuffer) ||
-          (!TheVarDecl && CBufferOrTBuffer)) &&
+  assert(((isa<VarDecl>(TheDecl) && !isa<HLSLBufferDecl>(TheDecl)) ||
+          (!isa<VarDecl>(TheDecl) && isa<HLSLBufferDecl>(TheDecl))) &&
          "either TheVarDecl or CBufferOrTBuffer should be set");
-  (void)TheVarDecl;
-  (void)CBufferOrTBuffer;
 
   RegisterBindingFlags Flags = HLSLFillRegisterBindingFlags(S, TheDecl);
   assert((int)Flags.Other + (int)Flags.Resource + (int)Flags.Basic +
