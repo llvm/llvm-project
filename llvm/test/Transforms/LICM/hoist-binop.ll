@@ -97,13 +97,13 @@ loop:
 define void @add_nuw_comm2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_nuw_comm2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C2:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INVARIANT_OP]], [[INDEX]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -122,13 +122,13 @@ loop:
 define void @add_nuw_comm3(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_nuw_comm3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C2:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INVARIANT_OP]], [[INDEX]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -196,13 +196,13 @@ loop:
 define void @mul_nuw_comm2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_nuw_comm2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C2:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INVARIANT_OP]], [[INDEX]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -221,13 +221,13 @@ loop:
 define void @mul_nuw_comm3(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_nuw_comm3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C2:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INVARIANT_OP]], [[INDEX]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
