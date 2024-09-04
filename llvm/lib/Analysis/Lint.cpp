@@ -244,7 +244,8 @@ void Lint::visitCallBase(CallBase &I) {
             // dereferenced anyway.
             if (I.doesNotAccessMemory(ArgNo))
               continue;
-            if (AI != BI && (*BI)->getType()->isPointerTy()) {
+            if (AI != BI && (*BI)->getType()->isPointerTy() &&
+                !isa<ConstantPointerNull>(*BI)) {
               AliasResult Result = AA->alias(*AI, *BI);
               Check(Result != AliasResult::MustAlias &&
                         Result != AliasResult::PartialAlias,
