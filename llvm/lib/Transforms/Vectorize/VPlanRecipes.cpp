@@ -272,6 +272,12 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
     return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
   if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
     return IG->getInsertPos();
+  // Currently the legacy cost model only calculates the instruction cost with
+  // underlying instruction. Removing the WidenMem here will prevent
+  // force-target-instruction-cost overwriting the cost of recipe with
+  // underlying instruction which is inconsistent with the legacy model.
+  // TODO: Remove WidenMem from this function when we don't need to compare to
+  // the legacy model.
   if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
     return &WidenMem->getIngredient();
   return nullptr;
@@ -2131,6 +2137,46 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
+
+InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
+                                                 VPCostContext &Ctx) const {
+  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment =
+      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  unsigned AS =
+      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  if (!Consecutive) {
+    // TODO: Using the original IR may not be accurate.
+    // Currently, ARM will use the underlying IR to calculate gather/scatter
+    // instruction cost.
+    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    assert(!Reverse &&
+           "Inconsecutive memory access should not have the order.");
+    return Ctx.TTI.getAddressComputationCost(Ty) +
+           Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
+                                          IsMasked, Alignment, CostKind,
+                                          &Ingredient);
+  }
+
+  InstructionCost Cost = 0;
+  if (IsMasked) {
+    Cost += Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                          AS, CostKind);
+  } else {
+    TTI::OperandValueInfo OpInfo =
+        Ctx.TTI.getOperandInfo(Ingredient.getOperand(0));
+    Cost += Ctx.TTI.getMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment, AS,
+                                    CostKind, OpInfo, &Ingredient);
+  }
+  if (!Reverse)
+    return Cost;
+
+  return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                        cast<VectorType>(Ty), std::nullopt,
+                                        CostKind, 0);
+}
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);

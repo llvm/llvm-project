@@ -246,7 +246,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorConstantExpr, Value)
 
 template <>
 struct OperandTraits<GetElementPtrConstantExpr>
-    : public VariadicOperandTraits<GetElementPtrConstantExpr, 1> {};
+    : public VariadicOperandTraits<GetElementPtrConstantExpr> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrConstantExpr, Value)
 
