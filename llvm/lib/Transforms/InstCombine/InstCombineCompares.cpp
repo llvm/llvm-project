@@ -8178,6 +8178,87 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   return nullptr;
 }
 
+static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
+                                             InstCombinerImpl &CI) {
+  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+  const CmpInst::Predicate Pred = I.getPredicate();
+  Type *OpType = LHS->getType();
+
+  // fcmp ole floor(x), x => fcmp ord x, 0
+  // fcmp ogt floor(x), x => false
+  if (match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS)))) {
+    if (Pred == FCmpInst::FCMP_OLE ||
+        Pred == FCmpInst::FCMP_ULE &&
+            isKnownNeverNaN(LHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    }
+    if (Pred == FCmpInst::FCMP_OGT ||
+        Pred == FCmpInst::FCMP_UGT &&
+            isKnownNeverNaN(LHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    }
+  }
+
+  // fcmp oge x, floor(x) => fcmp ord x, 0
+  // fcmp olt x, floor(x) => false
+  if (match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS)))) {
+    if (Pred == FCmpInst::FCMP_OGE ||
+        Pred == FCmpInst::FCMP_UGE &&
+            isKnownNeverNaN(RHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    }
+    if (Pred == FCmpInst::FCMP_OLT ||
+        Pred == FCmpInst::FCMP_ULT &&
+            isKnownNeverNaN(RHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    }
+  }
+
+  // fcmp oge ceil(x), x => fcmp ord x, 0
+  // fcmp olt ceil(x), x => false
+  if (match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)))) {
+    if (Pred == FCmpInst::FCMP_OGE ||
+        Pred == FCmpInst::FCMP_UGE &&
+            isKnownNeverNaN(LHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    }
+    if (Pred == FCmpInst::FCMP_OLT ||
+        Pred == FCmpInst::FCMP_ULT &&
+            isKnownNeverNaN(LHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    }
+  }
+
+  // fcmp ole x, ceil(x) => fcmp ord x, 0
+  // fcmp ogt x, ceil(x) => false
+  if (match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS)))) {
+    if (Pred == FCmpInst::FCMP_OLE ||
+        Pred == FCmpInst::FCMP_ULE &&
+            isKnownNeverNaN(RHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    }
+    if (Pred == FCmpInst::FCMP_OGT ||
+        Pred == FCmpInst::FCMP_UGT &&
+            isKnownNeverNaN(RHS, 0,
+                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    }
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -8380,6 +8461,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     return R;
 
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldFCmpWithFloorAndCeil(I, *this))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {
