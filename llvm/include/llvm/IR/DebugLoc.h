@@ -142,6 +142,31 @@ namespace llvm {
     static inline DebugLoc getDropped() { return DebugLoc(); }
 #endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
+    static DebugLoc getMergedLocations(ArrayRef<DebugLoc> Locs);
+    static DebugLoc getMergedLocation(DebugLoc LocA, DebugLoc LocB);
+
+    /// If this DebugLoc is non-empty, returns this DebugLoc; otherwise, selects
+    /// \p Other.
+    /// In coverage-tracking builds, this also accounts for whether this or
+    /// \p Other have an annotative DebugLocKind applied, such that if both are
+    /// empty but exactly one has an annotation, we prefer that annotated
+    /// location.
+    DebugLoc orElse(DebugLoc Other) const {
+      if (*this)
+        return *this;
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+      if (Other)
+        return Other;
+      if (getKind() != DebugLocKind::Normal)
+        return *this;
+      if (Other.getKind() != DebugLocKind::Normal)
+        return Other;
+      return *this;
+#else
+      return Other;
+#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+    }
+
     /// Get the underlying \a DILocation.
     ///
     /// \pre !*this or \c isa<DILocation>(getAsMDNode()).
