@@ -2804,10 +2804,6 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
 /// Reassociate associative binary expressions of the form
 ///
 /// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)" if op is an associative BinOp
-///
-/// where LV is a loop variant, and C1 and C2 are loop invariants that we want
-/// to hoist.
-///
 /// 2. "(C1 op LV) op C2" ==> "LV op (C1 op C2)" if op is a commutative BinOp
 ///
 /// where LV is a loop variant, and C1 and C2 are loop invariants that we want
@@ -2839,8 +2835,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   Value *C2 = BO->getOperand(1);
 
   if (L.isLoopInvariant(LV) && !L.isLoopInvariant(C1)) {
-    assert(BO->isCommutative() && BO0->isCommutative() &&
-           "Associativity implies commutativity");
+    assert(BO0->isCommutative() && "Associativity implies commutativity");
     std::swap(LV, C1);
   }
   if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) || !L.isLoopInvariant(C2))

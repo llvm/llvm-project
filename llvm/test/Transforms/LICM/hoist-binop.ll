@@ -22,27 +22,6 @@ loop:
   br label %loop
 }
 
-; Hoist ADD and remove old op if unused. Commutative version.
-define void @add_one_use_comm(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @add_one_use_comm(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %c1, %index
-  %index.next = add i64 %step.add, %c2
-  br label %loop
-}
-
 ; Hoist MUL and remove old op if unused.
 define void @mul_one_use(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_one_use(
@@ -63,28 +42,6 @@ loop:
   %index.next = mul i64 %step.add, %c2
   br label %loop
 }
-
-; Hoist MUL and remove old op if unused. Commutative version.
-define void @mul_one_use_comm(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @mul_one_use_comm(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FACTOR_OP_MUL:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[STEP_ADD_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD_REASS]] = mul i64 [[FACTOR_OP_MUL]], [[INDEX]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = mul i64 %c1, %index
-  %index.next = mul i64 %step.add, %c2
-  br label %loop
-}
-
 
 ; Hoist ADD and copy NUW if both ops have it.
 define void @add_nuw(i64 %c1, i64 %c2) {
@@ -111,7 +68,7 @@ loop:
 }
 
 
-; Hoist ADD and copy NUW even if both ops have it. Commutative version.
+; Hoist ADD and copy NUW if both ops have it. Commutative version.
 define void @add_nuw_comm(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_nuw_comm(
 ; CHECK-NEXT:  entry:
@@ -207,30 +164,6 @@ loop:
   br label %loop
 }
 
-; Hoist ADD but don't copy NUW if only one op has it. Commutative version.
-define void @add_no_nuw_comm(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @add_no_nuw_comm(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[C1]], [[INDEX]]
-; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %c1, %index
-  call void @use(i64 %step.add)
-  %index.next = add nuw i64 %step.add, %c2
-  br label %loop
-}
-
 ; Hoist ADD but don't copy NSW if one op has it.
 define void @add_no_nsw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_no_nsw(
@@ -250,30 +183,6 @@ entry:
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
   %step.add = add i64 %index, %c1
-  call void @use(i64 %step.add)
-  %index.next = add nsw i64 %step.add, %c2
-  br label %loop
-}
-
-; Hoist ADD but don't copy NSW if one op has it. Commutative version.
-define void @add_no_nsw_comm(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @add_no_nsw_comm(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[C1]], [[INDEX]]
-; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add i64 %c1, %index
   call void @use(i64 %step.add)
   %index.next = add nsw i64 %step.add, %c2
   br label %loop
@@ -303,31 +212,6 @@ loop:
   br label %loop
 }
 
-; Hoist ADD but don't copy NSW even if both ops have it. Commutative version.
-define void @add_no_nsw_2_comm(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @add_no_nsw_2_comm(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nsw i64 [[C1]], [[INDEX]]
-; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = add nsw i64 %c1, %index
-  call void @use(i64 %step.add)
-  %index.next = add nsw i64 %step.add, %c2
-  br label %loop
-}
-
-
 ; Hoist MUL and drop NSW even if both ops have it.
 define void @mul_no_nsw_2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_no_nsw_2(
@@ -347,30 +231,6 @@ entry:
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
   %step.add = mul nsw i64 %index, %c1
-  call void @use(i64 %step.add)
-  %index.next = mul nsw i64 %step.add, %c2
-  br label %loop
-}
-
-; Hoist MUL and drop NSW even if both ops have it. Commutative version.
-define void @mul_no_nsw_2_comm(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @mul_no_nsw_2_comm(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nsw i64 [[C1]], [[INDEX]]
-; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  br label %loop
-
-loop:
-  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %step.add = mul nsw i64 %c1, %index
   call void @use(i64 %step.add)
   %index.next = mul nsw i64 %step.add, %c2
   br label %loop
