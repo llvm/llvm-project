@@ -7,13 +7,13 @@
 define amdgpu_ps half @image_sample_2d_fptrunc_to_d16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 ; GFX7-LABEL: @image_sample_2d_fptrunc_to_d16(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[TEX:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32(i32 1, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[TEX:%.*]] = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_HALF:%.*]] = fptrunc float [[TEX]] to half
 ; GFX7-NEXT:    ret half [[TEX_HALF]]
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_fptrunc_to_d16(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[TEX:%.*]] = call half @llvm.amdgcn.image.sample.lz.2d.f16.f32(i32 1, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[TEX:%.*]] = call half @llvm.amdgcn.image.sample.lz.2d.f16.f32.v8i32.v4i32(i32 1, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX81PLUS-NEXT:    ret half [[TEX]]
 ;
 main_body:
@@ -25,7 +25,7 @@ main_body:
 define amdgpu_ps half @image_sample_2d_v2f32(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 ; GFX7-LABEL: @image_sample_2d_v2f32(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[TEX:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32(i32 3, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[TEX:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_2_HALF:%.*]] = fptrunc <2 x float> [[TEX]] to <2 x half>
 ; GFX7-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <2 x half> [[TEX_2_HALF]], i64 0
 ; GFX7-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <2 x half> [[TEX_2_HALF]], i64 1
@@ -34,7 +34,7 @@ define amdgpu_ps half @image_sample_2d_v2f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_v2f32(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <2 x half> @llvm.amdgcn.image.sample.lz.2d.v2f16.f32(i32 3, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <2 x half> @llvm.amdgcn.image.sample.lz.2d.v2f16.f32.v8i32.v4i32(i32 3, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <2 x half> [[TEX]], i64 0
 ; GFX81PLUS-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <2 x half> [[TEX]], i64 1
 ; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[TEX_HALF_0]], [[TEX_HALF_1]]
@@ -52,7 +52,7 @@ main_body:
 define amdgpu_ps half @image_sample_2d_v3f32(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 ; GFX7-LABEL: @image_sample_2d_v3f32(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[TEX:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32(i32 7, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[TEX:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32.v8i32.v4i32(i32 7, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_3_HALF:%.*]] = fptrunc <3 x float> [[TEX]] to <3 x half>
 ; GFX7-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <3 x half> [[TEX_3_HALF]], i64 0
 ; GFX7-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <3 x half> [[TEX_3_HALF]], i64 1
@@ -63,7 +63,7 @@ define amdgpu_ps half @image_sample_2d_v3f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_v3f32(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <3 x half> @llvm.amdgcn.image.sample.lz.2d.v3f16.f32(i32 7, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <3 x half> @llvm.amdgcn.image.sample.lz.2d.v3f16.f32.v8i32.v4i32(i32 7, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <3 x half> [[TEX]], i64 0
 ; GFX81PLUS-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <3 x half> [[TEX]], i64 1
 ; GFX81PLUS-NEXT:    [[TEX_HALF_2:%.*]] = extractelement <3 x half> [[TEX]], i64 2
@@ -85,7 +85,7 @@ main_body:
 define amdgpu_ps half @image_sample_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 ; GFX7-LABEL: @image_sample_2d_v4f32(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[TEX:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 15, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[TEX:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32.v8i32.v4i32(i32 15, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_4_HALF:%.*]] = fptrunc <4 x float> [[TEX]] to <4 x half>
 ; GFX7-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <4 x half> [[TEX_4_HALF]], i64 0
 ; GFX7-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <4 x half> [[TEX_4_HALF]], i64 1
@@ -98,7 +98,7 @@ define amdgpu_ps half @image_sample_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_v4f32(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.lz.2d.v4f16.f32(i32 15, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.lz.2d.v4f16.f32.v8i32.v4i32(i32 15, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <4 x half> [[TEX]], i64 0
 ; GFX81PLUS-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <4 x half> [[TEX]], i64 1
 ; GFX81PLUS-NEXT:    [[TEX_HALF_2:%.*]] = extractelement <4 x half> [[TEX]], i64 2
@@ -124,7 +124,7 @@ main_body:
 define amdgpu_ps half @image_gather4_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
 ; GFX7-LABEL: @image_gather4_2d_v4f32(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[TEX:%.*]] = call <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f16(i32 1, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX7-NEXT:    [[TEX:%.*]] = call <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f16.v8i32.v4i32(i32 1, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_4_HALF:%.*]] = fptrunc <4 x float> [[TEX]] to <4 x half>
 ; GFX7-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <4 x half> [[TEX_4_HALF]], i64 0
 ; GFX7-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <4 x half> [[TEX_4_HALF]], i64 1
@@ -137,7 +137,7 @@ define amdgpu_ps half @image_gather4_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> i
 ;
 ; GFX81PLUS-LABEL: @image_gather4_2d_v4f32(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <4 x half> @llvm.amdgcn.image.gather4.2d.v4f16.f16(i32 1, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <4 x half> @llvm.amdgcn.image.gather4.2d.v4f16.f16.v8i32.v4i32(i32 1, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <4 x half> [[TEX]], i64 0
 ; GFX81PLUS-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <4 x half> [[TEX]], i64 1
 ; GFX81PLUS-NEXT:    [[TEX_HALF_2:%.*]] = extractelement <4 x half> [[TEX]], i64 2
@@ -162,12 +162,12 @@ main_body:
 
 define amdgpu_ps half @load_1d(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-LABEL: @load_1d(
-; GFX7-NEXT:    [[S_FLOAT:%.*]] = call float @llvm.amdgcn.image.load.1d.f32.i16(i32 1, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[S_FLOAT:%.*]] = call float @llvm.amdgcn.image.load.1d.f32.i16.v8i32(i32 1, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[S_HALF:%.*]] = fptrunc float [[S_FLOAT]] to half
 ; GFX7-NEXT:    ret half [[S_HALF]]
 ;
 ; GFX81PLUS-LABEL: @load_1d(
-; GFX81PLUS-NEXT:    [[S_FLOAT:%.*]] = call half @llvm.amdgcn.image.load.1d.f16.i16(i32 1, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[S_FLOAT:%.*]] = call half @llvm.amdgcn.image.load.1d.f16.i16.v8i32(i32 1, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    ret half [[S_FLOAT]]
 ;
   %s_float = call float @llvm.amdgcn.image.load.1d.f32.i16(i32 1, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -177,7 +177,7 @@ define amdgpu_ps half @load_1d(i16 %s, <8 x i32> inreg %rsrc) {
 
 define amdgpu_ps half @load_1d_v2(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-LABEL: @load_1d_v2(
-; GFX7-NEXT:    [[V2_FLOAT:%.*]] = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16(i32 3, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[V2_FLOAT:%.*]] = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16.v8i32(i32 3, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V2_HALF:%.*]] = fptrunc <2 x float> [[V2_FLOAT]] to <2 x half>
 ; GFX7-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 0
 ; GFX7-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 1
@@ -185,7 +185,7 @@ define amdgpu_ps half @load_1d_v2(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 ; GFX81PLUS-LABEL: @load_1d_v2(
-; GFX81PLUS-NEXT:    [[V2_FLOAT:%.*]] = call <2 x half> @llvm.amdgcn.image.load.1d.v2f16.i16(i32 3, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[V2_FLOAT:%.*]] = call <2 x half> @llvm.amdgcn.image.load.1d.v2f16.i16.v8i32(i32 3, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 0
 ; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 1
 ; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
@@ -201,7 +201,7 @@ define amdgpu_ps half @load_1d_v2(i16 %s, <8 x i32> inreg %rsrc) {
 
 define amdgpu_ps half @load_1d_v3(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-LABEL: @load_1d_v3(
-; GFX7-NEXT:    [[V3_FLOAT:%.*]] = call <3 x float> @llvm.amdgcn.image.load.1d.v3f32.i16(i32 7, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[V3_FLOAT:%.*]] = call <3 x float> @llvm.amdgcn.image.load.1d.v3f32.i16.v8i32(i32 7, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V3_HALF:%.*]] = fptrunc <3 x float> [[V3_FLOAT]] to <3 x half>
 ; GFX7-NEXT:    [[S0:%.*]] = extractelement <3 x half> [[V3_HALF]], i64 0
 ; GFX7-NEXT:    [[S1:%.*]] = extractelement <3 x half> [[V3_HALF]], i64 1
@@ -211,7 +211,7 @@ define amdgpu_ps half @load_1d_v3(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-NEXT:    ret half [[ADDF_SUM_1]]
 ;
 ; GFX81PLUS-LABEL: @load_1d_v3(
-; GFX81PLUS-NEXT:    [[V3_FLOAT:%.*]] = call <3 x half> @llvm.amdgcn.image.load.1d.v3f16.i16(i32 7, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[V3_FLOAT:%.*]] = call <3 x half> @llvm.amdgcn.image.load.1d.v3f16.i16.v8i32(i32 7, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <3 x half> [[V3_FLOAT]], i64 0
 ; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <3 x half> [[V3_FLOAT]], i64 1
 ; GFX81PLUS-NEXT:    [[S2:%.*]] = extractelement <3 x half> [[V3_FLOAT]], i64 2
@@ -231,7 +231,7 @@ define amdgpu_ps half @load_1d_v3(i16 %s, <8 x i32> inreg %rsrc) {
 
 define amdgpu_ps half @load_1d_v4(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-LABEL: @load_1d_v4(
-; GFX7-NEXT:    [[V4_FLOAT:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32 15, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[V4_FLOAT:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16.v8i32(i32 15, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V4_HALF:%.*]] = fptrunc <4 x float> [[V4_FLOAT]] to <4 x half>
 ; GFX7-NEXT:    [[S0:%.*]] = extractelement <4 x half> [[V4_HALF]], i64 0
 ; GFX7-NEXT:    [[S1:%.*]] = extractelement <4 x half> [[V4_HALF]], i64 1
@@ -243,7 +243,7 @@ define amdgpu_ps half @load_1d_v4(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-NEXT:    ret half [[ADDF_SUM_2]]
 ;
 ; GFX81PLUS-LABEL: @load_1d_v4(
-; GFX81PLUS-NEXT:    [[V4_FLOAT:%.*]] = call <4 x half> @llvm.amdgcn.image.load.1d.v4f16.i16(i32 15, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[V4_FLOAT:%.*]] = call <4 x half> @llvm.amdgcn.image.load.1d.v4f16.i16.v8i32(i32 15, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <4 x half> [[V4_FLOAT]], i64 0
 ; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <4 x half> [[V4_FLOAT]], i64 1
 ; GFX81PLUS-NEXT:    [[S2:%.*]] = extractelement <4 x half> [[V4_FLOAT]], i64 2
@@ -268,13 +268,13 @@ define amdgpu_ps half @load_1d_v4(i16 %s, <8 x i32> inreg %rsrc) {
 define amdgpu_ps half @load_2dmsaa(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %fragid) {
 ; GFX7-LABEL: @load_2dmsaa(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[S_FLOAT:%.*]] = call float @llvm.amdgcn.image.msaa.load.x.2dmsaa.f32.i32(i32 1, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[S_FLOAT:%.*]] = call float @llvm.amdgcn.image.msaa.load.x.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[S_HALF:%.*]] = fptrunc float [[S_FLOAT]] to half
 ; GFX7-NEXT:    ret half [[S_HALF]]
 ;
 ; GFX81PLUS-LABEL: @load_2dmsaa(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[S_FLOAT:%.*]] = call half @llvm.amdgcn.image.msaa.load.x.2dmsaa.f16.i32(i32 1, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[S_FLOAT:%.*]] = call half @llvm.amdgcn.image.msaa.load.x.2dmsaa.f16.i32.v8i32(i32 1, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    ret half [[S_FLOAT]]
 ;
 main_body:
@@ -286,7 +286,7 @@ main_body:
 define amdgpu_ps half @load_2dmsaa_v2(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %fragid) {
 ; GFX7-LABEL: @load_2dmsaa_v2(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[V2_FLOAT:%.*]] = call <2 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f32.i32(i32 3, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[V2_FLOAT:%.*]] = call <2 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V2_HALF:%.*]] = fptrunc <2 x float> [[V2_FLOAT]] to <2 x half>
 ; GFX7-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 0
 ; GFX7-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 1
@@ -295,7 +295,7 @@ define amdgpu_ps half @load_2dmsaa_v2(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ;
 ; GFX81PLUS-LABEL: @load_2dmsaa_v2(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[V2_FLOAT:%.*]] = call <2 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f16.i32(i32 3, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[V2_FLOAT:%.*]] = call <2 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f16.i32.v8i32(i32 3, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 0
 ; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 1
 ; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
@@ -313,7 +313,7 @@ main_body:
 define amdgpu_ps half @load_2dmsaa_v3(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %fragid) {
 ; GFX7-LABEL: @load_2dmsaa_v3(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[V3_FLOAT:%.*]] = call <3 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f32.i32(i32 7, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[V3_FLOAT:%.*]] = call <3 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V3_HALF:%.*]] = fptrunc <3 x float> [[V3_FLOAT]] to <3 x half>
 ; GFX7-NEXT:    [[S0:%.*]] = extractelement <3 x half> [[V3_HALF]], i64 0
 ; GFX7-NEXT:    [[S1:%.*]] = extractelement <3 x half> [[V3_HALF]], i64 1
@@ -324,7 +324,7 @@ define amdgpu_ps half @load_2dmsaa_v3(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ;
 ; GFX81PLUS-LABEL: @load_2dmsaa_v3(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[V3_FLOAT:%.*]] = call <3 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f16.i32(i32 7, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[V3_FLOAT:%.*]] = call <3 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f16.i32.v8i32(i32 7, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <3 x half> [[V3_FLOAT]], i64 0
 ; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <3 x half> [[V3_FLOAT]], i64 1
 ; GFX81PLUS-NEXT:    [[S2:%.*]] = extractelement <3 x half> [[V3_FLOAT]], i64 2
@@ -346,7 +346,7 @@ main_body:
 define amdgpu_ps half @load_2dmsaa_v4(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %fragid) {
 ; GFX7-LABEL: @load_2dmsaa_v4(
 ; GFX7-NEXT:  main_body:
-; GFX7-NEXT:    [[V4_FLOAT:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f32.i32(i32 15, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX7-NEXT:    [[V4_FLOAT:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f32.i32.v8i32(i32 15, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V4_HALF:%.*]] = fptrunc <4 x float> [[V4_FLOAT]] to <4 x half>
 ; GFX7-NEXT:    [[S0:%.*]] = extractelement <4 x half> [[V4_HALF]], i64 0
 ; GFX7-NEXT:    [[S1:%.*]] = extractelement <4 x half> [[V4_HALF]], i64 1
@@ -359,7 +359,7 @@ define amdgpu_ps half @load_2dmsaa_v4(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ;
 ; GFX81PLUS-LABEL: @load_2dmsaa_v4(
 ; GFX81PLUS-NEXT:  main_body:
-; GFX81PLUS-NEXT:    [[V4_FLOAT:%.*]] = call <4 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f16.i32(i32 15, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX81PLUS-NEXT:    [[V4_FLOAT:%.*]] = call <4 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f16.i32.v8i32(i32 15, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <4 x half> [[V4_FLOAT]], i64 0
 ; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <4 x half> [[V4_FLOAT]], i64 1
 ; GFX81PLUS-NEXT:    [[S2:%.*]] = extractelement <4 x half> [[V4_FLOAT]], i64 2

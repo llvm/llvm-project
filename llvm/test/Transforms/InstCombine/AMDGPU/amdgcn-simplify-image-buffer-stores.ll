@@ -7,15 +7,15 @@
 
 define amdgpu_ps void @image_store_1d_store_all_zeros(<8 x i32> inreg %rsrc, i32 %s) #0 {
 ; GCN-LABEL: @image_store_1d_store_all_zeros(
-; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32(float 0.000000e+00, i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32.v8i32(float 0.000000e+00, i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @image_store_1d_store_all_zeros(
-; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32(float 0.000000e+00, i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32.v8i32(float 0.000000e+00, i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @image_store_1d_store_all_zeros(
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> zeroinitializer, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> zeroinitializer, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> zeroinitializer, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -24,17 +24,17 @@ define amdgpu_ps void @image_store_1d_store_all_zeros(<8 x i32> inreg %rsrc, i32
 
 define amdgpu_ps void @image_store_1d_store_insert_zeros_at_end(<8 x i32> inreg %rsrc, float %vdata1, i32 %s) #0 {
 ; GCN-LABEL: @image_store_1d_store_insert_zeros_at_end(
-; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32(float [[VDATA1:%.*]], i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32.v8i32(float [[VDATA1:%.*]], i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @image_store_1d_store_insert_zeros_at_end(
 ; GFX12-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> [[NEWVDATA4]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> [[NEWVDATA4]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @image_store_1d_store_insert_zeros_at_end(
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> [[NEWVDATA4]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> [[NEWVDATA4]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> undef, float %vdata1, i32 0
@@ -49,19 +49,19 @@ define amdgpu_ps void @image_store_mip_1d_store_insert_zeros_at_end(<8 x i32> in
 ; GCN-LABEL: @image_store_mip_1d_store_insert_zeros_at_end(
 ; GCN-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> <float 0.000000e+00, float poison, float poison>, float [[VDATA1:%.*]], i64 1
 ; GCN-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[VDATA2:%.*]], i64 2
-; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.v3f32.i32(<3 x float> [[TMP2]], i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.v3f32.i32.v8i32(<3 x float> [[TMP2]], i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @image_store_mip_1d_store_insert_zeros_at_end(
 ; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> <float 0.000000e+00, float poison, float poison>, float [[VDATA1:%.*]], i64 1
 ; GFX12-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[VDATA2:%.*]], i64 2
-; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v3f32.i32(<3 x float> [[TMP2]], i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v3f32.i32.v8i32(<3 x float> [[TMP2]], i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @image_store_mip_1d_store_insert_zeros_at_end(
 ; GFXUNKNOWN-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float 0.000000e+00>, float [[VDATA1:%.*]], i64 1
 ; GFXUNKNOWN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[TMP1]], float [[VDATA2:%.*]], i64 2
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> [[NEWVDATA4]], i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> [[NEWVDATA4]], i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %newvdata1 = insertelement <4 x float> undef, float 0.0, i32 0
@@ -148,17 +148,17 @@ define amdgpu_ps void @struct_tbuffer_store_insert_undefs(<4 x i32> inreg %a, fl
 define amdgpu_ps void @image_store_1d_store_shufflevector_same(<8 x i32> inreg %rsrc, <4 x float> %vdata1, i32 %s) #0 {
 ; GCN-LABEL: @image_store_1d_store_shufflevector_same(
 ; GCN-NEXT:    [[DATA:%.*]] = shufflevector <4 x float> [[VDATA1:%.*]], <4 x float> poison, <4 x i32> zeroinitializer
-; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> [[DATA]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> [[DATA]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @image_store_1d_store_shufflevector_same(
 ; GFX12-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32(float [[TMP1]], i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32.v8i32(float [[TMP1]], i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @image_store_1d_store_shufflevector_same(
 ; GFXUNKNOWN-NEXT:    [[DATA:%.*]] = shufflevector <4 x float> [[VDATA1:%.*]], <4 x float> poison, <4 x i32> zeroinitializer
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> [[DATA]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> [[DATA]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %data = shufflevector <4 x float> %vdata1, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -168,15 +168,15 @@ define amdgpu_ps void @image_store_1d_store_shufflevector_same(<8 x i32> inreg %
 
 define amdgpu_ps void @image_store_1d_store_shufflevector(<8 x i32> inreg %rsrc, float %vdata1, i32 %s) #0 {
 ; GCN-LABEL: @image_store_1d_store_shufflevector(
-; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 5.000000e+00, float 2.000000e+00>, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GCN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 5.000000e+00, float 2.000000e+00>, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @image_store_1d_store_shufflevector(
-; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v3f32.i32(<3 x float> <float 2.000000e+00, float 2.000000e+00, float 5.000000e+00>, i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v3f32.i32.v8i32(<3 x float> <float 2.000000e+00, float 2.000000e+00, float 5.000000e+00>, i32 7, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFXUNKNOWN-LABEL: @image_store_1d_store_shufflevector(
-; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 5.000000e+00, float 2.000000e+00>, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 5.000000e+00, float 2.000000e+00>, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %data = shufflevector <4 x float> <float 2.0, float 1.0, float 2.0, float 5.0>, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
