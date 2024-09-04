@@ -285,6 +285,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX11-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_32_xm0_xexec = SI_PS_LIVE
   ; GFX11-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.2
@@ -312,12 +313,12 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp3:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY10]], [[V_ADD_F32_e64_2]], 360, 15, 15, 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_3:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_2]], 0, [[V_MOV_B32_dpp3]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; GFX11-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_2]], 0, [[S_MOV_B32_2]], [[V_ADD_F32_e64_3]], 0, implicit $exec
+  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+  ; GFX11-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_]], 0, [[S_MOV_B32_]], [[COPY11]], 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_3]], 0, [[V_PERMLANEX16_B32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GFX11-NEXT:   [[STRICT_WWM:%[0-9]+]]:vgpr_32 = STRICT_WWM [[V_ADD_F32_e64_4]], implicit $exec
-  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX11-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_MBCNT_LO_U32_B32_e64_]], [[COPY11]], implicit $exec
+  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; GFX11-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_MBCNT_LO_U32_B32_e64_]], [[COPY12]], implicit $exec
   ; GFX11-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[V_CMP_EQ_U32_e64_]], %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.3
   ; GFX11-NEXT: {{  $}}

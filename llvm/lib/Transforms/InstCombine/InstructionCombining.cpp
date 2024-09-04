@@ -1730,8 +1730,7 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
                                          const DataLayout &DL,
                                          const SimplifyQuery SQ) {
   // NB: It is a precondition of this transform that the operands be
-  // phi translatable! This is usually trivially satisfied by limiting it
-  // to constant ops, and for selects we do a more sophisticated check.
+  // phi translatable!
   SmallVector<Value *> Ops;
   for (Value *Op : I.operands()) {
     if (Op == PN)
@@ -1784,9 +1783,31 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // Otherwise, we can replace *all* users with the new PHI we form.
   }
 
+  // Check that all operands are phi-translatable.
+  for (Value *Op : I.operands()) {
+    if (Op == PN)
+      continue;
+
+    // Non-instructions never require phi-translation.
+    auto *I = dyn_cast<Instruction>(Op);
+    if (!I)
+      continue;
+
+    // Phi-translate can handle phi nodes in the same block.
+    if (isa<PHINode>(I))
+      if (I->getParent() == PN->getParent())
+        continue;
+
+    // Operand dominates the block, no phi-translation necessary.
+    if (DT.dominates(I, PN->getParent()))
+      continue;
+
+    // Not phi-translatable, bail out.
+    return nullptr;
+  }
+
   // Check to see whether the instruction can be folded into each phi operand.
   // If there is one operand that does not fold, remember the BB it is in.
-  // If there is more than one or if *it* is a PHI, bail out.
   SmallVector<Value *> NewPhiValues;
   BasicBlock *NonSimplifiedBB = nullptr;
   Value *NonSimplifiedInVal = nullptr;
