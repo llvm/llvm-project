@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/RegisterTypeFlags.h"
+#include "lldb/Target/RegisterTypeUnion.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -465,4 +466,21 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
             "  <field name=\"f4\" start=\"27\" end=\"28\" type=\"enum_c\"/>\n"
             "  <field name=\"f5\" start=\"25\" end=\"26\" type=\"enum_d\"/>\n"
             "</flags>\n");
+}
+
+TEST(RegisterTypeTest, RegisterTypeUnionToXML) {
+  StreamString strm;
+  RegisterTypeUnion("foo", {}).ToXMLElement(strm);
+  ASSERT_EQ(strm.GetString(), "<union id=\"foo\"/>\n");
+
+  strm.Clear();
+
+  RegisterTypeFlags view_1("view_1", 4, {RegisterTypeFlags::Field("", 0, 0)});
+  RegisterTypeFlags view_2("view_2", 4, {RegisterTypeFlags::Field("", 0, 0)});
+  RegisterTypeUnion("bar", {{"1_view", &view_1}, {"2_view", &view_2}})
+      .ToXMLElement(strm);
+  ASSERT_EQ(strm.GetString(), "<union id=\"bar\">\n"
+                              "  <field name=\"1_view\" type=\"view_1\"/>\n"
+                              "  <field name=\"2_view\" type=\"view_2\"/>\n"
+                              "</union>\n");
 }

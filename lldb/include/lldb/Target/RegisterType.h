@@ -23,6 +23,7 @@ public:
   enum RegisterTypeKind {
     eRegisterTypeKindFlags,
     eRegisterTypeKindEnum,
+    eRegisterTypeKindUnion,
   };
 
   RegisterTypeKind getKind() const { return m_kind; }
