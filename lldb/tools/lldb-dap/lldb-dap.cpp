@@ -185,6 +185,33 @@ std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
   return argv;
 }
 
+// Gets all the environment variables from the json object depending on if the
+// kind is an object or an array.
+lldb::SBEnvironment
+GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
+  lldb::SBEnvironment envs{};
+  constexpr llvm::StringRef env_key = "env";
+  const auto *env_type = arguments.get(env_key);
+
+  if (!env_type)
+    return envs;
+
+  if (env_type->kind() == llvm::json::Value::Object) {
+    auto env_map = GetStringMap(arguments, env_key);
+    for (const auto &[key, value] : env_map) {
+      envs.Set(key.c_str(), value.c_str(), true);
+    }
+  } else if (env_type->kind() == llvm::json::Value::Array) {
+    const auto envs_strings = GetStrings(&arguments, env_key);
+    lldb::SBStringList entries{};
+    for (const auto &env : envs_strings) {
+      entries.AppendString(env.c_str());
+    }
+    envs.SetEntries(entries, true);
+  }
+  return envs;
+}
+
 // Send a "exited" event to indicate the process has exited.
 void SendProcessExitedEvent(lldb::SBProcess &process) {
   llvm::json::Object event(CreateEventObject("exited"));
@@ -1832,14 +1859,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
-  auto envMap = GetStringMap(*arguments, "env");
-  lldb::SBEnvironment envs{};
-  for (const auto &[key, value] : envMap) {
-    envs.Set(key.c_str(), value.c_str(), true);
-  }
-
-  if (envs.GetNumValues() != 0)
-    launch_info.SetEnvironment(envs, true);
+  const auto envs = GetEnvironmentFromArguments(*arguments);
+  launch_info.SetEnvironment(envs, true);
 
   auto flags = launch_info.GetLaunchFlags();
 

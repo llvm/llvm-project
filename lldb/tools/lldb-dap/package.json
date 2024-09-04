@@ -160,14 +160,26 @@
                 "default": "${workspaceRoot}"
               },
               "env": {
-                "type": "object",
-                "description": "Additional environment variables to set when launching the program. E.g. `{ \"FOO\": \"1\" }`",
-                "patternProperties": {
-                  ".*": {
-                    "type": "string"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Additional environment variables to set when launching the program. E.g. `{ \"FOO\": \"1\" }`",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "description": "Additional environment variables to set when launching the program. E.g. `[\"FOO=1\", \"BAR\"]`",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": {}
                   }
-                },
-                "default": {}
+                ]
               },
               "stopOnEntry": {
                 "type": "boolean",
