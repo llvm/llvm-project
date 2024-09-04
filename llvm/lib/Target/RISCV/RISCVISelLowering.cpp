@@ -19122,17 +19122,16 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   return false;
 }
 
-static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo,
-                                 std::optional<unsigned> FirstMaskArgument,
-                                 CCState &State,
+static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
                                  const RISCVTargetLowering &TLI) {
   const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
   if (RC == &RISCV::VRRegClass) {
     // Assign the first mask argument to V0.
     // This is an interim calling convention and it may be changed in the
     // future.
-    if (FirstMaskArgument && ValNo == *FirstMaskArgument)
-      return State.AllocateReg(RISCV::V0);
+    if (ValVT.getVectorElementType() == MVT::i1)
+      if (MCRegister Reg = State.AllocateReg(RISCV::V0))
+        return Reg;
     return State.AllocateReg(ArgVRs);
   }
   if (RC == &RISCV::VRM2RegClass)
@@ -19170,8 +19169,7 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo,
 bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
                      MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
                      ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     std::optional<unsigned> FirstMaskArgument) {
+                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI) {
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
@@ -19351,7 +19349,7 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   else if (ValVT == MVT::f64 && !UseGPRForF64)
     Reg = State.AllocateReg(ArgFPR64s);
   else if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
-    Reg = allocateRVVReg(ValVT, ValNo, FirstMaskArgument, State, TLI);
+    Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
     if (!Reg) {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
@@ -19421,26 +19419,12 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   return false;
 }
 
-template <typename ArgTy>
-static std::optional<unsigned> preAssignMask(const ArgTy &Args) {
-  for (const auto &ArgIdx : enumerate(Args)) {
-    MVT ArgVT = ArgIdx.value().VT;
-    if (ArgVT.isVector() && ArgVT.getVectorElementType() == MVT::i1)
-      return ArgIdx.index();
-  }
-  return std::nullopt;
-}
-
 void RISCVTargetLowering::analyzeInputArgs(
     MachineFunction &MF, CCState &CCInfo,
     const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
     RISCVCCAssignFn Fn) const {
   unsigned NumArgs = Ins.size();
   FunctionType *FType = MF.getFunction().getFunctionType();
-
-  std::optional<unsigned> FirstMaskArgument;
-  if (Subtarget.hasVInstructions())
-    FirstMaskArgument = preAssignMask(Ins);
 
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Ins[i].VT;
@@ -19454,8 +19438,7 @@ void RISCVTargetLowering::analyzeInputArgs(
 
     RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, /*IsFixed=*/true, IsRet, ArgTy, *this,
-           FirstMaskArgument)) {
+           ArgFlags, CCInfo, /*IsFixed=*/true, IsRet, ArgTy, *this)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
@@ -19469,10 +19452,6 @@ void RISCVTargetLowering::analyzeOutputArgs(
     CallLoweringInfo *CLI, RISCVCCAssignFn Fn) const {
   unsigned NumArgs = Outs.size();
 
-  std::optional<unsigned> FirstMaskArgument;
-  if (Subtarget.hasVInstructions())
-    FirstMaskArgument = preAssignMask(Outs);
-
   for (unsigned i = 0; i != NumArgs; i++) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
@@ -19480,8 +19459,7 @@ void RISCVTargetLowering::analyzeOutputArgs(
 
     RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, ArgVT, CCValAssign::Full,
-           ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy, *this,
-           FirstMaskArgument)) {
+           ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy, *this)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
@@ -19659,8 +19637,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             CCValAssign::LocInfo LocInfo,
                             ISD::ArgFlagsTy ArgFlags, CCState &State,
                             bool IsFixed, bool IsRet, Type *OrigTy,
-                            const RISCVTargetLowering &TLI,
-                            std::optional<unsigned> FirstMaskArgument) {
+                            const RISCVTargetLowering &TLI) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -19744,8 +19721,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
   }
 
   if (LocVT.isVector()) {
-    if (MCRegister Reg =
-            allocateRVVReg(ValVT, ValNo, FirstMaskArgument, State, TLI)) {
+    if (MCRegister Reg = allocateRVVReg(ValVT, ValNo, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
       if (ValVT.isFixedLengthVector())
@@ -20377,17 +20353,13 @@ bool RISCVTargetLowering::CanLowerReturn(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
-  std::optional<unsigned> FirstMaskArgument;
-  if (Subtarget.hasVInstructions())
-    FirstMaskArgument = preAssignMask(Outs);
-
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
     RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (RISCV::CC_RISCV(MF.getDataLayout(), ABI, i, VT, VT, CCValAssign::Full,
                         ArgFlags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
-                        nullptr, *this, FirstMaskArgument))
+                        nullptr, *this))
       return false;
   }
   return true;
