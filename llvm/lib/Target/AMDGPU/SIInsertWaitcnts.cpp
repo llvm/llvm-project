@@ -59,6 +59,11 @@ static cl::opt<bool> SoftwareHazardModeFlag(
              "only)"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> DisableVGPRDealloc(
+  "amdgpu-disable-vgpr-dealloc",
+  cl::desc("Disable s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) before the s_endpgm"),
+  cl::init(false), cl::Hidden);
+
 namespace {
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
@@ -2973,22 +2978,24 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
   // This is done in different ways depending on how the VGPRs were allocated
   // (i.e. whether we're in dynamic VGPR mode or not).
-  for (MachineInstr *MI : ReleaseVGPRInsts) {
-    if (ST->isDynamicVGPREnabled())
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-              TII->get(AMDGPU::S_ALLOC_VGPR))
-          .addImm(0);
-    else {
-      if (ST->requiresNopBeforeDeallocVGPRs()) {
+  if (!DisableVGPRDealloc) {
+    for (MachineInstr *MI : ReleaseVGPRInsts) {
+      if (ST->isDynamicVGPREnabled())
         BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                TII->get(AMDGPU::S_NOP))
+                TII->get(AMDGPU::S_ALLOC_VGPR))
             .addImm(0);
+      else {
+        if (ST->requiresNopBeforeDeallocVGPRs()) {
+          BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                  TII->get(AMDGPU::S_NOP))
+              .addImm(0);
+        }
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_SENDMSG))
+            .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
       }
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-              TII->get(AMDGPU::S_SENDMSG))
-          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+      Modified = true;
     }
-    Modified = true;
   }
   ReleaseVGPRInsts.clear();
   SLoadAddresses.clear();
