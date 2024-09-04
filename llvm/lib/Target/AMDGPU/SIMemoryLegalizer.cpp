@@ -2479,6 +2479,15 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
 
   // GLOBAL_WB is always needed, even for write-through caches, as it
   // additionally ensures all operations have reached the desired cache level.
+  //
+  // Note that we can technically skip emission of SCOPE_SE writebacks for
+  // gfx120x as L1 is a buffer there (hence forwards all to L2), but we still
+  // emit them. The current strategy we use is to favor mirrorring SW semantics
+  // in the ISA whenever it is correct, and the performance cost is very low.
+  //
+  // This makes the memory model easier to understand, maintain, and also
+  // reduces the potential for bugs as it is sometimes difficult to anticipate
+  // all possible scenarios in which the WB will actually be needed.
   bool SkipWB = false;
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
   switch (Scope) {
