@@ -994,12 +994,9 @@ body:             |
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-wide-load-store
-    ; ALLOC: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 12
-    ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_MOV_B32_]]
-    ; ALLOC-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 8
-    ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_MOV_B32_1]]
-    ; ALLOC-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
-    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_MOV_B32_2]]
+    ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 12
+    ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 8
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
     ; ALLOC-NEXT: BUNDLE implicit-def dead %5, implicit-def dead %2, implicit-def early-clobber %6, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
     ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s128), addrspace 10)
     ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s128), addrspace 10)
@@ -1013,12 +1010,9 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
-    ; LOWERED-NEXT: renamable $sgpr0 = S_MOV_B32 12
-    ; LOWERED-NEXT: renamable $sgpr1 = S_MOV_B32 8
-    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: renamable $sgpr0 = S_MOV_B32 0
-    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 12
+    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 8
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 3, implicit-def $mode
     ; LOWERED-NEXT: $vgpr12 = V_MOV_B32_e32 undef $vgpr0, implicit $exec
     ; LOWERED-NEXT: $vgpr13 = V_MOV_B32_e32 undef $vgpr1, implicit $exec

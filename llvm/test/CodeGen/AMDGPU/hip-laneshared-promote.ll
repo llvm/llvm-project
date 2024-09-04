@@ -22,8 +22,7 @@ entry:
 ; CHECK:      [[T9:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
 ; CHECK-NEXT: [[T10:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[T9]], 2, implicit-def dead $scc
 ; CHECK-NEXT: V_STORE_IDX [[T8]], [[T10]], 0, implicit $exec
-; SETIDX:     [[ZERO:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-; SETIDX-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[ZERO]]
+; SETIDX: $idx1 = S_SET_GPR_IDX_U32 0
 ; SETIDX-NEXT: BUNDLE implicit-def [[DAT0:%[0-9]+]], implicit $idx1
 ; SETIDX-NEXT: [[DAT0]]:vgpr_32 = V_LOAD_IDX $idx1, 8, implicit $exec
 ; SETIDX-NEXT: V_STORE_IDX internal [[DAT0]], $idx1, 4, implicit $exec
