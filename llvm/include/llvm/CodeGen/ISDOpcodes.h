@@ -1047,6 +1047,11 @@ enum NodeType {
   FMINIMUM,
   FMAXIMUM,
 
+  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
+  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  FMINIMUMNUM,
+  FMAXIMUMNUM,
+
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
@@ -1367,6 +1372,11 @@ enum NodeType {
   LIFETIME_START,
   LIFETIME_END,
 
+  /// FAKE_USE represents a use of the operand but does not do anything.
+  /// Its purpose is the extension of the operand's lifetime mainly for
+  /// debugging purposes.
+  FAKE_USE,
+
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
   /// information that target might need for lowering.  The first operand is
@@ -1514,7 +1524,7 @@ std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-unsigned getVPForBaseOpcode(unsigned Opcode);
+std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed

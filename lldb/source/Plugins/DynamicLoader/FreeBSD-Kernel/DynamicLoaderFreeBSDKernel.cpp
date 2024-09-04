@@ -783,6 +783,5 @@ ThreadPlanSP DynamicLoaderFreeBSDKernel::GetStepThroughTrampolinePlan(
 }
 
 Status DynamicLoaderFreeBSDKernel::CanLoadImage() {
-  Status error("shared object cannot be loaded into kernel");
-  return error;
+  return Status::FromErrorString("shared object cannot be loaded into kernel");
 }

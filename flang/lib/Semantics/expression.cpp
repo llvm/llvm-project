@@ -2015,6 +2015,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   // initialize X or A by name, but not both.
   auto components{semantics::OrderedComponentIterator{spec}};
   auto nextAnonymous{components.begin()};
+  auto afterLastParentComponentIter{components.end()};
+  if (parentComponent) {
+    for (auto iter{components.begin()}; iter != components.end(); ++iter) {
+      if (iter->test(Symbol::Flag::ParentComp)) {
+        afterLastParentComponentIter = iter;
+        ++afterLastParentComponentIter;
+      }
+    }
+  }
 
   std::set<parser::CharBlock> unavailable;
   bool anyKeyword{false};
@@ -2060,20 +2069,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       // Here's a regrettably common extension of the standard: anonymous
       // initialization of parent components, e.g., T(PT(1)) rather than
-      // T(1) or T(PT=PT(1)).
-      if (nextAnonymous == components.begin() && parentComponent &&
-          valueType == DynamicType::From(*parentComponent) &&
+      // T(1) or T(PT=PT(1)).  There may be multiple parent components.
+      if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
-        auto iter{
-            std::find(components.begin(), components.end(), *parentComponent)};
-        if (iter != components.end()) {
-          symbol = parentComponent;
-          nextAnonymous = ++iter;
-          if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
-            Say(source,
-                "Whole parent component '%s' in structure "
-                "constructor should not be anonymous"_port_en_US,
-                symbol->name());
+        for (auto parent{components.begin()};
+             parent != afterLastParentComponentIter; ++parent) {
+          if (auto parentType{DynamicType::From(*parent)}; parentType &&
+              parent->test(Symbol::Flag::ParentComp) &&
+              valueType->IsEquivalentTo(*parentType)) {
+            symbol = &*parent;
+            nextAnonymous = ++parent;
+            if (context().ShouldWarn(LanguageFeature::AnonymousParents)) {
+              Say(source,
+                  "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
+                  symbol->name());
+            }
+            break;
           }
         }
       }
@@ -2639,9 +2650,9 @@ static int ComputeCudaMatchingDistance(
 // Handles a forward reference to a module function from what must
 // be a specification expression.  Return false if the symbol is
 // an invalid forward reference.
-bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
+const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
   if (context_.HasError(symbol)) {
-    return false;
+    return nullptr;
   }
   if (const auto *details{
           symbol.detailsIf<semantics::SubprogramNameDetails>()}) {
@@ -2650,8 +2661,13 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
       // checking a specification expression in a sibling module
       // procedure.  Resolve its names now so that its interface
       // is known.
+      const semantics::Scope &scope{symbol.owner()};
       semantics::ResolveSpecificationParts(context_, symbol);
-      if (symbol.has<semantics::SubprogramNameDetails>()) {
+      const Symbol *resolved{nullptr};
+      if (auto iter{scope.find(symbol.name())}; iter != scope.cend()) {
+        resolved = &*iter->second;
+      }
+      if (!resolved || resolved->has<semantics::SubprogramNameDetails>()) {
         // When the symbol hasn't had its details updated, we must have
         // already been in the process of resolving the function's
         // specification part; but recursive function calls are not
@@ -2659,8 +2675,8 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
             symbol.name());
         context_.SetError(symbol);
-        return false;
       }
+      return resolved;
     } else if (inStmtFunctionDefinition_) {
       semantics::ResolveSpecificationParts(context_, symbol);
       CHECK(symbol.has<semantics::SubprogramDetails>());
@@ -2668,10 +2684,10 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
       Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
           symbol.name());
       context_.SetError(symbol);
-      return false;
+      return nullptr;
     }
   }
-  return true;
+  return &symbol;
 }
 
 // Resolve a call to a generic procedure with given actual arguments.
@@ -2698,20 +2714,21 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   }
   if (const auto *details{ultimate.detailsIf<semantics::GenericDetails>()}) {
     for (const Symbol &specific0 : details->specificProcs()) {
-      const Symbol &specific{BypassGeneric(specific0)};
-      if (isSubroutine != !IsFunction(specific)) {
+      const Symbol &specific1{BypassGeneric(specific0)};
+      if (isSubroutine != !IsFunction(specific1)) {
         continue;
       }
-      if (!ResolveForward(specific)) {
+      const Symbol *specific{ResolveForward(specific1)};
+      if (!specific) {
         continue;
       }
       if (std::optional<characteristics::Procedure> procedure{
               characteristics::Procedure::Characterize(
-                  ProcedureDesignator{specific}, context_.foldingContext(),
+                  ProcedureDesignator{*specific}, context_.foldingContext(),
                   /*emitError=*/false)}) {
         ActualArguments localActuals{actuals};
-        if (specific.has<semantics::ProcBindingDetails>()) {
-          if (!adjustActuals.value()(specific, localActuals)) {
+        if (specific->has<semantics::ProcBindingDetails>()) {
+          if (!adjustActuals.value()(*specific, localActuals)) {
             continue;
           }
         }
@@ -2740,9 +2757,9 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           }
           if (!procedure->IsElemental()) {
             // takes priority over elemental match
-            nonElemental = &specific;
+            nonElemental = specific;
           } else {
-            elemental = &specific;
+            elemental = specific;
           }
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
@@ -2855,7 +2872,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   if (context_.HasError(symbol)) {
     return std::nullopt; // also handles null symbol
   }
-  const Symbol &ultimate{DEREF(symbol).GetUltimate()};
+  symbol = ResolveForward(*symbol);
+  if (!symbol) {
+    return std::nullopt;
+  }
+  name.symbol = const_cast<Symbol *>(symbol);
+  const Symbol &ultimate{symbol->GetUltimate()};
   CheckForBadRecursion(name.source, ultimate);
   bool dueToAmbiguity{false};
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};

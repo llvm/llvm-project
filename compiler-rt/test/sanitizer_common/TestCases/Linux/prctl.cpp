@@ -1,5 +1,7 @@
 // RUN: %clangxx %s -o %t && %run %t %p
 
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <errno.h>
 #include <stdint.h>
@@ -37,6 +39,14 @@ int main() {
     } else {
       assert(cookie != 0);
     }
+  }
+
+  int signum;
+  res = prctl(PR_GET_PDEATHSIG, reinterpret_cast<unsigned long>(&signum));
+  if (res < 0) {
+    assert(errno == EINVAL);
+  } else {
+    assert(signum == 0);
   }
 
   char invname[81], vlname[] = "prctl";

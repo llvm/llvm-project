@@ -235,6 +235,46 @@ struct ConvertMemRefAssumeAlignment final
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertMemRefCopy
+//===----------------------------------------------------------------------===//
+
+struct ConvertMemRefCopy final : OpConversionPattern<memref::CopyOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto maybeRankedSource = dyn_cast<MemRefType>(op.getSource().getType());
+    auto maybeRankedDest = dyn_cast<MemRefType>(op.getTarget().getType());
+    if (maybeRankedSource && maybeRankedDest &&
+        maybeRankedSource.getLayout() != maybeRankedDest.getLayout())
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv("memref.copy emulation with distinct layouts ({0} "
+                            "and {1}) is currently unimplemented",
+                            maybeRankedSource.getLayout(),
+                            maybeRankedDest.getLayout()));
+    rewriter.replaceOpWithNewOp<memref::CopyOp>(op, adaptor.getSource(),
+                                                adaptor.getTarget());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertMemRefDealloc
+//===----------------------------------------------------------------------===//
+
+struct ConvertMemRefDealloc final : OpConversionPattern<memref::DeallocOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::DeallocOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<memref::DeallocOp>(op, adaptor.getMemref());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertMemRefLoad
 //===----------------------------------------------------------------------===//
 
@@ -296,6 +336,30 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     }
 
     rewriter.replaceOp(op, result->getResult(0));
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertMemRefMemorySpaceCast
+//===----------------------------------------------------------------------===//
+
+struct ConvertMemRefMemorySpaceCast final
+    : OpConversionPattern<memref::MemorySpaceCastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::MemorySpaceCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type newTy = getTypeConverter()->convertType(op.getDest().getType());
+    if (!newTy) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(), llvm::formatv("failed to convert memref type: {0}",
+                                      op.getDest().getType()));
+    }
+
+    rewriter.replaceOpWithNewOp<memref::MemorySpaceCastOp>(op, newTy,
+                                                           adaptor.getSource());
     return success();
   }
 };
@@ -490,6 +554,28 @@ struct ConvertMemRefCollapseShape final
   }
 };
 
+/// Emulating a `memref.expand_shape` becomes a no-op after emulation given
+/// that we flatten memrefs to a single dimension as part of the emulation and
+/// the expansion would just have been undone.
+struct ConvertMemRefExpandShape final
+    : OpConversionPattern<memref::ExpandShapeOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExpandShapeOp expandShapeOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value srcVal = adaptor.getSrc();
+    auto newTy = dyn_cast<MemRefType>(srcVal.getType());
+    if (!newTy)
+      return failure();
+
+    if (newTy.getRank() != 1)
+      return failure();
+
+    rewriter.replaceOp(expandShapeOp, srcVal);
+    return success();
+  }
+};
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -502,9 +588,10 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
 
   // Populate `memref.*` conversion patterns.
   patterns.add<ConvertMemRefAllocation<memref::AllocOp>,
-               ConvertMemRefAllocation<memref::AllocaOp>,
-               ConvertMemRefCollapseShape, ConvertMemRefLoad,
-               ConvertMemrefStore, ConvertMemRefAssumeAlignment,
+               ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefCopy,
+               ConvertMemRefDealloc, ConvertMemRefCollapseShape,
+               ConvertMemRefExpandShape, ConvertMemRefLoad, ConvertMemrefStore,
+               ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast,
                ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
       typeConverter, patterns.getContext());
   memref::populateResolveExtractStridedMetadataPatterns(patterns);

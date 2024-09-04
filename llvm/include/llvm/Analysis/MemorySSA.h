@@ -108,16 +108,12 @@
 namespace llvm {
 
 template <class GraphType> struct GraphTraits;
-class BasicBlock;
 class Function;
 class Loop;
-class Instruction;
 class LLVMContext;
 class MemoryAccess;
 class MemorySSAWalker;
 class Module;
-class Use;
-class Value;
 class raw_ostream;
 
 namespace MSSAHelpers {
@@ -693,7 +689,7 @@ inline void MemoryUseOrDef::resetOptimized() {
     cast<MemoryUse>(this)->resetOptimized();
 }
 
-template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
+template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 
 /// Encapsulates MemorySSA, including all data associated with memory

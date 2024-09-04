@@ -13,19 +13,18 @@
 #ifndef LLVM_CLANG_SEMA_SEMAHLSL_H
 #define LLVM_CLANG_SEMA_SEMAHLSL_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
 namespace clang {
+class AttributeCommonInfo;
+class IdentifierInfo;
 class ParsedAttr;
+class Scope;
 
 class SemaHLSL : public SemaBase {
 public:
@@ -38,6 +37,9 @@ public:
   HLSLNumThreadsAttr *mergeNumThreadsAttr(Decl *D,
                                           const AttributeCommonInfo &AL, int X,
                                           int Y, int Z);
+  HLSLWaveSizeAttr *mergeWaveSizeAttr(Decl *D, const AttributeCommonInfo &AL,
+                                      int Min, int Max, int Preferred,
+                                      int SpelledArgsCount);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                   llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
@@ -53,6 +55,7 @@ public:
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
@@ -60,8 +63,20 @@ public:
   void handleResourceClassAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+  bool handleResourceTypeAttr(const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  QualType ProcessResourceTypeAttributes(QualType Wrapped);
+  SourceLocation TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT);
+
+  // HLSL Type trait implementations
+  bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
+
+  bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
+
+  ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
+
+  QualType getInoutParameterType(QualType Ty);
 };
 
 } // namespace clang

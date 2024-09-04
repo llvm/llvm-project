@@ -1452,8 +1452,7 @@ operator<=(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key,
 template <class _Key, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
 operator<=>(const multiset<_Key, _Allocator>& __x, const multiset<_Key, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17
