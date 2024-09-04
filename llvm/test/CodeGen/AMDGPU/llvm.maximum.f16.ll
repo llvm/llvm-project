@@ -74,7 +74,6 @@ define half @v_maximum_f16(half %src0, half %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call half @llvm.maximum.f16(half %src0, half %src1)
   ret half %op
@@ -129,7 +128,6 @@ define half @v_maximum_f16__nnan(half %src0, half %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan half @llvm.maximum.f16(half %src0, half %src1)
   ret half %op
@@ -202,7 +200,6 @@ define half @v_maximum_f16__nsz(half %src0, half %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz half @llvm.maximum.f16(half %src0, half %src1)
   ret half %op
@@ -257,7 +254,6 @@ define half @v_maximum_f16__nnan_nsz(half %src0, half %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz half @llvm.maximum.f16(half %src0, half %src1)
   ret half %op
@@ -338,7 +334,6 @@ define half @v_maximum_f16__nnan_src0(half %arg0, half %src1) {
 ; GFX12-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %src0 = fadd nnan half %arg0, 1.0
   %op = call half @llvm.maximum.f16(half %src0, half %src1)
@@ -420,7 +415,6 @@ define half @v_maximum_f16__nnan_src1(half %src0, half %arg1) {
 ; GFX12-NEXT:    v_add_f16_e32 v1, 1.0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %src1 = fadd nnan half %arg1, 1.0
   %op = call half @llvm.maximum.f16(half %src0, half %src1)
@@ -639,7 +633,6 @@ define <2 x half> @v_maximum_v2f16(<2 x half> %src0, <2 x half> %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   ret <2 x half> %op
@@ -701,7 +694,6 @@ define <2 x half> @v_maximum_v2f16__nnan(<2 x half> %src0, <2 x half> %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   ret <2 x half> %op
@@ -810,7 +802,6 @@ define <2 x half> @v_maximum_v2f16__nsz(<2 x half> %src0, <2 x half> %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   ret <2 x half> %op
@@ -872,7 +863,6 @@ define <2 x half> @v_maximum_v2f16__nnan_nsz(<2 x half> %src0, <2 x half> %src1)
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   ret <2 x half> %op
@@ -1021,7 +1011,6 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use v0
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   %cast = bitcast <2 x half> %op to i32
@@ -1156,7 +1145,6 @@ define <3 x half> @v_maximum_v3f16(<3 x half> %src0, <3 x half> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -1229,7 +1217,6 @@ define <3 x half> @v_maximum_v3f16__nnan(<3 x half> %src0, <3 x half> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -1362,7 +1349,6 @@ define <3 x half> @v_maximum_v3f16__nsz(<3 x half> %src0, <3 x half> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -1435,7 +1421,6 @@ define <3 x half> @v_maximum_v3f16__nnan_nsz(<3 x half> %src0, <3 x half> %src1)
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -1601,7 +1586,6 @@ define <4 x half> @v_maximum_v4f16(<4 x half> %src0, <4 x half> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <4 x half> @llvm.maximum.v4f16(<4 x half> %src0, <4 x half> %src1)
   ret <4 x half> %op
@@ -1681,7 +1665,6 @@ define <4 x half> @v_maximum_v4f16__nnan(<4 x half> %src0, <4 x half> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <4 x half> @llvm.maximum.v4f16(<4 x half> %src0, <4 x half> %src1)
   ret <4 x half> %op
@@ -1847,7 +1830,6 @@ define <4 x half> @v_maximum_v4f16__nsz(<4 x half> %src0, <4 x half> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <4 x half> @llvm.maximum.v4f16(<4 x half> %src0, <4 x half> %src1)
   ret <4 x half> %op
@@ -1927,7 +1909,6 @@ define <4 x half> @v_maximum_v4f16__nnan_nsz(<4 x half> %src0, <4 x half> %src1)
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <4 x half> @llvm.maximum.v4f16(<4 x half> %src0, <4 x half> %src1)
   ret <4 x half> %op
@@ -2207,7 +2188,6 @@ define <8 x half> @v_maximum_v8f16(<8 x half> %src0, <8 x half> %src1) {
 ; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v5
 ; GFX12-NEXT:    v_pk_maximum_f16 v2, v2, v6
 ; GFX12-NEXT:    v_pk_maximum_f16 v3, v3, v7
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <8 x half> @llvm.maximum.v8f16(<8 x half> %src0, <8 x half> %src1)
   ret <8 x half> %op
@@ -2723,7 +2703,6 @@ define <16 x half> @v_maximum_v16f16(<16 x half> %src0, <16 x half> %src1) {
 ; GFX12-NEXT:    v_pk_maximum_f16 v5, v5, v13
 ; GFX12-NEXT:    v_pk_maximum_f16 v6, v6, v14
 ; GFX12-NEXT:    v_pk_maximum_f16 v7, v7, v15
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <16 x half> @llvm.maximum.v16f16(<16 x half> %src0, <16 x half> %src1)
   ret <16 x half> %op

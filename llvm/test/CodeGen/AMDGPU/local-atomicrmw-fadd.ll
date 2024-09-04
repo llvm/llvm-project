@@ -27,7 +27,6 @@ define float @local_atomic_fadd_ret_f32(ptr addrspace(3) %ptr) nounwind {
 ; GFX12-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_f32:
@@ -144,7 +143,6 @@ define float @local_atomic_fadd_ret_f32__offset(ptr addrspace(3) %ptr) nounwind 
 ; GFX12-NEXT:    ds_add_rtn_f32 v0, v0, v1 offset:65532
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_f32__offset:
@@ -262,7 +260,6 @@ define void @local_atomic_fadd_noret_f32(ptr addrspace(3) %ptr) nounwind {
 ; GFX12-NEXT:    ds_add_f32 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_f32:
@@ -377,7 +374,6 @@ define void @local_atomic_fadd_noret_f32__offset(ptr addrspace(3) %ptr) nounwind
 ; GFX12-NEXT:    ds_add_f32 v0, v1 offset:65532
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_f32__offset:
@@ -4950,7 +4946,6 @@ define <2 x half> @local_atomic_fadd_ret_v2f16(ptr addrspace(3) %ptr, <2 x half>
 ; GFX12-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_v2f16:
@@ -5175,7 +5170,6 @@ define <2 x half> @local_atomic_fadd_ret_v2f16__offset(ptr addrspace(3) %ptr, <2
 ; GFX12-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1 offset:65532
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_v2f16__offset:
@@ -5400,7 +5394,6 @@ define void @local_atomic_fadd_noret_v2f16(ptr addrspace(3) %ptr, <2 x half> %va
 ; GFX12-NEXT:    ds_pk_add_f16 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_v2f16:
@@ -5616,7 +5609,6 @@ define void @local_atomic_fadd_noret_v2f16__offset(ptr addrspace(3) %ptr, <2 x h
 ; GFX12-NEXT:    ds_pk_add_f16 v0, v1 offset:65532
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_v2f16__offset:
@@ -5838,7 +5830,6 @@ define <2 x bfloat> @local_atomic_fadd_ret_v2bf16(ptr addrspace(3) %ptr, <2 x bf
 ; GFX12-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_v2bf16:
@@ -6147,7 +6138,6 @@ define <2 x bfloat> @local_atomic_fadd_ret_v2bf16__offset(ptr addrspace(3) %ptr,
 ; GFX12-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1 offset:65532
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_v2bf16__offset:
@@ -6457,7 +6447,6 @@ define void @local_atomic_fadd_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX12-NEXT:    ds_pk_add_bf16 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_v2bf16:
@@ -6756,7 +6745,6 @@ define void @local_atomic_fadd_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX12-NEXT:    ds_pk_add_bf16 v0, v1 offset:65532
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_v2bf16__ofset:
@@ -7054,28 +7042,26 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x8
 ; GFX12-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_co_i32 s1, s5, 4
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX12-NEXT:    s_cbranch_execz .LBB28_2
 ; GFX12-NEXT:  ; %bb.1:
-; GFX12-NEXT:    s_bcnt1_i32_b32 s5, s6
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_bcnt1_i32_b32 s5, s6
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cvt_f32_ubyte0_e32 v1, s5
 ; GFX12-NEXT:    s_lshl_b32 s5, s1, 3
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mul_f32 v1, 0x42280000, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    ds_add_rtn_f32 v1, v2, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:  .LBB28_2:
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    s_mov_b32 s7, exec_lo
@@ -7087,11 +7073,10 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX12-NEXT:    s_cbranch_execz .LBB28_4
 ; GFX12-NEXT:  ; %bb.3:
 ; GFX12-NEXT:    s_bcnt1_i32_b32 s0, s7
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cvt_f32_ubyte0_e32 v1, s0
 ; GFX12-NEXT:    s_lshl_b32 s0, s1, 4
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mul_f32 v1, 0x42280000, v1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    ds_add_f32 v2, v1
@@ -7932,25 +7917,23 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x8
 ; GFX12-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_co_i32 s1, s5, 4
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX12-NEXT:    s_cbranch_execz .LBB29_2
 ; GFX12-NEXT:  ; %bb.1:
-; GFX12-NEXT:    s_bcnt1_i32_b32 s5, s6
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_bcnt1_i32_b32 s5, s6
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cvt_f32_ubyte0_e32 v1, s5
 ; GFX12-NEXT:    s_lshl_b32 s5, s1, 3
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mul_f32 v1, 0x42280000, v1
 ; GFX12-NEXT:    ds_add_rtn_f32 v1, v2, v1
 ; GFX12-NEXT:  .LBB29_2:
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s7, exec_lo
@@ -7964,11 +7947,10 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    s_cbranch_execz .LBB29_4
 ; GFX12-NEXT:  ; %bb.3:
 ; GFX12-NEXT:    s_bcnt1_i32_b32 s0, s7
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cvt_f32_ubyte0_e32 v1, s0
 ; GFX12-NEXT:    s_lshl_b32 s0, s1, 4
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mul_f32 v1, 0x42280000, v1
 ; GFX12-NEXT:    ds_add_f32 v2, v1
 ; GFX12-NEXT:  .LBB29_4:
@@ -8792,7 +8774,6 @@ define float @local_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode(ptr addrspa
 ; GFX12-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode:
@@ -8909,7 +8890,6 @@ define void @local_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode(ptr addrsp
 ; GFX12-NEXT:    ds_add_f32 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX940-LABEL: local_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode:
