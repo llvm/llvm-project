@@ -304,6 +304,8 @@ protected:
   friend class PHINode;               // For getting `Val`.
   friend class UnreachableInst;       // For getting `Val`.
   friend class CatchSwitchAddHandler; // For `Val`.
+  friend class ConstantArray;         // For `Val`.
+  friend class ConstantStruct;        // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -838,6 +840,97 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+/// Base class for aggregate constants (with operands).
+class ConstantAggregate : public Constant {
+protected:
+  ConstantAggregate(ClassID ID, llvm::Constant *C, Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    auto ID = From->getSubclassID();
+    return ID == ClassID::ConstantVector || ID == ClassID::ConstantStruct ||
+           ID == ClassID::ConstantArray;
+  }
+};
+
+class ConstantArray final : public ConstantAggregate {
+  ConstantArray(llvm::ConstantArray *C, Context &Ctx)
+      : ConstantAggregate(ClassID::ConstantArray, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
+  ArrayType *getType() const;
+
+  // TODO: Missing functions: getType(), getTypeForElements(), getAnon(), get().
+
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantArray;
+  }
+};
+
+class ConstantStruct final : public ConstantAggregate {
+  ConstantStruct(llvm::ConstantStruct *C, Context &Ctx)
+      : ConstantAggregate(ClassID::ConstantStruct, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static Constant *get(StructType *T, ArrayRef<Constant *> V);
+
+  template <typename... Csts>
+  static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
+  get(StructType *T, Csts *...Vs) {
+    return get(T, ArrayRef<Constant *>({Vs...}));
+  }
+  /// Return an anonymous struct that has the specified elements.
+  /// If the struct is possibly empty, then you must specify a context.
+  static Constant *getAnon(ArrayRef<Constant *> V, bool Packed = false) {
+    return get(getTypeForElements(V, Packed), V);
+  }
+  static Constant *getAnon(Context &Ctx, ArrayRef<Constant *> V,
+                           bool Packed = false) {
+    return get(getTypeForElements(Ctx, V, Packed), V);
+  }
+  /// This version of the method allows an empty list.
+  static StructType *getTypeForElements(Context &Ctx, ArrayRef<Constant *> V,
+                                        bool Packed = false);
+  /// Return an anonymous struct type to use for a constant with the specified
+  /// set of elements. The list must not be empty.
+  static StructType *getTypeForElements(ArrayRef<Constant *> V,
+                                        bool Packed = false) {
+    assert(!V.empty() &&
+           "ConstantStruct::getTypeForElements cannot be called on empty list");
+    return getTypeForElements(V[0]->getContext(), V, Packed);
+  }
+
+  /// Specialization - reduce amount of casting.
+  inline StructType *getType() const {
+    return cast<StructType>(Value::getType());
+  }
+
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantStruct;
+  }
+};
+
+class ConstantVector final : public ConstantAggregate {
+  ConstantVector(llvm::ConstantVector *C, Context &Ctx)
+      : ConstantAggregate(ClassID::ConstantVector, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  // TODO: Missing functions: getSplat(), getType(), getSplatValue(), get().
+
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantVector;
+  }
 };
 
 /// Iterator for `Instruction`s in a `BasicBlock.
@@ -3353,6 +3446,7 @@ protected:
   friend class Type;        // For LLVMCtx.
   friend class PointerType; // For LLVMCtx.
   friend class IntegerType; // For LLVMCtx.
+  friend class StructType;  // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
