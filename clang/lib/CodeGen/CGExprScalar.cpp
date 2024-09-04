@@ -2833,18 +2833,22 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
-    // Special case for atomic increment/decrement on floats
+    // Special case for atomic increment/decrement on floats.
+    // Bail out non-power-of-2-sized floating point types (e.g., x86_fp80).
     if (type->isFloatingType()) {
-      llvm::AtomicRMWInst::BinOp aop =
-          isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
-      llvm::Instruction::BinaryOps op =
-          isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
-      llvm::Value *amt = llvm::ConstantFP::get(
-          VMContext, llvm::APFloat(static_cast<float>(1.0)));
-      llvm::Value *old =
-          Builder.CreateAtomicRMW(aop, LV.getAddress(), amt,
-                                  llvm::AtomicOrdering::SequentiallyConsistent);
-      return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+      llvm::Type *Ty = ConvertType(type);
+      if (llvm::has_single_bit(Ty->getScalarSizeInBits())) {
+        llvm::AtomicRMWInst::BinOp aop =
+            isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
+        llvm::Instruction::BinaryOps op =
+            isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
+        llvm::Value *amt = llvm::ConstantFP::get(Ty, 1.0);
+        llvm::AtomicRMWInst *old = Builder.CreateAtomicRMW(
+            aop, LV.getAddress(), amt,
+            llvm::AtomicOrdering::SequentiallyConsistent);
+
+        return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+      }
     }
     value = EmitLoadOfLValue(LV, E->getExprLoc());
     input = value;
