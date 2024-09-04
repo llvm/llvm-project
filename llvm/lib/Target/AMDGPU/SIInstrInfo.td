@@ -304,14 +304,6 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SIfptrunc_round_upward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_UPWARD",
-  SDTFPRoundOp
->;
-
-def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
-  SDTFPRoundOp
->;
-
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
@@ -796,6 +788,22 @@ def frameindex_to_targetframeindex : SDNodeXForm<frameindex, [{
 def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
+}]>;
+
+def as_hw_round_mode : SDNodeXForm<timm, [{
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  return CurDAG->getTargetConstant((N->getSExtValue() + 3) % 4, SDLoc(N),
+                                    MVT::i32);
+}]>;
+
+def SupportedRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero ||
+         Imm == (int)RoundingMode::NearestTiesToEven ||
+         Imm == (int)RoundingMode::TowardPositive ||
+         Imm == (int)RoundingMode::TowardNegative;
 }]>;
 
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
@@ -2344,6 +2352,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
+  field bit HasFP8DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -2921,6 +2930,15 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ColFields = ["IsVCMPX"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+def FP8DstByteSelTable : GenericTable {
+  let FilterClass = "VOP3_Pseudo";
+  let CppTypeName = "FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getFP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

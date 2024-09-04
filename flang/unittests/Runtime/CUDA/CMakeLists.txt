@@ -6,7 +6,7 @@ add_flang_unittest(FlangCufRuntimeTests
 
 target_link_libraries(FlangCufRuntimeTests
   PRIVATE
-  CufRuntime
+  CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR}
   FortranRuntime
 )
 

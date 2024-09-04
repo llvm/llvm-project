@@ -2628,10 +2628,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   static const std::string dualIntrinsic[]{
       {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}};
 
-  return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
-             [&name](const std::string &dualName) {
-               return dualName == name;
-             }) != std::end(dualIntrinsic);
+  return llvm::is_contained(dualIntrinsic, name);
 }
 
 IntrinsicClass IntrinsicProcTable::Implementation::GetIntrinsicClass(

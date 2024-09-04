@@ -79,6 +79,7 @@ FUNCTION_PASS("win-eh-prepare", WinEHPreparePass())
 #define LOOP_PASS(NAME, CREATE_PASS)
 #endif
 LOOP_PASS("loop-reduce", LoopStrengthReducePass())
+LOOP_PASS("loop-term-fold", LoopTermFoldPass())
 #undef LOOP_PASS
 
 #ifndef MACHINE_MODULE_PASS
@@ -249,6 +250,7 @@ DUMMY_MACHINE_FUNCTION_PASS("reg-usage-propagation", RegUsageInfoPropagationPass
 DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass)
+DUMMY_MACHINE_FUNCTION_PASS("remove-loads-into-fake-uses", RemoveLoadsIntoFakeUsesPass)
 DUMMY_MACHINE_FUNCTION_PASS("removeredundantdebugvalues", RemoveRedundantDebugValuesPass)
 DUMMY_MACHINE_FUNCTION_PASS("rename-independent-subregs", RenameIndependentSubregsPass)
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass)

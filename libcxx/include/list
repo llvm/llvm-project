@@ -466,7 +466,7 @@ public:
 template <class _Tp, class _Alloc>
 class __list_imp {
 public:
-  __list_imp(const __list_imp&) = delete;
+  __list_imp(const __list_imp&)            = delete;
   __list_imp& operator=(const __list_imp&) = delete;
 
   typedef _Alloc allocator_type;
@@ -1679,8 +1679,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const list<_Tp, _Alloc>& __x, const
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
 operator<=>(const list<_Tp, _Allocator>& __x, const list<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17

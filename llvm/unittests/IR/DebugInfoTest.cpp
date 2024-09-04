@@ -1244,4 +1244,37 @@ TEST(DIBuilder, HashingDISubprogram) {
   EXPECT_EQ(HashDefinition, HashDefinitionAfter);
 }
 
+TEST(DIBuilder, CompositeTypes) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+
+  DICompositeType *Class =
+      DIB.createClassType(CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
+                          nullptr, nullptr, "ClassUniqueIdentifier");
+  EXPECT_EQ(Class->getTag(), dwarf::DW_TAG_class_type);
+
+  DICompositeType *Struct = DIB.createStructType(
+      CU, "MyStruct", F, 0, 8, 8, {}, {}, {}, 0, {}, "StructUniqueIdentifier");
+  EXPECT_EQ(Struct->getTag(), dwarf::DW_TAG_structure_type);
+
+  DICompositeType *Union = DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {},
+                                               {}, 0, "UnionUniqueIdentifier");
+  EXPECT_EQ(Union->getTag(), dwarf::DW_TAG_union_type);
+
+  DICompositeType *Array = DIB.createArrayType(8, 8, nullptr, {});
+  EXPECT_EQ(Array->getTag(), dwarf::DW_TAG_array_type);
+
+  DICompositeType *Vector = DIB.createVectorType(8, 8, nullptr, {});
+  EXPECT_EQ(Vector->getTag(), dwarf::DW_TAG_array_type);
+
+  DICompositeType *Enum = DIB.createEnumerationType(
+      CU, "MyEnum", F, 0, 8, 8, {}, nullptr, 0, "EnumUniqueIdentifier");
+  EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
+}
+
 } // end namespace

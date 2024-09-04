@@ -55,6 +55,7 @@ add_math_entrypoint_object(atanf)
 
 add_math_entrypoint_object(atan2)
 add_math_entrypoint_object(atan2f)
+add_math_entrypoint_object(atan2l)
 
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
@@ -121,6 +122,7 @@ add_math_entrypoint_object(exp10f16)
 
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
+add_math_entrypoint_object(expm1f16)
 
 add_math_entrypoint_object(f16add)
 add_math_entrypoint_object(f16addf)

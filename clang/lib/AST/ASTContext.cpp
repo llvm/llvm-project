@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "ByteCode/Context.h"
 #include "CXXABI.h"
-#include "Interp/Context.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -2406,6 +2406,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(
         cast<BTFTagAttributedType>(T)->getWrappedType().getTypePtr());
 
+  case Type::HLSLAttributedResource:
+    return getTypeInfo(
+        cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr());
+
   case Type::Atomic: {
     // Start with the base type information.
     TypeInfo Info = getTypeInfo(cast<AtomicType>(T)->getValueType());
@@ -3279,7 +3283,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 
   case Type::MemberPointer: {
     OS << "M";
-    const auto *MPT = T->getAs<MemberPointerType>();
+    const auto *MPT = T->castAs<MemberPointerType>();
     encodeTypeForFunctionPointerAuth(Ctx, OS, QualType(MPT->getClass(), 0));
     encodeTypeForFunctionPointerAuth(Ctx, OS, MPT->getPointeeType());
     return;
@@ -3606,6 +3610,21 @@ bool ASTContext::hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U) {
   return hasSameType(T, U) ||
          hasSameType(getFunctionTypeWithoutPtrSizes(T),
                      getFunctionTypeWithoutPtrSizes(U));
+}
+
+QualType ASTContext::getFunctionTypeWithoutParamABIs(QualType T) const {
+  if (const auto *Proto = T->getAs<FunctionProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI = Proto->getExtProtoInfo();
+    EPI.ExtParameterInfos = nullptr;
+    return getFunctionType(Proto->getReturnType(), Proto->param_types(), EPI);
+  }
+  return T;
+}
+
+bool ASTContext::hasSameFunctionTypeIgnoringParamABI(QualType T,
+                                                     QualType U) const {
+  return hasSameType(T, U) || hasSameType(getFunctionTypeWithoutParamABIs(T),
+                                          getFunctionTypeWithoutParamABIs(U));
 }
 
 void ASTContext::adjustExceptionSpec(
@@ -5219,6 +5238,28 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
   return QualType(Ty, 0);
 }
 
+QualType ASTContext::getHLSLAttributedResourceType(
+    QualType Wrapped, QualType Contained,
+    const HLSLAttributedResourceType::Attributes &Attrs) {
+
+  llvm::FoldingSetNodeID ID;
+  HLSLAttributedResourceType::Profile(ID, Wrapped, Contained, Attrs);
+
+  void *InsertPos = nullptr;
+  HLSLAttributedResourceType *Ty =
+      HLSLAttributedResourceTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  QualType Canon = getCanonicalType(Wrapped);
+  Ty = new (*this, alignof(HLSLAttributedResourceType))
+      HLSLAttributedResourceType(Canon, Wrapped, Contained, Attrs);
+
+  Types.push_back(Ty);
+  HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
+
+  return QualType(Ty, 0);
+}
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
@@ -6540,7 +6581,7 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
 /// \param AllowPiMismatch Allow the Pi1 and Pi2 to differ as described in
 ///        C++20 [conv.qual], if permitted by the current language mode.
 void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
-                                         bool AllowPiMismatch) {
+                                         bool AllowPiMismatch) const {
   while (true) {
     auto *AT1 = getAsArrayType(T1);
     if (!AT1)
@@ -6591,7 +6632,7 @@ void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
 /// \return \c true if a pointer type was unwrapped, \c false if we reached a
 /// pair of types that can't be unwrapped further.
 bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
-                                    bool AllowPiMismatch) {
+                                    bool AllowPiMismatch) const {
   UnwrapSimilarArrayTypes(T1, T2, AllowPiMismatch);
 
   const auto *T1PtrType = T1->getAs<PointerType>();
@@ -6627,7 +6668,7 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
   return false;
 }
 
-bool ASTContext::hasSimilarType(QualType T1, QualType T2) {
+bool ASTContext::hasSimilarType(QualType T1, QualType T2) const {
   while (true) {
     Qualifiers Quals;
     T1 = getUnqualifiedArrayType(T1, Quals);
@@ -13584,6 +13625,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(FunctionNoProto)
     CANONICAL_TYPE(FunctionProto)
     CANONICAL_TYPE(IncompleteArray)
+    CANONICAL_TYPE(HLSLAttributedResource)
     CANONICAL_TYPE(LValueReference)
     CANONICAL_TYPE(MemberPointer)
     CANONICAL_TYPE(ObjCInterface)

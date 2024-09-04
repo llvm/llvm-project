@@ -431,8 +431,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
         return byteOffset;
       }
       mlir::Type compType = component.second;
-      auto [compSize, compAlign] =
-          fir::getTypeSizeAndAlignment(loc, compType, getDataLayout(), kindMap);
+      auto [compSize, compAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+          loc, compType, getDataLayout(), kindMap);
       byteOffset = llvm::alignTo(byteOffset, compAlign);
       ArgClass LoComp, HiComp;
       classify(loc, compType, byteOffset, LoComp, HiComp);
@@ -452,8 +452,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                      ArgClass &Hi) const {
     mlir::Type eleTy = seqTy.getEleTy();
     const std::uint64_t arraySize = seqTy.getConstantArraySize();
-    auto [eleSize, eleAlign] =
-        fir::getTypeSizeAndAlignment(loc, eleTy, getDataLayout(), kindMap);
+    auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+        loc, eleTy, getDataLayout(), kindMap);
     std::uint64_t eleStorageSize = llvm::alignTo(eleSize, eleAlign);
     for (std::uint64_t i = 0; i < arraySize; ++i) {
       byteOffset = llvm::alignTo(byteOffset, eleAlign);
@@ -641,7 +641,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                                                mlir::Type ty) const {
     CodeGenSpecifics::Marshalling marshal;
     auto sizeAndAlign =
-        fir::getTypeSizeAndAlignment(loc, ty, getDataLayout(), kindMap);
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
     // The stack is always 8 byte aligned (note 14 in 3.2.3).
     unsigned short align =
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8));

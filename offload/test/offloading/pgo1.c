@@ -15,6 +15,10 @@
 // REQUIRES: gpu
 // REQUIRES: pgo
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 int test1(int a) { return a / 2; }
 int test2(int a) { return a * 2; }
 

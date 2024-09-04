@@ -377,7 +377,7 @@ define void @vscale_slt_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_ra
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
 ; CHECK-NEXT:    --> {%A,+,(4 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((4 * vscale * ((-1 + %n) /u vscale)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %vscale
-; CHECK-NEXT:    --> {vscale,+,vscale}<nw><%for.body> U: full-set S: full-set Exits: (vscale * (1 + ((-1 + %n) /u vscale))<nuw>) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {vscale,+,vscale}<nuw><nsw><%for.body> U: [2,-2147483648) S: [2,-2147483648) Exits: (vscale * (1 + ((-1 + %n) /u vscale))<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_slt_noflags
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u vscale)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 1073741822
@@ -415,7 +415,7 @@ define void @vscalex4_ult_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
 ; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %VF
-; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><%for.body> U: [8,-3) S: [-2147483648,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscalex4_ult_noflags
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 536870910

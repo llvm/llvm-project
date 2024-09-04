@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -225,12 +226,6 @@ static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
-
-// TODO: turn on and remove flag
-static cl::opt<bool> EnablePGOForceFunctionAttrs(
-    "enable-pgo-force-function-attrs",
-    cl::desc("Enable pass to set function attributes based on PGO profiles"),
-    cl::init(false));
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -843,7 +838,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   }
 
   // Perform PGO instrumentation.
-  MPM.addPass(PGOInstrumentationGen(IsCS));
+  MPM.addPass(PGOInstrumentationGen(IsCS ? PGOInstrumentationType::CSFDO
+                                         : PGOInstrumentationType::FDO));
 
   addPostPGOLoopRotation(MPM, Level);
   // Add the profile lowering pass.
@@ -878,7 +874,8 @@ void PassBuilder::addPGOInstrPassesForO0(
   }
 
   // Perform PGO instrumentation.
-  MPM.addPass(PGOInstrumentationGen(IsCS));
+  MPM.addPass(PGOInstrumentationGen(IsCS ? PGOInstrumentationType::CSFDO
+                                         : PGOInstrumentationType::FDO));
   // Add the profile lowering pass.
   InstrProfOptions Options;
   if (!ProfileFile.empty())
@@ -1192,10 +1189,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
                       PGOOpt->FS);
   } else if (IsCtxProfGen || IsCtxProfUse) {
-    MPM.addPass(PGOInstrumentationGen(false));
+    MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
     // The instrumentation will be removed in post-thinlink after IPO.
+    // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
+    // mechanism for GUIDs.
+    MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse)
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
@@ -1216,7 +1216,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnablePGOForceFunctionAttrs && PGOOpt)
+  if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
+                 PGOOpt->Action == PGOOptions::SampleUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
@@ -1528,9 +1529,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
-  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
-                                         .convertSwitchRangeToICmp(true)
-                                         .speculateUnpredictables(true)));
+  OptimizePM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions()
+                          .convertSwitchRangeToICmp(true)
+                          .speculateUnpredictables(true)
+                          .hoistLoadsStoresWithCondFaulting(true)));
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),

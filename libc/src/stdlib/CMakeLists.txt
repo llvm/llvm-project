@@ -428,6 +428,83 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
+add_entrypoint_object(
+  strtof_l
+  SRCS
+    strtof_l.cpp
+  HDRS
+    strtof_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtod_l
+  SRCS
+    strtod_l.cpp
+  HDRS
+    strtod_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtold_l
+  SRCS
+    strtold_l.cpp
+  HDRS
+    strtold_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtol_l
+  SRCS
+    strtol_l.cpp
+  HDRS
+    strtol_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoll_l
+  SRCS
+    strtoll_l.cpp
+  HDRS
+    strtoll_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoul_l
+  SRCS
+    strtoul_l.cpp
+  HDRS
+    strtoul_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoull_l
+  SRCS
+    strtoull_l.cpp
+  HDRS
+    strtoull_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()

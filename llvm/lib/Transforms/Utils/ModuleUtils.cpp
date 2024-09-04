@@ -205,11 +205,13 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDB(Ctx);
-  F.setMetadata(
-      LLVMContext::MD_kcfi_type,
-      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                           Type::getInt32Ty(Ctx),
-                           static_cast<uint32_t>(xxHash64(MangledType))))));
+  std::string Type = MangledType.str();
+  if (M.getModuleFlag("cfi-normalize-integers"))
+    Type += ".normalized";
+  F.setMetadata(LLVMContext::MD_kcfi_type,
+                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                     Type::getInt32Ty(Ctx),
+                                     static_cast<uint32_t>(xxHash64(Type))))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(

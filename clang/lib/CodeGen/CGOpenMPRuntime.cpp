@@ -1149,10 +1149,8 @@ void CGOpenMPRuntime::emitUserDefinedReduction(
         /*IsCombiner=*/false);
   }
   UDRMap.try_emplace(D, Combiner, Initializer);
-  if (CGF) {
-    auto &Decls = FunctionUDRMap.FindAndConstruct(CGF->CurFn);
-    Decls.second.push_back(D);
-  }
+  if (CGF)
+    FunctionUDRMap[CGF->CurFn].push_back(D);
 }
 
 std::pair<llvm::Function *, llvm::Function *>
@@ -1432,10 +1430,8 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
         ThreadID = CGF.EmitLoadOfScalar(LVal, Loc);
         // If value loaded in entry block, cache it and use it everywhere in
         // function.
-        if (CGF.Builder.GetInsertBlock() == TopBlock) {
-          auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-          Elem.second.ThreadID = ThreadID;
-        }
+        if (CGF.Builder.GetInsertBlock() == TopBlock)
+          OpenMPLocThreadIDMap[CGF.CurFn].ThreadID = ThreadID;
         return ThreadID;
       }
     }
@@ -6332,7 +6328,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
           CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
           CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
           CodeGenFunction::LexicalScope Scope(
-              CGF, ThreadLimitClause->getThreadLimit()->getSourceRange());
+              CGF,
+              ThreadLimitClause->getThreadLimit().front()->getSourceRange());
           if (const auto *PreInit =
                   cast_or_null<DeclStmt>(ThreadLimitClause->getPreInitStmt())) {
             for (const auto *I : PreInit->decls()) {
@@ -6349,7 +6346,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       }
     }
     if (ThreadLimitClause)
-      CheckForConstExpr(ThreadLimitClause->getThreadLimit(), ThreadLimitExpr);
+      CheckForConstExpr(ThreadLimitClause->getThreadLimit().front(),
+                        ThreadLimitExpr);
     if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
@@ -6370,7 +6368,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
     if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
       CodeGenFunction::RunCleanupsScope ThreadLimitScope(CGF);
       const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
-      CheckForConstExpr(ThreadLimitClause->getThreadLimit(), ThreadLimitExpr);
+      CheckForConstExpr(ThreadLimitClause->getThreadLimit().front(),
+                        ThreadLimitExpr);
     }
     const CapturedStmt *CS = D.getInnermostCapturedStmt();
     getNumThreads(CGF, CS, NTPtr, UpperBound, UpperBoundOnly, CondVal);
@@ -6388,7 +6387,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
     if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
       CodeGenFunction::RunCleanupsScope ThreadLimitScope(CGF);
       const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
-      CheckForConstExpr(ThreadLimitClause->getThreadLimit(), ThreadLimitExpr);
+      CheckForConstExpr(ThreadLimitClause->getThreadLimit().front(),
+                        ThreadLimitExpr);
     }
     getNumThreads(CGF, D.getInnermostCapturedStmt(), NTPtr, UpperBound,
                   UpperBoundOnly, CondVal);
@@ -6424,7 +6424,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
     if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
       CodeGenFunction::RunCleanupsScope ThreadLimitScope(CGF);
       const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
-      CheckForConstExpr(ThreadLimitClause->getThreadLimit(), ThreadLimitExpr);
+      CheckForConstExpr(ThreadLimitClause->getThreadLimit().front(),
+                        ThreadLimitExpr);
     }
     if (D.hasClausesOfKind<OMPNumThreadsClause>()) {
       CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
@@ -8635,8 +8636,7 @@ public:
           const MapData &BaseData = CI == CE ? L : L1;
           OMPClauseMappableExprCommon::MappableExprComponentListRef SubData =
               SI == SE ? Components : Components1;
-          auto &OverlappedElements = OverlappedData.FindAndConstruct(&BaseData);
-          OverlappedElements.getSecond().push_back(SubData);
+          OverlappedData[&BaseData].push_back(SubData);
         }
       }
     }
@@ -9311,10 +9311,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   MapperCGF.EmitBlock(DoneBB, /*IsFinished=*/true);
   MapperCGF.FinishFunction();
   UDMMap.try_emplace(D, Fn);
-  if (CGF) {
-    auto &Decls = FunctionUDMMap.FindAndConstruct(CGF->CurFn);
-    Decls.second.push_back(D);
-  }
+  if (CGF)
+    FunctionUDMMap[CGF->CurFn].push_back(D);
 }
 
 /// Emit the array initialization or deletion portion for user-defined mapper
@@ -9583,15 +9581,18 @@ static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
   genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder, MappedVarSet);
 }
 
-static void emitNumTeamsForBareTargetDirective(
-    CodeGenFunction &CGF, const OMPExecutableDirective &D,
-    llvm::SmallVectorImpl<llvm::Value *> &NumTeams) {
-  const auto *C = D.getSingleClause<OMPNumTeamsClause>();
-  assert(!C->varlist_empty() && "ompx_bare requires explicit num_teams");
-  CodeGenFunction::RunCleanupsScope NumTeamsScope(CGF);
-  for (auto *E : C->getNumTeams()) {
+template <typename ClauseTy>
+static void
+emitClauseForBareTargetDirective(CodeGenFunction &CGF,
+                                 const OMPExecutableDirective &D,
+                                 llvm::SmallVectorImpl<llvm::Value *> &Values) {
+  const auto *C = D.getSingleClause<ClauseTy>();
+  assert(!C->varlist_empty() &&
+         "ompx_bare requires explicit num_teams and thread_limit");
+  CodeGenFunction::RunCleanupsScope Scope(CGF);
+  for (auto *E : C->varlist()) {
     llvm::Value *V = CGF.EmitScalarExpr(E);
-    NumTeams.push_back(
+    Values.push_back(
         CGF.Builder.CreateIntCast(V, CGF.Int32Ty, /*isSigned=*/true));
   }
 }
@@ -9667,14 +9668,18 @@ static void emitTargetCallKernelLaunch(
 
     bool IsBare = D.hasClausesOfKind<OMPXBareClause>();
     SmallVector<llvm::Value *, 3> NumTeams;
-    if (IsBare)
-      emitNumTeamsForBareTargetDirective(CGF, D, NumTeams);
-    else
+    SmallVector<llvm::Value *, 3> NumThreads;
+    if (IsBare) {
+      emitClauseForBareTargetDirective<OMPNumTeamsClause>(CGF, D, NumTeams);
+      emitClauseForBareTargetDirective<OMPThreadLimitClause>(CGF, D,
+                                                             NumThreads);
+    } else {
       NumTeams.push_back(OMPRuntime->emitNumTeamsForTargetDirective(CGF, D));
+      NumThreads.push_back(
+          OMPRuntime->emitNumThreadsForTargetDirective(CGF, D));
+    }
 
     llvm::Value *DeviceID = emitDeviceID(Device, CGF);
-    llvm::Value *NumThreads =
-        OMPRuntime->emitNumThreadsForTargetDirective(CGF, D);
     llvm::Value *RTLoc = OMPRuntime->emitUpdateLocation(CGF, D.getBeginLoc());
     llvm::Value *NumIterations =
         OMPRuntime->emitTargetNumIterationsCall(CGF, D, SizeEmitter);
