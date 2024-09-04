@@ -1521,10 +1521,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
-  if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
-    SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
-
   if (Result) {
     LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
                       << (LAI->getRuntimePointerChecking()->Need
@@ -1532,6 +1528,10 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                               : "")
                       << "!\n");
   }
+
+  unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
+  if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
+    SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
 
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
