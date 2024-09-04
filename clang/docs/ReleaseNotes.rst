@@ -346,6 +346,7 @@ Bug Fixes to C++ Support
 - Fix handling of ``_`` as the name of a lambda's init capture variable. (#GH107024)
 - Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
 - Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
+- Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
