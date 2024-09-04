@@ -21783,7 +21783,11 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
          "Expected a partial reduction node");
 
   if (!Subtarget->isSVEorStreamingSVEAvailable() &&
-      !(Subtarget->isNeonAvailable() && Subtarget->hasDotProd()))
+      !Subtarget->isNeonAvailable())
+    return SDValue();
+
+  // Fixed-width requires the dotprod feature, both for Neon and SVE
+  if (!N->getValueType(0).isScalableVT() && !Subtarget->hasDotProd())
     return SDValue();
 
   SDLoc DL(N);
