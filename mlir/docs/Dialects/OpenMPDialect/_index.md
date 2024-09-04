@@ -293,3 +293,117 @@ been implemented, but it is closely linked to the `omp.canonical_loop` work.
 Nevertheless, loop transformation that the `collapse` clause for loop-associated
 worksharing constructs defines can be represented by introducing multiple
 bounds, step and induction variables to the `omp.loop_nest` operation.
+
+## Compound Construct Representation
+
+The OpenMP specification defines certain shortcuts that allow specifying
+multiple constructs in a single directive, which are referred to as compound
+constructs (e.g. `parallel do` contains the `parallel` and `do` constructs).
+These can be further classified into [combined](#combined-constructs) and
+[composite](#composite-constructs) constructs. This section describes how they
+are represented in the dialect.
+
+When clauses are specified for compound constructs, the OpenMP specification
+defines a set of rules to decide to which leaf constructs they apply, as well as
+potentially introducing some other implicit clauses. These rules must be taken
+into account by those creating the MLIR representation, since it is a per-leaf
+representation that expects these rules to have already been followed.
+
+### Combined Constructs
+
+Combined constructs are semantically equivalent to specifying one construct
+immediately nested inside another. This property is used to simplify the dialect
+by representing them through the operations associated to each leaf construct.
+For example, `target teams` would be represented as follows:
+
+```mlir
+omp.target ... {
+  ...
+  omp.teams ... {
+    ...
+    omp.terminator
+  }
+  ...
+  omp.terminator
+}
+```
+
+### Composite Constructs
+
+Composite constructs are similar to combined constructs in that they specify the
+effect of one construct being applied immediately after another. However, they
+group together constructs that cannot be directly nested into each other.
+Specifically, they group together multiple loop-associated constructs that apply
+to the same collapsed loop nest.
+
+As of version 5.2 of the OpenMP specification, the list of composite constructs
+is the following:
+  - `{do,for} simd`;
+  - `distribute simd`;
+  - `distribute parallel {do,for}`;
+  - `distribute parallel {do,for} simd`; and
+  - `taskloop simd`.
+
+Even though the list of composite constructs is relatively short and it would
+also be possible to create dialect operations for each, it was decided to
+allow attaching multiple loop wrappers to a single loop instead. This minimizes
+redundancy in the dialect and maximizes its modularity, since there is a single
+operation for each leaf construct regardless of whether it can be part of a
+composite construct. On the other hand, this means the `omp.loop_nest` operation
+will have to be interpreted differently depending on how many and which loop
+wrappers are attached to it.
+
+To simplify the detection of operations taking part in the representation of a
+composite construct, the `ComposableOpInterface` was introduced. Its purpose is
+to handle the `omp.composite` discardable dialect attribute that can optionally
+be attached to these operations. Operation verifiers will ensure its presence is
+consistent with the context the operation appears in, so that it is valid when
+the attribute is present if and only if it represents a leaf of a composite
+construct.
+
+For example, the `distribute simd` composite construct is represented as
+follows:
+
+```mlir
+omp.distribute ... {
+  omp.simd ... {
+    omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+      ...
+      omp.yield
+    }
+    omp.terminator
+  } {omp.composite}
+  omp.terminator
+} {omp.composite}
+```
+
+One exception to this is the representation of the
+`distribute parallel {do,for}` composite construct. The presence of a
+block-associated `parallel` leaf construct would introduce many problems if it
+was allowed to work as a loop wrapper. In this case, the "hoisted `omp.parallel`
+representation" is used instead. This consists in making `omp.parallel` the
+parent operation, with a nested `omp.loop_nest` wrapped by `omp.distribute` and
+`omp.wsloop` (and `omp.simd`, in the `distribute parallel {do,for} simd` case).
+
+This approach works because `parallel` is a parallelism-generating construct,
+whereas `distribute` is a worksharing construct impacting the higher level
+`teams` construct, making the ordering between these constructs not cause
+semantic mismatches. This property is also exploited by LLVM's SPMD-mode.
+
+```mlir
+omp.parallel ... {
+  ...
+  omp.distribute ... {
+    omp.wsloop ... {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        ...
+        omp.yield
+      }
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  ...
+  omp.terminator
+} {omp.composite}
+```
