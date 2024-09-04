@@ -480,6 +480,17 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_BINDINGS**:BOOL
   If disabled, do not try to build the OCaml bindings.
 
+**LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING**:STRING
+  Enhances Debugify's ability to detect line number errors by storing extra
+  information inside Instructions, removing false positives from Debugify's
+  results at the cost of performance. Allowed values are `DISABLED` (default),
+  `COVERAGE`, and `COVERAGE_AND_ORIGIN`. `COVERAGE` tracks whether and why a
+  line number was intentionally dropped or not generated for an instruction,
+  allowing Debugify to avoid reporting these as errors. `COVERAGE_AND_ORIGIN`
+  additionally stores a stacktrace of the point where each DebugLoc is
+  unintentionally dropped, allowing for much easier bug triaging at the cost of
+  a ~10x performance slowdown.
+
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
   only with MSVC. Defaults to ON.
