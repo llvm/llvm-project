@@ -2142,7 +2142,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 // it's not worth updating those.
 static const std::pair<std::vector<int64_t>, std::vector<int64_t>>
 remapIndices(Function &Caller, BasicBlock *StartBB,
-             CtxProfAnalysis::Result &CtxProf, uint32_t CalleeCounters,
+             PGOContextualProfile &CtxProf, uint32_t CalleeCounters,
              uint32_t CalleeCallsites) {
   // We'll allocate a new ID to imported callsite counters and callsites. We're
   // using -1 to indicate a counter we delete. Most likely the entry ID, for
@@ -2258,7 +2258,7 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
 // copying over the data of the callee, **intentionally without any value
 // scaling**, and copying over the callees of the inlined callee.
 llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                                        CtxProfAnalysis::Result &CtxProf,
+                                        PGOContextualProfile &CtxProf,
                                         bool MergeAttributes,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
