@@ -225,6 +225,11 @@ Attribute Changes in Clang
   more cases where the returned reference outlives the object.
   (#GH100567)
 
+- Now correctly diagnosing use of ``btf_type_tag`` in C++ and ignoring it; this
+  attribute is a C-only attribute, and was causing crashes with template
+  instantiation by accidentally allowing it in C++ in some circumstances.
+  (#GH106864)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
