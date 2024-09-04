@@ -55,10 +55,10 @@ Important notes
       
   * Data ownership and data collection consents are hard to accommodate from
     LLVM developers' point of view:
-     * Eg., data collected by Telemetry is not neccessarily owned by the user
-       of an LLVM tool with Telemetry enabled, hence the user's consent to data
-       collection is not meaningful. On the other hand, LLVM developers have no
-       reasonable ways to request consent from the "real" owners.
+    * Eg., data collected by Telemetry is not neccessarily owned by the user
+      of an LLVM tool with Telemetry enabled, hence the user's consent to data
+      collection is not meaningful. On the other hand, LLVM developers have no
+      reasonable ways to request consent from the "real" owners.
 
 
 High-level design
@@ -67,7 +67,7 @@ High-level design
 Key components
 --------------
 
-The framework is consisted of three important classes:
+The framework is consisted of four important classes:
 
 * `llvm::telemetry::Telemeter`: The class responsible for collecting and
   forwarding telemetry data. This is the main point of interaction between the
@@ -76,3 +76,8 @@ The framework is consisted of three important classes:
 * `llvm::telemetry::Config`: Configurations on the `Telemeter`.
 
 .. image:: llvm_telemetry_design.png
+
+How to implement and interact with the API
+------------------------------------------
+
+// TODO: walk through a simple usage here.
