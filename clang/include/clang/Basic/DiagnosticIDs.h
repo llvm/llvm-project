@@ -102,78 +102,78 @@ namespace clang {
     };
   }
 
-  class DiagnosticMapping {
-    LLVM_PREFERRED_TYPE(diag::Severity)
-    unsigned Severity : 3;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsUser : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsPragma : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasNoWarningAsError : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasNoErrorAsFatal : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned WasUpgradedFromWarning : 1;
+class DiagnosticMapping {
+  LLVM_PREFERRED_TYPE(diag::Severity)
+  unsigned Severity : 3;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsUser : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsPragma : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasNoWarningAsError : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasNoErrorAsFatal : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned WasUpgradedFromWarning : 1;
 
-  public:
-    static DiagnosticMapping Make(diag::Severity Severity, bool IsUser,
-                                  bool IsPragma) {
-      DiagnosticMapping Result;
-      Result.Severity = (unsigned)Severity;
-      Result.IsUser = IsUser;
-      Result.IsPragma = IsPragma;
-      Result.HasNoWarningAsError = 0;
-      Result.HasNoErrorAsFatal = 0;
-      Result.WasUpgradedFromWarning = 0;
-      return Result;
-    }
+public:
+  static DiagnosticMapping Make(diag::Severity Severity, bool IsUser,
+                                bool IsPragma) {
+    DiagnosticMapping Result;
+    Result.Severity = (unsigned)Severity;
+    Result.IsUser = IsUser;
+    Result.IsPragma = IsPragma;
+    Result.HasNoWarningAsError = 0;
+    Result.HasNoErrorAsFatal = 0;
+    Result.WasUpgradedFromWarning = 0;
+    return Result;
+  }
 
-    diag::Severity getSeverity() const { return (diag::Severity)Severity; }
-    void setSeverity(diag::Severity Value) { Severity = (unsigned)Value; }
+  diag::Severity getSeverity() const { return (diag::Severity)Severity; }
+  void setSeverity(diag::Severity Value) { Severity = (unsigned)Value; }
 
-    bool isUser() const { return IsUser; }
-    bool isPragma() const { return IsPragma; }
+  bool isUser() const { return IsUser; }
+  bool isPragma() const { return IsPragma; }
 
-    bool isErrorOrFatal() const {
-      return getSeverity() == diag::Severity::Error ||
-             getSeverity() == diag::Severity::Fatal;
-    }
+  bool isErrorOrFatal() const {
+    return getSeverity() == diag::Severity::Error ||
+            getSeverity() == diag::Severity::Fatal;
+  }
 
-    bool hasNoWarningAsError() const { return HasNoWarningAsError; }
-    void setNoWarningAsError(bool Value) { HasNoWarningAsError = Value; }
+  bool hasNoWarningAsError() const { return HasNoWarningAsError; }
+  void setNoWarningAsError(bool Value) { HasNoWarningAsError = Value; }
 
-    bool hasNoErrorAsFatal() const { return HasNoErrorAsFatal; }
-    void setNoErrorAsFatal(bool Value) { HasNoErrorAsFatal = Value; }
+  bool hasNoErrorAsFatal() const { return HasNoErrorAsFatal; }
+  void setNoErrorAsFatal(bool Value) { HasNoErrorAsFatal = Value; }
 
-    /// Whether this mapping attempted to map the diagnostic to a warning, but
-    /// was overruled because the diagnostic was already mapped to an error or
-    /// fatal error.
-    bool wasUpgradedFromWarning() const { return WasUpgradedFromWarning; }
-    void setUpgradedFromWarning(bool Value) { WasUpgradedFromWarning = Value; }
+  /// Whether this mapping attempted to map the diagnostic to a warning, but
+  /// was overruled because the diagnostic was already mapped to an error or
+  /// fatal error.
+  bool wasUpgradedFromWarning() const { return WasUpgradedFromWarning; }
+  void setUpgradedFromWarning(bool Value) { WasUpgradedFromWarning = Value; }
 
-    /// Serialize this mapping as a raw integer.
-    unsigned serialize() const {
-      return (IsUser << 7) | (IsPragma << 6) | (HasNoWarningAsError << 5) |
-             (HasNoErrorAsFatal << 4) | (WasUpgradedFromWarning << 3) |
-             Severity;
-    }
-    /// Deserialize a mapping.
-    static DiagnosticMapping deserialize(unsigned Bits) {
-      DiagnosticMapping Result;
-      Result.IsUser = (Bits >> 7) & 1;
-      Result.IsPragma = (Bits >> 6) & 1;
-      Result.HasNoWarningAsError = (Bits >> 5) & 1;
-      Result.HasNoErrorAsFatal = (Bits >> 4) & 1;
-      Result.WasUpgradedFromWarning = (Bits >> 3) & 1;
-      Result.Severity = Bits & 0x7;
-      return Result;
-    }
+  /// Serialize this mapping as a raw integer.
+  unsigned serialize() const {
+    return (IsUser << 7) | (IsPragma << 6) | (HasNoWarningAsError << 5) |
+            (HasNoErrorAsFatal << 4) | (WasUpgradedFromWarning << 3) |
+            Severity;
+  }
+  /// Deserialize a mapping.
+  static DiagnosticMapping deserialize(unsigned Bits) {
+    DiagnosticMapping Result;
+    Result.IsUser = (Bits >> 7) & 1;
+    Result.IsPragma = (Bits >> 6) & 1;
+    Result.HasNoWarningAsError = (Bits >> 5) & 1;
+    Result.HasNoErrorAsFatal = (Bits >> 4) & 1;
+    Result.WasUpgradedFromWarning = (Bits >> 3) & 1;
+    Result.Severity = Bits & 0x7;
+    return Result;
+  }
 
-    bool operator==(DiagnosticMapping Other) const {
-      return serialize() == Other.serialize();
-    }
-  };
+  bool operator==(DiagnosticMapping Other) const {
+    return serialize() == Other.serialize();
+  }
+};
 
 /// Used for handling and querying diagnostic IDs.
 ///
