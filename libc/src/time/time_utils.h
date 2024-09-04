@@ -176,7 +176,7 @@ LIBC_INLINE char *ctime(const struct tm *timeptr, char *buffer) {
   // be emitted as a call to snprintf. Alternatively, look into using our
   // internal printf machinery.
   int written_size = __builtin_snprintf(
-      buffer, strlen(buffer), "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
+      buffer, strlen(buffer)+32, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
       week_days_name[timeptr->tm_wday], months_name[timeptr->tm_mon],
       timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
       TimeConstants::TIME_YEAR_BASE + timeptr->tm_year);
