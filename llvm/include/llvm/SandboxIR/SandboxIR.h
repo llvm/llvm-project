@@ -121,6 +121,7 @@ class BasicBlock;
 class ConstantInt;
 class ConstantFP;
 class ConstantAggregateZero;
+class ConstantPointerNull;
 class Context;
 class Function;
 class Instruction;
@@ -318,6 +319,7 @@ protected:
   friend class ConstantArray;         // For `Val`.
   friend class ConstantStruct;        // For `Val`.
   friend class ConstantAggregateZero; // For `Val`.
+  friend class ConstantPointerNull;   // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -979,6 +981,35 @@ public:
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::ConstantAggregateZero>(Val) && "Expected a CAZ!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+// TODO: Inherit from ConstantData.
+class ConstantPointerNull final : public Constant {
+  ConstantPointerNull(llvm::ConstantPointerNull *C, Context &Ctx)
+      : Constant(ClassID::ConstantPointerNull, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static ConstantPointerNull *get(PointerType *Ty);
+
+  PointerType *getType() const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantPointerNull;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantPointerNull has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantPointerNull>(Val) && "Expected a CPNull!");
   }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
