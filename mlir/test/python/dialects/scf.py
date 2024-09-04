@@ -303,6 +303,7 @@ def testNestedIf():
 # CHECK:     %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
 # CHECK: return
 
+
 @constructAndPrintInModule
 def testIfWithElse():
     bool = IntegerType.get_signless(1)
