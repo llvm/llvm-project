@@ -5430,11 +5430,24 @@ struct EnsureImmediateInvocationInDefaultArgs
 
   // Rewrite to source location to refer to the context in which they are used.
   ExprResult TransformSourceLocExpr(SourceLocExpr *E) {
-    if (E->getParentContext() == SemaRef.CurContext)
+    DeclContext *DC = E->getParentContext();
+    if (DC == SemaRef.CurContext)
       return E;
-    return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
-                                             E->getBeginLoc(), E->getEndLoc(),
-                                             SemaRef.CurContext);
+
+    // FIXME: During instantiation, because the rebuild of defaults arguments
+    // is not always done in the context of the template instantiator,
+    // we run the risk of producing a dependent source location
+    // that would never be rebuilt.
+    // This usually happens during overload resolution, or in contexts
+    // where the value of the source location does not matter.
+    // However, we should find a better way to deal with source location
+    // of function templates.
+    if (!SemaRef.CurrentInstantiationScope ||
+        !SemaRef.CurContext->isDependentContext() || DC->isDependentContext())
+      DC = SemaRef.CurContext;
+
+    return getDerived().RebuildSourceLocExpr(
+        E->getIdentKind(), E->getType(), E->getBeginLoc(), E->getEndLoc(), DC);
   }
 };
 
