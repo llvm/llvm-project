@@ -72,6 +72,7 @@ intermediate LLVM representation.
    SupportLibrary
    TableGen/index
    TableGenFundamentals
+   Telemetry
    Vectorizers
    WritingAnLLVMPass
    WritingAnLLVMNewPMPass
