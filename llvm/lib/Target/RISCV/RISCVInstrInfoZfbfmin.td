@@ -14,16 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// RISC-V specific DAG Nodes.
-//===----------------------------------------------------------------------===//
-
-def SDT_RISCVFP_ROUND_BF16
-    : SDTypeProfile<1, 1, [SDTCisVT<0, bf16>, SDTCisVT<1, f32>]>;
-
-def riscv_fpround_bf16
-    : SDNode<"RISCVISD::FP_ROUND_BF16", SDT_RISCVFP_ROUND_BF16>;
-
-//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +50,7 @@ def : StPat<store, FSH, FPR16, bf16>;
 
 /// Float conversion operations
 // f32 -> bf16, bf16 -> f32
-def : Pat<(bf16 (riscv_fpround_bf16 FPR32:$rs1)),
+def : Pat<(bf16 (fpround FPR32:$rs1)),
           (FCVT_BF16_S FPR32:$rs1, FRM_DYN)>;
 def : Pat<(fpextend (bf16 FPR16:$rs1)),
           (FCVT_S_BF16 FPR16:$rs1, FRM_RNE)>;
@@ -72,6 +62,10 @@ def : Pat<(riscv_fmv_x_signexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 } // Predicates = [HasStdExtZfbfmin]
 
 let Predicates = [HasStdExtZfbfmin, HasStdExtD] in {
+// f64 -> bf16
+// FIXME: This pattern double rounds.
+def : Pat<(bf16 (fpround FPR64:$rs1)),
+          (FCVT_BF16_S (FCVT_S_D FPR64:$rs1, FRM_DYN), FRM_DYN)>;
 // bf16 -> f64
 def : Pat<(fpextend (bf16 FPR16:$rs1)),
           (FCVT_D_S (FCVT_S_BF16 FPR16:$rs1, FRM_DYN), FRM_RNE)>;
