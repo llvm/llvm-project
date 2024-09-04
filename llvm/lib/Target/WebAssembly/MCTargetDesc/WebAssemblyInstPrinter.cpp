@@ -166,15 +166,15 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       }
       return;
 
-    case WebAssembly::CATCH_P3:
-    case WebAssembly::CATCH_P3_S:
-    case WebAssembly::CATCH_ALL_P3:
-    case WebAssembly::CATCH_ALL_P3_S:
+    case WebAssembly::CATCH_LEGACY:
+    case WebAssembly::CATCH_LEGACY_S:
+    case WebAssembly::CATCH_ALL_LEGACY:
+    case WebAssembly::CATCH_ALL_LEGACY_S:
       // There can be multiple catch instructions for one try instruction, so
       // we print a label only for the first 'catch' label.
       if (EHInstStack.empty()) {
         printAnnotation(OS, "try-catch mismatch!");
-      } else if (EHInstStack.back() == CATCH_ALL_P3) {
+      } else if (EHInstStack.back() == CATCH_ALL_LEGACY) {
         printAnnotation(OS, "catch/catch_all cannot occur after catch_all");
       } else if (EHInstStack.back() == TRY) {
         if (TryStack.empty()) {
@@ -183,10 +183,11 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           printAnnotation(OS, "catch" + utostr(TryStack.pop_back_val()) + ':');
         }
         EHInstStack.pop_back();
-        if (Opc == WebAssembly::CATCH_P3 || Opc == WebAssembly::CATCH_P3_S) {
-          EHInstStack.push_back(CATCH_P3);
+        if (Opc == WebAssembly::CATCH_LEGACY ||
+            Opc == WebAssembly::CATCH_LEGACY_S) {
+          EHInstStack.push_back(CATCH_LEGACY);
         } else {
-          EHInstStack.push_back(CATCH_ALL_P3);
+          EHInstStack.push_back(CATCH_ALL_LEGACY);
         }
       }
       return;

@@ -162,10 +162,10 @@ defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 // Catching an exception: catch / catch_all
 let hasCtrlDep = 1, hasSideEffects = 1 in {
 let variadicOpsAreDefs = 1 in
-defm CATCH_P3 : I<(outs), (ins tag_op:$tag, variable_ops),
-                  (outs), (ins tag_op:$tag), [],
-                  "catch",  "catch   \t$tag", 0x07>;
-defm CATCH_ALL_P3 : NRI<(outs), (ins), [], "catch_all", 0x19>;
+defm CATCH_LEGACY : I<(outs), (ins tag_op:$tag, variable_ops),
+                      (outs), (ins tag_op:$tag), [],
+                      "catch",  "catch   \t$tag", 0x07>;
+defm CATCH_ALL_LEGACY : NRI<(outs), (ins), [], "catch_all", 0x19>;
 }
 
 // Delegating an exception: delegate
