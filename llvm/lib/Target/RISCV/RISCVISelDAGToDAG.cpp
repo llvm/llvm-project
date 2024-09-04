@@ -3452,10 +3452,37 @@ bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
   return true;
 }
 
+// Look for splats of zero. On RV32 a EEW=64 there may be a bitcast in between.
+//
+//   t72: nxv16i32 = RISCVISD::VMV_V_X_VL ...
+//   t73: v32i32 = extract_subvector t72, Constant:i32<0>
+//   t21: v16i64 = bitcast t73
+//   t42: nxv8i64 = insert_subvector undef:nxv8i64, t21, Constant:i32<0>
+static bool isZeroSplat(SDValue N) {
+  if (N.getOpcode() == ISD::INSERT_SUBVECTOR && N.getOperand(0).isUndef())
+    N = N.getOperand(1);
+  if (N.getOpcode() == ISD::BITCAST)
+    N = N.getOperand(0);
+  if (N.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+    N = N.getOperand(0);
+
+  return (N.getOpcode() == RISCVISD::VMV_V_X_VL ||
+          N.getOpcode() == RISCVISD::VMV_S_X_VL) &&
+         isa<ConstantSDNode>(N.getOperand(1)) &&
+         N.getConstantOperandVal(1) == 0;
+}
+
 static bool selectVSplatImmHelper(SDValue N, SDValue &SplatVal,
                                   SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget,
                                   std::function<bool(int64_t)> ValidateImm) {
+  // Explicitly look for zero splats to handle the EEW=64 on RV32 case.
+  if (isZeroSplat(N) && ValidateImm(0)) {
+    SplatVal =
+        DAG.getConstant(0, SDLoc(N), Subtarget.getXLenVT(), /*isTarget=*/true);
+    return true;
+  }
+
   SDValue Splat = findVSplat(N);
   if (!Splat || !isa<ConstantSDNode>(Splat.getOperand(1)))
     return false;
