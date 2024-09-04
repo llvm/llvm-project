@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_CXX03_LANG)
-using ::max_align_t _LIBCPP_USING_IF_EXISTS;
+using ::max_align_t;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::size_t _LIBCPP_USING_IF_EXISTS;
+using ::size_t;
 
 _LIBCPP_END_NAMESPACE_STD
 
