@@ -135,8 +135,8 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
-  if (!D.SysRoot.empty())
-    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+  CmdArgs.push_back(
+      Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
@@ -234,8 +234,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
-  if (!D.SysRoot.empty())
-    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+  CmdArgs.push_back(
+      Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
   // Default to PIE for non-static executables.
   const bool PIE =
@@ -323,46 +323,57 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args, StringRef Platform,
                                    const char *EnvVar)
     : Generic_ELF(D, Triple, Args) {
-  // Determine where to find the PS4/PS5 libraries.
-  // If -isysroot was passed, use that as the SDK base path.
-  // If not, we use the EnvVar if it exists; otherwise use the driver's
-  // installation path, which should be <SDK_DIR>/host_tools/bin.
+  // Determine the baseline SDK directory from the environment, else
+  // the driver's location, which should be <SDK_DIR>/host_tools/bin.
+  SmallString<128> SDKRootDir;
   SmallString<80> Whence;
-  if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-    SDKRootDir = A->getValue();
-    if (!llvm::sys::fs::exists(SDKRootDir))
-      D.Diag(clang::diag::warn_missing_sysroot) << SDKRootDir;
-    Whence = A->getSpelling();
-  } else if (const char *EnvValue = getenv(EnvVar)) {
+  if (const char *EnvValue = getenv(EnvVar)) {
     SDKRootDir = EnvValue;
-    Whence = { "environment variable '", EnvVar, "'" };
+    Whence = {"environment variable '", EnvVar, "'"};
   } else {
     SDKRootDir = D.Dir + "/../../";
     Whence = "compiler's location";
   }
 
-  SmallString<512> SDKIncludeDir(SDKRootDir);
-  llvm::sys::path::append(SDKIncludeDir, "target/include");
-  if (!Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nostdlibinc) &&
-      !Args.hasArg(options::OPT_isysroot) &&
-      !Args.hasArg(options::OPT__sysroot_EQ) &&
-      !llvm::sys::fs::exists(SDKIncludeDir)) {
+  auto OverrideRoot = [&](const options::ID &Opt, std::string &Root) {
+    if (const Arg *A = Args.getLastArg(Opt)) {
+      Root = A->getValue();
+      if (!llvm::sys::fs::exists(Root))
+        D.Diag(clang::diag::warn_missing_sysroot) << Root;
+      return true;
+    }
+    Root = SDKRootDir.str();
+    return false;
+  };
+
+  auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
+    if (llvm::sys::fs::exists(Dir))
+      return true;
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
-        << Twine(Platform, " system headers").str() << SDKIncludeDir << Whence;
+        << (Twine(Platform) + " " + Desc).str() << Dir << Whence;
+    return false;
+  };
+
+  // Allow -isysroot to override the root directory for header search, which
+  // we interpret as the user taking the reins and removing our obligation to
+  // check for the existence of SDK headers.
+  if (!OverrideRoot(options::OPT_isysroot, SDKHeaderRootDir) &&
+      !Args.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc)) {
+    SmallString<128> Dir(SDKHeaderRootDir);
+    llvm::sys::path::append(Dir, "target/include");
+    CheckSDKPartExists(Dir, "system headers");
   }
 
-  SmallString<512> SDKLibDir(SDKRootDir);
-  llvm::sys::path::append(SDKLibDir, "target/lib");
-  if (!Args.hasArg(options::OPT__sysroot_EQ) && !Args.hasArg(options::OPT_E) &&
-      !Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S) &&
-      !Args.hasArg(options::OPT_emit_ast) &&
-      !llvm::sys::fs::exists(SDKLibDir)) {
-    D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
-        << Twine(Platform, " system libraries").str() << SDKLibDir << Whence;
-    return;
+  // Similarly, allow --sysroot= to override the root directory for library
+  // search.
+  bool Linking = !Args.hasArg(options::OPT_E, options::OPT_c, options::OPT_S,
+                              options::OPT_emit_ast);
+  if (!OverrideRoot(options::OPT__sysroot_EQ, SDKLibraryRootDir) && Linking) {
+    SmallString<128> Dir(SDKLibraryRootDir);
+    llvm::sys::path::append(Dir, "target/lib");
+    if (CheckSDKPartExists(Dir, "system libraries"))
+      getFilePaths().push_back(std::string(Dir));
   }
-  getFilePaths().push_back(std::string(SDKLibDir));
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
@@ -383,9 +394,9 @@ void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
     return;
 
   addExternCSystemInclude(DriverArgs, CC1Args,
-                          SDKRootDir + "/target/include");
+                          SDKHeaderRootDir + "/target/include");
   addExternCSystemInclude(DriverArgs, CC1Args,
-                          SDKRootDir + "/target/include_common");
+                          SDKHeaderRootDir + "/target/include_common");
 }
 
 Tool *toolchains::PS4CPU::buildAssembler() const {
