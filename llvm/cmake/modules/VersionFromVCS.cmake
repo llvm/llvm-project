@@ -45,10 +45,11 @@ function(get_source_info path revision repository)
         string(REGEX MATCH "https?://[^/]*:[^/]*@.*"
           http_password "${git_output}")
         if(http_password)
-          message(SEND_ERROR "The remote URL has an embedded password. \
-Remove the password from the URL or use \
+          message(SEND_ERROR "The git remote repository URL has an embedded \
+password. Remove the password from the URL or use \
 `-DLLVM_FORCE_VC_REPOSITORY=<URL without password>` in order to avoid \
-leaking your password.")
+leaking your password (see https://git-scm.com/docs/gitcredentials for \
+alternatives).")
         endif()
         # Github token formats are described at:
         # https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats
@@ -56,10 +57,10 @@ leaking your password.")
           "https?://(gh[pousr]|github_pat)_[^/]+@github.com.*"
           github_token "${git_output}")
         if(github_token)
-          message(SEND_ERROR "The remote URL has an embedded Github Token. \
-Remove the token from the URL or use \
+          message(SEND_ERROR "The git remote repository URL has an embedded \
+Github Token. Remove the token from the URL or use \
 `-DLLVM_FORCE_VC_REPOSITORY=<URL without token>` in order to avoid leaking \
-your token.")
+your token (see https://git-scm.com/docs/gitcredentials for alternatives).")
         endif()
 
         string(STRIP "${git_output}" git_output)
