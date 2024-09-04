@@ -342,6 +342,7 @@ Bug Fixes to C++ Support
   specialization right before its declaration context. (#GH64082)
 - Fixed a constraint comparison bug for friend declarations. (#GH78101)
 - Fix handling of ``_`` as the name of a lambda's init capture variable. (#GH107024)
+- Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
