@@ -12,7 +12,7 @@
 ;.
 define void @fn(float %val, i32 %idx) #0 {
 ; CHECK-LABEL: define void @fn(
-; CHECK-SAME: float [[VAL:%.*]], i32 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: float [[VAL:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [1 x i32], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[VAR0]], align 4
@@ -28,7 +28,7 @@ define void @fn(float %val, i32 %idx) #0 {
 
 define amdgpu_kernel void @kernelA(float %val, i32 %idx) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernelA(
-; CHECK-SAME: float [[VAL:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] !llvm.amdgcn.lds.kernel.id [[META1:![0-9]+]] {
+; CHECK-SAME: float [[VAL:%.*]], i32 [[IDX:%.*]]) !llvm.amdgcn.lds.kernel.id [[META1:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernelA.dynlds) ]
 ; CHECK-NEXT:    tail call void @fn(float [[VAL]], i32 [[IDX]])
 ; CHECK-NEXT:    ret void
@@ -40,9 +40,8 @@ define amdgpu_kernel void @kernelA(float %val, i32 %idx) #0 {
 attributes #0 = { "amdgpu-no-lds-kernel-id" }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-lds-kernel-id" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
 ; CHECK: [[META1]] = !{i32 0}
