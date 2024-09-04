@@ -169,6 +169,42 @@ See the discussion in the section about
 :ref:`merging locations<WhenToMergeLocation>` for examples of when the rule for
 dropping locations applies.
 
+.. _NewInstLocations:
+
+Setting locations for new instructions
+------------------------------------
+
+Whenever a new instruction is created and there is no suitable location for that
+instruction, that location should be annotated accordingly. There are a set of
+special ``DebugLoc`` values that can be used to indicate the reason that a new
+instruction does not have a valid location. These are as follows:
+
+- ``DebugLoc::getCompilerGenerated()``: This indicates that the instruction is a
+compiler-generated instruction, i.e. it is not associated with any user source
+code.
+- ``DebugLoc::getDropped()``: This indicates that the instruction has
+intentionally had its source location removed, according to the rules for
+dropping locations; this is set automatically by
+``Instruction::dropLocation()``.
+- ``DebugLoc::getUnknown()``: This indicates that the instruction does not have
+a known or currently knowable source location, e.g. the attribution is ambiguous
+in a way that can't currently be represented in LLVM, or that it is otherwise
+infeasible to determine or track the correct source location.
+- ``DebugLoc::getTemporary()``: This is used for instructions that we don't
+expect to be emitted (e.g. ``UnreachableInst``), and so should not need a valid
+location; if we ever try to emit a temporary location into an object file, this
+indicates that something has gone wrong.
+
+Where applicable, these should be used instead of leaving an instruction without
+an assigned location or explicitly setting the location as ``DebugLoc()``.
+Ordinarily these special locations are ignored by the compiler, but some testing
+builds will track their use in order to detect missing locations; for this
+reason, the most important rule is to *not* apply any of these if it isn't clear
+which, if any, is appropriate - an absent location can be detected and fixed,
+while an incorrectly annotated instruction is much harder to detect. On the
+other hand, if any of these clearly apply, then they should be used to prevent
+false positives from being flagged up.
+
 Rules for updating debug values
 ===============================
 
