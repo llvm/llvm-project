@@ -29,7 +29,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -53,7 +52,6 @@
 #include <optional>
 #include <set>
 #include <system_error>
-
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
