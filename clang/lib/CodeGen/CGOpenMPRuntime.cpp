@@ -1332,11 +1332,10 @@ void CGOpenMPRuntime::setLocThreadIdInsertPt(CodeGenFunction &CGF,
 
   llvm::Value *Undef = llvm::UndefValue::get(CGF.Int32Ty);
   if (AtCurrentPoint) {
-    Elem.ServiceInsertPt = new llvm::BitCastInst(
-        Undef, CGF.Int32Ty, "svcpt", CGF.Builder.GetInsertBlock());
+    Elem.ServiceInsertPt = new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt",
+                                                 CGF.Builder.GetInsertBlock());
   } else {
-    Elem.ServiceInsertPt =
-        new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt");
+    Elem.ServiceInsertPt = new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt");
     Elem.ServiceInsertPt->insertAfter(CGF.AllocaInsertPt);
   }
 }
