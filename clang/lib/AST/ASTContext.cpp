@@ -3612,6 +3612,21 @@ bool ASTContext::hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U) {
                      getFunctionTypeWithoutPtrSizes(U));
 }
 
+QualType ASTContext::getFunctionTypeWithoutParamABIs(QualType T) const {
+  if (const auto *Proto = T->getAs<FunctionProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI = Proto->getExtProtoInfo();
+    EPI.ExtParameterInfos = nullptr;
+    return getFunctionType(Proto->getReturnType(), Proto->param_types(), EPI);
+  }
+  return T;
+}
+
+bool ASTContext::hasSameFunctionTypeIgnoringParamABI(QualType T,
+                                                     QualType U) const {
+  return hasSameType(T, U) || hasSameType(getFunctionTypeWithoutParamABIs(T),
+                                          getFunctionTypeWithoutParamABIs(U));
+}
+
 void ASTContext::adjustExceptionSpec(
     FunctionDecl *FD, const FunctionProtoType::ExceptionSpecInfo &ESI,
     bool AsWritten) {
@@ -6566,7 +6581,7 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
 /// \param AllowPiMismatch Allow the Pi1 and Pi2 to differ as described in
 ///        C++20 [conv.qual], if permitted by the current language mode.
 void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
-                                         bool AllowPiMismatch) {
+                                         bool AllowPiMismatch) const {
   while (true) {
     auto *AT1 = getAsArrayType(T1);
     if (!AT1)
@@ -6617,7 +6632,7 @@ void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
 /// \return \c true if a pointer type was unwrapped, \c false if we reached a
 /// pair of types that can't be unwrapped further.
 bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
-                                    bool AllowPiMismatch) {
+                                    bool AllowPiMismatch) const {
   UnwrapSimilarArrayTypes(T1, T2, AllowPiMismatch);
 
   const auto *T1PtrType = T1->getAs<PointerType>();
@@ -6653,7 +6668,7 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
   return false;
 }
 
-bool ASTContext::hasSimilarType(QualType T1, QualType T2) {
+bool ASTContext::hasSimilarType(QualType T1, QualType T2) const {
   while (true) {
     Qualifiers Quals;
     T1 = getUnqualifiedArrayType(T1, Quals);

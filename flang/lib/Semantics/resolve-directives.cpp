@@ -2514,14 +2514,14 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
       target = &details->symbol();
     }
   }
-  if (HasDataSharingAttributeObject(*target) &&
+  if (HasDataSharingAttributeObject(target->GetUltimate()) &&
       !WithMultipleAppearancesOmpException(symbol, ompFlag)) {
     context_.Say(name.source,
         "'%s' appears in more than one data-sharing clause "
         "on the same OpenMP directive"_err_en_US,
         name.ToString());
   } else {
-    AddDataSharingAttributeObject(*target);
+    AddDataSharingAttributeObject(target->GetUltimate());
     if (privateDataSharingAttributeFlags.test(ompFlag)) {
       AddPrivateDataSharingAttributeObjects(*target);
     }

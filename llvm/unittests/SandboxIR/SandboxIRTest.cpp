@@ -112,6 +112,9 @@ define void @foo(i32 %v0) {
 }
 )IR");
   Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto *LLVMAdd0 = &*LLVMBB->begin();
+  auto *LLVMFortyTwo = cast<llvm::ConstantInt>(LLVMAdd0->getOperand(1));
   sandboxir::Context Ctx(C);
 
   auto &F = *Ctx.createFunction(&LLVMF);
@@ -124,10 +127,397 @@ define void @foo(i32 %v0) {
   auto *NewCI =
       sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
   EXPECT_EQ(NewCI, FortyTwo);
-  // Check new constant.
-  auto *FortyThree =
-      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 43);
-  EXPECT_NE(FortyThree, FortyTwo);
+  {
+    // Check getTrue(Ctx).
+    auto *True = sandboxir::ConstantInt::getTrue(Ctx);
+    EXPECT_EQ(True, Ctx.getValue(llvm::ConstantInt::getTrue(C)));
+    // Check getFalse(Ctx).
+    auto *False = sandboxir::ConstantInt::getFalse(Ctx);
+    EXPECT_EQ(False, Ctx.getValue(llvm::ConstantInt::getFalse(C)));
+    // Check getBool(Ctx).
+    auto *Bool = sandboxir::ConstantInt::getBool(Ctx, true);
+    EXPECT_EQ(Bool, Ctx.getValue(llvm::ConstantInt::getBool(C, true)));
+  }
+  {
+    auto *Int1Ty = sandboxir::Type::getInt1Ty(Ctx);
+    auto *LLVMInt1Ty = llvm::Type::getInt1Ty(C);
+    // Check getTrue(Ty).
+    auto *True = sandboxir::ConstantInt::getTrue(Int1Ty);
+    EXPECT_EQ(True, Ctx.getValue(llvm::ConstantInt::getTrue(LLVMInt1Ty)));
+    // Check getFalse(Ty).
+    auto *False = sandboxir::ConstantInt::getFalse(Int1Ty);
+    EXPECT_EQ(False, Ctx.getValue(llvm::ConstantInt::getFalse(LLVMInt1Ty)));
+    // Check getBool(Ty).
+    auto *Bool = sandboxir::ConstantInt::getBool(Int1Ty, true);
+    EXPECT_EQ(Bool, Ctx.getValue(llvm::ConstantInt::getBool(LLVMInt1Ty, true)));
+  }
+
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *LLVMInt32Ty = llvm::Type::getInt32Ty(C);
+  {
+    // Check get(Type, V).
+    auto *FortyThree = sandboxir::ConstantInt::get(Int32Ty, 43);
+    auto *LLVMFortyThree = llvm::ConstantInt::get(LLVMInt32Ty, 43);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  {
+    // Check get(Type, V, IsSigned).
+    auto *FortyThree =
+        sandboxir::ConstantInt::get(Int32Ty, 43, /*IsSigned=*/true);
+    auto *LLVMFortyThree =
+        llvm::ConstantInt::get(LLVMInt32Ty, 43, /*IsSigned=*/true);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+
+  {
+    // Check get(IntegerType, V).
+    auto *FortyThree =
+        sandboxir::ConstantInt::get(sandboxir::IntegerType::get(Ctx, 32), 43);
+    auto *LLVMFortyThree =
+        llvm::ConstantInt::get(llvm::IntegerType::get(C, 32), 43);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  {
+    // Check get(IntegerType, V, IsSigned).
+    auto *FortyThree = sandboxir::ConstantInt::get(
+        sandboxir::IntegerType::get(Ctx, 32), 43, /*IsSigned=*/true);
+    auto *LLVMFortyThree = llvm::ConstantInt::get(llvm::IntegerType::get(C, 32),
+                                                  43, /*IsSigned=*/true);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+
+  {
+    // Check getSigned(IntegerType, V).
+    auto *FortyThree = sandboxir::ConstantInt::getSigned(
+        sandboxir::IntegerType::get(Ctx, 32), 43);
+    auto *LLVMFortyThree =
+        llvm::ConstantInt::getSigned(llvm::IntegerType::get(C, 32), 43);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  {
+    // Check getSigned(Type, V).
+    auto *FortyThree = sandboxir::ConstantInt::getSigned(Int32Ty, 43);
+    auto *LLVMFortyThree = llvm::ConstantInt::getSigned(LLVMInt32Ty, 43);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  {
+    // Check get(Ctx, APInt).
+    APInt APInt43(32, 43);
+    auto *FortyThree = sandboxir::ConstantInt::get(Ctx, APInt43);
+    auto *LLVMFortyThree = llvm::ConstantInt::get(C, APInt43);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  {
+    // Check get(Ty, Str, Radix).
+    StringRef Str("43");
+    uint8_t Radix(10);
+    auto *FortyThree = sandboxir::ConstantInt::get(
+        sandboxir::IntegerType::get(Ctx, 32), Str, Radix);
+    auto *LLVMFortyThree =
+        llvm::ConstantInt::get(llvm::IntegerType::get(C, 32), Str, Radix);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  {
+    // Check get(Ty, APInt).
+    APInt APInt43(32, 43);
+    auto *FortyThree = sandboxir::ConstantInt::get(Int32Ty, APInt43);
+    auto *LLVMFortyThree = llvm::ConstantInt::get(LLVMInt32Ty, APInt43);
+    EXPECT_NE(FortyThree, FortyTwo);
+    EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+  }
+  // Check getValue().
+  EXPECT_EQ(FortyTwo->getValue(), LLVMFortyTwo->getValue());
+  // Check getBitWidth().
+  EXPECT_EQ(FortyTwo->getBitWidth(), LLVMFortyTwo->getBitWidth());
+  // Check getZExtValue().
+  EXPECT_EQ(FortyTwo->getZExtValue(), LLVMFortyTwo->getZExtValue());
+  // Check getSExtValue().
+  EXPECT_EQ(FortyTwo->getSExtValue(), LLVMFortyTwo->getSExtValue());
+  // Check getMaybeAlignValue().
+  auto *SixtyFour =
+      cast<sandboxir::ConstantInt>(sandboxir::ConstantInt::get(Int32Ty, 64));
+  auto *LLVMSixtyFour =
+      cast<llvm::ConstantInt>(llvm::ConstantInt::get(LLVMInt32Ty, 64));
+  EXPECT_EQ(SixtyFour->getMaybeAlignValue(),
+            LLVMSixtyFour->getMaybeAlignValue());
+  // Check getAlignValue().
+  EXPECT_EQ(SixtyFour->getAlignValue(), LLVMSixtyFour->getAlignValue());
+  // Check equalsInt().
+  EXPECT_TRUE(FortyTwo->equalsInt(42));
+  EXPECT_FALSE(FortyTwo->equalsInt(43));
+  // Check getIntegerType().
+  EXPECT_EQ(FortyTwo->getIntegerType(), sandboxir::IntegerType::get(Ctx, 32));
+  // Check isValueValidForType().
+  EXPECT_TRUE(
+      sandboxir::ConstantInt::isValueValidForType(Int32Ty, (uint64_t)42));
+  EXPECT_TRUE(
+      sandboxir::ConstantInt::isValueValidForType(Int32Ty, (int64_t)42));
+  // Check isNegative().
+  EXPECT_FALSE(FortyTwo->isNegative());
+  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, -42));
+  // Check isZero().
+  EXPECT_FALSE(FortyTwo->isZero());
+  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, 0)->isZero());
+  // Check isOne().
+  EXPECT_FALSE(FortyTwo->isOne());
+  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, 1)->isOne());
+  // Check isMinusOne().
+  EXPECT_FALSE(FortyTwo->isMinusOne());
+  EXPECT_TRUE(sandboxir::ConstantInt::get(Int32Ty, -1)->isMinusOne());
+  // Check isMaxValue().
+  EXPECT_FALSE(FortyTwo->isMaxValue(/*Signed=*/true));
+  EXPECT_TRUE(
+      sandboxir::ConstantInt::get(Int32Ty, std::numeric_limits<int32_t>::max())
+          ->isMaxValue(/*Signed=*/true));
+  // Check isMinValue().
+  EXPECT_FALSE(FortyTwo->isMinValue(/*Signed=*/true));
+  EXPECT_TRUE(
+      sandboxir::ConstantInt::get(Int32Ty, std::numeric_limits<int32_t>::min())
+          ->isMinValue(/*Signed=*/true));
+  // Check uge().
+  EXPECT_TRUE(FortyTwo->uge(41));
+  EXPECT_FALSE(FortyTwo->uge(43));
+  // Check getLimitedValue().
+  EXPECT_EQ(FortyTwo->getLimitedValue(40u), 40u);
+  EXPECT_EQ(FortyTwo->getLimitedValue(50u), 42u);
+}
+
+TEST_F(SandboxIRTest, ConstantFP) {
+  parseIR(C, R"IR(
+define void @foo(float %v0, double %v1) {
+  %fadd0 = fadd float %v0, 42.0
+  %fadd1 = fadd double %v1, 43.0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *FAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FortyTwo = cast<sandboxir::ConstantFP>(FAdd0->getOperand(1));
+  [[maybe_unused]] auto *FortyThree =
+      cast<sandboxir::ConstantFP>(FAdd1->getOperand(1));
+
+  auto *FloatTy = sandboxir::Type::getFloatTy(Ctx);
+  auto *DoubleTy = sandboxir::Type::getDoubleTy(Ctx);
+  auto *LLVMFloatTy = Type::getFloatTy(C);
+  auto *LLVMDoubleTy = Type::getDoubleTy(C);
+  // Check that creating an identical constant gives us the same object.
+  auto *NewFortyTwo = sandboxir::ConstantFP::get(FloatTy, 42.0);
+  EXPECT_EQ(NewFortyTwo, FortyTwo);
+  // Check get(Type, double).
+  auto *FortyFour =
+      cast<sandboxir::ConstantFP>(sandboxir::ConstantFP::get(FloatTy, 44.0));
+  auto *LLVMFortyFour =
+      cast<llvm::ConstantFP>(llvm::ConstantFP::get(LLVMFloatTy, 44.0));
+  EXPECT_NE(FortyFour, FortyTwo);
+  EXPECT_EQ(FortyFour, Ctx.getValue(LLVMFortyFour));
+  // Check get(Type, APFloat).
+  auto *FortyFive = cast<sandboxir::ConstantFP>(
+      sandboxir::ConstantFP::get(DoubleTy, APFloat(45.0)));
+  auto *LLVMFortyFive = cast<llvm::ConstantFP>(
+      llvm::ConstantFP::get(LLVMDoubleTy, APFloat(45.0)));
+  EXPECT_EQ(FortyFive, Ctx.getValue(LLVMFortyFive));
+  // Check get(Type, StringRef).
+  auto *FortySix = sandboxir::ConstantFP::get(FloatTy, "46.0");
+  EXPECT_EQ(FortySix, Ctx.getValue(llvm::ConstantFP::get(LLVMFloatTy, "46.0")));
+  // Check get(APFloat).
+  auto *FortySeven = sandboxir::ConstantFP::get(APFloat(47.0), Ctx);
+  EXPECT_EQ(FortySeven, Ctx.getValue(llvm::ConstantFP::get(C, APFloat(47.0))));
+  // Check getNaN().
+  {
+    auto *NaN = sandboxir::ConstantFP::getNaN(FloatTy);
+    EXPECT_EQ(NaN, Ctx.getValue(llvm::ConstantFP::getNaN(LLVMFloatTy)));
+  }
+  {
+    auto *NaN = sandboxir::ConstantFP::getNaN(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(NaN, Ctx.getValue(llvm::ConstantFP::getNaN(LLVMFloatTy,
+                                                         /*Negative=*/true)));
+  }
+  {
+    auto *NaN = sandboxir::ConstantFP::getNaN(FloatTy, /*Negative=*/true,
+                                              /*Payload=*/1);
+    EXPECT_EQ(NaN, Ctx.getValue(llvm::ConstantFP::getNaN(
+                       LLVMFloatTy, /*Negative=*/true, /*Payload=*/1)));
+  }
+  // Check getQNaN().
+  {
+    auto *QNaN = sandboxir::ConstantFP::getQNaN(FloatTy);
+    EXPECT_EQ(QNaN, Ctx.getValue(llvm::ConstantFP::getQNaN(LLVMFloatTy)));
+  }
+  {
+    auto *QNaN = sandboxir::ConstantFP::getQNaN(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(QNaN, Ctx.getValue(llvm::ConstantFP::getQNaN(LLVMFloatTy,
+                                                           /*Negative=*/true)));
+  }
+  {
+    APInt Payload(1, 1);
+    auto *QNaN =
+        sandboxir::ConstantFP::getQNaN(FloatTy, /*Negative=*/true, &Payload);
+    EXPECT_EQ(QNaN, Ctx.getValue(llvm::ConstantFP::getQNaN(
+                        LLVMFloatTy, /*Negative=*/true, &Payload)));
+  }
+  // Check getSNaN().
+  {
+    auto *SNaN = sandboxir::ConstantFP::getSNaN(FloatTy);
+    EXPECT_EQ(SNaN, Ctx.getValue(llvm::ConstantFP::getSNaN(LLVMFloatTy)));
+  }
+  {
+    auto *SNaN = sandboxir::ConstantFP::getSNaN(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(SNaN, Ctx.getValue(llvm::ConstantFP::getSNaN(LLVMFloatTy,
+                                                           /*Negative=*/true)));
+  }
+  {
+    APInt Payload(1, 1);
+    auto *SNaN =
+        sandboxir::ConstantFP::getSNaN(FloatTy, /*Negative=*/true, &Payload);
+    EXPECT_EQ(SNaN, Ctx.getValue(llvm::ConstantFP::getSNaN(
+                        LLVMFloatTy, /*Negative=*/true, &Payload)));
+  }
+
+  // Check getZero().
+  {
+    auto *Zero = sandboxir::ConstantFP::getZero(FloatTy);
+    EXPECT_EQ(Zero, Ctx.getValue(llvm::ConstantFP::getZero(LLVMFloatTy)));
+  }
+  {
+    auto *Zero = sandboxir::ConstantFP::getZero(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(Zero, Ctx.getValue(llvm::ConstantFP::getZero(LLVMFloatTy,
+                                                           /*Negative=*/true)));
+  }
+
+  // Check getNegativeZero().
+  auto *NegZero = cast<sandboxir::ConstantFP>(
+      sandboxir::ConstantFP::getNegativeZero(FloatTy));
+  EXPECT_EQ(NegZero,
+            Ctx.getValue(llvm::ConstantFP::getNegativeZero(LLVMFloatTy)));
+
+  // Check getInfinity().
+  {
+    auto *Inf = sandboxir::ConstantFP::getInfinity(FloatTy);
+    EXPECT_EQ(Inf, Ctx.getValue(llvm::ConstantFP::getInfinity(LLVMFloatTy)));
+  }
+  {
+    auto *Inf = sandboxir::ConstantFP::getInfinity(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(Inf, Ctx.getValue(llvm::ConstantFP::getInfinity(
+                       LLVMFloatTy, /*Negative=*/true)));
+  }
+
+  // Check isValueValidForType().
+  APFloat V(1.1);
+  EXPECT_EQ(sandboxir::ConstantFP::isValueValidForType(FloatTy, V),
+            llvm::ConstantFP::isValueValidForType(LLVMFloatTy, V));
+  // Check getValueAPF().
+  EXPECT_EQ(FortyFour->getValueAPF(), LLVMFortyFour->getValueAPF());
+  // Check getValue().
+  EXPECT_EQ(FortyFour->getValue(), LLVMFortyFour->getValue());
+  // Check isZero().
+  EXPECT_EQ(FortyFour->isZero(), LLVMFortyFour->isZero());
+  EXPECT_TRUE(sandboxir::ConstantFP::getZero(FloatTy));
+  EXPECT_TRUE(sandboxir::ConstantFP::getZero(FloatTy, /*Negative=*/true));
+  // Check isNegative().
+  EXPECT_TRUE(cast<sandboxir::ConstantFP>(
+                  sandboxir::ConstantFP::getZero(FloatTy, /*Negative=*/true))
+                  ->isNegative());
+  // Check isInfinity().
+  EXPECT_TRUE(
+      cast<sandboxir::ConstantFP>(sandboxir::ConstantFP::getInfinity(FloatTy))
+          ->isInfinity());
+  // Check isNaN().
+  EXPECT_TRUE(
+      cast<sandboxir::ConstantFP>(sandboxir::ConstantFP::getNaN(FloatTy))
+          ->isNaN());
+  // Check isExactlyValue(APFloat).
+  EXPECT_TRUE(NegZero->isExactlyValue(NegZero->getValueAPF()));
+  // Check isExactlyValue(double).
+  EXPECT_TRUE(NegZero->isExactlyValue(-0.0));
+}
+
+// Tests ConstantArray, ConstantStruct and ConstantVector.
+TEST_F(SandboxIRTest, ConstantAggregate) {
+  // Note: we are using i42 to avoid the creation of ConstantDataVector or
+  // ConstantDataArray.
+  parseIR(C, R"IR(
+define void @foo() {
+  %array = extractvalue [2 x i42] [i42 0, i42 1], 0
+  %struct = extractvalue {i42, i42} {i42 0, i42 1}, 0
+  %vector = extractelement <2 x i42> <i42 0, i42 1>, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  // Check classof() and creation.
+  auto *Array = cast<sandboxir::ConstantArray>(I0->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantAggregate>(Array));
+  auto *Struct = cast<sandboxir::ConstantStruct>(I1->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantAggregate>(Struct));
+  auto *Vector = cast<sandboxir::ConstantVector>(I2->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantAggregate>(Vector));
+
+  auto *ZeroI42 = cast<sandboxir::ConstantInt>(Array->getOperand(0));
+  auto *OneI42 = cast<sandboxir::ConstantInt>(Array->getOperand(1));
+  // Check ConstantArray::get(), getType().
+  auto *NewCA =
+      sandboxir::ConstantArray::get(Array->getType(), {ZeroI42, OneI42});
+  EXPECT_EQ(NewCA, Array);
+
+  // Check ConstantStruct::get(), getType().
+  auto *NewCS =
+      sandboxir::ConstantStruct::get(Struct->getType(), {ZeroI42, OneI42});
+  EXPECT_EQ(NewCS, Struct);
+  // Check ConstantStruct::get(...).
+  auto *NewCS2 =
+      sandboxir::ConstantStruct::get(Struct->getType(), ZeroI42, OneI42);
+  EXPECT_EQ(NewCS2, Struct);
+  // Check ConstantStruct::getAnon(ArayRef).
+  auto *AnonCS = sandboxir::ConstantStruct::getAnon({ZeroI42, OneI42});
+  EXPECT_FALSE(cast<sandboxir::StructType>(AnonCS->getType())->isPacked());
+  auto *AnonCSPacked =
+      sandboxir::ConstantStruct::getAnon({ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_TRUE(cast<sandboxir::StructType>(AnonCSPacked->getType())->isPacked());
+  // Check ConstantStruct::getAnon(Ctx, ArrayRef).
+  auto *AnonCS2 = sandboxir::ConstantStruct::getAnon(Ctx, {ZeroI42, OneI42});
+  EXPECT_EQ(AnonCS2, AnonCS);
+  auto *AnonCS2Packed = sandboxir::ConstantStruct::getAnon(
+      Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_EQ(AnonCS2Packed, AnonCSPacked);
+  // Check ConstantStruct::getTypeForElements(Ctx, ArrayRef).
+  auto *StructTy =
+      sandboxir::ConstantStruct::getTypeForElements(Ctx, {ZeroI42, OneI42});
+  EXPECT_EQ(StructTy, Struct->getType());
+  EXPECT_FALSE(StructTy->isPacked());
+  // Check ConstantStruct::getTypeForElements(Ctx, ArrayRef, Packed).
+  auto *StructTyPacked = sandboxir::ConstantStruct::getTypeForElements(
+      Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_TRUE(StructTyPacked->isPacked());
+  // Check ConstantStruct::getTypeForElements(ArrayRef).
+  auto *StructTy2 =
+      sandboxir::ConstantStruct::getTypeForElements(Ctx, {ZeroI42, OneI42});
+  EXPECT_EQ(StructTy2, Struct->getType());
+  // Check ConstantStruct::getTypeForElements(ArrayRef, Packed).
+  auto *StructTy2Packed = sandboxir::ConstantStruct::getTypeForElements(
+      Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_EQ(StructTy2Packed, StructTyPacked);
 }
 
 TEST_F(SandboxIRTest, Use) {

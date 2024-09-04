@@ -1516,6 +1516,8 @@ public:
     return const_cast<Value *>(getArgOperand(0))->stripPointerCasts();
   }
 
+  void setNameValue(Value *V) { setArgOperand(0, V); }
+
   // The hash of the CFG for the instrumented function.
   ConstantInt *getHash() const {
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));

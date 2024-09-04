@@ -26,6 +26,10 @@ DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_CONST(Constant, Constant)
 DEF_CONST(ConstantInt, ConstantInt)
+DEF_CONST(ConstantFP, ConstantFP)
+DEF_CONST(ConstantArray, ConstantArray)
+DEF_CONST(ConstantStruct, ConstantStruct)
+DEF_CONST(ConstantVector, ConstantVector)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
