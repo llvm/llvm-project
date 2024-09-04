@@ -61,14 +61,14 @@ define void @f_1(ptr %ptr) {
 ; CHECK: Cycle detected in struct path
 ; CHECK-NEXT:  store i32 0, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
 
-; CHECK: Offset not zero at the point of scalar access
+; CHECK: Did not see access type in access path
+; CHECK-NEXT:  store i32 0, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
+
+; CHECK: Did not see access type in access path
 ; CHECK-NEXT:  store i32 1, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
 
-; CHECK: Offset not zero at the point of scalar access
+; CHECK: Did not see access type in access path
 ; CHECK-NEXT:  store i32 2, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
-
-; CHECK: Could not find TBAA parent in struct type node
-; CHECK-NEXT:  store i32 3, ptr %ptr, align 4, !tbaa !{{[0-9]+}}
 
 ; CHECK: Did not see access type in access path!
 ; CHECK-NEXT:  store i32 3, ptr %ptr, align 4, !tbaa !{{[0-9]+}}

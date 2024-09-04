@@ -6742,9 +6742,10 @@ tuples this way:
    undefined if ``Offset`` is non-zero.
 
  * If ``BaseTy`` is a struct type then ``ImmediateParent(BaseTy, Offset)``
-   is ``(NewTy, NewOffset)`` where ``NewTy`` is the type contained in
-   ``BaseTy`` at offset ``Offset`` and ``NewOffset`` is ``Offset`` adjusted
-   to be relative within that inner type.
+   is array of ``(NewTy[N], NewOffset)`` where ``NewTy[N]`` is the Nth type
+   contained in ``BaseTy`` at offset ``Offset`` and ``NewOffset`` is
+   ``Offset`` adjusted to be relative within that inner type. Multiple types
+   occupying same offset allow to describe union-like structures.
 
 A memory access with an access tag ``(BaseTy1, AccessTy1, Offset1)``
 aliases a memory access with an access tag ``(BaseTy2, AccessTy2,
@@ -6755,9 +6756,9 @@ As a concrete example, the type descriptor graph for the following program
 
 .. code-block:: c
 
-    struct Inner {
+    union Inner {
       int i;    // offset 0
-      float f;  // offset 4
+      float f;  // offset 0
     };
 
     struct Outer {
@@ -6769,7 +6770,7 @@ As a concrete example, the type descriptor graph for the following program
     void f(struct Outer* outer, struct Inner* inner, float* f, int* i, char* c) {
       outer->f = 0;            // tag0: (OuterStructTy, FloatScalarTy, 0)
       outer->inner_a.i = 0;    // tag1: (OuterStructTy, IntScalarTy, 12)
-      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, FloatScalarTy, 16)
+      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, FloatScalarTy, 12)
       *f = 0.0;                // tag3: (FloatScalarTy, FloatScalarTy, 0)
     }
 
@@ -6783,13 +6784,13 @@ type):
     FloatScalarTy = ("float", CharScalarTy, 0)
     DoubleScalarTy = ("double", CharScalarTy, 0)
     IntScalarTy = ("int", CharScalarTy, 0)
-    InnerStructTy = {"Inner" (IntScalarTy, 0), (FloatScalarTy, 4)}
+    InnerStructTy = {"Inner" (IntScalarTy, 0), (FloatScalarTy, 0)}
     OuterStructTy = {"Outer", (FloatScalarTy, 0), (DoubleScalarTy, 4),
                      (InnerStructTy, 12)}
 
 
 with (e.g.) ``ImmediateParent(OuterStructTy, 12)`` = ``(InnerStructTy,
-0)``, ``ImmediateParent(InnerStructTy, 0)`` = ``(IntScalarTy, 0)``, and
+0)``, ``ImmediateParent(InnerStructTy, 0)`` = ``(IntScalarTy, 0), (FloatScalarTy, 0)``, and
 ``ImmediateParent(IntScalarTy, 0)`` = ``(CharScalarTy, 0)``.
 
 .. _tbaa_node_representation:
