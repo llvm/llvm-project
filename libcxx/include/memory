@@ -946,6 +946,8 @@ template<class Pointer = void, class Smart, class... Args>
 #include <__memory/pointer_traits.h>
 #include <__memory/raw_storage_iterator.h>
 #include <__memory/shared_ptr.h>
+#include <__memory/start_lifetime_as.h>
+#include <__memory/start_lifetime_as_array.h>
 #include <__memory/temporary_buffer.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
