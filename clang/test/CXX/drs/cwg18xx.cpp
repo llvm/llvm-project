@@ -222,6 +222,8 @@ namespace cwg1815 { // cwg1815: no
 #endif
 }
 
+// cwg1818 is in cwg1818.cpp
+
 namespace cwg1820 { // cwg1820: 3.5
 typedef int A;
 typedef int cwg1820::A;
