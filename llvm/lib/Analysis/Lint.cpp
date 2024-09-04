@@ -454,7 +454,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     // Accesses from before the start or after the end of the object are not
     // defined.
-    Check(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
+    Check(!Loc.Size.hasValue() || Loc.Size.isScalable() ||
+              BaseSize == MemoryLocation::UnknownSize ||
               (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
           "Undefined behavior: Buffer overflow", &I);
 
