@@ -293,6 +293,7 @@ public:
 
 class ArrayType : public Type {
 public:
+  static ArrayType *get(Type *ElementType, uint64_t NumElements);
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::ArrayType>(From->LLVMTy);

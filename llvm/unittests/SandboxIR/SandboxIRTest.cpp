@@ -520,6 +520,75 @@ define void @foo() {
   EXPECT_EQ(StructTy2Packed, StructTyPacked);
 }
 
+TEST_F(SandboxIRTest, ConstantAggregateZero) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, {i32, i8} %v1, <2 x i8> %v2) {
+  %extr0 = extractvalue [2 x i8] zeroinitializer, 0
+  %extr1 = extractvalue {i32, i8} zeroinitializer, 0
+  %extr2 = extractelement <2 x i8> zeroinitializer, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Extr0 = &*It++;
+  auto *Extr1 = &*It++;
+  auto *Extr2 = &*It++;
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  auto *Zero32 =
+      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *Zero8 = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0);
+  auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *ArrayTy = sandboxir::ArrayType::get(Int8Ty, 2u);
+  auto *StructTy = sandboxir::StructType::get(Ctx, {Int32Ty, Int8Ty});
+  auto *VectorTy =
+      sandboxir::VectorType::get(Int8Ty, ElementCount::getFixed(2u));
+
+  // Check creation and classof().
+  auto *ArrayCAZ = cast<sandboxir::ConstantAggregateZero>(Extr0->getOperand(0));
+  EXPECT_EQ(ArrayCAZ->getType(), ArrayTy);
+  auto *StructCAZ =
+      cast<sandboxir::ConstantAggregateZero>(Extr1->getOperand(0));
+  EXPECT_EQ(StructCAZ->getType(), StructTy);
+  auto *VectorCAZ =
+      cast<sandboxir::ConstantAggregateZero>(Extr2->getOperand(0));
+  EXPECT_EQ(VectorCAZ->getType(), VectorTy);
+  // Check get().
+  auto *SameVectorCAZ =
+      sandboxir::ConstantAggregateZero::get(sandboxir::VectorType::get(
+          sandboxir::Type::getInt8Ty(Ctx), ElementCount::getFixed(2)));
+  EXPECT_EQ(SameVectorCAZ, VectorCAZ); // Should be uniqued.
+  auto *NewVectorCAZ =
+      sandboxir::ConstantAggregateZero::get(sandboxir::VectorType::get(
+          sandboxir::Type::getInt8Ty(Ctx), ElementCount::getFixed(4)));
+  EXPECT_NE(NewVectorCAZ, VectorCAZ);
+  // Check getSequentialElement().
+  auto *SeqElm = VectorCAZ->getSequentialElement();
+  EXPECT_EQ(SeqElm,
+            sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0));
+  // Check getStructElement().
+  auto *StructElm0 = StructCAZ->getStructElement(0);
+  auto *StructElm1 = StructCAZ->getStructElement(1);
+  EXPECT_EQ(StructElm0, Zero32);
+  EXPECT_EQ(StructElm1, Zero8);
+  // Check getElementValue(Constant).
+  EXPECT_EQ(ArrayCAZ->getElementValue(Zero32), Zero8);
+  EXPECT_EQ(StructCAZ->getElementValue(Zero32), Zero32);
+  EXPECT_EQ(VectorCAZ->getElementValue(Zero32), Zero8);
+  // Check getElementValue(unsigned).
+  EXPECT_EQ(ArrayCAZ->getElementValue(0u), Zero8);
+  EXPECT_EQ(StructCAZ->getElementValue(0u), Zero32);
+  EXPECT_EQ(VectorCAZ->getElementValue(0u), Zero8);
+  // Check getElementCount().
+  EXPECT_EQ(ArrayCAZ->getElementCount(), ElementCount::getFixed(2));
+  EXPECT_EQ(NewVectorCAZ->getElementCount(), ElementCount::getFixed(4));
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
