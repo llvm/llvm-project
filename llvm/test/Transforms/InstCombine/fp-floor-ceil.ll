@@ -13,11 +13,11 @@ define i1 @floor_x_ole(float %x) {
 
 define i1 @floor_x_ule(float %x) {
 ; CHECK-LABEL: @floor_x_ule(
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ninf ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %floor = call nnan float @llvm.floor.f32(float %x)
-  %ret = fcmp ule float %floor, %x
+  %ret = fcmp ninf ule float %floor, %x
   ret i1 %ret
 }
 
@@ -109,11 +109,11 @@ define i1 @ceil_x_oge(float %x) {
 
 define i1 @ceil_x_uge(float %x) {
 ; CHECK-LABEL: @ceil_x_uge(
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ninf ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ceil = call nnan float @llvm.ceil.f32(float %x)
-  %ret = fcmp uge float %ceil, %x
+  %ret = fcmp ninf uge float %ceil, %x
   ret i1 %ret
 }
 
