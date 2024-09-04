@@ -20,7 +20,10 @@
 !                          store loop IV
 ! CHECK:                   fir.store %{{.*}} to %[[VAL_18]]#1 : !fir.ref<i32>
 !                          assign private variable to original copy: realloc
-! CHECK:                   hlfir.assign %[[VAL_16]]#0 to %[[VAL_3]]#0 realloc : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:                   %[[VAL_23:.*]] = fir.load %[[VAL_16]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:                   %[[VAL_24:.*]] = fir.box_addr %[[VAL_23]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:                   %[[VAL_25:.*]] = fir.load %[[VAL_24]] : !fir.heap<i32>
+! CHECK:                   hlfir.assign %[[VAL_25]] to %[[VAL_3]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK-NEXT:            }
 ! CHECK-NEXT:            omp.yield
 ! CHECK-NEXT:          }
