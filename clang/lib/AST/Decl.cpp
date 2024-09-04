@@ -5016,7 +5016,6 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setParamDestroyedInCallee(false);
   setArgPassingRestrictions(RecordArgPassingKind::CanPassInRegs);
   setIsRandomized(false);
-  setIntangible(IntangibleResult::Invalid);
   setODRHash(0);
 }
 

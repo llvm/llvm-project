@@ -55,7 +55,24 @@ class Simple {
     int a;
 };
 
-class MyClass3 : MyClass2, Simple {
-    half h;
+template<typename T> struct TemplatedBuffer {
+    T a;
+    __hlsl_resource_t h;
 };
-_Static_assert(__builtin_hlsl_is_intangible(MyClass3), "");
+_Static_assert(__builtin_hlsl_is_intangible(TemplatedBuffer<int>), "");
+
+struct MyStruct2 : TemplatedBuffer<float> {
+    float x;
+};
+_Static_assert(__builtin_hlsl_is_intangible(MyStruct2), "");
+
+struct MyStruct3 {
+    const TemplatedBuffer<float> TB[10];
+};
+_Static_assert(__builtin_hlsl_is_intangible(MyStruct3), "");
+
+template<typename T> struct SimpleTemplate {
+    T a;
+};
+_Static_assert(__builtin_hlsl_is_intangible(SimpleTemplate<__hlsl_resource_t>), "");
+_Static_assert(!__builtin_hlsl_is_intangible(SimpleTemplate<float>), "");

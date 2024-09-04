@@ -1411,15 +1411,6 @@ enum class DeductionCandidate : unsigned char {
   Aggregate,
 };
 
-enum class IntangibleResult : unsigned char {
-  // IsIntangible has not been computed.
-  Invalid = 0,
-  // Intangible type
-  Intangible,
-  // Not an intangible type
-  NotIntangible
-};
-
 enum class RecordArgPassingKind;
 enum class OMPDeclareReductionInitKind;
 enum class ObjCImplementationControl;
@@ -1689,13 +1680,9 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsRandomized : 1;
 
-    // Indicates whether this struct is intangible
-    LLVM_PREFERRED_TYPE(IntangibleResult)
-    uint64_t Intangible : 2;
-
     /// True if a valid hash is stored in ODRHash. This should shave off some
     /// extra storage and prevent CXXRecordDecl to store unused bits.
-    uint64_t ODRHash : 24;
+    uint64_t ODRHash : 26;
   };
 
   /// Number of inherited and non-inherited bits in RecordDeclBitfields.

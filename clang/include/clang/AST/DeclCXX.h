@@ -1547,6 +1547,10 @@ public:
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
+  /// Returns true if the class contains HLSL intangible type, either as 
+  /// a field or in base class.
+  bool isIntangible() const { return data().IsIntangible; }
+
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
   const FunctionDecl *isLocalClass() const {

@@ -1612,85 +1612,29 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
-static bool calculateIsIntangibleType(const Type *Ty) {
-  assert(!Ty->isBuiltinType() &&
-         "builtin types should be taken care of in IsIntangibleType");
 
-  llvm::SmallVector<const Type *> TypesToScan;
-  TypesToScan.push_back(Ty);
-  while (!TypesToScan.empty()) {
-    QualType T = TypesToScan.pop_back_val()->getCanonicalTypeUnqualified();
-
-    if (T->isBuiltinType()) {
-      if (T->isHLSLIntangibleType())
-        return true;
-    }
-
-    if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
-      TypesToScan.push_back(AT->getElementType().getTypePtr());
-      continue;
-    }
-
-    if (const auto *VT = dyn_cast<VectorType>(T)) {
-      assert(!VT->getElementType()
-                  .getCanonicalType()
-                  .getUnqualifiedType()
-                  ->isHLSLIntangibleType() &&
-             "vectors can only contain builtin types that are not intangible");
-      continue;
-    }
-
-    if (const auto *MT = dyn_cast<MatrixType>(T)) {
-      assert(!MT->getElementType()
-                  .getCanonicalType()
-                  .getUnqualifiedType()
-                  ->isHLSLIntangibleType() &&
-             "matrices can only contain builtin types that are not intangible");
-      continue;
-    }
-
-    if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *RD = RT->getDecl();
-      if (RD->getIntangible() == IntangibleResult::Intangible)
-        return true;
-      
-      for (const auto *FD : RD->fields())
-        TypesToScan.push_back(FD->getType().getTypePtr());
-
-      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-        for (const CXXBaseSpecifier &B : CXXRD->bases())
-          TypesToScan.push_back(B.getType().getTypePtr());
-      }
-      continue;
-    }
-  }
-  return false;
-}
 
 bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
   if (QT.isNull())
     return false;
+  
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
 
   // check if it's a builtin type first (simple check, no need to cache it)
-  const Type *Ty = QT->getCanonicalTypeUnqualified()->getTypePtr();
   if (Ty->isBuiltinType())
     return Ty->isHLSLIntangibleType();
 
+  // unwrap arrays
   while (isa<ConstantArrayType>(Ty))
     Ty = Ty->getArrayElementTypeNoTypeQual();
 
-  const RecordType *RT = dyn_cast<RecordType>(Ty);
+  const RecordType *RT = dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
   if (!RT)
     return false;
 
-  RecordDecl *RD = RT->getAsRecordDecl();
-  IntangibleResult Result = RD->getIntangible();
-  if (Result == IntangibleResult::Invalid) {
-    Result = calculateIsIntangibleType(Ty) ? IntangibleResult::Intangible
-                                           : IntangibleResult::NotIntangible; 
-    RD->setIntangible(Result);
-  }
-  return Result == IntangibleResult::Intangible;
+  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+  assert(RD != nullptr && "all HLSL struct and classes should be CXXRecordDecl");
+  return RD->isIntangible();
 }
 
 static void BuildFlattenedTypeList(QualType BaseTy,
