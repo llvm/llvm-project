@@ -275,8 +275,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
 
     // But saturating fp_to_int converstions are
-    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
+    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}) {
       setOperationAction(Op, MVT::v4i32, Custom);
+      if (Subtarget->hasFP16()) {
+        setOperationAction(Op, MVT::v8i16, Custom);
+      }
+    }
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
@@ -1189,8 +1193,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+    MaybeAlign StackAlign = Layout.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
@@ -2472,6 +2477,9 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return Op;
 
   if (ResT == MVT::v4i32 && SatVT == MVT::i32)
+    return Op;
+
+  if (ResT == MVT::v8i16 && SatVT == MVT::i16)
     return Op;
 
   return SDValue();

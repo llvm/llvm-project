@@ -440,6 +440,9 @@ namespace llvm {
   // metadata after llvm SanitizerBinaryMetadata pass.
   extern char &MachineSanitizerBinaryMetadataID;
 
+  /// RemoveLoadsIntoFakeUses pass.
+  extern char &RemoveLoadsIntoFakeUsesID;
+
   /// RemoveRedundantDebugValues pass.
   extern char &RemoveRedundantDebugValuesID;
 

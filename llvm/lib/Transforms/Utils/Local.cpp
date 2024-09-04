@@ -1506,7 +1506,8 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(PrefAlign))
+    MaybeAlign StackAlign = DL.getStackAlignment();
+    if (StackAlign && PrefAlign > *StackAlign)
       return CurrentAlign;
     AI->setAlignment(PrefAlign);
     return PrefAlign;
@@ -3490,6 +3491,9 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
 
   unsigned Count = 0;
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
+    auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+    if (II && II->getIntrinsicID() == Intrinsic::fake_use)
+      continue;
     if (!ShouldReplace(Root, U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";

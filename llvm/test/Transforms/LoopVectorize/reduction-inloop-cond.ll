@@ -169,7 +169,7 @@ define float @cond_cmp_sel(ptr noalias %a, ptr noalias %cond, i64 %N) {
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x float> [ [[TMP18]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], [[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = select fast <4 x i1> [[TMP1]], <4 x float> [[TMP24]], <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    [[TMP25:%.*]] = select fast <4 x i1> [[TMP1]], <4 x float> [[TMP24]], <4 x float> <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>
 ; CHECK-NEXT:    [[TMP26:%.*]] = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP25]])
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT]] = call fast float @llvm.minnum.f32(float [[TMP26]], float [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -587,9 +587,7 @@ define i64 @nested_cond_and(ptr noalias nocapture readonly %a, ptr noalias nocap
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; CHECK:       pred.load.continue14:
 ; CHECK-NEXT:    [[TMP46:%.*]] = phi <4 x i64> [ [[TMP41]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP45]], [[PRED_LOAD_IF13]] ]
-; CHECK-NEXT:    [[TMP47:%.*]] = xor <4 x i1> [[TMP25]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP48:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP47]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI_V:%.*]] = select <4 x i1> [[TMP48]], <4 x i64> [[TMP24]], <4 x i64> [[TMP46]]
+; CHECK-NEXT:    [[PREDPHI_V:%.*]] = select <4 x i1> [[TMP26]], <4 x i64> [[TMP46]], <4 x i64> [[TMP24]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[PREDPHI_V]], <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    [[PREDPHI15]] = and <4 x i64> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -895,7 +893,7 @@ define float @cond_cond(ptr noalias %src1, ptr noalias %src2, ptr noalias %cond,
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP48]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PREDPHI15]])
+; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI15]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
