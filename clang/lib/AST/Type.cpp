@@ -3992,12 +3992,12 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
 
 PackIndexingType::PackIndexingType(const ASTContext &Context,
                                    QualType Canonical, QualType Pattern,
-                                   Expr *IndexExpr, bool FullySubstituted,
+                                   Expr *IndexExpr, bool ExpandsToEmptyPack,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), FullySubstituted(FullySubstituted) {
+      Size(Expansions.size()), ExpandsToEmptyPack(ExpandsToEmptyPack) {
 
   std::uninitialized_copy(Expansions.begin(), Expansions.end(),
                           getTrailingObjects<QualType>());
@@ -4042,10 +4042,10 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context, QualType Pattern,
-                               Expr *E, bool FullySubstituted) {
+                               Expr *E, bool ExpandsToEmptyPack) {
   Pattern.Profile(ID);
   E->Profile(ID, Context, true);
-  ID.AddBoolean(FullySubstituted);
+  ID.AddBoolean(ExpandsToEmptyPack);
 }
 
 UnaryTransformType::UnaryTransformType(QualType BaseType,
