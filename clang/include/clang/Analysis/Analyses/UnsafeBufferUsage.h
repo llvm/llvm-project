@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/Debug.h"
@@ -105,6 +106,20 @@ public:
   /// Invoked when an unsafe operation over raw pointers is found.
   virtual void handleUnsafeOperation(const Stmt *Operation,
                                      bool IsRelatedToDecl, ASTContext &Ctx) = 0;
+
+  /// Invoked when a call to an unsafe libc function is found.
+  /// \param PrintfInfo
+  ///  is 0 if the callee function is not a member of the printf family;
+  ///  is 1 if the callee is `sprintf`;
+  ///  is 2 if arguments of the call have `__size_by` relation but are not in a
+  ///  safe pattern;
+  ///  is 3 if string arguments do not guarantee null-termination
+  ///  is 4 if the callee takes va_list
+  /// \param UnsafeArg one of the actual arguments that is unsafe, non-null
+  /// only when `2 <= PrintfInfo <= 3`
+  virtual void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
+                                    ASTContext &Ctx,
+                                    const Expr *UnsafeArg = nullptr) = 0;
 
   /// Invoked when an unsafe operation with a std container is found.
   virtual void handleUnsafeOperationInContainer(const Stmt *Operation,
