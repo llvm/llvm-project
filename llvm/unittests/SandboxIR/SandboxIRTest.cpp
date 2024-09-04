@@ -445,6 +445,81 @@ define void @foo(float %v0, double %v1) {
   EXPECT_TRUE(NegZero->isExactlyValue(-0.0));
 }
 
+// Tests ConstantArray, ConstantStruct and ConstantVector.
+TEST_F(SandboxIRTest, ConstantAggregate) {
+  // Note: we are using i42 to avoid the creation of ConstantDataVector or
+  // ConstantDataArray.
+  parseIR(C, R"IR(
+define void @foo() {
+  %array = extractvalue [2 x i42] [i42 0, i42 1], 0
+  %struct = extractvalue {i42, i42} {i42 0, i42 1}, 0
+  %vector = extractelement <2 x i42> <i42 0, i42 1>, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  // Check classof() and creation.
+  auto *Array = cast<sandboxir::ConstantArray>(I0->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantAggregate>(Array));
+  auto *Struct = cast<sandboxir::ConstantStruct>(I1->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantAggregate>(Struct));
+  auto *Vector = cast<sandboxir::ConstantVector>(I2->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantAggregate>(Vector));
+
+  auto *ZeroI42 = cast<sandboxir::ConstantInt>(Array->getOperand(0));
+  auto *OneI42 = cast<sandboxir::ConstantInt>(Array->getOperand(1));
+  // Check ConstantArray::get(), getType().
+  auto *NewCA =
+      sandboxir::ConstantArray::get(Array->getType(), {ZeroI42, OneI42});
+  EXPECT_EQ(NewCA, Array);
+
+  // Check ConstantStruct::get(), getType().
+  auto *NewCS =
+      sandboxir::ConstantStruct::get(Struct->getType(), {ZeroI42, OneI42});
+  EXPECT_EQ(NewCS, Struct);
+  // Check ConstantStruct::get(...).
+  auto *NewCS2 =
+      sandboxir::ConstantStruct::get(Struct->getType(), ZeroI42, OneI42);
+  EXPECT_EQ(NewCS2, Struct);
+  // Check ConstantStruct::getAnon(ArayRef).
+  auto *AnonCS = sandboxir::ConstantStruct::getAnon({ZeroI42, OneI42});
+  EXPECT_FALSE(cast<sandboxir::StructType>(AnonCS->getType())->isPacked());
+  auto *AnonCSPacked =
+      sandboxir::ConstantStruct::getAnon({ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_TRUE(cast<sandboxir::StructType>(AnonCSPacked->getType())->isPacked());
+  // Check ConstantStruct::getAnon(Ctx, ArrayRef).
+  auto *AnonCS2 = sandboxir::ConstantStruct::getAnon(Ctx, {ZeroI42, OneI42});
+  EXPECT_EQ(AnonCS2, AnonCS);
+  auto *AnonCS2Packed = sandboxir::ConstantStruct::getAnon(
+      Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_EQ(AnonCS2Packed, AnonCSPacked);
+  // Check ConstantStruct::getTypeForElements(Ctx, ArrayRef).
+  auto *StructTy =
+      sandboxir::ConstantStruct::getTypeForElements(Ctx, {ZeroI42, OneI42});
+  EXPECT_EQ(StructTy, Struct->getType());
+  EXPECT_FALSE(StructTy->isPacked());
+  // Check ConstantStruct::getTypeForElements(Ctx, ArrayRef, Packed).
+  auto *StructTyPacked = sandboxir::ConstantStruct::getTypeForElements(
+      Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_TRUE(StructTyPacked->isPacked());
+  // Check ConstantStruct::getTypeForElements(ArrayRef).
+  auto *StructTy2 =
+      sandboxir::ConstantStruct::getTypeForElements(Ctx, {ZeroI42, OneI42});
+  EXPECT_EQ(StructTy2, Struct->getType());
+  // Check ConstantStruct::getTypeForElements(ArrayRef, Packed).
+  auto *StructTy2Packed = sandboxir::ConstantStruct::getTypeForElements(
+      Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
+  EXPECT_EQ(StructTy2Packed, StructTyPacked);
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
