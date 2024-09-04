@@ -7,6 +7,13 @@ define <vscale x 8 x i8> @alloca_access() {
   ret <vscale x 8 x i8> %v
 }
 
+; CHECK-NOT: Buffer overflow
+define <vscale x 8 x i8> @alloca_access2() {
+  %a = alloca <256 x i8>
+  %v = load <vscale x 8 x i8>, ptr %a
+  ret <vscale x 8 x i8> %v
+}
+
 ; CHECK-NOT: insertelement index out of range
 define <vscale x 8 x half> @insertelement() {
   %insert = insertelement <vscale x 8 x half> poison, half 0xH0000, i64 100
