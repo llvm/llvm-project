@@ -137,9 +137,8 @@ public:
 private:
   ScopeType getScopeType(const FormatToken &Token) const {
     switch (Token.getType()) {
-    case TT_FunctionLBrace:
     case TT_LambdaLBrace:
-      return ST_Function;
+      return ST_ChildBlock;
     case TT_ClassLBrace:
     case TT_StructLBrace:
     case TT_UnionLBrace:
@@ -400,7 +399,8 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
-    } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
+    } else if (!Line.MustBeDeclaration &&
+               (!Line.InPPDirective || (Line.InMacroBody && !Scopes.empty()))) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
@@ -3649,11 +3649,21 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
 }
 
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
-  AnnotatingParser Parser(Style, Line, Keywords, Scopes);
+  if (!Line.InMacroBody)
+    MacroBodyScopes.clear();
+
+  auto &ScopeStack = Line.InMacroBody ? MacroBodyScopes : Scopes;
+  AnnotatingParser Parser(Style, Line, Keywords, ScopeStack);
   Line.Type = Parser.parseLine();
 
-  for (auto &Child : Line.Children)
-    annotate(*Child);
+  if (!Line.Children.empty()) {
+    ScopeStack.push_back(ST_ChildBlock);
+    for (auto &Child : Line.Children)
+      annotate(*Child);
+    // ScopeStack can become empty if Child has an unmatched `}`.
+    if (!ScopeStack.empty())
+      ScopeStack.pop_back();
+  }
 
   // With very deep nesting, ExpressionParser uses lots of stack and the
   // formatting algorithm is very slow. We're not going to do a good job here
@@ -3671,7 +3681,7 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   if (IsCpp) {
     FormatToken *OpeningParen = nullptr;
     auto *Tok = getFunctionName(Line, OpeningParen);
-    if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
+    if (Tok && ((!ScopeStack.empty() && ScopeStack.back() == ST_Class) ||
                 Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
       Tok->setFinalizedType(TT_CtorDtorDeclName);
       assert(OpeningParen);
