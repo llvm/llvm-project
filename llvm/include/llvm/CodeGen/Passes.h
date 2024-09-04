@@ -330,7 +330,7 @@ namespace llvm {
   extern char &GCMachineCodeAnalysisID;
 
   /// MachineCSE - This pass performs global CSE on machine instructions.
-  extern char &MachineCSEID;
+  extern char &MachineCSELegacyID;
 
   /// MIRCanonicalizer - This pass canonicalizes MIR by renaming vregs
   /// according to the semantics of the instruction as well as hoists

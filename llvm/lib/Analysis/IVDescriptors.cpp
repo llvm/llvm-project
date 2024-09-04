@@ -734,13 +734,12 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
   Value *FalseVal = SI->getFalseValue();
   // Handle only when either of operands of select instruction is a PHI
   // node for now.
-  if ((isa<PHINode>(*TrueVal) && isa<PHINode>(*FalseVal)) ||
-      (!isa<PHINode>(*TrueVal) && !isa<PHINode>(*FalseVal)))
+  if ((isa<PHINode>(TrueVal) && isa<PHINode>(FalseVal)) ||
+      (!isa<PHINode>(TrueVal) && !isa<PHINode>(FalseVal)))
     return InstDesc(false, I);
 
-  Instruction *I1 =
-      isa<PHINode>(*TrueVal) ? dyn_cast<Instruction>(FalseVal)
-                             : dyn_cast<Instruction>(TrueVal);
+  Instruction *I1 = isa<PHINode>(TrueVal) ? dyn_cast<Instruction>(FalseVal)
+                                          : dyn_cast<Instruction>(TrueVal);
   if (!I1 || !I1->isBinaryOp())
     return InstDesc(false, I);
 
@@ -754,8 +753,8 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
         (m_Mul(m_Value(Op1), m_Value(Op2)).match(I1))))
     return InstDesc(false, I);
 
-  Instruction *IPhi = isa<PHINode>(*Op1) ? dyn_cast<Instruction>(Op1)
-                                         : dyn_cast<Instruction>(Op2);
+  Instruction *IPhi = isa<PHINode>(Op1) ? dyn_cast<Instruction>(Op1)
+                                        : dyn_cast<Instruction>(Op2);
   if (!IPhi || IPhi != FalseVal)
     return InstDesc(false, I);
 
@@ -1035,7 +1034,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
 Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) const {
+                                                   FastMathFlags FMF) {
   switch (K) {
   case RecurKind::Xor:
   case RecurKind::Add:
@@ -1058,21 +1057,21 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
     return ConstantInt::get(Tp,
                             APInt::getSignedMinValue(Tp->getIntegerBitWidth()));
   case RecurKind::FMin:
-    assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP min reduction.");
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
   case RecurKind::FMax:
     assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP max reduction.");
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
+           "nnan, nsz is expected to be set for FP min/max reduction.");
+    [[fallthrough]];
   case RecurKind::FMinimum:
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
-  case RecurKind::FMaximum:
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
+  case RecurKind::FMaximum: {
+    bool Negative = K == RecurKind::FMax || K == RecurKind::FMaximum;
+    const fltSemantics &Semantics = Tp->getFltSemantics();
+    return !FMF.noInfs()
+               ? ConstantFP::getInfinity(Tp, Negative)
+               : ConstantFP::get(Tp, APFloat::getLargest(Semantics, Negative));
+  }
   case RecurKind::IAnyOf:
   case RecurKind::FAnyOf:
-    return getRecurrenceStartValue();
-    break;
+    llvm_unreachable("No meaningful identity for recurrence kind");
   default:
     llvm_unreachable("Unknown recurrence kind");
   }

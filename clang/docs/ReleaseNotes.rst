@@ -268,6 +268,11 @@ Improvements to Clang's diagnostics
 
 - Improved diagnostic when trying to overload a function in an ``extern "C"`` context. (#GH80235)
 
+- Clang now respects lifetimebound attribute for the assignment operator parameter. (#GH106372).
+
+- The lifetimebound and GSL analysis in clang are coherent, allowing clang to
+  detect more use-after-free bugs. (#GH100549).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -341,6 +346,10 @@ Bug Fixes to C++ Support
 - Template parameter names are considered in the name lookup of out-of-line class template
   specialization right before its declaration context. (#GH64082)
 - Fixed a constraint comparison bug for friend declarations. (#GH78101)
+- Fix handling of ``_`` as the name of a lambda's init capture variable. (#GH107024)
+- Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
+- Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
+- Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

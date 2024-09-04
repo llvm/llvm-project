@@ -4183,9 +4183,11 @@ defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
 } // End HasSVE2orSME2, HasFP8
 
 let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
-// FP8 Arithmetic - Predicated Group
-defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
-defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
+defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "FAMIN_ZPZZ", int_aarch64_sve_famin, DestructiveBinaryComm>;
+defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "FAMAX_ZPZZ", int_aarch64_sve_famax, DestructiveBinaryComm>;
+
+defm FAMAX_ZPZZ : sve_fp_bin_pred_hfd<int_aarch64_sve_famax_u>;
+defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<int_aarch64_sve_famin_u>;
 } // End HasSVE2orSME2, HasFAMINMAX
 
 let Predicates = [HasSSVE_FP8FMA] in {

@@ -665,4 +665,4 @@ def FRM    : RISCVReg<0, "frm">;
 def SSP    : RISCVReg<0, "ssp">;
 
 // Dummy SiFive VCIX state register
-def SF_VCIX_STATE : RISCVReg<0, "sf_vcix_state">;
+def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
