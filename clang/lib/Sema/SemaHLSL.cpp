@@ -1615,7 +1615,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
   if (QT.isNull())
     return false;
-  
+
   const Type *Ty = QT->getUnqualifiedDesugaredType();
 
   // check if it's a builtin type first (simple check, no need to cache it)
