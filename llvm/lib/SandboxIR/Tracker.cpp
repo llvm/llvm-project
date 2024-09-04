@@ -251,10 +251,12 @@ void ShuffleVectorSetMask::dump() const {
 CmpSwapOperands::CmpSwapOperands(CmpInst *Cmp) : Cmp(Cmp) {}
 
 void CmpSwapOperands::revert(Tracker &Tracker) { Cmp->swapOperands(); }
+#ifndef NDEBUG
 void CmpSwapOperands::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif
 
 void Tracker::save() { State = TrackerState::Record; }
 
