@@ -1475,11 +1475,10 @@ define i16 @select_xor_1b(i16 %A, i8 %cond) {
 ;
 ; MCU-LABEL: select_xor_1b:
 ; MCU:       # %bb.0: # %entry
-; MCU-NEXT:    testb $1, %dl
-; MCU-NEXT:    je .LBB29_2
-; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    xorl $43, %eax
-; MCU-NEXT:  .LBB29_2: # %entry
+; MCU-NEXT:    andl $1, %edx
+; MCU-NEXT:    negl %edx
+; MCU-NEXT:    andl $43, %edx
+; MCU-NEXT:    xorl %edx, %eax
 ; MCU-NEXT:    # kill: def $ax killed $ax killed $eax
 ; MCU-NEXT:    retl
 entry:
@@ -1545,11 +1544,10 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ;
 ; MCU-LABEL: select_xor_2b:
 ; MCU:       # %bb.0: # %entry
-; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    je .LBB31_2
-; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    xorl %edx, %eax
-; MCU-NEXT:  .LBB31_2: # %entry
+; MCU-NEXT:    andl $1, %ecx
+; MCU-NEXT:    negl %ecx
+; MCU-NEXT:    andl %edx, %ecx
+; MCU-NEXT:    xorl %ecx, %eax
 ; MCU-NEXT:    retl
 entry:
  %and = and i8 %cond, 1
@@ -1614,11 +1612,10 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ;
 ; MCU-LABEL: select_or_b:
 ; MCU:       # %bb.0: # %entry
-; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    je .LBB33_2
-; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:  .LBB33_2: # %entry
+; MCU-NEXT:    andl $1, %ecx
+; MCU-NEXT:    negl %ecx
+; MCU-NEXT:    andl %edx, %ecx
+; MCU-NEXT:    orl %ecx, %eax
 ; MCU-NEXT:    retl
 entry:
  %and = and i8 %cond, 1
@@ -1683,11 +1680,10 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ;
 ; MCU-LABEL: select_or_1b:
 ; MCU:       # %bb.0: # %entry
-; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    je .LBB35_2
-; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:  .LBB35_2: # %entry
+; MCU-NEXT:    andl $1, %ecx
+; MCU-NEXT:    negl %ecx
+; MCU-NEXT:    andl %edx, %ecx
+; MCU-NEXT:    orl %ecx, %eax
 ; MCU-NEXT:    retl
 entry:
  %and = and i32 %cond, 1
