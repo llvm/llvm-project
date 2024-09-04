@@ -6799,43 +6799,44 @@ InitializationSequence::~InitializationSequence() {
 //===----------------------------------------------------------------------===//
 // Perform initialization
 //===----------------------------------------------------------------------===//
-static Sema::AssignmentAction
-getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
+static AssignmentAction getAssignmentAction(const InitializedEntity &Entity,
+                                            bool Diagnose = false) {
   switch(Entity.getKind()) {
   case InitializedEntity::EK_Variable:
   case InitializedEntity::EK_New:
   case InitializedEntity::EK_Exception:
   case InitializedEntity::EK_Base:
   case InitializedEntity::EK_Delegating:
-    return Sema::AA_Initializing;
+    return AssignmentAction::Initializing;
 
   case InitializedEntity::EK_Parameter:
     if (Entity.getDecl() &&
         isa<ObjCMethodDecl>(Entity.getDecl()->getDeclContext()))
-      return Sema::AA_Sending;
+      return AssignmentAction::Sending;
 
-    return Sema::AA_Passing;
+    return AssignmentAction::Passing;
 
   case InitializedEntity::EK_Parameter_CF_Audited:
     if (Entity.getDecl() &&
       isa<ObjCMethodDecl>(Entity.getDecl()->getDeclContext()))
-      return Sema::AA_Sending;
+      return AssignmentAction::Sending;
 
-    return !Diagnose ? Sema::AA_Passing : Sema::AA_Passing_CFAudited;
+    return !Diagnose ? AssignmentAction::Passing
+                     : AssignmentAction::Passing_CFAudited;
 
   case InitializedEntity::EK_Result:
   case InitializedEntity::EK_StmtExprResult: // FIXME: Not quite right.
-    return Sema::AA_Returning;
+    return AssignmentAction::Returning;
 
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_RelatedResult:
     // FIXME: Can we tell apart casting vs. converting?
-    return Sema::AA_Casting;
+    return AssignmentAction::Casting;
 
   case InitializedEntity::EK_TemplateParameter:
     // This is really initialization, but refer to it as conversion for
     // consistency with CheckConvertedConstantExpression.
-    return Sema::AA_Converting;
+    return AssignmentAction::Converting;
 
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_ParenAggInitMember:
@@ -6847,7 +6848,7 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_CompoundLiteralInit:
-    return Sema::AA_Initializing;
+    return AssignmentAction::Initializing;
   }
 
   llvm_unreachable("Invalid EntityKind!");

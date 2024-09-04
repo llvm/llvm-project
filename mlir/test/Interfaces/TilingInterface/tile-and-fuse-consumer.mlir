@@ -337,7 +337,7 @@ module {
             }
         }
         %output = tensor.empty() : tensor<4x32x16xf32>
-        %pack = tensor.pack %1 outer_dims_perm = [0, 1] inner_dims_pos = [0] inner_tiles = [16] into %output : tensor<64x32xf32> -> tensor<4x32x16xf32>
+        %pack = tensor.pack %1 inner_dims_pos = [0] inner_tiles = [16] into %output : tensor<64x32xf32> -> tensor<4x32x16xf32>
         return %pack : tensor<4x32x16xf32>
     }
 }
@@ -366,7 +366,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV1]])
 //      CHECK:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][%[[PACK_RESULT_OFFSET]], %[[IV2]], 0] [2, 32, 16] [1, 1, 1]
 //      CHECK:      %[[TILED_PACK_OUT:.*]] = tensor.pack %[[GENERIC_OUT]]
-// CHECK-SAME:                              outer_dims_perm = [0, 1] inner_dims_pos = [0] inner_tiles = [16]
+// CHECK-SAME:                              inner_dims_pos = [0] inner_tiles = [16]
 // CHECK-SAME:                              into %[[TILED_PACK_DEST]]
 //      CHECK:      scf.forall.in_parallel {
 //      CHECK:          tensor.parallel_insert_slice %[[TILED_PACK_OUT]] into %[[PACK_OUT_ARG]][%[[PACK_RESULT_OFFSET]],  %[[IV2]], 0] [2, 32, 16] [1, 1, 1]

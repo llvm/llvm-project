@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cmath>
-#include <memory>
-#include <string>
-
-#include "Assembler.h"
 #include "BenchmarkRunner.h"
+#include "Assembler.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "MmapUtils.h"
@@ -22,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,6 +26,9 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include <cmath>
+#include <memory>
+#include <string>
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM

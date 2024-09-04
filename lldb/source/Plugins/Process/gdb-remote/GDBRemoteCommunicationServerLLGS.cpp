@@ -2526,28 +2526,18 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
   size_t bytes_read = 0;
   Status error = m_current_process->ReadMemoryWithoutTrap(
       read_addr, &buf[0], byte_count, bytes_read);
-  if (error.Fail()) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-              " mem 0x%" PRIx64 ": failed to read. Error: %s",
-              __FUNCTION__, m_current_process->GetID(), read_addr,
-              error.AsCString());
+  LLDB_LOG(
+      log,
+      "ReadMemoryWithoutTrap({0}) read {1} of {2} requested bytes (error: {3})",
+      read_addr, byte_count, bytes_read, error);
+  if (bytes_read == 0)
     return SendErrorResponse(0x08);
-  }
-
-  if (bytes_read == 0) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-              " mem 0x%" PRIx64 ": read 0 of %" PRIu64 " requested bytes",
-              __FUNCTION__, m_current_process->GetID(), read_addr, byte_count);
-    return SendErrorResponse(0x08);
-  }
 
   StreamGDBRemote response;
   packet.SetFilePos(0);
   char kind = packet.GetChar('?');
   if (kind == 'x')
-    response.PutEscapedBytes(buf.data(), byte_count);
+    response.PutEscapedBytes(buf.data(), bytes_read);
   else {
     assert(kind == 'm');
     for (size_t i = 0; i < bytes_read; ++i)
