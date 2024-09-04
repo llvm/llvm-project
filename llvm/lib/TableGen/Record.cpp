@@ -92,9 +92,38 @@ struct RecordKeeperImpl {
 
   unsigned AnonCounter;
   unsigned LastRecordID;
+
+  void dumpAllocationStats(raw_ostream &OS) const;
 };
 } // namespace detail
 } // namespace llvm
+
+void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
+  // Dump memory allocation related stats.
+  OS << "TheArgumentInitPool size = " << TheArgumentInitPool.size() << '\n';
+  OS << "TheBitsInitPool size = " << TheBitsInitPool.size() << '\n';
+  OS << "TheIntInitPool size = " << TheIntInitPool.size() << '\n';
+  OS << "TheBitsInitPool size = " << TheBitsInitPool.size() << '\n';
+  OS << "TheListInitPool size = " << TheListInitPool.size() << '\n';
+  OS << "TheUnOpInitPool size = " << TheUnOpInitPool.size() << '\n';
+  OS << "TheBinOpInitPool size = " << TheBinOpInitPool.size() << '\n';
+  OS << "TheTernOpInitPool size = " << TheTernOpInitPool.size() << '\n';
+  OS << "TheFoldOpInitPool size = " << TheFoldOpInitPool.size() << '\n';
+  OS << "TheIsAOpInitPool size = " << TheIsAOpInitPool.size() << '\n';
+  OS << "TheExistsOpInitPool size = " << TheExistsOpInitPool.size() << '\n';
+  OS << "TheCondOpInitPool size = " << TheCondOpInitPool.size() << '\n';
+  OS << "TheDagInitPool size = " << TheDagInitPool.size() << '\n';
+  OS << "RecordTypePool size = " << RecordTypePool.size() << '\n';
+  OS << "TheVarInitPool size = " << TheVarInitPool.size() << '\n';
+  OS << "TheVarBitInitPool size = " << TheVarBitInitPool.size() << '\n';
+  OS << "TheVarDefInitPool size = " << TheVarDefInitPool.size() << '\n';
+  OS << "TheFieldInitPool size = " << TheFieldInitPool.size() << '\n';
+  OS << "Bytes allocated = " << Allocator.getBytesAllocated() << '\n';
+  OS << "Total allocator memory = " << Allocator.getTotalMemory() << "\n\n";
+
+  OS << "Number of records instantiated = " << LastRecordID << '\n';
+  OS << "Number of anonymous records = " << AnonCounter << '\n';
+}
 
 //===----------------------------------------------------------------------===//
 //    Type implementations
@@ -3259,6 +3288,10 @@ std::vector<Record *>
 RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
   return getClass(ClassName) ? getAllDerivedDefinitions(ClassName)
                              : std::vector<Record *>();
+}
+
+void RecordKeeper::dumpAllocationStats(raw_ostream &OS) const {
+  Impl->dumpAllocationStats(OS);
 }
 
 Init *MapResolver::resolve(Init *VarName) {

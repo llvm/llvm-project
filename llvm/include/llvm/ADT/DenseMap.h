@@ -354,7 +354,8 @@ public:
     incrementNumTombstones();
   }
 
-  value_type& FindAndConstruct(const KeyT &Key) {
+  LLVM_DEPRECATED("Use [Key] instead", "[Key]")
+  value_type &FindAndConstruct(const KeyT &Key) {
     BucketT *TheBucket;
     if (LookupBucketFor(Key, TheBucket))
       return *TheBucket;
@@ -363,10 +364,15 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) {
-    return FindAndConstruct(Key).second;
+    BucketT *TheBucket;
+    if (LookupBucketFor(Key, TheBucket))
+      return TheBucket->second;
+
+    return InsertIntoBucket(TheBucket, Key)->second;
   }
 
-  value_type& FindAndConstruct(KeyT &&Key) {
+  LLVM_DEPRECATED("Use [Key] instead", "[Key]")
+  value_type &FindAndConstruct(KeyT &&Key) {
     BucketT *TheBucket;
     if (LookupBucketFor(Key, TheBucket))
       return *TheBucket;
@@ -375,7 +381,11 @@ public:
   }
 
   ValueT &operator[](KeyT &&Key) {
-    return FindAndConstruct(std::move(Key)).second;
+    BucketT *TheBucket;
+    if (LookupBucketFor(Key, TheBucket))
+      return TheBucket->second;
+
+    return InsertIntoBucket(TheBucket, std::move(Key))->second;
   }
 
   /// isPointerIntoBucketsArray - Return true if the specified pointer points
