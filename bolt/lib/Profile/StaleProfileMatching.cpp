@@ -46,7 +46,6 @@ namespace opts {
 
 extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
-extern cl::opt<unsigned> Verbosity;
 
 cl::opt<bool>
     InferStaleProfile("infer-stale-profile",
@@ -235,13 +234,13 @@ public:
   matchBlock(BlendedBlockHash BlendedHash, uint64_t CallHash,
              const ArrayRef<yaml::bolt::PseudoProbeInfo> PseudoProbes,
              const ArrayRef<yaml::bolt::InlineTreeInfo> InlineTree) {
-    const auto &[Block, Hash] = matchWithOpcodes(BlendedHash);
-    if (isHighConfidenceMatch(Hash, BlendedHash))
+    const auto &[Block, ExactHash] = matchWithOpcodes(BlendedHash);
+    if (Block && ExactHash)
       return {Block, MATCH_EXACT};
-    const auto &[ProbeBlock, Exact] =
+    const auto &[ProbeBlock, ExactProbe] =
         matchWithPseudoProbes(PseudoProbes, InlineTree);
     if (ProbeBlock)
-      return {ProbeBlock, Exact ? MATCH_PROBE_EXACT : MATCH_PROBE_LOOSE};
+      return {ProbeBlock, ExactProbe ? MATCH_PROBE_EXACT : MATCH_PROBE_LOOSE};
     if (const FlowBlock *BestBlock = matchWithCalls(BlendedHash, CallHash))
       return {BestBlock, MATCH_CALL};
     if (Block)
@@ -281,13 +280,12 @@ private:
   DenseMap<uint32_t, const MCDecodedPseudoProbeInlineTree *> InlineTreeNodeMap;
   DenseMap<const MCDecodedPseudoProbe *, FlowBlock *> BBPseudoProbeToBlock;
 
-  // Uses OpcodeHash to find the most similar block (with blended hash) for a
-  // given hash.
-  std::pair<const FlowBlock *, BlendedBlockHash>
+  // Uses OpcodeHash to find the most similar block for a given hash.
+  std::pair<const FlowBlock *, bool>
   matchWithOpcodes(BlendedBlockHash BlendedHash) const {
     auto BlockIt = OpHashToBlocks.find(BlendedHash.OpcodeHash);
     if (BlockIt == OpHashToBlocks.end())
-      return {nullptr, BlendedBlockHash(0)};
+      return {nullptr, false};
     FlowBlock *BestBlock = nullptr;
     uint64_t BestDist = std::numeric_limits<uint64_t>::max();
     BlendedBlockHash BestHash;
@@ -299,7 +297,7 @@ private:
         BestHash = Hash;
       }
     }
-    return {BestBlock, BestHash};
+    return {BestBlock, isHighConfidenceMatch(BestHash, BlendedHash)};
   }
 
   // Uses CallHash to find the most similar block for a given hash.
@@ -579,7 +577,6 @@ size_t matchWeightsByHashes(
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
-  StaleMatcher Matcher;
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
@@ -602,10 +599,10 @@ size_t matchWeightsByHashes(
     Blocks.push_back(&Func.Blocks[I + 1]);
     BlendedBlockHash BlendedHash(BB->getHash());
     BlendedHashes.push_back(BlendedHash);
-
     LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
+  StaleMatcher Matcher;
   // Collects function pseudo probes for use in the StaleMatcher.
   if (opts::StaleMatchingWithBlockPseudoProbes) {
     const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
@@ -620,7 +617,6 @@ size_t matchWeightsByHashes(
               BF.getBasicBlockContainingOffset(Probe.getAddress() - FuncAddr))
         Matcher.mapProbeToBB(&Probe, Blocks[BB->getIndex()]);
     // Match inline tree nodes by GUID, checksum, parent, and call site.
-    unsigned MatchedNodes = 0;
     const MCDecodedPseudoProbeInlineTree *DummyInlineRoot =
         &PseudoProbeDecoder->getDummyInlineRoot();
     for (const yaml::bolt::InlineTreeInfo &InlineTreeNode : YamlBF.InlineTree) {
@@ -644,12 +640,9 @@ size_t matchWeightsByHashes(
             std::get<1>(Child.getInlineSite()) != CallSiteProbe)
           continue;
         Matcher.mapInlineTreeNode(InlineTreeNodeId, &Child);
-        ++MatchedNodes;
         break;
       }
     }
-    LLVM_DEBUG(errs() << "matched " << MatchedNodes << "/"
-                      << YamlBF.InlineTree.size() << " inline tree nodes\n");
   }
   Matcher.init(Blocks, BlendedHashes, CallHashes);
 
@@ -674,8 +667,11 @@ size_t matchWeightsByHashes(
     StaleMatcher::MatchMethod Method;
     std::tie(MatchedBlock, Method) = Matcher.matchBlock(
         YamlHash, CallHash, YamlBB.PseudoProbes, YamlBF.InlineTree);
-    if (MatchedBlock == nullptr && YamlBB.Index == 0)
+    if (MatchedBlock == nullptr && YamlBB.Index == 0) {
       MatchedBlock = Blocks[0];
+      // Report as loose match
+      Method = StaleMatcher::MATCH_OPCODE;
+    }
     if (MatchedBlock != nullptr) {
       const BinaryBasicBlock *BB = BlockOrder[MatchedBlock->Index - 1];
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
@@ -690,7 +686,7 @@ size_t matchWeightsByHashes(
       case StaleMatcher::MATCH_EXACT:
         ++BC.Stats.NumExactMatchedBlocks;
         BC.Stats.ExactMatchedSampleCount += YamlBB.ExecCount;
-        LLVM_DEBUG(dbgs() << "  exact hash match\n");
+        LLVM_DEBUG(dbgs() << "  exact match\n");
         break;
       case StaleMatcher::MATCH_PROBE_EXACT:
         ++BC.Stats.NumPseudoProbeExactMatchedBlocks;
@@ -710,7 +706,7 @@ size_t matchWeightsByHashes(
       case StaleMatcher::MATCH_OPCODE:
         ++BC.Stats.NumLooseMatchedBlocks;
         BC.Stats.LooseMatchedSampleCount += YamlBB.ExecCount;
-        LLVM_DEBUG(dbgs() << "  loose hash match\n");
+        LLVM_DEBUG(dbgs() << "  loose match\n");
         break;
       case StaleMatcher::NO_MATCH:
         LLVM_DEBUG(dbgs() << "  no match\n");

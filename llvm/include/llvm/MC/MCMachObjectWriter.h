@@ -353,18 +353,6 @@ public:
 
   uint64_t writeObject(MCAssembler &Asm) override;
 };
-
-/// Construct a new Mach-O writer instance.
-///
-/// This routine takes ownership of the target writer subclass.
-///
-/// \param MOTW - The target specific Mach-O writer subclass.
-/// \param OS - The stream to write to.
-/// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
-createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
-                       raw_pwrite_stream &OS, bool IsLittleEndian);
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCMACHOBJECTWRITER_H

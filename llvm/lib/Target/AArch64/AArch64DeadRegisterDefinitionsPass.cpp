@@ -108,6 +108,10 @@ static bool atomicReadDroppedOnZero(unsigned Opcode) {
     case AArch64::LDUMINW:    case AArch64::LDUMINX:
     case AArch64::LDUMINLB:   case AArch64::LDUMINLH:
     case AArch64::LDUMINLW:   case AArch64::LDUMINLX:
+    case AArch64::SWPB:       case AArch64::SWPH:
+    case AArch64::SWPW:       case AArch64::SWPX:
+    case AArch64::SWPLB:      case AArch64::SWPLH:
+    case AArch64::SWPLW:      case AArch64::SWPLX:
     return true;
   }
   return false;

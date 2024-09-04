@@ -9,7 +9,7 @@
 define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 ; RV32-LABEL: lrint_v1f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa5, v8
 ; RV32-NEXT:    fcvt.w.s a0, fa5
 ; RV32-NEXT:    vmv.s.x v8, a0
@@ -17,7 +17,7 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 ;
 ; RV64-i32-LABEL: lrint_v1f32:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-i32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-i32-NEXT:    vfmv.f.s fa5, v8
 ; RV64-i32-NEXT:    fcvt.l.s a0, fa5
 ; RV64-i32-NEXT:    vmv.s.x v8, a0
@@ -25,10 +25,10 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 ;
 ; RV64-i64-LABEL: lrint_v1f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-i64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-i64-NEXT:    vfmv.f.s fa5, v8
 ; RV64-i64-NEXT:    fcvt.l.s a0, fa5
-; RV64-i64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV64-i64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-i64-NEXT:    vmv.s.x v8, a0
 ; RV64-i64-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1f32(<1 x float> %x)

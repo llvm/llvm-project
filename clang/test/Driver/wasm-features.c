@@ -35,11 +35,11 @@
 // EXTENDED-CONST: "-target-feature" "+extended-const"
 // NO-EXTENDED-CONST: "-target-feature" "-extended-const"
 
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mhalf-precision 2>&1 | FileCheck %s -check-prefix=HALF-PRECISION
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-half-precision 2>&1 | FileCheck %s -check-prefix=NO-HALF-PRECISION
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mfp16 2>&1 | FileCheck %s -check-prefix=HALF-PRECISION
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-fp16 2>&1 | FileCheck %s -check-prefix=NO-HALF-PRECISION
 
-// HALF-PRECISION: "-target-feature" "+half-precision"
-// NO-HALF-PRECISION: "-target-feature" "-half-precision"
+// HALF-PRECISION: "-target-feature" "+fp16"
+// NO-HALF-PRECISION: "-target-feature" "-fp16"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultimemory 2>&1 | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-multimemory 2>&1 | FileCheck %s -check-prefix=NO-MULTIMEMORY

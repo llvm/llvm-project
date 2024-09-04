@@ -117,3 +117,16 @@ int main() {
 
   return 0;
 }
+
+namespace gh101685 {
+template <int AS>
+using ASPtrTy = void [[clang::address_space(AS)]] *;
+
+template <int AS>
+struct EntryTy {
+  ASPtrTy<AS> Base;
+};
+
+ASPtrTy<1> x;
+EntryTy<2> y;
+}

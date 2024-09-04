@@ -609,6 +609,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
+#include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory_resource/polymorphic_allocator.h>
@@ -629,7 +630,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
 #include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/auto_cast.h>
@@ -827,8 +827,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  typedef __bounded_iter<__wrap_iter<pointer>> iterator;
-  typedef __bounded_iter<__wrap_iter<const_pointer>> const_iterator;
+  typedef __bounded_iter<__wrap_iter<pointer> > iterator;
+  typedef __bounded_iter<__wrap_iter<const_pointer> > const_iterator;
 #else
   typedef __wrap_iter<pointer> iterator;
   typedef __wrap_iter<const_pointer> const_iterator;
@@ -1048,7 +1048,7 @@ public:
       __r_.first()       = __str.__r_.first();
       __str.__r_.first() = __rep();
       __str.__annotate_new(0);
-      if (!__is_long() && this != &__str)
+      if (!__is_long() && this != std::addressof(__str))
         __annotate_new(size());
     }
   }
@@ -1213,7 +1213,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
-    return __self_view(data(), size());
+    return __self_view(typename __self_view::__assume_valid(), data(), size());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string&
@@ -1822,7 +1822,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
   constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(__self_view __sv) const noexcept {
-    return __self_view(data(), size()).starts_with(__sv);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).starts_with(__sv);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(value_type __c) const noexcept {
@@ -1834,7 +1834,7 @@ public:
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(__self_view __sv) const noexcept {
-    return __self_view(data(), size()).ends_with(__sv);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).ends_with(__sv);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(value_type __c) const noexcept {
@@ -1848,15 +1848,15 @@ public:
 
 #if _LIBCPP_STD_VER >= 23
   constexpr _LIBCPP_HIDE_FROM_ABI bool contains(__self_view __sv) const noexcept {
-    return __self_view(data(), size()).contains(__sv);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).contains(__sv);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool contains(value_type __c) const noexcept {
-    return __self_view(data(), size()).contains(__c);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).contains(__c);
   }
 
   constexpr _LIBCPP_HIDE_FROM_ABI bool contains(const value_type* __s) const {
-    return __self_view(data(), size()).contains(__s);
+    return __self_view(typename __self_view::__assume_valid(), data(), size()).contains(__s);
   }
 #endif
 
@@ -2014,11 +2014,11 @@ private:
     (void)__old_mid;
     (void)__new_mid;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-  #if defined(__APPLE__)
+#  if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
-    if(!__is_long())
+    if (!__is_long())
       return;
-  #endif
+#  endif
     std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
 #endif
   }
@@ -2246,6 +2246,10 @@ private:
   friend constexpr basic_string operator+ <>(const basic_string&, type_identity_t<__self_view>);
   friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, const basic_string&);
 #endif
+
+  template <class _CharT2, class _Traits2, class _Allocator2>
+  friend inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+  operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
 };
 
 // These declarations must appear before any functions are implicitly used
@@ -2707,7 +2711,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   __str.__set_short_size(0);
   traits_type::assign(__str.__get_short_pointer()[0], value_type());
 
-  if (__str_was_short && this != &__str)
+  if (__str_was_short && this != std::addressof(__str))
     __str.__annotate_shrink(__str_old_size);
   else
     // ASan annotations: was long, so object memory is unpoisoned as new.
@@ -2721,7 +2725,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   // invariants hold (so functions without preconditions, such as the assignment operator,
   // can be safely used on the object after it was moved from):"
   // Quote: "v = std::move(v); // the value of v is unspecified"
-  if (!__is_long() && &__str != this)
+  if (!__is_long() && std::addressof(__str) != this)
     // If it is long string, delete was never called on original __str's buffer.
     __annotate_new(__get_short_size());
 }
@@ -3446,25 +3450,17 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
       "swapping non-equal allocators");
   if (!__is_long())
     __annotate_delete();
-  if (this != &__str && !__str.__is_long())
+  if (this != std::addressof(__str) && !__str.__is_long())
     __str.__annotate_delete();
   std::swap(__r_.first(), __str.__r_.first());
   std::__swap_allocator(__alloc(), __str.__alloc());
   if (!__is_long())
     __annotate_new(__get_short_size());
-  if (this != &__str && !__str.__is_long())
+  if (this != std::addressof(__str) && !__str.__is_long())
     __str.__annotate_new(__str.__get_short_size());
 }
 
 // find
-
-template <class _Traits>
-struct _LIBCPP_HIDDEN __traits_eq {
-  typedef typename _Traits::char_type char_type;
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const char_type& __x, const char_type& __y) _NOEXCEPT {
-    return _Traits::eq(__x, __y);
-  }
-};
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::size_type
@@ -3855,16 +3851,18 @@ operator==(const _CharT* __lhs, const basic_string<_CharT, _Traits, _Allocator>&
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs) _NOEXCEPT {
-#if _LIBCPP_STD_VER >= 20
-  return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
-#else
-  typedef basic_string<_CharT, _Traits, _Allocator> _String;
   _LIBCPP_ASSERT_NON_NULL(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
+
+  using _String = basic_string<_CharT, _Traits, _Allocator>;
+
   size_t __rhs_len = _Traits::length(__rhs);
+  if (__builtin_constant_p(__rhs_len) && !_String::__fits_in_sso(__rhs_len)) {
+    if (!__lhs.__is_long())
+      return false;
+  }
   if (__rhs_len != __lhs.size())
     return false;
   return __lhs.compare(0, _String::npos, __rhs, __rhs_len) == 0;
-#endif
 }
 
 #if _LIBCPP_STD_VER >= 20

@@ -5,15 +5,13 @@
 define signext i32 @rotl_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a2, $zero, 32
-; LA32-NEXT:    sub.w $a1, $a2, $a1
+; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a2, $zero, 32
-; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %z = sub i32 32, %y
@@ -80,8 +78,7 @@ define i64 @rotl_64(i64 %x, i64 %y) nounwind {
 ;
 ; LA64-LABEL: rotl_64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a2, $zero, 64
-; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %z = sub i64 64, %y
@@ -149,8 +146,7 @@ define signext i32 @rotl_32_mask(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; LA64-LABEL: rotl_32_mask:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a2, $zero, 32
-; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %z = sub i32 0, %y
@@ -170,8 +166,7 @@ define signext i32 @rotl_32_mask_and_63_and_31(i32 signext %x, i32 signext %y) n
 ;
 ; LA64-LABEL: rotl_32_mask_and_63_and_31:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a2, $zero, 32
-; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %a = and i32 %y, 63
@@ -192,8 +187,7 @@ define signext i32 @rotl_32_mask_or_64_or_32(i32 signext %x, i32 signext %y) nou
 ;
 ; LA64-LABEL: rotl_32_mask_or_64_or_32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a2, $zero, 32
-; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %a = or i32 %y, 64

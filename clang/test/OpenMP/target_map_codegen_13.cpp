@@ -113,7 +113,7 @@ void implicit_maps_class (int a){
 // CK14: [[REF0:%.+]] = load ptr, ptr [[ADDR0]],
 // CK14-64: {{.+}} = load i32,  ptr [[ADDR1]],
 // CK14-32: {{.+}} = load i32, ptr [[ADDR1]],
-// CK14: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF0]], i32 0, i32 0
+// CK14: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF0]], i32 0, i32 0
 
 #endif // CK14
 #endif

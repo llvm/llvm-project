@@ -152,7 +152,7 @@ basic_ostream<_CharT, _Traits>::sentry::sentry(basic_ostream<_CharT, _Traits>& _
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>::sentry::~sentry() {
-  if (__os_.rdbuf() && __os_.good() && (__os_.flags() & ios_base::unitbuf) && !uncaught_exception()) {
+  if (__os_.rdbuf() && __os_.good() && (__os_.flags() & ios_base::unitbuf) && uncaught_exceptions() == 0) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS

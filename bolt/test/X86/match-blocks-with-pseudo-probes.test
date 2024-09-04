@@ -5,9 +5,10 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
-# RUN:   --print-cfg --funcs=main --profile-ignore-hash=0 --infer-stale-profile --profile-use-pseudo-probes --stale-matching-with-block-pseudo-probes 2>&1 | FileCheck %s
+# RUN:   --print-cfg --funcs=main --infer-stale-profile \
+# RUN:   --stale-matching-with-block-pseudo-probes 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: inference found a pseudo probe match for 100.00% of basic blocks (1 out of 1 stale) responsible for -nan% samples (0 out of 0 stale)
+# CHECK: BOLT-INFO: inference found an exact pseudo probe match for 100.00% of basic blocks (1 out of 1 stale) responsible for -nan% samples (0 out of 0 stale)
 
 #--- main.s
  .text
@@ -31,9 +32,6 @@ main:                                   # @main
   .quad   4294967295
   .byte   4
   .ascii  "main"
-  .ident  "clang version 17.0.6 (CentOS 17.0.6-5.el9)"
-  .section        ".note.GNU-stack","",@progbits
-  .addrsig
 
 #--- yaml
 ---
@@ -52,11 +50,12 @@ functions:
     hash:                   0x0000000000000001
     exec:                   1
     nblocks:                6
-    guid:                   0xDB956436E78DD5FA
-    pseudo_probe_desc_hash: 4294967295
     blocks:
       - bid:             1
-        hash:            0x0000000000000001
+        hash:            0xFFFFFFFFFFFFFFF1
         insns:           1
         succ:            [ { bid: 3, cnt: 1} ]
-        pseudo_probes: [ { guid: 0xDB956436E78DD5FA, id: 1, type: 0 } ]
+        pseudo_probes:
+          - { id: 1, type: 0, offset: 0xB }
+    inline_tree:
+      - { guid: 0xDB956436E78DD5FA, hash: 0xFFFFFFFF, id: 0 }
