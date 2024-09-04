@@ -2824,15 +2824,15 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (Opcode != Instruction::Add && Opcode != Instruction::Mul)
     return false;
 
-  bool BinOpInRHS = isa<BinaryOperator>(BO->getOperand(1));
-  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(BinOpInRHS));
+  bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
+  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
       BO0->hasNUsesOrMore(3))
     return false;
 
   Value *LV = BO0->getOperand(0);
   Value *C1 = BO0->getOperand(1);
-  Value *C2 = BO->getOperand(!BinOpInRHS);
+  Value *C2 = BO->getOperand(!LVInRHS);
 
   assert(BO->isCommutative() && BO0->isCommutative() &&
          "Associativity implies commutativity");
