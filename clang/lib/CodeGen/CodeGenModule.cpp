@@ -2475,7 +2475,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
     // disabled, mark the function as noinline.
     // HLSL functions must be always inlined
-    if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) && !getLangOpts().HLSL &&
+    if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) &&
+        !getLangOpts().HLSL &&
         CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
