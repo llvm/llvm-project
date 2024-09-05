@@ -1,4 +1,4 @@
-//===- VectorToGPU.cpp - Convert vector to GPU dialect ----------*- C++ -*-===//
+//===- VectorToXeGPU.cpp - Convert vector to XeGPU dialect ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,6 +93,8 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
     ndDesc = rewriter.create<xegpu::CreateNdDescOp>(loc, descType, src,
                                                     getAsOpFoldResult(offsets));
   } else {
+    // In case of any dynamic shapes, source's shape and strides have to be
+    // explicitly provided.
     SmallVector<Value> sourceDims;
     unsigned srcRank = srcTy.getRank();
     for (unsigned i = 0; i < srcRank; ++i)
