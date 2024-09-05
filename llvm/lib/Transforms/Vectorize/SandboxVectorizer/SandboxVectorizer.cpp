@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/SandboxIR/SandboxIR.h"
 
 using namespace llvm;
 
