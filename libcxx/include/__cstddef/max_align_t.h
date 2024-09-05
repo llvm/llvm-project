@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===---------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,32 +6,22 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_SPAN_H
-#define _LIBCPP___FWD_SPAN_H
+#ifndef _LIBCPP___CSTDDEF_MAX_ALIGN_T_H
+#define _LIBCPP___CSTDDEF_MAX_ALIGN_T_H
 
 #include <__config>
-#include <__cstddef/size_t.h>
-#include <limits>
+#include <stddef.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-
-inline constexpr size_t dynamic_extent = numeric_limits<size_t>::max();
-template <typename _Tp, size_t _Extent = dynamic_extent>
-class span;
-
+#if !defined(_LIBCPP_CXX03_LANG)
+using ::max_align_t _LIBCPP_USING_IF_EXISTS;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
 
-_LIBCPP_POP_MACROS
-
-#endif // _LIBCPP___FWD_SPAN_H
+#endif // _LIBCPP___CSTDDEF_MAX_ALIGN_T_H
