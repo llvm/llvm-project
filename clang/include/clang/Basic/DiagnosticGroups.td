@@ -1559,7 +1559,8 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
+def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall]>;
 
 // Warnings and notes related to the function effects system underlying
 // the nonblocking and nonallocating attributes.
