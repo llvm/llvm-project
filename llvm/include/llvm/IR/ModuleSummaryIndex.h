@@ -856,9 +856,8 @@ public:
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
-        /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
-        std::vector<ValueInfo>(), std::move(Edges),
-        std::vector<GlobalValue::GUID>(),
+        /*NumInsts=*/0, FunctionSummary::FFlags{}, std::vector<ValueInfo>(),
+        std::move(Edges), std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
@@ -877,11 +876,6 @@ private:
 
   /// Function summary specific flags.
   FFlags FunFlags;
-
-  /// The synthesized entry count of the function.
-  /// This is only populated during ThinLink phase and remains unused while
-  /// generating per-module summaries.
-  uint64_t EntryCount = 0;
 
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
   std::vector<EdgeTy> CallGraphEdgeList;
@@ -913,8 +907,7 @@ private:
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
-                  uint64_t EntryCount, std::vector<ValueInfo> Refs,
-                  std::vector<EdgeTy> CGEdges,
+                  std::vector<ValueInfo> Refs, std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
@@ -923,7 +916,7 @@ public:
                   std::vector<ParamAccess> Params, CallsitesTy CallsiteList,
                   AllocsTy AllocList)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
-        InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
+        InstCount(NumInsts), FunFlags(FunFlags),
         CallGraphEdgeList(std::move(CGEdges)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
@@ -957,12 +950,6 @@ public:
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
-
-  /// Get the synthetic entry count for this function.
-  uint64_t entryCount() const { return EntryCount; }
-
-  /// Set the synthetic entry count for this function.
-  void setEntryCount(uint64_t EC) { EntryCount = EC; }
 
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }

@@ -5349,7 +5349,6 @@ llvm/include/llvm/IR/SSAContext.h
 llvm/include/llvm/IR/StructuralHash.h
 llvm/include/llvm/IR/TrackingMDRef.h
 llvm/include/llvm/IR/UseListOrder.h
-llvm/include/llvm/LTO/SummaryBasedOptimizations.h
 llvm/include/llvm/MC/MCAsmInfoCOFF.h
 llvm/include/llvm/MC/MCAsmInfoDarwin.h
 llvm/include/llvm/MC/MCAsmInfoELF.h
@@ -5586,7 +5585,6 @@ llvm/include/llvm/Transforms/IPO/SampleProfile.h
 llvm/include/llvm/Transforms/IPO/SampleProfileProbe.h
 llvm/include/llvm/Transforms/IPO/SCCP.h
 llvm/include/llvm/Transforms/IPO/StripSymbols.h
-llvm/include/llvm/Transforms/IPO/SyntheticCountsPropagation.h
 llvm/include/llvm/Transforms/IPO/ThinLTOBitcodeWriter.h
 llvm/include/llvm/Transforms/IPO/WholeProgramDevirt.h
 llvm/include/llvm/Transforms/Scalar/ADCE.h
@@ -6070,7 +6068,6 @@ llvm/lib/IR/SSAContext.cpp
 llvm/lib/IR/Statepoint.cpp
 llvm/lib/IR/StructuralHash.cpp
 llvm/lib/IR/ValueSymbolTable.cpp
-llvm/lib/LTO/SummaryBasedOptimizations.cpp
 llvm/lib/MC/MCAsmInfoCOFF.cpp
 llvm/lib/MC/MCAsmInfoELF.cpp
 llvm/lib/MC/MCAsmInfoGOFF.cpp
@@ -6861,7 +6858,6 @@ llvm/lib/Transforms/IPO/OpenMPOpt.cpp
 llvm/lib/Transforms/IPO/SampleContextTracker.cpp
 llvm/lib/Transforms/IPO/SampleProfileProbe.cpp
 llvm/lib/Transforms/IPO/StripDeadPrototypes.cpp
-llvm/lib/Transforms/IPO/SyntheticCountsPropagation.cpp
 llvm/lib/Transforms/ObjCARC/BlotMapVector.h
 llvm/lib/Transforms/ObjCARC/ObjCARCExpand.cpp
 llvm/lib/Transforms/ObjCARC/ProvenanceAnalysis.h

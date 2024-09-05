@@ -1713,9 +1713,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     if (!ModuleToDefinedGVSummaries.count(Mod.first))
       ModuleToDefinedGVSummaries.try_emplace(Mod.first);
 
-  // Synthesize entry counts for functions in the CombinedIndex.
-  computeSyntheticCounts(ThinLTO.CombinedIndex);
-
   DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(
       ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(

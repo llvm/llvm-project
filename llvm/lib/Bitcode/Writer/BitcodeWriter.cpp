@@ -4714,7 +4714,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         getEncodedGVSummaryFlags(FS->flags(), shouldImportValueAsDecl(FS)));
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
-    NameVals.push_back(FS->entryCount());
+    NameVals.push_back(0 /* EntryCount */);
 
     // Fill in below
     NameVals.push_back(0); // numrefs
