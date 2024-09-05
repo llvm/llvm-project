@@ -1051,6 +1051,7 @@ def z : Separate<["-"], "z">, Flags<[LinkerInput]>,
 def offload_link : Flag<["--"], "offload-link">, Group<Link_Group>,
   HelpText<"Use the new offloading linker to perform the link job.">;
 def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
+  Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
