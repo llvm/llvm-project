@@ -39,7 +39,7 @@ static cl::opt<std::string> Class("class",
                                   cl::value_desc("class name"),
                                   cl::cat(PrintEnumsCat));
 
-static void PrintRecords(RecordKeeper &Records, raw_ostream &OS) {
+static void PrintRecords(const RecordKeeper &Records, raw_ostream &OS) {
   OS << Records; // No argument, dump all contents
 }
 
@@ -49,14 +49,14 @@ static void PrintEnums(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
 }
 
-static void PrintSets(RecordKeeper &Records, raw_ostream &OS) {
+static void PrintSets(const RecordKeeper &Records, raw_ostream &OS) {
   SetTheory Sets;
   Sets.addFieldExpander("Set", "Elements");
   for (Record *Rec : Records.getAllDerivedDefinitions("Set")) {
     OS << Rec->getName() << " = [";
     const std::vector<Record *> *Elts = Sets.expand(Rec);
     assert(Elts && "Couldn't expand Set instance");
-    for (Record *Elt : *Elts)
+    for (const Record *Elt : *Elts)
       OS << ' ' << Elt->getName();
     OS << " ]\n";
   }
@@ -67,7 +67,7 @@ static TableGen::Emitter::Opt X[] = {
      true},
     {"print-detailed-records", EmitDetailedRecords,
      "Print full details of all records to stdout"},
-    {"null-backend", [](RecordKeeper &Records, raw_ostream &OS) {},
+    {"null-backend", [](const RecordKeeper &Records, raw_ostream &OS) {},
      "Do nothing after parsing (useful for timing)"},
     {"dump-json", EmitJSON, "Dump all records as machine-readable JSON"},
     {"print-enums", PrintEnums, "Print enum values for a class"},

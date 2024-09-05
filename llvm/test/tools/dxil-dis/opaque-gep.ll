@@ -7,7 +7,7 @@ define i32 @fn(ptr %0)  {
   ret i32 %3
 }
 
-; CHECK:        define i32 @fn(i32*) 
+; CHECK:        define internal i32 @fn(i32*)
 ; CHECK-NEXT:   %2 = getelementptr i32, i32* %0, i32 4
 ; CHECK-NEXT:   %3 = load i32, i32* %2, align 4
 
@@ -17,6 +17,6 @@ define i32 @fn2(ptr addrspace(1) %0)  {
   ret i32 %3
 }
 
-; CHECK:        define i32 @fn2(i32 addrspace(1)*) 
+; CHECK:        define internal i32 @fn2(i32 addrspace(1)*)
 ; CHECK-NEXT:   %2 = getelementptr i32, i32 addrspace(1)* %0, i32 4
 ; CHECK-NEXT:   %3 = load i32, i32 addrspace(1)* %2, align 4
