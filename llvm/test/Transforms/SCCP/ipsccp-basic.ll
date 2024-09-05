@@ -275,7 +275,7 @@ define i32 @test10a() nounwind {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test10b(i32 undef)
-; CHECK-NEXT:    ret i32 [[CALL]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %call = call i32 @test10b(i32 undef)
@@ -287,8 +287,7 @@ define internal i32 @test10b(i32 %x) nounwind {
 ; CHECK-LABEL: define internal i32 @test10b
 ; CHECK-SAME: (i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = and i32 undef, 1
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %r = and i32 %x, 1
@@ -299,8 +298,7 @@ entry:
 
 define i64 @test11a() {
 ; CHECK-LABEL: define i64 @test11a() {
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 undef, undef
-; CHECK-NEXT:    ret i64 [[XOR]]
+; CHECK-NEXT:    ret i64 0
 ;
   %xor = xor i64 undef, undef
   ret i64 %xor
@@ -309,8 +307,7 @@ define i64 @test11a() {
 define i64 @test11b() {
 ; CHECK-LABEL: define i64 @test11b() {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i64 @test11a()
-; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[CALL1]])
-; CHECK-NEXT:    ret i64 [[CALL2]]
+; CHECK-NEXT:    ret i64 0
 ;
   %call1 = call i64 @test11a()
   %call2 = call i64 @llvm.ctpop.i64(i64 %call1)

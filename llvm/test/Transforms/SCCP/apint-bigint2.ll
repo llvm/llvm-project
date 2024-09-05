@@ -21,11 +21,7 @@ define i101 @array() {
 
 define i101 @large_aggregate() {
 ; CHECK-LABEL: @large_aggregate(
-; CHECK-NEXT:    [[D:%.*]] = and i101 undef, 1
-; CHECK-NEXT:    [[DD:%.*]] = or i101 [[D]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i101, ptr getelementptr inbounds (i8, ptr @Y, i64 80), i101 [[DD]]
-; CHECK-NEXT:    [[L3:%.*]] = load i101, ptr [[G]], align 4
-; CHECK-NEXT:    ret i101 [[L3]]
+; CHECK-NEXT:    ret i101 poison
 ;
   %B = load i101, ptr undef
   %D = and i101 %B, 1
@@ -38,11 +34,7 @@ define i101 @large_aggregate() {
 
 define i101 @large_aggregate_2() {
 ; CHECK-LABEL: @large_aggregate_2(
-; CHECK-NEXT:    [[D:%.*]] = and i101 undef, 1
-; CHECK-NEXT:    [[DD:%.*]] = or i101 [[D]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i101, ptr getelementptr inbounds (i8, ptr @Y, i64 80), i101 [[DD]]
-; CHECK-NEXT:    [[L3:%.*]] = load i101, ptr [[G]], align 4
-; CHECK-NEXT:    ret i101 [[L3]]
+; CHECK-NEXT:    ret i101 poison
 ;
   %D = and i101 undef, 1
   %DD = or i101 %D, 1

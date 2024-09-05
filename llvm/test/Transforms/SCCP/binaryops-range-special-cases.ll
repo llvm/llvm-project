@@ -102,9 +102,7 @@ define void @urem_cmp_constants() {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[UREM_3:%.*]] = urem i16 12704, 0
-; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i16 [[UREM_3]], 1
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    call void @use(i1 poison)
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 false, i16 0, i16 12704
@@ -130,9 +128,7 @@ define void @srem_cmp_constants() {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[SREM_3:%.*]] = urem i16 12704, 0
-; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i16 [[SREM_3]], 1
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    call void @use(i1 poison)
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 false, i16 0, i16 12704

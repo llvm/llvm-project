@@ -5,8 +5,7 @@
 ; PR6940
 define double @test1() {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[T:%.*]] = sitofp i32 undef to double
-; CHECK-NEXT:    ret double [[T]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %t = sitofp i32 undef to double
   ret double %t
@@ -175,8 +174,7 @@ bb1:                                              ; preds = %bb1.us-lcssa, %bb1.
 ; rdar://9956541
 define i32 @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[T:%.*]] = xor i32 undef, undef
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    ret i32 0
 ;
   %t = xor i32 undef, undef
   ret i32 %t
@@ -185,8 +183,7 @@ define i32 @test3() {
 ; Be conservative with FP ops
 define double @test4(double %x) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], undef
-; CHECK-NEXT:    ret double [[T]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %t = fadd double %x, undef
   ret double %t
@@ -195,8 +192,7 @@ define double @test4(double %x) {
 ; Make sure casts produce a possible value
 define i32 @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[T:%.*]] = sext i8 undef to i32
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    ret i32 0
 ;
   %t = sext i8 undef to i32
   ret i32 %t
@@ -205,8 +201,7 @@ define i32 @test5() {
 ; Make sure ashr produces a possible value
 define i32 @test6() {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[T:%.*]] = ashr i32 undef, 31
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    ret i32 0
 ;
   %t = ashr i32 undef, 31
   ret i32 %t
@@ -215,8 +210,7 @@ define i32 @test6() {
 ; Make sure lshr produces a possible value
 define i32 @test7() {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[T:%.*]] = lshr i32 undef, 31
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    ret i32 0
 ;
   %t = lshr i32 undef, 31
   ret i32 %t
@@ -260,8 +254,7 @@ define i32 @test11(i1 %tobool) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @test11, @GV
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[SHR4:%.*]] = ashr i32 undef, [[EXT]]
-; CHECK-NEXT:    ret i32 [[SHR4]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp eq ptr @test11, @GV
@@ -273,8 +266,7 @@ entry:
 ; Test unary ops
 define double @test12(double %x) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[T:%.*]] = fneg double undef
-; CHECK-NEXT:    ret double [[T]]
+; CHECK-NEXT:    ret double undef
 ;
   %t = fneg double undef
   ret double %t

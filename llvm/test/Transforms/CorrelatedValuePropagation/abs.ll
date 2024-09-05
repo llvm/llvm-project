@@ -499,7 +499,8 @@ define i32 @pr68381_undef_abs_true(i1 %c0, i1 %c1, i8 %v1) {
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[V1_I32]], [[BB0]] ], [ undef, [[START:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB0]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
 start:
   br i1 %c0, label %bb0, label %bb1

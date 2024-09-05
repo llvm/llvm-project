@@ -260,7 +260,7 @@ define void @test4_a() {
 ; CHECK-LABEL: define {{[^@]+}}@test4_a() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = call ptr @test4_c(ptr null)
-; CHECK-NEXT:    call void @test4_b(ptr null)
+; CHECK-NEXT:    call void @test4_b(ptr poison)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -273,9 +273,8 @@ define internal void @test4_b(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_b
 ; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, ptr null, ptr null
-; CHECK-NEXT:    call void @use.16(ptr null)
-; CHECK-NEXT:    call void @use.8(ptr [[SEL]])
+; CHECK-NEXT:    call void @use.16(ptr poison)
+; CHECK-NEXT:    call void @use.8(ptr poison)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -289,12 +288,7 @@ define internal ptr @test4_c(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_c
 ; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb1:
-; CHECK-NEXT:    [[TMP:%.*]] = and i1 undef, undef
-; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
-; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    ret ptr poison
 ;
 bb1:                                              ; preds = %bb
   %tmp = and i1 undef, undef
@@ -313,7 +307,7 @@ define void @test5_a() {
 ; CHECK-LABEL: define {{[^@]+}}@test5_a() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = call ptr @test5_c(ptr null)
-; CHECK-NEXT:    call void @test5_b(ptr null)
+; CHECK-NEXT:    call void @test5_b(ptr poison)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -326,8 +320,7 @@ define internal void @test5_b(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test5_b
 ; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, ptr null, ptr null
-; CHECK-NEXT:    call void @use.8(ptr [[SEL]])
+; CHECK-NEXT:    call void @use.8(ptr poison)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -340,12 +333,7 @@ define internal ptr @test5_c(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test5_c
 ; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb1:
-; CHECK-NEXT:    [[TMP:%.*]] = and i1 undef, undef
-; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
-; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    ret ptr poison
 ;
 bb1:                                              ; preds = %bb
   %tmp = and i1 undef, undef
@@ -370,23 +358,11 @@ define void @test3() {
 ; CHECK-NEXT:    br label [[IF_END16:%.*]]
 ; CHECK:       if.end16:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @contextsize, align 4
-; CHECK-NEXT:    [[SUB18:%.*]] = sub i32 undef, [[TMP0]]
-; CHECK-NEXT:    [[SUB19:%.*]] = sub i32 [[SUB18]], undef
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @maxposslen, align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 8
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 undef, [[ADD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @pcount, align 4
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], [[SUB19]]
-; CHECK-NEXT:    [[CMP20:%.*]] = icmp sgt i32 [[TMP2]], [[MUL]]
-; CHECK-NEXT:    br i1 [[CMP20]], label [[IF_THEN22:%.*]], label [[IF_END24:%.*]]
-; CHECK:       if.then22:
-; CHECK-NEXT:    store i32 [[MUL]], ptr @pcount, align 4
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[IF_END24:%.*]]
 ; CHECK:       if.end24:
-; CHECK-NEXT:    [[CMP25474:%.*]] = icmp sgt i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[CMP25474]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

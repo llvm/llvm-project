@@ -47,7 +47,7 @@ define i1 @test2() {
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @testf()
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
 entry:
   br label %if.end

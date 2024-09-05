@@ -19,11 +19,6 @@ ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
   if (isUnknown() || Other.isUnknown())
     return nullptr;
 
-  // TODO: Can be made more precise, but always returning undef would be
-  // incorrect.
-  if (isUndef() || Other.isUndef())
-    return nullptr;
-
   if (isConstant() && Other.isConstant())
     return ConstantFoldCompareInstOperands(Pred, getConstant(),
                                            Other.getConstant(), DL);
@@ -112,8 +107,6 @@ ValueLatticeElement::intersect(const ValueLatticeElement &Other) const {
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
   if (Val.isUnknown())
     return OS << "unknown";
-  if (Val.isUndef())
-    return OS << "undef";
   if (Val.isOverdefined())
     return OS << "overdefined";
 

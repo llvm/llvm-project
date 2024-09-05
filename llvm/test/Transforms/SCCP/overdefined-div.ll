@@ -25,8 +25,7 @@ define i32 @test2(i32 %foo) {
 define i32 @test3(i32 %foo) {
 ; CHECK-LABEL: define i32 @test3
 ; CHECK-SAME: (i32 [[FOO:%.*]]) {
-; CHECK-NEXT:    [[TINKYWINKY:%.*]] = udiv i32 [[FOO]], 0
-; CHECK-NEXT:    ret i32 [[TINKYWINKY]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %tinkywinky = udiv i32 %foo, 0
   ret i32 %tinkywinky
@@ -35,8 +34,7 @@ define i32 @test3(i32 %foo) {
 define i32 @test4(i32 %foo) {
 ; CHECK-LABEL: define i32 @test4
 ; CHECK-SAME: (i32 [[FOO:%.*]]) {
-; CHECK-NEXT:    [[TINKYWINKY:%.*]] = sdiv i32 [[FOO]], 0
-; CHECK-NEXT:    ret i32 [[TINKYWINKY]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %tinkywinky = sdiv i32 %foo, 0
   ret i32 %tinkywinky

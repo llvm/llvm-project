@@ -5,9 +5,12 @@
 
 define void @f() {
 ; CHECK-LABEL: define void @f() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOR_RHS:.*]]
 ; CHECK:       [[LOR_RHS]]:
+; CHECK-NEXT:    [[G_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 0, %[[LOR_RHS]] ]
+; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[G_1]], 16
+; CHECK-NEXT:    [[CONV20:%.*]] = ashr exact i32 [[SEXT]], 16
 ; CHECK-NEXT:    br label %[[LOR_RHS]]
 ;
 entry:

@@ -8,8 +8,7 @@ declare void @use(i1)
 define void @val_undef_eq() {
 ; CHECK-LABEL: @val_undef_eq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 undef, 0
-; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 [[A]], 10
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 undef, 10
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
@@ -41,12 +40,11 @@ declare void @use.i32(i32)
 define void @val_undef_range() {
 ; CHECK-LABEL: @val_undef_range(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 undef, 0
-; CHECK-NEXT:    [[BC_1:%.*]] = icmp ult i32 [[A]], 127
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp ult i32 undef, 127
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[A_127:%.*]] = and i32 [[A]], 127
+; CHECK-NEXT:    [[A_127:%.*]] = and i32 undef, 127
 ; CHECK-NEXT:    call void @use.i32(i32 [[A_127]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
@@ -79,11 +77,15 @@ define void @val_singlecrfromundef_range(i1 %cond) {
 ; CHECK:       inc2:
 ; CHECK-NEXT:    br label [[IF]]
 ; CHECK:       if:
-; CHECK-NEXT:    br label [[TRUE:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 10, [[INC1]] ], [ undef, [[INC2]] ]
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp ult i32 [[P]], 127
+; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[P_127:%.*]] = and i32 10, 127
+; CHECK-NEXT:    [[P_127:%.*]] = and i32 [[P]], 127
 ; CHECK-NEXT:    call void @use.i32(i32 [[P_127]])
+; CHECK-NEXT:    ret void
+; CHECK:       false:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -175,11 +177,14 @@ define void @bound_singlecrfromundef(i32 %a, i1 %cond) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[PRED]]
 ; CHECK:       pred:
-; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ undef, [[BB1]] ], [ 10, [[BB2]] ]
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[A:%.*]], [[P]]
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[A]], 5
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i32 [[A]], 5
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    [[A_127:%.*]] = and i32 [[A]], 127
 ; CHECK-NEXT:    call void @use.i32(i32 [[A_127]])
 ; CHECK-NEXT:    ret void

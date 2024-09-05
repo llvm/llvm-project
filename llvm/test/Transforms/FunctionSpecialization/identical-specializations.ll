@@ -12,9 +12,8 @@ define i64 @main(i64 %x, i64 %y, i1 %flag) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @compute.specialized.3(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PH:%.*]] = phi i64 [ [[CMP0]], [[PLUS]] ], [ [[CMP1]], [[MINUS]] ]
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.specialized.2(i64 [[PH]], i64 42, ptr @plus, ptr @minus)
-; CHECK-NEXT:    ret i64 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.specialized.2(i64 poison, i64 42, ptr @plus, ptr @minus)
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   br i1 %flag, label %plus, label %minus
@@ -48,6 +47,10 @@ entry:
 
 define internal i64 @plus(i64 %x, i64 %y) {
 ; CHECK-LABEL: @plus(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
 entry:
   %add = add i64 %x, %y
   ret i64 %add
@@ -55,25 +58,14 @@ entry:
 
 define internal i64 @minus(i64 %x, i64 %y) {
 ; CHECK-LABEL: @minus(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
 entry:
   %sub = sub i64 %x, %y
   ret i64 %sub
 }
 
-; CHECK-LABEL: @compute.specialized.1
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 %binop1(i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.specialized.1(i64 [[X]], i64 [[Y]], ptr %binop1, ptr @plus)
 
-; CHECK-LABEL: @compute.specialized.2
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @plus(i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.specialized.1(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)
 
-; CHECK-LABEL: @compute.specialized.3
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @minus(i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.specialized.3(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)

@@ -5,8 +5,7 @@
 
 define i32 @sdiv_const_undef() {
 ; CHECK-LABEL: @sdiv_const_undef(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 42, poison
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %i = load i32, ptr @g, align 4
   %d = sdiv i32 %i, poison
@@ -15,8 +14,7 @@ define i32 @sdiv_const_undef() {
 
 define i32 @sdiv_undef_const() {
 ; CHECK-LABEL: @sdiv_undef_const(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 poison, 42
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %i = load i32, ptr @g, align 4
   %d = sdiv i32 poison, %i

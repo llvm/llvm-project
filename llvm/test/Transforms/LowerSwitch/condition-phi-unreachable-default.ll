@@ -9,7 +9,7 @@ entry:
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.epilog.outer, %for.body
-  %i = phi i32 [ undef, %for.body ], [ 0, %entry ]
+  %i = phi i32 [ poison, %for.body ], [ 0, %entry ]
   br i1 undef, label %for.body, label %for.end
 
 for.body:                                         ; preds = %sw.epilog

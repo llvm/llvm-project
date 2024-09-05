@@ -9,12 +9,14 @@ define void @read_dmatrix() #0 {
 ; CHECK-NEXT:    [[HEIGHT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
+; CHECK-NEXT:    [[J_0:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ 0, [[FOR_COND6:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[HEIGHT]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP0]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND6:%.*]], label [[FOR_END16:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND6]], label [[FOR_END16:%.*]]
 ; CHECK:       for.cond6:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end16:
+; CHECK-NEXT:    [[SUB21:%.*]] = sub nsw i32 [[J_0]], 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -42,6 +44,8 @@ define void @emptyTT() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
+; CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_0_0:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ 0, [[FOR_COND]] ]
+; CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i64 [[DOTCOMPOUNDLITERAL_SROA_0_0]], -67108864
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_COND]], label [[EXIT:%.*]]
 ; CHECK:       exit:

@@ -3,7 +3,7 @@
 
 ; Test that SCCP has basic knowledge of when and/or/mul nuke overdefined values.
 
- define i32 @test(i32 %X) {
+  define i32 @test(i32 %X) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -21,8 +21,7 @@ define i32 @test2(i32 %X) {
 
 define i32 @test3(i32 %X) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[Y:%.*]] = and i32 undef, [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 0
 ;
   %Y = and i32 undef, %X
   ret i32 %Y
@@ -30,8 +29,7 @@ define i32 @test3(i32 %X) {
 
 define i32 @test4(i32 %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[Y:%.*]] = or i32 [[X:%.*]], undef
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %Y = or i32 %X, undef
   ret i32 %Y

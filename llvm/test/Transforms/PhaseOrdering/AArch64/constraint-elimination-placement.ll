@@ -96,7 +96,7 @@ define void @test2(ptr %this) #0 {
 ; CHECK-LABEL: define void @test2(
 ; CHECK-SAME: ptr nocapture writeonly [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
+; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 poison)
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CALL1_I_I]], i64 [[CALL2_I_I]], i64 0
 ; CHECK-NEXT:    switch i64 [[COND_I_I]], label [[COMMON_RET:%.*]] [
@@ -156,7 +156,7 @@ define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-SAME: ptr nocapture readonly [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[__RHS]])
-; CHECK-NEXT:    [[CALL1_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
+; CHECK-NEXT:    [[CALL1_I:%.*]] = tail call i1 @test2_fn4(i8 poison)
 ; CHECK-NEXT:    [[CALL2_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CALL1_I]], i64 [[CALL2_I]], i64 0
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i64 [[CALL]], [[COND_I]]

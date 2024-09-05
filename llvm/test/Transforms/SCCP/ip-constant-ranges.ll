@@ -205,7 +205,7 @@ define internal i32 @f5(i32 %x) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 undef, [[X]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select i1 [[CMP]], i32 1, i32 2
 ; CHECK-NEXT:    [[RES2:%.*]] = select i1 [[CMP2]], i32 3, i32 4
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[RES1]], [[RES2]]
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[RES1]], [[RES2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -223,7 +223,7 @@ define i32 @caller4() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @f5(i32 47)
 ; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @f5(i32 301)
-; CHECK-NEXT:    [[RES:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CALL1]], [[CALL2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
