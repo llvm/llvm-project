@@ -2076,6 +2076,12 @@ defm INT_PTX_ATOM_XOR_GEN_64_USE_G : F_ATOMIC_2<i64, Int64Regs, ".global", ".b64
 
 // atom_cas
 
+def atomic_cmp_swap_i16_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
+  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
+def atomic_cmp_swap_i16_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
+  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
+def atomic_cmp_swap_i16_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
+  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
 def atomic_cmp_swap_i32_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
   (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
 def atomic_cmp_swap_i32_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
@@ -2089,6 +2095,14 @@ def atomic_cmp_swap_i64_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
 def atomic_cmp_swap_i64_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
   (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
 
+defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
+  atomic_cmp_swap_i16_g, i16imm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, ".shared", ".b16", ".cas",
+  atomic_cmp_swap_i16_s, i16imm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_CAS_GEN_16 : F_ATOMIC_3<i16, Int16Regs, "", ".b16", ".cas",
+  atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_CAS_GEN_16_USE_G : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
+  atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_CAS_G_32 : F_ATOMIC_3<i32, Int32Regs, ".global", ".b32", ".cas",
   atomic_cmp_swap_i32_g, i32imm>;
 defm INT_PTX_ATOM_CAS_S_32 : F_ATOMIC_3<i32, Int32Regs, ".shared", ".b32", ".cas",
@@ -2300,6 +2314,7 @@ multiclass ATOM2_incdec_impl<string OpStr> {
 
 // atom.cas
 multiclass ATOM3_cas_impl<string OpStr> {
+   defm _b16  : ATOM3S_impl<OpStr, "i", "b16", i16, Int16Regs, i16imm, imm, i16, []>;
    defm _b32  : ATOM3S_impl<OpStr, "i", "b32", i32, Int32Regs, i32imm, imm, i32, []>;
    defm _b64  : ATOM3S_impl<OpStr, "i", "b64", i64, Int64Regs, i64imm, imm, i64, []>;
 }

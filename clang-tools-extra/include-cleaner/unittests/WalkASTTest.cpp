@@ -255,7 +255,7 @@ TEST(WalkAST, TemplateSpecializationsFromUsingDecl) {
   // Class templates
   testWalk(R"cpp(
 namespace ns {
-template<class T> class $ambiguous^Z {};      // primary template
+template<class T> class $explicit^Z {};      // primary template
 template<class T> class $ambiguous^Z<T*> {};  // partial specialization
 template<> class $ambiguous^Z<int> {};        // full specialization
 }
@@ -265,7 +265,7 @@ template<> class $ambiguous^Z<int> {};        // full specialization
   // Var templates
   testWalk(R"cpp(
 namespace ns {
-template<class T> T $ambiguous^foo;      // primary template
+template<class T> T $explicit^foo;      // primary template
 template<class T> T $ambiguous^foo<T*>;  // partial specialization
 template<> int* $ambiguous^foo<int>;     // full specialization
 }
@@ -335,7 +335,12 @@ TEST(WalkAST, Using) {
   testWalk(R"cpp(
     namespace ns {
       template<class T>
-      class $ambiguous^Y {};
+      class $explicit^Y {};
+    })cpp",
+           "using ns::^Y;");
+  testWalk(R"cpp(
+    namespace ns {
+      class $explicit^Y {};
     })cpp",
            "using ns::^Y;");
   testWalk(R"cpp(
@@ -529,6 +534,9 @@ TEST(WalkAST, Enums) {
   testWalk(R"(namespace ns { enum E { A = 42 }; }
               struct S { using ns::E::A; };)",
            "int e = S::^A;");
+  testWalk(R"(namespace ns { enum E { $explicit^A = 42 }; })",
+           "namespace z = ns; int e = z::^A;");
+  testWalk(R"(enum E { $explicit^A = 42 };)", "int e = ::^A;");
 }
 
 TEST(WalkAST, InitializerList) {
@@ -557,9 +565,9 @@ TEST(WalkAST, FriendDecl) {
 }
 
 TEST(WalkAST, OperatorNewDelete) {
-  testWalk("void* $explicit^operator new(decltype(sizeof(int)), void*);",
+  testWalk("void* $ambiguous^operator new(decltype(sizeof(int)), void*);",
            "struct Bar { void foo() { Bar b; ^new (&b) Bar; } };");
-  testWalk("struct A { static void $explicit^operator delete(void*); };",
+  testWalk("struct A { static void $ambiguous^operator delete(void*); };",
            "void foo() { A a; ^delete &a; }");
 }
 } // namespace

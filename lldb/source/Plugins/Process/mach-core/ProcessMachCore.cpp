@@ -550,28 +550,33 @@ void ProcessMachCore::CleanupMemoryRegionPermissions() {
 Status ProcessMachCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
   SetCanJIT(false);
-
-  // The corefile's architecture is our best starting point.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-  if (arch.IsValid())
-    GetTarget().SetArchitecture(arch);
 
   CreateMemoryRegions();
 
   LoadBinariesAndSetDYLD();
 
   CleanupMemoryRegionPermissions();
+
+  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
+  } else {
+    // The corefile's architecture is our best starting point.
+    ArchSpec arch(m_core_module_sp->GetArchitecture());
+    if (arch.IsValid())
+      GetTarget().SetArchitecture(arch);
+  }
 
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
   SetAddressableBitMasks(addressable_bits);
@@ -696,7 +701,7 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
       } else {
         // Only set the error if we didn't read any bytes
         if (bytes_read == 0)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "core file does not contain 0x%" PRIx64, curr_addr);
         break;
       }

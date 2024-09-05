@@ -288,7 +288,8 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
         // Map and set types.
         .Cases("find", "equal_range", "lower_bound", "upper_bound", true)
         .Default(false);
-  } else if (Callee->getReturnType()->isReferenceType()) {
+  }
+  if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
       return OO == OverloadedOperatorKind::OO_Subscript ||
@@ -316,10 +317,34 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
         .Cases("end", "rend", "cend", "crend", true)
         .Case("data", true)
         .Default(false);
-  } else if (FD->getReturnType()->isReferenceType()) {
+  }
+  if (FD->getReturnType()->isReferenceType()) {
     return llvm::StringSwitch<bool>(FD->getName())
         .Cases("get", "any_cast", true)
         .Default(false);
+  }
+  return false;
+}
+
+// Return true if this is an "normal" assignment operator.
+// We assuments that a normal assingment operator always returns *this, that is,
+// an lvalue reference that is the same type as the implicit object parameter
+// (or the LHS for a non-member operator$=).
+static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
+  OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
+  if (OO == OO_Equal || isCompoundAssignmentOperator(OO)) {
+    QualType RetT = FD->getReturnType();
+    if (RetT->isLValueReferenceType()) {
+      ASTContext &Ctx = FD->getASTContext();
+      QualType LHST;
+      auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      if (MD && MD->isCXXInstanceMember())
+        LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
+      else
+        LHST = MD->getParamDecl(0)->getType();
+      if (Ctx.hasSameType(RetT, LHST))
+        return true;
+    }
   }
   return false;
 }
@@ -339,26 +364,7 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
       return true;
   }
 
-  // Assume that all assignment operators with a "normal" return type return
-  // *this, that is, an lvalue reference that is the same type as the implicit
-  // object parameter (or the LHS for a non-member operator$=).
-  OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
-  if (OO == OO_Equal || isCompoundAssignmentOperator(OO)) {
-    QualType RetT = FD->getReturnType();
-    if (RetT->isLValueReferenceType()) {
-      ASTContext &Ctx = FD->getASTContext();
-      QualType LHST;
-      auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isCXXInstanceMember())
-        LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
-      else
-        LHST = MD->getParamDecl(0)->getType();
-      if (Ctx.hasSameType(RetT, LHST))
-        return true;
-    }
-  }
-
-  return false;
+  return isNormalAssignmentOperator(FD);
 }
 
 // Visit lifetimebound or gsl-pointer arguments.
@@ -405,7 +411,8 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     // Once we initialized a value with a reference, it can no longer dangle.
     if (!Value) {
       for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
-        if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit)
+        if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit ||
+            PE.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
           continue;
         if (PE.Kind == IndirectLocalPathEntry::GslPointerInit ||
             PE.Kind == IndirectLocalPathEntry::GslPointerAssignment)
@@ -456,7 +463,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
        I != N; ++I) {
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
-    else if (EnableGSLAnalysis && I == 0) { // GSL
+    else if (EnableGSLAnalysis && I == 0) {
       if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0],
                            !Callee->getReturnType()->isReferenceType());
@@ -935,6 +942,22 @@ static bool pathOnlyHandlesGslPointer(IndirectLocalPath &Path) {
   return false;
 }
 
+static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
+  if (!CMD)
+    return false;
+  return isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
+         CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
+}
+
+static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
+                                           const AssignedEntity &Entity) {
+  bool EnableGSLAssignmentWarnings = !SemaRef.getDiagnostics().isIgnored(
+      diag::warn_dangling_lifetime_pointer_assignment, SourceLocation());
+  return (EnableGSLAssignmentWarnings &&
+          (isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
+           isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator)));
+}
+
 static void checkExprLifetimeImpl(Sema &SemaRef,
                                   const InitializedEntity *InitEntity,
                                   const InitializedEntity *ExtendingEntity,
@@ -1233,10 +1256,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
   };
 
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
-  if (!SemaRef.getDiagnostics().isIgnored(diag::warn_dangling_lifetime_pointer,
-                                          SourceLocation()) &&
-      LK == LK_Assignment &&
-      isRecordWithAttr<PointerAttr>(AEntity->LHS->getType()))
+  if (LK == LK_Assignment && shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity))
     Path.push_back({IndirectLocalPathEntry::GslPointerAssignment, Init});
 
   if (Init->isGLValue())
@@ -1260,11 +1280,11 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                        Expr *Init) {
-  bool EnableLifetimeWarnings = !SemaRef.getDiagnostics().isIgnored(
-      diag::warn_dangling_lifetime_pointer, SourceLocation());
-  bool RunAnalysis = Entity.LHS->getType()->isPointerType() ||
-                     (EnableLifetimeWarnings &&
-                      isRecordWithAttr<PointerAttr>(Entity.LHS->getType()));
+  bool EnableDanglingPointerAssignment = !SemaRef.getDiagnostics().isIgnored(
+      diag::warn_dangling_pointer_assignment, SourceLocation());
+  bool RunAnalysis = (EnableDanglingPointerAssignment &&
+                      Entity.LHS->getType()->isPointerType()) ||
+                     shouldRunGSLAssignmentAnalysis(SemaRef, Entity);
 
   if (!RunAnalysis)
     return;

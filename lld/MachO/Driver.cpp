@@ -1882,9 +1882,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->arch() != AK_i386)
-      error("invalid argument '" + arg->getAsString(args) +
-            "': max and init must be the same for non-i386 archs");
+
+    // FIXME: Check if this works on more platforms.
+    bool allowsDifferentInitAndMaxProt =
+        config->platform() == PLATFORM_MACOS ||
+        config->platform() == PLATFORM_MACCATALYST;
+    if (allowsDifferentInitAndMaxProt) {
+      if (initProt > maxProt)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': init must not be more permissive than max");
+    } else {
+      if (maxProt != initProt && config->arch() != AK_i386)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': max and init must be the same for non-macOS non-i386 archs");
+    }
+
     if (segName == segment_names::linkEdit)
       error("-segprot cannot be used to change __LINKEDIT's protections");
     config->segmentProtections.push_back({segName, maxProt, initProt});
