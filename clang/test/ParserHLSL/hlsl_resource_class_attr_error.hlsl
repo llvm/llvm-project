@@ -12,7 +12,7 @@ __hlsl_resource_t [[hlsl::resource_class(gibberish)]] e2;
 // expected-warning@+1{{attribute 'resource_class' is already applied with different arguments}}
 __hlsl_resource_t [[hlsl::resource_class(SRV)]] [[hlsl::resource_class(UAV)]] e3;
 
-// duplicate attribute with the same meaning - no error
+// expected-warning@+1{{attribute 'resource_class' is already applied}}
 __hlsl_resource_t [[hlsl::resource_class(SRV)]] [[hlsl::resource_class(SRV)]] e4;
 
 // expected-error@+1{{'resource_class' attribute takes one argument}}

@@ -582,7 +582,10 @@ bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
         ResAttrs.ResourceClass = RC;
         HasResourceClass = true;
       } else {
-        S.Diag(A->getLocation(), diag::warn_duplicate_attribute) << A;
+        S.Diag(A->getLocation(), ResAttrs.ResourceClass == RC
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
         return false;
       }
       break;
