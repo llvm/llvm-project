@@ -1305,7 +1305,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
 
         // catch_all always catches an exception, so we don't need to do
         // anything
-        if (MI.getOpcode() == WebAssembly::CATCH_ALL) {
+        if (MI.getOpcode() == WebAssembly::CATCH_ALL_LEGACY) {
         }
 
         // This can happen when the unwind dest was removed during the
@@ -1448,8 +1448,8 @@ void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
       case WebAssembly::DELEGATE:
         updateScopeTops(EndToBegin[&MI]->getParent(), &MBB);
         break;
-      case WebAssembly::CATCH:
-      case WebAssembly::CATCH_ALL:
+      case WebAssembly::CATCH_LEGACY:
+      case WebAssembly::CATCH_ALL_LEGACY:
         updateScopeTops(EHPadToTry[&MBB]->getParent(), &MBB);
         break;
       }
@@ -1698,8 +1698,8 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         Stack.push_back(std::make_pair(EndToBegin[&MI]->getParent(), &MI));
         break;
 
-      case WebAssembly::CATCH:
-      case WebAssembly::CATCH_ALL:
+      case WebAssembly::CATCH_LEGACY:
+      case WebAssembly::CATCH_ALL_LEGACY:
         EHPadStack.pop_back();
         break;
 
