@@ -35,7 +35,6 @@ define float @struct_ptr_buffer_atomic_add_f32_rtn__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_add_f32 v0, v[1:2], s[0:3], s6 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret float %ret
@@ -70,7 +69,6 @@ define float @struct_ptr_buffer_atomic_add_f32_rtn__vgpr_val__sgpr_rsrc__0_voffs
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s6 idxen th:TH_ATOMIC_RETURN
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
   ret float %ret
@@ -108,7 +106,6 @@ define float @struct_ptr_buffer_atomic_add_f32_rtn__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_add_f32 v0, v[1:2], s[0:3], s6 idxen offen th:TH_ATOMIC_NT_RETURN
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
   ret float %ret
@@ -146,7 +143,6 @@ define <2 x half> @struct_ptr_buffer_atomic_add_v2f16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_pk_add_f16 v0, v[1:2], s[0:3], s6 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret <2 x half> %ret

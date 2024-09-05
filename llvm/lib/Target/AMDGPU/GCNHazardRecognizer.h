@@ -49,6 +49,7 @@ private:
   TargetSchedModel TSchedModel;
   bool RunLdsBranchVmemWARHazardFixup;
   BitVector VALUReadHazardSGPRs;
+  bool UseVALUReadHazardExhaustiveSearch;
 
   /// RegUnits of uses in the current soft memory clause.
   BitVector ClauseUses;
@@ -108,9 +109,9 @@ private:
   bool fixWMMAHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
-  bool fixRequiredExportPriority(MachineInstr *MI);
   void computeVALUHazardSGPRs(MachineFunction *MMF);
   bool fixVALUReadSGPRHazard(MachineInstr *MI);
+  bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixCvtScaleForwardingHazard(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
 

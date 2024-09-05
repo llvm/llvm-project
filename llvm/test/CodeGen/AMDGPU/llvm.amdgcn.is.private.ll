@@ -186,10 +186,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x4
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_xor_b32 s0, s0, src_flat_scratch_base_hi
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX1210-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1210-SDAG-NEXT:    s_cmp_lt_u32 s0, 0x4000000
 ; GFX1210-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX1210-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GFX1210-SDAG-NEXT:  ; %bb.1: ; %bb0
@@ -261,7 +260,7 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_xor_b32 s0, s1, src_flat_scratch_base_hi
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-GISEL-NEXT:    s_cmp_ge_u32 s0, 0x4000000
 ; GFX1210-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1210-GISEL-NEXT:  ; %bb.1: ; %bb0

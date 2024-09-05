@@ -51,7 +51,6 @@ define amdgpu_kernel void @workgroup_ids_kernel() {
 ; GFX12-SDAG:       ; %bb.0: ; %.entry
 ; GFX12-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
 ; GFX12-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
@@ -64,7 +63,6 @@ define amdgpu_kernel void @workgroup_ids_kernel() {
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX12-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
@@ -292,7 +290,6 @@ define void @workgroup_ids_device_func(ptr addrspace(1) %outx, ptr addrspace(1) 
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[4:5], v8, off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %id.x = call i32 @llvm.amdgcn.workgroup.id.x()
   %id.y = call i32 @llvm.amdgcn.workgroup.id.y()

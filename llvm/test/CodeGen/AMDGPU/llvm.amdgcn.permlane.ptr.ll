@@ -38,7 +38,6 @@ define void @v_permlane16_p0(ptr addrspace(1) %out, ptr %src0, i32 %src1, i32 %s
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr @llvm.amdgcn.permlane16.p0(ptr %src0, ptr %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr %v, ptr addrspace(1) %out
@@ -80,7 +79,6 @@ define void @v_permlanex16_p0(ptr addrspace(1) %out, ptr %src0, i32 %src1, i32 %
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr @llvm.amdgcn.permlanex16.p0(ptr %src0, ptr %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr %v, ptr addrspace(1) %out
@@ -139,7 +137,6 @@ define void @v_permlane16_v3p0(ptr addrspace(1) %out, <3 x ptr> %src0, i32 %src1
 ; GFX12-SDAG-NEXT:    s_clause 0x1
 ; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
 ; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr> @llvm.amdgcn.permlane16.v3p0(<3 x ptr> %src0, <3 x ptr> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr> %v, ptr addrspace(1) %out
@@ -198,7 +195,6 @@ define void @v_permlanex16_v3p0(ptr addrspace(1) %out, <3 x ptr> %src0, i32 %src
 ; GFX12-SDAG-NEXT:    s_clause 0x1
 ; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
 ; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr> @llvm.amdgcn.permlanex16.v3p0(<3 x ptr> %src0, <3 x ptr> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr> %v, ptr addrspace(1) %out
@@ -237,7 +233,6 @@ define void @v_permlane16_p3(ptr addrspace(1) %out, ptr addrspace(3) %src0, i32 
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr addrspace(3) @llvm.amdgcn.permlane16.p3(ptr addrspace(3) %src0, ptr addrspace(3) %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr addrspace(3) %v, ptr addrspace(1) %out
@@ -276,7 +271,6 @@ define void @v_permlanex16_p3(ptr addrspace(1) %out, ptr addrspace(3) %src0, i32
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr addrspace(3) @llvm.amdgcn.permlanex16.p3(ptr addrspace(3) %src0, ptr addrspace(3) %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr addrspace(3) %v, ptr addrspace(1) %out
@@ -321,7 +315,6 @@ define void @v_permlane16_v3p3(ptr addrspace(1) %out, <3 x ptr addrspace(3)> %sr
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr addrspace(3)> @llvm.amdgcn.permlane16.v3p3(<3 x ptr addrspace(3)> %src0, <3 x ptr addrspace(3)> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr addrspace(3)> %v, ptr addrspace(1) %out
@@ -366,7 +359,6 @@ define void @v_permlanex16_v3p3(ptr addrspace(1) %out, <3 x ptr addrspace(3)> %s
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr addrspace(3)> @llvm.amdgcn.permlanex16.v3p3(<3 x ptr addrspace(3)> %src0, <3 x ptr addrspace(3)> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr addrspace(3)> %v, ptr addrspace(1) %out
@@ -405,7 +397,6 @@ define void @v_permlane16_p5(ptr addrspace(1) %out, ptr addrspace(5) %src0, i32 
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr addrspace(5) @llvm.amdgcn.permlane16.p5(ptr addrspace(5) %src0, ptr addrspace(5) %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr addrspace(5) %v, ptr addrspace(1) %out
@@ -444,7 +435,6 @@ define void @v_permlanex16_p5(ptr addrspace(1) %out, ptr addrspace(5) %src0, i32
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr addrspace(5) @llvm.amdgcn.permlanex16.p5(ptr addrspace(5) %src0, ptr addrspace(5) %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr addrspace(5) %v, ptr addrspace(1) %out
@@ -489,7 +479,6 @@ define void @v_permlane16_v3p5(ptr addrspace(1) %out, <3 x ptr addrspace(5)> %sr
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr addrspace(5)> @llvm.amdgcn.permlane16.v3p5(<3 x ptr addrspace(5)> %src0, <3 x ptr addrspace(5)> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr addrspace(5)> %v, ptr addrspace(1) %out
@@ -534,7 +523,6 @@ define void @v_permlanex16_v3p5(ptr addrspace(1) %out, <3 x ptr addrspace(5)> %s
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr addrspace(5)> @llvm.amdgcn.permlanex16.v3p5(<3 x ptr addrspace(5)> %src0, <3 x ptr addrspace(5)> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr addrspace(5)> %v, ptr addrspace(1) %out
@@ -573,7 +561,6 @@ define void @v_permlane16_p6(ptr addrspace(1) %out, ptr addrspace(6) %src0, i32 
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr addrspace(6) @llvm.amdgcn.permlane16.p6(ptr addrspace(6) %src0, ptr addrspace(6) %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr addrspace(6) %v, ptr addrspace(1) %out
@@ -612,7 +599,6 @@ define void @v_permlanex16_p6(ptr addrspace(1) %out, ptr addrspace(6) %src0, i32
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call ptr addrspace(6) @llvm.amdgcn.permlanex16.p6(ptr addrspace(6) %src0, ptr addrspace(6) %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store ptr addrspace(6) %v, ptr addrspace(1) %out
@@ -657,7 +643,6 @@ define void @v_permlane16_v3p6(ptr addrspace(1) %out, <3 x ptr addrspace(6)> %sr
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr addrspace(6)> @llvm.amdgcn.permlane16.v3p6(<3 x ptr addrspace(6)> %src0, <3 x ptr addrspace(6)> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr addrspace(6)> %v, ptr addrspace(1) %out
@@ -702,7 +687,6 @@ define void @v_permlanex16_v3p6(ptr addrspace(1) %out, <3 x ptr addrspace(6)> %s
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %v = call <3 x ptr addrspace(6)> @llvm.amdgcn.permlanex16.v3p6(<3 x ptr addrspace(6)> %src0, <3 x ptr addrspace(6)> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <3 x ptr addrspace(6)> %v, ptr addrspace(1) %out

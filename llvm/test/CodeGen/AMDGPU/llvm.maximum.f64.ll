@@ -88,7 +88,6 @@ define double @v_maximum_f64(double %src0, double %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call double @llvm.maximum.f64(double %src0, double %src1)
   ret double %op
@@ -145,7 +144,6 @@ define double @v_maximum_f64__nnan(double %src0, double %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan double @llvm.maximum.f64(double %src0, double %src1)
   ret double %op
@@ -231,7 +229,6 @@ define double @v_maximum_f64__nsz(double %src0, double %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz double @llvm.maximum.f64(double %src0, double %src1)
   ret double %op
@@ -288,7 +285,6 @@ define double @v_maximum_f64__nnan_nsz(double %src0, double %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz double @llvm.maximum.f64(double %src0, double %src1)
   ret double %op
@@ -384,7 +380,6 @@ define double @v_maximum_f64__nnan_src0(double %arg0, double %src1) {
 ; GFX12-NEXT:    v_add_f64_e32 v[0:1], 1.0, v[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %src0 = fadd nnan double %arg0, 1.0
   %op = call double @llvm.maximum.f64(double %src0, double %src1)
@@ -481,7 +476,6 @@ define double @v_maximum_f64__nnan_src1(double %src0, double %arg1) {
 ; GFX12-NEXT:    v_add_f64_e32 v[2:3], 1.0, v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %src1 = fadd nnan double %arg1, 1.0
   %op = call double @llvm.maximum.f64(double %src0, double %src1)
@@ -600,7 +594,6 @@ define void @s_maximum_f64(double inreg %src0, double inreg %src1) {
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use v[0:1]
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call double @llvm.maximum.f64(double %src0, double %src1)
   call void asm sideeffect "; use $0", "s"(double %op)
@@ -718,7 +711,6 @@ define <2 x double> @v_maximum_v2f64(<2 x double> %src0, <2 x double> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x double> @llvm.maximum.v2f64(<2 x double> %src0, <2 x double> %src1)
   ret <2 x double> %op
@@ -783,7 +775,6 @@ define <2 x double> @v_maximum_v2f64__nnan(<2 x double> %src0, <2 x double> %src
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <2 x double> @llvm.maximum.v2f64(<2 x double> %src0, <2 x double> %src1)
   ret <2 x double> %op
@@ -900,7 +891,6 @@ define <2 x double> @v_maximum_v2f64__nsz(<2 x double> %src0, <2 x double> %src1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <2 x double> @llvm.maximum.v2f64(<2 x double> %src0, <2 x double> %src1)
   ret <2 x double> %op
@@ -965,7 +955,6 @@ define <2 x double> @v_maximum_v2f64__nnan_nsz(<2 x double> %src0, <2 x double> 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[4:5]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <2 x double> @llvm.maximum.v2f64(<2 x double> %src0, <2 x double> %src1)
   ret <2 x double> %op
@@ -1120,7 +1109,6 @@ define void @s_maximum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use v[0:3]
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x double> @llvm.maximum.v2f64(<2 x double> %src0, <2 x double> %src1)
   call void asm sideeffect "; use $0", "s"(<2 x double> %op)
@@ -1268,7 +1256,6 @@ define <3 x double> @v_maximum_v3f64(<3 x double> %src0, <3 x double> %src1) {
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[6:7]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[8:9]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[10:11]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <3 x double> @llvm.maximum.v3f64(<3 x double> %src0, <3 x double> %src1)
   ret <3 x double> %op
@@ -1341,7 +1328,6 @@ define <3 x double> @v_maximum_v3f64__nnan(<3 x double> %src0, <3 x double> %src
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[6:7]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[8:9]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[10:11]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <3 x double> @llvm.maximum.v3f64(<3 x double> %src0, <3 x double> %src1)
   ret <3 x double> %op
@@ -1488,7 +1474,6 @@ define <3 x double> @v_maximum_v3f64__nsz(<3 x double> %src0, <3 x double> %src1
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[6:7]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[8:9]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[10:11]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <3 x double> @llvm.maximum.v3f64(<3 x double> %src0, <3 x double> %src1)
   ret <3 x double> %op
@@ -1561,7 +1546,6 @@ define <3 x double> @v_maximum_v3f64__nnan_nsz(<3 x double> %src0, <3 x double> 
 ; GFX12-NEXT:    v_maximum_f64 v[0:1], v[0:1], v[6:7]
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[8:9]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[10:11]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <3 x double> @llvm.maximum.v3f64(<3 x double> %src0, <3 x double> %src1)
   ret <3 x double> %op
@@ -1739,7 +1723,6 @@ define <4 x double> @v_maximum_v4f64(<4 x double> %src0, <4 x double> %src1) {
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[10:11]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[12:13]
 ; GFX12-NEXT:    v_maximum_f64 v[6:7], v[6:7], v[14:15]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <4 x double> @llvm.maximum.v4f64(<4 x double> %src0, <4 x double> %src1)
   ret <4 x double> %op
@@ -1820,7 +1803,6 @@ define <4 x double> @v_maximum_v4f64__nnan(<4 x double> %src0, <4 x double> %src
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[10:11]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[12:13]
 ; GFX12-NEXT:    v_maximum_f64 v[6:7], v[6:7], v[14:15]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <4 x double> @llvm.maximum.v4f64(<4 x double> %src0, <4 x double> %src1)
   ret <4 x double> %op
@@ -1998,7 +1980,6 @@ define <4 x double> @v_maximum_v4f64__nsz(<4 x double> %src0, <4 x double> %src1
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[10:11]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[12:13]
 ; GFX12-NEXT:    v_maximum_f64 v[6:7], v[6:7], v[14:15]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <4 x double> @llvm.maximum.v4f64(<4 x double> %src0, <4 x double> %src1)
   ret <4 x double> %op
@@ -2079,7 +2060,6 @@ define <4 x double> @v_maximum_v4f64__nnan_nsz(<4 x double> %src0, <4 x double> 
 ; GFX12-NEXT:    v_maximum_f64 v[2:3], v[2:3], v[10:11]
 ; GFX12-NEXT:    v_maximum_f64 v[4:5], v[4:5], v[12:13]
 ; GFX12-NEXT:    v_maximum_f64 v[6:7], v[6:7], v[14:15]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <4 x double> @llvm.maximum.v4f64(<4 x double> %src0, <4 x double> %src1)
   ret <4 x double> %op
@@ -2390,7 +2370,6 @@ define <8 x double> @v_maximum_v8f64(<8 x double> %src0, <8 x double> %src1) {
 ; GFX12-NEXT:    v_maximum_f64 v[12:13], v[12:13], v[28:29]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[14:15], v[14:15], v[30:31]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <8 x double> @llvm.maximum.v8f64(<8 x double> %src0, <8 x double> %src1)
   ret <8 x double> %op
@@ -3423,7 +3402,6 @@ define <16 x double> @v_maximum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX12-NEXT:    v_maximum_f64 v[28:29], v[28:29], v[84:85]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_maximum_f64 v[30:31], v[30:31], v[86:87]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <16 x double> @llvm.maximum.v16f64(<16 x double> %src0, <16 x double> %src1)
   ret <16 x double> %op
