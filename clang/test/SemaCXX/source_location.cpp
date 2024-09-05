@@ -989,3 +989,16 @@ void Test() {
 }
 
 #endif
+
+
+namespace GH67134 {
+template <int loc = std::source_location::current().line()>
+constexpr auto f(std::source_location loc2 = std::source_location::current()) { return loc; }
+int g = []() -> decltype(f()) { return 0; }();
+int call() {
+#if __cplusplus >= 202002L
+  return []<decltype(f()) = 0>() -> decltype(f()) { return  0; }();
+#endif
+  return []() -> decltype(f()) { return  0; }();
+}
+}
