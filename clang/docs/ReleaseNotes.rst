@@ -109,6 +109,9 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
+- Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
+
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
