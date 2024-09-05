@@ -8,7 +8,7 @@
 
 #include "src/signal/signal.h"
 #include "hdr/signal_macros.h"
-#include "include/llvm-libc-types/__sighandler_t.h"
+#include "hdr/types/sighandler_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/signal/sigaction.h"

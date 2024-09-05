@@ -55,7 +55,7 @@ add_entrypoint_object(
   signal
   ALIAS
   DEPENDS
-     .${LIBC_TARGET_OS}.signal
+    .${LIBC_TARGET_OS}.signal
 )
 
 add_entrypoint_object(

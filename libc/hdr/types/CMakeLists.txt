@@ -177,6 +177,7 @@ add_proxy_header_library(
   HDRS
     __sighandler_t.h
   FULL_BUILD_DEPENDS
-   libc.include.llvm-libc-types.__sighandler_t
+    libc.include.llvm-libc-types.__sighandler_t
+    libc.include.signal
 )
 
