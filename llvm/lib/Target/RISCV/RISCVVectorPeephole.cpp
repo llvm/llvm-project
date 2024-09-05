@@ -499,7 +499,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVII::TAIL_AGNOSTIC);
   }
 
-  MRI->replaceRegWith(MI.getOperand(0).getReg(), Src->getOperand(0).getReg());
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
   MI.eraseFromParent();
   V0Defs.erase(&MI);
   return true;
@@ -616,7 +616,10 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
       Changed |= convertVMergeToVMv(MI);
-      Changed |= foldUndefPassthruVMV_V_V(MI);
+      if (foldUndefPassthruVMV_V_V(MI)) {
+        Changed |= true;
+        continue; // MI is erased
+      }
       Changed |= foldVMV_V_V(MI);
     }
   }
