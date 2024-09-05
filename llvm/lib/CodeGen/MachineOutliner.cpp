@@ -645,69 +645,65 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
 }
 
 struct MatchedEntry {
-  size_t StartIdx;
-  size_t Length;
-  size_t Count;
+  unsigned StartIdx;
+  unsigned EndIdx;
+  unsigned Count;
+  MatchedEntry(unsigned StartIdx, unsigned EndIdx, unsigned Count)
+      : StartIdx(StartIdx), EndIdx(EndIdx), Count(Count) {}
+  MatchedEntry() = delete;
 };
-
-static const HashNode *followHashNode(stable_hash StableHash,
-                                      const HashNode *Current) {
-  auto I = Current->Successors.find(StableHash);
-  return (I == Current->Successors.end()) ? nullptr : I->second.get();
-}
 
 // Find all matches in the global outlined hash tree.
 // It's quadratic complexity in theory, but it's nearly linear in practice
 // since the length of outlined sequences are small within a block.
-static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
+static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   auto &InstrList = Mapper.InstrList;
   auto &UnsignedVec = Mapper.UnsignedVec;
 
-  std::vector<MatchedEntry> MatchedEntries;
+  SmallVector<MatchedEntry> MatchedEntries;
   auto Size = UnsignedVec.size();
 
   // Get the global outlined hash tree built from the previous run.
   assert(cgdata::hasOutlinedHashTree());
   const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
-  for (size_t I = 0; I < Size; ++I) {
-    // Skip the invalid mapping.
-    if (UnsignedVec[I] >= Mapper.LegalInstrNumber)
+
+  auto getValidInstr = [&](unsigned Index) -> const MachineInstr * {
+    if (UnsignedVec[Index] >= Mapper.LegalInstrNumber)
+      return nullptr;
+    return &(*InstrList[Index]);
+  };
+
+  auto getStableHashAndFollow =
+      [](const MachineInstr &MI, const HashNode *CurrNode) -> const HashNode * {
+    stable_hash StableHash = stableHashValue(MI);
+    if (!StableHash)
+      return nullptr;
+    auto It = CurrNode->Successors.find(StableHash);
+    return (It == CurrNode->Successors.end()) ? nullptr : It->second.get();
+  };
+
+  for (unsigned I = 0; I < Size; ++I) {
+    const MachineInstr *MI = getValidInstr(I);
+    if (!MI || MI->isDebugInstr())
       continue;
-    const MachineInstr &MI = *InstrList[I];
-    // Skip debug instructions as we did for the outlined function.
-    if (MI.isDebugInstr())
-      continue;
-    // Skip the empty hash value.
-    stable_hash StableHashI = stableHashValue(MI);
-    if (!StableHashI)
+    const HashNode *CurrNode = getStableHashAndFollow(*MI, RootNode);
+    if (!CurrNode)
       continue;
 
-    const HashNode *LastNode = followHashNode(StableHashI, RootNode);
-    if (!LastNode)
-      continue;
-
-    size_t J = I + 1;
-    for (; J < Size; ++J) {
-      // Break on the invalid mapping.
-      if (UnsignedVec[J] >= Mapper.LegalInstrNumber)
+    for (unsigned J = I + 1; J < Size; ++J) {
+      const MachineInstr *MJ = getValidInstr(J);
+      if (!MJ)
         break;
       // Skip debug instructions as we did for the outlined function.
-      const MachineInstr &MJ = *InstrList[J];
-      if (MJ.isDebugInstr())
+      if (MJ->isDebugInstr())
         continue;
-      // Break on the empty hash value.
-      stable_hash StableHashJ = stableHashValue(MJ);
-      if (!StableHashJ)
+      CurrNode = getStableHashAndFollow(*MJ, CurrNode);
+      if (!CurrNode)
         break;
-      LastNode = followHashNode(StableHashJ, LastNode);
-      if (!LastNode)
-        break;
-
       // Even with a match ending with a terminal, we continue finding
       // matches to populate all candidates.
-      auto Count = LastNode->Terminals;
-      if (Count)
-        MatchedEntries.push_back({I, J - I + 1, *Count});
+      if (auto Count = CurrNode->Terminals)
+        MatchedEntries.emplace_back(I, J, *Count);
     }
   }
 
@@ -725,10 +721,11 @@ void MachineOutliner::findGlobalCandidates(
   for (auto &ME : getMatchedEntries(Mapper)) {
     CandidatesForRepeatedSeq.clear();
     MachineBasicBlock::iterator StartIt = InstrList[ME.StartIdx];
-    MachineBasicBlock::iterator EndIt = InstrList[ME.StartIdx + ME.Length - 1];
+    MachineBasicBlock::iterator EndIt = InstrList[ME.EndIdx];
+    auto Length = ME.EndIdx - ME.StartIdx + 1;
     MachineBasicBlock *MBB = StartIt->getParent();
-    CandidatesForRepeatedSeq.emplace_back(ME.StartIdx, ME.Length, StartIt,
-                                          EndIt, MBB, FunctionList.size(),
+    CandidatesForRepeatedSeq.emplace_back(ME.StartIdx, Length, StartIt, EndIt,
+                                          MBB, FunctionList.size(),
                                           MBBFlagsMap[MBB]);
     const TargetInstrInfo *TII =
         MBB->getParent()->getSubtarget().getInstrInfo();
@@ -738,7 +735,7 @@ void MachineOutliner::findGlobalCandidates(
                                        MinRepeats);
     if (!OF.has_value() || OF.value()->Candidates.empty())
       continue;
-    // We create a global candidate each match.
+    // We create a global candidate for each match.
     assert(OF.value()->Candidates.size() == MinRepeats);
     FunctionList.emplace_back(std::make_unique<GlobalOutlinedFunction>(
         std::move(OF.value()), ME.Count));
@@ -1350,7 +1347,7 @@ void MachineOutliner::initializeOutlinerMode(const Module &M) {
   if (cgdata::emitCGData()) {
     OutlinerMode = CGDataMode::Write;
     // Create a local outlined hash tree to be published.
-    LocalHashTree.reset(new OutlinedHashTree());
+    LocalHashTree = std::make_unique<OutlinedHashTree>();
     // We don't need to read the outlined hash tree from the previous codegen
   } else if (cgdata::hasOutlinedHashTree())
     OutlinerMode = CGDataMode::Read;
