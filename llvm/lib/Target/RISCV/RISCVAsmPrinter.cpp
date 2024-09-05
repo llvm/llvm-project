@@ -303,11 +303,6 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
     return;
-  case RISCV::PseudoRVVInitUndefM1:
-  case RISCV::PseudoRVVInitUndefM2:
-  case RISCV::PseudoRVVInitUndefM4:
-  case RISCV::PseudoRVVInitUndefM8:
-    return;
   case TargetOpcode::STACKMAP:
     return LowerSTACKMAP(*OutStreamer, SM, *MI);
   case TargetOpcode::PATCHPOINT:

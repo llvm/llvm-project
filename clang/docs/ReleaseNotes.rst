@@ -283,6 +283,8 @@ Improvements to Clang's diagnostics
 - The lifetimebound and GSL analysis in clang are coherent, allowing clang to
   detect more use-after-free bugs. (#GH100549).
 
+- Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -360,6 +362,8 @@ Bug Fixes to C++ Support
 - Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
 - Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
 - Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
+- Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
