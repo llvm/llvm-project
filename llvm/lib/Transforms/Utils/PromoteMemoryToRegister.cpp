@@ -56,8 +56,6 @@
 #include <utility>
 #include <vector>
 
-#include <sstream>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "mem2reg"
@@ -679,38 +677,6 @@ public:
     return llvm::map_range(PHIBlocks[AllocaIndex], [this](BBNumberTy BB) {
       return BBList[BB];
     });
-  }
-
-  std::string dump() {
-    std::vector<std::string> AllocaNames;
-    for (AllocaInst *A: Allocas) {
-      AllocaNames.push_back(A->getNameOrAsOperand());
-    }
-
-    auto AllocaStateToString = [&](AllocaState A) {
-      std::stringstream r;
-      auto V =  A.to_ullong();
-      while (V) {
-        int idx = llvm::countr_zero(V);
-        r << AllocaNames[idx] << ' ';
-        V ^= (1u << idx);
-      }
-      return r.str();
-    };
-
-    std::stringstream result;
-    for (size_t I = 0; I < BBList.size(); ++I) {
-      AllocaState Def = BlockStates.get<DEF_STATE>(I);
-      AllocaState Live = BlockStates.get<LIVEIN_STATE>(I);
-      AllocaState Update = BlockStates.get<UPDATE_STATE>(I);
-      AllocaState IDF = BlockStates.get<IDF_STATE>(I);
-
-      result << "BB" << I << "{ DEF[" << AllocaStateToString(Def)
-             << "] LIVE[" << AllocaStateToString(Live)
-             << "] UPDATE[" << AllocaStateToString(Update)
-             << "] IDF[" << AllocaStateToString(IDF) <<"]} \n";
-    }
-    return result.str();
   }
 };
 
