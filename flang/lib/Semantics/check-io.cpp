@@ -1171,6 +1171,12 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
             "Derived type '%s' in I/O may not be polymorphic unless using defined I/O"_err_en_US,
             derived.name());
       }
+      if ((IsBuiltinDerivedType(&derived, "c_ptr") ||
+              IsBuiltinDerivedType(&derived, "c_devptr")) &&
+          !context_.ShouldWarn(common::LanguageFeature::PrintCptr)) {
+        // Bypass the check below for c_ptr and c_devptr.
+        return nullptr;
+      }
       if (const Symbol *
           bad{FindInaccessibleComponent(which, derived, scope)}) {
         return &context_.Say(where,
