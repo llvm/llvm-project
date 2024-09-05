@@ -174,7 +174,6 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -198,8 +197,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
@@ -420,7 +418,6 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -678,7 +675,6 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -960,7 +956,6 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -1211,7 +1206,6 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -1237,10 +1231,8 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_xor_b32 s2, s2, 0x80000000
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
@@ -1453,7 +1445,6 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -1479,10 +1470,8 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_bitset0_b32 s2, 31
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
@@ -1695,7 +1684,6 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -1721,10 +1709,8 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_bitset1_b32 s2, 31
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
@@ -1942,7 +1928,6 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -1968,10 +1953,8 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1210-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
@@ -2189,7 +2172,6 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -2216,12 +2198,10 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_bitset0_b32 s2, 31
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX1210-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
@@ -2451,7 +2431,6 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX1210-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s10, s6
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s11, s7
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -2477,10 +2456,8 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1210-GISEL-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null

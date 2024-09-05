@@ -63,7 +63,6 @@ define i16 @abs_i16(i16 %arg) {
 ; GFX12-NEXT:    v_sub_nc_u16 v1, 0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_i16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call i16 @llvm.abs.i16(i16 %arg, i1 false)
   ret i16 %res
@@ -139,7 +138,6 @@ define <2 x i16> @v_abs_v2i16(<2 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_sub_i16 v1, 0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_max_i16 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %arg, i1 false)
   ret <2 x i16> %res
@@ -233,7 +231,6 @@ define <3 x i16> @v_abs_v3i16(<3 x i16> %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_max_i16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_max_i16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <3 x i16> @llvm.abs.v3i16(<3 x i16> %arg, i1 false)
   ret <3 x i16> %res
@@ -342,7 +339,6 @@ define <4 x i16> @v_abs_v4i16(<4 x i16> %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_max_i16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_max_i16 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %arg, i1 false)
   ret <4 x i16> %res
@@ -482,7 +478,6 @@ define <6 x i16> @v_abs_v6i16(<6 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v1, v1, v4
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-NEXT:    v_pk_max_i16 v2, v2, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <6 x i16> @llvm.abs.v6i16(<6 x i16> %arg, i1 false)
   ret <6 x i16> %res
@@ -655,7 +650,6 @@ define <8 x i16> @v_abs_v8i16(<8 x i16> %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_pk_max_i16 v2, v2, v6
 ; GFX12-NEXT:    v_pk_max_i16 v3, v3, v7
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %arg, i1 false)
   ret <8 x i16> %res
@@ -949,7 +943,6 @@ define <16 x i16> @v_abs_v16i16(<16 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v3, v3, v8
 ; GFX12-NEXT:    v_pk_max_i16 v4, v4, v9
 ; GFX12-NEXT:    v_pk_max_i16 v5, v5, v10
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %arg, i1 false)
   ret <16 x i16> %res
@@ -1494,7 +1487,6 @@ define <32 x i16> @v_abs_v32i16(<32 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v13, v13, v18
 ; GFX12-NEXT:    v_pk_max_i16 v14, v14, v19
 ; GFX12-NEXT:    v_pk_max_i16 v15, v15, v20
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %res = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %arg, i1 false)
   ret <32 x i16> %res

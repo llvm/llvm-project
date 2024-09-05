@@ -19,7 +19,6 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ; GFX1210-SDAG-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX1210-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], src_flat_scratch_base_lo, v[0:1]
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, 0, v1
 ; GFX1210-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
@@ -171,7 +170,6 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1210-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX1210-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_storecnt 0x0

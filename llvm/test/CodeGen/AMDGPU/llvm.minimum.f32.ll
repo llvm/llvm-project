@@ -77,7 +77,6 @@ define float @v_minimum_f32(float %src0, float %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call float @llvm.minimum.f32(float %src0, float %src1)
   ret float %op
@@ -134,7 +133,6 @@ define float @v_minimum_f32__nnan(float %src0, float %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan float @llvm.minimum.f32(float %src0, float %src1)
   ret float %op
@@ -209,7 +207,6 @@ define float @v_minimum_f32__nsz(float %src0, float %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz float @llvm.minimum.f32(float %src0, float %src1)
   ret float %op
@@ -266,7 +263,6 @@ define float @v_minimum_f32__nnan_nsz(float %src0, float %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz float @llvm.minimum.f32(float %src0, float %src1)
   ret float %op
@@ -350,7 +346,6 @@ define float @v_minimum_f32__nnan_src0(float %arg0, float %src1) {
 ; GFX12-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %src0 = fadd nnan float %arg0, 1.0
   %op = call float @llvm.minimum.f32(float %src0, float %src1)
@@ -435,7 +430,6 @@ define float @v_minimum_f32__nnan_src1(float %src0, float %arg1) {
 ; GFX12-NEXT:    v_add_f32_e32 v1, 1.0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %src1 = fadd nnan float %arg1, 1.0
   %op = call float @llvm.minimum.f32(float %src0, float %src1)
@@ -636,7 +630,6 @@ define <2 x float> @v_minimum_v2f32(<2 x float> %src0, <2 x float> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v2
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x float> @llvm.minimum.v2f32(<2 x float> %src0, <2 x float> %src1)
   ret <2 x float> %op
@@ -700,7 +693,6 @@ define <2 x float> @v_minimum_v2f32__nnan(<2 x float> %src0, <2 x float> %src1) 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v2
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <2 x float> @llvm.minimum.v2f32(<2 x float> %src0, <2 x float> %src1)
   ret <2 x float> %op
@@ -795,7 +787,6 @@ define <2 x float> @v_minimum_v2f32__nsz(<2 x float> %src0, <2 x float> %src1) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v2
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <2 x float> @llvm.minimum.v2f32(<2 x float> %src0, <2 x float> %src1)
   ret <2 x float> %op
@@ -859,7 +850,6 @@ define <2 x float> @v_minimum_v2f32__nnan_nsz(<2 x float> %src0, <2 x float> %sr
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v2
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v3
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <2 x float> @llvm.minimum.v2f32(<2 x float> %src0, <2 x float> %src1)
   ret <2 x float> %op
@@ -1105,7 +1095,6 @@ define <3 x float> @v_minimum_v3f32(<3 x float> %src0, <3 x float> %src1) {
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v3
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v4
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <3 x float> @llvm.minimum.v3f32(<3 x float> %src0, <3 x float> %src1)
   ret <3 x float> %op
@@ -1177,7 +1166,6 @@ define <3 x float> @v_minimum_v3f32__nnan(<3 x float> %src0, <3 x float> %src1) 
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v3
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v4
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <3 x float> @llvm.minimum.v3f32(<3 x float> %src0, <3 x float> %src1)
   ret <3 x float> %op
@@ -1293,7 +1281,6 @@ define <3 x float> @v_minimum_v3f32__nsz(<3 x float> %src0, <3 x float> %src1) {
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v3
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v4
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <3 x float> @llvm.minimum.v3f32(<3 x float> %src0, <3 x float> %src1)
   ret <3 x float> %op
@@ -1365,7 +1352,6 @@ define <3 x float> @v_minimum_v3f32__nnan_nsz(<3 x float> %src0, <3 x float> %sr
 ; GFX12-NEXT:    v_minimum_f32 v0, v0, v3
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v4
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <3 x float> @llvm.minimum.v3f32(<3 x float> %src0, <3 x float> %src1)
   ret <3 x float> %op
@@ -1502,7 +1488,6 @@ define <4 x float> @v_minimum_v4f32(<4 x float> %src0, <4 x float> %src1) {
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v5
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v6
 ; GFX12-NEXT:    v_minimum_f32 v3, v3, v7
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <4 x float> @llvm.minimum.v4f32(<4 x float> %src0, <4 x float> %src1)
   ret <4 x float> %op
@@ -1581,7 +1566,6 @@ define <4 x float> @v_minimum_v4f32__nnan(<4 x float> %src0, <4 x float> %src1) 
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v5
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v6
 ; GFX12-NEXT:    v_minimum_f32 v3, v3, v7
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <4 x float> @llvm.minimum.v4f32(<4 x float> %src0, <4 x float> %src1)
   ret <4 x float> %op
@@ -1718,7 +1702,6 @@ define <4 x float> @v_minimum_v4f32__nsz(<4 x float> %src0, <4 x float> %src1) {
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v5
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v6
 ; GFX12-NEXT:    v_minimum_f32 v3, v3, v7
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <4 x float> @llvm.minimum.v4f32(<4 x float> %src0, <4 x float> %src1)
   ret <4 x float> %op
@@ -1797,7 +1780,6 @@ define <4 x float> @v_minimum_v4f32__nnan_nsz(<4 x float> %src0, <4 x float> %sr
 ; GFX12-NEXT:    v_minimum_f32 v1, v1, v5
 ; GFX12-NEXT:    v_minimum_f32 v2, v2, v6
 ; GFX12-NEXT:    v_minimum_f32 v3, v3, v7
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <4 x float> @llvm.minimum.v4f32(<4 x float> %src0, <4 x float> %src1)
   ret <4 x float> %op
@@ -2016,7 +1998,6 @@ define <8 x float> @v_minimum_v8f32(<8 x float> %src0, <8 x float> %src1) {
 ; GFX12-NEXT:    v_minimum_f32 v5, v5, v13
 ; GFX12-NEXT:    v_minimum_f32 v6, v6, v14
 ; GFX12-NEXT:    v_minimum_f32 v7, v7, v15
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <8 x float> @llvm.minimum.v8f32(<8 x float> %src0, <8 x float> %src1)
   ret <8 x float> %op
@@ -2441,7 +2422,6 @@ define <16 x float> @v_minimum_v16f32(<16 x float> %src0, <16 x float> %src1) {
 ; GFX12-NEXT:    v_minimum_f32 v14, v14, v30
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_minimum_f32 v15, v15, v31
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <16 x float> @llvm.minimum.v16f32(<16 x float> %src0, <16 x float> %src1)
   ret <16 x float> %op
