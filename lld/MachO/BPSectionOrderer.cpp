@@ -21,6 +21,8 @@
 using namespace llvm;
 using namespace lld::macho;
 
+using UtilityNodes = SmallVector<BPFunctionNode::UtilityNodeT>;
+
 /// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
 /// "yyyy" are numbers that could change between builds. We need to use the root
 /// symbol name before this suffix so these symbols can be matched with profiles
@@ -60,9 +62,11 @@ getRelocHash(const Reloc &reloc,
   return getRelocHash(kind, sectionIdx.value_or(0), 0, reloc.addend);
 }
 
-static SmallVector<
-    std::pair<unsigned, SmallVector<BPFunctionNode::UtilityNodeT>>>
-getUnsForCompression(
+/// Given \p sectionIdxs, a list of section indexes, return a list of utility
+/// nodes for each section index. If \p duplicateSectionIdx is provided,
+/// populate it with nearly identical sections. Increment \p maxUN to be the
+/// largest utility node we have used so far.
+static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     ArrayRef<const InputSection *> sections,
     const DenseMap<const InputSection *, uint64_t> &sectionToIdx,
     ArrayRef<unsigned> sectionIdxs,
@@ -139,10 +143,9 @@ getUnsForCompression(
     hashToUN[hash] = ++maxUN;
   }
 
-  SmallVector<std::pair<unsigned, SmallVector<BPFunctionNode::UtilityNodeT>>>
-      sectionUns;
+  SmallVector<std::pair<unsigned, UtilityNodes>> sectionUns;
   for (auto &[sectionIdx, hashes] : sectionHashes) {
-    SmallVector<BPFunctionNode::UtilityNodeT> uns;
+    UtilityNodes uns;
     for (auto &hash : hashes) {
       auto it = hashToUN.find(hash);
       if (it != hashToUN.end())
@@ -191,8 +194,7 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
   }
 
   BPFunctionNode::UtilityNodeT maxUN = 0;
-  DenseMap<unsigned, SmallVector<BPFunctionNode::UtilityNodeT>>
-      startupSectionIdxUNs;
+  DenseMap<unsigned, UtilityNodes> startupSectionIdxUNs;
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   std::unique_ptr<InstrProfReader> reader;
