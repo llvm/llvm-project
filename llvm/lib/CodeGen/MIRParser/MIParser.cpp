@@ -800,10 +800,6 @@ bool MIParser::parseBasicBlockDefinition(
     MF.setBBSectionsType(BasicBlockSection::List);
   }
   if (BBID.has_value()) {
-    // BBSectionsType is set to `List` if any basic blocks has `SectionID`.
-    // Here, we set it to `Labels` if it hasn't been set above.
-    if (!MF.hasBBSections())
-      MF.setBBSectionsType(BasicBlockSection::Labels);
     MBB->setBBID(BBID.value());
   }
   MBB->setCallFrameSize(CallFrameSize);
