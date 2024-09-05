@@ -693,7 +693,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -745,7 +745,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -762,7 +762,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
  */
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries, const lto::InputFile &File) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
@@ -785,7 +785,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -823,7 +823,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -833,7 +833,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
   // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
   GVSummaryPtrSet DecSummaries;
-  std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+  ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
       ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
@@ -874,7 +874,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -1074,7 +1074,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,

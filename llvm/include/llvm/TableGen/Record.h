@@ -1757,7 +1757,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
+  ArrayRef<std::pair<Record *, SMRange>> getSuperClasses() const {
     return SuperClasses;
   }
 
@@ -2073,6 +2073,8 @@ public:
 
   void dump() const;
 
+  void dumpAllocationStats(raw_ostream &OS) const;
+
 private:
   RecordKeeper(RecordKeeper &&) = delete;
   RecordKeeper(const RecordKeeper &) = delete;
@@ -2328,8 +2330,8 @@ public:
   Init *resolve(Init *VarName) override;
 };
 
-void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
-void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
+void EmitDetailedRecords(const RecordKeeper &RK, raw_ostream &OS);
+void EmitJSON(const RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm
 

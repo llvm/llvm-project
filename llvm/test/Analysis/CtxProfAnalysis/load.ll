@@ -3,10 +3,10 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
-; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
-; RUN:   %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-FILE
+; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
+; RUN:   %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-CTX
 
-; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:   -use-ctx-profile=does_not_exist.ctxprofdata %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-FILE
 
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' \
@@ -14,11 +14,12 @@
 
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata \
 ; RUN:  %t/example.ll -S -o %t/prelink.ll
-; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:   -use-ctx-profile=%t/profile.ctxprofdata %t/prelink.ll -S 2> %t/output.txt
 ; RUN: diff %t/expected-profile-output.txt %t/output.txt
 
 ; NO-FILE: error: could not open contextual profile file
+; NO-CTX: No contextual profile was provided
 ;
 ; This is the reference profile, laid out in the format the json formatter will
 ; output it from opt.

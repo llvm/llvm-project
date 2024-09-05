@@ -28,14 +28,18 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
+#include "SIFoldOperands.h"
+#include "SILoadStoreOptimizer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -264,20 +268,6 @@ static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
   cl::desc("Enable AMDGPU Alias Analysis"),
   cl::init(true));
 
-// Option to run late CFG structurizer
-static cl::opt<bool, true> LateCFGStructurize(
-  "amdgpu-late-structurize",
-  cl::desc("Enable late CFG structurization"),
-  cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
-  cl::Hidden);
-
-// Disable structurizer-based control-flow lowering in order to test convergence
-// control tokens. This should eventually be replaced by the wave-transform.
-static cl::opt<bool, true> DisableStructurizer(
-    "amdgpu-disable-structurizer",
-    cl::desc("Disable structurizer for experiments; produces unusable code"),
-    cl::location(AMDGPUTargetMachine::DisableStructurizer), cl::ReallyHidden);
-
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
   "amdgpu-simplify-libcall",
@@ -353,11 +343,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-static cl::opt<bool, true> EnableStructurizerWorkarounds(
-    "amdgpu-enable-structurizer-workarounds",
-    cl::desc("Enable workarounds for the StructurizeCFG pass"),
-    cl::location(AMDGPUTargetMachine::EnableStructurizerWorkarounds),
-    cl::init(true), cl::Hidden);
+static cl::opt<bool>
+    EnableSwLowerLDS("amdgpu-enable-sw-lower-lds",
+                     cl::desc("Enable lowering of lds to global memory pass "
+                              "and asan instrument resulting IR."),
+                     cl::init(true), cl::Hidden);
 
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
@@ -417,7 +407,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600VectorRegMergerPass(*PR);
   initializeGlobalISel(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
-  initializeGCNDPPCombinePass(*PR);
+  initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
@@ -425,14 +415,15 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
-  initializeSIFoldOperandsPass(*PR);
+  initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
-  initializeSIShrinkInstructionsPass(*PR);
+  initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSIOptimizeVGPRLiveRangePass(*PR);
-  initializeSILoadStoreOptimizerPass(*PR);
+  initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
+  initializeAMDGPUSwLowerLDSLegacyPass(*PR);
   initializeAMDGPUAttributorLegacyPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
@@ -628,11 +619,8 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
   }
 }
 
-bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
-bool AMDGPUTargetMachine::DisableStructurizer = false;
-bool AMDGPUTargetMachine::EnableStructurizerWorkarounds = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -782,6 +770,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
+        if (EnableSwLowerLDS)
+          PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
@@ -1019,7 +1009,6 @@ public:
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
 
-  void addPreRegAlloc() override;
   bool addPreRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -1096,6 +1085,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Replace OpenCL enqueued block function pointers with global variables.
   addPass(createAMDGPUOpenCLEnqueuedBlockLoweringPass());
+
+  // Lower LDS accesses to global memory pass if address sanitizer is enabled.
+  if (EnableSwLowerLDS)
+    addPass(createAMDGPUSwLowerLDSLegacyPass(&TM));
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
@@ -1258,21 +1251,17 @@ bool GCNPassConfig::addPreISel() {
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
-  if (!LateCFGStructurize && !DisableStructurizer) {
-    if (EnableStructurizerWorkarounds) {
-      addPass(createFixIrreduciblePass());
-      addPass(createUnifyLoopExitsPass());
-    }
-    addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
-  }
+  addPass(createFixIrreduciblePass());
+  addPass(createUnifyLoopExitsPass());
+  addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
+
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
-  if (!LateCFGStructurize && !DisableStructurizer) {
-    addPass(createSIAnnotateControlFlowLegacyPass());
-    // TODO: Move this right after structurizeCFG to avoid extra divergence
-    // analysis. This depends on stopping SIAnnotateControlFlow from making
-    // control flow modifications.
-    addPass(createAMDGPURewriteUndefForPHILegacyPass());
-  }
+  addPass(createSIAnnotateControlFlowLegacyPass());
+  // TODO: Move this right after structurizeCFG to avoid extra divergence
+  // analysis. This depends on stopping SIAnnotateControlFlow from making
+  // control flow modifications.
+  addPass(createAMDGPURewriteUndefForPHILegacyPass());
+
   addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1291,18 +1280,18 @@ void GCNPassConfig::addMachineSSAOptimization() {
   // instructions leftover after the operands are folded as well.
   //
   // XXX - Can we get away without running DeadMachineInstructionElim again?
-  addPass(&SIFoldOperandsID);
+  addPass(&SIFoldOperandsLegacyID);
   if (EnableDPPCombine)
-    addPass(&GCNDPPCombineID);
-  addPass(&SILoadStoreOptimizerID);
+    addPass(&GCNDPPCombineLegacyID);
+  addPass(&SILoadStoreOptimizerLegacyID);
   if (isPassEnabled(EnableSDWAPeephole)) {
     addPass(&SIPeepholeSDWAID);
     addPass(&EarlyMachineLICMID);
-    addPass(&MachineCSEID);
-    addPass(&SIFoldOperandsID);
+    addPass(&MachineCSELegacyID);
+    addPass(&SIFoldOperandsLegacyID);
   }
   addPass(&DeadMachineInstructionElimID);
-  addPass(createSIShrinkInstructionsPass());
+  addPass(createSIShrinkInstructionsLegacyPass());
 }
 
 bool GCNPassConfig::addILPOpts() {
@@ -1355,12 +1344,6 @@ void GCNPassConfig::addPreGlobalInstructionSelect() {
 bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
   return false;
-}
-
-void GCNPassConfig::addPreRegAlloc() {
-  if (LateCFGStructurize) {
-    addPass(createAMDGPUMachineCFGStructurizerPass());
-  }
 }
 
 void GCNPassConfig::addFastRegAlloc() {
@@ -1512,7 +1495,7 @@ void GCNPassConfig::addPostRegAlloc() {
 
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSIShrinkInstructionsPass());
+    addPass(createSIShrinkInstructionsLegacyPass());
   addPass(&SIPostRABundlerID);
 }
 
@@ -1888,10 +1871,6 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
-  const bool LateCFGStructurize = AMDGPUTargetMachine::EnableLateStructurizeCFG;
-  const bool DisableStructurizer = AMDGPUTargetMachine::DisableStructurizer;
-  const bool EnableStructurizerWorkarounds =
-      AMDGPUTargetMachine::EnableStructurizerWorkarounds;
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(FlattenCFGPass());
@@ -1905,26 +1884,18 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // regions formed by them.
 
   addPass(AMDGPUUnifyDivergentExitNodesPass());
-
-  if (!LateCFGStructurize && !DisableStructurizer) {
-    if (EnableStructurizerWorkarounds) {
-      addPass(FixIrreduciblePass());
-      addPass(UnifyLoopExitsPass());
-    }
-
-    addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
-  }
+  addPass(FixIrreduciblePass());
+  addPass(UnifyLoopExitsPass());
+  addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
 
   addPass(AMDGPUAnnotateUniformValuesPass());
 
-  if (!LateCFGStructurize && !DisableStructurizer) {
-    addPass(SIAnnotateControlFlowPass(TM));
+  addPass(SIAnnotateControlFlowPass(TM));
 
-    // TODO: Move this right after structurizeCFG to avoid extra divergence
-    // analysis. This depends on stopping SIAnnotateControlFlow from making
-    // control flow modifications.
-    addPass(AMDGPURewriteUndefForPHIPass());
-  }
+  // TODO: Move this right after structurizeCFG to avoid extra divergence
+  // analysis. This depends on stopping SIAnnotateControlFlow from making
+  // control flow modifications.
+  addPass(AMDGPURewriteUndefForPHIPass());
 
   addPass(LCSSAPass());
 

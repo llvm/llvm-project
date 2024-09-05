@@ -56,11 +56,9 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 } // namespace llvm
 
 static bool isMetaInstrGET(unsigned Opcode) {
-  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_ID64 ||
-         Opcode == SPIRV::GET_fID || Opcode == SPIRV::GET_fID64 ||
-         Opcode == SPIRV::GET_pID32 || Opcode == SPIRV::GET_pID64 ||
-         Opcode == SPIRV::GET_vID || Opcode == SPIRV::GET_vfID ||
-         Opcode == SPIRV::GET_vpID32 || Opcode == SPIRV::GET_vpID64;
+  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
+         Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
+         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID;
 }
 
 static bool mayBeInserted(unsigned Opcode) {
@@ -126,9 +124,8 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResVType)
             continue;
           // Set type & class
-          MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
-          MRI.setType(ResVReg,
-                      LLT::scalar(GR->getScalarOrVectorBitWidth(ResVType)));
+          MRI.setRegClass(ResVReg, GR->getRegClass(ResVType));
+          MRI.setType(ResVReg, GR->getRegType(ResVType));
           GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
         }
         // If this is a simple operation that is to be reduced by TableGen
@@ -140,10 +137,6 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             continue;
           // Restore usual instructions pattern for the newly inserted
           // instruction
-          MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
-                                       ? &SPIRV::iIDRegClass
-                                       : &SPIRV::ANYIDRegClass);
-          MRI.setType(ResVReg, LLT::scalar(32));
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
           processInstr(I, MIB, MRI, GR);
         }

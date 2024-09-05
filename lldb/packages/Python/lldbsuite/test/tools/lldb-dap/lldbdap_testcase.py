@@ -81,7 +81,10 @@ class DAPTestCaseBase(TestBase):
                 body = stopped_event["body"]
                 if "reason" not in body:
                     continue
-                if body["reason"] != "breakpoint":
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
                     continue
                 if "description" not in body:
                     continue
@@ -200,6 +203,11 @@ class DAPTestCaseBase(TestBase):
     def collect_console(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "console", timeout_secs=timeout_secs, pattern=pattern
+        )
+
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
         )
 
     def get_local_as_int(self, name, threadId=None):

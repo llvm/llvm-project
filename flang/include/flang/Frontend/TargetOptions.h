@@ -38,6 +38,12 @@ public:
   /// The list of target specific features to enable or disable, as written on
   /// the command line.
   std::vector<std::string> featuresAsWritten;
+
+  /// The real KINDs disabled for this target
+  std::vector<int> disabledRealKinds;
+
+  /// The integer KINDs disabled for this target
+  std::vector<int> disabledIntegerKinds;
 };
 
 } // end namespace Fortran::frontend

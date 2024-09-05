@@ -137,7 +137,7 @@ public:
     if (isIntegralPointer())
       return asIntPointer().Value + (Offset * elemSize());
     if (isFunctionPointer())
-      return asFunctionPointer().getIntegerRepresentation();
+      return asFunctionPointer().getIntegerRepresentation() + Offset;
     return reinterpret_cast<uint64_t>(asBlockPointer().Pointee) + Offset;
   }
 
@@ -491,6 +491,14 @@ public:
     }
     return false;
   }
+  /// Checks if the storage has been dynamically allocated.
+  bool isDynamic() const {
+    if (isBlockPointer()) {
+      assert(asBlockPointer().Pointee);
+      return asBlockPointer().Pointee->isDynamic();
+    }
+    return false;
+  }
   /// Checks if the storage is a static temporary.
   bool isStaticTemporary() const { return isStatic() && isTemporary(); }
 
@@ -551,7 +559,7 @@ public:
   }
 
   /// Returns the byte offset from the start.
-  unsigned getByteOffset() const {
+  uint64_t getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
     if (isOnePastEnd())
@@ -614,6 +622,8 @@ public:
 
   /// Checks if the pointer is pointing to a zero-size array.
   bool isZeroSizeArray() const {
+    if (isFunctionPointer())
+      return false;
     if (const auto *Desc = getFieldDesc())
       return Desc->isZeroSizeArray();
     return false;
@@ -681,6 +691,10 @@ public:
   static bool hasSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
+
+  /// Whether this points to a block that's been created for a "literal lvalue",
+  /// i.e. a non-MaterializeTemporaryExpr Expr.
+  bool pointsToLiteral() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

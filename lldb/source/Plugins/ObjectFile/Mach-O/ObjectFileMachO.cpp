@@ -6556,8 +6556,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       make_core = true;
       break;
     default:
-      error.SetErrorStringWithFormat("unsupported core architecture: %s",
-                                     target_triple.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "unsupported core architecture: %s", target_triple.str().c_str());
       break;
     }
 
@@ -6835,9 +6835,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             for (auto &lcnote : lc_notes) {
               if (core_file.get()->SeekFromStart(lcnote->payload_file_offset) ==
                   -1) {
-                error.SetErrorStringWithFormat("Unable to seek to corefile pos "
-                                               "to write '%s' LC_NOTE payload",
-                                               lcnote->name.c_str());
+                error = Status::FromErrorStringWithFormat(
+                    "Unable to seek to corefile pos "
+                    "to write '%s' LC_NOTE payload",
+                    lcnote->name.c_str());
                 return false;
               }
               bytes_written = lcnote->payload.GetSize();
@@ -6850,7 +6851,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             // Now write the file data for all memory segments in the process
             for (const auto &segment : segment_load_commands) {
               if (core_file.get()->SeekFromStart(segment.fileoff) == -1) {
-                error.SetErrorStringWithFormat(
+                error = Status::FromErrorStringWithFormat(
                     "unable to seek to offset 0x%" PRIx64 " in '%s'",
                     segment.fileoff, core_file_path.c_str());
                 break;
