@@ -76,17 +76,11 @@ define i64 @rotate64(i64 %a, i32 %b) {
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.u64 %rd1, [rotate64_param_0];
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b32 %dummy;
-; SM35-NEXT:    mov.b64 {%dummy,%r1}, %rd1;
-; SM35-NEXT:    }
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b32 %dummy;
-; SM35-NEXT:    mov.b64 {%r2,%dummy}, %rd1;
-; SM35-NEXT:    }
-; SM35-NEXT:    ld.param.u32 %r3, [rotate64_param_1];
-; SM35-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, %r3;
-; SM35-NEXT:    shf.l.wrap.b32 %r5, %r1, %r2, %r3;
+; SM35-NEXT:    ld.param.u32 %r1, [rotate64_param_1];
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r2}, %rd1; }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {%r3, tmp}, %rd1; }
+; SM35-NEXT:    shf.l.wrap.b32 %r4, %r3, %r2, %r1;
+; SM35-NEXT:    shf.l.wrap.b32 %r5, %r2, %r3, %r1;
 ; SM35-NEXT:    mov.b64 %rd2, {%r5, %r4};
 ; SM35-NEXT:    st.param.b64 [func_retval0+0], %rd2;
 ; SM35-NEXT:    ret;
@@ -125,17 +119,11 @@ define i64 @rotateright64(i64 %a, i32 %b) {
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.u64 %rd1, [rotateright64_param_0];
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b32 %dummy;
-; SM35-NEXT:    mov.b64 {%r1,%dummy}, %rd1;
-; SM35-NEXT:    }
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b32 %dummy;
-; SM35-NEXT:    mov.b64 {%dummy,%r2}, %rd1;
-; SM35-NEXT:    }
-; SM35-NEXT:    ld.param.u32 %r3, [rotateright64_param_1];
-; SM35-NEXT:    shf.r.wrap.b32 %r4, %r2, %r1, %r3;
-; SM35-NEXT:    shf.r.wrap.b32 %r5, %r1, %r2, %r3;
+; SM35-NEXT:    ld.param.u32 %r1, [rotateright64_param_1];
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {%r2, tmp}, %rd1; }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd1; }
+; SM35-NEXT:    shf.r.wrap.b32 %r4, %r3, %r2, %r1;
+; SM35-NEXT:    shf.r.wrap.b32 %r5, %r2, %r3, %r1;
 ; SM35-NEXT:    mov.b64 %rd2, {%r5, %r4};
 ; SM35-NEXT:    st.param.b64 [func_retval0+0], %rd2;
 ; SM35-NEXT:    ret;
@@ -205,22 +193,17 @@ define i64 @rotl64(i64 %a, i64 %n) {
 ;
 ; SM35-LABEL: rotl64(
 ; SM35:       {
-; SM35-NEXT:    .reg .b32 %r<2>;
+; SM35-NEXT:    .reg .b32 %r<6>;
 ; SM35-NEXT:    .reg .b64 %rd<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.u64 %rd1, [rotl64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [rotl64_param_1];
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b64 %lhs;
-; SM35-NEXT:    .reg .b64 %rhs;
-; SM35-NEXT:    .reg .u32 %amt2;
-; SM35-NEXT:    and.b32 %amt2, %r1, 63;
-; SM35-NEXT:    shl.b64 %lhs, %rd1, %amt2;
-; SM35-NEXT:    sub.u32 %amt2, 64, %amt2;
-; SM35-NEXT:    shr.b64 %rhs, %rd1, %amt2;
-; SM35-NEXT:    add.u64 %rd2, %lhs, %rhs;
-; SM35-NEXT:    }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd1; }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {%r2, tmp}, %rd1; }
+; SM35-NEXT:    ld.param.u32 %r3, [rotl64_param_1];
+; SM35-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, %r3;
+; SM35-NEXT:    shf.l.wrap.b32 %r5, %r1, %r2, %r3;
+; SM35-NEXT:    mov.b64 %rd2, {%r5, %r4};
 ; SM35-NEXT:    st.param.b64 [func_retval0+0], %rd2;
 ; SM35-NEXT:    ret;
   %val = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %n)
@@ -247,17 +230,16 @@ define i64 @rotl64_imm(i64 %a) {
 ;
 ; SM35-LABEL: rotl64_imm(
 ; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<5>;
 ; SM35-NEXT:    .reg .b64 %rd<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.u64 %rd1, [rotl64_imm_param_0];
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b64 %lhs;
-; SM35-NEXT:    .reg .b64 %rhs;
-; SM35-NEXT:    shl.b64 %lhs, %rd1, 2;
-; SM35-NEXT:    shr.b64 %rhs, %rd1, 62;
-; SM35-NEXT:    add.u64 %rd2, %lhs, %rhs;
-; SM35-NEXT:    }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd1; }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {%r2, tmp}, %rd1; }
+; SM35-NEXT:    shf.l.wrap.b32 %r3, %r2, %r1, 2;
+; SM35-NEXT:    shf.l.wrap.b32 %r4, %r1, %r2, 2;
+; SM35-NEXT:    mov.b64 %rd2, {%r4, %r3};
 ; SM35-NEXT:    st.param.b64 [func_retval0+0], %rd2;
 ; SM35-NEXT:    ret;
   %val = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 66)
@@ -289,22 +271,17 @@ define i64 @rotr64(i64 %a, i64 %n) {
 ;
 ; SM35-LABEL: rotr64(
 ; SM35:       {
-; SM35-NEXT:    .reg .b32 %r<2>;
+; SM35-NEXT:    .reg .b32 %r<6>;
 ; SM35-NEXT:    .reg .b64 %rd<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.u64 %rd1, [rotr64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [rotr64_param_1];
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b64 %lhs;
-; SM35-NEXT:    .reg .b64 %rhs;
-; SM35-NEXT:    .reg .u32 %amt2;
-; SM35-NEXT:    and.b32 %amt2, %r1, 63;
-; SM35-NEXT:    shr.b64 %lhs, %rd1, %amt2;
-; SM35-NEXT:    sub.u32 %amt2, 64, %amt2;
-; SM35-NEXT:    shl.b64 %rhs, %rd1, %amt2;
-; SM35-NEXT:    add.u64 %rd2, %lhs, %rhs;
-; SM35-NEXT:    }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r2}, %rd1; }
+; SM35-NEXT:    ld.param.u32 %r3, [rotr64_param_1];
+; SM35-NEXT:    shf.r.wrap.b32 %r4, %r2, %r1, %r3;
+; SM35-NEXT:    shf.r.wrap.b32 %r5, %r1, %r2, %r3;
+; SM35-NEXT:    mov.b64 %rd2, {%r5, %r4};
 ; SM35-NEXT:    st.param.b64 [func_retval0+0], %rd2;
 ; SM35-NEXT:    ret;
   %val = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %n)
@@ -331,17 +308,16 @@ define i64 @rotr64_imm(i64 %a) {
 ;
 ; SM35-LABEL: rotr64_imm(
 ; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<5>;
 ; SM35-NEXT:    .reg .b64 %rd<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.u64 %rd1, [rotr64_imm_param_0];
-; SM35-NEXT:    {
-; SM35-NEXT:    .reg .b64 %lhs;
-; SM35-NEXT:    .reg .b64 %rhs;
-; SM35-NEXT:    shl.b64 %lhs, %rd1, 62;
-; SM35-NEXT:    shr.b64 %rhs, %rd1, 2;
-; SM35-NEXT:    add.u64 %rd2, %lhs, %rhs;
-; SM35-NEXT:    }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
+; SM35-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r2}, %rd1; }
+; SM35-NEXT:    shf.r.wrap.b32 %r3, %r2, %r1, 2;
+; SM35-NEXT:    shf.r.wrap.b32 %r4, %r1, %r2, 2;
+; SM35-NEXT:    mov.b64 %rd2, {%r4, %r3};
 ; SM35-NEXT:    st.param.b64 [func_retval0+0], %rd2;
 ; SM35-NEXT:    ret;
   %val = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 66)
