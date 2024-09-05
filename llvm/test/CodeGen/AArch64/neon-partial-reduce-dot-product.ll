@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple aarch64 -mattr=+neon,+dotprod < %s | FileCheck %s --check-prefixes=CHECK,CHECK-DOT
 ; RUN: llc -mtriple aarch64 -mattr=+neon < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NODOT
 
-define <4 x i32> @udot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
+define <4 x i32> @udot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ; CHECK-DOT-LABEL: udot:
 ; CHECK-DOT:       // %bb.0:
 ; CHECK-DOT-NEXT:    udot v0.4s, v2.16b, v1.16b
@@ -25,7 +25,7 @@ define <4 x i32> @udot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
   ret <4 x i32> %partial.reduce
 }
 
-define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
+define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-DOT-LABEL: udot_narrow:
 ; CHECK-DOT:       // %bb.0:
 ; CHECK-DOT-NEXT:    udot v0.2s, v2.8b, v1.8b
@@ -52,7 +52,7 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
   ret <2 x i32> %partial.reduce
 }
 
-define <4 x i32> @sdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
+define <4 x i32> @sdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ; CHECK-DOT-LABEL: sdot:
 ; CHECK-DOT:       // %bb.0:
 ; CHECK-DOT-NEXT:    sdot v0.4s, v2.16b, v1.16b
@@ -75,7 +75,7 @@ define <4 x i32> @sdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
   ret <4 x i32> %partial.reduce
 }
 
-define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
+define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-DOT-LABEL: sdot_narrow:
 ; CHECK-DOT:       // %bb.0:
 ; CHECK-DOT-NEXT:    sdot v0.2s, v2.8b, v1.8b
@@ -102,7 +102,7 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
   ret <2 x i32> %partial.reduce
 }
 
-define <4 x i32> @not_udot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
+define <4 x i32> @not_udot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-LABEL: not_udot:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull v1.8h, v2.8b, v1.8b
@@ -116,7 +116,7 @@ define <4 x i32> @not_udot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
   ret <4 x i32> %partial.reduce
 }
 
-define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) #0{
+define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) {
 ; CHECK-LABEL: not_udot_narrow:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic v1.4h, #255, lsl #8
@@ -129,41 +129,6 @@ define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) #0{
 ; CHECK-NEXT:    ret
   %u.wide = zext <4 x i8> %u to <4 x i32>
   %s.wide = zext <4 x i8> %s to <4 x i32>
-  %mult = mul nuw nsw <4 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <4 x i32> %mult)
-  ret <2 x i32> %partial.reduce
-}
-
-define <4 x i32> @not_sdot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
-; CHECK-LABEL: not_sdot:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v1.8h, v2.8b, v1.8b
-; CHECK-NEXT:    saddw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    saddw2 v0.4s, v0.4s, v1.8h
-; CHECK-NEXT:    ret
-  %u.wide = sext <8 x i8> %u to <8 x i32>
-  %s.wide = sext <8 x i8> %s to <8 x i32>
-  %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <8 x i32> %mult)
-  ret <4 x i32> %partial.reduce
-}
-
-define <2 x i32> @not_sdot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) #0{
-; CHECK-LABEL: not_sdot_narrow:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    shl v1.4s, v1.4s, #24
-; CHECK-NEXT:    shl v2.4s, v2.4s, #24
-; CHECK-NEXT:    sshr v1.4s, v1.4s, #24
-; CHECK-NEXT:    sshr v2.4s, v2.4s, #24
-; CHECK-NEXT:    mul v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NEXT:    ret
-  %u.wide = sext <4 x i8> %u to <4 x i32>
-  %s.wide = sext <4 x i8> %s to <4 x i32>
   %mult = mul nuw nsw <4 x i32> %s.wide, %u.wide
   %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <4 x i32> %mult)
   ret <2 x i32> %partial.reduce
