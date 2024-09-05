@@ -364,7 +364,6 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitVectorComparison(const BinaryOperator *E);
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const QualType BaseType,

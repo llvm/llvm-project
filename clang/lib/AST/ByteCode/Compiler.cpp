@@ -1227,6 +1227,8 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   assert(E->getType()->isVectorType());
+  assert(E->getLHS()->getType()->isVectorType());
+  assert(E->getRHS()->getType()->isVectorType());
 
   // FIXME: Current only support comparison binary operator, add support for
   // other binary operator.
@@ -1274,7 +1276,43 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
     if (!getElem(RHSOffset, I, ElemT))
       return false;
     if (E->isComparisonOp()) {
-      if (!this->emitVectorComparison(E))
+      switch (E->getOpcode()) {
+      case BO_EQ:
+        if (!this->emitEQ(ElemT, E))
+          return false;
+        break;
+      case BO_NE:
+        if (!this->emitNE(ElemT, E))
+          return false;
+        break;
+      case BO_LE:
+        if (!this->emitLE(ElemT, E))
+          return false;
+        break;
+      case BO_LT:
+        if (!this->emitLT(ElemT, E))
+          return false;
+        break;
+      case BO_GE:
+        if (!this->emitGE(ElemT, E))
+          return false;
+        break;
+      case BO_GT:
+        if (!this->emitGT(ElemT, E))
+          return false;
+        break;
+      default:
+        llvm_unreachable("Unsupported binary operator");
+      }
+
+      // The result of the comparison is a vector of the same width and number
+      // of elements as the comparison operands with a signed integral element
+      // type.
+      //
+      // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+      if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
+        return false;
+      if (!this->emitNeg(ResultElemT, E))
         return false;
     } else {
       llvm_unreachable("Unsupported binary operator");
@@ -1282,56 +1320,6 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
     if (!this->emitInitElem(ResultElemT, I, E))
       return false;
   }
-  return true;
-}
-
-template <class Emitter>
-bool Compiler<Emitter>::emitVectorComparison(const BinaryOperator *E) {
-  assert(E->isComparisonOp());
-  assert(!DiscardResult);
-  const auto *VecTy = E->getType()->getAs<VectorType>();
-
-  // The LHS and RHS of a comparison operator must have the same type. So we
-  // just use LHS vector element type here.
-  PrimType LHSElemT = this->classifyVectorElementType(E->getLHS()->getType());
-  PrimType ResultElemT = this->classifyVectorElementType(E->getType());
-  switch (E->getOpcode()) {
-  case BO_EQ:
-    if (!this->emitEQ(LHSElemT, E))
-      return false;
-    break;
-  case BO_NE:
-    if (!this->emitNE(LHSElemT, E))
-      return false;
-    break;
-  case BO_LE:
-    if (!this->emitLE(LHSElemT, E))
-      return false;
-    break;
-  case BO_LT:
-    if (!this->emitLT(LHSElemT, E))
-      return false;
-    break;
-  case BO_GE:
-    if (!this->emitGE(LHSElemT, E))
-      return false;
-    break;
-  case BO_GT:
-    if (!this->emitGT(LHSElemT, E))
-      return false;
-    break;
-  default:
-    llvm_unreachable("Unsupported binary operator");
-  }
-
-  // The result of the comparison is a vector of the same width and number of
-  // elements as the comparison operands with a signed integral element type.
-  //
-  // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
-  if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
-    return false;
-  if (!this->emitNeg(ResultElemT, E))
-    return false;
   return true;
 }
 
