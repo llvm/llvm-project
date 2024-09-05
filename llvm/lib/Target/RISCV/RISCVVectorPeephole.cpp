@@ -346,8 +346,7 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
 static unsigned getVMV_V_VOpcodeForVMERGE_VVM(const MachineInstr &MI) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
-    return RISCV::PseudoVMV_V_V_##lmul;                                        \
-    break;
+    return RISCV::PseudoVMV_V_V_##lmul;
   switch (MI.getOpcode()) {
   default:
     return 0;
