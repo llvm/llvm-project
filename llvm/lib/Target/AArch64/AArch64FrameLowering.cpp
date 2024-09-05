@@ -2931,16 +2931,6 @@ struct RegPairInfo {
 
 } // end anonymous namespace
 
-unsigned findFreePredicateReg(BitVector &SavedRegs) {
-  for (unsigned PReg = AArch64::P8; PReg <= AArch64::P15; ++PReg) {
-    if (SavedRegs.test(PReg)) {
-      unsigned PNReg = PReg - AArch64::P0 + AArch64::PN0;
-      return PNReg;
-    }
-  }
-  return AArch64::NoRegister;
-}
-
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -3645,7 +3635,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   unsigned ExtraCSSpill = 0;
   bool HasUnpairedGPR64 = false;
-  bool HasPairZReg = false;
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
@@ -3699,28 +3688,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
           !RegInfo->isReservedReg(MF, PairedReg))
         ExtraCSSpill = PairedReg;
     }
-    // Check if there is a pair of ZRegs, so it can select PReg for spill/fill
-    HasPairZReg |= (AArch64::ZPRRegClass.contains(Reg, CSRegs[i ^ 1]) &&
-                    SavedRegs.test(CSRegs[i ^ 1]));
-  }
-
-  if (HasPairZReg && (Subtarget.hasSVE2p1() || Subtarget.hasSME2())) {
-    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    // Find a suitable predicate register for the multi-vector spill/fill
-    // instructions.
-    unsigned PnReg = findFreePredicateReg(SavedRegs);
-    if (PnReg != AArch64::NoRegister)
-      AFI->setPredicateRegForFillSpill(PnReg);
-    // If no free callee-save has been found assign one.
-    if (!AFI->getPredicateRegForFillSpill() &&
-        MF.getFunction().getCallingConv() ==
-            CallingConv::AArch64_SVE_VectorCall) {
-      SavedRegs.set(AArch64::P8);
-      AFI->setPredicateRegForFillSpill(AArch64::PN8);
-    }
-
-    assert(!RegInfo->isReservedReg(MF, AFI->getPredicateRegForFillSpill()) &&
-           "Predicate cannot be a reserved register");
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
