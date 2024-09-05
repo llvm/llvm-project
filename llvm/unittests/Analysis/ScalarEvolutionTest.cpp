@@ -137,7 +137,7 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
-  auto *PN = PHINode::Create(Ty, 2, "", &*LoopBB->begin());
+  auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
   PN->addIncoming(UndefValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
@@ -930,10 +930,12 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Type::getInt64Ty(Context), 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br);
+  auto *Phi =
+      PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br->getIterator());
   Phi->addIncoming(MinInt64, EntryBB);
   Phi->addIncoming(Add, LoopBB);
   // exit:
@@ -986,10 +988,11 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br);
+  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br->getIterator());
   auto *Arg = &*(F->arg_begin());
   Phi->addIncoming(Arg, EntryBB);
   Phi->addIncoming(Add, LoopBB);
@@ -1139,6 +1142,8 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
         %var = load i32, ptr %ptr
         %iv2pvar = add i32 %iv2, %var
         %iv2pvarp3 = add i32 %iv2pvar, 3
+        %iv2pvarm3 = mul i32 %iv2pvar, 3
+        %iv2pvarp3m3 = mul i32 %iv2pvarp3, 3
         %cmp2 = icmp sle i32 %iv2.next, %sz
         br i1 %cmp2, label %loop2.body, label %exit
       exit:
@@ -1175,6 +1180,12 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     // %var + {{3,+,1},+,1}
     const SCEV *ScevIV2PVarP3 =
         SE.getSCEV(getInstructionByName(F, "iv2pvarp3"));
+    // 3 * (%var + {{0,+,1},+,1})
+    const SCEV *ScevIV2PVarM3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarm3"));
+    // 3 * (%var + {{3,+,1},+,1})
+    const SCEV *ScevIV2PVarP3M3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarp3m3"));
 
     auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
@@ -1199,8 +1210,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
-    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), std::nullopt); // TODO
-    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), std::nullopt); // TODO
+    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), 3);
+    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), -3);
+    EXPECT_EQ(diff(ScevIV2PVarP3M3, ScevIV2PVarM3), 9);
     EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
     EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
     EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);

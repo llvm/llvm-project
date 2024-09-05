@@ -3533,6 +3533,54 @@ define <4 x i32> @PR63700(i128 %0) {
   ret <4 x i32> %shuffle.i11
 }
 
+define <16 x i8> @PR107289(<16 x i8> %0) {
+; SSE2-LABEL: PR107289:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm1, %rcx
+; SSE2-NEXT:    shldq $8, %rax, %rcx
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    psllq $8, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR107289:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movq %xmm0, %rax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-NEXT:    movq %xmm1, %rcx
+; SSSE3-NEXT:    shldq $8, %rax, %rcx
+; SSSE3-NEXT:    movq %rcx, %xmm1
+; SSSE3-NEXT:    psllq $8, %xmm0
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR107289:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq %xmm0, %rax
+; SSE41-NEXT:    pextrq $1, %xmm0, %rcx
+; SSE41-NEXT:    shldq $8, %rax, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    psllq $8, %xmm0
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR107289:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX-NEXT:    shldq $8, %rax, %rcx
+; AVX-NEXT:    vmovq %rcx, %xmm1
+; AVX-NEXT:    vpsllq $8, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
+  %src = bitcast <16 x i8> %0 to i128
+  %shl = shl i128 %src, 8
+  %res = bitcast i128 %shl to <16 x i8>
+  ret <16 x i8> %res
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
@@ -3641,9 +3689,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB141_1: # %CF242
+; CHECK-NEXT:  .LBB142_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB141_1
+; CHECK-NEXT:    jmp .LBB142_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>

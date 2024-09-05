@@ -234,7 +234,7 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    xorl $31, %edx
 ; X86-NEXT:    bsrl %ebx, %ecx
 ; X86-NEXT:    xorl $31, %ecx
-; X86-NEXT:    addl $32, %ecx
+; X86-NEXT:    orl $32, %ecx
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    cmovnel %edx, %ecx
 ; X86-NEXT:    bsrl %ebp, %edx
@@ -242,11 +242,11 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    bsrl %edi, %edi
 ; X86-NEXT:    xorl $31, %edi
-; X86-NEXT:    addl $32, %edi
+; X86-NEXT:    orl $32, %edi
 ; X86-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    testl %ebp, %ebp
 ; X86-NEXT:    cmovnel %edx, %edi
-; X86-NEXT:    addl $64, %edi
+; X86-NEXT:    orl $64, %edi
 ; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %ebx, %edx
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -258,7 +258,7 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; X86-NEXT:    bsrl %ebp, %ecx
 ; X86-NEXT:    xorl $31, %ecx
-; X86-NEXT:    addl $32, %ecx
+; X86-NEXT:    orl $32, %ecx
 ; X86-NEXT:    testl %ebx, %ebx
 ; X86-NEXT:    cmovnel %edx, %ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -266,10 +266,10 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:    bsrl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    addl $32, %edx
+; X86-NEXT:    orl $32, %edx
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    cmovnel %esi, %edx
-; X86-NEXT:    addl $64, %edx
+; X86-NEXT:    orl $64, %edx
 ; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    orl %ebx, %esi
 ; X86-NEXT:    cmovnel %ecx, %edx

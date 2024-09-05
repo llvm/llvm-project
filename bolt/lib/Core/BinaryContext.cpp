@@ -142,7 +142,6 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
       Logger(Logger), InitialDynoStats(isAArch64()) {
-  Relocation::Arch = this->TheTriple->getArch();
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -1056,28 +1055,18 @@ void BinaryContext::adjustCodePadding() {
 MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
                                                uint64_t Size,
                                                uint16_t Alignment,
-                                               unsigned Flags,
-                                               BinarySection *Section) {
+                                               unsigned Flags) {
   // Register the name with MCContext.
   MCSymbol *Symbol = Ctx->getOrCreateSymbol(Name);
-  BinaryData *BD;
-
-  // Register out of section symbols only in GlobalSymbols map
-  if (Section && Section->getEndAddress() == Address) {
-    BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
-                        *Section, Flags);
-    GlobalSymbols[Name] = BD;
-    return Symbol;
-  }
 
   auto GAI = BinaryDataMap.find(Address);
+  BinaryData *BD;
   if (GAI == BinaryDataMap.end()) {
     ErrorOr<BinarySection &> SectionOrErr = getSectionForAddress(Address);
-    BinarySection &SectionRef = Section        ? *Section
-                                : SectionOrErr ? SectionOrErr.get()
-                                               : absoluteSection();
+    BinarySection &Section =
+        SectionOrErr ? SectionOrErr.get() : absoluteSection();
     BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
-                        SectionRef, Flags);
+                        Section, Flags);
     GAI = BinaryDataMap.emplace(Address, BD).first;
     GlobalSymbols[Name] = BD;
     updateObjectNesting(GAI);
@@ -1412,7 +1401,7 @@ void BinaryContext::postProcessSymbolTable() {
     if ((BD->getName().starts_with("SYMBOLat") ||
          BD->getName().starts_with("DATAat")) &&
         !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
-        BD->getSection().getSize()) {
+        BD->getSection()) {
       this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
                    << "\n";
       Valid = false;

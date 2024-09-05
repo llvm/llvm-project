@@ -127,7 +127,7 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
       (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
-  } else if (acceptAllocatable &&
+  } else if (acceptAllocatable && IsAllocatable(ultimate) &&
       !flags.test(DefinabilityFlag::SourcedAllocation)) {
     // allocating a function result doesn't count as a def'n
     // unless there's SOURCE=
@@ -223,7 +223,8 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
       }
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
         if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+          if (auto bad{
+                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
             return BlameSymbol(at,
                 "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
                 original, bad.BuildResultDesignatorName());

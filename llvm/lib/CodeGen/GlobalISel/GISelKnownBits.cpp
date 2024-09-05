@@ -271,8 +271,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForAddSub(/*Add=*/false, /*NSW=*/false,
-                                        /* NUW=*/false, Known, Known2);
+    Known = KnownBits::sub(Known, Known2);
     break;
   }
   case TargetOpcode::G_XOR: {
@@ -298,8 +297,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
-                                        /* NUW=*/false, Known, Known2);
+    Known = KnownBits::add(Known, Known2);
     break;
   }
   case TargetOpcode::G_AND: {
@@ -571,8 +569,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
     KnownBits ExtKnown = KnownBits::makeConstant(APInt(BitWidth, BitWidth));
-    KnownBits ShiftKnown = KnownBits::computeForAddSub(
-        /*Add=*/false, /*NSW=*/false, /* NUW=*/false, ExtKnown, WidthKnown);
+    KnownBits ShiftKnown = KnownBits::sub(ExtKnown, WidthKnown);
     Known = KnownBits::ashr(KnownBits::shl(Known, ShiftKnown), ShiftKnown);
     break;
   }

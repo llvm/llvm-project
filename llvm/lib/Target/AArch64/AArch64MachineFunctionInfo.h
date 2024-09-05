@@ -177,14 +177,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
 
-  /// HasELFSignedGOT is true if the target binary format is ELF and the IR
-  /// module containing the corresponding function has the following flags:
-  /// - aarch64-elf-pauthabi-platform flag equal to
-  ///   AARCH64_PAUTH_PLATFORM_LLVM_LINUX;
-  /// - aarch64-elf-pauthabi-version flag with
-  ///   AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT bit set.
-  bool HasELFSignedGOT = false;
-
   /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
   /// within the prologue, so it can be re-used for authentication in the
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
@@ -516,8 +508,6 @@ public:
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
-
-  bool hasELFSignedGOT() const { return HasELFSignedGOT; }
 
   MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }

@@ -251,9 +251,35 @@ Overview:
 The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
 instruction, equivalent to the ``__syncthreads()`` call in CUDA.
 
+Electing a thread
+-----------------
+
+'``llvm.nvvm.elect.sync``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare {i32, i1} @llvm.nvvm.elect.sync(i32 %membermask)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.elect.sync``' intrinsic generates the ``elect.sync``
+PTX instruction, which elects one predicated active leader thread from
+a set of threads specified by ``membermask``. The behavior is undefined
+if the executing thread is not in ``membermask``. The laneid of the
+elected thread is captured in the i32 return value. The i1 return
+value is set to ``True`` for the leader thread and ``False`` for all
+the other threads. Election of a leader thread happens deterministically,
+i.e. the same leader thread is elected for the same ``membermask``
+every time. For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+
 Membar/Fences
 -------------
-
 
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -286,6 +312,77 @@ The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence us
   ====================================================== =========================================================
 
 The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+
+Arithmetic Intrinsics
+---------------------
+
+'``llvm.nvvm.idp2a.[us].[us]``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp2a.s.s(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.s.u(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.u.s(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.u.u(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp2a.[us].[us]``' intrinsics performs a 2-element vector dot
+product followed by addition. They corresponds directly to the ``dp2a`` PTX 
+instruction.
+
+Semantics:
+""""""""""
+
+The 32-bit value in ``%a`` is broken into 2 16-bit values which are extended to
+32 bits. For the '``llvm.nvvm.idp2a.u.[us]``' variants zero-extension is used,
+while for the '``llvm.nvvm.idp2a.s.[us]``' sign-extension is used. Two bytes are
+selected from ``%b``, if ``%is.hi`` is true, the most significant bytes are
+selected, otherwise the least significant bytes are selected. These bytes are
+then extended to 32-bits. For the '``llvm.nvvm.idp2a.[us].u``' variants
+zero-extension is used, while for the '``llvm.nvvm.idp2a.[us].s``'
+sign-extension is used. The dot product of these 2-element vectors is added to
+``%c`` to produce the return.
+
+
+'``llvm.nvvm.idp4a.[us].[us]``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp4a.s.s(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.s.u(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.u.s(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.u.u(i32 %a, i32 %b, i32 %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp4a.[us].[us]``' intrinsics perform a 4-element vector dot
+product followed by addition. They corresponds directly to the ``dp4a`` PTX
+instruction.
+
+Semantics:
+""""""""""
+
+Each of the 4 bytes in both ``%a`` and ``%b`` are extended to 32-bit integers
+forming 2 ``<4 x i32>``. For ``%a``, zero-extension is used in the
+'``llvm.nvvm.idp4a.u.[us]``' variants, while sign-extension is used with
+'``llvm.nvvm.idp4a.s.[us]``' variants. Similarly, for ``%b``, zero-extension is
+used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
+with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
+vectors is added to ``%c`` to produce the return.
+
+
 
 Other Intrinsics
 ----------------

@@ -138,7 +138,7 @@ define i1 @oneuse1(i8 %val, i8 %bits) {
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits
@@ -154,7 +154,7 @@ define i1 @oneuse2(i8 %val, i8 %bits) {
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits
@@ -173,7 +173,7 @@ define i1 @n0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 1, %bits ; constant is not -1
@@ -199,7 +199,7 @@ define <2 x i1> @n2_vec_nonsplat(<2 x i8> %val, <2 x i8> %bits) {
 ; CHECK-LABEL: @n2_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i8> <i8 -1, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i8> [[T0]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <2 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = shl <2 x i8> <i8 -1, i8 1>, %bits ; again, wrong constant
@@ -225,7 +225,7 @@ define i1 @n3(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n3(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits

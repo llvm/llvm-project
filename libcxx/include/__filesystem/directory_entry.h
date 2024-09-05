@@ -20,6 +20,7 @@
 #include <__filesystem/operations.h>
 #include <__filesystem/path.h>
 #include <__filesystem/perms.h>
+#include <__fwd/ostream.h>
 #include <__system_error/errc.h>
 #include <__system_error/error_code.h>
 #include <__utility/move.h>

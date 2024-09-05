@@ -1,38 +1,11 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums %s | FileCheck %s
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
 // XFAIL: vg_leak
 
-class IntrinsicProperty<bit is_default = 0> {
-  bit IsDefault = is_default;
-}
-
-class SDNodeProperty;
-
-class ValueType<int size, int value> {
-  string Namespace = "MVT";
-  int Size = size;
-  int Value = value;
-}
-
-class LLVMType<ValueType vt> {
-  ValueType VT = vt;
-}
-
-class Intrinsic<string name, list<LLVMType> ret_types = []> {
-  string LLVMName = name;
-  bit isTarget = 0;
-  string TargetPrefix = "";
-  list<LLVMType> RetTypes = ret_types;
-  list<LLVMType> ParamTypes = [];
-  list<IntrinsicProperty> IntrProperties = [];
-  list<SDNodeProperty> Properties = [];
-  bit DisableDefaultAttributes = 1;
-}
-
-def iAny : ValueType<0, 253>;
-def llvm_anyint_ty : LLVMType<iAny>;
+include "llvm/IR/Intrinsics.td"
 
 // Make sure we can return up to 8 values
 // CHECK: returns_8_results = {{[0-9]+}}, // llvm.returns.8.results
-def int_returns_8_results : Intrinsic<"llvm.returns.8.results",
+def int_returns_8_results : Intrinsic<
     [llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty,
-     llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty]>;
+     llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty],
+     [], [], "llvm.returns.8.results">;

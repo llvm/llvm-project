@@ -1,0 +1,65 @@
+# RUN: llc %s -mattr=+fix-tn0012 -march=sparc -run-pass=errata-workaround -o - \
+# RUN:   | FileCheck %s
+
+---
+# CHECK:      bb.2:
+# CHECK:      NOP
+# CHECK-NEXT: $f0 = FADDS $f0, $f0
+name:            er-5-1
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    BCOND %bb.2, 10, implicit $icc {
+      NOP
+    }
+
+  bb.1.entry:
+    successors: %bb.2
+    NOP
+
+  bb.2:
+    $f0 = FADDS $f0, $f0
+
+---
+# CHECK:      bb.2:
+# CHECK:      NOP
+# CHECK-NEXT: FBCOND %bb.3, 22, implicit $fcc0 {
+name:            er-5-2
+body:             |
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+    BCOND %bb.1, 10, implicit $icc {
+      NOP
+    }
+
+  bb.2.entry:
+    successors: %bb.1
+    NOP
+
+  bb.1:
+    successors: %bb.3
+    FBCOND %bb.3, 22, implicit $fcc0 {
+      NOP
+    }
+  bb.3:
+   NOP
+
+---
+# CHECK:      bb.2:
+# CHECK:      NOP
+# CHECK-NEXT: FCMPS $f0, $f0, implicit-def $fcc0
+name:            er-5-3
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    BCOND %bb.2, 10, implicit $icc {
+      NOP
+    }
+
+  bb.1.entry:
+    successors: %bb.2
+    NOP
+
+  bb.2:
+    FCMPS $f0, $f0, implicit-def $fcc0
+...

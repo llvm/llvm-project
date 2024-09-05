@@ -31,7 +31,7 @@
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP)
 #include "arm/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen)
 #include "riscv/FEnvImpl.h"
 #else
 

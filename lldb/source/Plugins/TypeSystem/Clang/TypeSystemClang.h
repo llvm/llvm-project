@@ -457,8 +457,7 @@ public:
 
   CompilerType
   CreateObjCClass(llvm::StringRef name, clang::DeclContext *decl_ctx,
-                  OptionalClangModuleID owning_module, bool isForwardDecl,
-                  bool isInternal,
+                  OptionalClangModuleID owning_module, bool isInternal,
                   std::optional<ClangASTMetadata> metadata = std::nullopt);
 
   // Returns a mask containing bits from the TypeSystemClang::eTypeXXX

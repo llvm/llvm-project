@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cos.h"
+#include "utils/MPFRWrapper/mpfr_inc.h"
 #include <math.h>
-#include <mpfr.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const double x) {
   // remove NaN and inf as preconditions

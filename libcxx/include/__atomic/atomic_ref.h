@@ -219,7 +219,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
 
 protected:
-  typedef _Tp _Aligned_Tp __attribute__((aligned(required_alignment)));
+  using _Aligned_Tp [[__gnu__::__aligned__(required_alignment)]] = _Tp;
   _Aligned_Tp* __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}

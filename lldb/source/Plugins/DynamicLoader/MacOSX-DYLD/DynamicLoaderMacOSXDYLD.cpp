@@ -1060,7 +1060,7 @@ Status DynamicLoaderMacOSXDYLD::CanLoadImage() {
       return error; // Success
   }
 
-  error.SetErrorString("unsafe to load or unload shared libraries");
+  error = Status::FromErrorString("unsafe to load or unload shared libraries");
   return error;
 }
 

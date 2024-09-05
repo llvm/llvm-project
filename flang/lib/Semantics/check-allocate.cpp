@@ -270,11 +270,13 @@ static bool IsTypeCompatible(
     const DeclTypeSpec &type1, const DerivedTypeSpec &derivedType2) {
   if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
     if (type1.category() == DeclTypeSpec::Category::TypeDerived) {
-      return &derivedType1->typeSymbol() == &derivedType2.typeSymbol();
+      return evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+          *derivedType1, derivedType2);
     } else if (type1.category() == DeclTypeSpec::Category::ClassDerived) {
       for (const DerivedTypeSpec *parent{&derivedType2}; parent;
            parent = parent->typeSymbol().GetParentTypeSpec()) {
-        if (&derivedType1->typeSymbol() == &parent->typeSymbol()) {
+        if (evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+                *derivedType1, *parent)) {
           return true;
         }
       }

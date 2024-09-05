@@ -940,6 +940,23 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
                         withFix(equalToFix(ExpectedFix2))))));
 }
 
+TEST(DiagnosticsTest, ClangTidyCallingIntoPreprocessor) {
+  std::string Main = R"cpp(
+    extern "C" {
+    #include "b.h"
+    }
+  )cpp";
+  std::string Header = R"cpp(
+    #define EXTERN extern
+    EXTERN int waldo();
+  )cpp";
+  auto TU = TestTU::withCode(Main);
+  TU.AdditionalFiles["b.h"] = Header;
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
+  // Check that no assertion failures occur during the build
+  TU.build();
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:

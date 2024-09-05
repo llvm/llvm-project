@@ -894,6 +894,9 @@ approach:
 Reducing the duplication from textual includes is what improves compile-time
 performance.
 
+To help users to identify such issues, we add a warning ``-Wdecls-in-multiple-modules``.
+This warning is disabled by default and it needs to be explicitly enabled or by ``-Weverything``.
+
 Transitioning to modules
 ------------------------
 
@@ -1230,6 +1233,58 @@ parsing their headers, those should be included after the import. If the
 imported modules don't provide such a header, one can be made manually for
 improved compile time performance.
 
+Reachability of internal partition units
+----------------------------------------
+
+The internal partition units are sometimes called implementation partition units in other documentation.
+However, the name may be confusing since implementation partition units are not implementation
+units.
+
+According to `[module.reach]p1 <https://eel.is/c++draft/module.reach#1>`_ and
+`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_ (from N4986):
+
+  A translation unit U is necessarily reachable from a point P if U is a module
+  interface unit on which the translation unit containing P has an interface
+  dependency, or the translation unit containing P imports U, in either case
+  prior to P.
+
+  All translation units that are necessarily reachable are reachable. Additional
+  translation units on which the point within the program has an interface
+  dependency may be considered reachable, but it is unspecified which are and
+  under what circumstances.
+
+For example,
+
+.. code-block:: c++
+
+  // a.cpp
+  import B;
+  int main()
+  {
+      g<void>();
+  }
+
+  // b.cppm
+  export module B;
+  import :C;
+  export template <typename T> inline void g() noexcept
+  {
+      return f<T>();
+  }
+
+  // c.cppm
+  module B:C;
+  template<typename> inline void f() noexcept {}
+
+The internal partition unit ``c.cppm`` is not necessarily reachable by
+``a.cpp`` because ``c.cppm`` is not a module interface unit and ``a.cpp``
+doesn't import ``c.cppm``. This leaves it up to the compiler to decide if
+``c.cppm`` is reachable by ``a.cpp`` or not. Clang's behavior is that
+indirectly imported internal partition units are not reachable.
+
+The suggested approach for using an internal partition unit in Clang is
+to only import them in the implementation unit.
+
 Known Issues
 ------------
 
@@ -1244,74 +1299,6 @@ When creating a new issue for standard C++ modules, please start the title with
 A high-level overview of support for standards features, including modules, can
 be found on the `C++ Feature Status <https://clang.llvm.org/cxx_status.html>`_
 page.
-
-Missing VTables for classes attached to modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Now the compiler may miss emitting the definition of vtables
-for classes attached to modules, if the definition of the class
-doesn't contain any key function in that module units
-(The key function is the first non-pure virtual function that is
-not inline at the point of class definition.)
-
-(Note: technically, the key function is not a thing for modules.
-We use the concept here for convinient.)
-
-For example,
-
-.. code-block:: c++
-
-  // layer1.cppm
-  export module foo:layer1;
-  struct Fruit {
-      virtual ~Fruit() = default;
-      virtual void eval() = 0;
-  };
-  struct Banana : public Fruit {
-      Banana() {}
-      void eval() override;
-  };
-
-  // layer2.cppm
-  export module foo:layer2;
-  import :layer1;
-  export void layer2_fun() {
-      Banana *b = new Banana();
-      b->eval();
-  }
-  void Banana::eval() {
-  }
-
-For the above example, we can't find the definition for the vtable of
-class ``Banana`` in any object files.
-
-The expected behavior is, for dynamic classes attached to named modules,
-the vtable should always be emitted to the module units the class attaches
-to.
-
-To workaround the problem, users can add the key function manually in the
-corresponding module units. e.g.,
-
-.. code-block:: c++
-
-  // layer1.cppm
-  export module foo:layer1;
-  struct Fruit {
-      virtual ~Fruit() = default;
-      virtual void eval() = 0;
-  };
-  struct Banana : public Fruit {
-      // Hack a key function to hint the compiler to emit the virtual table.
-      virtual void anchor();
-
-      Banana() {}
-      void eval() override;
-  };
-
-  void Banana::anchor() {}
-
-This is tracked by
-`#70585 <https://github.com/llvm/llvm-project/issues/70585>`_.
 
 Including headers after import is not well-supported
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1384,7 +1371,7 @@ non-module unit depending on the definition of some macros. However, this usage
 is forbidden by P1857R3 which is not yet implemented in Clang. This means that
 is possible to write invalid modules which will no longer be accepted once
 P1857R3 is implemented. This is tracked by
-`#56917 <https://github.com/llvm/llvm-project/issues/56917>`_.
+`#54047 <https://github.com/llvm/llvm-project/issues/54047>`_.
 
 Until then, it is recommended not to mix macros with module declarations.
 

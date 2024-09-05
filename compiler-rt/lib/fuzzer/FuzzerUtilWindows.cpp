@@ -241,8 +241,8 @@ size_t PageSize() {
 void SetThreadName(std::thread &thread, const std::string &name) {
   typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
-  proc ThreadNameProc =
-      reinterpret_cast<proc>(GetProcAddress(kbase, "SetThreadDescription"));
+  proc ThreadNameProc = reinterpret_cast<proc>(
+      (void *)GetProcAddress(kbase, "SetThreadDescription"));
   if (ThreadNameProc) {
     std::wstring buf;
     auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
