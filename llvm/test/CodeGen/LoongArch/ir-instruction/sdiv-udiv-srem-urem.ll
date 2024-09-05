@@ -189,8 +189,6 @@ define signext i32 @sdiv_si32_ui32_ui32(i32 %a, i32 %b) {
 ;
 ; LA64-LABEL: sdiv_si32_ui32_ui32:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.w $a1, $a1, 0
-; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    div.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
 ;
@@ -205,8 +203,6 @@ define signext i32 @sdiv_si32_ui32_ui32(i32 %a, i32 %b) {
 ;
 ; LA64-TRAP-LABEL: sdiv_si32_ui32_ui32:
 ; LA64-TRAP:       # %bb.0: # %entry
-; LA64-TRAP-NEXT:    addi.w $a1, $a1, 0
-; LA64-TRAP-NEXT:    addi.w $a0, $a0, 0
 ; LA64-TRAP-NEXT:    div.w $a0, $a0, $a1
 ; LA64-TRAP-NEXT:    bnez $a1, .LBB5_2
 ; LA64-TRAP-NEXT:  # %bb.1: # %entry
@@ -1174,7 +1170,8 @@ define signext i32 @pr107414(i32 signext %x) {
 ; LA64-NEXT:    lu12i.w $a1, -266831
 ; LA64-NEXT:    ori $a1, $a1, 3337
 ; LA64-NEXT:    lu32i.d $a1, 0
-; LA64-NEXT:    div.w $a0, $a1, $a0
+; LA64-NEXT:    div.d $a0, $a1, $a0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-TRAP-LABEL: pr107414:
@@ -1195,15 +1192,15 @@ define signext i32 @pr107414(i32 signext %x) {
 ;
 ; LA64-TRAP-LABEL: pr107414:
 ; LA64-TRAP:       # %bb.0: # %entry
-; LA64-TRAP-NEXT:    move $a1, $a0
-; LA64-TRAP-NEXT:    lu12i.w $a0, -266831
-; LA64-TRAP-NEXT:    ori $a0, $a0, 3337
-; LA64-TRAP-NEXT:    lu32i.d $a0, 0
-; LA64-TRAP-NEXT:    div.w $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, .LBB32_2
+; LA64-TRAP-NEXT:    lu12i.w $a1, -266831
+; LA64-TRAP-NEXT:    ori $a1, $a1, 3337
+; LA64-TRAP-NEXT:    lu32i.d $a1, 0
+; LA64-TRAP-NEXT:    div.d $a1, $a1, $a0
+; LA64-TRAP-NEXT:    bnez $a0, .LBB32_2
 ; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
 ; LA64-TRAP-NEXT:  .LBB32_2: # %entry
+; LA64-TRAP-NEXT:    addi.w $a0, $a1, 0
 ; LA64-TRAP-NEXT:    ret
 entry:
   %conv = sext i32 %x to i64

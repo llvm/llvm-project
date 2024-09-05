@@ -1065,10 +1065,13 @@ def RDTIME_D : RDTIME_2R<0x00006800>;
 
 /// Generic pattern classes
 
+def sexti32 : ComplexPattern<i64, 1, "selectSExti32">;
+def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
+
 class PatGprGpr<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(OpNode GPR:$rj, GPR:$rk), (Inst GPR:$rj, GPR:$rk)>;
 class PatGprGpr_32<SDPatternOperator OpNode, LAInst Inst>
-    : Pat<(sext_inreg (OpNode GPR:$rj, GPR:$rk), i32), (Inst GPR:$rj, GPR:$rk)>;
+    : Pat<(sext_inreg (OpNode (sexti32 GPR:$rj), (sexti32 GPR:$rk)), i32), (Inst GPR:$rj, GPR:$rk)>;
 class PatGpr<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(OpNode GPR:$rj), (Inst GPR:$rj)>;
 
@@ -1094,9 +1097,6 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
 def shiftMaskGRLen
     : ComplexPattern<GRLenVT, 1, "selectShiftMaskGRLen", [], [], 0>;
 def shiftMask32 : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
-
-def sexti32 : ComplexPattern<i64, 1, "selectSExti32">;
-def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
 
 class shiftop<SDPatternOperator operator>
     : PatFrag<(ops node:$val, node:$count),
