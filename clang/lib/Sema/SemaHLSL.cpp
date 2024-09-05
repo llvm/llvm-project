@@ -562,27 +562,27 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-bool clang::CreateHLSLAttributedResourceType(
-    Sema &S, QualType Wrapped, llvm::SmallVector<const Attr *> &AttrList,
-    QualType &ResType) {
+bool clang::CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
+                                             ArrayRef<const Attr *> AttrList,
+                                             QualType &ResType) {
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType Contained = QualType();
   HLSLAttributedResourceType::Attributes ResAttrs = {};
 
-  bool hasResourceClass = false;
-  for (auto *Attr : AttrList) {
-    if (!Attr)
+  bool HasResourceClass = false;
+  for (const Attr *A : AttrList) {
+    if (!A)
       continue;
-    switch (Attr->getKind()) {
+    switch (A->getKind()) {
     case attr::HLSLResourceClass: {
       llvm::dxil::ResourceClass RC =
-          dyn_cast<HLSLResourceClassAttr>(Attr)->getResourceClass();
-      if (!hasResourceClass) {
+          dyn_cast<HLSLResourceClassAttr>(A)->getResourceClass();
+      if (!HasResourceClass) {
         ResAttrs.ResourceClass = RC;
-        hasResourceClass = true;
-      } else if (RC != ResAttrs.ResourceClass) {
-        S.Diag(Attr->getLocation(), diag::warn_duplicate_attribute) << Attr;
+        HasResourceClass = true;
+      } else {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute) << A;
         return false;
       }
       break;
@@ -595,9 +595,9 @@ bool clang::CreateHLSLAttributedResourceType(
     }
   }
 
-  if (!hasResourceClass) {
+  if (!HasResourceClass) {
     S.Diag(AttrList.back()->getRange().getEnd(),
-           diag::err_missing_resource_class);
+           diag::err_hlsl_missing_resource_class);
     return false;
   }
 

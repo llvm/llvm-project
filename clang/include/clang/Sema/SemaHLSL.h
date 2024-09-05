@@ -31,7 +31,7 @@ class Scope;
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(Sema &S, QualType Wrapped,
-                                      llvm::SmallVector<const Attr *> &AttrList,
+                                      ArrayRef<const Attr *> AttrList,
                                       QualType &ResType);
 
 class SemaHLSL : public SemaBase {
