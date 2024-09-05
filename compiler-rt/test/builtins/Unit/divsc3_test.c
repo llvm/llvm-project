@@ -342,7 +342,7 @@ int main() {
                   {1, INFINITY},
                   {2, INFINITY},
                   {INFINITY, INFINITY},
-                  {INFINITY, fromRep32(0x7f800001) /* NaN */}};
+                  {INFINITY, fromRep32(0x7f800001) /* SNaN */}};
 
   const unsigned N = sizeof(x) / sizeof(x[0]);
   unsigned i, j;
