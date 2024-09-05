@@ -77,7 +77,7 @@ public:
   bool initializeLoopInfo(ForOp op, const PipeliningOption &options);
   /// Emits the prologue, this creates `maxStage - 1` part which will contain
   /// operations from stages [0; i], where i is the part index.
-  void emitPrologue(RewriterBase &rewriter);
+  LogicalResult emitPrologue(RewriterBase &rewriter);
   /// Gather liverange information for Values that are used in a different stage
   /// than its definition.
   llvm::MapVector<Value, LiverangeInfo> analyzeCrossStageValues();
@@ -267,7 +267,7 @@ cloneAndUpdateOperands(RewriterBase &rewriter, Operation *op,
   return clone;
 }
 
-void LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
+LogicalResult LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
   // Initialize the iteration argument to the loop initial values.
   for (auto [arg, operand] :
        llvm::zip(forOp.getRegionIterArgs(), forOp.getInitsMutable())) {
@@ -314,7 +314,8 @@ void LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
       int predicateIdx = i - stages[op];
       if (predicates[predicateIdx]) {
         newOp = predicateFn(rewriter, newOp, predicates[predicateIdx]);
-        assert(newOp && "failed to predicate op.");
+        if (newOp == nullptr)
+          return failure();
       }
       rewriter.setInsertionPointAfter(newOp);
       if (annotateFn)
@@ -343,6 +344,7 @@ void LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
       }
     }
   }
+  return success();
 }
 
 llvm::MapVector<Value, LoopPipelinerInternal::LiverangeInfo>
@@ -733,7 +735,8 @@ FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
     *modifiedIR = true;
 
   // 1. Emit prologue.
-  pipeliner.emitPrologue(rewriter);
+  if (failed(pipeliner.emitPrologue(rewriter)))
+    return failure();
 
   // 2. Track values used across stages. When a value cross stages it will
   // need to be passed as loop iteration arguments.
