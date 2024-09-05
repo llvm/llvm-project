@@ -421,8 +421,14 @@ void ICF::run() {
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
       // When using safe_thunks, keepUnique inputs are already handeled above
-      if (useSafeThunks && icfInputs[i]->keepUnique)
+      if (useSafeThunks && icfInputs[i]->keepUnique) {
+        // Assert that all keepUnique input sections have been replaced with
+        // thunks
+        assert(!icfInputs[i]->live);
+        assert(icfInputs[i]->replacement->data.size() ==
+               target->getICFSafeThunkSize());
         continue;
+      }
       beginIsec->foldIdentical(icfInputs[i]);
     }
   });
