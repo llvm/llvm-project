@@ -3416,11 +3416,11 @@ public:
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }
 
-  /// Returns VF * UF of the vector loop region.
-  VPValue &getVFxUF() { return VFxUF; }
-
   /// Returns the VF of the vector loop region.
   VPValue *getVF() { return &VF; };
+
+  /// Returns VF * UF of the vector loop region.
+  VPValue &getVFxUF() { return VFxUF; }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
