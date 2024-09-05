@@ -15,8 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t, char *buffer)) {
-  return time_utils::ctime(t, buffer, TimeConstants::CTIME_MAX_BYTES);
+LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t_ptr, char *buffer)) {
+  return time_utils::asctime(localtime(t_ptr), buffer, TimeConstants::CTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
