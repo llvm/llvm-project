@@ -6661,96 +6661,98 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     }
     return Results;
   };
-  auto ProcessGatheredLoads = [&](ArrayRef<
-                                  SmallVector<std::pair<LoadInst *, int>>>
-                                      GatheredLoads) {
-    SmallVector<LoadInst *> NonVectorized;
-    for (ArrayRef<std::pair<LoadInst *, int>> LoadsDists : GatheredLoads) {
-      SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
-      SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-      transform(LoadsDists, OriginalLoads.begin(),
-                [](const std::pair<LoadInst *, int> &L) { return L.first; });
-      stable_sort(LocalLoadsDists, LoadSorter);
-      SmallVector<LoadInst *> Loads;
-      for (const std::pair<LoadInst *, int> &L : LocalLoadsDists) {
-        if (!getTreeEntry(L.first))
-          Loads.push_back(L.first);
-      }
-      if (Loads.empty())
-        continue;
-      BoUpSLP::ValueSet VectorizedLoads;
-      SmallVector<LoadInst *> SortedNonVectorized;
-      SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results =
-          GetVectorizedRanges(Loads, VectorizedLoads, SortedNonVectorized);
-      if (!Results.empty() && !SortedNonVectorized.empty() &&
-          all_of(Results,
-                 [](const std::pair<ArrayRef<Value *>, LoadsState> &P) {
-                   return P.second == LoadsState::ScatterVectorize;
-                 })) {
-        VectorizedLoads.clear();
-        SmallVector<LoadInst *> UnsortedNonVectorized;
-        SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> UnsortedResults =
-            GetVectorizedRanges(OriginalLoads, VectorizedLoads,
-                                UnsortedNonVectorized);
-        if (SortedNonVectorized.size() >= UnsortedNonVectorized.size()) {
-          SortedNonVectorized.swap(UnsortedNonVectorized);
-          Results.swap(UnsortedResults);
-        }
-      }
-      for (auto [Slice, _] : Results) {
-        LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize gathered loads ("
-                          << Slice.size() << ")\n");
-        if (any_of(Slice, [&](Value *V) { return getTreeEntry(V); })) {
-          for (Value *L : Slice)
-            if (!getTreeEntry(L))
-              SortedNonVectorized.push_back(cast<LoadInst>(L));
-          continue;
-        }
+  auto ProcessGatheredLoads =
+      [&](ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads) {
+        SmallVector<LoadInst *> NonVectorized;
+        for (ArrayRef<std::pair<LoadInst *, int>> LoadsDists : GatheredLoads) {
+          SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
+          SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
+          transform(
+              LoadsDists, OriginalLoads.begin(),
+              [](const std::pair<LoadInst *, int> &L) { return L.first; });
+          stable_sort(LocalLoadsDists, LoadSorter);
+          SmallVector<LoadInst *> Loads;
+          for (const std::pair<LoadInst *, int> &L : LocalLoadsDists) {
+            if (!getTreeEntry(L.first))
+              Loads.push_back(L.first);
+          }
+          if (Loads.empty())
+            continue;
+          BoUpSLP::ValueSet VectorizedLoads;
+          SmallVector<LoadInst *> SortedNonVectorized;
+          SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results =
+              GetVectorizedRanges(Loads, VectorizedLoads, SortedNonVectorized);
+          if (!Results.empty() && !SortedNonVectorized.empty() &&
+              all_of(Results,
+                     [](const std::pair<ArrayRef<Value *>, LoadsState> &P) {
+                       return P.second == LoadsState::ScatterVectorize;
+                     })) {
+            VectorizedLoads.clear();
+            SmallVector<LoadInst *> UnsortedNonVectorized;
+            SmallVector<std::pair<ArrayRef<Value *>, LoadsState>>
+                UnsortedResults = GetVectorizedRanges(
+                    OriginalLoads, VectorizedLoads, UnsortedNonVectorized);
+            if (SortedNonVectorized.size() >= UnsortedNonVectorized.size()) {
+              SortedNonVectorized.swap(UnsortedNonVectorized);
+              Results.swap(UnsortedResults);
+            }
+          }
+          for (auto [Slice, _] : Results) {
+            LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize gathered loads ("
+                              << Slice.size() << ")\n");
+            if (any_of(Slice, [&](Value *V) { return getTreeEntry(V); })) {
+              for (Value *L : Slice)
+                if (!getTreeEntry(L))
+                  SortedNonVectorized.push_back(cast<LoadInst>(L));
+              continue;
+            }
 
-        // Select maximum VF as a maximum of user gathered nodes and
-        // distance between scalar loads in these nodes.
-        unsigned MaxVF = Slice.size();
-        unsigned UserMaxVF = 0;
-        std::optional<unsigned> CommonVF = 0;
-        DenseMap<const TreeEntry *, unsigned> EntryToPosition;
-        for (auto [Idx, V] : enumerate(Slice)) {
-          for (const TreeEntry *E : ValueToGatherNodes.at(V)) {
-            UserMaxVF = std::max<unsigned>(UserMaxVF, E->Scalars.size());
-            unsigned Pos = EntryToPosition.try_emplace(E, Idx).first->second;
-            UserMaxVF = std::max<unsigned>(UserMaxVF, Idx - Pos + 1);
-            if (CommonVF) {
-              if (*CommonVF == 0) {
-                CommonVF = E->Scalars.size();
-                continue;
+            // Select maximum VF as a maximum of user gathered nodes and
+            // distance between scalar loads in these nodes.
+            unsigned MaxVF = Slice.size();
+            unsigned UserMaxVF = 0;
+            std::optional<unsigned> CommonVF = 0;
+            DenseMap<const TreeEntry *, unsigned> EntryToPosition;
+            for (auto [Idx, V] : enumerate(Slice)) {
+              for (const TreeEntry *E : ValueToGatherNodes.at(V)) {
+                UserMaxVF = std::max<unsigned>(UserMaxVF, E->Scalars.size());
+                unsigned Pos =
+                    EntryToPosition.try_emplace(E, Idx).first->second;
+                UserMaxVF = std::max<unsigned>(UserMaxVF, Idx - Pos + 1);
+                if (CommonVF) {
+                  if (*CommonVF == 0) {
+                    CommonVF = E->Scalars.size();
+                    continue;
+                  }
+                  if (*CommonVF != E->Scalars.size())
+                    CommonVF.reset();
+                }
               }
-              if (*CommonVF != E->Scalars.size())
-                CommonVF.reset();
+            }
+            // Try to build long masked gather loads.
+            UserMaxVF = PowerOf2Ceil(UserMaxVF);
+            for (unsigned VF = MaxVF; VF >= 2; VF /= 2) {
+              bool IsVectorized = true;
+              for (unsigned I = 0, E = Slice.size(); I < E; I += VF) {
+                ArrayRef<Value *> SubSlice =
+                    Slice.slice(I, std::min(VF, E - I));
+                if (getTreeEntry(SubSlice.front()))
+                  continue;
+                unsigned Sz = VectorizableTree.size();
+                buildTree_rec(SubSlice, 0, EdgeInfo());
+                if (Sz == VectorizableTree.size()) {
+                  IsVectorized = false;
+                  continue;
+                }
+              }
+              if (IsVectorized)
+                break;
             }
           }
+          NonVectorized.append(SortedNonVectorized);
         }
-        // Try to build long masked gather loads.
-        UserMaxVF = PowerOf2Ceil(UserMaxVF);
-        for (unsigned VF = MaxVF; VF >= 2; VF /= 2) {
-          bool IsVectorized = true;
-          for (unsigned I = 0, E = Slice.size(); I < E; I += VF) {
-            ArrayRef<Value *> SubSlice = Slice.slice(I, std::min(VF, E - I));
-            if (getTreeEntry(SubSlice.front()))
-              continue;
-            unsigned Sz = VectorizableTree.size();
-            buildTree_rec(SubSlice, 0, EdgeInfo());
-            if (Sz == VectorizableTree.size()) {
-              IsVectorized = false;
-              continue;
-            }
-          }
-          if (IsVectorized)
-            break;
-        }
-      }
-      NonVectorized.append(SortedNonVectorized);
-    }
-    return NonVectorized;
-  };
+        return NonVectorized;
+      };
   SmallVector<LoadInst *> NonVectorized = ProcessGatheredLoads(GatheredLoads);
   SmallVector<SmallVector<std::pair<LoadInst *, int>>> FinalGatheredLoads;
   for (LoadInst *LI : NonVectorized) {
