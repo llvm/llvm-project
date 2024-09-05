@@ -15,8 +15,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(__sighandler_t, signal,
-                   (int signum, __sighandler_t handler)) {
+LLVM_LIBC_FUNCTION(sighandler_t, signal,
+                   (int signum, sighandler_t handler)) {
   struct sigaction action, old;
   action.sa_handler = handler;
   action.sa_flags = SA_RESTART;

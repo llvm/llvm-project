@@ -20,7 +20,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcSignal, Invalid) {
   LIBC_NAMESPACE::libc_errno = 0;
-  __sighandler_t valid = +[](int) {};
+  sighandler_t valid = +[](int) {};
   EXPECT_THAT((void *)LIBC_NAMESPACE::signal(0, valid),
               Fails(EINVAL, (void *)SIG_ERR));
   EXPECT_THAT((void *)LIBC_NAMESPACE::signal(65, valid),

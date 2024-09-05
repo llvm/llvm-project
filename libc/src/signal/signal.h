@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-__sighandler_t signal(int signum, __sighandler_t handler);
+sighandler_t signal(int signum, sighandler_t handler);
 
 } // namespace LIBC_NAMESPACE_DECL
 
