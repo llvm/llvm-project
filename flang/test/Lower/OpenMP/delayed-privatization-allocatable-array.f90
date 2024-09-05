@@ -52,7 +52,16 @@ end subroutine
 
 ! CHECK-NEXT: } copy {
 ! CHECK-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
-! CHECK-NEXT:   %[[PRIV_ORIG_ARG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]]
-! CHECK-NEXT:   hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]] realloc
+! CHECK-NEXT:  %[[PRIV_BASE_VAL:.*]] = fir.load %[[PRIV_PRIV_ARG]]
+! CHECK-NEXT:  %[[PRIV_BASE_BOX:.*]] = fir.box_addr %[[PRIV_BASE_VAL]]
+! CHECK-NEXT:  %[[PRIV_BASE_ADDR:.*]] = fir.convert %[[PRIV_BASE_BOX]]
+! CHECK-NEXT:  %[[C0:.*]] = arith.constant 0 : i64
+! CHECK-NEXT:  %[[COPY_COND:.*]] = arith.cmpi ne, %[[PRIV_BASE_ADDR]], %[[C0]] : i64
+
+
+! CHECK-NEXT:  fir.if %[[COPY_COND]] {
+! CHECK-NEXT:    %[[PRIV_ORIG_ARG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]]
+! CHECK-NEXT:    hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]] realloc
+! CHECK-NEXT:   }
 ! CHECK-NEXT:   omp.yield
 ! CHECK-NEXT: }
