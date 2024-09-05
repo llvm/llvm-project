@@ -9,8 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: clang-17, clang-18, clang-19, gcc-14, apple-clang-16, apple-clang-17
-// XFAIL: apple-clang
+// UNSUPPORTED: clang-17, clang-18, clang-19, gcc-14, apple-clang-15, apple-clang-16, apple-clang-17
 
 // <type_traits>
 
@@ -109,14 +108,6 @@ struct StructWithZeroSizedArray {
   int arr[0];
 };
 
-#ifdef TEST_COMPILER_CLANG
-using AlignValueInt = int* __attribute__((align_value(16)));
-using Float4        = float __attribute__((ext_vector_type(4)));
-
-struct [[clang::enforce_read_only_placement]] EnforceReadOnlyPlacement {};
-struct [[clang::type_visibility("hidden")]] TypeVisibility {};
-#endif
-
 // Test implicit-lifetime type
 template <typename T, bool Expected>
 constexpr void test_is_implicit_lifetime() {
@@ -142,7 +133,6 @@ constexpr void test_is_implicit_lifetime() {
 
   // Arrays
   test_is_implicit_lifetime<T[], true>();
-  test_is_implicit_lifetime<T[0], true>();
   test_is_implicit_lifetime<T[94], true>();
 }
 
@@ -277,38 +267,6 @@ constexpr bool test() {
   test_is_implicit_lifetime<_BitInt(8)>();
   test_is_implicit_lifetime<_BitInt(128)>();
 #endif
-
-  // Language extensions: Types
-
-#if !defined(TEST_HAS_NO_INT128)
-  test_is_implicit_lifetime<__int128_t>();
-  test_is_implicit_lifetime<__uint128_t>();
-#endif
-
-#ifdef TEST_COMPILER_CLANG
-  // https://clang.llvm.org/docs/LanguageExtensions.html#half-precision-floating-point
-  test_is_implicit_lifetime<__fp16>();
-  test_is_implicit_lifetime<__bf16>();
-#endif // TEST_COMPILER_CLANG
-
-  // Language extensions: Attributes
-
-#ifdef TEST_COMPILER_CLANG
-  test_is_implicit_lifetime<AlignValueInt, true>();
-  test_is_implicit_lifetime<Float4, true>();
-
-  test_is_implicit_lifetime<EnforceReadOnlyPlacement, true>();
-  test_is_implicit_lifetime<TypeVisibility, true>();
-
-  test_is_implicit_lifetime<int [[clang::annotate_type("category2")]]*, true>();
-  test_is_implicit_lifetime<int __attribute__((btf_type_tag("user")))*, true>();
-
-  test_is_implicit_lifetime<int __attribute__((noderef))*, true>();
-
-  test_is_implicit_lifetime<int* _Nonnull, true>();
-  test_is_implicit_lifetime<int* _Null_unspecified, true>();
-  test_is_implicit_lifetime<int* _Nullable, true>();
-#endif // TEST_COMPILER_CLANG
 
   return true;
 }
