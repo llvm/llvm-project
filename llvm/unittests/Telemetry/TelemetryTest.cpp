@@ -563,7 +563,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   {
 
     // There should be 3 events emitted by the Telemeter (start, midpoint, exit)
-    EXPECT_EQ(3, CurrentContext->EmittedJsons.size());
+    EXPECT_EQ(static_cast<size_t>(3), CurrentContext->EmittedJsons.size());
 
     const json::Value *StartupEntry =
         CurrentContext->EmittedJsons[0].get("Startup");
@@ -643,7 +643,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   {
 
     // There should be 3 events emitted by the Telemeter (start, midpoint, exit)
-    EXPECT_EQ(3, CurrentContext->EmittedJsons.size());
+    EXPECT_EQ(static_cast<size_t>(3), CurrentContext->EmittedJsons.size());
 
     const json::Value *StartupEntry =
         CurrentContext->EmittedJsons[0].get("Startup");
