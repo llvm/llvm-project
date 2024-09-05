@@ -56,6 +56,11 @@ HANDLE_TARGET_OPCODE(INSERT_SUBREG)
 /// IMPLICIT_DEF - This is the MachineInstr-level equivalent of undef.
 HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 
+/// Explicit undef initialization used past IMPLICIT_DEF elimination in cases
+/// where an undef operand must be allocated to a different register than an
+/// early-clobber result operand.
+HANDLE_TARGET_OPCODE(INIT_UNDEF)
+
 /// SUBREG_TO_REG - Assert the value of bits in a super register.
 /// The result of this instruction is the value of the second operand inserted
 /// into the subregister specified by the third operand. All other bits are
