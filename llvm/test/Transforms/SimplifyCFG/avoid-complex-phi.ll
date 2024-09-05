@@ -1,23 +1,59 @@
-; RUN: opt < %s -passes=simplifycfg -S | FileCheck --check-prefixes=CHECK-100 %s
-; RUN: opt < %s -max-phi-entries-after-removing-empty-block=101 -passes=simplifycfg -S | FileCheck --check-prefixes=CHECK-101 %s
-; CHECK-100: %x = phi i16 {{((\[ [0-2], %BB[0-9]+ \], ){51})\[ [0-2], %BB[0-9]+ \]}}
-; CHECK-101: %x = phi i16 {{((\[ [0-2], %BB[0-9]+ \], ){100})\[ [0-2], %BB[0-9]+ \]}}
+; RUN: opt < %s -passes=simplifycfg -S | FileCheck --check-prefixes=CHECK-1000 %s
+; RUN: opt < %s -max-phi-entries-increase-after-removing-empty-block=989 -passes=simplifycfg -S | FileCheck --check-prefixes=CHECK-989 %s
+; RUN: opt < %s -max-phi-entries-increase-after-removing-empty-block=489 -passes=simplifycfg -S | FileCheck --check-prefixes=CHECK-489 %s
 
 ; This test has the following CFG:
 ;   1. entry has a switch to 100 blocks: BB1 - BB100
-;   2. For BB1 to BB50, it branch to BB101 and BB103
-;   3. For BB51 to BB100, it branch to BB102 and BB103
+;   2. For BB1 to BB50, it branches to BB101 and BB103
+;   3. For BB51 to BB100, it branches to BB102 and BB103
 ;   4. BB101, BB102, BB103 branch to Merge unconditionally
-;   5. Merge returns value %x which is a phi having incoming blocks BB101, BB102, BB103
+;   5. Merge has 10 phis(x1 - x10).
 ; 
-; In the first test, we are going to check that the simplifycfg will not introduce a phi with more than
-; 100 incoming values. So the simplifycfg can remove only one of BB101 and BB102. Otherwise, the
-; phi of %x will have at least 50 + 50 + 1 = 101 incoming blocks (BB1 - BB100 and BB103).
-; 
-; In the second test, the threshold is changed to 101. Then both BB101 and BB102 can be removed, and 
-; %x will have 101 incoming entries.
+; If we remove BB103, it will increase the number of phi entries by (100 - 1) * 10 = 990.
+; If we remove BB101 / BB102, it will increase the number of phi entries by (50 - 1) * 10 = 490.
 ;
-define i16 @example(i32 %a, ptr %array) {
+; By default, in SimplifyCFG, we will not remove a block if it will increase more than 1000 phi entries.
+; In the first test, BB103 will be removed, and every phi will have 102(3 + 100 - 1) phi entries.
+; In the second test, we set max-phi-entries-increase-after-removing-empty-block to be 989, then BB103 should not be removed, 
+; but BB101 and BB102 can be removed.
+; In the third test, we set  max-phi-entries-increase-after-removing-empty-block to be 489, then no BB can be removed.
+
+; CHECK-1000: %x1 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x2 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x3 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x4 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x5 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x6 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x7 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x8 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x9 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-1000: %x10 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){101})\[ [0-9], %BB[0-9]+ \]}}
+
+; CHECK-989: %x1 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x2 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x3 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x4 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x5 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x6 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x7 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x8 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x9 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-989: %x10 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){100})\[ [0-9], %BB[0-9]+ \]}}
+
+; CHECK-489: %x1 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x2 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x3 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x4 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x5 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x6 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x7 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x8 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x9 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+; CHECK-489: %x10 = phi i16 {{((\[ [0-9], %BB[0-9]+ \], ){2})\[ [0-9], %BB[0-9]+ \]}}
+
+
+;
+define void @example(i32 %a, ptr %array) {
 entry:
   switch i32 %a, label %BB1 [
     i32 1, label %BB1
@@ -722,16 +758,25 @@ BB100:                                            ; preds = %entry
   %cmp100 = icmp eq i32 %val100, 100
   br i1 %cmp100, label %BB102, label %BB103
 
+BB103:                                            ; preds = %BB100, %BB99, %BB98, %BB97, %BB96, %BB95, %BB94, %BB93, %BB92, %BB91, %BB90, %BB89, %BB88, %BB87, %BB86, %BB85, %BB84, %BB83, %BB82, %BB81, %BB80, %BB79, %BB78, %BB77, %BB76, %BB75, %BB74, %BB73, %BB72, %BB71, %BB70, %BB69, %BB68, %BB67, %BB66, %BB65, %BB64, %BB63, %BB62, %BB61, %BB60, %BB59, %BB58, %BB57, %BB56, %BB55, %BB54, %BB53, %BB52, %BB51, %BB50, %BB49, %BB48, %BB47, %BB46, %BB45, %BB44, %BB43, %BB42, %BB41, %BB40, %BB39, %BB38, %BB37, %BB36, %BB35, %BB34, %BB33, %BB32, %BB31, %BB30, %BB29, %BB28, %BB27, %BB26, %BB25, %BB24, %BB23, %BB22, %BB21, %BB20, %BB19, %BB18, %BB17, %BB16, %BB15, %BB14, %BB13, %BB12, %BB11, %BB10, %BB9, %BB8, %BB7, %BB6, %BB5, %BB4, %BB3, %BB2, %BB1
+  br label %Merge
+
 BB101:                                            ; preds = %BB50, %BB49, %BB48, %BB47, %BB46, %BB45, %BB44, %BB43, %BB42, %BB41, %BB40, %BB39, %BB38, %BB37, %BB36, %BB35, %BB34, %BB33, %BB32, %BB31, %BB30, %BB29, %BB28, %BB27, %BB26, %BB25, %BB24, %BB23, %BB22, %BB21, %BB20, %BB19, %BB18, %BB17, %BB16, %BB15, %BB14, %BB13, %BB12, %BB11, %BB10, %BB9, %BB8, %BB7, %BB6, %BB5, %BB4, %BB3, %BB2, %BB1
   br label %Merge
 
 BB102:                                            ; preds = %BB100, %BB99, %BB98, %BB97, %BB96, %BB95, %BB94, %BB93, %BB92, %BB91, %BB90, %BB89, %BB88, %BB87, %BB86, %BB85, %BB84, %BB83, %BB82, %BB81, %BB80, %BB79, %BB78, %BB77, %BB76, %BB75, %BB74, %BB73, %BB72, %BB71, %BB70, %BB69, %BB68, %BB67, %BB66, %BB65, %BB64, %BB63, %BB62, %BB61, %BB60, %BB59, %BB58, %BB57, %BB56, %BB55, %BB54, %BB53, %BB52, %BB51
   br label %Merge
 
-BB103:                                            ; preds = %BB100, %BB99, %BB98, %BB97, %BB96, %BB95, %BB94, %BB93, %BB92, %BB91, %BB90, %BB89, %BB88, %BB87, %BB86, %BB85, %BB84, %BB83, %BB82, %BB81, %BB80, %BB79, %BB78, %BB77, %BB76, %BB75, %BB74, %BB73, %BB72, %BB71, %BB70, %BB69, %BB68, %BB67, %BB66, %BB65, %BB64, %BB63, %BB62, %BB61, %BB60, %BB59, %BB58, %BB57, %BB56, %BB55, %BB54, %BB53, %BB52, %BB51, %BB50, %BB49, %BB48, %BB47, %BB46, %BB45, %BB44, %BB43, %BB42, %BB41, %BB40, %BB39, %BB38, %BB37, %BB36, %BB35, %BB34, %BB33, %BB32, %BB31, %BB30, %BB29, %BB28, %BB27, %BB26, %BB25, %BB24, %BB23, %BB22, %BB21, %BB20, %BB19, %BB18, %BB17, %BB16, %BB15, %BB14, %BB13, %BB12, %BB11, %BB10, %BB9, %BB8, %BB7, %BB6, %BB5, %BB4, %BB3, %BB2, %BB1
-  br label %Merge
-
 Merge:                                            ; preds = %BB103, %BB102, %BB101
-  %x = phi i16 [ 0, %BB101 ], [ 1, %BB102 ], [ 2, %BB103 ]
-  ret i16 %x
+  %x1 = phi i16 [ 1, %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x2 = phi i16 [ 2 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x3 = phi i16 [ 3 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x4 = phi i16 [ 4 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x5 = phi i16 [ 5 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x6 = phi i16 [ 6 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x7 = phi i16 [ 7 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x8 = phi i16 [ 8 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x9 = phi i16 [ 9 , %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  %x10 = phi i16 [ 0, %BB103 ], [ 0, %BB101 ], [ 2, %BB102 ]
+  ret void
 }
