@@ -41,7 +41,7 @@ void f(B b) {
 struct D : B {};
 } // namespace cwg2718
 
-namespace cwg2749 { // cwg2749: 19
+namespace cwg2749 { // cwg2749: 20
 
 extern int x[2];
 struct Y {
