@@ -16,6 +16,7 @@ lconv *localeconv(void);
 typedef struct {
 } tm;
 char *asctime(const tm *timeptr);
+char *ctime(const time_t *timeptr);
 
 int strcmp(const char*, const char*);
 extern void foo(char *e);
