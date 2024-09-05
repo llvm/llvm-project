@@ -331,10 +331,10 @@ Below are the rules regarding patching the release branch:
    manager, the official release testers or the maintainers with approval from
    the release manager.
 
-#. Release managers are encouraged, but not required, to get approval from code
-   owners before approving patches.  If there are no reachable maintainers then
-   release managers can ask approval from patch reviewers or other developers
-   active in that area.
+#. Release managers are encouraged, but not required, to get approval from a
+   maintainer before approving patches.  If there are no reachable maintainers
+   then release managers can ask approval from patch reviewers or other
+   developers active in that area.
 
 #. *Before RC1* Patches should be limited to bug fixes, important optimization
    improvements, or completion of features that were started before the branch

@@ -194,9 +194,7 @@ within an area of a project:
     * aid release managers with backporting and other release-related
       activities,
     * be a point of contact for contributors who need help (answering questions
-      on Discord/Discourse/IRC or holding office hours), and
-      coordinate with and provide oversight for other maintainers in the same
-      area of the code.
+      on Discord/Discourse/IRC or holding office hours).
 
 Each top-level project in the monorepo will specify one or more
 lead maintainers who are responsible for ensuring community needs are
@@ -206,8 +204,8 @@ within the project. If you cannot reach a maintainer or don't know which
 maintainer to reach out to, a lead maintainer is always a good choice
 to reach out to.
 
-All contributors to the LLVM Project are eligible to be a maintainer. However,
-we are looking for people who can commit to:
+All contributors with commit access to the LLVM Project are eligible to be a
+maintainer. However, we are looking for people who can commit to:
 
     * engaging in their responsibilities the majority of the days in a month,
     * ensuring that they, and the community members they interact with, abide by
