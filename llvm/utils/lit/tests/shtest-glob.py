@@ -5,8 +5,7 @@
 #
 # END.
 
-# CHECK: UNRESOLVED: shtest-glob :: glob-echo.txt ({{[^)]*}})
-# CHECK: TypeError: string argument expected, got 'GlobItem'
+# CHECK: PASS: shtest-glob :: glob-echo.txt ({{[^)]*}})
 
 # CHECK: FAIL: shtest-glob :: glob-mkdir.txt ({{[^)]*}})
 # CHECK: # error: command failed with exit status: 1
