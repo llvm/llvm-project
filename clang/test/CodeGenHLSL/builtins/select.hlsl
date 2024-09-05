@@ -16,26 +16,22 @@ struct S test_select_infer(bool cond0, struct S tVal, struct S fVal) {
 
 // CHECK: %hlsl.select = select i1
 // CHECK: ret <2 x i32> %hlsl.select
-vector<int,2> test_select_bool_vector(bool cond0, vector<int, 2> tVal,
-                                      vector<int, 2> fVal) {
-  return select<vector<int,2> >(cond0, tVal, fVal); }
+int2 test_select_bool_vector(bool cond0, int2 tVal, int2 fVal) {
+  return select<int2>(cond0, tVal, fVal); }
 
 // CHECK: %hlsl.select = select <1 x i1>
 // CHECK: ret <1 x i32> %hlsl.select
-vector<int,1> test_select_vector_1(vector<bool,1> cond0, vector<int,1> tVals,
-                                   vector<int,1> fVals) {
+int1 test_select_vector_2(bool1 cond0, int1 tVals, int1 fVals) {
   return select<int,1>(cond0, tVals, fVals); }
 
 // CHECK: %hlsl.select = select <2 x i1>
 // CHECK: ret <2 x i32> %hlsl.select
-vector<int,2> test_select_vector_2(vector<bool, 2> cond0, vector<int, 2> tVals,
-                                   vector<int, 2> fVals) {
+int2 test_select_vector_2(bool2 cond0, int2 tVals, int2 fVals) {
   return select<int,2>(cond0, tVals, fVals); }
 
 // CHECK: %hlsl.select = select <3 x i1>
 // CHECK: ret <3 x i32> %hlsl.select
-vector<int,3> test_select_vector_3(vector<bool, 3> cond0, vector<int, 3> tVals,
-                                   vector<int, 3> fVals) {
+int3 test_select_vector_3(bool3 cond0, int3 tVals, int3 fVals) {
   return select<int,3>(cond0, tVals, fVals); }
 
 // CHECK: %hlsl.select = select <4 x i1>
