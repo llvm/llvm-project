@@ -5,8 +5,8 @@
 
 ;--- aarch64-svcount.ll
 declare target("aarch64.svcount", i32) @aarch64_svcount()
-; CHECK-AARCH64-SVCOUNT: error: Target type should have no parameters
+; CHECK-AARCH64-SVCOUNT: error: Target type aarch64.svcount should have no parameters
 
 ;--- riscv-vector-tuple.ll
 declare target("riscv.vector.tuple", 99) @riscv_vector_tuple()
-; CHECK-RISCV-VECTOR-TUPLE: Target type should have one type parameter and one integer parameter
+; CHECK-RISCV-VECTOR-TUPLE: Target type riscv.vector.tuple should have one type parameter and one integer parameter
