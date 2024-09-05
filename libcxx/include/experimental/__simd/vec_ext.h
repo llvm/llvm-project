@@ -12,6 +12,7 @@
 
 #include <__assert>
 #include <__bit/bit_ceil.h>
+#include <__type_traits/integral_constant.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <cstddef>
