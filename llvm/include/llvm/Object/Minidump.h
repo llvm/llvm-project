@@ -98,8 +98,7 @@ public:
   /// Returns the first exception stream in the file. An error is returned if
   /// the associated stream is smaller than the size of the ExceptionStream
   /// structure. Or the directory supplied is not of kind exception stream.
-  Expected<const minidump::ExceptionStream &>
-  getExceptionStream() const {
+  Expected<const minidump::ExceptionStream &> getExceptionStream() const {
     auto it = getExceptionStreams();
     if (it.begin() == it.end())
       return createError("No exception streams");
@@ -233,8 +232,8 @@ public:
   class ExceptionStreamsIterator {
   public:
     ExceptionStreamsIterator(ArrayRef<minidump::Directory> Streams,
-                            const MinidumpFile *File)
-      : Streams(Streams), File(File) {}
+                             const MinidumpFile *File)
+        : Streams(Streams), File(File) {}
 
     bool operator==(const ExceptionStreamsIterator &R) const {
       return Streams.size() == R.Streams.size();

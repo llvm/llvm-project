@@ -751,7 +751,7 @@ TEST(MinidumpFile, getExceptionStreams) {
   auto ExpectedFile = create(Data);
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   const MinidumpFile &File = **ExpectedFile;
-  
+
   auto ExceptionStreams = File.getExceptionStreams();
   ASSERT_NE(ExceptionStreams.begin(), ExceptionStreams.end());
   auto ExceptionIterator = ExceptionStreams.begin();
