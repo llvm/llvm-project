@@ -1291,9 +1291,7 @@ private:
     bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) { return true; }
 
     // Skip concept requirements since they don't generate code.
-    bool TraverseConceptRequirement(concepts::Requirement *R) {
-      return true;
-    }
+    bool TraverseConceptRequirement(concepts::Requirement *R) { return true; }
   };
 };
 
