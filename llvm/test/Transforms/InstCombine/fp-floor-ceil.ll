@@ -13,10 +13,9 @@ define i1 @floor_x_ole(float %x) {
 
 define i1 @floor_x_ule(float %x) {
 ; CHECK-LABEL: @floor_x_ule(
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ninf ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
-  %floor = call nnan float @llvm.floor.f32(float %x)
+  %floor = call float @llvm.floor.f32(float %x)
   %ret = fcmp ninf ule float %floor, %x
   ret i1 %ret
 }
@@ -32,17 +31,17 @@ define i1 @floor_x_ogt(float %x) {
 
 define i1 @floor_x_ugt(float %x) {
 ; CHECK-LABEL: @floor_x_ugt(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
-  %floor = call nnan float @llvm.floor.f32(float %x)
+  %floor = call float @llvm.floor.f32(float %x)
   %ret = fcmp ugt float %floor, %x
   ret i1 %ret
 }
 
 define i1 @x_floor_oge(float %x) {
 ; CHECK-LABEL: @x_floor_oge(
-; CHECK-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[FLOOR]], 0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %floor = call float @llvm.floor.f32(float %x)
@@ -54,7 +53,7 @@ define i1 @x_floor_uge(float %x) {
 ; CHECK-LABEL: @x_floor_uge(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %floor = call nnan float @llvm.floor.f32(float %x)
+  %floor = call float @llvm.floor.f32(float %x)
   %ret = fcmp uge float %x, %floor
   ret i1 %ret
 }
@@ -68,9 +67,10 @@ define i1 @x_floor_olt(float %x) {
   ret i1 %ret
 }
 
-define i1 @x_floor_ult(float nofpclass(nan) %x) {
+define i1 @x_floor_ult(float %x) {
 ; CHECK-LABEL: @x_floor_ult(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %floor = call float @llvm.floor.f32(float %x)
   %ret = fcmp ult float %x, %floor
@@ -109,10 +109,9 @@ define i1 @ceil_x_oge(float %x) {
 
 define i1 @ceil_x_uge(float %x) {
 ; CHECK-LABEL: @ceil_x_uge(
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ninf ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
-  %ceil = call nnan float @llvm.ceil.f32(float %x)
+  %ceil = call float @llvm.ceil.f32(float %x)
   %ret = fcmp ninf uge float %ceil, %x
   ret i1 %ret
 }
@@ -128,17 +127,17 @@ define i1 @ceil_x_olt(float %x) {
 
 define i1 @ceil_x_ult(float %x) {
 ; CHECK-LABEL: @ceil_x_ult(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
-  %ceil = call nnan float @llvm.ceil.f32(float %x)
+  %ceil = call float @llvm.ceil.f32(float %x)
   %ret = fcmp ult float %ceil, %x
   ret i1 %ret
 }
 
 define i1 @x_ceil_ole(float %x) {
 ; CHECK-LABEL: @x_ceil_ole(
-; CHECK-NEXT:    [[CEIL:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[CEIL]], 0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ceil = call float @llvm.ceil.f32(float %x)
@@ -150,7 +149,7 @@ define i1 @x_ceil_ule(float %x) {
 ; CHECK-LABEL: @x_ceil_ule(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %ceil = call nnan float @llvm.ceil.f32(float %x)
+  %ceil = call float @llvm.ceil.f32(float %x)
   %ret = fcmp ule float %x, %ceil
   ret i1 %ret
 }
@@ -164,9 +163,10 @@ define i1 @x_ceil_ogt(float %x) {
   ret i1 %ret
 }
 
-define i1 @x_ceil_ugt(float nofpclass(nan) %x) {
+define i1 @x_ceil_ugt(float %x) {
 ; CHECK-LABEL: @x_ceil_ugt(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ceil = call float @llvm.ceil.f32(float %x)
   %ret = fcmp ugt float %x, %ceil

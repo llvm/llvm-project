@@ -8181,79 +8181,93 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
                                              InstCombinerImpl &CI) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  const CmpInst::Predicate Pred = I.getPredicate();
   Type *OpType = LHS->getType();
+  const CmpInst::Predicate Pred = I.getPredicate();
 
-  // fcmp ole floor(x), x => fcmp ord x, 0
-  // fcmp ogt floor(x), x => false
-  if (match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS)))) {
-    if (Pred == FCmpInst::FCMP_OLE ||
-        Pred == FCmpInst::FCMP_ULE &&
-            isKnownNeverNaN(LHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+  bool floor_x = match(LHS, m_Intrinsic<Intrinsic::floor>(m_Specific(RHS)));
+  bool x_floor = match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS)));
+  bool ceil_x = match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)));
+  bool x_ceil = match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS)));
+
+  switch (Pred) {
+  case FCmpInst::FCMP_OLE:
+    // fcmp ole floor(x), x => fcmp ord x, 0
+    // fcmp ole x, ceil(x) => fcmp ord x, 0
+    if (floor_x)
       return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
                           "", &I);
-    }
-    if (Pred == FCmpInst::FCMP_OGT ||
-        Pred == FCmpInst::FCMP_UGT &&
-            isKnownNeverNaN(LHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+    if (x_ceil)
+      return new FCmpInst(FCmpInst::FCMP_ORD, LHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    break;
+  case FCmpInst::FCMP_OGT:
+    // fcmp ogt floor(x), x => false
+    // fcmp ogt x, ceil(x) => false
+    if (floor_x || x_ceil)
       return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    }
-  }
-
-  // fcmp oge x, floor(x) => fcmp ord x, 0
-  // fcmp olt x, floor(x) => false
-  if (match(RHS, m_Intrinsic<Intrinsic::floor>(m_Specific(LHS)))) {
-    if (Pred == FCmpInst::FCMP_OGE ||
-        Pred == FCmpInst::FCMP_UGE &&
-            isKnownNeverNaN(RHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+    break;
+  case FCmpInst::FCMP_OGE:
+    // fcmp oge x, floor(x) => fcmp ord x, 0
+    // fcmp oge ceil(x), x => fcmp ord x, 0
+    if (x_floor)
+      return new FCmpInst(FCmpInst::FCMP_ORD, LHS, ConstantFP::getZero(OpType),
+                          "", &I);
+    if (ceil_x)
       return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
                           "", &I);
-    }
-    if (Pred == FCmpInst::FCMP_OLT ||
-        Pred == FCmpInst::FCMP_ULT &&
-            isKnownNeverNaN(RHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
+    break;
+  case FCmpInst::FCMP_OLT:
+    // fcmp olt x, floor(x) => false
+    // fcmp olt ceil(x), x => false
+    if (x_floor || ceil_x)
       return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    }
-  }
-
-  // fcmp oge ceil(x), x => fcmp ord x, 0
-  // fcmp olt ceil(x), x => false
-  if (match(LHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(RHS)))) {
-    if (Pred == FCmpInst::FCMP_OGE ||
-        Pred == FCmpInst::FCMP_UGE &&
-            isKnownNeverNaN(LHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
-      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+    break;
+  case FCmpInst::FCMP_ULE:
+    // fcmp ule floor(x), x => fcmp ule -inf, x
+    // fcmp ule x, ceil(x) => fcmp ule x, inf
+    if (floor_x)
+      return new FCmpInst(FCmpInst::FCMP_ULE,
+                          ConstantFP::getInfinity(RHS->getType(), true), RHS,
                           "", &I);
-    }
-    if (Pred == FCmpInst::FCMP_OLT ||
-        Pred == FCmpInst::FCMP_ULT &&
-            isKnownNeverNaN(LHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
-      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    }
-  }
-
-  // fcmp ole x, ceil(x) => fcmp ord x, 0
-  // fcmp ogt x, ceil(x) => false
-  if (match(RHS, m_Intrinsic<Intrinsic::ceil>(m_Specific(LHS)))) {
-    if (Pred == FCmpInst::FCMP_OLE ||
-        Pred == FCmpInst::FCMP_ULE &&
-            isKnownNeverNaN(RHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
-      return new FCmpInst(FCmpInst::FCMP_ORD, RHS, ConstantFP::getZero(OpType),
+    if (x_ceil)
+      return new FCmpInst(FCmpInst::FCMP_ULE, LHS,
+                          ConstantFP::getInfinity(LHS->getType(), false), "",
+                          &I);
+  case FCmpInst::FCMP_UGT:
+    // fcmp ugt floor(x), x => fcmp ugt -inf, x
+    // fcmp ugt x, ceil(x) => fcmp ugt x, inf
+    if (floor_x)
+      return new FCmpInst(FCmpInst::FCMP_UGT,
+                          ConstantFP::getInfinity(RHS->getType(), true), RHS,
                           "", &I);
-    }
-    if (Pred == FCmpInst::FCMP_OGT ||
-        Pred == FCmpInst::FCMP_UGT &&
-            isKnownNeverNaN(RHS, 0,
-                            CI.getSimplifyQuery().getWithInstruction(&I))) {
-      return CI.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    }
+    if (x_ceil)
+      return new FCmpInst(FCmpInst::FCMP_UGT, LHS,
+                          ConstantFP::getInfinity(LHS->getType(), false), "",
+                          &I);
+  case FCmpInst::FCMP_UGE:
+    // fcmp uge x, floor(x) => fcmp uge x, -inf
+    // fcmp uge ceil(x), x => fcmp uge inf, x
+    if (x_floor)
+      return new FCmpInst(FCmpInst::FCMP_UGE, LHS,
+                          ConstantFP::getInfinity(LHS->getType(), true), "",
+                          &I);
+    if (ceil_x)
+      return new FCmpInst(FCmpInst::FCMP_UGE,
+                          ConstantFP::getInfinity(RHS->getType(), false), RHS,
+                          "", &I);
+  case FCmpInst::FCMP_ULT:
+    // fcmp ult x, floor(x) => fcmp ult x, -inf
+    // fcmp ult ceil(x), x => fcmp ult inf, x
+    if (x_floor)
+      return new FCmpInst(FCmpInst::FCMP_ULT, LHS,
+                          ConstantFP::getInfinity(LHS->getType(), true), "",
+                          &I);
+    if (ceil_x)
+      return new FCmpInst(FCmpInst::FCMP_ULT,
+                          ConstantFP::getInfinity(RHS->getType(), false), RHS,
+                          "", &I);
+  default:
+    break;
   }
 
   return nullptr;
