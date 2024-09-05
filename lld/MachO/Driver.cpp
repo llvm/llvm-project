@@ -847,8 +847,14 @@ static ICFLevel getICFLevel(const ArgList &args) {
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
+                      .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
+
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
+    error("--icf=safe_thunks is only supported on arm64 targets");
+  }
+
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
@@ -2116,7 +2122,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
     if (config->icfLevel != ICFLevel::none) {
-      if (config->icfLevel == ICFLevel::safe)
+      if (config->icfLevel == ICFLevel::safe ||
+          config->icfLevel == ICFLevel::safe_thunks)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
     } else if (config->dedupStrings) {
