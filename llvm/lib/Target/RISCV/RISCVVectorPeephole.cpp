@@ -464,10 +464,11 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
+    MachineInstr *AfterDef = Def->getNextNode();
+    if (!isSafeToMove(Src, *AfterDef))
       return false;
-    V0Defs[&Src] = V0Defs[Def];
-    Src.moveBefore(Def->getNextNode());
+    V0Defs[&Src] = V0Defs[AfterDef];
+    Src.moveBefore(AfterDef);
   }
 
   return true;
