@@ -26,6 +26,8 @@ class raw_ostream;
 
 namespace lldb_private {
 
+const char *ExpressionResultAsCString(lldb::ExpressionResults result);
+
 /// \class Status Status.h "lldb/Utility/Status.h" An error handling class.
 ///
 /// This class is designed to be able to hold any error code that can be
