@@ -1275,48 +1275,48 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       return false;
     if (!getElem(RHSOffset, I, ElemT))
       return false;
-    if (E->isComparisonOp()) {
-      switch (E->getOpcode()) {
-      case BO_EQ:
-        if (!this->emitEQ(ElemT, E))
-          return false;
-        break;
-      case BO_NE:
-        if (!this->emitNE(ElemT, E))
-          return false;
-        break;
-      case BO_LE:
-        if (!this->emitLE(ElemT, E))
-          return false;
-        break;
-      case BO_LT:
-        if (!this->emitLT(ElemT, E))
-          return false;
-        break;
-      case BO_GE:
-        if (!this->emitGE(ElemT, E))
-          return false;
-        break;
-      case BO_GT:
-        if (!this->emitGT(ElemT, E))
-          return false;
-        break;
-      default:
-        llvm_unreachable("Unsupported binary operator");
-      }
+    switch (E->getOpcode()) {
+    case BO_EQ:
+      if (!this->emitEQ(ElemT, E))
+        return false;
+      break;
+    case BO_NE:
+      if (!this->emitNE(ElemT, E))
+        return false;
+      break;
+    case BO_LE:
+      if (!this->emitLE(ElemT, E))
+        return false;
+      break;
+    case BO_LT:
+      if (!this->emitLT(ElemT, E))
+        return false;
+      break;
+    case BO_GE:
+      if (!this->emitGE(ElemT, E))
+        return false;
+      break;
+    case BO_GT:
+      if (!this->emitGT(ElemT, E))
+        return false;
+      break;
+    default:
+      llvm_unreachable("Unsupported binary operator");
+    }
 
-      // The result of the comparison is a vector of the same width and number
-      // of elements as the comparison operands with a signed integral element
-      // type.
-      //
-      // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    // The result of the comparison is a vector of the same width and number
+    // of elements as the comparison operands with a signed integral element
+    // type.
+    //
+    // https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+    if (E->isComparisonOp()) {
       if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
         return false;
       if (!this->emitNeg(ResultElemT, E))
         return false;
-    } else {
-      llvm_unreachable("Unsupported binary operator");
     }
+
+    // Initialize array element with the value we just computed.
     if (!this->emitInitElem(ResultElemT, I, E))
       return false;
   }
