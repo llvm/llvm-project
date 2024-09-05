@@ -34,3 +34,10 @@ TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   char* result = call_ctime(&t);
   ASSERT_STREQ("Tue Jan  19 03:14:07 2038\n", result);
 }
+
+TEST(LlvmLibcCtime, InvalidArgument) {
+  struct time_t t = 2147483648;
+  char* result = call_ctime(&t);
+  ASSERT_ERRNO_EQ(EINVAL);
+  ASSERT_STREQ(nullptr, result);
+}
