@@ -35,7 +35,7 @@ bool SandboxVectorizerPass::runImpl(Function &F) {
     return false;
   }
   LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << F.getName() << ".\n");
-  // Don't vectorize when the attribute NoImplicitFloat is used.
+  // Early return if the attribute NoImplicitFloat is used.
   if (F.hasFnAttribute(Attribute::NoImplicitFloat)) {
     LLVM_DEBUG(dbgs() << "SBVec: NoImplicitFloat attribute, return.\n");
     return false;
