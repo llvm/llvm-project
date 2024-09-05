@@ -68,7 +68,7 @@
                                            (const int)(R)))
 #endif /* __x86_64__ */
 
-//  128 Bit : Double -> int
+// 128 Bit : Double -> int
 #define _mm_cvttspd_epi32(A)                                                   \
   ((__m128i)__builtin_ia32_vcvttpd2dqs128_mask(                                \
       (__v2df)(__m128d)A, (__v4si)(__m128i)_mm_undefined_si128(),              \
@@ -82,7 +82,7 @@
   ((__m128i)__builtin_ia32_vcvttpd2dqs128_mask(                                \
       (__v2df)(__m128d)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U))
 
-//  256 Bit : Double -> int
+// 256 Bit : Double -> int
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm256_cvttspd_epi32(__m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2dqs256_round_mask(
@@ -116,7 +116,7 @@ _mm256_maskz_cvttspd_epi32(__mmask8 U, __m256d A) {
       (__v4df)(__m256d)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U,   \
       (int)(R)))
 
-//  128 Bit : Double -> uint
+// 128 Bit : Double -> uint
 #define _mm_cvttspd_epu32(A)                                                   \
   ((__m128i)__builtin_ia32_vcvttpd2udqs128_mask(                               \
       (__v2df)(__m128d)A, (__v4si)(__m128i)_mm_undefined_si128(),              \
@@ -130,7 +130,7 @@ _mm256_maskz_cvttspd_epi32(__mmask8 U, __m256d A) {
   ((__m128i)__builtin_ia32_vcvttpd2udqs128_mask(                               \
       (__v2df)(__m128d)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U))
 
-//  256 Bit : Double -> uint
+// 256 Bit : Double -> uint
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm256_cvttspd_epu32(__m256d A) {
   return ((__m128i)__builtin_ia32_vcvttpd2udqs256_round_mask(
@@ -164,7 +164,7 @@ _mm256_maskz_cvttspd_epu32(__mmask8 U, __m256d A) {
       (__v4df)(__m256d)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U,   \
       (int)(R)))
 
-//  128 Bit : Double -> long
+// 128 Bit : Double -> long
 #define _mm_cvttspd_epi64(A)                                                   \
   ((__m128i)__builtin_ia32_vcvttpd2qqs128_mask(                                \
       (__v2df)(__m128d)A, (__v2di)_mm_undefined_si128(), (__mmask8) - 1))
@@ -177,7 +177,7 @@ _mm256_maskz_cvttspd_epu32(__mmask8 U, __m256d A) {
   ((__m128i)__builtin_ia32_vcvttpd2qqs128_mask(                                \
       (__v2df)(__m128d)A, (__v2di)_mm_setzero_si128(), (__mmask8)U))
 
-//  256 Bit : Double -> long
+// 256 Bit : Double -> long
 static __inline__ __m256i __DEFAULT_FN_ATTRS _mm256_cvttspd_epi64(__m256d A) {
   return ((__m256i)__builtin_ia32_vcvttpd2qqs256_round_mask(
       (__v4df)A, (__v4di)_mm256_undefined_si256(), (__mmask8)-1,
@@ -208,7 +208,7 @@ _mm256_maskz_cvttspd_epi64(__mmask8 U, __m256d A) {
   ((__m256i)__builtin_ia32_vcvttpd2qqs256_round_mask(                          \
       (__v4df)A, (__v4di)_mm256_setzero_si256(), (__mmask8)U, (int)R))
 
-//  128 Bit : Double -> ulong
+// 128 Bit : Double -> ulong
 #define _mm_cvttspd_epu64(A)                                                   \
   ((__m128i)__builtin_ia32_vcvttpd2uqqs128_mask(                               \
       (__v2df)(__m128d)A, (__v2di)_mm_undefined_si128(), (__mmask8) - 1))
@@ -221,7 +221,7 @@ _mm256_maskz_cvttspd_epi64(__mmask8 U, __m256d A) {
   ((__m128i)__builtin_ia32_vcvttpd2uqqs128_mask(                               \
       (__v2df)(__m128d)A, (__v2di)_mm_setzero_si128(), (__mmask8)U))
 
-//  256 Bit : Double -> ulong
+// 256 Bit : Double -> ulong
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS _mm256_cvttspd_epu64(__m256d A) {
   return ((__m256i)__builtin_ia32_vcvttpd2uqqs256_round_mask(
@@ -253,7 +253,7 @@ _mm256_maskz_cvttspd_epu64(__mmask8 U, __m256d A) {
   ((__m256i)__builtin_ia32_vcvttpd2uqqs256_round_mask(                         \
       (__v4df)A, (__v4di)_mm256_setzero_si256(), (__mmask8)U, (int)R))
 
-//  128 Bit : float -> int
+// 128 Bit : float -> int
 #define _mm_cvttsps_epi32(A)                                                   \
   ((__m128i)__builtin_ia32_vcvttps2dqs128_mask(                                \
       (__v4sf)(__m128)A, (__v4si)(__m128i)_mm_undefined_si128(),               \
@@ -267,7 +267,7 @@ _mm256_maskz_cvttspd_epu64(__mmask8 U, __m256d A) {
   ((__m128i)__builtin_ia32_vcvttps2dqs128_mask(                                \
       (__v4sf)(__m128)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U))
 
-//  256 Bit : float -> int
+// 256 Bit : float -> int
 static __inline__ __m256i __DEFAULT_FN_ATTRS _mm256_cvttsps_epi32(__m256 A) {
   return ((__m256i)__builtin_ia32_vcvttps2dqs256_round_mask(
       (__v8sf)A, (__v8si)_mm256_undefined_si256(), (__mmask8)-1,
@@ -301,7 +301,7 @@ _mm256_maskz_cvttsps_epi32(__mmask8 U, __m256 A) {
       (__v8sf)(__m256)A, (__v8si)(__m256i)_mm256_setzero_si256(), (__mmask8)U, \
       (int)(R)))
 
-//  128 Bit : float -> uint
+// 128 Bit : float -> uint
 #define _mm_cvttsps_epu32(A)                                                   \
   ((__m128i)__builtin_ia32_vcvttps2udqs128_mask(                               \
       (__v4sf)(__m128)A, (__v4si)(__m128i)_mm_undefined_si128(),               \
@@ -315,7 +315,7 @@ _mm256_maskz_cvttsps_epi32(__mmask8 U, __m256 A) {
   ((__m128i)__builtin_ia32_vcvttps2udqs128_mask(                               \
       (__v4sf)(__m128)A, (__v4si)(__m128i)_mm_setzero_si128(), (__mmask8)U))
 
-//  256 Bit : float -> uint
+// 256 Bit : float -> uint
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS _mm256_cvttsps_epu32(__m256 A) {
   return ((__m256i)__builtin_ia32_vcvttps2udqs256_round_mask(
@@ -361,9 +361,7 @@ _mm256_maskz_cvttsps_epu32(__mmask8 U, __m256 A) {
 #define _mm_maskz_cvttsps_epi64(U, A)                                          \
   ((__m128i)__builtin_ia32_vcvttps2qqs128_mask(                                \
       (__v4sf)(__m128)A, (__v2di)_mm_setzero_si128(), (__mmask8)U))
-/*
 // 256 bit : float -> long
-*/
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS _mm256_cvttsps_epi64(__m128 A) {
   return ((__m256i)__builtin_ia32_vcvttps2qqs256_round_mask(
@@ -407,9 +405,7 @@ _mm256_maskz_cvttsps_epi64(__mmask8 U, __m128 A) {
 #define _mm_maskz_cvttsps_epu64(U, A)                                          \
   ((__m128i)__builtin_ia32_vcvttps2uqqs128_mask(                               \
       (__v4sf)(__m128)A, (__v2di)_mm_setzero_si128(), (__mmask8)U))
-/*
 // 256 bit : float -> ulong
-*/
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS _mm256_cvttsps_epu64(__m128 A) {
   return ((__m256i)__builtin_ia32_vcvttps2uqqs256_round_mask(

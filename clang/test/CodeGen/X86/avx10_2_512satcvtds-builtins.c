@@ -1,43 +1,8 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-unknown-unknown -target-feature +avx10.2-512 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2-512 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2-512 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
 
 #include <immintrin.h>
 #include <stddef.h>
-
-int test_mm_cvttssd_i32(__m128d __A) {
-  // CHECK-LABEL: @test_mm_cvttssd_i32
-  // CHECK: @llvm.x86.avx512.vcvttsd2sis
-  return _mm_cvtts_roundsd_i32(__A, _MM_FROUND_NO_EXC);
-}
-
-int test_mm_cvttssd_si32(__m128d __A) {
-  // CHECK-LABEL: @test_mm_cvttssd_si32(
-  // CHECK: @llvm.x86.avx512.vcvttsd2sis(<2 x double>
-  return _mm_cvtts_roundsd_si32(__A, _MM_FROUND_NO_EXC);
-}
-
-unsigned test_mm_cvttssd_u32(__m128d __A) {
-  // CHECK-LABEL: @test_mm_cvttssd_u32(
-  // CHECK: @llvm.x86.avx512.vcvttsd2usis(<2 x double>
-  return _mm_cvtts_roundsd_u32(__A, _MM_FROUND_NO_EXC);
-}
-
-int test_mm_cvttsss_i32(__m128 __A) {
-  // CHECK-LABEL: @test_mm_cvttsss_i32(
-  // CHECK: @llvm.x86.avx512.vcvttss2sis(<4 x float>
-  return _mm_cvtts_roundss_i32(__A, _MM_FROUND_NO_EXC);
-}
-
-int test_mm_cvttsss_si32(__m128 __A) {
-  // CHECK-LABEL: @test_mm_cvttsss_si32(
-  // CHECK: @llvm.x86.avx512.vcvttss2sis(<4 x float>
-  return _mm_cvtts_roundss_si32(__A, _MM_FROUND_NO_EXC);
-}
-
-unsigned test_mm_cvttsss_u32(__m128 __A) {
-  // CHECK-LABEL: @test_mm_cvttsss_u32(
-  // CHECK: @llvm.x86.avx512.vcvttss2usis(<4 x float>
-  return _mm_cvtts_roundss_u32(__A, _MM_FROUND_NO_EXC);
-}
 
 __m256i test_mm512_cvttspd_epi32(__m512d A) {
   // CHECK-LABEL: test_mm512_cvttspd_epi32
@@ -181,3 +146,6 @@ __m512i test_mm512_maskz_cvtts_roundps_epu32(__mmask8 U, __m512 A) {
   // CHECK: @llvm.x86.avx512.mask.vcvttps2udqs.round.512(<16 x float>
   return _mm512_maskz_cvtts_roundps_epu32(U, A, _MM_FROUND_NO_EXC);
 }
+
+// X64: {{.*}}
+// X86: {{.*}}
