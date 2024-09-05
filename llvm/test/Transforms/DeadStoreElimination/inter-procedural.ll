@@ -6,6 +6,7 @@ declare void @p1_write_then_read(ptr nocapture noundef initializes((0, 2)) dead_
 declare void @p2_same_range(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2)) dead_on_unwind)
 declare void @p2_no_init(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef dead_on_unwind)
 declare void @p2_no_dead_on_unwind(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2)))
+declare void @p2_no_dead_on_unwind_but_nounwind(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2))) nounwind
 
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_only_caller() {
@@ -98,6 +99,21 @@ define i16 @p2_no_dead_on_unwind_alias_caller() {
   %ptr = alloca i16
   store i16 0, ptr %ptr
   call void @p2_no_dead_on_unwind(ptr %ptr, ptr %ptr)
+  %l = load i16, ptr %ptr
+  ret i16 %l
+}
+
+; Function Attrs: mustprogress nounwind uwtable
+define i16 @p2_no_dead_on_unwind_but_nounwind_alias_caller() {
+; CHECK-LABEL: @p2_no_dead_on_unwind_but_nounwind_alias_caller(
+; CHECK-NEXT:    %ptr = alloca i16, align 2
+; CHECK-NEXT:    call void @p2_no_dead_on_unwind_but_nounwind(ptr %ptr, ptr %ptr)
+; CHECK-NEXT:    %l = load i16, ptr %ptr
+; CHECK-NEXT:    ret i16 %l
+;
+  %ptr = alloca i16
+  store i16 0, ptr %ptr
+  call void @p2_no_dead_on_unwind_but_nounwind(ptr %ptr, ptr %ptr)
   %l = load i16, ptr %ptr
   ret i16 %l
 }
