@@ -727,48 +727,47 @@ bool AArch64MIPeepholeOpt::visitUBFMXri(MachineInstr &MI) {
 
   bool IsLSR = Imms == 31 && Immr <= Imms;
   bool IsLSL = Immr == Imms + 33;
-  if (IsLSR || IsLSL) {
-    if (IsLSL) {
-      Immr -= 32;
-    }
+  if (!IsLSR && !IsLSL)
+    return false;
 
-    const TargetRegisterClass *DstRC64 =
-        TII->getRegClass(TII->get(MI.getOpcode()), 0, TRI, *MI.getMF());
-    const TargetRegisterClass *DstRC32 =
-        TRI->getSubRegisterClass(DstRC64, AArch64::sub_32);
-    assert(DstRC32 && "Destination register class of UBFMXri doesn't have a "
-                      "sub_32 subregister class");
-
-    const TargetRegisterClass *SrcRC64 =
-        TII->getRegClass(TII->get(MI.getOpcode()), 1, TRI, *MI.getMF());
-    const TargetRegisterClass *SrcRC32 =
-        TRI->getSubRegisterClass(SrcRC64, AArch64::sub_32);
-    assert(SrcRC32 && "Source register class of UBFMXri doesn't have a sub_32 "
-                      "subregister class");
-
-    Register DstReg64 = MI.getOperand(0).getReg();
-    Register DstReg32 = MRI->createVirtualRegister(DstRC32);
-    Register SrcReg64 = MI.getOperand(1).getReg();
-    Register SrcReg32 = MRI->createVirtualRegister(SrcRC32);
-
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY),
-            SrcReg32)
-        .addReg(SrcReg64, 0, AArch64::sub_32);
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::UBFMWri),
-            DstReg32)
-        .addReg(SrcReg32)
-        .addImm(Immr)
-        .addImm(Imms);
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-            TII->get(AArch64::SUBREG_TO_REG), DstReg64)
-        .addImm(0)
-        .addReg(DstReg32)
-        .addImm(AArch64::sub_32);
-    MI.eraseFromParent();
-    return true;
+  if (IsLSL) {
+    Immr -= 32;
   }
 
-  return false;
+  const TargetRegisterClass *DstRC64 =
+      TII->getRegClass(TII->get(MI.getOpcode()), 0, TRI, *MI.getMF());
+  const TargetRegisterClass *DstRC32 =
+      TRI->getSubRegisterClass(DstRC64, AArch64::sub_32);
+  assert(DstRC32 && "Destination register class of UBFMXri doesn't have a "
+                    "sub_32 subregister class");
+
+  const TargetRegisterClass *SrcRC64 =
+      TII->getRegClass(TII->get(MI.getOpcode()), 1, TRI, *MI.getMF());
+  const TargetRegisterClass *SrcRC32 =
+      TRI->getSubRegisterClass(SrcRC64, AArch64::sub_32);
+  assert(SrcRC32 && "Source register class of UBFMXri doesn't have a sub_32 "
+                    "subregister class");
+
+  Register DstReg64 = MI.getOperand(0).getReg();
+  Register DstReg32 = MRI->createVirtualRegister(DstRC32);
+  Register SrcReg64 = MI.getOperand(1).getReg();
+  Register SrcReg32 = MRI->createVirtualRegister(SrcRC32);
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY),
+          SrcReg32)
+      .addReg(SrcReg64, 0, AArch64::sub_32);
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::UBFMWri),
+          DstReg32)
+      .addReg(SrcReg32)
+      .addImm(Immr)
+      .addImm(Imms);
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+          TII->get(AArch64::SUBREG_TO_REG), DstReg64)
+      .addImm(0)
+      .addReg(DstReg32)
+      .addImm(AArch64::sub_32);
+  MI.eraseFromParent();
+  return true;
 }
 
 // Across a basic-block we might have in i32 extract from a value that only
