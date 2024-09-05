@@ -14,11 +14,7 @@
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-static inline char *call_ctime_r(time_t *t, int year, int month, int mday,
-                                 int hour, int min, int sec, int wday, int yday,
-                                 char *buffer) {
-  LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
-      localtime(t), year, month, mday, hour, min, sec, wday, yday);
+static inline char *call_ctime_r(time_t *t, char *buffer) {
   return LIBC_NAMESPACE::ctime_r(t, buffer);
 }
 
@@ -41,20 +37,11 @@ TEST(LlvmLibcCtimeR, Nullptr) {
   ASSERT_STREQ(nullptr, result);
 }
 
-TEST(LlvmLibcCtimeR, ValidDate) {
+TEST(LlvmLibcCtimeR, ValidUnixTimestamp) {
   char buffer[TimeConstants::CTIME_BUFFER_SIZE];
-  struct time_t t;
+  struct time_t t = 0;
   char *result;
   // 1970-01-01 00:00:00. Test with a valid buffer size.
-  result = call_ctime_r(&t,
-                        1970, // year
-                        1,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        4,    // wday
-                        0,    // yday
-                        buffer);
+  result = call_ctime_r(&t, buffer);
   ASSERT_STREQ("Thu Jan  1 00:00:00 1970\n", result);
 }
