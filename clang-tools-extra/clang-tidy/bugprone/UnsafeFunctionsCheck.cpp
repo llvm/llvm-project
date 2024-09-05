@@ -42,7 +42,7 @@ static StringRef getReplacementFor(StringRef FunctionName,
     // Try to find a better replacement from Annex K first.
     StringRef AnnexKReplacementFunction =
         StringSwitch<StringRef>(FunctionName)
-	    .Cases("asctime", "asctime_r", "asctime_s", "ctime", "ctime_r")
+	    .Cases("asctime", "asctime_r", "asctime_s")
             .Case("gets", "gets_s")
             .Default({});
     if (!AnnexKReplacementFunction.empty())
