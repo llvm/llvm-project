@@ -166,7 +166,7 @@ ModuleLock::ModuleLock(const FileSpec &root_dir_spec, const UUID &uuid,
     m_file_up = std::move(file.get());
   else {
     m_file_up.reset();
-    error = Status(file.takeError());
+    error = Status::FromError(file.takeError());
     return;
   }
 
