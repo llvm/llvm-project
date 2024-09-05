@@ -172,7 +172,11 @@ typedef _Atomic(uintmax_t)          atomic_uintmax_t;
 
 typedef struct atomic_flag { atomic_bool _Value; } atomic_flag;
 
+#ifdef __cplusplus
+#define ATOMIC_FLAG_INIT {false}
+#else
 #define ATOMIC_FLAG_INIT { 0 }
+#endif
 
 /* These should be provided by the libc implementation. */
 #ifdef __cplusplus

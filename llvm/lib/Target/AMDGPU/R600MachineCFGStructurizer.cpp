@@ -598,7 +598,7 @@ MachineInstr *R600MachineCFGStructurizer::getLoopendBlockBranchInstr(
     if (MI) {
       if (isCondBranch(MI) || isUncondBranch(MI))
         return MI;
-      else if (!TII->isMov(MI->getOpcode()))
+      if (!TII->isMov(MI->getOpcode()))
         break;
     }
   }

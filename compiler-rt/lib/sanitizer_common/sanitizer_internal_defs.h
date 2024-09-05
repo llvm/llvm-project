@@ -143,7 +143,7 @@ namespace __sanitizer {
 typedef unsigned long long uptr;
 typedef signed long long sptr;
 #else
-#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_APPLE || SANITIZER_WINDOWS
+#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_APPLE
 typedef unsigned long uptr;
 typedef signed long sptr;
 #  else
@@ -455,6 +455,9 @@ namespace __lsan {
 using namespace __sanitizer;
 }
 namespace __msan {
+using namespace __sanitizer;
+}
+namespace __nsan {
 using namespace __sanitizer;
 }
 namespace __hwasan {

@@ -128,6 +128,22 @@ void getFeaturesForCPU(StringRef CPU,
     else
       EnabledFeatures.push_back(F.substr(1));
 }
+
+namespace RISCVExtensionBitmaskTable {
+#define GET_RISCVExtensionBitmaskTable_IMPL
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+} // namespace RISCVExtensionBitmaskTable
+
+namespace {
+struct LessExtName {
+  bool operator()(const RISCVExtensionBitmaskTable::RISCVExtensionBitmask &LHS,
+                  StringRef RHS) {
+    return StringRef(LHS.Name) < RHS;
+  }
+};
+} // namespace
+
 } // namespace RISCV
 
 namespace RISCVVType {

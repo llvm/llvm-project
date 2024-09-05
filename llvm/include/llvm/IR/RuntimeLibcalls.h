@@ -15,7 +15,6 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/Triple.h"
@@ -41,7 +40,6 @@ enum Libcall {
 struct RuntimeLibcallsInfo {
   explicit RuntimeLibcallsInfo(const Triple &TT) {
     initLibcalls(TT);
-    initCmpLibcallCCs();
   }
 
   /// Rename the default libcall routine name for the specified libcall.
@@ -57,18 +55,6 @@ struct RuntimeLibcallsInfo {
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
     return LibcallRoutineNames[Call];
-  }
-
-  /// Override the default CondCode to be used to test the result of the
-  /// comparison libcall against zero.
-  void setCmpLibcallCC(RTLIB::Libcall Call, ISD::CondCode CC) {
-    CmpLibcallCCs[Call] = CC;
-  }
-
-  /// Get the CondCode that's to be used to test the result of the comparison
-  /// libcall against zero.
-  ISD::CondCode getCmpLibcallCC(RTLIB::Libcall Call) const {
-    return CmpLibcallCCs[Call];
   }
 
   /// Set the CallingConv that should be used for the specified libcall.
@@ -90,10 +76,6 @@ private:
   /// Stores the name each libcall.
   const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
 
-  /// The ISD::CondCode that should be used to test the result of each of the
-  /// comparison libcall against zero.
-  ISD::CondCode CmpLibcallCCs[RTLIB::UNKNOWN_LIBCALL];
-
   /// Stores the CallingConv that should be used for each libcall.
   CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL];
 
@@ -111,9 +93,6 @@ private:
     // Any other darwin such as WatchOS/TvOS is new enough.
     return true;
   }
-
-  /// Sets default libcall calling conventions.
-  void initCmpLibcallCCs();
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.

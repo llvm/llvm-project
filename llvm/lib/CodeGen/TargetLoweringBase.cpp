@@ -574,6 +574,39 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
+void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
+  std::fill(CmpLibcallCCs, CmpLibcallCCs + RTLIB::UNKNOWN_LIBCALL,
+            ISD::SETCC_INVALID);
+  CmpLibcallCCs[RTLIB::OEQ_F32] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::OEQ_F64] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::OEQ_F128] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::UNE_F32] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UNE_F64] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UNE_F128] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::OGE_F32] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OGE_F64] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OGE_F128] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OLT_F32] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLT_F64] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLT_F128] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLE_F32] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OLE_F64] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OLE_F128] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OGT_F32] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::OGT_F64] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::OGT_F128] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::UO_F32] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UO_F64] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UO_F128] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UO_PPCF128] = ISD::SETNE;
+}
+
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
     : TM(tm), Libcalls(TM.getTargetTriple()) {
@@ -608,6 +641,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
+
+  RTLIB::initCmpLibcallCCs(CmpLibcallCCs);
 }
 
 void TargetLoweringBase::initActions() {
@@ -678,6 +713,7 @@ void TargetLoweringBase::initActions() {
                         ISD::FMINNUM,        ISD::FMAXNUM,
                         ISD::FMINNUM_IEEE,   ISD::FMAXNUM_IEEE,
                         ISD::FMINIMUM,       ISD::FMAXIMUM,
+                        ISD::FMINIMUMNUM,    ISD::FMAXIMUMNUM,
                         ISD::FMAD,           ISD::SMIN,
                         ISD::SMAX,           ISD::UMIN,
                         ISD::UMAX,           ISD::ABS,
@@ -718,6 +754,11 @@ void TargetLoweringBase::initActions() {
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
 
+    // Saturated trunc
+    setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
+
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
                        Expand);
@@ -733,8 +774,9 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN, ISD::FACOS,
-           ISD::FASIN, ISD::FATAN, ISD::FCOSH, ISD::FSINH, ISD::FTANH},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
+           ISD::LLROUND, ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
+           ISD::FCOSH, ISD::FSINH, ISD::FTANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -789,13 +831,16 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT,      ISD::FLOG,    ISD::FLOG2,  ISD::FLOG10,
-                      ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10, ISD::FFLOOR,
-                      ISD::FNEARBYINT, ISD::FCEIL,   ISD::FRINT,  ISD::FTRUNC,
-                      ISD::LROUND,     ISD::LLROUND, ISD::LRINT,  ISD::LLRINT,
-                      ISD::FROUNDEVEN, ISD::FTAN,    ISD::FACOS,  ISD::FASIN,
-                      ISD::FATAN,      ISD::FCOSH,   ISD::FSINH,  ISD::FTANH},
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,  ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
+                      ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
+
+  // FIXME: Query RuntimeLibCalls to make the decision.
+  setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
+                     {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
                       ISD::FSINH, ISD::FTANH},
@@ -1637,16 +1682,8 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i) {
-      ISD::ArgFlagsTy OutFlags = Flags;
-      if (NumParts > 1 && i == 0)
-        OutFlags.setSplit();
-      else if (i == NumParts - 1 && i != 0)
-        OutFlags.setSplitEnd();
-
-      Outs.push_back(
-          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
-    }
+    for (unsigned i = 0; i < NumParts; ++i)
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
   }
 }
 

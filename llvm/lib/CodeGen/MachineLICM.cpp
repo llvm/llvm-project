@@ -476,7 +476,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
   RUs |= RUsFromRegsNotInMask;
 }
 
-/// Examine the instruction for potentai LICM candidate. Also
+/// Examine the instruction for potential LICM candidate. Also
 /// gather register def and frame object update information.
 void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
@@ -1075,7 +1075,7 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
 bool MachineLICMBase::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop) {
   // Check if it's safe to move the instruction.
   bool DontMoveAcrossStore = !HoistConstLoads || !AllowedToHoistLoads[CurLoop];
-  if ((!I.isSafeToMove(AA, DontMoveAcrossStore)) &&
+  if ((!I.isSafeToMove(DontMoveAcrossStore)) &&
       !(HoistConstStores && isInvariantStore(I, TRI, MRI))) {
     LLVM_DEBUG(dbgs() << "LICM: Instruction not safe to move.\n");
     return false;

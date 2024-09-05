@@ -11,6 +11,9 @@
 #define __has_builtin(x) 0
 #endif
 
+// Make sure these are included first so they don't conflict with the system.
+#include <limits.h>
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
@@ -108,6 +111,10 @@ void handle_printf(rpc::Server::Port &port) {
       if (cur_section.has_conv && cur_section.conv_name == 's' &&
           cur_section.conv_val_ptr) {
         strs_to_copy[lane].emplace_back(cur_section.conv_val_ptr);
+        // Get the minimum size of the string in the case of padding.
+        char c = '\0';
+        cur_section.conv_val_ptr = &c;
+        convert(&writer, cur_section);
       } else if (cur_section.has_conv) {
         // Ignore conversion errors for the first pass.
         convert(&writer, cur_section);

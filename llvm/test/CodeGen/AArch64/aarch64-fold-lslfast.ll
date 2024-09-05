@@ -28,17 +28,16 @@ define i16 @halfword(ptr %ctx, i32 %xor72) nounwind {
 ;
 ; CHECK0-GISEL-LABEL: halfword:
 ; CHECK0-GISEL:       // %bb.0:
-; CHECK0-GISEL-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK0-GISEL-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK0-GISEL-NEXT:    lsr w8, w1, #9
 ; CHECK0-GISEL-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK0-GISEL-NEXT:    mov x19, x0
-; CHECK0-GISEL-NEXT:    and x21, x8, #0xff
-; CHECK0-GISEL-NEXT:    ldrh w20, [x0, x21, lsl #1]
+; CHECK0-GISEL-NEXT:    add x20, x0, w8, uxtb #1
+; CHECK0-GISEL-NEXT:    ldrh w19, [x20]
 ; CHECK0-GISEL-NEXT:    bl foo
-; CHECK0-GISEL-NEXT:    mov w0, w20
-; CHECK0-GISEL-NEXT:    strh w20, [x19, x21, lsl #1]
+; CHECK0-GISEL-NEXT:    mov w0, w19
+; CHECK0-GISEL-NEXT:    strh w19, [x20]
 ; CHECK0-GISEL-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK0-GISEL-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK0-GISEL-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK0-GISEL-NEXT:    ret
 ;
 ; CHECK3-SDAG-LABEL: halfword:
@@ -248,27 +247,23 @@ define i16 @multi_use_half_word(ptr %ctx, i32 %xor72) {
 ;
 ; CHECK0-GISEL-LABEL: multi_use_half_word:
 ; CHECK0-GISEL:       // %bb.0: // %entry
-; CHECK0-GISEL-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
-; CHECK0-GISEL-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK0-GISEL-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK0-GISEL-NEXT:    .cfi_def_cfa_offset 48
+; CHECK0-GISEL-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK0-GISEL-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK0-GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK0-GISEL-NEXT:    .cfi_offset w19, -8
 ; CHECK0-GISEL-NEXT:    .cfi_offset w20, -16
 ; CHECK0-GISEL-NEXT:    .cfi_offset w21, -24
-; CHECK0-GISEL-NEXT:    .cfi_offset w22, -32
-; CHECK0-GISEL-NEXT:    .cfi_offset w30, -48
+; CHECK0-GISEL-NEXT:    .cfi_offset w30, -32
 ; CHECK0-GISEL-NEXT:    lsr w8, w1, #9
-; CHECK0-GISEL-NEXT:    mov x19, x0
-; CHECK0-GISEL-NEXT:    and x21, x8, #0xff
-; CHECK0-GISEL-NEXT:    ldrh w20, [x0, x21, lsl #1]
-; CHECK0-GISEL-NEXT:    add w22, w20, #1
+; CHECK0-GISEL-NEXT:    add x20, x0, w8, uxtb #1
+; CHECK0-GISEL-NEXT:    ldrh w19, [x20]
+; CHECK0-GISEL-NEXT:    add w21, w19, #1
 ; CHECK0-GISEL-NEXT:    bl foo
-; CHECK0-GISEL-NEXT:    strh w20, [x19, x21, lsl #1]
-; CHECK0-GISEL-NEXT:    mov w0, w20
-; CHECK0-GISEL-NEXT:    strh w22, [x19, x21, lsl #1]
-; CHECK0-GISEL-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK0-GISEL-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK0-GISEL-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; CHECK0-GISEL-NEXT:    strh w19, [x20]
+; CHECK0-GISEL-NEXT:    mov w0, w19
+; CHECK0-GISEL-NEXT:    strh w21, [x20]
+; CHECK0-GISEL-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK0-GISEL-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK0-GISEL-NEXT:    ret
 ;
 ; CHECK3-SDAG-LABEL: multi_use_half_word:
@@ -387,14 +382,14 @@ define i128 @gep4(ptr %p, i128 %a, i64 %b) {
 ;
 ; CHECK0-GISEL-LABEL: gep4:
 ; CHECK0-GISEL:       // %bb.0:
-; CHECK0-GISEL-NEXT:    ldr q1, [x0, x4, lsl #4]
+; CHECK0-GISEL-NEXT:    add x8, x0, x4, lsl #4
 ; CHECK0-GISEL-NEXT:    mov v0.d[0], x2
-; CHECK0-GISEL-NEXT:    mov x8, x0
+; CHECK0-GISEL-NEXT:    ldr q1, [x8]
 ; CHECK0-GISEL-NEXT:    mov d2, v1.d[1]
-; CHECK0-GISEL-NEXT:    fmov x0, d1
 ; CHECK0-GISEL-NEXT:    mov v0.d[1], x3
+; CHECK0-GISEL-NEXT:    fmov x0, d1
 ; CHECK0-GISEL-NEXT:    fmov x1, d2
-; CHECK0-GISEL-NEXT:    str q0, [x8, x4, lsl #4]
+; CHECK0-GISEL-NEXT:    str q0, [x8]
 ; CHECK0-GISEL-NEXT:    ret
 ;
 ; CHECK3-SDAG-LABEL: gep4:

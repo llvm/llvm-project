@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
+#include "DirectivesCommon.h"
+#include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -19,6 +21,7 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/Cuda.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
@@ -939,24 +942,59 @@ public:
     return mlir::UnknownLoc::get(&getMLIRContext());
   }
 
+  static mlir::Location genLocation(Fortran::parser::SourcePosition pos,
+                                    mlir::MLIRContext &ctx) {
+    llvm::SmallString<256> path(*pos.path);
+    llvm::sys::fs::make_absolute(path);
+    llvm::sys::path::remove_dots(path);
+    return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
+  }
+
   /// Generate a `Location` from the `CharBlock`.
   mlir::Location
   genLocation(const Fortran::parser::CharBlock &block) override final {
+    mlir::Location mainLocation = genUnknownLocation();
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
       if (std::optional<Fortran::parser::ProvenanceRange> provenance =
               cooked->GetProvenanceRange(block)) {
         if (std::optional<Fortran::parser::SourcePosition> filePos =
-                cooked->allSources().GetSourcePosition(provenance->start())) {
-          llvm::SmallString<256> filePath(*filePos->path);
-          llvm::sys::fs::make_absolute(filePath);
-          llvm::sys::path::remove_dots(filePath);
-          return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
-                                           filePos->line, filePos->column);
+                cooked->allSources().GetSourcePosition(provenance->start()))
+          mainLocation = genLocation(*filePos, getMLIRContext());
+
+        llvm::SmallVector<mlir::Location> locs;
+        locs.push_back(mainLocation);
+
+        llvm::SmallVector<fir::LocationKindAttr> locAttrs;
+        locAttrs.push_back(fir::LocationKindAttr::get(&getMLIRContext(),
+                                                      fir::LocationKind::Base));
+
+        // Gather include location information if any.
+        Fortran::parser::ProvenanceRange *prov = &*provenance;
+        while (prov) {
+          if (std::optional<Fortran::parser::ProvenanceRange> include =
+                  cooked->allSources().GetInclusionInfo(*prov)) {
+            if (std::optional<Fortran::parser::SourcePosition> incPos =
+                    cooked->allSources().GetSourcePosition(include->start())) {
+              locs.push_back(genLocation(*incPos, getMLIRContext()));
+              locAttrs.push_back(fir::LocationKindAttr::get(
+                  &getMLIRContext(), fir::LocationKind::Inclusion));
+            }
+            prov = &*include;
+          } else {
+            prov = nullptr;
+          }
+        }
+        if (locs.size() > 1) {
+          assert(locs.size() == locAttrs.size() &&
+                 "expect as many attributes as locations");
+          return mlir::FusedLocWith<fir::LocationKindArrayAttr>::get(
+              &getMLIRContext(), locs,
+              fir::LocationKindArrayAttr::get(&getMLIRContext(), locAttrs));
         }
       }
     }
-    return genUnknownLocation();
+    return mainLocation;
   }
 
   const Fortran::semantics::Scope &getCurrentScope() override final {
@@ -2312,8 +2350,11 @@ private:
       fir::IfOp topIfOp, currentIfOp;
       for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
         auto genIfOp = [&](mlir::Value cond) {
-          auto ifOp =
-              builder->create<fir::IfOp>(toLocation(), cond, /*withElse=*/true);
+          Fortran::lower::pft::Evaluation &succ = *e.controlSuccessor;
+          bool hasElse = succ.isA<Fortran::parser::ElseIfStmt>() ||
+                         succ.isA<Fortran::parser::ElseStmt>();
+          auto ifOp = builder->create<fir::IfOp>(toLocation(), cond,
+                                                 /*withElseRegion=*/hasElse);
           builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
           return ifOp;
         };
@@ -2959,6 +3000,12 @@ private:
     mlir::Block &b = op.getRegion().back();
     builder->setInsertionPointToStart(&b);
 
+    Fortran::lower::pft::Evaluation *crtEval = &getEval();
+    if (crtEval->lowerAsUnstructured())
+      Fortran::lower::createEmptyRegionBlocks<fir::FirEndOp>(
+          *builder, crtEval->getNestedEvaluations());
+    builder->setInsertionPointToStart(&b);
+
     for (auto [arg, value] : llvm::zip(
              op.getLoopRegions().front()->front().getArguments(), ivValues)) {
       mlir::Value convArg =
@@ -2966,7 +3013,6 @@ private:
       builder->create<fir::StoreOp>(loc, convArg, value);
     }
 
-    Fortran::lower::pft::Evaluation *crtEval = &getEval();
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < nestedLoops; i++)
@@ -4215,34 +4261,60 @@ private:
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
-    auto getRefIfLoaded = [](mlir::Value val) -> mlir::Value {
+    auto getRefFromValue = [](mlir::Value val) -> mlir::Value {
       if (auto loadOp =
               mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
         return loadOp.getMemref();
+      if (!mlir::isa<fir::BaseBoxType>(val.getType()))
+        return val;
+      if (auto declOp =
+              mlir::dyn_cast_or_null<hlfir::DeclareOp>(val.getDefiningOp())) {
+        if (!declOp.getShape())
+          return val;
+        if (mlir::isa<fir::ReferenceType>(declOp.getMemref().getType()))
+          return declOp.getResults()[1];
+      }
       return val;
     };
 
-    mlir::Value rhsVal = getRefIfLoaded(rhs.getBase());
-    mlir::Value lhsVal = getRefIfLoaded(lhs.getBase());
+    auto getShapeFromDecl = [](mlir::Value val) -> mlir::Value {
+      if (!mlir::isa<fir::BaseBoxType>(val.getType()))
+        return {};
+      if (auto declOp =
+              mlir::dyn_cast_or_null<hlfir::DeclareOp>(val.getDefiningOp()))
+        return declOp.getShape();
+      return {};
+    };
+
+    mlir::Value rhsVal = getRefFromValue(rhs.getBase());
+    mlir::Value lhsVal = getRefFromValue(lhs.getBase());
+    // Get shape from the rhs if available otherwise get it from lhs.
+    mlir::Value shape = getShapeFromDecl(rhs.getBase());
+    if (!shape)
+      shape = getShapeFromDecl(lhs.getBase());
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::HostDevice);
       if (!rhs.isVariable()) {
+        mlir::Value base = rhs;
+        if (auto convertOp =
+                mlir::dyn_cast<fir::ConvertOp>(rhs.getDefiningOp()))
+          base = convertOp.getValue();
         // Special case if the rhs is a constant.
-        if (matchPattern(rhs.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(loc, rhs, lhsVal,
+        if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
+          builder.create<cuf::DataTransferOp>(loc, base, lhsVal, shape,
                                               transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(
               loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
           builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
-                                              transferKindAttr);
+                                              shape, transferKindAttr);
           builder.create<hlfir::EndAssociateOp>(loc, associate);
         }
       } else {
-        builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
+        builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                             transferKindAttr);
       }
       return;
@@ -4252,7 +4324,7 @@ private:
     if (!lhsIsDevice && rhsIsDevice) {
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
+      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                           transferKindAttr);
       return;
     }
@@ -4262,7 +4334,7 @@ private:
       assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
+      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
                                           transferKindAttr);
       return;
     }
@@ -4306,31 +4378,13 @@ private:
           addSymbol(sym,
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);
-          builder.create<cuf::DataTransferOp>(loc, addr, temp,
-                                              transferKindAttr);
+          builder.create<cuf::DataTransferOp>(
+              loc, addr, temp, /*shape=*/mlir::Value{}, transferKindAttr);
           ++nbDeviceResidentObject;
         }
       }
     }
     return temps;
-  }
-
-  // Check if the insertion point is currently in a device context. HostDevice
-  // subprogram are not considered fully device context so it will return false
-  // for it.
-  static bool isDeviceContext(fir::FirOpBuilder &builder) {
-    if (builder.getRegion().getParentOfType<cuf::KernelOp>())
-      return true;
-    if (auto funcOp =
-            builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
-      if (auto cudaProcAttr =
-              funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                  cuf::getProcAttrName())) {
-        return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
-               cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
-      }
-    }
-    return false;
   }
 
   void genDataAssignment(
@@ -4339,7 +4393,8 @@ private:
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isInDeviceContext = isDeviceContext(builder);
+    bool isInDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+
     bool isCUDATransfer = (Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs) ||
                            Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs)) &&
                           !isInDeviceContext;
@@ -6086,6 +6141,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module.get(),
                                   targetMachine.createDataLayout());
+  fir::setIdent(*module.get(), Fortran::common::getFlangFullVersion());
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(

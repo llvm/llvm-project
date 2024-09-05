@@ -138,7 +138,7 @@ public:
     FirPlaceHolder(mlir::Type t, int passedPosition, Property p,
                    llvm::ArrayRef<mlir::NamedAttribute> attrs)
         : type{t}, passedEntityPosition{passedPosition}, property{p},
-          attributes{attrs.begin(), attrs.end()} {}
+          attributes{attrs} {}
     /// Type for this input/output
     mlir::Type type;
     /// Position of related passedEntity in passedArguments.

@@ -324,13 +324,6 @@ namespace {
 
 class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   friend class InstVisitor<Verifier>;
-
-  // ISD::ArgFlagsTy::MemAlign only have 4 bits for alignment, so
-  // the alignment size should not exceed 2^15. Since encode(Align)
-  // would plus the shift value by 1, the alignment size should
-  // not exceed 2^14, otherwise it can NOT be properly lowered
-  // in backend.
-  static constexpr unsigned ParamMaxAlignment = 1 << 14;
   DominatorTree DT;
 
   /// When verifying a basic block, keep track of all of the
@@ -1013,9 +1006,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   Check(isa<PointerType>(Resolver->getFunctionType()->getReturnType()),
         "IFunc resolver must return a pointer", &GI);
 
-  const Type *ResolverFuncTy =
-      GlobalIFunc::getResolverFunctionType(GI.getValueType());
-  Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
+  Check(ResolverTy == PointerType::get(Context, GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
 }
 
@@ -2021,31 +2012,43 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 
   if (isa<PointerType>(Ty)) {
+    if (Attrs.hasAttribute(Attribute::Alignment)) {
+      Align AttrAlign = Attrs.getAlignment().valueOrOne();
+      Check(AttrAlign.value() <= Value::MaximumAlignment,
+            "huge alignment values are unsupported", V);
+    }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
-      if (Attrs.hasAttribute(Attribute::Alignment)) {
-        Align AttrAlign = Attrs.getAlignment().valueOrOne();
-        Align MaxAlign(ParamMaxAlignment);
-        Check(AttrAlign <= MaxAlign,
-              "Attribute 'align' exceed the max size 2^14", V);
-      }
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getByValType()->isSized(&Visited),
             "Attribute 'byval' does not support unsized types!", V);
+      Check(DL.getTypeAllocSize(Attrs.getByValType()).getKnownMinValue() <
+                (1ULL << 32),
+            "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getByRefType()->isSized(&Visited),
             "Attribute 'byref' does not support unsized types!", V);
+      Check(DL.getTypeAllocSize(Attrs.getByRefType()).getKnownMinValue() <
+                (1ULL << 32),
+            "huge 'byref' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::InAlloca)) {
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getInAllocaType()->isSized(&Visited),
             "Attribute 'inalloca' does not support unsized types!", V);
+      Check(DL.getTypeAllocSize(Attrs.getInAllocaType()).getKnownMinValue() <
+                (1ULL << 32),
+            "huge 'inalloca' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::Preallocated)) {
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getPreallocatedType()->isSized(&Visited),
             "Attribute 'preallocated' does not support unsized types!", V);
+      Check(
+          DL.getTypeAllocSize(Attrs.getPreallocatedType()).getKnownMinValue() <
+              (1ULL << 32),
+          "huge 'preallocated' arguments are unsupported", V);
     }
   }
 
@@ -2773,6 +2776,10 @@ void Verifier::visitFunction(const Function &F) {
 
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
+
+  if (Attrs.hasFnAttr(Attribute::Naked))
+    for (const Argument &Arg : F.args())
+      Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
 
   // Check that this function meets the restrictions on this calling convention.
   // Sometimes varargs is used for perfectly forwarding thunks, so some of these
@@ -3511,12 +3518,15 @@ void Verifier::visitCallBase(CallBase &Call) {
         "not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.",
         Call);
 
+  // Disallow passing/returning values with alignment higher than we can
+  // represent.
+  // FIXME: Consider making DataLayout cap the alignment, so this isn't
+  // necessary.
   auto VerifyTypeAlign = [&](Type *Ty, const Twine &Message) {
     if (!Ty->isSized())
       return;
     Align ABIAlign = DL.getABITypeAlign(Ty);
-    Align MaxAlign(ParamMaxAlignment);
-    Check(ABIAlign <= MaxAlign,
+    Check(ABIAlign.value() <= Value::MaximumAlignment,
           "Incorrect alignment of " + Message + " to called function!", Call);
   };
 
@@ -4134,8 +4144,10 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
     ConstantInt *High =
         mdconst::dyn_extract<ConstantInt>(Range->getOperand(2 * i + 1));
     Check(High, "The upper limit must be an integer!", High);
-    Check(High->getType() == Low->getType() &&
-          High->getType() == Ty->getScalarType(),
+
+    Check(High->getType() == Low->getType(), "Range pair types must match!",
+          &I);
+    Check(High->getType() == Ty->getScalarType(),
           "Range types must match instruction type!", &I);
 
     APInt HighV = High->getValue();
@@ -5110,6 +5122,7 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
+                F->getIntrinsicID() == Intrinsic::fake_use ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
@@ -5940,31 +5953,24 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::lrint:
-  case Intrinsic::llrint: {
-    Type *ValTy = Call.getArgOperand(0)->getType();
-    Type *ResultTy = Call.getType();
-    Check(
-        ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
-        "llvm.lrint, llvm.llrint: argument must be floating-point or vector "
-        "of floating-points, and result must be integer or vector of integers",
-        &Call);
-    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
-          "llvm.lrint, llvm.llrint: argument and result disagree on vector use",
-          &Call);
-    if (ValTy->isVectorTy()) {
-      Check(cast<VectorType>(ValTy)->getElementCount() ==
-                cast<VectorType>(ResultTy)->getElementCount(),
-            "llvm.lrint, llvm.llrint: argument must be same length as result",
-            &Call);
-    }
-    break;
-  }
+  case Intrinsic::llrint:
   case Intrinsic::lround:
   case Intrinsic::llround: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &Call);
+    auto *VTy = dyn_cast<VectorType>(ValTy);
+    auto *RTy = dyn_cast<VectorType>(ResultTy);
+    Check(ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
+          ExpectedName + ": argument must be floating-point or vector "
+                         "of floating-points, and result must be integer or "
+                         "vector of integers",
+          &Call);
+    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
+          ExpectedName + ": argument and result disagree on vector use", &Call);
+    if (VTy) {
+      Check(VTy->getElementCount() == RTy->getElementCount(),
+            ExpectedName + ": argument must be same length as result", &Call);
+    }
     break;
   }
   case Intrinsic::bswap: {
@@ -6086,11 +6092,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     VectorType *VecTy = dyn_cast<VectorType>(Call.getType());
     Check(VecTy && VecTy->getScalarType()->isIntegerTy() &&
               VecTy->getScalarSizeInBits() >= 8,
-          "experimental_stepvector only supported for vectors of integers "
+          "stepvector only supported for vectors of integers "
           "with a bitwidth of at least 8.",
           &Call);
     break;
@@ -6221,10 +6227,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
-    Check(llvm::any_of(CBR->getIndirectDests(),
-                       [LandingPadBB](const BasicBlock *IndDest) {
-                         return IndDest == LandingPadBB;
-                       }),
+    Check(llvm::is_contained(CBR->getIndirectDests(), LandingPadBB),
           "Intrinsic's corresponding callbr must have intrinsic's parent basic "
           "block in indirect destination list",
           &Call);
@@ -6322,6 +6325,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address first argument must be a GlobalValue");
     Check(cast<GlobalValue>(Arg0).isThreadLocal(),
           "llvm.threadlocal.address operand isThreadLocal() must be true");
+    break;
+  }
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cluster:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys: {
+    unsigned size = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(size == 128, " The only supported value for size operand is 128");
     break;
   }
   };

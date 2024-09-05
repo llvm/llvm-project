@@ -118,10 +118,10 @@ define amdgpu_kernel void @s_fdiv_f32_ninf(ptr addrspace(1) %out, float %a, floa
 ;
 ; GFX10-LABEL: s_fdiv_f32_ninf:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_scale_f32 v0, s4, s3, s3, s2
-; GFX10-NEXT:    v_div_scale_f32 v2, vcc_lo, s2, s3, s2
+; GFX10-NEXT:    v_div_scale_f32 v0, s0, s7, s7, s6
+; GFX10-NEXT:    v_div_scale_f32 v2, vcc_lo, s6, s7, s6
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v3, -v0, v1, 1.0
@@ -133,8 +133,8 @@ define amdgpu_kernel void @s_fdiv_f32_ninf(ptr addrspace(1) %out, float %a, floa
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_div_fixup_f32 v0, v0, s3, s2
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_div_fixup_f32 v0, v0, s7, s6
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_f32_ninf:
@@ -275,21 +275,21 @@ define amdgpu_kernel void @s_fdiv_f32_ieee(ptr addrspace(1) %out, float %a, floa
 ;
 ; GFX10-LABEL: s_fdiv_f32_ieee:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_scale_f32 v0, s4, s3, s3, s2
+; GFX10-NEXT:    v_div_scale_f32 v0, s0, s7, s7, s6
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX10-NEXT:    v_fma_f32 v2, -v0, v1, 1.0
 ; GFX10-NEXT:    v_fmac_f32_e32 v1, v2, v1
-; GFX10-NEXT:    v_div_scale_f32 v2, vcc_lo, s2, s3, s2
+; GFX10-NEXT:    v_div_scale_f32 v2, vcc_lo, s6, s7, s6
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v2, v1
 ; GFX10-NEXT:    v_fma_f32 v4, -v0, v3, v2
 ; GFX10-NEXT:    v_fmac_f32_e32 v3, v4, v1
 ; GFX10-NEXT:    v_fma_f32 v0, -v0, v3, v2
 ; GFX10-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_div_fixup_f32 v0, v0, s3, s2
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_div_fixup_f32 v0, v0, s7, s6
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_f32_ieee:
@@ -370,16 +370,16 @@ define amdgpu_kernel void @s_fdiv_25ulp_f32(ptr addrspace(1) %out, float %a, flo
 ;
 ; GFX10-LABEL: s_fdiv_25ulp_f32:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |s3|
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0x2f800000, s4
-; GFX10-NEXT:    v_mul_f32_e32 v1, s3, v0
+; GFX10-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |s7|
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0x2f800000, s0
+; GFX10-NEXT:    v_mul_f32_e32 v1, s7, v0
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX10-NEXT:    v_mul_f32_e32 v1, s2, v1
+; GFX10-NEXT:    v_mul_f32_e32 v1, s6, v1
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX10-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX10-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_25ulp_f32:
@@ -482,18 +482,18 @@ define amdgpu_kernel void @s_fdiv_25ulp_ieee_f32(ptr addrspace(1) %out, float %a
 ;
 ; GFX10-LABEL: s_fdiv_25ulp_ieee_f32:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_frexp_mant_f32_e32 v0, s3
-; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v1, s3
-; GFX10-NEXT:    v_frexp_mant_f32_e32 v2, s2
-; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v3, s2
+; GFX10-NEXT:    v_frexp_mant_f32_e32 v0, s7
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v1, s7
+; GFX10-NEXT:    v_frexp_mant_f32_e32 v2, s6
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v3, s6
 ; GFX10-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v1, v3, v1
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX10-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX10-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_25ulp_ieee_f32:
@@ -559,12 +559,12 @@ define amdgpu_kernel void @s_fdiv_fast_ieee_f32(ptr addrspace(1) %out, float %a,
 ;
 ; GFX10-LABEL: s_fdiv_fast_ieee_f32:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX10-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_rcp_f32_e32 v0, s7
+; GFX10-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_fast_ieee_f32:
@@ -623,12 +623,12 @@ define amdgpu_kernel void @s_fdiv_f32_fast_math(ptr addrspace(1) %out, float %a,
 ;
 ; GFX10-LABEL: s_fdiv_f32_fast_math:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX10-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_rcp_f32_e32 v0, s7
+; GFX10-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_f32_fast_math:
@@ -687,12 +687,12 @@ define amdgpu_kernel void @s_fdiv_ulp25_f32_fast_math(ptr addrspace(1) %out, flo
 ;
 ; GFX10-LABEL: s_fdiv_ulp25_f32_fast_math:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX10-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_rcp_f32_e32 v0, s7
+; GFX10-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_ulp25_f32_fast_math:
@@ -829,10 +829,10 @@ define amdgpu_kernel void @s_fdiv_f32_arcp_daz(ptr addrspace(1) %out, float %a, 
 ;
 ; GFX10-LABEL: s_fdiv_f32_arcp_daz:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_scale_f32 v0, s4, s3, s3, s2
-; GFX10-NEXT:    v_div_scale_f32 v2, vcc_lo, s2, s3, s2
+; GFX10-NEXT:    v_div_scale_f32 v0, s0, s7, s7, s6
+; GFX10-NEXT:    v_div_scale_f32 v2, vcc_lo, s6, s7, s6
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v3, -v0, v1, 1.0
@@ -844,8 +844,8 @@ define amdgpu_kernel void @s_fdiv_f32_arcp_daz(ptr addrspace(1) %out, float %a, 
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_div_fixup_f32 v0, v0, s3, s2
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_div_fixup_f32 v0, v0, s7, s6
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_f32_arcp_daz:
@@ -916,12 +916,12 @@ define amdgpu_kernel void @s_fdiv_f32_arcp_ninf(ptr addrspace(1) %out, float %a,
 ;
 ; GFX10-LABEL: s_fdiv_f32_arcp_ninf:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f32_e32 v0, s3
-; GFX10-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_rcp_f32_e32 v0, s7
+; GFX10-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fdiv_f32_arcp_ninf:

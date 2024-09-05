@@ -15,6 +15,7 @@
 #ifndef MLIR_CAPI_REWRITE_H
 #define MLIR_CAPI_REWRITE_H
 
+#include "mlir-c/Rewrite.h"
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/PatternMatch.h"
 

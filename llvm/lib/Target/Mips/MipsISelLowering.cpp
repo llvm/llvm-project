@@ -370,6 +370,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f64, Expand);
     setOperationAction(ISD::FMAXNUM, MVT::f64, Expand);
+  } else {
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
   }
 
   if (Subtarget.isGP64bit()) {
@@ -1251,6 +1254,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
   case ISD::FABS:               return lowerFABS(Op, DAG);
+  case ISD::FCANONICALIZE:
+    return lowerFCANONICALIZE(Op, DAG);
   case ISD::FRAMEADDR:          return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:         return lowerRETURNADDR(Op, DAG);
   case ISD::EH_RETURN:          return lowerEH_RETURN(Op, DAG);
@@ -2520,6 +2525,20 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
   return lowerFABS32(Op, DAG, Subtarget.hasExtractInsert());
 }
 
+SDValue MipsTargetLowering::lowerFCANONICALIZE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Operand = Op.getOperand(0);
+  SDNodeFlags Flags = Op->getFlags();
+
+  if (Flags.hasNoNaNs() || DAG.isKnownNeverNaN(Operand))
+    return Operand;
+
+  SDValue Quiet = DAG.getNode(ISD::FADD, DL, VT, Operand, Operand);
+  return DAG.getSelectCC(DL, Operand, Operand, Quiet, Operand, ISD::SETUO);
+}
+
 SDValue MipsTargetLowering::
 lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // check the depth
@@ -2991,7 +3010,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     } else {
       Reg = State.AllocateReg(F64Regs);
       // Shadow int registers
-      unsigned Reg2 = State.AllocateReg(IntRegs);
+      MCRegister Reg2 = State.AllocateReg(IntRegs);
       if (Reg2 == Mips::A1 || Reg2 == Mips::A3)
         State.AllocateReg(IntRegs);
       State.AllocateReg(IntRegs);

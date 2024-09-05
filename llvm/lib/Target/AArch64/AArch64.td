@@ -77,7 +77,7 @@ def SME2p1Unsupported : AArch64Unsupported;
 
 def SME2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSME2, HasSVE2orSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA,
-                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16orSMEF8F16],
+                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16orSMEF8F16, HasSMEB16B16],
                       SME2p1Unsupported.F);
 }
 

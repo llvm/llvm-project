@@ -84,8 +84,8 @@ public:
 
   // Returns whether Inst is compressed.
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   typedef std::tuple<unsigned, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
@@ -291,9 +291,10 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   emitNTLHint(MI);
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
-
+  }
 
   switch (MI->getOpcode()) {
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
@@ -301,11 +302,6 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   case RISCV::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
-    return;
-  case RISCV::PseudoRVVInitUndefM1:
-  case RISCV::PseudoRVVInitUndefM2:
-  case RISCV::PseudoRVVInitUndefM4:
-  case RISCV::PseudoRVVInitUndefM8:
     return;
   case TargetOpcode::STACKMAP:
     return LowerSTACKMAP(*OutStreamer, SM, *MI);
@@ -395,6 +391,15 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
     OS << *MCO.getExpr();
+
+  if (Offset.isMCSymbol())
+    MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
+  if (Offset.isBlockAddress()) {
+    const BlockAddress *BA = Offset.getBlockAddress();
+    MCSymbol *Sym = GetBlockAddressSymbol(BA);
+    MMI->getContext().registerInlineAsmLabel(Sym);
+  }
+
   OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
@@ -975,7 +980,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
     if (hasVLOutput && OpNo == 1)
       continue;
 
-    // Skip merge op. It should be the first operand after the defs.
+    // Skip passthru op. It should be the first operand after the defs.
     if (OpNo == MI->getNumExplicitDefs() && MO.isReg() && MO.isTied()) {
       assert(MCID.getOperandConstraint(OpNo, MCOI::TIED_TO) == 0 &&
              "Expected tied to first def.");

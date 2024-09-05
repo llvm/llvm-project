@@ -230,11 +230,10 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
     derivedType_ = from.derivedType_;
   }
   for (std::size_t i{0}; i < from.specificProcs_.size(); ++i) {
-    if (std::find_if(specificProcs_.begin(), specificProcs_.end(),
-            [&](const Symbol &mySymbol) {
-              return &mySymbol.GetUltimate() ==
-                  &from.specificProcs_[i]->GetUltimate();
-            }) == specificProcs_.end()) {
+    if (llvm::none_of(specificProcs_, [&](const Symbol &mySymbol) {
+          return &mySymbol.GetUltimate() ==
+              &from.specificProcs_[i]->GetUltimate();
+        })) {
       specificProcs_.push_back(from.specificProcs_[i]);
       bindingNames_.push_back(from.bindingNames_[i]);
     }
@@ -588,7 +587,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
-            os << ' ' << common::EnumToString(x.attr());
+            if (auto attr{x.attr()}) {
+              os << ' ' << common::EnumToString(*attr);
+            } else {
+              os << " (no attr)";
+            }
             DumpExpr(os, "init", x.init());
           },
           [&](const MiscDetails &x) {
@@ -739,9 +742,16 @@ const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
   return nullptr;
 }
 
-void TypeParamDetails::set_type(const DeclTypeSpec &type) {
+TypeParamDetails &TypeParamDetails::set_attr(common::TypeParamAttr attr) {
+  CHECK(!attr_);
+  attr_ = attr;
+  return *this;
+}
+
+TypeParamDetails &TypeParamDetails::set_type(const DeclTypeSpec &type) {
   CHECK(!type_);
   type_ = &type;
+  return *this;
 }
 
 bool GenericKind::IsIntrinsicOperator() const {

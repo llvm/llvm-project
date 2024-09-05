@@ -51,6 +51,8 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.OSUtil.osutil
     .exit_handler
+    .at_quick_exit
+    .atexit
 )
 
 add_entrypoint_object(
@@ -60,7 +62,7 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-    libc.config.linux.app_h
+  libc.config.app_h
 )
 
 add_entrypoint_object(
@@ -329,7 +331,12 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
 
     # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
-    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    # set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    if (LIBC_TARGET_OS_IS_DARWIN AND (LIBC_TARGET_ARCHITECTURE STREQUAL "arm"))
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO arm64)
+    else()
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    endif()
     if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
       set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv64)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
@@ -343,12 +350,14 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
     list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
-
-    list(APPEND SCUDO_DEPS
-      RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      )
+    
+    if (COMPILER_RT_BUILD_GWP_ASAN)
+      list(APPEND SCUDO_DEPS
+        RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        )
+    endif()
 
     add_entrypoint_external(
       malloc
@@ -385,8 +394,6 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
         malloc.h
       DEPENDS
         libc.src.__support.freelist_heap
-      COMPILE_OPTIONS
-        -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
     )
     get_target_property(freelist_malloc_is_skipped libc.src.stdlib.freelist_malloc "SKIPPED")
     if(LIBC_TARGET_OS_IS_BAREMETAL AND NOT freelist_malloc_is_skipped)
@@ -421,6 +428,83 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
+add_entrypoint_object(
+  strtof_l
+  SRCS
+    strtof_l.cpp
+  HDRS
+    strtof_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtod_l
+  SRCS
+    strtod_l.cpp
+  HDRS
+    strtod_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtold_l
+  SRCS
+    strtold_l.cpp
+  HDRS
+    strtold_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
+  strtol_l
+  SRCS
+    strtol_l.cpp
+  HDRS
+    strtol_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoll_l
+  SRCS
+    strtoll_l.cpp
+  HDRS
+    strtoll_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoul_l
+  SRCS
+    strtoul_l.cpp
+  HDRS
+    strtoul_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  strtoull_l
+  SRCS
+    strtoull_l.cpp
+  HDRS
+    strtoull_l.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_integer
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -438,14 +522,23 @@ if(LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       .${LIBC_TARGET_OS}.free
   )
-  add_entrypoint_external(
-    calloc
-  )
-  add_entrypoint_external(
+  add_entrypoint_object(
     realloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.realloc
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
+    calloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.calloc
+  )
+  add_entrypoint_object(
     aligned_alloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.aligned_alloc
   )
 endif()
 
@@ -462,15 +555,11 @@ add_entrypoint_object(
 
 # TODO: Move all exit functions to linux specific 
 
-if (TARGET libc.src.__support.threads.mutex)
-add_object_library(
+if(TARGET libc.src.__support.threads.mutex)
+add_header_library(
   exit_handler
-  SRCS
-    exit_handler.cpp
   HDRS
     exit_handler.h
-  CXX_STANDARD
-    20 # For constinit 
   DEPENDS
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
@@ -487,6 +576,8 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
+  CXX_STANDARD
+    20 # For constinit 
   DEPENDS
     .exit_handler
 )
@@ -497,8 +588,11 @@ add_entrypoint_object(
     at_quick_exit.cpp
   HDRS
     at_quick_exit.h
+  CXX_STANDARD
+    20 # For constinit 
   DEPENDS
     .exit_handler
+    .atexit
 )
 
 list(APPEND exit_deps

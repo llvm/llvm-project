@@ -475,7 +475,8 @@ public:
   }
 
   /// Update Str offset in .debug_str in .debug_str_offsets.
-  void updateAddressMap(uint32_t Index, uint32_t Address);
+  void updateAddressMap(uint32_t Index, uint32_t Address,
+                        const DWARFUnit &Unit);
 
   /// Get offset for given index in original .debug_str_offsets section.
   uint64_t getOffset(uint32_t Index) const { return StrOffsets[Index]; }
@@ -507,6 +508,8 @@ private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  [[maybe_unused]]
+  DenseSet<uint64_t> DebugStrOffsetFinalized;
   SmallVector<uint32_t, 5> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
   bool StrOffsetSectionWasModified = false;

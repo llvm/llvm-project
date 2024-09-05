@@ -1,0 +1,30 @@
+header: arpa-inet.h
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: htonl
+    standards:
+      - POSIX
+    return_type: uint32_t
+    arguments:
+      - type: uint32_t
+  - name: htons
+    standards:
+      - POSIX
+    return_type: uint16_t
+    arguments:
+      - type: uint16_t
+  - name: ntohl
+    standards:
+      - POSIX
+    return_type: uint32_t
+    arguments:
+      - type: uint32_t
+  - name: ntohs
+    standards:
+      - POSIX
+    return_type: uint16_t
+    arguments:
+      - type: uint16_t

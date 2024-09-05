@@ -366,6 +366,41 @@ llvm.func @fn_with_gl() {
 
 // -----
 
+// Test that imported entries correctly generates 'retainedNodes' in the
+// subprogram.
+
+llvm.func @imp_fn() {
+  llvm.return
+} loc(#loc2)
+
+#di_file = #llvm.di_file<"test.f90" in "">
+#di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>,
+  sourceLanguage = DW_LANG_Fortran95, file = #di_file, isOptimized = false,
+  emissionKind = Full>
+#di_module_1 = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "mod1">
+#di_module_2 = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "mod2">
+#di_subprogram_self_rec = #llvm.di_subprogram<recId = distinct[1]<>>
+#di_imported_entity_1 = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  scope = #di_subprogram_self_rec, entity = #di_module_1, file = #di_file, line = 1>
+#di_imported_entity_2 = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  scope = #di_subprogram_self_rec, entity = #di_module_2, file = #di_file, line = 1>
+#di_subprogram = #llvm.di_subprogram<id = distinct[2]<>, recId = distinct[1]<>,
+  compileUnit = #di_compile_unit, scope = #di_file, name = "imp_fn",
+  file = #di_file, subprogramFlags = Definition, type = #di_subroutine_type,
+  retainedNodes = #di_imported_entity_1, #di_imported_entity_2>
+#loc1 = loc("test.f90":12:14)
+#loc2 = loc(fused<#di_subprogram>[#loc1])
+
+// CHECK-DAG: ![[SP:[0-9]+]] = {{.*}}!DISubprogram(name: "imp_fn"{{.*}}retainedNodes: ![[NODES:[0-9]+]])
+// CHECK-DAG: ![[NODES]] = !{![[NODE1:[0-9]+]], ![[NODE2:[0-9]+]]}
+// CHECK-DAG: ![[NODE1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD1:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[NODE2]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD2:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[MOD1]] = !DIModule({{.*}}name: "mod1"{{.*}})
+// CHECK-DAG: ![[MOD2]] = !DIModule({{.*}}name: "mod2"{{.*}})
+
+// -----
+
 // Nameless and scopeless global constant.
 
 // CHECK-LABEL: @.str.1 = external constant [10 x i8]
@@ -413,7 +448,7 @@ llvm.func @func_debug_directives() {
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
 
 // Recursive type itself.
-#di_struct_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_struct_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 #di_ptr_inner = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #di_struct_self, sizeInBits = 64>
 #di_subroutine_inner = #llvm.di_subroutine_type<types = #di_null_type, #di_ptr_inner>
 #di_subprogram_inner = #llvm.di_subprogram<
@@ -467,7 +502,7 @@ llvm.func @class_method() {
 
 // Ensures composite types with a recursive scope work.
 
-#di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 #di_file = #llvm.di_file<"test.mlir" in "/">
 #di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
@@ -478,7 +513,7 @@ llvm.func @class_method() {
 llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
 
 // CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
-// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]]
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
@@ -490,7 +525,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // replaced with the recursive self reference.
 
 #di_file = #llvm.di_file<"test.mlir" in "/">
-#di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 
 #di_subroutine_type_inner = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram_inner = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type_inner>
@@ -510,7 +545,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // CHECK: distinct !DIGlobalVariable({{.*}}type: ![[VAR:[0-9]+]],
 // CHECK: ![[VAR]] = !DISubroutineType(types: ![[COMPS:[0-9]+]])
 // CHECK: ![[COMPS]] = !{![[COMP:[0-9]+]],
-// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]]
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
@@ -603,7 +638,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
  file = #file, isOptimized = false, emissionKind = Full>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
  file = #file, subprogramFlags = Definition>
-#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt>
+#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt, flags = Artificial>
 #ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
@@ -620,4 +655,4 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc2 = loc(fused<#sp>[#loc1])
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
-// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}})
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
