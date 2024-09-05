@@ -4,7 +4,7 @@
 #include "llvm/Pass.h"
 
 // The name of the trace function
-#define YK_TRACE_FUNCTION "yk_trace_basicblock"
+#define YK_TRACE_FUNCTION "__yk_trace_basicblock"
 
 namespace llvm {
 ModulePass *createYkBasicBlockTracerPass();
