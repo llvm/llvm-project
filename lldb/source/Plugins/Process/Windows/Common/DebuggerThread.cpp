@@ -57,7 +57,7 @@ Status DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
       "lldb.plugin.process-windows.secondary[?]",
       [this, launch_info] { return DebuggerThreadLaunchRoutine(launch_info); });
   if (!secondary_thread) {
-    result = Status(secondary_thread.takeError());
+    result = Status::FromError(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't launch debugger thread. {0}", result);
   }
 
