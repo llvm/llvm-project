@@ -126,3 +126,10 @@ struct Eg14{
 };
 // expected-warning@+1{{binding type 't' only applies to types containing SRV resources}}
 Eg14 e14 : register(t9);
+
+struct Eg15 {
+  float f[4];
+}; 
+// expected no error
+Eg15 e15 : register(c0);
+

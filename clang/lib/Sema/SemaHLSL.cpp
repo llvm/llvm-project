@@ -10,8 +10,11 @@
 
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -612,6 +615,9 @@ struct RegisterBindingFlags {
 
   bool ContainsNumeric = false;
   bool DefaultGlobals = false;
+
+  // used only when Resource == true
+  std::optional<llvm::dxil::ResourceClass> ResourceClass;
 };
 
 static bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
@@ -677,65 +683,38 @@ static const T *getSpecifiedHLSLAttrFromVarDecl(VarDecl *VD) {
   return getSpecifiedHLSLAttrFromRecordDecl<T>(TheRecordDecl);
 }
 
-static void updateFlagsFromType(QualType TheQualTy,
-                                RegisterBindingFlags &Flags);
+static void updateResourceClassFlagsFromRecordType(RegisterBindingFlags &Flags,
+                                                   const RecordType *RT) {
+  llvm::SmallVector<const Type *> TypesToScan;
+  TypesToScan.emplace_back(RT);
 
-static void updateResourceClassFlagsFromRecordDecl(RegisterBindingFlags &Flags,
-                                                   const RecordDecl *RD) {
-  if (!RD)
-    return;
-
-  if (RD->isCompleteDefinition()) {
-    for (auto Field : RD->fields()) {
-      QualType T = Field->getType();
-      updateFlagsFromType(T, Flags);
+  while (!TypesToScan.empty()) {
+    const Type *T = TypesToScan.pop_back_val();
+    while (T->isArrayType())
+      T = T->getArrayElementTypeNoTypeQual();
+    if (T->isIntegralOrEnumerationType() || T->isFloatingType()) {
+      Flags.ContainsNumeric = true;
+      continue;
     }
-  }
-}
+    const RecordType *RT = T->getAs<RecordType>();
+    if (!RT)
+      continue;
 
-static void updateFlagsFromType(QualType TheQualTy,
-                                RegisterBindingFlags &Flags) {
-  // if the member's type is a numeric type, set the ContainsNumeric flag
-  if (TheQualTy->isIntegralOrEnumerationType() || TheQualTy->isFloatingType()) {
-    Flags.ContainsNumeric = true;
-    return;
-  }
-
-  const clang::Type *TheBaseType = TheQualTy.getTypePtr();
-  while (TheBaseType->isArrayType())
-    TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
-  // otherwise, if the member's base type is not a record type, return
-  const RecordType *TheRecordTy = TheBaseType->getAs<RecordType>();
-  if (!TheRecordTy)
-    return;
-
-  RecordDecl *SubRecordDecl = TheRecordTy->getDecl();
-  const HLSLResourceClassAttr *Attr =
-      getSpecifiedHLSLAttrFromRecordDecl<HLSLResourceClassAttr>(SubRecordDecl);
-  // find the attr if it's on the member, or on any of the member's fields
-  if (Attr) {
-    llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
-    updateResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
-  }
-
-  // otherwise, dig deeper and recurse into the member
-  else {
-    updateResourceClassFlagsFromRecordDecl(Flags, SubRecordDecl);
+    const RecordDecl *RD = RT->getDecl();
+    for (FieldDecl *FD : RD->fields()) {
+      if (HLSLResourceClassAttr *RCAttr =
+              FD->getAttr<HLSLResourceClassAttr>()) {
+        updateResourceClassFlagsFromDeclResourceClass(
+            Flags, RCAttr->getResourceClass());
+        continue;
+      }
+      TypesToScan.emplace_back(FD->getType().getTypePtr());
+    }
   }
 }
 
 static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
                                                          Decl *TheDecl) {
-
-  // Cbuffers and Tbuffers are HLSLBufferDecl types
-  HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
-  // Samplers, UAVs, and SRVs are VarDecl types
-  VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
-
-  assert(((TheVarDecl && !CBufferOrTBuffer) ||
-          (!TheVarDecl && CBufferOrTBuffer)) &&
-         "either TheVarDecl or CBufferOrTBuffer should be set");
-
   RegisterBindingFlags Flags;
 
   // check if the decl type is groupshared
@@ -744,57 +723,59 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
     return Flags;
   }
 
-  if (!isDeclaredWithinCOrTBuffer(TheDecl)) {
-    // make sure the type is a basic / numeric type
-    if (TheVarDecl) {
-      QualType TheQualTy = TheVarDecl->getType();
-      // a numeric variable or an array of numeric variables
-      // will inevitably end up in $Globals buffer
-      const clang::Type *TheBaseType = TheQualTy.getTypePtr();
-      while (TheBaseType->isArrayType())
-        TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
-      if (TheBaseType->isIntegralType(S.getASTContext()) ||
-          TheBaseType->isFloatingType())
-        Flags.DefaultGlobals = true;
-    }
-  }
-
-  if (CBufferOrTBuffer) {
+  // Cbuffers and Tbuffers are HLSLBufferDecl types
+  if (HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl)) {
     Flags.Resource = true;
-    if (CBufferOrTBuffer->isCBuffer())
-      Flags.CBV = true;
-    else
-      Flags.SRV = true;
-  } else if (TheVarDecl) {
+    Flags.ResourceClass = CBufferOrTBuffer->isCBuffer()
+                              ? llvm::dxil::ResourceClass::CBuffer
+                              : llvm::dxil::ResourceClass::SRV;
+  }
+  // Samplers, UAVs, and SRVs are VarDecl types
+  else if (VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl)) {
     const HLSLResourceClassAttr *resClassAttr =
         getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
-
     if (resClassAttr) {
-      llvm::hlsl::ResourceClass DeclResourceClass =
-          resClassAttr->getResourceClass();
       Flags.Resource = true;
-      updateResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
+      Flags.ResourceClass = resClassAttr->getResourceClass();
     } else {
       const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
       while (TheBaseType->isArrayType())
         TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
-      if (TheBaseType->isArithmeticType())
+
+      if (TheBaseType->isArithmeticType()) {
         Flags.Basic = true;
-      else if (TheBaseType->isRecordType()) {
+        if (!isDeclaredWithinCOrTBuffer(TheDecl) &&
+            (TheBaseType->isIntegralType(S.getASTContext()) ||
+             TheBaseType->isFloatingType()))
+          Flags.DefaultGlobals = true;
+      } else if (TheBaseType->isRecordType()) {
         Flags.UDT = true;
         const RecordType *TheRecordTy = TheBaseType->getAs<RecordType>();
-        assert(TheRecordTy && "The Qual Type should be Record Type");
-        const RecordDecl *TheRecordDecl = TheRecordTy->getDecl();
-        // recurse through members, set appropriate resource class flags.
-        updateResourceClassFlagsFromRecordDecl(Flags, TheRecordDecl);
+        updateResourceClassFlagsFromRecordType(Flags, TheRecordTy);
       } else
         Flags.Other = true;
     }
+  } else {
+    llvm_unreachable("expected be VarDecl or HLSLBufferDecl");
   }
   return Flags;
 }
 
 enum class RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
+
+static RegisterType getRegisterType(llvm::dxil::ResourceClass RC) {
+  switch (RC) {
+  case llvm::dxil::ResourceClass::SRV:
+    return RegisterType::SRV;
+  case llvm::dxil::ResourceClass::UAV:
+    return RegisterType::UAV;
+  case llvm::dxil::ResourceClass::CBuffer:
+    return RegisterType::CBuffer;
+  case llvm::dxil::ResourceClass::Sampler:
+    return RegisterType::Sampler;
+  }
+  llvm_unreachable("unexpected ResourceClass value");
+}
 
 static RegisterType getRegisterType(StringRef Slot) {
   switch (Slot[0]) {
@@ -856,15 +837,10 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
                                           Decl *TheDecl, RegisterType regType) {
 
-  // Samplers, UAVs, and SRVs are VarDecl types
-  VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
-  // Cbuffers and Tbuffers are HLSLBufferDecl types
-  HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
-
   // exactly one of these two types should be set
-  assert(((TheVarDecl && !CBufferOrTBuffer) ||
-          (!TheVarDecl && CBufferOrTBuffer)) &&
-         "either TheVarDecl or CBufferOrTBuffer should be set");
+  assert(((isa<VarDecl>(TheDecl) && !isa<HLSLBufferDecl>(TheDecl)) ||
+          (!isa<VarDecl>(TheDecl) && isa<HLSLBufferDecl>(TheDecl))) &&
+         "expecting VarDecl or HLSLBufferDecl");
 
   RegisterBindingFlags Flags = HLSLFillRegisterBindingFlags(S, TheDecl);
   assert((int)Flags.Other + (int)Flags.Resource + (int)Flags.Basic +
@@ -886,34 +862,8 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
-    const HLSLResourceClassAttr *resClassAttr = nullptr;
-    if (CBufferOrTBuffer) {
-      resClassAttr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
-    } else if (TheVarDecl) {
-      resClassAttr =
-          getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
-    }
-
-    assert(resClassAttr &&
-           "any decl that set the resource flag on analysis should "
-           "have a resource class attribute attached.");
-    const llvm::hlsl::ResourceClass DeclResourceClass =
-        resClassAttr->getResourceClass();
-
-    // confirm that the register type is bound to its expected resource class
-    static RegisterType ExpectedRegisterTypesForResourceClass[] = {
-        RegisterType::SRV,
-        RegisterType::UAV,
-        RegisterType::CBuffer,
-        RegisterType::Sampler,
-    };
-    assert((size_t)DeclResourceClass <
-               std::size(ExpectedRegisterTypesForResourceClass) &&
-           "DeclResourceClass has unexpected value");
-
-    RegisterType ExpectedRegisterType =
-        ExpectedRegisterTypesForResourceClass[(int)DeclResourceClass];
-    if (regType != ExpectedRegisterType) {
+    RegisterType expRegType = getRegisterType(Flags.ResourceClass.value());
+    if (regType != expRegType) {
       S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
           << regTypeNum;
     }
@@ -955,7 +905,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 }
 
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
-  if (dyn_cast<VarDecl>(TheDecl)) {
+  if (isa<VarDecl>(TheDecl)) {
     if (SemaRef.RequireCompleteType(TheDecl->getBeginLoc(),
                                     cast<ValueDecl>(TheDecl)->getType(),
                                     diag::err_incomplete_type))
@@ -1123,13 +1073,11 @@ class DiagnoseHLSLAvailability
 
   // Helper methods for dealing with shader stage bitmap
   void AddToScannedFunctions(const FunctionDecl *FD) {
-    unsigned &ScannedStages = ScannedDecls.getOrInsertDefault(FD);
+    unsigned &ScannedStages = ScannedDecls[FD];
     ScannedStages |= CurrentShaderStageBit;
   }
 
-  unsigned GetScannedStages(const FunctionDecl *FD) {
-    return ScannedDecls.getOrInsertDefault(FD);
-  }
+  unsigned GetScannedStages(const FunctionDecl *FD) { return ScannedDecls[FD]; }
 
   bool WasAlreadyScannedInCurrentStage(const FunctionDecl *FD) {
     return WasAlreadyScannedInCurrentStage(GetScannedStages(FD));
@@ -1655,6 +1603,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   }
   return false;
+}
+
+bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+
+  // check if it's a builtin type first (simple check, no need to cache it)
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLIntangibleType();
+
+  // unwrap arrays
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+
+  const RecordType *RT =
+      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
+  if (!RT)
+    return false;
+
+  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+  assert(RD != nullptr &&
+         "all HLSL struct and classes should be CXXRecordDecl");
+  return RD->isHLSLIntangible();
 }
 
 static void BuildFlattenedTypeList(QualType BaseTy,
