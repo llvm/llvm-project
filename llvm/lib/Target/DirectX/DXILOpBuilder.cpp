@@ -123,8 +123,7 @@ static OverloadKind getOverloadKind(Type *Ty) {
   case Type::StructTyID:
     return OverloadKind::ObjectType;
   default:
-    llvm_unreachable("invalid overload type");
-    return OverloadKind::VOID;
+    return OverloadKind::UNDEFINED;
   }
 }
 
