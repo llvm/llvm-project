@@ -135,7 +135,7 @@ static bool hasSameExtendedValue(llvm::APSInt X, llvm::APSInt Y) {
 }
 
 /// The kind of PartialOrdering we're performing template argument deduction
-/// for (C++0x [temp.deduct.partial]).
+/// for (C++11 [temp.deduct.partial]).
 enum class PartialOrderingKind { None, NonCall, Call };
 
 static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
