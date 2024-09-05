@@ -420,6 +420,8 @@ private:
   std::unique_ptr<llvm::DenseMap<StringRef, GlobalResolution>>
       GlobalResolutions;
 
+  void releaseGlobalResolutionsMemory();
+
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
                             bool InSummary);

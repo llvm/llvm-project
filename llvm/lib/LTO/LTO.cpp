@@ -695,6 +695,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
   }
 }
 
+void LTO::releaseGlobalResolutionsMemory() {
+  // Release GlobalResolutions dense-map itself.
+  GlobalResolutions.reset();
+  // Release the string saver memory.
+  GlobalResolutionSymbolSaver.reset();
+  Alloc.reset();
+}
+
 static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
                                   ArrayRef<SymbolResolution> Res) {
   StringRef Path = Input->getName();
@@ -1811,10 +1819,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // are no further accesses. We specifically want to do this before computing
   // cross module importing, which adds to peak memory via the computed import
   // and export lists.
-  GlobalResolutions.reset();
-  // Release the string saver memory.
-  GlobalResolutionSymbolSaver.reset();
-  Alloc.reset();
+  releaseGlobalResolutionsMemory();
 
   if (Conf.OptLevel > 0)
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,

@@ -1745,7 +1745,7 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
   if (!sym)
-    sym = symtab.insert(saver().save(objSym.getName()));
+    sym = symtab.insert(unique_saver().save(objSym.getName()));
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
@@ -1797,9 +1797,14 @@ void BitcodeFile::parseLazy() {
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
-      auto *sym = symtab.insert(saver().save(irSym.getName()));
+      auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
+    } else {
+      // Keep copies of per-module undefined symbols for LTO::GlobalResolutions
+      // usage.
+      [[maybe_unused]] StringRef SymbolRef =
+          unique_saver().save(irSym.getName());
     }
 }
 
