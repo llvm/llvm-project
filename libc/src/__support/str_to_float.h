@@ -1210,7 +1210,7 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
-#ifndef LIBC_HAS_SANITIZER
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
   if (LIBC_UNLIKELY(arg == nullptr)) {
     // Use volatile to prevent undefined behavior of dereferencing nullptr.
     volatile const char *crashing = arg;
