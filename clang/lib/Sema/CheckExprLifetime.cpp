@@ -288,7 +288,8 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
         // Map and set types.
         .Cases("find", "equal_range", "lower_bound", "upper_bound", true)
         .Default(false);
-  } else if (Callee->getReturnType()->isReferenceType()) {
+  }
+  if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
       return OO == OverloadedOperatorKind::OO_Subscript ||
@@ -316,7 +317,8 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
         .Cases("end", "rend", "cend", "crend", true)
         .Case("data", true)
         .Default(false);
-  } else if (FD->getReturnType()->isReferenceType()) {
+  }
+  if (FD->getReturnType()->isReferenceType()) {
     return llvm::StringSwitch<bool>(FD->getName())
         .Cases("get", "any_cast", true)
         .Default(false);
