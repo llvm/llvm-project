@@ -7524,8 +7524,10 @@ LoopVectorizationPlanner::executePlan(
       "expanded SCEVs to reuse can only be used during epilogue vectorization");
   (void)IsEpilogueVectorization;
 
-  VPlanTransforms::interleaveByUF(
-      BestVPlan, BestUF, OrigLoop->getHeader()->getModule()->getContext());
+  // TODO: Move to VPlan transform stage once the transition to the VPlan-based
+  // cost model is complete for better cost estimates.
+  VPlanTransforms::unrollByUF(BestVPlan, BestUF,
+                              OrigLoop->getHeader()->getModule()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF

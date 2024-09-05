@@ -115,7 +115,7 @@ struct VPlanTransforms {
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
       VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
 
-  static void interleaveByUF(VPlan &Plan, unsigned IC, LLVMContext &Ctx);
+  static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
 };
 
 } // namespace llvm

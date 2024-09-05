@@ -164,8 +164,8 @@ public:
 
   VPInstruction *createFPOp(unsigned Opcode,
                             std::initializer_list<VPValue *> Operands,
-                            DebugLoc DL = {}, const Twine &Name = "",
-                            FastMathFlags FMFs = {}) {
+                            FastMathFlags FMFs = {}, DebugLoc DL = {},
+                            const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, FMFs, DL, Name));
   }

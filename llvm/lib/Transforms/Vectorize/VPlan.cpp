@@ -577,7 +577,9 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   return SplitBlock;
 }
 
-template <typename T> static T *getEnclosingLoopRegionImpl(T *P) {
+/// Return the enclosing loop region for region \p P. The templated version is
+/// used to support both const and non-const block arguments.
+template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
   if (P && P->isReplicator()) {
     P = P->getParent();
     assert(!cast<VPRegionBlock>(P)->isReplicator() &&
@@ -587,11 +589,11 @@ template <typename T> static T *getEnclosingLoopRegionImpl(T *P) {
 }
 
 const VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() const {
-  return getEnclosingLoopRegionImpl(getParent());
+  return getEnclosingLoopRegionForRegion(getParent());
 }
 
 VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
-  return getEnclosingLoopRegionImpl(getParent());
+  return getEnclosingLoopRegionForRegion(getParent());
 }
 
 static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
@@ -1069,8 +1071,8 @@ void VPlan::execute(VPTransformState *State) {
 
       // When the VPlan has been unrolled, chain together the steps of the
       // unrolled parts together.
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R) && R.getNumOperands() == 4)
-        Inc->setOperand(0, State->get(R.getOperand(3), 0));
+      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+        Inc->setOperand(0, State->get(IV->getUnrolledPart(), 0));
       continue;
     }
 

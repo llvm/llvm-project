@@ -728,6 +728,9 @@ public:
 
   PHINode *getPhi() const { return Phi; }
 
+  /// Live-outs are marked as only using the first part during the transtition
+  /// to unrolling directly on VPlan.
+  /// TODO: Remove after unroller transition.
   bool onlyFirstPartUsed(const VPValue *Op) const override { return true; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1404,9 +1407,6 @@ public:
   /// Returns true if this VPInstruction's operands are single scalars and the
   /// result is also a single scalar.
   bool isSingleScalar() const;
-
-  /// Return the interleave count from VPInstruction's last operand.
-  unsigned getInterleaveCount() const;
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
@@ -1695,7 +1695,8 @@ public:
   bool onlyFirstPartUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getOperand(0);
+    assert(getNumOperands() <= 2 && "must have a single operand");
+    return true;
   }
 
   VPVectorPointerRecipe *clone() override {
@@ -1703,8 +1704,8 @@ public:
                                      isInBounds(), getDebugLoc());
   }
 
-  /// Return the part associated with this vector pointer.
-  unsigned getPartForRecipe() const;
+  /// Return the unroll part for this vector pointer.
+  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1870,6 +1871,12 @@ public:
   Type *getScalarType() const {
     return Trunc ? Trunc->getType() : IV->getType();
   }
+
+  /// Returns the optional VPValue representing the value of this induction at
+  /// the last unrolled part, if it exists. If it does not exist.
+  VPValue *getUnrolledPart() {
+    return getNumOperands() == 4 ? getOperand(3) : this;
+  }
 };
 
 class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe {
@@ -1908,6 +1915,9 @@ public:
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
+
+  /// Return the unroll part for this reduction phi.
+  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2047,8 +2057,8 @@ public:
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
 
-  /// Return the part associated with this reduction phi.
-  unsigned getPartForRecipe() const;
+  /// Return the unroll part for this reduction phi.
+  unsigned getUnrollPart() const;
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -2814,7 +2824,8 @@ public:
 
   VPActiveLaneMaskPHIRecipe *clone() override {
     auto *R = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
-    R->addOperand(getOperand(1));
+    if (getNumOperands() == 2)
+      R->addOperand(getOperand(1));
     return R;
   }
 
@@ -2893,8 +2904,8 @@ public:
   /// step = <VF*UF, VF*UF, ..., VF*UF>.
   void execute(VPTransformState &State) override;
 
-  /// Return the part associated with this widened IV.
-  unsigned getPartForRecipe() const;
+  /// Return the unroll part for this widened IV.
+  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3009,8 +3020,8 @@ public:
     return true;
   }
 
-  /// Return the part associated with this scalar step
-  unsigned getPartForRecipe() const;
+  /// Return the unroll part for this scalar step
+  unsigned getUnrollPart() const;
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
@@ -3457,6 +3468,10 @@ public:
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
+  unsigned getUF() const {
+    assert(UFs.size() == 1);
+    return UFs[0];
+  }
 
   void setUF(unsigned UF) {
     assert(hasUF(UF) && "Cannot set the UF not already in plan");
@@ -3642,13 +3657,16 @@ public:
     connectBlocks(BlockPtr, NewBlock);
   }
 
+  /// Insert disconnected block \p NewBlock before \p Blockptr. First
+  /// disconnects all predecessors of \p BlockPtr and connects them to \p
+  /// NewBlock. Add \p NewBlock as predecessor of \p BlockPtr and \p BlockPtr as
+  /// successor of \p NewBlock.
   static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
     assert(NewBlock->getSuccessors().empty() &&
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Preds(BlockPtr->predecessors());
-    for (VPBlockBase *Pred : Preds) {
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
       disconnectBlocks(Pred, BlockPtr);
       connectBlocks(Pred, NewBlock);
     }
@@ -3851,39 +3869,6 @@ public:
 
 namespace vputils {
 
-/// Checks if \p C is uniform across all VF lanes and UF parts. It is considered
-/// as such if it is either loop invariant (defined outside the vector region)
-/// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
-inline bool isUniformAcrossVFsAndUFs(VPValue *V) {
-  // Loop invariants are uniform:
-  if (V->isDefinedOutsideVectorRegions())
-    return true;
-
-  auto *R = V->getDefiningRecipe();
-  // Canonical IV chain is uniform:
-  auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
-  if (R == CanonicalIV || V == CanonicalIV->getBackedgeValue())
-    return true;
-
-  // DerivedIV is uniform:
-  if (isa<VPDerivedIVRecipe>(R))
-    return true;
-
-  // Loads and stores that are uniform across VF lanes are handled by
-  // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if all
-  // their operands are invariant:
-  if (isa<VPReplicateRecipe>(V) && cast<VPReplicateRecipe>(V)->isUniform() &&
-      (isa<LoadInst, StoreInst>(V->getUnderlyingValue())) &&
-      all_of(R->operands(),
-             [](VPValue *Op) { return Op->isDefinedOutsideVectorRegions(); }))
-    return true;
-
-  return isa<VPScalarCastRecipe, VPWidenCastRecipe>(R) &&
-         (R->getOperand(0)->isLiveIn() ||
-          isa<VPDerivedIVRecipe>(R->getOperand(0)) ||
-          isa<VPCanonicalIVPHIRecipe>(R->getOperand(0)));
-}
 
 } // end namespace vputils
 
