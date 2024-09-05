@@ -3537,47 +3537,43 @@ define <16 x i8> @PR107289(<16 x i8> %0) {
 ; SSE2-LABEL: PR107289:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm1, %rcx
 ; SSE2-NEXT:    shldq $8, %rax, %rcx
-; SSE2-NEXT:    shlq $8, %rax
 ; SSE2-NEXT:    movq %rcx, %xmm1
-; SSE2-NEXT:    movq %rax, %xmm0
+; SSE2-NEXT:    psllq $8, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: PR107289:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq %xmm0, %rax
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSSE3-NEXT:    movq %xmm0, %rcx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-NEXT:    movq %xmm1, %rcx
 ; SSSE3-NEXT:    shldq $8, %rax, %rcx
-; SSSE3-NEXT:    shlq $8, %rax
 ; SSSE3-NEXT:    movq %rcx, %xmm1
-; SSSE3-NEXT:    movq %rax, %xmm0
+; SSSE3-NEXT:    psllq $8, %xmm0
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: PR107289:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pextrq $1, %xmm0, %rax
-; SSE41-NEXT:    movq %xmm0, %rcx
-; SSE41-NEXT:    shldq $8, %rcx, %rax
-; SSE41-NEXT:    shlq $8, %rcx
-; SSE41-NEXT:    movq %rax, %xmm1
-; SSE41-NEXT:    movq %rcx, %xmm0
+; SSE41-NEXT:    movq %xmm0, %rax
+; SSE41-NEXT:    pextrq $1, %xmm0, %rcx
+; SSE41-NEXT:    shldq $8, %rax, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    psllq $8, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR107289:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX-NEXT:    vmovq %xmm0, %rcx
-; AVX-NEXT:    shldq $8, %rcx, %rax
-; AVX-NEXT:    shlq $8, %rcx
-; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX-NEXT:    shldq $8, %rax, %rcx
 ; AVX-NEXT:    vmovq %rcx, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vpsllq $8, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq
   %src = bitcast <16 x i8> %0 to i128
   %shl = shl i128 %src, 8
