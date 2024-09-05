@@ -542,7 +542,7 @@ private:
 
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags,
-                     SmallVector<ValueInfo, 0> Refs)
+                     SmallVectorImpl<ValueInfo> &&Refs)
       : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
     assert((K != AliasKind || Refs.empty()) &&
            "Expect no references for AliasSummary");
@@ -914,7 +914,7 @@ private:
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
-                  uint64_t EntryCount, SmallVector<ValueInfo, 0> Refs,
+                  uint64_t EntryCount, SmallVectorImpl<ValueInfo> &&Refs,
                   std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
@@ -1167,7 +1167,7 @@ public:
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
-                   SmallVector<ValueInfo, 0> Refs)
+                   SmallVectorImpl<ValueInfo> &&Refs)
       : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)),
         VarFlags(VarFlags) {}
 

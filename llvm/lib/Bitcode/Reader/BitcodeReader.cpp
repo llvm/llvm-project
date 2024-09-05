@@ -7508,7 +7508,7 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
     parseTypeIdCompatibleVtableInfo(Record, Slot, TypeId);
 }
 
-static void setSpecialRefs(SmallVector<ValueInfo, 0> &Refs, unsigned ROCnt,
+static void setSpecialRefs(SmallVectorImpl<ValueInfo> &Refs, unsigned ROCnt,
                            unsigned WOCnt) {
   // Readonly and writeonly refs are in the end of the refs list.
   assert(ROCnt + WOCnt <= Refs.size());
