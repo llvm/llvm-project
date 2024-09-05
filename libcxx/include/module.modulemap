@@ -294,13 +294,13 @@ module std_stdexcept [system] {
 }
 module std_stop_token [system] {
   header "stop_token"
-  private header "__stop_token/atomic_unique_lock.h"
-  private header "__stop_token/intrusive_list_view.h"
-  private header "__stop_token/intrusive_shared_ptr.h"
-  private header "__stop_token/stop_callback.h"
-  private header "__stop_token/stop_source.h"
-  private header "__stop_token/stop_state.h"
-  private header "__stop_token/stop_token.h"
+  module atomic_unique_lock     { header "__stop_token/atomic_unique_lock.h" }
+  module intrusive_list_view    { header "__stop_token/intrusive_list_view.h" }
+  module intrusive_shared_ptr   { header "__stop_token/intrusive_shared_ptr.h" }
+  module stop_callback          { header "__stop_token/stop_callback.h" }
+  module stop_source            { header "__stop_token/stop_source.h" }
+  module stop_state             { header "__stop_token/stop_state.h" }
+  module stop_token             { header "__stop_token/stop_token.h" }
   export *
 }
 module std_streambuf [system] {
