@@ -21782,12 +21782,10 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
-      !Subtarget->isNeonAvailable())
+  bool Scalable = N->getValueType(0).isScalableVector();
+  if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue();
-
-  // Fixed-width requires the dotprod feature, both for Neon and SVE
-  if (!N->getValueType(0).isScalableVT() && !Subtarget->hasDotProd())
+  if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
     return SDValue();
 
   SDLoc DL(N);
