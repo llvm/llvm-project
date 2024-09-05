@@ -1436,6 +1436,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), 8);
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.flags |= MachineMemOperand::MOLoad;
+    return true;
+  }
   default:
     return false;
   }
@@ -9926,6 +9933,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
+  }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    // For non-global address space preserve the chain and remove the call.
+    if (!AMDGPU::isFlatGlobalAddrSpace(cast<MemSDNode>(Op)->getAddressSpace()))
+      return Op.getOperand(0);
+    return Op;
   }
   case Intrinsic::amdgcn_s_buffer_prefetch_data: {
     SDValue Ops[] = {

@@ -1154,6 +1154,27 @@ defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 let SubtargetPredicate = isGFX12Plus in {
   def : GCNPat <
+    (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
+    (S_PREFETCH_DATA $sbase, $offset, $len, 0)
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), (i32 SReg_32:$len)),
+    (S_PREFETCH_DATA $sbase, 0, $len, 0)
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), imm:$len),
+    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), imm:$len),
+    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len))
+
+  >;
+
+  def : GCNPat <
     (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), (i32 SReg_32:$len)),
     (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, $len, 0)
   >;

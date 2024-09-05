@@ -51,7 +51,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
-    UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram)
+    UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
