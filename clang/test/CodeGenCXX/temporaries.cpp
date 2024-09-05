@@ -524,7 +524,7 @@ namespace Elision {
     // CHECK-NEXT: [[BT2:%.*]] = alloca [[B]], align 8
 
     // CHECK:      call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT0]])
-    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], ptr [[BT0]], i32 0, i32 0
+    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT0]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[AT0]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE(ptr noundef [[AT0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[AT0]])
@@ -532,13 +532,13 @@ namespace Elision {
     takeA(B().a);
 
     // CHECK-NEXT: call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT1]])
-    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], ptr [[BT1]], i32 0, i32 0
+    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT1]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[X]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev(ptr {{[^,]*}} [[BT1]])
     A x = B().a;
 
     // CHECK-NEXT: call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT2]])
-    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], ptr [[BT2]], i32 0, i32 0
+    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT2]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[RET:%.*]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev(ptr {{[^,]*}} [[BT2]])
     return B().a;
@@ -718,7 +718,7 @@ namespace MultipleExtension {
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e1E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i32 0, i32 2)
+  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[TEMPE]], i32 0, i32 2)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[TEMPE]]
   // CHECK: store {{.*}} @[[TEMPE]], ptr @_ZN17MultipleExtension2e1E, align 8
 
@@ -732,7 +732,7 @@ namespace MultipleExtension {
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e2E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds ({{.*}} @[[E]], i32 0, i32 2)
+  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[E]], i32 0, i32 2)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[E]]
 
 

@@ -697,6 +697,10 @@ void TypeSystemClang::CreateASTContext() {
   TargetInfo *target_info = getTargetInfo();
   if (target_info)
     m_ast_up->InitBuiltinTypes(*target_info);
+  else if (auto *log = GetLog(LLDBLog::Expressions))
+    LLDB_LOG(log,
+             "Failed to initialize builtin ASTContext types for target '{0}'",
+             m_target_triple);
 
   GetASTMap().Insert(m_ast_up.get(), this);
 
@@ -4237,6 +4241,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   // We don't handle pack indexing yet
   case clang::Type::PackIndexing:
     break;
+
+  case clang::Type::HLSLAttributedResource:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5144,6 +5151,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   // We don't handle pack indexing yet
   case clang::Type::PackIndexing:
     break;
+
+  case clang::Type::HLSLAttributedResource:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5304,6 +5314,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   // We don't handle pack indexing yet
   case clang::Type::PackIndexing:
+    break;
+
+  case clang::Type::HLSLAttributedResource:
     break;
   }
   // We don't know hot to display this type...

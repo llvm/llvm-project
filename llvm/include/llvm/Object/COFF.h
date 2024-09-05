@@ -1085,6 +1085,7 @@ public:
   Expected<SubtargetFeatures> getFeatures() const override {
     return SubtargetFeatures();
   }
+  std::unique_ptr<MemoryBuffer> getHybridObjectView() const;
 
   import_directory_iterator import_directory_begin() const;
   import_directory_iterator import_directory_end() const;

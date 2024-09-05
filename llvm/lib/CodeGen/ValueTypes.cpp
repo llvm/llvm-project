@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -161,6 +162,12 @@ TypeSize EVT::getExtendedSizeInBits() const {
 std::string EVT::getEVTString() const {
   switch (V.SimpleTy) {
   default:
+    if (isRISCVVectorTuple()) {
+      unsigned Sz = getSizeInBits();
+      unsigned NF = getRISCVVectorTupleNumFields();
+      unsigned MinNumElts = Sz / (NF * 8);
+      return "riscv_nxv" + utostr(MinNumElts) + "i8x" + utostr(NF);
+    }
     if (isVector())
       return (isScalableVector() ? "nxv" : "v") +
              utostr(getVectorElementCount().getKnownMinValue()) +
@@ -249,6 +256,14 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
       return MVT(MVT::aarch64svcount);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
+    if (TargetExtTy->getName() == "riscv.vector.tuple") {
+      unsigned Sz = cast<ScalableVectorType>(TargetExtTy->getTypeParameter(0))
+                        ->getMinNumElements() *
+                    8;
+      unsigned NF = TargetExtTy->getIntParameter(0);
+
+      return MVT::getRISCVVectorTupleVT(Sz * NF, NF);
+    }
     if (HandleUnknown)
       return MVT(MVT::Other);
     llvm_unreachable("Unknown target ext type!");
@@ -287,6 +302,23 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
                        VTy->getElementCount());
   }
   }
+}
+
+const fltSemantics &MVT::getFltSemantics() const {
+  switch (getScalarType().SimpleTy) {
+  default: llvm_unreachable("Unknown FP format");
+  case MVT::f16:     return APFloat::IEEEhalf();
+  case MVT::bf16:    return APFloat::BFloat();
+  case MVT::f32:     return APFloat::IEEEsingle();
+  case MVT::f64:     return APFloat::IEEEdouble();
+  case MVT::f80:     return APFloat::x87DoubleExtended();
+  case MVT::f128:    return APFloat::IEEEquad();
+  case MVT::ppcf128: return APFloat::PPCDoubleDouble();
+  }
+}
+
+const fltSemantics &EVT::getFltSemantics() const {
+  return getScalarType().getSimpleVT().getFltSemantics();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

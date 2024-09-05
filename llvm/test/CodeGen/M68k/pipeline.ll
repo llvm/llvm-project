@@ -40,6 +40,9 @@
 ; CHECK-NEXT:      CodeGen Prepare
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Exception handling preparation
+; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:      Function Alias Analysis Results
+; CHECK-NEXT:      ObjC ARC contraction
 ; CHECK-NEXT:      Prepare callbr
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
@@ -131,6 +134,7 @@
 ; CHECK-NEXT:      Implement the 'patchable-function' attribute
 ; CHECK-NEXT:      M68k MOVEM collapser pass
 ; CHECK-NEXT:      Contiguously Lay Out Funclets
+; CHECK-NEXT:      Remove Loads Into Fake Uses
 ; CHECK-NEXT:      StackMap Liveness Analysis
 ; CHECK-NEXT:      Live DEBUG_VALUE analysis
 ; CHECK-NEXT:      Machine Sanitizer Binary Metadata

@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
-#define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H
 
 #include "Basic/SDNodeProperties.h"
 #include "CodeGenHwModes.h"
@@ -252,4 +252,4 @@ public:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H

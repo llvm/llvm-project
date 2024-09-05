@@ -6,6 +6,7 @@ add_flang_library(FIRTransforms
   AnnotateConstant.cpp
   AssumedRankOpConversion.cpp
   CharacterConversion.cpp
+  CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   CufOpConversion.cpp
@@ -21,21 +22,20 @@ add_flang_library(FIRTransforms
   AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
-  OMPFunctionFiltering.cpp
-  OMPMapInfoFinalization.cpp
-  OMPMarkDeclareTarget.cpp
   StackReclaim.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
   DebugTypeGenerator.cpp
 
   DEPENDS
+  CUFAttrs
   CUFDialect
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
 
   LINK_LIBS
+  CUFAttrs
   CUFDialect
   FIRAnalysis
   FIRBuilder

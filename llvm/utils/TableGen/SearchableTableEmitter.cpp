@@ -94,7 +94,7 @@ struct GenericTable {
 class SearchableTableEmitter {
   RecordKeeper &Records;
   std::unique_ptr<CodeGenTarget> Target;
-  DenseMap<Init *, std::unique_ptr<CodeGenIntrinsic>> Intrinsics;
+  std::unique_ptr<CodeGenIntrinsicMap> Intrinsics;
   std::vector<std::unique_ptr<GenericEnum>> Enums;
   DenseMap<Record *, GenericEnum *> EnumMap;
   std::set<std::string> PreprocessorGuards;
@@ -125,7 +125,7 @@ private:
     else if (BitInit *BI = dyn_cast<BitInit>(I))
       return BI->getValue() ? "true" : "false";
     else if (Field.IsIntrinsic)
-      return "Intrinsic::" + getIntrinsic(I).EnumName;
+      return "Intrinsic::" + getIntrinsic(I).EnumName.str();
     else if (Field.IsInstruction)
       return I->getAsString();
     else if (Field.Enum) {
@@ -146,11 +146,13 @@ private:
   }
 
   CodeGenIntrinsic &getIntrinsic(Init *I) {
-    std::unique_ptr<CodeGenIntrinsic> &Intr = Intrinsics[I];
-    if (!Intr)
-      Intr = std::make_unique<CodeGenIntrinsic>(cast<DefInit>(I)->getDef(),
-                                                std::vector<Record *>());
-    return *Intr;
+    const Record *Def = cast<DefInit>(I)->getDef();
+    // Build the Intrinsics map on demand. If we instantiate one in the
+    // constructor, we may get errors if the TableGen file being processed does
+    // not include Intrinsics.td and does not do anything with intrinsics.
+    if (!Intrinsics)
+      Intrinsics = std::make_unique<CodeGenIntrinsicMap>(Records);
+    return (*Intrinsics)[Def];
   }
 
   bool compareBy(Record *LHS, Record *RHS, const SearchIndex &Index);
