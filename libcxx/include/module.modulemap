@@ -2184,10 +2184,6 @@ module std_inttypes_h [system] {
   header "inttypes.h"
   export *
 }
-module std_locale_h [system] {
-  header "locale.h"
-  export *
-}
 module std_math_h [system] {
   header "math.h"
   export *
@@ -2203,10 +2199,6 @@ module std_stdbool_h [system] {
 module std_stddef_h [system] {
   // <stddef.h>'s __need_* macros require textual inclusion.
   textual header "stddef.h"
-}
-module std_stdint_h [system] {
-  header "stdint.h"
-  export *
 }
 module std_stdio_h [system] {
   // <stdio.h>'s __need_* macros require textual inclusion.
