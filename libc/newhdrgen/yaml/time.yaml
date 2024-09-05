@@ -24,6 +24,19 @@ functions:
     arguments:
       - type: struct tm *
       - type: char *
+  - name: ctime
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const time_t *
+  - name: ctime_r
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const time_t *
+      - type: char *
   - name: clock
     standard:
       - stdc
