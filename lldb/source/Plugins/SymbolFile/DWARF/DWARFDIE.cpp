@@ -25,9 +25,9 @@ using namespace lldb_private::plugin::dwarf;
 namespace {
 
 /// Iterate through all DIEs elaborating (i.e. reachable by a chain of
-/// DW_AT_specification and DW_AT_abstract_origin attributes) a given DIE. For
-/// convenience, the starting die is included in the sequence as the first
-/// item.
+/// DW_AT_specification, DW_AT_abstract_origin and/or DW_AT_signature
+/// attributes) a given DIE. For convenience, the starting die is included in
+/// the sequence as the first item.
 class ElaboratingDIEIterator
     : public llvm::iterator_facade_base<
           ElaboratingDIEIterator, std::input_iterator_tag, DWARFDIE,
@@ -51,7 +51,7 @@ class ElaboratingDIEIterator
 
     // And add back any items that elaborate it.
     for (dw_attr_t attr :
-         {DW_AT_specification, DW_AT_abstract_origin, DW_AT_specification}) {
+         {DW_AT_specification, DW_AT_abstract_origin, DW_AT_signature}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
         if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
