@@ -15,7 +15,6 @@ body: |
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
     ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5 /* e32 */
     ; CHECK-NEXT: $v0 = COPY %mask
-    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 $noreg, %true, %avl, 5 /* e32 */, 0 /* tu, mu */
     %false:vr = COPY $v8
     %true:vr = COPY $v9
     %avl:gprnox0 = COPY $x1

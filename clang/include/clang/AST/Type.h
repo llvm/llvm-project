@@ -2658,6 +2658,7 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
+  bool isHLSLIntangibleType() const; // Any HLSL intangible type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -5828,12 +5829,15 @@ class PackIndexingType final
   QualType Pattern;
   Expr *IndexExpr;
 
-  unsigned Size;
+  unsigned Size : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandsToEmptyPack : 1;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
   PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr,
+                   QualType Pattern, Expr *IndexExpr, bool ExpandsToEmptyPack,
                    ArrayRef<QualType> Expansions = {});
 
 public:
@@ -5857,6 +5861,8 @@ public:
 
   bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
 
+  bool expandsToEmptyPack() const { return ExpandsToEmptyPack; }
+
   ArrayRef<QualType> getExpansions() const {
     return {getExpansionsPtr(), Size};
   }
@@ -5869,10 +5875,10 @@ public:
     if (hasSelectedType())
       getSelectedType().Profile(ID);
     else
-      Profile(ID, Context, getPattern(), getIndexExpr());
+      Profile(ID, Context, getPattern(), getIndexExpr(), expandsToEmptyPack());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E);
+                      QualType Pattern, Expr *E, bool ExpandsToEmptyPack);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -8334,6 +8340,12 @@ inline bool Type::isHLSLSpecificType() const {
   return
 #include "clang/Basic/HLSLIntangibleTypes.def"
       false; // end boolean or operation
+}
+
+inline bool Type::isHLSLIntangibleType() const {
+  // All HLSL specific types are currently intangible type as well, but that
+  // might change in the future.
+  return isHLSLSpecificType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {

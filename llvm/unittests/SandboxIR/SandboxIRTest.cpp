@@ -520,6 +520,102 @@ define void @foo() {
   EXPECT_EQ(StructTy2Packed, StructTyPacked);
 }
 
+TEST_F(SandboxIRTest, ConstantAggregateZero) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, {i32, i8} %v1, <2 x i8> %v2) {
+  %extr0 = extractvalue [2 x i8] zeroinitializer, 0
+  %extr1 = extractvalue {i32, i8} zeroinitializer, 0
+  %extr2 = extractelement <2 x i8> zeroinitializer, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Extr0 = &*It++;
+  auto *Extr1 = &*It++;
+  auto *Extr2 = &*It++;
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  auto *Zero32 =
+      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *Zero8 = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0);
+  auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *ArrayTy = sandboxir::ArrayType::get(Int8Ty, 2u);
+  auto *StructTy = sandboxir::StructType::get(Ctx, {Int32Ty, Int8Ty});
+  auto *VectorTy =
+      sandboxir::VectorType::get(Int8Ty, ElementCount::getFixed(2u));
+
+  // Check creation and classof().
+  auto *ArrayCAZ = cast<sandboxir::ConstantAggregateZero>(Extr0->getOperand(0));
+  EXPECT_EQ(ArrayCAZ->getType(), ArrayTy);
+  auto *StructCAZ =
+      cast<sandboxir::ConstantAggregateZero>(Extr1->getOperand(0));
+  EXPECT_EQ(StructCAZ->getType(), StructTy);
+  auto *VectorCAZ =
+      cast<sandboxir::ConstantAggregateZero>(Extr2->getOperand(0));
+  EXPECT_EQ(VectorCAZ->getType(), VectorTy);
+  // Check get().
+  auto *SameVectorCAZ =
+      sandboxir::ConstantAggregateZero::get(sandboxir::VectorType::get(
+          sandboxir::Type::getInt8Ty(Ctx), ElementCount::getFixed(2)));
+  EXPECT_EQ(SameVectorCAZ, VectorCAZ); // Should be uniqued.
+  auto *NewVectorCAZ =
+      sandboxir::ConstantAggregateZero::get(sandboxir::VectorType::get(
+          sandboxir::Type::getInt8Ty(Ctx), ElementCount::getFixed(4)));
+  EXPECT_NE(NewVectorCAZ, VectorCAZ);
+  // Check getSequentialElement().
+  auto *SeqElm = VectorCAZ->getSequentialElement();
+  EXPECT_EQ(SeqElm,
+            sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0));
+  // Check getStructElement().
+  auto *StructElm0 = StructCAZ->getStructElement(0);
+  auto *StructElm1 = StructCAZ->getStructElement(1);
+  EXPECT_EQ(StructElm0, Zero32);
+  EXPECT_EQ(StructElm1, Zero8);
+  // Check getElementValue(Constant).
+  EXPECT_EQ(ArrayCAZ->getElementValue(Zero32), Zero8);
+  EXPECT_EQ(StructCAZ->getElementValue(Zero32), Zero32);
+  EXPECT_EQ(VectorCAZ->getElementValue(Zero32), Zero8);
+  // Check getElementValue(unsigned).
+  EXPECT_EQ(ArrayCAZ->getElementValue(0u), Zero8);
+  EXPECT_EQ(StructCAZ->getElementValue(0u), Zero32);
+  EXPECT_EQ(VectorCAZ->getElementValue(0u), Zero8);
+  // Check getElementCount().
+  EXPECT_EQ(ArrayCAZ->getElementCount(), ElementCount::getFixed(2));
+  EXPECT_EQ(NewVectorCAZ->getElementCount(), ElementCount::getFixed(4));
+}
+
+TEST_F(SandboxIRTest, ConstantPointerNull) {
+  parseIR(C, R"IR(
+define ptr @foo() {
+  ret ptr null
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof() and creation.
+  auto *CPNull = cast<sandboxir::ConstantPointerNull>(Ret->getReturnValue());
+  // Check get().
+  auto *NewCPNull =
+      sandboxir::ConstantPointerNull::get(sandboxir::PointerType::get(Ctx, 0u));
+  EXPECT_EQ(NewCPNull, CPNull);
+  auto *NewCPNull2 =
+      sandboxir::ConstantPointerNull::get(sandboxir::PointerType::get(Ctx, 1u));
+  EXPECT_NE(NewCPNull2, CPNull);
+  // Check getType().
+  EXPECT_EQ(CPNull->getType(), sandboxir::PointerType::get(Ctx, 0u));
+  EXPECT_EQ(NewCPNull2->getType(), sandboxir::PointerType::get(Ctx, 1u));
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
@@ -4798,6 +4894,184 @@ bb5:
     NewPHI->addIncoming(V, IncBB);
   }
   EXPECT_EQ(NewPHI->getNumIncomingValues(), PHI->getNumIncomingValues());
+}
+
+static void checkSwapOperands(sandboxir::Context &Ctx,
+                              llvm::sandboxir::CmpInst *Cmp,
+                              llvm::CmpInst *LLVMCmp) {
+  auto OrigOp0 = Cmp->getOperand(0);
+  auto OrigOp1 = Cmp->getOperand(1);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp0);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp1);
+  // This checks the dispatch mechanism in CmpInst, as well as
+  // the specific implementations.
+  Cmp->swapOperands();
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp0);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp0);
+  // Undo it to keep the rest of the test consistent
+  Cmp->swapOperands();
+}
+
+static void checkCommonPredicates(sandboxir::CmpInst *Cmp,
+                                  llvm::CmpInst *LLVMCmp) {
+  // Check proper creation
+  auto Pred = Cmp->getPredicate();
+  auto LLVMPred = LLVMCmp->getPredicate();
+  EXPECT_EQ(Pred, LLVMPred);
+  // Check setPredicate
+  Cmp->setPredicate(llvm::CmpInst::FCMP_FALSE);
+  EXPECT_EQ(Cmp->getPredicate(), llvm::CmpInst::FCMP_FALSE);
+  EXPECT_EQ(LLVMCmp->getPredicate(), llvm::CmpInst::FCMP_FALSE);
+  Cmp->setPredicate(Pred);
+  EXPECT_EQ(LLVMCmp->getPredicate(), Pred);
+  // Ensure the accessors properly forward to the underlying implementation
+  EXPECT_STREQ(sandboxir::CmpInst::getPredicateName(Pred).data(),
+               llvm::CmpInst::getPredicateName(LLVMPred).data());
+  EXPECT_EQ(Cmp->isFPPredicate(), LLVMCmp->isFPPredicate());
+  EXPECT_EQ(Cmp->isIntPredicate(), LLVMCmp->isIntPredicate());
+  EXPECT_EQ(Cmp->getInversePredicate(), LLVMCmp->getInversePredicate());
+  EXPECT_EQ(Cmp->getOrderedPredicate(), LLVMCmp->getOrderedPredicate());
+  EXPECT_EQ(Cmp->getUnorderedPredicate(), LLVMCmp->getUnorderedPredicate());
+  EXPECT_EQ(Cmp->getSwappedPredicate(), LLVMCmp->getSwappedPredicate());
+  EXPECT_EQ(Cmp->isStrictPredicate(), LLVMCmp->isStrictPredicate());
+  EXPECT_EQ(Cmp->isNonStrictPredicate(), LLVMCmp->isNonStrictPredicate());
+  EXPECT_EQ(Cmp->isRelational(), LLVMCmp->isRelational());
+  if (Cmp->isRelational()) {
+    EXPECT_EQ(Cmp->getFlippedStrictnessPredicate(),
+              LLVMCmp->getFlippedStrictnessPredicate());
+  }
+  EXPECT_EQ(Cmp->isCommutative(), LLVMCmp->isCommutative());
+  EXPECT_EQ(Cmp->isTrueWhenEqual(), LLVMCmp->isTrueWhenEqual());
+  EXPECT_EQ(Cmp->isFalseWhenEqual(), LLVMCmp->isFalseWhenEqual());
+  EXPECT_EQ(sandboxir::CmpInst::isOrdered(Pred),
+            llvm::CmpInst::isOrdered(LLVMPred));
+  EXPECT_EQ(sandboxir::CmpInst::isUnordered(Pred),
+            llvm::CmpInst::isUnordered(LLVMPred));
+}
+
+TEST_F(SandboxIRTest, ICmpInst) {
+  SCOPED_TRACE("SandboxIRTest sandboxir::ICmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(i32 %i0, i32 %i1) {
+ bb:
+  %ine  = icmp ne i32 %i0, %i1
+  %iugt = icmp ugt i32 %i0, %i1
+  %iuge = icmp uge i32 %i0, %i1
+  %iult = icmp ult i32 %i0, %i1
+  %iule = icmp ule i32 %i0, %i1
+  %isgt = icmp sgt i32 %i0, %i1
+  %isle = icmp sle i32 %i0, %i1
+  %ieg  = icmp eq i32 %i0, %i1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto *LLVMBB = getBasicBlockByName(LLVMF, "bb");
+  auto LLVMIt = LLVMBB->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  // Check classof()
+  while (auto *ICmp = dyn_cast<sandboxir::ICmpInst>(&*It++)) {
+    auto *LLVMICmp = cast<llvm::ICmpInst>(&*LLVMIt++);
+    checkSwapOperands(Ctx, ICmp, LLVMICmp);
+    checkCommonPredicates(ICmp, LLVMICmp);
+    EXPECT_EQ(ICmp->isSigned(), LLVMICmp->isSigned());
+    EXPECT_EQ(ICmp->isUnsigned(), LLVMICmp->isUnsigned());
+    EXPECT_EQ(ICmp->getSignedPredicate(), LLVMICmp->getSignedPredicate());
+    EXPECT_EQ(ICmp->getUnsignedPredicate(), LLVMICmp->getUnsignedPredicate());
+  }
+  auto *NewCmp =
+      sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
+                                 F.getArg(1), &*BB->begin(), Ctx, "NewCmp");
+  EXPECT_EQ(NewCmp, &*BB->begin());
+  EXPECT_EQ(NewCmp->getPredicate(), llvm::CmpInst::ICMP_ULE);
+  EXPECT_EQ(NewCmp->getOperand(0), F.getArg(0));
+  EXPECT_EQ(NewCmp->getOperand(1), F.getArg(1));
+#ifndef NDEBUG
+  EXPECT_EQ(NewCmp->getName(), "NewCmp");
+#endif // NDEBUG
+  // TODO: Improve this test when sandboxir::VectorType is more completely
+  // implemented.
+  sandboxir::Type *RT =
+      sandboxir::CmpInst::makeCmpResultType(F.getArg(0)->getType());
+  EXPECT_TRUE(RT->isIntegerTy(1)); // Only one bit in a single comparison
+}
+
+TEST_F(SandboxIRTest, FCmpInst) {
+  SCOPED_TRACE("SandboxIRTest sandboxir::FCmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(float %f0, float %f1) {
+bb:
+  %ffalse = fcmp false float %f0, %f1
+  %foeq = fcmp oeq float %f0, %f1
+  %fogt = fcmp ogt float %f0, %f1
+  %folt = fcmp olt float %f0, %f1
+  %fole = fcmp ole float %f0, %f1
+  %fone = fcmp one float %f0, %f1
+  %ford = fcmp ord float %f0, %f1
+  %funo = fcmp uno float %f0, %f1
+  %fueq = fcmp ueq float %f0, %f1
+  %fugt = fcmp ugt float %f0, %f1
+  %fuge = fcmp uge float %f0, %f1
+  %fult = fcmp ult float %f0, %f1
+  %fule = fcmp ule float %f0, %f1
+  %fune = fcmp une float %f0, %f1
+  %ftrue = fcmp true float %f0, %f1
+  ret void
+bb1:
+  %copyfrom = fadd reassoc float %f0, 42.0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto *LLVMBB = getBasicBlockByName(LLVMF, "bb");
+  auto LLVMIt = LLVMBB->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  // Check classof()
+  while (auto *FCmp = dyn_cast<sandboxir::ICmpInst>(&*It++)) {
+    auto *LLVMFCmp = cast<llvm::ICmpInst>(&*LLVMIt++);
+    checkSwapOperands(Ctx, FCmp, LLVMFCmp);
+    checkCommonPredicates(FCmp, LLVMFCmp);
+  }
+
+  auto *LLVMBB1 = getBasicBlockByName(LLVMF, "bb1");
+  auto *BB1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB1));
+  auto It1 = BB1->begin();
+  auto *CopyFrom = &*It1++;
+  CopyFrom->setFastMathFlags(FastMathFlags::getFast());
+
+  // create with default flags
+  auto *NewFCmp = sandboxir::CmpInst::create(
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), &*It1, Ctx, "NewFCmp");
+  EXPECT_EQ(NewFCmp->getPredicate(), llvm::CmpInst::FCMP_ONE);
+  EXPECT_EQ(NewFCmp->getOperand(0), F.getArg(0));
+  EXPECT_EQ(NewFCmp->getOperand(1), F.getArg(1));
+#ifndef NDEBUG
+  EXPECT_EQ(NewFCmp->getName(), "NewFCmp");
+#endif // NDEBUG
+  FastMathFlags DefaultFMF = NewFCmp->getFastMathFlags();
+  EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
+  // create with copied flags
+  auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, &*It1, Ctx,
+      "NewFCmpFlags");
+  EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
+               CopyFrom->getFastMathFlags());
+  EXPECT_EQ(NewFCmpFlags->getPredicate(), llvm::CmpInst::FCMP_ONE);
+  EXPECT_EQ(NewFCmpFlags->getOperand(0), F.getArg(0));
+  EXPECT_EQ(NewFCmpFlags->getOperand(1), F.getArg(1));
+#ifndef NDEBUG
+  EXPECT_EQ(NewFCmpFlags->getName(), "NewFCmpFlags");
+#endif // NDEBUG
 }
 
 TEST_F(SandboxIRTest, UnreachableInst) {

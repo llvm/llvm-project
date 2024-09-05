@@ -1011,8 +1011,26 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_frem: {
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    if (FOp)
-      return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
+    assert(FOp.has_value());
+    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
+    break;
+  }
+  // vp int cast ops.
+  case Intrinsic::vp_trunc:
+  case Intrinsic::vp_zext:
+  case Intrinsic::vp_sext:
+  // vp float cast ops.
+  case Intrinsic::vp_fptoui:
+  case Intrinsic::vp_fptosi:
+  case Intrinsic::vp_uitofp:
+  case Intrinsic::vp_sitofp:
+  case Intrinsic::vp_fptrunc:
+  case Intrinsic::vp_fpext: {
+    std::optional<unsigned> FOp =
+        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+    assert(FOp.has_value() && !ICA.getArgTypes().empty());
+    return getCastInstrCost(*FOp, RetTy, ICA.getArgTypes()[0],
+                            TTI::CastContextHint::None, CostKind);
     break;
   }
   }
