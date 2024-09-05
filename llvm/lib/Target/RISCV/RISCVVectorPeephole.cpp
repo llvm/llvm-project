@@ -103,13 +103,13 @@ static bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
 /// operand of \p Src with an unknown EEW, return true if their EEWs match.
 bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
                                      const MachineInstr &Src) const {
-  unsigned UserSEW =
+  unsigned UserLog2SEW =
       User.getOperand(RISCVII::getSEWOpNum(User.getDesc())).getImm();
-  unsigned SrcSEW =
+  unsigned SrcLog2SEW =
       Src.getOperand(RISCVII::getSEWOpNum(Src.getDesc())).getImm();
-  unsigned SrcEEW = RISCV::getDestEEW(
-      TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcSEW);
-  return SrcEEW == UserSEW;
+  unsigned SrcLog2EEW = RISCV::getDestLog2EEW(
+      TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcLog2SEW);
+  return SrcLog2EEW == UserLog2SEW;
 }
 
 // Attempt to reduce the VL of an instruction whose sole use is feeding a
