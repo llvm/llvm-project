@@ -1883,6 +1883,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
 
+    // FIXME: Check if this works on more platforms.
     bool allowsDifferentInitAndMaxProt =
         config->platform() == PLATFORM_MACOS ||
         config->platform() == PLATFORM_MACCATALYST;
