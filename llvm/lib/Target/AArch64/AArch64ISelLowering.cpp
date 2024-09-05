@@ -16816,9 +16816,9 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
       DstTy = TruncDstType;
     }
 
-    // mul(zext(i8), sext) can be transformed into smull(zext, sext) when
-    // destination type is at least SrcWidth * 4, which is faster than using tbl
-    // instructions
+    // mul(zext(i8), sext) can be transformed into smull(zext, sext) which
+    // performs one extend implicitly. If DstWidth is at most 4 * SrcWidth, at
+    // most one extra extend step is needed and using tbl is not profitable.
     if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
       auto *SingleUser = cast<Instruction>(*I->user_begin());
       if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
