@@ -21,6 +21,7 @@
 #include <__system_error/errc.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/make_32_64_or_128_bit.h>
 #include <__type_traits/make_unsigned.h>

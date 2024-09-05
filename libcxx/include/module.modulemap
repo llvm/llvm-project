@@ -440,6 +440,11 @@ module std_cstdbool [system] {
 }
 module std_cstddef [system] {
   header "cstddef"
+  module byte         { header "__cstddef/byte.h" }
+  module max_align_t  { header "__cstddef/max_align_t.h" }
+  module nullptr_t    { header "__cstddef/nullptr_t.h" }
+  module ptrdiff_t    { header "__cstddef/ptrdiff_t.h" }
+  module size_t       { header "__cstddef/size_t.h" }
   export *
 }
 module std_cstdint [system] {
@@ -1418,6 +1423,7 @@ module std_private_iterator_iterator                [system] { header "__iterato
 module std_private_iterator_iterator_traits         [system] {
   header "__iterator/iterator_traits.h"
   export std_private_type_traits_is_primary_template
+  export std_private_type_traits_integral_constant
 }
 module std_private_iterator_iterator_with_data      [system] { header "__iterator/iterator_with_data.h" }
 module std_private_iterator_mergeable               [system] {
@@ -1814,7 +1820,10 @@ module std_private_tuple_tuple_like             [system] {
   export *
 }
 module std_private_tuple_tuple_like_ext         [system] { header "__tuple/tuple_like_ext.h" }
-module std_private_tuple_tuple_size             [system] { header "__tuple/tuple_size.h" }
+module std_private_tuple_tuple_size             [system] {
+  header "__tuple/tuple_size.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_tuple_tuple_types            [system] { header "__tuple/tuple_types.h" }
 
 module std_private_type_traits_add_const                                 [system] { header "__type_traits/add_const.h" }
@@ -1926,7 +1935,10 @@ module std_private_type_traits_is_implicitly_default_constructible       [system
   header "__type_traits/is_implicitly_default_constructible.h"
   export std_private_type_traits_integral_constant
 }
-module std_private_type_traits_is_integral                               [system] { header "__type_traits/is_integral.h" }
+module std_private_type_traits_is_integral                               [system] {
+  header "__type_traits/is_integral.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_literal_type                           [system] { header "__type_traits/is_literal_type.h" }
 module std_private_type_traits_is_member_pointer                         [system] { header "__type_traits/is_member_pointer.h" }
 module std_private_type_traits_is_nothrow_assignable                     [system] { header "__type_traits/is_nothrow_assignable.h" }
@@ -1954,7 +1966,10 @@ module std_private_type_traits_is_primary_template                       [system
   header "__type_traits/is_primary_template.h"
   export std_private_type_traits_enable_if
 }
-module std_private_type_traits_is_reference                              [system] { header "__type_traits/is_reference.h" }
+module std_private_type_traits_is_reference                              [system] {
+  header "__type_traits/is_reference.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_reference_wrapper                      [system] { header "__type_traits/is_reference_wrapper.h" }
 module std_private_type_traits_is_referenceable                          [system] { header "__type_traits/is_referenceable.h" }
 module std_private_type_traits_is_same                                   [system] {
@@ -1976,7 +1991,10 @@ module std_private_type_traits_is_swappable                              [system
 module std_private_type_traits_is_trivial                                [system] { header "__type_traits/is_trivial.h" }
 module std_private_type_traits_is_trivially_assignable                   [system] { header "__type_traits/is_trivially_assignable.h" }
 module std_private_type_traits_is_trivially_constructible                [system] { header "__type_traits/is_trivially_constructible.h" }
-module std_private_type_traits_is_trivially_copyable                     [system] { header "__type_traits/is_trivially_copyable.h" }
+module std_private_type_traits_is_trivially_copyable                     [system] {
+  header "__type_traits/is_trivially_copyable.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_trivially_destructible                 [system] { header "__type_traits/is_trivially_destructible.h" }
 module std_private_type_traits_is_trivially_lexicographically_comparable [system] { header "__type_traits/is_trivially_lexicographically_comparable.h" }
 module std_private_type_traits_is_trivially_relocatable                  [system] { header "__type_traits/is_trivially_relocatable.h" }
@@ -2044,7 +2062,10 @@ module std_private_utility_exception_guard        [system] { header "__utility/e
 module std_private_utility_exchange               [system] { header "__utility/exchange.h" }
 module std_private_utility_forward                [system] { header "__utility/forward.h" }
 module std_private_utility_forward_like           [system] { header "__utility/forward_like.h" }
-module std_private_utility_in_place               [system] { header "__utility/in_place.h" }
+module std_private_utility_in_place               [system] {
+  header "__utility/in_place.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_utility_integer_sequence       [system] { header "__utility/integer_sequence.h" }
 module std_private_utility_is_pointer_in_range    [system] { header "__utility/is_pointer_in_range.h" }
 module std_private_utility_is_valid_range         [system] { header "__utility/is_valid_range.h" }
