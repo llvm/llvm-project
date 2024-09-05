@@ -66,6 +66,7 @@ private:
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
+  bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
 
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
@@ -472,6 +473,38 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
   return true;
 }
 
+/// If a PseudoVMV_V_V's passthru is undef then we can replace it with its input
+bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
+    return false;
+  if (MI.getOperand(1).getReg() != RISCV::NoRegister)
+    return false;
+
+  // If the input was a pseudo with a policy operand, we can give it a tail
+  // agnostic policy if MI's undef tail subsumes the input's.
+  MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
+  if (Src && !Src->hasUnmodeledSideEffects() &&
+      MRI->hasOneUse(MI.getOperand(2).getReg()) &&
+      RISCVII::hasVLOp(Src->getDesc().TSFlags) &&
+      RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags) &&
+      getSEWLMULRatio(MI) == getSEWLMULRatio(*Src)) {
+    const MachineOperand &MIVL = MI.getOperand(3);
+    const MachineOperand &SrcVL =
+        Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
+
+    MachineOperand &SrcPolicy =
+        Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
+
+    if (isVLKnownLE(MIVL, SrcVL))
+      SrcPolicy.setImm(SrcPolicy.getImm() | RISCVII::TAIL_AGNOSTIC);
+  }
+
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
+  MI.eraseFromParent();
+  V0Defs.erase(&MI);
+  return true;
+}
+
 /// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
 /// into it.
 ///
@@ -531,9 +564,8 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
 
   // If MI was tail agnostic and the VL didn't increase, preserve it.
   int64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  bool TailAgnostic = (MI.getOperand(5).getImm() & RISCVII::TAIL_AGNOSTIC) ||
-                      Passthru.getReg() == RISCV::NoRegister;
-  if (TailAgnostic && isVLKnownLE(MI.getOperand(3), SrcVL))
+  if ((MI.getOperand(5).getImm() & RISCVII::TAIL_AGNOSTIC) &&
+      isVLKnownLE(MI.getOperand(3), SrcVL))
     Policy |= RISCVII::TAIL_AGNOSTIC;
   Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
 
@@ -584,6 +616,10 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
       Changed |= convertVMergeToVMv(MI);
+      if (foldUndefPassthruVMV_V_V(MI)) {
+        Changed |= true;
+        continue; // MI is erased
+      }
       Changed |= foldVMV_V_V(MI);
     }
   }
