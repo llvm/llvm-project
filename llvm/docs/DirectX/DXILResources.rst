@@ -162,6 +162,10 @@ the subsequent ``dx.op.annotateHandle`` operation in. Note that we don't have
 an analogue for `dx.op.createHandle`_, since ``dx.op.createHandleFromBinding``
 subsumes it.
 
+For simplicity of lowering, we match DXIL in using an index from the beginning
+of the binding space rather than an index from the lower bound of the binding
+itself.
+
 .. _dx.op.createHandle: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-handles
 
 .. list-table:: ``@llvm.dx.handle.fromBinding``
@@ -190,7 +194,7 @@ subsumes it.
    * - ``%index``
      - 4
      - ``i32``
-     - Index of the resource to access.
+     - Index from the beginning of the binding space to access.
    * - ``%non-uniform``
      - 5
      - i1

@@ -168,8 +168,6 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processType(opcode, operands);
   case spirv::Opcode::OpTypeForwardPointer:
     return processTypeForwardPointer(operands);
-  case spirv::Opcode::OpTypeJointMatrixINTEL:
-    return processType(opcode, operands);
   case spirv::Opcode::OpConstant:
     return processConstant(operands, /*isSpec=*/false);
   case spirv::Opcode::OpSpecConstant:

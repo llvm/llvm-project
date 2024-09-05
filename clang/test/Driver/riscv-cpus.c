@@ -402,6 +402,21 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
+// MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"
+// MCPU-HAZARD3-SAME: "-target-feature" "+m"
+// MCPU-HAZARD3-SAME: "-target-feature" "+a"
+// MCPU-HAZARD3-SAME: "-target-feature" "+c"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zicsr"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zifencei"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zcb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zcmp"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zba"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbkb"
+// MCPU-HAZARD3-SAME: "-target-feature" "+zbs"
+// MCPU-HAZARD3-SAME: "-target-abi" "ilp32"
+
 // Check failed cases
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv321 | FileCheck -check-prefix=FAIL-MCPU-NAME %s

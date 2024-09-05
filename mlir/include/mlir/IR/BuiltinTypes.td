@@ -17,6 +17,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/CommonTypeConstraints.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
 // This is to differentiate the types here with the ones in OpBase.td. We should
@@ -1096,6 +1097,10 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
+def Builtin_VectorTypeElementType : AnyTypeOf<[AnyInteger, Index, AnyFloat]> {
+  let cppFunctionName = "isValidVectorTypeElementType";
+}
+
 def Builtin_Vector : Builtin_Type<"Vector", "vector",
     [ShapedTypeInterface, ValueSemantics], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
@@ -1146,7 +1151,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
-    "Type":$elementType,
+    Builtin_VectorTypeElementType:$elementType,
     ArrayRefParameter<"bool">:$scalableDims
   );
   let builders = [
@@ -1170,11 +1175,8 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
     class Builder;
 
     /// Returns true if the given type can be used as an element of a vector
-    /// type. In particular, vectors can consist of integer, index, or float
-    /// primitives.
-    static bool isValidElementType(Type t) {
-      return ::llvm::isa<IntegerType, IndexType, FloatType>(t);
-    }
+    /// type. See "Builtin_VectorTypeElementType" for allowed types.
+    static bool isValidElementType(Type t);
 
     /// Returns true if the vector contains scalable dimensions.
     bool isScalable() const {

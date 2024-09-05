@@ -286,7 +286,7 @@ def Vector_MultiDimReductionOp :
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVector:$source,
                    AnyType:$acc,
-                   I64ArrayAttr:$reduction_dims)>,
+                   DenseI64ArrayAttr:$reduction_dims)>,
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
@@ -325,8 +325,8 @@ def Vector_MultiDimReductionOp :
 
     SmallVector<bool> getReductionMask() {
       SmallVector<bool> res(getSourceVectorType().getRank(), false);
-      for (auto ia : getReductionDims().getAsRange<IntegerAttr>())
-        res[ia.getInt()] = true;
+      for (int64_t dim : getReductionDims())
+        res[dim] = true;
       return res;
     }
     static SmallVector<bool> getReductionMask(

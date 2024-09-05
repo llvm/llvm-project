@@ -19,7 +19,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i64> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <vscale x 4 x i64> [[TMP9]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP10]]
@@ -92,7 +92,7 @@ define void @single_constant_stride_int_iv(ptr %p) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i64> [[TMP7]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 64, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP8]]
@@ -183,7 +183,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP10]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP13]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP14]]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = mul <vscale x 4 x i64> [[TMP15]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 8, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 4 x i64> [[VECTOR_GEP]]
@@ -536,7 +536,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; STRIDED-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
-; STRIDED-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; STRIDED-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; STRIDED-NEXT:    [[TMP13:%.*]] = add <vscale x 4 x i64> [[TMP12]], zeroinitializer
 ; STRIDED-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i64> [[TMP13]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; STRIDED-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP14]]
@@ -759,7 +759,7 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP15]], 0
 ; STRIDED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP18]], i64 0
 ; STRIDED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; STRIDED-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; STRIDED-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; STRIDED-NEXT:    [[TMP20:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP19]]
 ; STRIDED-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; STRIDED-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT9]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -772,7 +772,7 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP23]], 0
 ; STRIDED-NEXT:    [[DOTSPLATINSERT13:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP26]], i64 0
 ; STRIDED-NEXT:    [[DOTSPLAT14:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT13]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; STRIDED-NEXT:    [[TMP27:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; STRIDED-NEXT:    [[TMP27:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; STRIDED-NEXT:    [[TMP28:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT14]], [[TMP27]]
 ; STRIDED-NEXT:    [[VECTOR_GEP17:%.*]] = mul <vscale x 4 x i64> [[TMP28]], [[DOTSPLAT10]]
 ; STRIDED-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[POINTER_PHI11]], <vscale x 4 x i64> [[VECTOR_GEP17]]

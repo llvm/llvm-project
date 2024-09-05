@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -78,6 +79,29 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
     auto *F = cast<Function>(
         M->getOrInsertFunction("labs", InvalidLabsFTy).getCallee());
     EXPECT_FALSE(isLibFunc(F, LibFunc_labs));
+  }
+}
+
+TEST_F(TargetLibraryInfoTest, SizeReturningNewInvalidProto) {
+  parseAssembly(
+      "target datalayout = \"p:64:64:64\"\n"
+      ";; Invalid additional params \n"
+      "declare {i8*, i64} @__size_returning_new(i64, i64)\n"
+      ";; Invalid params types \n"
+      "declare {i8*, i64} @__size_returning_new_hot_cold(i64, i32)\n"
+      ";; Invalid return struct types \n"
+      "declare {i8*, i8} @__size_returning_new_aligned(i64, i64)\n"
+      ";; Invalid return type \n"
+      "declare i8* @__size_returning_new_aligned_hot_cold(i64, i64, i8)\n");
+
+  for (const LibFunc LF :
+       {LibFunc_size_returning_new, LibFunc_size_returning_new_aligned,
+        LibFunc_size_returning_new_hot_cold,
+        LibFunc_size_returning_new_aligned_hot_cold}) {
+    TLII.setAvailable(LF);
+    Function *F = M->getFunction(TLI.getName(LF));
+    ASSERT_NE(F, nullptr);
+    EXPECT_FALSE(isLibFunc(F, LF));
   }
 }
 
@@ -188,6 +212,12 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @fmin(double, double)\n"
       "declare float @fminf(float, float)\n"
       "declare x86_fp80 @fminl(x86_fp80, x86_fp80)\n"
+      "declare double @fmaximum_num(double, double)\n"
+      "declare float @fmaximum_numf(float, float)\n"
+      "declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80)\n"
+      "declare double @fminimum_num(double, double)\n"
+      "declare float @fminimum_numf(float, float)\n"
+      "declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80)\n"
       "declare double @fmod(double, double)\n"
       "declare float @fmodf(float, float)\n"
       "declare x86_fp80 @fmodl(x86_fp80, x86_fp80)\n"
@@ -472,10 +502,11 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, %struct*)\n"
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64, i64, "
       "%struct*, i8)\n"
-      "declare %struct @__size_returning_new(i64)\n"
-      "declare %struct @__size_returning_new_hot_cold(i64, i8)\n"
-      "declare %struct @__size_returning_new_aligned(i64, i64)\n"
-      "declare %struct @__size_returning_new_aligned_hot_cold(i64, i64, i8)\n"
+      "declare {i8*, i64} @__size_returning_new(i64)\n"
+      "declare {i8*, i64} @__size_returning_new_hot_cold(i64, i8)\n"
+      "declare {i8*, i64} @__size_returning_new_aligned(i64, i64)\n"
+      "declare {i8*, i64} @__size_returning_new_aligned_hot_cold(i64, i64, "
+      "i8)\n"
 
       "declare void @\"??3@YAXPEAX@Z\"(i8*)\n"
       "declare void @\"??3@YAXPEAXAEBUnothrow_t@std@@@Z\"(i8*, %struct*)\n"
@@ -504,12 +535,14 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @__cxa_guard_abort(%struct*)\n"
       "declare i32 @__cxa_guard_acquire(%struct*)\n"
       "declare void @__cxa_guard_release(%struct*)\n"
+      "declare void @__cxa_throw(ptr, ptr, ptr)\n"
 
       "declare i32 @atexit(void ()*)\n"
 
       "declare void @abort()\n"
       "declare void @exit(i32)\n"
       "declare void @_Exit(i32)\n"
+      "declare void @_ZSt9terminatev()\n"
 
       "declare i32 @__nvvm_reflect(i8*)\n"
 

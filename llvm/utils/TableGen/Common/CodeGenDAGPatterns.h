@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENDAGPATTERNS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENDAGPATTERNS_H
 
 #include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
@@ -1266,4 +1266,4 @@ inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENDAGPATTERNS_H

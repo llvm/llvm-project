@@ -1608,8 +1608,8 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         }
         emitInst(Mips::SLL, TempReg[0]).addReg(SrcReg).addImm(8);
         emitInst(Mips::SRL, TempReg[1]).addReg(SrcReg).addImm(8);
-        emitInst(Mips::OR, TempReg[2]).addReg(TempReg[0]).addReg(TempReg[1]);
-        emitInst(Mips::ANDi, DestReg).addReg(TempReg[2]).addImm(0xFFFF);
+        emitInst(Mips::ANDi, TempReg[2]).addReg(TempReg[1]).addImm(0xFF);
+        emitInst(Mips::OR, DestReg).addReg(TempReg[0]).addReg(TempReg[2]);
         updateValueMap(II, DestReg);
         return true;
       }

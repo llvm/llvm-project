@@ -160,19 +160,19 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromMemoryTagSegment(
 Status ProcessElfCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFileELF *core = (ObjectFileELF *)(m_core_module_sp->GetObjectFile());
   if (core == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
   llvm::ArrayRef<elf::ELFProgramHeader> segments = core->ProgramHeaders();
   if (segments.size() == 0) {
-    error.SetErrorString("core file has no segments");
+    error = Status::FromErrorString("core file has no segments");
     return error;
   }
 
@@ -383,8 +383,8 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   const VMRangeToFileOffset::Entry *address_range =
       m_core_aranges.FindEntryThatContains(addr);
   if (address_range == nullptr || address_range->GetRangeEnd() < addr) {
-    error.SetErrorStringWithFormat("core file does not contain 0x%" PRIx64,
-                                   addr);
+    error = Status::FromErrorStringWithFormat(
+        "core file does not contain 0x%" PRIx64, addr);
     return 0;
   }
 
@@ -1077,10 +1077,10 @@ ArchSpec ProcessElfCore::GetArchitecture() {
 }
 
 DataExtractor ProcessElfCore::GetAuxvData() {
-  const uint8_t *start = m_auxv.GetDataStart();
-  size_t len = m_auxv.GetByteSize();
-  lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(start, len));
-  return DataExtractor(buffer, GetByteOrder(), GetAddressByteSize());
+  assert(m_auxv.GetByteSize() == 0 ||
+         (m_auxv.GetByteOrder() == GetByteOrder() &&
+          m_auxv.GetAddressByteSize() == GetAddressByteSize()));
+  return DataExtractor(m_auxv);
 }
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {

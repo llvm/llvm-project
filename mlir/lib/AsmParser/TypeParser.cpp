@@ -458,31 +458,24 @@ Type Parser::parseTupleType() {
 /// static-dim-list ::= decimal-literal (`x` decimal-literal)*
 ///
 VectorType Parser::parseVectorType() {
+  SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_vector);
 
   if (parseToken(Token::less, "expected '<' in vector type"))
     return nullptr;
 
+  // Parse the dimensions.
   SmallVector<int64_t, 4> dimensions;
   SmallVector<bool, 4> scalableDims;
   if (parseVectorDimensionList(dimensions, scalableDims))
     return nullptr;
-  if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
-    return emitError(getToken().getLoc(),
-                     "vector types must have positive constant sizes"),
-           nullptr;
 
   // Parse the element type.
-  auto typeLoc = getToken().getLoc();
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
 
-  if (!VectorType::isValidElementType(elementType))
-    return emitError(typeLoc, "vector elements must be int/index/float type"),
-           nullptr;
-
-  return VectorType::get(dimensions, elementType, scalableDims);
+  return getChecked<VectorType>(loc, dimensions, elementType, scalableDims);
 }
 
 /// Parse a dimension list in a vector type. This populates the dimension list.

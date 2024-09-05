@@ -32,6 +32,8 @@
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -98,6 +100,7 @@
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -247,6 +250,7 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopSink.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "llvm/Transforms/Scalar/LoopTermFold.h"
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
@@ -331,8 +335,6 @@ cl::opt<bool> PrintPipelinePasses(
     cl::desc("Print a '-passes' compatible string describing the pipeline "
              "(best-effort only)."));
 } // namespace llvm
-
-extern cl::opt<std::string> UseCtxProfile;
 
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
@@ -847,6 +849,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.needCanonicalLoops(Enable);
     } else if (ParamName == "hoist-common-insts") {
       Result.hoistCommonInsts(Enable);
+    } else if (ParamName == "hoist-loads-stores-with-cond-faulting") {
+      Result.hoistLoadsStoresWithCondFaulting(Enable);
     } else if (ParamName == "sink-common-insts") {
       Result.sinkCommonInsts(Enable);
     } else if (ParamName == "speculate-unpredictables") {
@@ -879,9 +883,7 @@ Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "use-loop-info") {
-      Result.setUseLoopInfo(Enable);
-    } else if (ParamName == "verify-fixpoint") {
+    if (ParamName == "verify-fixpoint") {
       Result.setVerifyFixpoint(Enable);
     } else if (Enable && ParamName.consume_front("max-iterations=")) {
       APInt MaxIterations;
@@ -1083,6 +1085,11 @@ Expected<bool> parseDependenceAnalysisPrinterOptions(StringRef Params) {
 Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "lower-gep",
                                             "SeparateConstOffsetFromGEP");
+}
+
+Expected<bool> parseStructurizeCFGPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "skip-uniform-regions",
+                                            "StructurizeCFG");
 }
 
 Expected<OptimizationLevel>

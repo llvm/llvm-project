@@ -1519,6 +1519,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     const char *sanitizer = nullptr;
     if (Sanitize.needsUbsanRt()) {
       sanitizer = "UndefinedBehaviorSanitizer";
+    } else if (Sanitize.needsRtsanRt()) {
+      sanitizer = "RealtimeSanitizer";
     } else if (Sanitize.needsAsanRt()) {
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
@@ -1540,6 +1542,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
                "Static sanitizer runtimes not supported");
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
+    }
+    if (Sanitize.needsRtsanRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "rtsan");
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
@@ -2953,7 +2960,15 @@ static bool sdkSupportsBuiltinModules(
   case Darwin::MacOS:
     return SDKVersion >= VersionTuple(15U);
   case Darwin::IPhoneOS:
-    return SDKVersion >= VersionTuple(18U);
+    switch (TargetEnvironment) {
+    case Darwin::MacCatalyst:
+      // Mac Catalyst uses `-target arm64-apple-ios18.0-macabi` so the platform
+      // is iOS, but it builds with the macOS SDK, so it's the macOS SDK version
+      // that's relevant.
+      return SDKVersion >= VersionTuple(15U);
+    default:
+      return SDKVersion >= VersionTuple(18U);
+    }
   case Darwin::TvOS:
     return SDKVersion >= VersionTuple(18U);
   case Darwin::WatchOS:
@@ -3531,6 +3546,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

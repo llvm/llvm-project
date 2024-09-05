@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
@@ -753,8 +754,8 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
-static bool isNewWithHotColdVariant(Function *Callee,
-                                    const TargetLibraryInfo &TLI) {
+static bool isAllocationWithHotColdVariant(Function *Callee,
+                                           const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;
   LibFunc Func;
@@ -769,6 +770,8 @@ static bool isNewWithHotColdVariant(Function *Callee,
   case LibFunc_ZnamRKSt9nothrow_t:
   case LibFunc_ZnamSt11align_val_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_size_returning_new:
+  case LibFunc_size_returning_new_aligned:
     return true;
   case LibFunc_Znwm12__hot_cold_t:
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
@@ -778,6 +781,8 @@ static bool isNewWithHotColdVariant(Function *Callee,
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned_hot_cold:
     return ClMemProfMatchHotColdNew;
   default:
     return false;
@@ -945,9 +950,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // instruction's locations match the prefix Frame locations on an
       // allocation context with the same leaf.
       if (AllocInfoIter != LocHashToAllocInfo.end()) {
-        // Only consider allocations via new, to reduce unnecessary metadata,
-        // since those are the only allocations that will be targeted initially.
-        if (!isNewWithHotColdVariant(CI->getCalledFunction(), TLI))
+        // Only consider allocations which support hinting.
+        if (!isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI))
           continue;
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to
