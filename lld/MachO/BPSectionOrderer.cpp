@@ -158,7 +158,8 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
 
 DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     size_t &highestAvailablePriority, StringRef profilePath,
-    bool forFunctionCompression, bool forDataCompression, bool verbose) {
+    bool forFunctionCompression, bool forDataCompression,
+    bool compressionSortStartupFunctions, bool verbose) {
 
   SmallVector<const InputSection *> sections;
   DenseMap<const InputSection *, uint64_t> sectionToIdx;
@@ -268,8 +269,15 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     }
   }
 
-  // Map a section index (to be ordered for compression) to a list of duplicate
-  // section indices (not ordered for compression).
+  SmallVector<unsigned> startupIdxs;
+  if (compressionSortStartupFunctions)
+    for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
+      startupIdxs.push_back(sectionIdx);
+  auto unsForStartupFunctionCompression =
+      getUnsForCompression(sections, sectionToIdx, startupIdxs, nullptr, maxUN);
+
+  // Map a section index (order directly) to a list of duplicate section indices
+  // (not ordered directly).
   DenseMap<unsigned, SmallVector<unsigned>> duplicateSectionIdxs;
   auto unsForFunctionCompression = getUnsForCompression(
       sections, sectionToIdx, sectionIdxsForFunctionCompression,
@@ -278,6 +286,12 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
       sections, sectionToIdx, sectionIdxsForDataCompression,
       &duplicateSectionIdxs, maxUN);
 
+  for (auto &[sectionIdx, compressionUns] : unsForStartupFunctionCompression) {
+    auto &uns = startupSectionIdxUNs[sectionIdx];
+    uns.append(compressionUns);
+    llvm::sort(uns);
+    uns.erase(std::unique(uns.begin(), uns.end()), uns.end());
+  }
   std::vector<BPFunctionNode> nodesForStartup, nodesForFunctionCompression,
       nodesForDataCompression;
   for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
