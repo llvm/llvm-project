@@ -288,7 +288,8 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
         // Map and set types.
         .Cases("find", "equal_range", "lower_bound", "upper_bound", true)
         .Default(false);
-  } else if (Callee->getReturnType()->isReferenceType()) {
+  }
+  if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
       return OO == OverloadedOperatorKind::OO_Subscript ||
@@ -316,7 +317,8 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
         .Cases("end", "rend", "cend", "crend", true)
         .Case("data", true)
         .Default(false);
-  } else if (FD->getReturnType()->isReferenceType()) {
+  }
+  if (FD->getReturnType()->isReferenceType()) {
     return llvm::StringSwitch<bool>(FD->getName())
         .Cases("get", "any_cast", true)
         .Default(false);
@@ -328,7 +330,7 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
 // We assuments that a normal assingment operator always returns *this, that is,
 // an lvalue reference that is the same type as the implicit object parameter
 // (or the LHS for a non-member operator$=).
-static bool isNormalAsisgnmentOperator(const FunctionDecl *FD) {
+static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
   OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
   if (OO == OO_Equal || isCompoundAssignmentOperator(OO)) {
     QualType RetT = FD->getReturnType();
@@ -362,7 +364,7 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
       return true;
   }
 
-  return isNormalAsisgnmentOperator(FD);
+  return isNormalAssignmentOperator(FD);
 }
 
 // Visit lifetimebound or gsl-pointer arguments.
@@ -940,10 +942,10 @@ static bool pathOnlyHandlesGslPointer(IndirectLocalPath &Path) {
   return false;
 }
 
-static bool isAssginmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
+static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
   if (!CMD)
     return false;
-  return isNormalAsisgnmentOperator(CMD) && CMD->param_size() == 1 &&
+  return isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
          CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
 }
 
@@ -953,7 +955,7 @@ static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
       diag::warn_dangling_lifetime_pointer_assignment, SourceLocation());
   return (EnableGSLAssignmentWarnings &&
           (isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
-           isAssginmentOperatorLifetimeBound(Entity.AssignmentOperator)));
+           isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator)));
 }
 
 static void checkExprLifetimeImpl(Sema &SemaRef,
