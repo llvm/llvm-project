@@ -122,6 +122,9 @@ C++2c Feature Support
 
 - Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
 
+- Added the ``__builtin_is_within_lifetime`` builtin, which supports
+  `P2641R4 Checking if a union alternative is active <https://wg21.link/p2641r4>`_
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
