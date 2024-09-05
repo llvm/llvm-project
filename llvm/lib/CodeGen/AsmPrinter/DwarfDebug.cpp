@@ -2198,11 +2198,10 @@ DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
 
     // Ensure the compile unit is created if the function is called before
     // beginFunction().
-    (void)getOrCreateDwarfCompileUnit(
-        MF.getFunction().getSubprogram()->getUnit());
+    DISubprogram *SP = MF.getFunction().getSubprogram();
+    (void)getOrCreateDwarfCompileUnit(SP->getUnit());
     // We'd like to list the prologue as "not statements" but GDB behaves
     // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-    const DISubprogram *SP = PrologEndLoc->getInlinedAtScope()->getSubprogram();
     ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
                        CUID, getDwarfVersion(), getUnits());
     return PrologEndLoc;
