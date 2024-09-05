@@ -2206,8 +2206,8 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   (void)getOrCreateDwarfCompileUnit(SP->getUnit());
   // We'd like to list the prologue as "not statements" but GDB behaves
   // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-  ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
-                     CUID, getDwarfVersion(), getUnits());
+  ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT, CUID,
+                     getDwarfVersion(), getUnits());
   return PrologEndLoc;
 }
 
