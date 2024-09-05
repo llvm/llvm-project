@@ -155,7 +155,6 @@ expected cstdint
 expected initializer_list
 expected new
 expected version
-experimental/iterator cstddef
 experimental/iterator iterator
 experimental/memory cstddef
 experimental/memory cstdint
@@ -647,7 +646,6 @@ tuple compare
 tuple cstddef
 tuple cstdint
 tuple version
-type_traits cstddef
 type_traits cstdint
 type_traits version
 typeindex compare
