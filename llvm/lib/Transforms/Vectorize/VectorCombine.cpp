@@ -2516,8 +2516,7 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   // Check that the expression overall uses at most the same number of bits as
   // ZExted
   KnownBits KB = computeKnownBits(&I, *DL);
-  unsigned IBW = KB.getBitWidth() - KB.Zero.countLeadingOnes();
-  if (IBW > BW)
+  if (KB.countMaxActiveBits() > BW)
     return false;
 
   // Calculate costs of leaving current IR as it is and moving ZExt operation
@@ -2546,8 +2545,7 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
 
     // Check if we can propagate ZExt through its other users
     KB = computeKnownBits(UI, *DL);
-    unsigned UBW = KB.getBitWidth() - KB.countMinLeadingZeros();
-    if (UBW > BW)
+    if (KB.countMaxActiveBits() > BW)
       return false;
 
     CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy, CostKind);
