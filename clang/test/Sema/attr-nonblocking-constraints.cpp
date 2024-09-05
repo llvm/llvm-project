@@ -348,6 +348,24 @@ void g() [[clang::nonblocking]] {
 #pragma clang diagnostic pop
 }
 
+// Make sure we are skipping concept requirements -- they can trigger an unexpected
+// warning involving use of a function pointer (e.g. std::reverse_iterator::operator==
+struct HasFoo { int foo() const { return 0; } };
+
+template <class A, class B>
+inline bool compare(const A& a, const B& b)
+	requires requires { 
+		a.foo();
+	}
+{
+	return a.foo() == b.foo();
+}
+
+void nb25() [[clang::nonblocking]] {
+	HasFoo a, b;
+	compare(a, b);
+}
+
 
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
