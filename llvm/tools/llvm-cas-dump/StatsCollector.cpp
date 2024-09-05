@@ -150,10 +150,11 @@ void StatsCollector::printToOuts(ArrayRef<ObjectProxy> TopLevels,
   StringLiteral Format =
       ObjectStatsFormat == FormatType::Pretty ? FormatPretty : FormatCSV;
 
-  StatOS << llvm::formatv(HeaderFormat.begin(), "Kind", "Count", "", "Parents",
-                          "", "Children", "", "Data (B)", "", "Cost (B)", "");
+  StatOS << llvm::formatv(false, HeaderFormat.begin(), "Kind", "Count", "",
+                          "Parents", "", "Children", "", "Data (B)", "",
+                          "Cost (B)", "");
   if (ObjectStatsFormat == FormatType::Pretty) {
-    StatOS << llvm::formatv(HeaderFormat.begin(), "====", "=====", "",
+    StatOS << llvm::formatv(false, HeaderFormat.begin(), "====", "=====", "",
                             "=======", "", "========", "", "========", "",
                             "========", "");
   }
@@ -164,10 +165,11 @@ void StatsCollector::printToOuts(ArrayRef<ObjectProxy> TopLevels,
     auto getPercent = [](double N, double D) { return D ? N / D : 0.0; };
     size_t Size = Info.getTotalSize(NumHashBytes);
     StatOS << llvm::formatv(
-        Format.begin(), Kind, Info.Count, getPercent(Info.Count, Totals.Count),
-        Info.NumParents, getPercent(Info.NumParents, Totals.NumParents),
-        Info.NumChildren, getPercent(Info.NumChildren, Totals.NumChildren),
-        Info.DataSize, getPercent(Info.DataSize, Totals.DataSize), Size,
+        false, Format.begin(), Kind, Info.Count,
+        getPercent(Info.Count, Totals.Count), Info.NumParents,
+        getPercent(Info.NumParents, Totals.NumParents), Info.NumChildren,
+        getPercent(Info.NumChildren, Totals.NumChildren), Info.DataSize,
+        getPercent(Info.DataSize, Totals.DataSize), Size,
         getPercent(Size, Totals.getTotalSize(NumHashBytes)));
   };
   for (StringRef Kind : Kinds)
