@@ -32,14 +32,14 @@ end subroutine omp_sin_f64
 subroutine omp_abs_f32(x, y)
 !$omp declare target
   real :: x, y
-!CHECK: call float @__ocml_fabs_f32(float {{.*}})
+!CHECK: call contract float @llvm.fabs.f32(float {{.*}})
   y = abs(x)
 end subroutine omp_abs_f32
 
 subroutine omp_abs_f64(x, y)
 !$omp declare target
   real(8) :: x, y
-!CHECK: call double @__ocml_fabs_f64(double {{.*}})
+!CHECK: call contract double @llvm.fabs.f64(double {{.*}})
   y = abs(x)
 end subroutine omp_abs_f64
 
@@ -102,7 +102,7 @@ end subroutine omp_erf_f64
 subroutine omp_exp_f32(x, y)
 !$omp declare target
   real :: x, y
-!CHECK: call float @__ocml_exp_f32(float {{.*}})
+!CHECK: call contract float @llvm.exp.f32(float {{.*}})
   y = exp(x)
 end subroutine omp_exp_f32
 
@@ -116,7 +116,7 @@ end subroutine omp_exp_f64
 subroutine omp_log_f32(x, y)
 !$omp declare target
   real :: x, y
-!CHECK: call float @__ocml_log_f32(float {{.*}})
+!CHECK: call contract float @llvm.log.f32(float {{.*}})
   y = log(x)
 end subroutine omp_log_f32
 
@@ -144,14 +144,14 @@ end subroutine omp_log10_f64
 subroutine omp_sqrt_f32(x, y)
 !$omp declare target
   real :: x, y
-!CHECK: call float @__ocml_sqrt_f32(float {{.*}})
+!CHECK: call contract float @llvm.sqrt.f32(float {{.*}})
   y = sqrt(x)
 end subroutine omp_sqrt_f32
 
 subroutine omp_sqrt_f64(x, y)
 !$omp declare target
   real(8) :: x, y
-!CHECK: call double @__ocml_sqrt_f64(double {{.*}})
+!CHECK: call contract double @llvm.sqrt.f64(double {{.*}})
   y = sqrt(x)
 end subroutine omp_sqrt_f64
 
