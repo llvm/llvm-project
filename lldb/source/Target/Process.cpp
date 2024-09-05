@@ -5898,43 +5898,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-const char *Process::ExecutionResultAsCString(ExpressionResults result) {
-  const char *result_name = "<unknown>";
-
-  switch (result) {
-  case eExpressionCompleted:
-    result_name = "eExpressionCompleted";
-    break;
-  case eExpressionDiscarded:
-    result_name = "eExpressionDiscarded";
-    break;
-  case eExpressionInterrupted:
-    result_name = "eExpressionInterrupted";
-    break;
-  case eExpressionHitBreakpoint:
-    result_name = "eExpressionHitBreakpoint";
-    break;
-  case eExpressionSetupError:
-    result_name = "eExpressionSetupError";
-    break;
-  case eExpressionParseError:
-    result_name = "eExpressionParseError";
-    break;
-  case eExpressionResultUnavailable:
-    result_name = "eExpressionResultUnavailable";
-    break;
-  case eExpressionTimedOut:
-    result_name = "eExpressionTimedOut";
-    break;
-  case eExpressionStoppedForDebug:
-    result_name = "eExpressionStoppedForDebug";
-    break;
-  case eExpressionThreadVanished:
-    result_name = "eExpressionThreadVanished";
-  }
-  return result_name;
-}
-
 void Process::GetStatus(Stream &strm) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {

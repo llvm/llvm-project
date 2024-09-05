@@ -204,3 +204,29 @@ void llvm::format_provider<lldb_private::Status>::format(
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
 }
+
+const char *lldb_private::ExpressionResultAsCString(ExpressionResults result) {
+  switch (result) {
+  case eExpressionCompleted:
+    return "eExpressionCompleted";
+  case eExpressionDiscarded:
+    return "eExpressionDiscarded";
+  case eExpressionInterrupted:
+    return "eExpressionInterrupted";
+  case eExpressionHitBreakpoint:
+    return "eExpressionHitBreakpoint";
+  case eExpressionSetupError:
+    return "eExpressionSetupError";
+  case eExpressionParseError:
+    return "eExpressionParseError";
+  case eExpressionResultUnavailable:
+    return "eExpressionResultUnavailable";
+  case eExpressionTimedOut:
+    return "eExpressionTimedOut";
+  case eExpressionStoppedForDebug:
+    return "eExpressionStoppedForDebug";
+  case eExpressionThreadVanished:
+    return "eExpressionThreadVanished";
+  }
+  return "<unknown>";
+}
