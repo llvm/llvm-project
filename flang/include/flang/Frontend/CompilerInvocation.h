@@ -148,10 +148,6 @@ class CompilerInvocation : public CompilerInvocationBase {
   /// is enabled.
   bool enableTimers;
 
-  /// Whether to report the timing of each run of an LLVM pass. Set when
-  /// -ftime-report=per-pass-run is enabled.
-  bool timeLLVMPassesPerRun;
-
 public:
   CompilerInvocation() = default;
 
@@ -233,9 +229,6 @@ public:
 
   bool getEnableTimers() { return enableTimers; }
   bool getEnableTimers() const { return enableTimers; }
-
-  bool getTimeLLVMPassesPerRun() { return timeLLVMPassesPerRun; }
-  bool getTimeLLVMPassesPerRun() const { return timeLLVMPassesPerRun; }
 
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.

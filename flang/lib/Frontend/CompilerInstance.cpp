@@ -178,7 +178,6 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
     // Once the root cause of this is determined, we should enable this to have
     // behavior that is comparable to clang.
     // llvm::TimePassesIsEnabled = true;
-    // llvm::TimePassesPerRun = invoc.getTimeLLVMPassesPerRun();
 
     timingStreamMLIR = std::make_unique<Fortran::support::string_ostream>();
     timingStreamLLVM = std::make_unique<Fortran::support::string_ostream>();
@@ -218,11 +217,19 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
     timingMgr.setOutput(
         Fortran::support::createTimingFormatterText(mlir::thread_safe_nulls()));
 
-    // This is deliberately done in "reverse" order and does not match the
-    // behavior of clang.
-    llvm::errs() << timingStreamCodeGen->str() << "\n";
-    llvm::errs() << timingStreamLLVM->str() << "\n";
-    llvm::errs() << timingStreamMLIR->str() << "\n";
+    // This prints the timings in "reverse" order, starting from code
+    // generation, followed by LLVM-IR optimizations, then MLIR optimizations
+    // and transformations and the frontend. If any of the steps are disabled,
+    // for instance because code generation was not performed, the strings
+    // will be empty.
+    if (!timingStreamCodeGen->str().empty())
+      llvm::errs() << timingStreamCodeGen->str() << "\n";
+
+    if (!timingStreamLLVM->str().empty())
+      llvm::errs() << timingStreamLLVM->str() << "\n";
+
+    if (!timingStreamMLIR->str().empty())
+      llvm::errs() << timingStreamMLIR->str() << "\n";
   }
 
   return !getDiagnostics().getClient()->getNumErrors();

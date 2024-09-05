@@ -279,7 +279,6 @@ public:
   /// {
   /// @name Timing
   /// @{
-  bool isTimingEnabled() { return timingMgr.isEnabled(); }
   bool isTimingEnabled() const { return timingMgr.isEnabled(); }
 
   mlir::DefaultTimingManager &getTimingManager() { return timingMgr; }
