@@ -48,7 +48,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
-  initializeBPFDAGToDAGISelPass(PR);
+  initializeBPFDAGToDAGISelLegacyPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -108,21 +108,15 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new BPFPassConfig(*this, PM);
 }
 
-void BPFTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, FunctionPassManager &FPM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "bpf-ir-peephole") {
-          FPM.addPass(BPFIRPeepholePass());
-          return true;
-        }
-        if (PassName == "bpf-preserve-static-offset") {
-          FPM.addPass(BPFPreserveStaticOffsetPass(false));
-          return true;
-        }
-        return false;
-      });
+static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "allow-partial",
+                                            "BPFPreserveStaticOffsetPass");
+}
+
+void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "BPFPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
         FunctionPassManager FPM;
@@ -135,6 +129,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
   PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
                                     OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
+    FPM.addPass(BPFASpaceCastSimplifyPass());
   });
   PB.registerScalarOptimizerLateEPCallback(
       [=](FunctionPassManager &FPM, OptimizationLevel Level) {
@@ -149,7 +144,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
 }
 
 void BPFPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIR());
 
   TargetPassConfig::addIRPasses();

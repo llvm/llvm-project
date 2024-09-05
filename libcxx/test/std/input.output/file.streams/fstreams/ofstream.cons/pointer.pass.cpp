@@ -17,12 +17,16 @@
 
 #include <fstream>
 #include <cassert>
+#include <ios>
+
 #include "test_macros.h"
+#include "operator_hijacker.h"
 #include "platform_support.h"
 
 int main(int, char**)
 {
     std::string temp = get_temp_file_name();
+
     {
         std::ofstream fs(temp.c_str());
         fs << 3.25;
@@ -33,14 +37,43 @@ int main(int, char**)
         fs >> x;
         assert(x == 3.25);
     }
+    std::remove(temp.c_str());
+
     {
-        std::ifstream fs(temp.c_str(), std::ios_base::out);
-        double x = 0;
-        fs >> x;
-        assert(x == 3.25);
+      std::basic_ofstream<char, operator_hijacker_char_traits<char> > fs(temp.c_str());
+      fs << "3.25";
+    }
+    {
+      std::ifstream fs(temp.c_str());
+      double x = 0;
+      fs >> x;
+      assert(x == 3.25);
     }
     std::remove(temp.c_str());
 
+    {
+      std::ofstream fs(temp.c_str(), std::ios_base::out);
+      fs << 3.25;
+    }
+    {
+      std::ifstream fs(temp.c_str());
+      double x = 0;
+      fs >> x;
+      assert(x == 3.25);
+    }
+    std::remove(temp.c_str());
+
+    {
+      std::basic_ofstream<char, operator_hijacker_char_traits<char> > fs(temp.c_str(), std::ios_base::out);
+      fs << "3.25";
+    }
+    {
+      std::ifstream fs(temp.c_str());
+      double x = 0;
+      fs >> x;
+      assert(x == 3.25);
+    }
+    std::remove(temp.c_str());
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wofstream fs(temp.c_str());
@@ -52,13 +85,44 @@ int main(int, char**)
         fs >> x;
         assert(x == 3.25);
     }
+    std::remove(temp.c_str());
+
     {
-        std::wifstream fs(temp.c_str(), std::ios_base::out);
-        double x = 0;
-        fs >> x;
-        assert(x == 3.25);
+      std::basic_ofstream<wchar_t, operator_hijacker_char_traits<wchar_t> > fs(temp.c_str());
+      fs << L"3.25";
+    }
+    {
+      std::ifstream fs(temp.c_str());
+      double x = 0;
+      fs >> x;
+      assert(x == 3.25);
     }
     std::remove(temp.c_str());
+
+    {
+      std::wofstream fs(temp.c_str(), std::ios_base::out);
+      fs << 3.25;
+    }
+    {
+      std::wifstream fs(temp.c_str());
+      double x = 0;
+      fs >> x;
+      assert(x == 3.25);
+    }
+    std::remove(temp.c_str());
+
+    {
+      std::basic_ofstream<wchar_t, operator_hijacker_char_traits<wchar_t> > fs(temp.c_str(), std::ios_base::out);
+      fs << L"3.25";
+    }
+    {
+      std::ifstream fs(temp.c_str());
+      double x = 0;
+      fs >> x;
+      assert(x == 3.25);
+    }
+    std::remove(temp.c_str());
+
 #endif
 
 #if TEST_STD_VER >= 23

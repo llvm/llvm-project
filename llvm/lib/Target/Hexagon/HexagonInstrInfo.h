@@ -174,7 +174,8 @@ public:
   /// large registers. See for example the ARM target.
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   /// Store the specified register of the given register class to the specified
   /// stack frame index. The store instruction is to be added to the given
@@ -208,7 +209,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   /// Reverses the branch condition of the specified condition list,
@@ -434,12 +435,10 @@ public:
   bool predCanBeUsedAsDotNew(const MachineInstr &MI, Register PredReg) const;
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
-  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
-  bool isCircBufferInstr(const MachineInstr &MI) const;
 
   unsigned getAddrMode(const MachineInstr &MI) const;
   MachineOperand *getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
-                                   unsigned &AccessSize) const;
+                                   LocationSize &AccessSize) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
   unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup

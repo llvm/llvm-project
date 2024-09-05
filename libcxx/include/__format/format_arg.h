@@ -14,11 +14,12 @@
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__format/concepts.h>
-#include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__functional/invoke.h>
+#include <__fwd/format.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/remove_const.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
@@ -391,7 +392,7 @@ _LIBCPP_DEPRECATED_IN_CXX26
   }
 }
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

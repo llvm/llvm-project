@@ -125,8 +125,11 @@
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
 
-/* Define to 1 if you have the <link.h> header file. */
-#cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
+/* Define to 1 if you have the `pthread_get_name_np' function. */
+#cmakedefine HAVE_PTHREAD_GET_NAME_NP ${HAVE_PTHREAD_GET_NAME_NP}
+
+/* Define to 1 if you have the `pthread_set_name_np' function. */
+#cmakedefine HAVE_PTHREAD_SET_NAME_NP ${HAVE_PTHREAD_SET_NAME_NP}
 
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
@@ -209,9 +212,6 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #cmakedefine HAVE_SYS_TYPES_H ${HAVE_SYS_TYPES_H}
 
-/* Define if the setupterm() function is supported this platform. */
-#cmakedefine LLVM_ENABLE_TERMINFO ${LLVM_ENABLE_TERMINFO}
-
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}
 
@@ -289,6 +289,9 @@
 
 /* Whether tools show host and target info when invoked with --version */
 #cmakedefine01 LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
+
+/* Whether tools show optional build config flags when invoked with --version */
+#cmakedefine01 LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
 
 /* Define if libxml2 is supported on this platform. */
 #cmakedefine LLVM_ENABLE_LIBXML2 ${LLVM_ENABLE_LIBXML2}

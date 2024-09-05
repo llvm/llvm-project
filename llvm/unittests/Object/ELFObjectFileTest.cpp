@@ -1504,3 +1504,46 @@ Sections:
                "SHT_RELA section with index 1: failed to get a "
                "relocated section: invalid section index: 255");
 }
+
+TEST(ELFObjectFileTest, ELFSymbolRefLess) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+)");
+
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  const ELFObjectFile<ELF64LE> &Obj = *ElfOrErr;
+
+  const uint32_t ValLow = 0x00000001;
+  const uint32_t ValHigh = 0x00000100;
+
+  auto MakeSymbol = [&Obj](size_t SymtabIndex, size_t SymbolIndex) {
+    DataRefImpl Data;
+    Data.d.a = SymtabIndex;
+    Data.d.b = SymbolIndex;
+    SymbolRef Sym(Data, &Obj);
+    return ELFSymbolRef(Sym);
+  };
+
+  ELFSymbolRef ELFSymLowLow = MakeSymbol(ValLow, ValLow);
+  ELFSymbolRef ELFSymLowHigh = MakeSymbol(ValLow, ValHigh);
+  ELFSymbolRef ELFSymHighLow = MakeSymbol(ValHigh, ValLow);
+  ELFSymbolRef ELFSymHighHigh = MakeSymbol(ValHigh, ValHigh);
+
+  EXPECT_TRUE(ELFSymLowLow < ELFSymLowHigh);
+  EXPECT_FALSE(ELFSymLowHigh < ELFSymLowLow);
+  EXPECT_FALSE(ELFSymLowLow < ELFSymLowLow);
+
+  EXPECT_TRUE(ELFSymLowLow < ELFSymHighHigh);
+  EXPECT_TRUE(ELFSymLowHigh < ELFSymHighLow);
+  EXPECT_TRUE(ELFSymLowLow < ELFSymHighLow);
+
+  EXPECT_FALSE(ELFSymHighLow < ELFSymLowHigh);
+  EXPECT_FALSE(ELFSymHighHigh < ELFSymLowLow);
+  EXPECT_FALSE(ELFSymHighLow < ELFSymLowLow);
+}

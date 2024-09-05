@@ -748,7 +748,7 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
 clangd::Range tokenRangeForLoc(ParsedAST &AST, SourceLocation TokLoc,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
-  const auto *Token = AST.getTokens().spelledTokenAt(TokLoc);
+  const auto *Token = AST.getTokens().spelledTokenContaining(TokLoc);
   assert(Token && "rename expects spelled tokens");
   clangd::Range Result;
   Result.start = sourceLocToPosition(SM, Token->location());
@@ -811,8 +811,18 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
       continue;
     Locs.push_back(RenameLoc);
   }
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl))
-    return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    // The custom ObjC selector logic doesn't handle the zero arg selector
+    // case, as it relies on parsing selectors via the trailing `:`.
+    // We also choose to use regular rename logic for the single-arg selectors
+    // as the AST/Index has the right locations in that case.
+    if (MD->getSelector().getNumArgs() > 1)
+      return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+
+    // Eat trailing : for single argument methods since they're actually
+    // considered a separate token during rename.
+    NewName.consume_back(":");
+  }
   for (const auto &Loc : Locs) {
     if (auto Err = FilteredChanges.add(tooling::Replacement(
             SM, CharSourceRange::getTokenRange(Loc), NewName)))
@@ -930,10 +940,9 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
     std::optional<Selector> Selector = std::nullopt;
     llvm::SmallVector<llvm::StringRef, 8> NewNames;
     if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
-      if (MD->getSelector().getNumArgs() > 1) {
-        RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
+      RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
+      if (MD->getSelector().getNumArgs() > 1)
         Selector = MD->getSelector();
-      }
     }
     NewName.split(NewNames, ":");
 
@@ -1053,6 +1062,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::AmbiguousSymbol);
 
   const auto &RenameDecl = **DeclsUnderCursor.begin();
+  static constexpr trace::Metric RenameTriggerCounter(
+      "rename_trigger_count", trace::Metric::Counter, "decl_kind");
+  RenameTriggerCounter.record(1, RenameDecl.getDeclKindName());
+
   std::string Placeholder = getName(RenameDecl);
   auto Invalid = checkName(RenameDecl, RInputs.NewName, Placeholder);
   if (Invalid)
@@ -1077,11 +1090,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return MainFileRenameEdit.takeError();
 
   llvm::DenseSet<Range> RenamedRanges;
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+  if (!isa<ObjCMethodDecl>(RenameDecl)) {
     // TODO: Insert the ranges from the ObjCMethodDecl/ObjCMessageExpr selector
     // pieces which are being renamed. This will require us to make changes to
     // locateDeclAt to preserve this AST node.
-  } else {
     RenamedRanges.insert(CurrentIdentifier);
   }
 

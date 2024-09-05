@@ -32,6 +32,7 @@ add_llvm_unittest(CodeGenTests
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
   MachineBasicBlockTest.cpp
+  MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
   MachineOperandTest.cpp
@@ -40,6 +41,7 @@ add_llvm_unittest(CodeGenTests
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
   SelectionDAGAddressAnalysisTest.cpp
+  SelectionDAGPatternMatchTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp

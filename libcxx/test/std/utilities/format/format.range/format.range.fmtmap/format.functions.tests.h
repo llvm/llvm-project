@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -45,7 +46,6 @@ void test_char(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -87,7 +87,6 @@ void test_char(TestFunction check, ExceptionTest check_exception) {
   check(SV("{__'a': 'A'___, __'b': 'B'___, __'c': 'C'___}"), SV("{::_^{}}"), input, 13);
   check(SV("{#####'a': 'A', #####'b': 'B', #####'c': 'C'}"), SV("{::#>{}}"), input, 13);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -157,7 +156,6 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -198,7 +196,6 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   check(SV("{__'a': 'A'___, __'b': 'B'___, __'c': 'C'___}"), SV("{::_^{}}"), input, 13);
   check(SV("{#####'a': 'A', #####'b': 'B', #####'c': 'C'}"), SV("{::#>{}}"), input, 13);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -267,7 +264,6 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -308,7 +304,6 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("{_false: 0_, _true: 42_, _true: 1__}"), SV("{::_^{}}"), input, 10);
   check(SV("{##false: 0, ##true: 42, ###true: 1}"), SV("{::#>{}}"), input, 10);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -369,7 +364,6 @@ void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -410,7 +404,6 @@ void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
   check(SV("{_-42: 42__, __1: -1___, _42: -42__}"), SV("{::_^{}}"), input, 10);
   check(SV("{###-42: 42, #####1: -1, ###42: -42}"), SV("{::#>{}}"), input, 10);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -478,7 +471,6 @@ void test_floating_point(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -519,7 +511,6 @@ void test_floating_point(TestFunction check, ExceptionTest check_exception) {
   check(SV("{_-42: 42__, __1: -1___}"), SV("{::_^{}}"), input, 10);
   check(SV("{###-42: 42, #####1: -1}"), SV("{::#>{}}"), input, 10);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -582,7 +573,6 @@ void test_pointer(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
@@ -621,7 +611,6 @@ void test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("{__0x0: 0x0___}"), SV("{::_^{}}"), input, 13);
   check(SV("{#####0x0: 0x0}"), SV("{::#>{}}"), input, 13);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -685,7 +674,6 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
@@ -724,7 +712,6 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
   check(SV(R"({__"hello": "HELLO"___, __"world": "WORLD"___})"), SV("{::_^{}}"), input, 21);
   check(SV(R"({#####"hello": "HELLO", #####"world": "WORLD"})"), SV("{::#>{}}"), input, 21);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -788,7 +775,6 @@ void test_status(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);

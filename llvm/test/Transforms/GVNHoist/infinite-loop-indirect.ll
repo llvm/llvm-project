@@ -292,7 +292,7 @@ define i32 @foo2(ptr nocapture readonly %i) local_unnamed_addr personality ptr @
 ; CHECK-NEXT:    [[BC1:%.*]] = add i32 [[TMP0]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #[[ATTR1]]
 ; CHECK-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[BC7:%.*]] = add i32 [[TMP0]], 10
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[TMP3]]) #[[ATTR1]]
@@ -340,7 +340,7 @@ lpad:
   %bc1 = add i32 %0, 10
   %3 = extractvalue { ptr, i32 } %2, 0
   %4 = extractvalue { ptr, i32 } %2, 1
-  %5 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #2
+  %5 = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #2
   %matches = icmp eq i32 %4, %5
   %bc7 = add i32 %0, 10
   %6 = tail call ptr @__cxa_begin_catch(ptr %3) #2
@@ -383,7 +383,7 @@ declare void @__cxa_throw(ptr, ptr, ptr) local_unnamed_addr
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.eh.typeid.for(ptr) #1
+declare i32 @llvm.eh.typeid.for.p0(ptr) #1
 
 declare ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 

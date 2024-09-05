@@ -41,11 +41,13 @@ ValueObjectCast::~ValueObjectCast() = default;
 
 CompilerType ValueObjectCast::GetCompilerTypeImpl() { return m_cast_type; }
 
-size_t ValueObjectCast::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t> ValueObjectCast::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(
       true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 std::optional<uint64_t> ValueObjectCast::GetByteSize() {
@@ -84,7 +86,7 @@ bool ValueObjectCast::UpdateValue() {
 
   // The dynamic value failed to get an error, pass the error along
   if (m_error.Success() && m_parent->GetError().Fail())
-    m_error = m_parent->GetError();
+    m_error = m_parent->GetError().Clone();
   SetValueIsValid(false);
   return false;
 }

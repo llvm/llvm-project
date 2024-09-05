@@ -24,13 +24,13 @@
 // CHECK:                 "subsect<trivial<compressed[0,0]>>.not_end
 // CHECK:               } do {
 // CHECK:                 %[[D2:.*]] = "subsect<trivial<compressed[0,0]>>.deref"
-// CHECK:                 "trivial<dense[1,0]>.locate"(%{{.*}}, %[[D2]])
+// CHECK:                 "trivial<batch[1,0]>.locate"(%{{.*}}, %[[D2]])
 // CHECK:                 "subsect<trivial<compressed[0,1]>>.begin"
 // CHECK:                 scf.while {{.*}} {
 // CHECK:                   "subsect<trivial<compressed[0,1]>>.not_end"
 // CHECK:                 } do {
 // CHECK:                   %[[D3:.*]] = "subsect<trivial<compressed[0,1]>>.deref"
-// CHECK:                   "trivial<dense[1,1]>.locate"(%{{.*}}, %[[D3]])
+// CHECK:                   "trivial<batch[1,1]>.locate"(%{{.*}}, %[[D3]])
 // CHECK:                   tensor.extract %{{.*}}{{\[}}%[[D2]], %[[D3]]]
 // CHECK:                   arith.muli
 // CHECK:                   arith.addi
@@ -41,7 +41,7 @@
 // CHECK:                 scf.yield
 // CHECK:               }
 // CHECK:               scf.if {{.*}} {
-// CHECK:                 sparse_tensor.insert %{{.*}} into %{{.*}}{{\[}}%[[D0]], %[[D1]]]
+// CHECK:                 tensor.insert %{{.*}} into %{{.*}}{{\[}}%[[D0]], %[[D1]]]
 // CHECK:                 scf.yield
 // CHECK:               } else {
 // CHECK:                 scf.yield

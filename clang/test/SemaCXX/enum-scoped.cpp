@@ -53,6 +53,7 @@ enum class E4 {
   e1 = -2147483648, // ok
   e2 = 2147483647, // ok
   e3 = 2147483648 // expected-error{{enumerator value evaluates to 2147483648, which cannot be narrowed to type 'int'}}
+                  // expected-warning@-1{{changes value}}
 };
 
 enum class E5 {

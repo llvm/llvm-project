@@ -150,12 +150,12 @@ void test_impl() {
     test_seq_cst<T, MaybeVolatile>(store, load);
 
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
-      auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::seq_cst, std::memory_order_relaxed);
+      auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::seq_cst);
       assert(r);
     };
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
-      while (!x.compare_exchange_strong(val, val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_strong(val, val, std::memory_order::seq_cst)) {
       }
       return val;
     };

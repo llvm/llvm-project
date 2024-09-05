@@ -9,10 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
-// TODO: This test makes incorrect assumptions about floating point conversions.
-//       See https://github.com/llvm/llvm-project/issues/74327.
-// XFAIL: optimization=speed
-
 // <experimental/simd>
 //
 // [simd.class]
@@ -50,7 +46,7 @@ struct CheckConversionSimdCtor {
     for (size_t i = 0; i < array_size; ++i)
       expected_value[i] = static_cast<T>(i);
 
-    types::for_each(arithmetic_no_bool_types(), ConversionHelper<T, SimdAbi, array_size>(expected_value));
+    types::for_each(simd_test_types(), ConversionHelper<T, SimdAbi, array_size>(expected_value));
   }
 };
 
@@ -74,7 +70,7 @@ struct CheckConversionSimdCtorTraits {
   void operator()() {
     constexpr std::size_t array_size = ex::simd_size_v<T, SimdAbi>;
 
-    types::for_each(arithmetic_no_bool_types(), CheckConversionSimdCtorTraitsHelper<T, SimdAbi, array_size>());
+    types::for_each(simd_test_types(), CheckConversionSimdCtorTraitsHelper<T, SimdAbi, array_size>());
   }
 };
 

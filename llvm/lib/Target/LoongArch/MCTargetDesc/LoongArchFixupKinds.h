@@ -111,9 +111,45 @@ enum Fixups {
   fixup_loongarch_relax = FirstLiteralRelocationKind + ELF::R_LARCH_RELAX,
   // Generate an R_LARCH_ALIGN which indicates the linker may fixup align here.
   fixup_loongarch_align = FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN,
+  // 20-bit fixup corresponding to %pcrel_20(foo) for instruction pcaddi.
+  fixup_loongarch_pcrel20_s2,
   // 36-bit fixup corresponding to %call36(foo) for a pair instructions:
   // pcaddu18i+jirl.
   fixup_loongarch_call36 = FirstLiteralRelocationKind + ELF::R_LARCH_CALL36,
+  // 20-bit fixup corresponding to %desc_pc_hi20(foo) for instruction pcalau12i.
+  fixup_loongarch_tls_desc_pc_hi20 =
+      FirstLiteralRelocationKind + ELF::R_LARCH_TLS_DESC_PC_HI20,
+  // 12-bit fixup corresponding to %desc_pc_lo12(foo) for instructions like
+  // addi.w/d.
+  fixup_loongarch_tls_desc_pc_lo12,
+  // 20-bit fixup corresponding to %desc64_pc_lo20(foo) for instruction lu32i.d.
+  fixup_loongarch_tls_desc64_pc_lo20,
+  // 12-bit fixup corresponding to %desc64_pc_hi12(foo) for instruction lu52i.d.
+  fixup_loongarch_tls_desc64_pc_hi12,
+  // 20-bit fixup corresponding to %desc_hi20(foo) for instruction lu12i.w.
+  fixup_loongarch_tls_desc_hi20,
+  // 12-bit fixup corresponding to %desc_lo12(foo) for instruction ori.
+  fixup_loongarch_tls_desc_lo12,
+  // 20-bit fixup corresponding to %desc64_lo20(foo) for instruction lu32i.d.
+  fixup_loongarch_tls_desc64_lo20,
+  // 12-bit fixup corresponding to %desc64_hi12(foo) for instruction lu52i.d.
+  fixup_loongarch_tls_desc64_hi12,
+  // 12-bit fixup corresponding to %desc_ld(foo) for instruction ld.w/d.
+  fixup_loongarch_tls_desc_ld,
+  // 12-bit fixup corresponding to %desc_call(foo) for instruction jirl.
+  fixup_loongarch_tls_desc_call,
+  // 20-bit fixup corresponding to %le_hi20_r(foo) for instruction lu12i.w.
+  fixup_loongarch_tls_le_hi20_r,
+  // Fixup corresponding to %le_add_r(foo) for instruction PseudoAddTPRel_W/D.
+  fixup_loongarch_tls_le_add_r,
+  // 12-bit fixup corresponding to %le_lo12_r(foo) for instruction addi.w/d.
+  fixup_loongarch_tls_le_lo12_r,
+  // 20-bit fixup corresponding to %ld_pcrel_20(foo) for instruction pcaddi.
+  fixup_loongarch_tls_ld_pcrel20_s2,
+  // 20-bit fixup corresponding to %gd_pcrel_20(foo) for instruction pcaddi.
+  fixup_loongarch_tls_gd_pcrel20_s2,
+  // 20-bit fixup corresponding to %desc_pcrel_20(foo) for instruction pcaddi.
+  fixup_loongarch_tls_desc_pcrel20_s2,
 };
 } // end namespace LoongArch
 } // end namespace llvm

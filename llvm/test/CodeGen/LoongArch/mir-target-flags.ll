@@ -1,6 +1,6 @@
-; RUN: llc --mtriple=loongarch64 --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d --stop-after loongarch-prera-expand-pseudo \
 ; RUN:     --relocation-model=pic %s -o %t.mir
-; RUN: llc --mtriple=loongarch64 --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d --run-pass loongarch-prera-expand-pseudo \
 ; RUN:     %t.mir -o - | FileCheck %s
 
 ;; This tests the LoongArch-specific serialization and deserialization of

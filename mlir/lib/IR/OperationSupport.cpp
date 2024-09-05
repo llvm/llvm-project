@@ -431,7 +431,7 @@ MutableOperandRange::MutableOperandRange(
     Operation *owner, unsigned start, unsigned length,
     ArrayRef<OperandSegment> operandSegments)
     : owner(owner), start(start), length(length),
-      operandSegments(operandSegments.begin(), operandSegments.end()) {
+      operandSegments(operandSegments) {
   assert((start + length) <= owner->getNumOperands() && "invalid range");
 }
 MutableOperandRange::MutableOperandRange(Operation *owner)
@@ -497,9 +497,14 @@ void MutableOperandRange::clear() {
   }
 }
 
+/// Explicit conversion to an OperandRange.
+OperandRange MutableOperandRange::getAsOperandRange() const {
+  return owner->getOperands().slice(start, length);
+}
+
 /// Allow implicit conversion to an OperandRange.
 MutableOperandRange::operator OperandRange() const {
-  return owner->getOperands().slice(start, length);
+  return getAsOperandRange();
 }
 
 MutableOperandRange::operator MutableArrayRef<OpOperand>() const {

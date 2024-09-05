@@ -99,6 +99,15 @@ LANGSTANDARD_ALIAS_DEPR(gnu23, "gnu2x")
 // FIXME: Add the alias for iso9899:202* once we know the year ISO publishes
 // the document (expected to be 2024).
 
+// C2y modes
+LANGSTANDARD(c2y, "c2y",
+             C, "Working Draft for ISO C2y",
+             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | HexFloat)
+LANGSTANDARD(gnu2y, "gnu2y",
+             C, "Working Draft for ISO C2y with GNU extensions",
+             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode | HexFloat)
+
+
 // C++ modes
 LANGSTANDARD(cxx98, "c++98",
              CXX, "ISO C++ 1998 with amendments",

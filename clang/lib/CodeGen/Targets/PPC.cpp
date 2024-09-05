@@ -8,13 +8,14 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
 
-static Address complexTempStructure(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty, CharUnits SlotSize,
-                                    CharUnits EltSize, const ComplexType *CTy) {
+static RValue complexTempStructure(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, CharUnits SlotSize,
+                                   CharUnits EltSize, const ComplexType *CTy) {
   Address Addr =
       emitVoidPtrDirectVAArg(CGF, VAListAddr, CGF.Int8Ty, SlotSize * 2,
                              SlotSize, SlotSize, /*AllowHigher*/ true);
@@ -36,10 +37,7 @@ static Address complexTempStructure(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Value *Real = CGF.Builder.CreateLoad(RealAddr, ".vareal");
   llvm::Value *Imag = CGF.Builder.CreateLoad(ImagAddr, ".vaimag");
 
-  Address Temp = CGF.CreateMemTemp(Ty, "vacplx");
-  CGF.EmitStoreOfComplex({Real, Imag}, CGF.MakeAddrLValue(Temp, Ty),
-                         /*init*/ true);
-  return Temp;
+  return RValue::getComplex(Real, Imag);
 }
 
 static bool PPC_initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
@@ -128,8 +126,8 @@ public:
       I.info = classifyArgumentType(I.type);
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -145,6 +143,9 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
 };
 } // namespace
 
@@ -216,8 +217,9 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign*/ TyAlign > CCAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                     : ABIArgInfo::getDirect());
+  return (isPromotableTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
@@ -235,8 +237,8 @@ CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
   return CharUnits::fromQuantity(PtrByteSize);
 }
 
-Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
@@ -257,12 +259,67 @@ Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
-                          SlotSize, /*AllowHigher*/ true);
+                          SlotSize, /*AllowHigher*/ true, Slot);
 }
 
 bool AIXTargetCodeGenInfo::initDwarfEHRegSizeTable(
     CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, Is64Bit, /*IsAIX*/ true);
+}
+
+void AIXTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (!isa<llvm::GlobalVariable>(GV))
+    return;
+
+  auto *GVar = cast<llvm::GlobalVariable>(GV);
+  auto GVId = GV->getName();
+
+  // Is this a global variable specified by the user as toc-data?
+  bool UserSpecifiedTOC =
+      llvm::binary_search(M.getCodeGenOpts().TocDataVarsUserSpecified, GVId);
+  // Assumes the same variable cannot be in both TocVarsUserSpecified and
+  // NoTocVars.
+  if (UserSpecifiedTOC ||
+      ((M.getCodeGenOpts().AllTocData) &&
+       !llvm::binary_search(M.getCodeGenOpts().NoTocDataVars, GVId))) {
+    const unsigned long PointerSize =
+        GV->getParent()->getDataLayout().getPointerSizeInBits() / 8;
+    auto *VarD = dyn_cast<VarDecl>(D);
+    assert(VarD && "Invalid declaration of global variable.");
+
+    ASTContext &Context = D->getASTContext();
+    unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
+    const auto *Ty = VarD->getType().getTypePtr();
+    const RecordDecl *RDecl =
+        Ty->isRecordType() ? Ty->getAs<RecordType>()->getDecl() : nullptr;
+
+    bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
+    auto reportUnsupportedWarning = [&](bool ShouldEmitWarning, StringRef Msg) {
+      if (ShouldEmitWarning)
+        M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+            << GVId << Msg;
+    };
+    if (!Ty || Ty->isIncompleteType())
+      reportUnsupportedWarning(EmitDiagnostic, "of incomplete type");
+    else if (RDecl && RDecl->hasFlexibleArrayMember())
+      reportUnsupportedWarning(EmitDiagnostic,
+                               "it contains a flexible array member");
+    else if (VarD->getTLSKind() != VarDecl::TLS_None)
+      reportUnsupportedWarning(EmitDiagnostic, "of thread local storage");
+    else if (PointerSize < Context.getTypeInfo(VarD->getType()).Width / 8)
+      reportUnsupportedWarning(EmitDiagnostic,
+                               "variable is larger than a pointer");
+    else if (PointerSize < Alignment)
+      reportUnsupportedWarning(EmitDiagnostic,
+                               "variable is aligned wider than a pointer");
+    else if (D->hasAttr<SectionAttr>())
+      reportUnsupportedWarning(EmitDiagnostic,
+                               "variable has a section attribute");
+    else if (GV->hasExternalLinkage() ||
+             (M.getCodeGenOpts().AllTocData && !GV->hasLocalLinkage()))
+      GVar->addAttribute("toc-data");
+  }
 }
 
 // PowerPC-32
@@ -289,8 +346,8 @@ public:
       I.info = classifyArgumentType(I.type);
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class PPC32TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -367,8 +424,8 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 
 // TODO: this implementation is now likely redundant with
 // DefaultABIInfo::EmitVAArg.
-Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
-                                      QualType Ty) const {
+RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
+                                     QualType Ty, AggValueSlot Slot) const {
   if (getTarget().getTriple().isOSDarwin()) {
     auto TI = getContext().getTypeInfoInChars(Ty);
     TI.Align = getParamTypeAlignment(Ty);
@@ -376,14 +433,14 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     CharUnits SlotSize = CharUnits::fromQuantity(4);
     return emitVoidPtrVAArg(CGF, VAList, Ty,
                             classifyArgumentType(Ty).isIndirect(), TI, SlotSize,
-                            /*AllowHigherAlign=*/true);
+                            /*AllowHigherAlign=*/true, Slot);
   }
 
   const unsigned OverflowLimit = 8;
   if (const ComplexType *CTy = Ty->getAs<ComplexType>()) {
     // TODO: Implement this. For now ignore.
     (void)CTy;
-    return Address::invalid(); // FIXME?
+    return RValue::getAggregate(Address::invalid()); // FIXME?
   }
 
   // struct __va_list_tag {
@@ -454,9 +511,10 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     CharUnits RegSize = CharUnits::fromQuantity((isInt || IsSoftFloatABI) ? 4 : 8);
     llvm::Value *RegOffset =
         Builder.CreateMul(NumRegs, Builder.getInt8(RegSize.getQuantity()));
-    RegAddr = Address(
-        Builder.CreateInBoundsGEP(CGF.Int8Ty, RegAddr.getPointer(), RegOffset),
-        DirectTy, RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
+    RegAddr = Address(Builder.CreateInBoundsGEP(
+                          CGF.Int8Ty, RegAddr.emitRawPointer(CGF), RegOffset),
+                      DirectTy,
+                      RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
 
     // Increase the used-register count.
     NumRegs =
@@ -492,7 +550,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     // Round up address of argument to alignment
     CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
     if (Align > OverflowAreaAlign) {
-      llvm::Value *Ptr = OverflowArea.getPointer();
+      llvm::Value *Ptr = OverflowArea.emitRawPointer(CGF);
       OverflowArea = Address(emitRoundPointerUpToAlignment(CGF, Ptr, Align),
                              OverflowArea.getElementType(), Align);
     }
@@ -501,7 +559,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
     // Increase the overflow area.
     OverflowArea = Builder.CreateConstInBoundsByteGEP(OverflowArea, Size);
-    Builder.CreateStore(OverflowArea.getPointer(), OverflowAreaAddr);
+    Builder.CreateStore(OverflowArea.emitRawPointer(CGF), OverflowAreaAddr);
     CGF.EmitBranch(Cont);
   }
 
@@ -517,7 +575,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                      getContext().getTypeAlignInChars(Ty));
   }
 
-  return Result;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Result, Ty), Slot);
 }
 
 bool PPC32TargetCodeGenInfo::isStructReturnInRegABI(
@@ -598,8 +656,8 @@ public:
     }
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class PPC64_SVR4_TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -834,8 +892,9 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign=*/TyAlign > ABIAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                     : ABIArgInfo::getDirect());
+  return (isPromotableTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo
@@ -898,8 +957,8 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 // Based on ARMABIInfo::EmitVAArg, adjusted for 64-bit machine.
-Address PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                      QualType Ty) const {
+RValue PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                     QualType Ty, AggValueSlot Slot) const {
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
 
@@ -931,7 +990,7 @@ Address PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // types this way, and so right-alignment only applies to fundamental types.
   // So on PPC64, we must force the use of right-alignment even for aggregates.
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
-                          SlotSize, /*AllowHigher*/ true,
+                          SlotSize, /*AllowHigher*/ true, Slot,
                           /*ForceRightAdjust*/ true);
 }
 

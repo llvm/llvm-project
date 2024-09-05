@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple mips64-linux-gnu -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple mips64-linux-gnu -o - -emit-llvm %s | FileCheck %s
 //
 // Transparent unions are passed according to the calling convention rules of
 // the first member. In this case, it is as if it were a void pointer so we

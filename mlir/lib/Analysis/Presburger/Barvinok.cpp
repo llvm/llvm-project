@@ -10,7 +10,6 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/Sequence.h"
 #include <algorithm>
-#include <bitset>
 
 using namespace mlir;
 using namespace presburger;
@@ -61,9 +60,9 @@ ConeH mlir::presburger::detail::getDual(ConeV cone) {
 }
 
 /// Find the index of a cone in V-representation.
-MPInt mlir::presburger::detail::getIndex(ConeV cone) {
+DynamicAPInt mlir::presburger::detail::getIndex(const ConeV &cone) {
   if (cone.getNumRows() > cone.getNumColumns())
-    return MPInt(0);
+    return DynamicAPInt(0);
 
   return cone.determinant();
 }
@@ -79,7 +78,7 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 /// coefficients.
 GeneratingFunction
 mlir::presburger::detail::computeUnimodularConeGeneratingFunction(
-    ParamPoint vertex, int sign, ConeH cone) {
+    ParamPoint vertex, int sign, const ConeH &cone) {
   // Consider a cone with H-representation [0  -1].
   //                                       [-1 -2]
   // Let the vertex be given by the matrix [ 2  2   0], with 2 params.
@@ -358,11 +357,11 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
 
     if (!vertex)
       continue;
-    if (std::find(vertices.begin(), vertices.end(), vertex) != vertices.end())
+    if (llvm::is_contained(vertices, vertex))
       continue;
     // If this subset corresponds to a vertex that has not been considered,
     // store it.
-    vertices.push_back(*vertex);
+    vertices.emplace_back(*vertex);
 
     // If a vertex is formed by the intersection of more than d facets, we
     // assume that any d-subset of these facets can be solved to obtain its
@@ -413,7 +412,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // constant terms zero.
     ConeH tangentCone = defineHRep(numVars);
     for (unsigned j = 0, e = subset.getNumRows(); j < e; ++j) {
-      SmallVector<MPInt> ineq(numVars + 1);
+      SmallVector<DynamicAPInt> ineq(numVars + 1);
       for (unsigned k = 0; k < numVars; ++k)
         ineq[k] = subset(j, k);
       tangentCone.addInequality(ineq);
@@ -473,10 +472,10 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
 Point mlir::presburger::detail::getNonOrthogonalVector(
     ArrayRef<Point> vectors) {
   unsigned dim = vectors[0].size();
-  assert(
-      llvm::all_of(vectors,
-                   [&](const Point &vector) { return vector.size() == dim; }) &&
-      "all vectors need to be the same size!");
+  assert(llvm::all_of(
+             vectors,
+             [&dim](const Point &vector) { return vector.size() == dim; }) &&
+         "all vectors need to be the same size!");
 
   SmallVector<Fraction> newPoint = {Fraction(1, 1)};
   Fraction maxDisallowedValue = -Fraction(1, 0),
@@ -494,7 +493,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
       // Find the biggest such value
       maxDisallowedValue = std::max(maxDisallowedValue, disallowedValue);
     }
-    newPoint.push_back(maxDisallowedValue + 1);
+    newPoint.emplace_back(maxDisallowedValue + 1);
   }
   return newPoint;
 }
@@ -515,25 +514,25 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
-  assert(den.size() != 0 &&
-         "division by empty denominator in rational function!");
+  assert(!den.empty() && "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
   // inherits from.
-  assert(
-      llvm::all_of(
-          num, [&](const QuasiPolynomial &qp) { return num[0].isEqual(qp); }) &&
-      "the quasipolynomials should all belong to the same space!");
+  assert(llvm::all_of(num,
+                      [&num](const QuasiPolynomial &qp) {
+                        return num[0].isEqual(qp);
+                      }) &&
+         "the quasipolynomials should all belong to the same space!");
 
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(power + 1);
 
-  coefficients.push_back(num[0] / den[0]);
+  coefficients.emplace_back(num[0] / den[0]);
   for (unsigned i = 1; i <= power; ++i) {
     // If the power is not there in the numerator, the coefficient is zero.
-    coefficients.push_back(i < num.size() ? num[i]
-                                          : QuasiPolynomial(numParam, 0));
+    coefficients.emplace_back(i < num.size() ? num[i]
+                                             : QuasiPolynomial(numParam, 0));
 
     // After den.size(), the coefficients are zero, so we stop
     // subtracting at that point (if it is less than i).
@@ -556,8 +555,8 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// v represents the affine functions whose floors are multiplied by the
 /// generators, and ds represents the list of generators.
 std::pair<QuasiPolynomial, std::vector<Fraction>>
-substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
-                   Point mu) {
+substituteMuInTerm(unsigned numParams, const ParamPoint &v,
+                   const std::vector<Point> &ds, const Point &mu) {
   unsigned numDims = mu.size();
 #ifndef NDEBUG
   for (const Point &d : ds)
@@ -575,7 +574,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   SmallVector<Fraction> coefficients;
   coefficients.reserve(numDims);
   for (const Point &d : ds)
-    coefficients.push_back(-dotProduct(mu, d));
+    coefficients.emplace_back(-dotProduct(mu, d));
 
   // Then, the affine function is a single floor expression, given by the
   // corresponding column of v.
@@ -583,7 +582,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   std::vector<std::vector<SmallVector<Fraction>>> affine;
   affine.reserve(numDims);
   for (unsigned j = 0; j < numDims; ++j)
-    affine.push_back({SmallVector<Fraction>(vTranspose.getRow(j))});
+    affine.push_back({SmallVector<Fraction>{vTranspose.getRow(j)}});
 
   QuasiPolynomial num(numParams, coefficients, affine);
   num = num.simplify();
@@ -595,7 +594,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   for (const Point &d : ds) {
     // This term in the denominator is
     // (1 - t^dens.back())
-    dens.push_back(dotProduct(d, mu));
+    dens.emplace_back(dotProduct(d, mu));
   }
 
   return {num, dens};
@@ -613,10 +612,10 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
   // denominator, and convert them to their absolute values.
   unsigned numNegExps = 0;
   Fraction sumNegExps(0, 1);
-  for (unsigned j = 0, e = dens.size(); j < e; ++j) {
-    if (dens[j] < 0) {
+  for (const auto &den : dens) {
+    if (den < 0) {
       numNegExps += 1;
-      sumNegExps += dens[j];
+      sumNegExps += den;
     }
   }
 
@@ -635,15 +634,15 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
+std::vector<QuasiPolynomial> getBinomialCoefficients(const QuasiPolynomial &n,
                                                      unsigned r) {
   unsigned numParams = n.getNumInputs();
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(r + 1);
-  coefficients.push_back(QuasiPolynomial(numParams, 1));
+  coefficients.emplace_back(numParams, 1);
   for (unsigned j = 1; j <= r; ++j)
     // We use the recursive formula for binomial coefficients here and below.
-    coefficients.push_back(
+    coefficients.emplace_back(
         (coefficients[j - 1] * (n - QuasiPolynomial(numParams, j - 1)) /
          Fraction(j, 1))
             .simplify());
@@ -652,12 +651,13 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<Fraction> getBinomialCoefficients(Fraction n, Fraction r) {
+std::vector<Fraction> getBinomialCoefficients(const Fraction &n,
+                                              const Fraction &r) {
   std::vector<Fraction> coefficients;
   coefficients.reserve((int64_t)floor(r));
-  coefficients.push_back(1);
+  coefficients.emplace_back(1);
   for (unsigned j = 1; j <= r; ++j)
-    coefficients.push_back(coefficients[j - 1] * (n - (j - 1)) / (j));
+    coefficients.emplace_back(coefficients[j - 1] * (n - (j - 1)) / (j));
   return coefficients;
 }
 
@@ -722,8 +722,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // Then, using the formula for geometric series, we replace each (1 -
     // (s+1)^(dens[j])) with
     // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
-    for (unsigned j = 0, e = dens.size(); j < e; ++j)
-      dens[j] = abs(dens[j]) - 1;
+    for (auto &j : dens)
+      j = abs(j) - 1;
     // Note that at this point, the semantics of `dens[j]` changes to mean
     // a term (\sum_{0 ≤ k ≤ dens[j]} (s+1)^k). The denominator is, as before,
     // a product of these terms.
@@ -765,8 +765,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     eachTermDenCoefficients.reserve(r);
     for (const Fraction &den : dens) {
       singleTermDenCoefficients = getBinomialCoefficients(den + 1, den + 1);
-      eachTermDenCoefficients.push_back(
-          ArrayRef<Fraction>(singleTermDenCoefficients).slice(1));
+      eachTermDenCoefficients.emplace_back(
+          ArrayRef<Fraction>(singleTermDenCoefficients).drop_front());
     }
 
     // Now we find the coefficients in Q(s) itself

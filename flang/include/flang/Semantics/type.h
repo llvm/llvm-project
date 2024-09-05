@@ -306,7 +306,7 @@ public:
   }
   // For TYPE IS & CLASS IS: kind type parameters must be
   // explicit and equal, len type parameters are ignored.
-  bool Match(const DerivedTypeSpec &) const;
+  bool MatchesOrExtends(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
   std::string VectorTypeAsFortran() const;
 
@@ -459,7 +459,7 @@ inline const DerivedTypeSpec *DeclTypeSpec::AsDerived() const {
   return const_cast<DeclTypeSpec *>(this)->AsDerived();
 }
 
-bool IsInteroperableIntrinsicType(
+std::optional<bool> IsInteroperableIntrinsicType(
     const DeclTypeSpec &, const common::LanguageFeatureControl &);
 
 } // namespace Fortran::semantics

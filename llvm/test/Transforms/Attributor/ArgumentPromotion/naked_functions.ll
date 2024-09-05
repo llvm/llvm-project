@@ -7,7 +7,7 @@
 @g = common global i32 0, align 4
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = common global i32 0, align 4
+; CHECK: @g = common global i32 0, align 4
 ;.
 define i32 @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar() {

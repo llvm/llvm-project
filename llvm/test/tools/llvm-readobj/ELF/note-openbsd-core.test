@@ -35,35 +35,37 @@ ProgramHeaders:
 # GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_REGS (regular registers)
 # GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_FPREGS (floating point registers)
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x78
 # LLVM-NEXT:     Size: 0x74
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: OpenBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_OPENBSD_PROCINFO (procinfo structure)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: OpenBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_OPENBSD_AUXV (ELF auxiliary vector data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: OpenBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_OPENBSD_WCOOKIE (window cookie)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: OpenBSD@31337
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_OPENBSD_REGS (regular registers)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: OpenBSD@31337
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_OPENBSD_FPREGS (floating point registers)
-# LLVM-NEXT:     }
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: OpenBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_OPENBSD_PROCINFO (procinfo structure)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: OpenBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_OPENBSD_AUXV (ELF auxiliary vector data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: OpenBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_OPENBSD_WCOOKIE (window cookie)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: OpenBSD@31337
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_OPENBSD_REGS (regular registers)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: OpenBSD@31337
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_OPENBSD_FPREGS (floating point registers)
+# LLVM-NEXT:        }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]

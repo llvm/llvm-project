@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <cstddef>
 #include <experimental/__config>
@@ -56,6 +57,17 @@ public:
   template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI simd_mask(const value_type* __mem, _Flags) {
     _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
+  // copy functions
+  template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void copy_from(const value_type* __mem, _Flags) {
+    _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
+  template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void copy_to(value_type* __mem, _Flags) const {
+    _Impl::__store(__s_, _Flags::template __apply<simd_mask>(__mem));
   }
 
   // scalar access [simd.mask.subscr]

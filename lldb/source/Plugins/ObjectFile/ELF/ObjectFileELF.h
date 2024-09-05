@@ -183,10 +183,17 @@ private:
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;
   typedef SectionHeaderColl::const_iterator SectionHeaderCollConstIter;
 
-  typedef std::vector<elf::ELFDynamic> DynamicSymbolColl;
+  struct ELFDynamicWithName {
+    elf::ELFDynamic symbol;
+    std::string name;
+  };
+  typedef std::vector<ELFDynamicWithName> DynamicSymbolColl;
   typedef DynamicSymbolColl::iterator DynamicSymbolCollIter;
   typedef DynamicSymbolColl::const_iterator DynamicSymbolCollConstIter;
 
+  /// An ordered map of file address to address class. Used on architectures
+  /// like Arm where there is an alternative ISA mode like Thumb. The container
+  /// is ordered so that it can be binary searched.
   typedef std::map<lldb::addr_t, lldb_private::AddressClass>
       FileAddressToAddressClassMap;
 
@@ -209,6 +216,10 @@ private:
 
   /// Collection of section headers.
   SectionHeaderColl m_section_headers;
+
+  /// The file address of the .dynamic section. This can be found in the p_vaddr
+  /// of the PT_DYNAMIC program header.
+  lldb::addr_t m_dynamic_base_addr = LLDB_INVALID_ADDRESS;
 
   /// Collection of symbols from the dynamic table.
   DynamicSymbolColl m_dynamic_symbols;
@@ -285,18 +296,19 @@ private:
 
   /// Populates the symbol table with all non-dynamic linker symbols.  This
   /// method will parse the symbols only once.  Returns the number of symbols
-  /// parsed.
-  unsigned ParseSymbolTable(lldb_private::Symtab *symbol_table,
-                            lldb::user_id_t start_id,
-                            lldb_private::Section *symtab);
+  /// parsed and a map of address types (used by targets like Arm that have
+  /// an alternative ISA mode like Thumb).
+  std::pair<unsigned, FileAddressToAddressClassMap>
+  ParseSymbolTable(lldb_private::Symtab *symbol_table, lldb::user_id_t start_id,
+                   lldb_private::Section *symtab);
 
   /// Helper routine for ParseSymbolTable().
-  unsigned ParseSymbols(lldb_private::Symtab *symbol_table,
-                        lldb::user_id_t start_id,
-                        lldb_private::SectionList *section_list,
-                        const size_t num_symbols,
-                        const lldb_private::DataExtractor &symtab_data,
-                        const lldb_private::DataExtractor &strtab_data);
+  std::pair<unsigned, FileAddressToAddressClassMap>
+  ParseSymbols(lldb_private::Symtab *symbol_table, lldb::user_id_t start_id,
+               lldb_private::SectionList *section_list,
+               const size_t num_symbols,
+               const lldb_private::DataExtractor &symtab_data,
+               const lldb_private::DataExtractor &strtab_data);
 
   /// Scans the relocation entries and adds a set of artificial symbols to the
   /// given symbol table for each PLT slot.  Returns the number of symbols
@@ -380,6 +392,9 @@ private:
   /// ELF dependent module dump routine.
   void DumpDependentModules(lldb_private::Stream *s);
 
+  /// ELF dump the .dynamic section
+  void DumpELFDynamic(lldb_private::Stream *s);
+
   const elf::ELFDynamic *FindDynamicSymbol(unsigned tag);
 
   unsigned PLTRelocationType();
@@ -398,6 +413,28 @@ private:
   /// .gnu_debugdata section or \c nullptr if an error occured or if there's no
   /// section with that name.
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
+
+  /// Get the bytes that represent the .dynamic section.
+  ///
+  /// This function will fetch the data for the .dynamic section in an ELF file.
+  /// The PT_DYNAMIC program header will be used to extract the data and this
+  /// function will fall back to using the section headers if PT_DYNAMIC isn't
+  /// found.
+  ///
+  /// \return The bytes that represent the string table data or \c std::nullopt
+  ///         if an error occured.
+  std::optional<lldb_private::DataExtractor> GetDynamicData();
+
+  /// Get the bytes that represent the dynamic string table data.
+  ///
+  /// This function will fetch the data for the string table in an ELF file. If
+  /// the ELF file is loaded from a file on disk, it will use the section
+  /// headers to extract the data and fall back to using the DT_STRTAB and
+  /// DT_STRSZ .dynamic entries.
+  ///
+  /// \return The bytes that represent the string table data or \c std::nullopt
+  ///         if an error occured.
+  std::optional<lldb_private::DataExtractor> GetDynstrData();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

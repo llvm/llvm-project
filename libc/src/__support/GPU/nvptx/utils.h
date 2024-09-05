@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace gpu {
 
 /// Type aliases to the address spaces used by the NVPTX backend.
@@ -97,7 +98,7 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
 
 /// Returns the id of the thread inside of a CUDA warp executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {
-  return get_thread_id() & (get_lane_size() - 1);
+  return __nvvm_read_ptx_sreg_laneid();
 }
 
 /// Returns the bit-mask of active threads in the current warp.
@@ -118,12 +119,24 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
   uint32_t mask = static_cast<uint32_t>(lane_mask);
   return __nvvm_vote_ballot_sync(mask, x);
 }
+
 /// Waits for all the threads in the block to converge and issues a fence.
 [[clang::convergent]] LIBC_INLINE void sync_threads() { __syncthreads(); }
+
+/// Waits for all pending memory operations to complete in program order.
+[[clang::convergent]] LIBC_INLINE void memory_fence() { __nvvm_membar_sys(); }
 
 /// Waits for all threads in the warp to reconverge for independent scheduling.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t mask) {
   __nvvm_bar_warp_sync(static_cast<uint32_t>(mask));
+}
+
+/// Shuffles the the lanes inside the warp according to the given index.
+[[clang::convergent]] LIBC_INLINE uint32_t shuffle(uint64_t lane_mask,
+                                                   uint32_t idx, uint32_t x) {
+  uint32_t mask = static_cast<uint32_t>(lane_mask);
+  uint32_t bitmask = (mask >> idx) & 1;
+  return -bitmask & __nvvm_shfl_sync_idx_i32(mask, x, idx, get_lane_size() - 1);
 }
 
 /// Returns the current value of the GPU's processor clock.
@@ -142,6 +155,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 LIBC_INLINE uint32_t get_cluster_id() { return __nvvm_read_ptx_sreg_smid(); }
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif

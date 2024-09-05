@@ -49,15 +49,15 @@ public:
   static const int MaxTables = 4;
 
   /// The lookup result is a list of global declaration IDs.
-  using data_type = SmallVector<DeclID, 4>;
+  using data_type = SmallVector<GlobalDeclID, 4>;
 
   struct data_type_builder {
     data_type &Data;
-    llvm::DenseSet<DeclID> Found;
+    llvm::DenseSet<GlobalDeclID> Found;
 
     data_type_builder(data_type &D) : Data(D) {}
 
-    void insert(DeclID ID) {
+    void insert(GlobalDeclID ID) {
       // Just use a linear scan unless we have more than a few IDs.
       if (Found.empty() && !Data.empty()) {
         if (Data.size() <= 4) {
@@ -108,7 +108,7 @@ public:
 
   static void MergeDataInto(const data_type &From, data_type_builder &To) {
     To.Data.reserve(To.Data.size() + From.size());
-    for (DeclID ID : From)
+    for (GlobalDeclID ID : From)
       To.insert(ID);
   }
 
@@ -175,7 +175,7 @@ public:
                      const unsigned char* d,
                      unsigned DataLen);
 
-  IdentID ReadIdentifierID(const unsigned char *d);
+  IdentifierID ReadIdentifierID(const unsigned char *d);
 
   ASTReader &getReader() const { return Reader; }
 };

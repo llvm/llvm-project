@@ -16,6 +16,11 @@ class ParsedCommandTestCase(TestBase):
     def test(self):
         self.pycmd_tests()
 
+    def setUp(self):
+        TestBase.setUp(self)
+        self.stdin_path = self.getBuildArtifact("stdin.txt")
+        self.stdout_path = self.getBuildArtifact("stdout.txt")
+
     def check_help_options(self, cmd_name, opt_list, substrs=[]):
         """
         Pass the command name in cmd_name and a vector of the short option, type & long option.
@@ -29,8 +34,39 @@ class ParsedCommandTestCase(TestBase):
             else:
                 (short_opt, type, long_opt) = elem
                 substrs.append(f"-{short_opt} <{type}> ( --{long_opt} <{type}> )")
-        print(f"Opt Vec\n{substrs}")
         self.expect("help " + cmd_name, substrs=substrs)
+
+    def run_one_repeat(self, commands, expected_num_errors):
+        with open(self.stdin_path, "w") as input_handle:
+            input_handle.write(commands)
+
+        in_fileH = open(self.stdin_path, "r")
+        self.dbg.SetInputFileHandle(in_fileH, False)
+
+        out_fileH = open(self.stdout_path, "w")
+        self.dbg.SetOutputFileHandle(out_fileH, False)
+        self.dbg.SetErrorFileHandle(out_fileH, False)
+
+        options = lldb.SBCommandInterpreterRunOptions()
+        options.SetEchoCommands(False)
+        options.SetPrintResults(True)
+        options.SetPrintErrors(True)
+        options.SetAllowRepeats(True)
+
+        n_errors, quit_requested, has_crashed = self.dbg.RunCommandInterpreter(
+            True, False, options, 0, False, False
+        )
+
+        in_fileH.close()
+        out_fileH.close()
+
+        results = None
+        with open(self.stdout_path, "r") as out_fileH:
+            results = out_fileH.read()
+
+        self.assertEqual(n_errors, expected_num_errors)
+
+        return results
 
     def pycmd_tests(self):
         source_dir = self.getSourceDir()
@@ -168,9 +204,6 @@ class ParsedCommandTestCase(TestBase):
         num_completions = interp.HandleCompletionWithDescriptions(
             cmd_str, len(cmd_str) - 1, 0, 1000, matches, descriptions
         )
-        print(
-            f"First: {matches.GetStringAtIndex(0)}\nSecond: {matches.GetStringAtIndex(1)}\nThird: {matches.GetStringAtIndex(2)}"
-        )
         self.assertEqual(num_completions, 1, "Only one completion for source file")
         self.assertEqual(matches.GetSize(), 2, "The first element is the complete line")
         self.assertEqual(
@@ -197,3 +230,23 @@ class ParsedCommandTestCase(TestBase):
             "two-args 'First Argument' 'Second Argument'",
             substrs=["0: First Argument", "1: Second Argument"],
         )
+
+        # Now make sure get_repeat_command works properly:
+
+        # no-args turns off auto-repeat
+        results = self.run_one_repeat("no-args\n\n", 1)
+        self.assertIn("No auto repeat", results, "Got auto-repeat error")
+
+        # one-args does the normal repeat
+        results = self.run_one_repeat("one-arg-no-opt ONE_ARG\n\n", 0)
+        self.assertEqual(results.count("ONE_ARG"), 2, "We did a normal repeat")
+
+        # two-args adds an argument:
+        results = self.run_one_repeat("two-args FIRST_ARG SECOND_ARG\n\n", 0)
+        self.assertEqual(
+            results.count("FIRST_ARG"), 2, "Passed first arg to both commands"
+        )
+        self.assertEqual(
+            results.count("SECOND_ARG"), 2, "Passed second arg to both commands"
+        )
+        self.assertEqual(results.count("THIRD_ARG"), 1, "Passed third arg in repeat")

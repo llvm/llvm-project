@@ -17,18 +17,22 @@ add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
+  SPIRVInlineAsmLowering.cpp
+  SPIRVCommandLine.cpp
   SPIRVDuplicatesTracker.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVStripConvergentIntrinsics.cpp
+  SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
   SPIRVPreLegalizer.cpp
+  SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
@@ -36,6 +40,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVUtils.cpp
+  SPIRVEmitNonSemanticDI.cpp
 
   LINK_COMPONENTS
   Analysis

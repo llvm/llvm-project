@@ -70,9 +70,6 @@ define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 ; SSE2-LABEL: test_v16i8_reassociation:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpgtb %xmm0, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -81,20 +78,17 @@ define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pminsb %xmm1, %xmm0
-; SSE41-NEXT:    pminsb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: test_v16i8_reassociation:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pxor %xmm1, %xmm1
 ; SSE42-NEXT:    pminsb %xmm1, %xmm0
-; SSE42-NEXT:    pminsb %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8_reassociation:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpminsb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpminsb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <16 x i8> @llvm.smin.v16i8(<16 x i8> %a, <16 x i8> zeroinitializer)

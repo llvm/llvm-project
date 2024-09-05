@@ -48,7 +48,7 @@ let SchedRW = [WriteSystem] in {
                       [(int_x86_loadiwkey XMM0, VR128:$src1, VR128:$src2, EAX)]>, T8, XS;
   }
 
-  let Predicates = [HasKL, NoEGPR] in {
+  let Predicates = [HasKL] in {
     let Uses = [XMM0], Defs = [XMM0, XMM1, XMM2, XMM4, XMM5, XMM6, EFLAGS] in
       def ENCODEKEY128 : Encodekey<0xFA, "encodekey128">, T8;
 
@@ -57,17 +57,6 @@ let SchedRW = [WriteSystem] in {
 
     let Constraints = "$src1 = $dst", Defs = [EFLAGS] in
       defm "" : Aesencdec<"">, T8;
-  }
-
-  let Predicates = [HasKL, HasEGPR, In64BitMode] in {
-    let Uses = [XMM0], Defs = [XMM0, XMM1, XMM2, XMM4, XMM5, XMM6, EFLAGS] in
-      def ENCODEKEY128_EVEX : Encodekey<0xDA, "encodekey128">, EVEX, T_MAP4;
-
-    let Uses = [XMM0, XMM1], Defs = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, EFLAGS] in
-      def ENCODEKEY256_EVEX : Encodekey<0xDB, "encodekey256">, EVEX, T_MAP4;
-
-    let Constraints = "$src1 = $dst", Defs = [EFLAGS] in
-      defm "" : Aesencdec<"_EVEX">, EVEX, T_MAP4;
   }
 } // SchedRW
 
@@ -80,9 +69,6 @@ multiclass Aesencdecwide<string suffix> {
 
 let SchedRW = [WriteSystem], Uses = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
     Defs = [EFLAGS, XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7], mayLoad = 1 in {
-  let Predicates = [HasWIDEKL, NoEGPR] in
+  let Predicates = [HasWIDEKL] in
     defm "" : Aesencdecwide<"">, T8;
-
-  let Predicates = [HasWIDEKL, HasEGPR, In64BitMode] in
-    defm "" : Aesencdecwide<"_EVEX">, EVEX, T_MAP4;
 } // SchedRW

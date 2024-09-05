@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -139,28 +140,26 @@ public:
   /// start of a symbol, or the entire symbol.
   /// This is used for example by WebAssembly to decode preludes.
   ///
-  /// Base implementation returns std::nullopt. So all targets by default ignore
-  /// to treat symbols separately.
+  /// Base implementation returns false. So all targets by default decline to
+  /// treat symbols separately.
   ///
   /// \param Symbol   - The symbol.
   /// \param Size     - The number of bytes consumed.
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
   /// \param Bytes    - A reference to the actual bytes at the symbol location.
-  /// \param CStream  - The stream to print comments and annotations on.
-  /// \return         - MCDisassembler::Success if bytes are decoded
-  ///                   successfully. Size must hold the number of bytes that
-  ///                   were decoded.
-  ///                 - MCDisassembler::Fail if the bytes are invalid. Size
-  ///                   must hold the number of bytes that were decoded before
-  ///                   failing. The target must print nothing. This can be
-  ///                   done by buffering the output if needed.
-  ///                 - std::nullopt if the target doesn't want to handle the
-  ///                   symbol separately. Value of Size is ignored in this
-  ///                   case.
-  virtual std::optional<DecodeStatus>
-  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                uint64_t Address, raw_ostream &CStream) const;
+  /// \return         - True if this symbol triggered some target specific
+  ///                   disassembly for this symbol. Size must be set with the
+  ///                   number of bytes consumed.
+  ///                 - Error if this symbol triggered some target specific
+  ///                   disassembly for this symbol, but an error was found with
+  ///                   it. Size must be set with the number of bytes consumed.
+  ///                 - False if the target doesn't want to handle the symbol
+  ///                   separately. The value of Size is ignored in this case,
+  ///                   and Err must not be set.
+  virtual Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                       ArrayRef<uint8_t> Bytes,
+                                       uint64_t Address) const;
   // TODO:
   // Implement similar hooks that can be used at other points during
   // disassembly. Something along the following lines:

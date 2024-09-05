@@ -76,28 +76,34 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait (devnum: i + j:queues:) clause-list
 
-  // expected-error@+4{{use of undeclared identifier 'devnum'}}
+  // expected-error@+5{{use of undeclared identifier 'devnum'}}
+  // expected-error@+4{{expected ','}}
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait (queues:devnum: i + j
 
-  // expected-error@+2{{use of undeclared identifier 'devnum'}}
+  // expected-error@+3{{use of undeclared identifier 'devnum'}}
+  // expected-error@+2{{expected ','}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait (queues:devnum: i + j)
 
-  // expected-error@+3{{use of undeclared identifier 'devnum'}}
+  // expected-error@+4{{use of undeclared identifier 'devnum'}}
+  // expected-error@+3{{expected ','}}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait (queues:devnum: i + j) clause-list
 
+  // expected-error@+4{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(i, j, 1+1, 3.3
 
+  // expected-error@+2{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(i, j, 1+1, 3.3)
+  // expected-error@+3{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(i, j, 1+1, 3.3) clause-list
@@ -117,40 +123,50 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(,) clause-list
 
+  // expected-error@+4{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(queues:i, j, 1+1, 3.3
 
+  // expected-error@+5{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+4{{expected expression}}
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(queues:i, j, 1+1, 3.3,
 
+  // expected-error@+2{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(queues:i, j, 1+1, 3.3)
 
+  // expected-error@+3{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(queues:i, j, 1+1, 3.3) clause-list
 
+  // expected-error@+4{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:i, j, 1+1, 3.3
+  // expected-error@+2{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:i, j, 1+1, 3.3)
+  // expected-error@+3{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:i, j, 1+1, 3.3) clause-list
 
+  // expected-error@+4{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:queues:i, j, 1+1, 3.3
+  // expected-error@+2{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:queues:i, j, 1+1, 3.3)
+  // expected-error@+3{{OpenACC directive 'wait' requires expression of integer type ('double' invalid)}}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
   #pragma acc wait(devnum:3:queues:i, j, 1+1, 3.3) clause-list

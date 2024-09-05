@@ -204,6 +204,8 @@ private:
   Value *mergeSqrtToExp(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B);
   Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
+  Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
                                       IRBuilderBase &B);
@@ -242,6 +244,9 @@ private:
   Value *optimizeSPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFPrintFString(CallInst *CI, IRBuilderBase &B);
+
+  /// Exit functions
+  Value *optimizeExit(CallInst *CI);
 
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f

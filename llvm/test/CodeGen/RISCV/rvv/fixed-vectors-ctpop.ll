@@ -131,7 +131,7 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vi v10, v8, 1
@@ -139,7 +139,7 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vsub.vv v8, v8, v9
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v10, v8, v9
@@ -150,13 +150,13 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vadd.vv v8, v8, v9
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v8, v8, v9
 ; RV32-NEXT:    lui a1, 4112
 ; RV32-NEXT:    addi a1, a1, 257
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vmul.vv v8, v8, v9
@@ -437,7 +437,7 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vsrl.vi v12, v8, 1
@@ -445,7 +445,7 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vsub.vv v8, v8, v10
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v12, v8, v10
@@ -456,13 +456,13 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vadd.vv v8, v8, v10
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v8, v8, v10
 ; RV32-NEXT:    lui a1, 4112
 ; RV32-NEXT:    addi a1, a1, 257
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vmul.vv v8, v8, v10

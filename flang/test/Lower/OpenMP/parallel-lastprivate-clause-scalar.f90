@@ -7,15 +7,16 @@
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
 !CHECK-DAG: %[[FIVE:.*]] = arith.constant 5 : index
 !CHECK-DAG: %[[ARG1_REF:.*]] = fir.convert %[[ARG1_UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,5>>
-!CHECK-DAG: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1_REF]] typeparams %[[FIVE]] {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+!CHECK-DAG: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1_REF]] typeparams %[[FIVE]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 
 !CHECK: omp.parallel {
-!CHECK-DAG: %[[ARG1_PVT:.*]] = fir.alloca !fir.char<1,5> {bindc_name = "arg1",
+!CHECK-DAG: %[[ARG1_PVT:.*]] = fir.alloca !fir.char<1,5> {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK-DAG: %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] typeparams %[[FIVE]] {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 
 ! Check that we are accessing the clone inside the loop
-!CHECK-DAG: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK-DAG: %[[UNIT:.*]] = arith.constant 6 : i32
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: %[[UNIT:.*]] = arith.constant 6 : i32
 !CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
 !CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
@@ -36,9 +37,12 @@
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 
 ! Testing lastprivate val update
-!CHECK-DAG: hlfir.assign %[[ARG1_PVT_DECL]]#0 to %[[ARG1_DECL]]#0 temporary_lhs : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
-!CHECK-DAG: } 
-!CHECK-DAG: omp.yield
+!CHECK: hlfir.assign %[[ARG1_PVT_DECL]]#0 to %[[ARG1_DECL]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+!CHECK: }
+!CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine lastprivate_character(arg1)
         character(5) :: arg1
@@ -53,11 +57,12 @@ end do
 end subroutine
 
 !CHECK: func @_QPlastprivate_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFlastprivate_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFlastprivate_intEarg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-DAG: omp.parallel  {
-!CHECK-DAG: %[[CLONE:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK-DAG: %[[CLONE:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK-DAG: %[[CLONE_DECL:.*]]:2 = hlfir.declare %[[CLONE]] {uniq_name = "_QFlastprivate_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -71,9 +76,12 @@ end subroutine
 
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE_DECL]]#0 : !fir.ref<i32>
-!CHECK:      hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
-!CHECK-DAG: }
-!CHECK-DAG: omp.yield
+!CHECK:      hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK: }
+!CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine lastprivate_int(arg1)
         integer :: arg1
@@ -89,14 +97,15 @@ print *, arg1
 end subroutine
 
 !CHECK: func.func @_QPmult_lastprivate_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFmult_lastprivate_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] {uniq_name = "_QFmult_lastprivate_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFmult_lastprivate_intEarg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFmult_lastprivate_intEarg2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
-!CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFmult_lastprivate_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
+!CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2", pinned, {{.*}}}
 !CHECK-DAG: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFmult_lastprivate_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -109,11 +118,14 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine mult_lastprivate_int(arg1, arg2)
         integer :: arg1, arg2
@@ -130,14 +142,15 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPmult_lastprivate_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %arg0 {uniq_name = "_QFmult_lastprivate_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %arg1 {uniq_name = "_QFmult_lastprivate_int2Earg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFmult_lastprivate_int2Earg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFmult_lastprivate_int2Earg2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
-!CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
-!CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFmult_lastprivate_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
+!CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2", pinned, {{.*}}}
 !CHECK-DAG: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFmult_lastprivate_int2Earg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
+!CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFmult_lastprivate_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 !Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -150,11 +163,14 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 !Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine mult_lastprivate_int2(arg1, arg2)
         integer :: arg1, arg2
@@ -171,19 +187,20 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPfirstpriv_lastpriv_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstpriv_lastpriv_intEarg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstpriv_lastpriv_intEarg2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
 ! Firstprivate update
-!CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[FPV_LD:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 : i32, !fir.ref<i32>
 ! Lastprivate Allocation
-!CHECK: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
+!CHECK: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2", pinned, {{.*}}}
 !CHECK: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NOT: omp.barrier
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -196,9 +213,12 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG2_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
+!CHECK-NEXT: }
+!CHECK-NEXT: omp.terminator
+!CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int(arg1, arg2)
         integer :: arg1, arg2
@@ -215,15 +235,21 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPfirstpriv_lastpriv_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
+
 ! Firstprivate update
-!CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 : i32, !fir.ref<i32>
+
+!CHECK-NEXT: %[[IV:.*]] = fir.alloca i32 {bindc_name = "n", pinned, {{.*}}}
+!CHECK-NEXT: hlfir.declare %[[IV]]
+
 !CHECK-NEXT: omp.barrier
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
 !CHECK: %[[C0:.*]] = arith.constant 0 : i32
@@ -235,9 +261,12 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
+!CHECK-NEXT: }
+!CHECK-NEXT: omp.terminator
+!CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int2(arg1)
         integer :: arg1

@@ -394,3 +394,105 @@ static_assert(none_of(
 ));
 
 }
+
+#if __cplusplus >= 202302L
+namespace lvalue_to_rvalue_init_from_heap {
+
+struct S {
+    int *value;
+    constexpr S(int v) : value(new int {v}) {}  // expected-note 2 {{heap allocation performed here}}
+    constexpr ~S() { delete value; }
+};
+consteval S fn() { return S(5); }
+int fn2() { return 2; }  // expected-note {{declared here}}
+
+constexpr int a = *fn().value;
+constinit int b = *fn().value;
+const int c = *fn().value;
+int d = *fn().value;
+
+constexpr int e = *fn().value + fn2(); // expected-error {{must be initialized by a constant expression}} \
+                                       // expected-error {{call to consteval function 'lvalue_to_rvalue_init_from_heap::fn' is not a constant expression}} \
+                                       // expected-note {{non-constexpr function 'fn2'}} \
+                                       // expected-note {{pointer to heap-allocated object}}
+
+int f = *fn().value + fn2();  // expected-error {{call to consteval function 'lvalue_to_rvalue_init_from_heap::fn' is not a constant expression}} \
+                              // expected-note {{pointer to heap-allocated object}}
+}
+#endif
+
+
+#if __cplusplus >= 202302L
+
+namespace GH91509 {
+
+consteval int f(int) { return 0; }
+
+template<typename T>
+constexpr int g(int x) {
+    if consteval {
+        return f(x);
+    }
+    if !consteval {}
+    else {
+        return f(x);
+    }
+    return 1;
+}
+
+int h(int x) {
+    return g<void>(x);
+}
+}
+
+#endif
+
+
+namespace GH91308 {
+    constexpr void f(auto) {
+        static_assert(false);
+    }
+    using R1 = decltype(&f<int>);
+}
+
+namespace GH94935 {
+
+consteval void f(int) {}
+consteval void undef(int); // expected-note {{declared here}}
+
+template<typename T>
+struct G {
+    void g() {
+        GH94935::f(T::fn());
+        GH94935::f(T::undef2());  // expected-error {{call to consteval function 'GH94935::f' is not a constant expression}} \
+                                  // expected-note  {{undefined function 'undef2' cannot be used in a constant expression}}
+        GH94935::undef(T::fn());  // expected-error {{call to consteval function 'GH94935::undef' is not a constant expression}} \
+                                  // expected-note  {{undefined function 'undef' cannot be used in a constant expression}}
+    }
+};
+
+struct X {
+    static consteval int fn() { return 0; }
+    static consteval int undef2();  // expected-note {{declared here}}
+
+};
+
+void test() {
+    G<X>{}.g(); // expected-note {{instantiation}}
+}
+
+
+template<typename T>
+void g() {
+    auto l = []{
+        ::f(T::fn());
+    };
+}
+
+struct Y {
+    static int fn();
+};
+
+template void g<Y>();
+
+}

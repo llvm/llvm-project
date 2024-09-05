@@ -43,6 +43,9 @@ void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,
     const char *source = nullptr, int line = 0,
     const Descriptor *values = nullptr);
 
+void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
+    const char *sourceFile, int line);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TIME_INTRINSIC_H_

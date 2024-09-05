@@ -138,10 +138,10 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
 
   let extraClassDeclaration = [{
     ShapedType getInputOperandType() {
-      return getInput().getType().cast<ShapedType>();
+      return cast<ShapedType>(getInput().getType());
     }
     ShapedType getOutputOperandType() {
-      return getOutput().getType().cast<ShapedType>();
+      return cast<ShapedType>(getOutput().getType());
     }
     int64_t getInputOperandRank() {
       return getInputOperandType().getRank();
@@ -150,6 +150,252 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
       return getOutputOperandType().getRank();
     }
     MutableOperandRange getDpsInitsMutable() { return getOutputMutable(); }
+  }];
+  let hasVerifier = 1;
+}
+
+def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform",
+    [AllElementTypesMatch<["filter", "output"]>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
+  let summary = "Winograd filter transform operator";
+  let description = [{
+    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    matrix multiply. Before the matrix multiply, it will convert filter and
+    input into a format suitable for batched matrix multiply. After the matrix
+    multiply, it will convert output to the final result tensor.
+
+    The algorithm F(m x m, r x r) is
+
+    Y = A^T x [(G x g x G^T) @ (B^T x d x B)] x A
+
+    The size of output Y is m x m. The size of filter g is r x r. The size of
+    input d is (m + r - 1) x (m + r - 1). A^T, A, G^T, G, B^T, and B are
+    transformation matrices.
+
+    This operator is defined to represent the high level concept of filter
+    transformation (G x g x G^T) in the Winograd Conv2D algorithm.
+  }];
+
+  let arguments = (ins TensorRankOf<[AnyType], [4]>:$filter,
+                       TensorRankOf<[AnyType], [4]>:$output,
+                       I64Attr:$m,
+                       I64Attr:$r
+  );
+
+  let results = (outs TensorRankOf<[AnyType], [4]>:$result);
+  let assemblyFormat = [{
+    attr-dict
+    `m` `(` $m `)`
+    `r` `(` $r `)`
+    `ins` `(` $filter `:` type($filter) `)`
+    `outs` `(` $output `:` type($output) `)`
+    `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ShapedType getFilterOperandType() {
+      return cast<ShapedType>(getFilter().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getFilterOperandRank() {
+      return getFilterOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    int64_t getFilterFDim() {
+      return 0;
+    }
+    int64_t getFilterHDim() {
+      return 1;
+    }
+    int64_t getFilterWDim() {
+      return 2;
+    }
+    int64_t getFilterCDim() {
+      return 3;
+    }
+  }];
+  let hasVerifier = 1;
+}
+
+def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
+    [AllElementTypesMatch<["input", "output"]>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
+  let summary = "Winograd input transform operator";
+  let description = [{
+    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    matrix multiply. Before the matrix multiply, it will convert filter and
+    input into a format suitable for batched matrix multiply. After the matrix
+    multiply, it will convert output to the final result tensor.
+
+    The algorithm F(m x m, r x r) is
+
+    Y = A^T x [(G x g x G^T) @ (B^T x d x B)] x A
+
+    The size of output Y is m x m. The size of filter g is r x r. The size of
+    input d is (m + r - 1) x (m + r - 1). A^T, A, G^T, G, B^T, and B are
+    transformation matrices.
+
+    This operator is defined to represent the high level concept of input
+    transformation (B^T x d x B) in the Winograd Conv2D algorithm.
+  }];
+
+  let arguments = (ins TensorRankOf<[AnyType], [4]>:$input,
+                       TensorRankOf<[AnyType], [6]>:$output,
+                       I64Attr:$m,
+                       I64Attr:$r
+  );
+
+  let results = (outs TensorRankOf<[AnyType], [6]>:$result);
+  let assemblyFormat = [{
+    attr-dict
+    `m` `(` $m `)`
+    `r` `(` $r `)`
+    `ins` `(` $input `:` type($input) `)`
+    `outs` `(` $output `:` type($output) `)`
+    `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ShapedType getInputOperandType() {
+      return cast<ShapedType>(getInput().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getInputOperandRank() {
+      return getInputOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    int64_t getInputNDim() {
+      return 0;
+    }
+    int64_t getInputHDim() {
+      return 1;
+    }
+    int64_t getInputWDim() {
+      return 2;
+    }
+    int64_t getInputCDim() {
+      return 3;
+    }
+    int64_t getOutputAlphaHDim() {
+      return 0;
+    }
+    int64_t getOutputAlphaWDim() {
+      return 1;
+    }
+    int64_t getOutputTileHDim() {
+      return 2;
+    }
+    int64_t getOutputTileWDim() {
+      return 3;
+    }
+    int64_t getOutputNDim() {
+      return 4;
+    }
+    int64_t getOutputCDim() {
+      return 5;
+    }
+  }];
+  let hasVerifier = 1;
+}
+
+def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
+    [AllElementTypesMatch<["value", "output"]>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
+  let summary = "Winograd output transform operator";
+  let description = [{
+    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    matrix multiply. Before the matrix multiply, it will convert filter and
+    input into a format suitable for batched matrix multiply. After the matrix
+    multiply, it will convert output to the final result tensor.
+
+    The algorithm F(m x m, r x r) is
+
+    Y = A^T x [(G x g x G^T) @ (B^T x d x B)] x A
+
+    The size of output Y is m x m. The size of filter g is r x r. The size of
+    input d is (m + r - 1) x (m + r - 1). A^T, A, G^T, G, B^T, and B are
+    transformation matrices.
+
+    This operator is defined to represent the high level concept of output
+    transformation (A^T x y x A) in the Winograd Conv2D algorithm.
+  }];
+
+  let arguments = (ins TensorRankOf<[AnyType], [6]>:$value,
+                       TensorRankOf<[AnyType], [4]>:$output,
+                       I64Attr:$m,
+                       I64Attr:$r
+  );
+
+  let results = (outs TensorRankOf<[AnyType], [4]>:$result);
+  let assemblyFormat = [{
+    attr-dict
+    `m` `(` $m `)`
+    `r` `(` $r `)`
+    `ins` `(` $value `:` type($value) `)`
+    `outs` `(` $output `:` type($output) `)`
+    `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ShapedType getValueOperandType() {
+      return cast<ShapedType>(getValue().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getValueOperandRank() {
+      return getValueOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    int64_t getValueAlphaHDim() {
+      return 0;
+    }
+    int64_t getValueAlphaWDim() {
+      return 1;
+    }
+    int64_t getValueTileHDim() {
+      return 2;
+    }
+    int64_t getValueTileWDim() {
+      return 3;
+    }
+    int64_t getValueNDim() {
+      return 4;
+    }
+    int64_t getValueFDim() {
+      return 5;
+    }
+    int64_t getOutputNDim() {
+      return 0;
+    }
+    int64_t getOutputHDim() {
+      return 1;
+    }
+    int64_t getOutputWDim() {
+      return 2;
+    }
+    int64_t getOutputFDim() {
+      return 3;
+    }
   }];
   let hasVerifier = 1;
 }

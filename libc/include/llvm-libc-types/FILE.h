@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FILE_H__
-#define __LLVM_LIBC_TYPES_FILE_H__
+#ifndef LLVM_LIBC_TYPES_FILE_H
+#define LLVM_LIBC_TYPES_FILE_H
 
 typedef struct FILE FILE;
 
-#endif // __LLVM_LIBC_TYPES_FILE_H__
+#endif // LLVM_LIBC_TYPES_FILE_H

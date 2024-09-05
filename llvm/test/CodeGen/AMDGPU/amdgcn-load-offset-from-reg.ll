@@ -72,12 +72,12 @@ define amdgpu_ps void @test_sgpr_plus_imm_offset(ptr addrspace(4) inreg %base, i
 ; SDAG-DAG: %[[BASE1:.*]]:sgpr_32 = COPY $sgpr1
 ; SDAG-DAG: %[[OFFSET:.*]]:sgpr_32 = COPY $sgpr2
 ; SDAG-DAG: %[[BASE:.*]]:sgpr_64 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1
-; SDAG: S_LOAD_DWORDX2_SGPR_IMM killed %[[BASE]], %[[OFFSET]], 16,
+; SDAG: S_LOAD_DWORDX2_SGPR_IMM_ec killed %[[BASE]], %[[OFFSET]], 16,
 ; GISEL-DAG: %[[BASE0:.*]]:sreg_32 = COPY $sgpr0
 ; GISEL-DAG: %[[BASE1:.*]]:sreg_32 = COPY $sgpr1
 ; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr2
 ; GISEL-DAG: %[[BASE:.*]]:sreg_64 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1
-; GISEL: S_LOAD_DWORDX2_SGPR_IMM %[[BASE]], %[[OFFSET]], 16,
+; GISEL: S_LOAD_DWORDX2_SGPR_IMM_ec %[[BASE]], %[[OFFSET]], 16,
 define amdgpu_ps void @test_sgpr_plus_imm_offset_x2(ptr addrspace(4) inreg %base, i32 inreg %offset,
                                                     ptr addrspace(1) inreg %out) {
   %v1 = getelementptr i8, ptr addrspace(4) %base, i64 16

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -150,7 +151,8 @@ Thumb2InstrInfo::optimizeSelect(MachineInstr &MI,
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  MCRegister SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   // Handle SPR, DPR, and QPR copies.
   if (!ARM::GPRRegClass.contains(DestReg, SrcReg))
     return ARMBaseInstrInfo::copyPhysReg(MBB, I, DL, DestReg, SrcReg, KillSrc);
@@ -284,6 +286,25 @@ MachineInstr *Thumb2InstrInfo::commuteInstructionImpl(MachineInstr &MI,
       return nullptr;
   }
   return ARMBaseInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+}
+
+bool Thumb2InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                           const MachineBasicBlock *MBB,
+                                           const MachineFunction &MF) const {
+  // BTI clearing instructions shall not take part in scheduling regions as
+  // they must stay in their intended place. Although PAC isn't BTI clearing,
+  // it can be transformed into PACBTI after the pre-RA Machine Scheduling
+  // has taken place, so its movement must also be restricted.
+  switch (MI.getOpcode()) {
+  case ARM::t2BTI:
+  case ARM::t2PAC:
+  case ARM::t2PACBTI:
+  case ARM::t2SG:
+    return true;
+  default:
+    break;
+  }
+  return ARMBaseInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
@@ -552,7 +573,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
-        !MI.definesRegister(ARM::CPSR)) {
+        !MI.definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // Turn it into a move.
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);

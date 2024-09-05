@@ -268,6 +268,7 @@ const char *archToWindowsSDKArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "x64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -285,6 +286,7 @@ const char *archToLegacyVCArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "amd64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -300,6 +302,7 @@ const char *archToDevDivInternalArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "amd64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -321,6 +324,7 @@ bool appendArchToWindowsSDKLibPath(int SDKMajor, SmallString<128> LibPath,
       sys::path::append(LibPath, "x64");
       break;
     case Triple::arm:
+    case Triple::thumb:
       // It is not necessary to link against Windows SDK 7.x when targeting ARM.
       return false;
     default:

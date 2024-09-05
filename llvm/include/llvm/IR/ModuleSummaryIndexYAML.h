@@ -138,6 +138,7 @@ template <> struct MappingTraits<TypeIdSummary> {
 struct FunctionSummaryYaml {
   unsigned Linkage, Visibility;
   bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
+  unsigned ImportType;
   std::vector<uint64_t> Refs;
   std::vector<uint64_t> TypeTests;
   std::vector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
@@ -183,6 +184,7 @@ template <> struct MappingTraits<FunctionSummaryYaml> {
     io.mapOptional("Live", summary.Live);
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
+    io.mapOptional("ImportType", summary.ImportType);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
     io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
@@ -212,22 +214,21 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       io.setError("key not an integer");
       return;
     }
-    if (!V.count(KeyInt))
-      V.emplace(KeyInt, /*IsAnalysis=*/false);
-    auto &Elem = V.find(KeyInt)->second;
+    auto &Elem = V.try_emplace(KeyInt, /*IsAnalysis=*/false).first->second;
     for (auto &FSum : FSums) {
       std::vector<ValueInfo> Refs;
+      Refs.reserve(FSum.Refs.size());
       for (auto &RefGUID : FSum.Refs) {
-        if (!V.count(RefGUID))
-          V.emplace(RefGUID, /*IsAnalysis=*/false);
-        Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*V.find(RefGUID)));
+        auto It = V.try_emplace(RefGUID, /*IsAnalysis=*/false).first;
+        Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*It));
       }
       Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
               static_cast<GlobalValue::VisibilityTypes>(FSum.Visibility),
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal,
-              FSum.CanAutoHide),
+              FSum.CanAutoHide,
+              static_cast<GlobalValueSummary::ImportKind>(FSum.ImportType)),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
@@ -244,6 +245,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       for (auto &Sum : P.second.SummaryList) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get())) {
           std::vector<uint64_t> Refs;
+          Refs.reserve(FSum->refs().size());
           for (auto &VI : FSum->refs())
             Refs.push_back(VI.getGUID());
           FSums.push_back(FunctionSummaryYaml{
@@ -251,9 +253,9 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(FSum->flags().NotEligibleToImport),
               static_cast<bool>(FSum->flags().Live),
               static_cast<bool>(FSum->flags().DSOLocal),
-              static_cast<bool>(FSum->flags().CanAutoHide), Refs,
-              FSum->type_tests(), FSum->type_test_assume_vcalls(),
-              FSum->type_checked_load_vcalls(),
+              static_cast<bool>(FSum->flags().CanAutoHide),
+              FSum->flags().ImportType, Refs, FSum->type_tests(),
+              FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
               FSum->type_checked_load_const_vcalls()});
           }

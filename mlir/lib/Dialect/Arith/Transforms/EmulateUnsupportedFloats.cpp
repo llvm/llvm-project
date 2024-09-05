@@ -56,9 +56,11 @@ static std::optional<FloatType> parseFloatType(MLIRContext *ctx,
   Builder b(ctx);
   return llvm::StringSwitch<std::optional<FloatType>>(name)
       .Case("f8E5M2", b.getFloat8E5M2Type())
+      .Case("f8E4M3", b.getFloat8E4M3Type())
       .Case("f8E4M3FN", b.getFloat8E4M3FNType())
       .Case("f8E5M2FNUZ", b.getFloat8E5M2FNUZType())
       .Case("f8E4M3FNUZ", b.getFloat8E4M3FNUZType())
+      .Case("f8E3M4", b.getFloat8E3M4Type())
       .Case("bf16", b.getBF16Type())
       .Case("f16", b.getF16Type())
       .Case("f32", b.getF32Type())
@@ -94,8 +96,11 @@ void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
   SmallVector<Value> newResults(expandedOp->getResults());
   for (auto [res, oldType, newType] : llvm::zip_equal(
            MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {
-    if (oldType != newType)
-      res = rewriter.create<arith::TruncFOp>(loc, oldType, res);
+    if (oldType != newType) {
+      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, oldType, res);
+      truncFOp.setFastmath(arith::FastMathFlags::contract);
+      res = truncFOp.getResult();
+    }
   }
   rewriter.replaceOp(op, newResults);
 }
@@ -106,7 +111,7 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
                            targetType](Type type) -> std::optional<Type> {
     if (llvm::is_contained(sourceTypes, type))
       return targetType;
-    if (auto shaped = type.dyn_cast<ShapedType>())
+    if (auto shaped = dyn_cast<ShapedType>(type))
       if (llvm::is_contained(sourceTypes, shaped.getElementType()))
         return shaped.clone(targetType);
     // All other types legal
@@ -114,7 +119,9 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
   });
   converter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        return b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        extFOp.setFastmath(arith::FastMathFlags::contract);
+        return extFOp;
       });
 }
 

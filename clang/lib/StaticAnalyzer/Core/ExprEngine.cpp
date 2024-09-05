@@ -1072,8 +1072,6 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
       CleanedState, SFC, SymReaper);
 
   // Process any special transfer function for dead symbols.
-  // A tag to track convenience transitions, which can be removed at cleanup.
-  static SimpleProgramPointTag cleanupTag(TagProviderName, "Clean Node");
   // Call checkers with the non-cleaned state so that they could query the
   // values of the soon to be dead symbols.
   ExplodedNodeSet CheckedSet;
@@ -1102,8 +1100,13 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
     // generate a transition to that state.
     ProgramStateRef CleanedCheckerSt =
         StateMgr.getPersistentStateWithGDM(CleanedState, CheckerState);
-    Bldr.generateNode(DiagnosticStmt, I, CleanedCheckerSt, &cleanupTag, K);
+    Bldr.generateNode(DiagnosticStmt, I, CleanedCheckerSt, cleanupNodeTag(), K);
   }
+}
+
+const ProgramPointTag *ExprEngine::cleanupNodeTag() {
+  static SimpleProgramPointTag cleanupTag(TagProviderName, "Clean Node");
+  return &cleanupTag;
 }
 
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
@@ -1776,6 +1779,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPScanDirectiveClass:
     case Stmt::OMPOrderedDirectiveClass:
     case Stmt::OMPAtomicDirectiveClass:
+    case Stmt::OMPAssumeDirectiveClass:
     case Stmt::OMPTargetDirectiveClass:
     case Stmt::OMPTargetDataDirectiveClass:
     case Stmt::OMPTargetEnterDataDirectiveClass:
@@ -1811,7 +1815,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    case Stmt::OMPReverseDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
+    case Stmt::OMPInterchangeDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
     case Stmt::OMPMaskedDirectiveClass:
@@ -1822,8 +1828,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     case Stmt::CapturedStmtClass:
     case Stmt::OpenACCComputeConstructClass:
+    case Stmt::OpenACCLoopConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
-    case Stmt::OMPMetaDirectiveClass: {
+    case Stmt::OMPMetaDirectiveClass:
+    case Stmt::HLSLOutArgExprClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());
       break;
@@ -1948,7 +1956,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXPseudoDestructorExprClass:
     case Stmt::SubstNonTypeTemplateParmExprClass:
     case Stmt::CXXNullPtrLiteralExprClass:
-    case Stmt::OMPArraySectionExprClass:
+    case Stmt::ArraySectionExprClass:
     case Stmt::OMPArrayShapingExprClass:
     case Stmt::OMPIteratorExprClass:
     case Stmt::SYCLUniqueStableNameExprClass:
@@ -2056,11 +2064,17 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
-    case Stmt::GCCAsmStmtClass:
+    case Stmt::GCCAsmStmtClass: {
       Bldr.takeNodes(Pred);
-      VisitGCCAsmStmt(cast<GCCAsmStmt>(S), Pred, Dst);
+      ExplodedNodeSet PreVisit;
+      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+      ExplodedNodeSet PostVisit;
+      for (ExplodedNode *const N : PreVisit)
+        VisitGCCAsmStmt(cast<GCCAsmStmt>(S), N, PostVisit);
+      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       Bldr.addNodes(Dst);
       break;
+    }
 
     case Stmt::MSAsmStmtClass:
       Bldr.takeNodes(Pred);
@@ -2421,6 +2435,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
+
+    case Stmt::EmbedExprClass:
+      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
+      break;
   }
 }
 
@@ -3793,6 +3811,14 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
       state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
   }
 
+  // Do not reason about locations passed inside inline assembly.
+  for (const Expr *I : A->inputs()) {
+    SVal X = state->getSVal(I, Pred->getLocationContext());
+
+    if (std::optional<Loc> LV = X.getAs<Loc>())
+      state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
+  }
+
   Bldr.generateNode(A, Pred, state);
 }
 
@@ -3895,7 +3921,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     State->printDOT(Out, N->getLocationContext(), Space);
 
     Out << "\\l}\\l";
-    return Out.str();
+    return Buf;
   }
 };
 

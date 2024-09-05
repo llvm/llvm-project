@@ -50,7 +50,7 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
     bool Is64Bit =
         static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit();
     unsigned CvtaLocalOpcode =
-        (Is64Bit ? NVPTX::cvta_local_yes_64 : NVPTX::cvta_local_yes);
+        (Is64Bit ? NVPTX::cvta_local_64 : NVPTX::cvta_local);
     unsigned MovDepotOpcode =
         (Is64Bit ? NVPTX::MOV_DEPOT_ADDR_64 : NVPTX::MOV_DEPOT_ADDR);
     if (!MR.use_empty(NRI->getFrameRegister(MF))) {
@@ -60,10 +60,12 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
                      NRI->getFrameRegister(MF))
                  .addReg(NRI->getFrameLocalRegister(MF));
     }
-    BuildMI(MBB, MBBI, dl,
-            MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
-            NRI->getFrameLocalRegister(MF))
-        .addImm(MF.getFunctionNumber());
+    if (!MR.use_empty(NRI->getFrameLocalRegister(MF))) {
+      BuildMI(MBB, MBBI, dl,
+              MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
+              NRI->getFrameLocalRegister(MF))
+          .addImm(MF.getFunctionNumber());
+    }
   }
 }
 
@@ -91,5 +93,8 @@ MachineBasicBlock::iterator NVPTXFrameLowering::eliminateCallFramePseudoInstr(
 
 TargetFrameLowering::DwarfFrameBase
 NVPTXFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
-  return {DwarfFrameBase::CFA, {0}};
+  DwarfFrameBase FrameBase;
+  FrameBase.Kind = DwarfFrameBase::CFA;
+  FrameBase.Location.Offset = 0;
+  return FrameBase;
 }

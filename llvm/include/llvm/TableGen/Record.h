@@ -1686,7 +1686,7 @@ public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
                   RecordKind Kind = RK_Def)
-      : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
+      : Name(N), Locs(locs), TrackedRecords(records),
         ID(getNewUID(N->getRecordKeeper())), Kind(Kind) {
     checkName();
   }
@@ -1757,7 +1757,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
+  ArrayRef<std::pair<Record *, SMRange>> getSuperClasses() const {
     return SuperClasses;
   }
 
@@ -2073,6 +2073,8 @@ public:
 
   void dump() const;
 
+  void dumpAllocationStats(raw_ostream &OS) const;
+
 private:
   RecordKeeper(RecordKeeper &&) = delete;
   RecordKeeper(const RecordKeeper &) = delete;
@@ -2098,7 +2100,7 @@ private:
 /// Sorting predicate to sort record pointers by name.
 struct LessRecord {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
-    return StringRef(Rec1->getName()).compare_numeric(Rec2->getName()) < 0;
+    return Rec1->getName().compare_numeric(Rec2->getName()) < 0;
   }
 };
 
@@ -2112,8 +2114,7 @@ struct LessRecordByID {
   }
 };
 
-/// Sorting predicate to sort record pointers by their
-/// name field.
+/// Sorting predicate to sort record pointers by their Name field.
 struct LessRecordFieldName {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return Rec1->getValueAsString("Name") < Rec2->getValueAsString("Name");
@@ -2329,8 +2330,8 @@ public:
   Init *resolve(Init *VarName) override;
 };
 
-void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
-void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
+void EmitDetailedRecords(const RecordKeeper &RK, raw_ostream &OS);
+void EmitJSON(const RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm
 

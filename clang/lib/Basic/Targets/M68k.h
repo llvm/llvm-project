@@ -25,6 +25,7 @@ namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY M68kTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
+  static const TargetInfo::GCCRegAlias GCCRegAliases[];
 
   enum CPUKind {
     CK_Unknown,
@@ -55,6 +56,10 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(const std::string &Name) override;
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 };
 
 } // namespace targets

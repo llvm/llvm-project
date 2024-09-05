@@ -544,7 +544,7 @@ TEST(DiagnosticTest, RespectsDiagnosticConfig) {
                   Diag(Main.range("ret"),
                        "void function 'x' should not return a value")));
   Config Cfg;
-  Cfg.Diagnostics.Suppress.insert("return-type");
+  Cfg.Diagnostics.Suppress.insert("return-mismatch");
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(Diag(Main.range(),
@@ -938,6 +938,23 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
                              "prefer using 'override' or (rarely) 'final' "
                              "instead of 'virtual'"),
                         withFix(equalToFix(ExpectedFix2))))));
+}
+
+TEST(DiagnosticsTest, ClangTidyCallingIntoPreprocessor) {
+  std::string Main = R"cpp(
+    extern "C" {
+    #include "b.h"
+    }
+  )cpp";
+  std::string Header = R"cpp(
+    #define EXTERN extern
+    EXTERN int waldo();
+  )cpp";
+  auto TU = TestTU::withCode(Main);
+  TU.AdditionalFiles["b.h"] = Header;
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
+  // Check that no assertion failures occur during the build
+  TU.build();
 }
 
 TEST(DiagnosticsTest, Preprocessor) {

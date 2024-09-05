@@ -53,6 +53,7 @@ Configuration files:
   Checks                       - Same as '--checks'. Additionally, the list of
                                  globs can be specified as a list instead of a
                                  string.
+  ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
   ExtraArgs                    - Same as '--extra-args'.
   ExtraArgsBefore              - Same as '--extra-args-before'.
   FormatStyle                  - Same as '--format-style'.
@@ -131,6 +132,20 @@ option in .clang-tidy file, if any.
 )"),
                                          cl::init(""),
                                          cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string> ExcludeHeaderFilter("exclude-header-filter",
+                                                desc(R"(
+Regular expression matching the names of the
+headers to exclude diagnostics from. Diagnostics
+from the main file of each translation unit are
+always displayed.
+Must be used together with --header-filter.
+Can be used together with -line-filter.
+This option overrides the 'ExcludeHeaderFilterRegex'
+option in .clang-tidy file, if any.
+)"),
+                                                cl::init(""),
+                                                cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> SystemHeaders("system-headers", desc(R"(
 Display the errors from system headers.
@@ -310,6 +325,14 @@ option is recognized.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> AllowNoChecks("allow-no-checks", desc(R"(
+Allow empty enabled checks. This suppresses
+the "no checks enabled" error when disabling
+all of the checks.
+)"),
+                                         cl::init(false),
+                                         cl::cat(ClangTidyCategory));
+
 namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
@@ -353,6 +376,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
   DefaultOptions.Checks = DefaultChecks;
   DefaultOptions.WarningsAsErrors = "";
   DefaultOptions.HeaderFilterRegex = HeaderFilter;
+  DefaultOptions.ExcludeHeaderFilterRegex = ExcludeHeaderFilter;
   DefaultOptions.SystemHeaders = SystemHeaders;
   DefaultOptions.FormatStyle = FormatStyle;
   DefaultOptions.User = llvm::sys::Process::GetEnv("USER");
@@ -367,6 +391,8 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
     OverrideOptions.WarningsAsErrors = WarningsAsErrors;
   if (HeaderFilter.getNumOccurrences() > 0)
     OverrideOptions.HeaderFilterRegex = HeaderFilter;
+  if (ExcludeHeaderFilter.getNumOccurrences() > 0)
+    OverrideOptions.ExcludeHeaderFilterRegex = ExcludeHeaderFilter;
   if (SystemHeaders.getNumOccurrences() > 0)
     OverrideOptions.SystemHeaders = SystemHeaders;
   if (FormatStyle.getNumOccurrences() > 0)
@@ -454,52 +480,27 @@ static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {
-  llvm::StringRef Cur, Rest;
+  GlobList Globs(CheckGlob);
   bool AnyInvalid = false;
-  for (std::tie(Cur, Rest) = CheckGlob.split(',');
-       !(Cur.empty() && Rest.empty()); std::tie(Cur, Rest) = Rest.split(',')) {
-    Cur = Cur.trim();
-    if (Cur.empty())
+  for (const auto &Item : Globs.getItems()) {
+    if (Item.Text.starts_with("clang-diagnostic"))
       continue;
-    Cur.consume_front("-");
-    if (Cur.starts_with("clang-diagnostic"))
-      continue;
-    if (Cur.contains('*')) {
-      SmallString<128> RegexText("^");
-      StringRef MetaChars("()^$|*+?.[]\\{}");
-      for (char C : Cur) {
-        if (C == '*')
-          RegexText.push_back('.');
-        else if (MetaChars.contains(C))
-          RegexText.push_back('\\');
-        RegexText.push_back(C);
-      }
-      RegexText.push_back('$');
-      llvm::Regex Glob(RegexText);
-      std::string Error;
-      if (!Glob.isValid(Error)) {
-        AnyInvalid = true;
-        llvm::WithColor::error(llvm::errs(), Source)
-            << "building check glob '" << Cur << "' " << Error << "'\n";
-        continue;
-      }
-      if (llvm::none_of(AllChecks.keys(),
-                        [&Glob](StringRef S) { return Glob.match(S); })) {
-        AnyInvalid = true;
-        llvm::WithColor::warning(llvm::errs(), Source)
-            << "check glob '" << Cur << "' doesn't match any known check"
-            << VerifyConfigWarningEnd;
-      }
-    } else {
-      if (AllChecks.contains(Cur))
-        continue;
+    if (llvm::none_of(AllChecks.keys(),
+                      [&Item](StringRef S) { return Item.Regex.match(S); })) {
       AnyInvalid = true;
-      llvm::raw_ostream &Output = llvm::WithColor::warning(llvm::errs(), Source)
-                                  << "unknown check '" << Cur << '\'';
-      llvm::StringRef Closest = closest(Cur, AllChecks);
-      if (!Closest.empty())
-        Output << "; did you mean '" << Closest << '\'';
-      Output << VerifyConfigWarningEnd;
+      if (Item.Text.contains('*'))
+        llvm::WithColor::warning(llvm::errs(), Source)
+            << "check glob '" << Item.Text << "' doesn't match any known check"
+            << VerifyConfigWarningEnd;
+      else {
+        llvm::raw_ostream &Output =
+            llvm::WithColor::warning(llvm::errs(), Source)
+            << "unknown check '" << Item.Text << '\'';
+        llvm::StringRef Closest = closest(Item.Text, AllChecks);
+        if (!Closest.empty())
+          Output << "; did you mean '" << Closest << '\'';
+        Output << VerifyConfigWarningEnd;
+      }
     }
   }
   return AnyInvalid;
@@ -605,7 +606,7 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (ListChecks) {
-    if (EnabledChecks.empty()) {
+    if (EnabledChecks.empty() && !AllowNoChecks) {
       llvm::errs() << "No checks enabled.\n";
       return 1;
     }
@@ -659,6 +660,10 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (EnabledChecks.empty()) {
+    if (AllowNoChecks) {
+      llvm::outs() << "No checks enabled.\n";
+      return 0;
+    }
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;

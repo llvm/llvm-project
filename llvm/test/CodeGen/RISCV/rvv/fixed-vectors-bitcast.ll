@@ -265,13 +265,13 @@ define i64 @bitcast_v1i64_i64(<1 x i64> %a) {
 define half @bitcast_v2i8_f16(<2 x i8> %a) {
 ; CHECK-LABEL: bitcast_v2i8_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_v2i8_f16:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; ELEN32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; ELEN32-NEXT:    vfmv.f.s fa0, v8
 ; ELEN32-NEXT:    ret
   %b = bitcast <2 x i8> %a to half
@@ -281,13 +281,13 @@ define half @bitcast_v2i8_f16(<2 x i8> %a) {
 define half @bitcast_v1i16_f16(<1 x i16> %a) {
 ; CHECK-LABEL: bitcast_v1i16_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_v1i16_f16:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; ELEN32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; ELEN32-NEXT:    vfmv.f.s fa0, v8
 ; ELEN32-NEXT:    ret
   %b = bitcast <1 x i16> %a to half
@@ -297,7 +297,7 @@ define half @bitcast_v1i16_f16(<1 x i16> %a) {
 define float @bitcast_v4i8_f32(<4 x i8> %a) {
 ; CHECK-LABEL: bitcast_v4i8_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -313,7 +313,7 @@ define float @bitcast_v4i8_f32(<4 x i8> %a) {
 define float @bitcast_v2i16_f32(<2 x i16> %a) {
 ; CHECK-LABEL: bitcast_v2i16_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -329,7 +329,7 @@ define float @bitcast_v2i16_f32(<2 x i16> %a) {
 define float @bitcast_v1i32_f32(<1 x i32> %a) {
 ; CHECK-LABEL: bitcast_v1i32_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -416,8 +416,8 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    addi sp, sp, -16
 ; RV32ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32ELEN32-NEXT:    sw a1, 12(sp)
 ; RV32ELEN32-NEXT:    sw a0, 8(sp)
+; RV32ELEN32-NEXT:    sw a1, 12(sp)
 ; RV32ELEN32-NEXT:    fld fa0, 8(sp)
 ; RV32ELEN32-NEXT:    addi sp, sp, 16
 ; RV32ELEN32-NEXT:    ret

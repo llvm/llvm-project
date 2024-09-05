@@ -52,7 +52,7 @@
 // LINKED4: [[GEP_4_Z:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 8
 // LINKED4: select i1 false, ptr addrspace(4) [[GEP_5_Z]], ptr addrspace(4) [[GEP_4_Z]]
 // LINKED4: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// LINKED4: "amdgpu_code_object_version", i32 400
+// LINKED4: "amdhsa_code_object_version", i32 400
 
 // LINKED5: __oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
 // LINKED5-LABEL: bar
@@ -82,7 +82,7 @@
 // LINKED5: [[GEP_4_Z:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 8
 // LINKED5: select i1 true, ptr addrspace(4) [[GEP_5_Z]], ptr addrspace(4) [[GEP_4_Z]]
 // LINKED5: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// LINKED5: "amdgpu_code_object_version", i32 500
+// LINKED5: "amdhsa_code_object_version", i32 500
 
 // LINKED6: __oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
 // LINKED6-LABEL: bar
@@ -112,7 +112,7 @@
 // LINKED6: [[GEP_4_Z:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 8
 // LINKED6: select i1 true, ptr addrspace(4) [[GEP_5_Z]], ptr addrspace(4) [[GEP_4_Z]]
 // LINKED6: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// LINKED6: "amdgpu_code_object_version", i32 600
+// LINKED6: "amdhsa_code_object_version", i32 600
 
 #ifdef DEVICELIB
 __device__ void bar(int *x, int *y, int *z)

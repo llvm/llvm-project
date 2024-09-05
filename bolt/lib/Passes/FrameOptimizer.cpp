@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/FrameOptimizer.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/ShrinkWrapping.h"
 #include "bolt/Passes/StackAvailableExpressions.h"
@@ -20,7 +20,6 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/Timer.h"
 #include <deque>
-#include <unordered_map>
 
 #define DEBUG_TYPE "fop"
 

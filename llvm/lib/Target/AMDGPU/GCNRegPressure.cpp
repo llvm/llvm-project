@@ -88,9 +88,10 @@ void GCNRegPressure::inc(unsigned Reg,
   }
 }
 
-bool GCNRegPressure::less(const GCNSubtarget &ST,
-                          const GCNRegPressure& O,
+bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
   const auto SGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(getSGPRNum()));
   const auto VGPROcc =
@@ -104,18 +105,103 @@ bool GCNRegPressure::less(const GCNSubtarget &ST,
 
   const auto Occ = std::min(SGPROcc, VGPROcc);
   const auto OtherOcc = std::min(OtherSGPROcc, OtherVGPROcc);
+
+  // Give first precedence to the better occupancy.
   if (Occ != OtherOcc)
     return Occ > OtherOcc;
+
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+  unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+
+  // SGPR excess pressure conditions
+  unsigned ExcessSGPR = std::max(static_cast<int>(getSGPRNum() - MaxSGPRs), 0);
+  unsigned OtherExcessSGPR =
+      std::max(static_cast<int>(O.getSGPRNum() - MaxSGPRs), 0);
+
+  auto WaveSize = ST.getWavefrontSize();
+  // The number of virtual VGPRs required to handle excess SGPR
+  unsigned VGPRForSGPRSpills = (ExcessSGPR + (WaveSize - 1)) / WaveSize;
+  unsigned OtherVGPRForSGPRSpills =
+      (OtherExcessSGPR + (WaveSize - 1)) / WaveSize;
+
+  unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
+
+  // Unified excess pressure conditions, accounting for VGPRs used for SGPR
+  // spills
+  unsigned ExcessVGPR =
+      std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) +
+                                VGPRForSGPRSpills - MaxVGPRs),
+               0);
+  unsigned OtherExcessVGPR =
+      std::max(static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) +
+                                OtherVGPRForSGPRSpills - MaxVGPRs),
+               0);
+  // Arch VGPR excess pressure conditions, accounting for VGPRs used for SGPR
+  // spills
+  unsigned ExcessArchVGPR = std::max(
+      static_cast<int>(getVGPRNum(false) + VGPRForSGPRSpills - MaxArchVGPRs),
+      0);
+  unsigned OtherExcessArchVGPR =
+      std::max(static_cast<int>(O.getVGPRNum(false) + OtherVGPRForSGPRSpills -
+                                MaxArchVGPRs),
+               0);
+  // AGPR excess pressure conditions
+  unsigned ExcessAGPR = std::max(
+      static_cast<int>(ST.hasGFX90AInsts() ? (getAGPRNum() - MaxArchVGPRs)
+                                           : (getAGPRNum() - MaxVGPRs)),
+      0);
+  unsigned OtherExcessAGPR = std::max(
+      static_cast<int>(ST.hasGFX90AInsts() ? (O.getAGPRNum() - MaxArchVGPRs)
+                                           : (O.getAGPRNum() - MaxVGPRs)),
+      0);
+
+  bool ExcessRP = ExcessSGPR || ExcessVGPR || ExcessArchVGPR || ExcessAGPR;
+  bool OtherExcessRP = OtherExcessSGPR || OtherExcessVGPR ||
+                       OtherExcessArchVGPR || OtherExcessAGPR;
+
+  // Give second precedence to the reduced number of spills to hold the register
+  // pressure.
+  if (ExcessRP || OtherExcessRP) {
+    // The difference in excess VGPR pressure, after including VGPRs used for
+    // SGPR spills
+    int VGPRDiff = ((OtherExcessVGPR + OtherExcessArchVGPR + OtherExcessAGPR) -
+                    (ExcessVGPR + ExcessArchVGPR + ExcessAGPR));
+
+    int SGPRDiff = OtherExcessSGPR - ExcessSGPR;
+
+    if (VGPRDiff != 0)
+      return VGPRDiff > 0;
+    if (SGPRDiff != 0) {
+      unsigned PureExcessVGPR =
+          std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) - MaxVGPRs),
+                   0) +
+          std::max(static_cast<int>(getVGPRNum(false) - MaxArchVGPRs), 0);
+      unsigned OtherPureExcessVGPR =
+          std::max(
+              static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) - MaxVGPRs),
+              0) +
+          std::max(static_cast<int>(O.getVGPRNum(false) - MaxArchVGPRs), 0);
+
+      // If we have a special case where there is a tie in excess VGPR, but one
+      // of the pressures has VGPR usage from SGPR spills, prefer the pressure
+      // with SGPR spills.
+      if (PureExcessVGPR != OtherPureExcessVGPR)
+        return SGPRDiff < 0;
+      // If both pressures have the same excess pressure before and after
+      // accounting for SGPR spills, prefer fewer SGPR spills.
+      return SGPRDiff > 0;
+    }
+  }
 
   bool SGPRImportant = SGPROcc < VGPROcc;
   const bool OtherSGPRImportant = OtherSGPROcc < OtherVGPROcc;
 
-  // if both pressures disagree on what is more important compare vgprs
+  // If both pressures disagree on what is more important compare vgprs.
   if (SGPRImportant != OtherSGPRImportant) {
     SGPRImportant = false;
   }
 
-  // compare large regs pressure
+  // Give third precedence to lower register tuple pressure.
   bool SGPRFirst = SGPRImportant;
   for (int I = 2; I > 0; --I, SGPRFirst = !SGPRFirst) {
     if (SGPRFirst) {
@@ -130,6 +216,8 @@ bool GCNRegPressure::less(const GCNSubtarget &ST,
         return VW < OtherVW;
     }
   }
+
+  // Give final precedence to lower general RP.
   return SGPRImportant ? (getSGPRNum() < O.getSGPRNum()):
                          (getVGPRNum(ST.hasGFX90AInsts()) <
                           O.getVGPRNum(ST.hasGFX90AInsts()));
@@ -540,7 +628,7 @@ getRegLiveThroughMask(const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   auto &OS = dbgs();
 

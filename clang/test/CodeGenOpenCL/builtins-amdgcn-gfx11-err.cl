@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -verify -S -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -verify -emit-llvm -o - %s
 
 void test_s_sleep_var(int d)
 {

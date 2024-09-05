@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --tosa-infer-shapes %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --tosa-infer-shapes --allow-unregistered-dialect %s | FileCheck %s
 
 // CHECK-LABEL: @test_return
 func.func @test_return(%arg0 : tensor<4xf32>) -> tensor<*xf32> {
@@ -222,13 +222,13 @@ func.func @test_binary_i32(%arg0 : tensor<4xi32>, %arg1 : tensor<i32>) -> () {
 
 // CHECK-LABEL: @test_binary_i1
 func.func @test_binary_i1(%arg0 : tensor<4xi1>, %arg1 : tensor<i1>) -> () {
-  // CHECK tosa.logical_and %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<4xi1>
+  // CHECK: tosa.logical_and %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<4xi1>
   %0 = tosa.logical_and %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<*xi1>
 
-  // CHECK tosa.logical_or %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<4xi1>
+  // CHECK: tosa.logical_or %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<4xi1>
   %1 = tosa.logical_or %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<*xi1>
 
-  // CHECK tosa.logical_xor %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<*4i1>
+  // CHECK: tosa.logical_xor %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<4xi1>
   %2 = tosa.logical_xor %arg0, %arg1 : (tensor<4xi1>, tensor<i1>) -> tensor<*xi1>
 
   return
@@ -1177,6 +1177,97 @@ func.func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
 
 // -----
 
+// This test locks down a fix for a crash in the type inference process.
+// The relevant pattern is a while loop whose body contains a TOSA operation which is
+// consumed by a non-inferrable user in the same body.
+// Previously, this would trigger a crash due to how types are cached and then
+// reapplied to the operations in the loops body.
+
+// CHECK-LABEL: @while_dont_crash
+func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
+  %0 = tosa.add %arg0, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK:      tosa.while_loop
+  // CHECK-SAME: (tensor<i32>) -> tensor<i32>
+  %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
+    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    // CHECK:       tosa.greater_equal
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+    %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+    tosa.yield %3 : tensor<*xi1>
+  } do {
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  ^bb0(%arg1: tensor<*xi32>):
+    // CHECK:     tosa.add
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+    %3 = tosa.add %arg1, %arg1 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
+    // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
+    // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+    "use"(%3) : (tensor<*xi32>) -> ()
+    tosa.yield %3 : tensor<*xi32>
+  }
+  // CHECK: tensor.cast
+  return %1 : tensor<*xi32>
+}
+
+// -----
+
+// This test locks down a fix for a crash in the type inference process.
+// The relevant pattern is a while loop whose body contains a TOSA operation which is
+// consumed by a non-inferrable user in the same body.
+
+// CHECK-LABEL: @while_dont_crash_nested
+func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
+  %0 = tosa.add %arg0, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK:      tosa.while_loop
+  // CHECK-SAME: (tensor<i32>) -> tensor<i32>
+  %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
+    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    // CHECK:       tosa.greater_equal
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+    %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+    // CHECK:      tosa.yield
+    // CHECK-SAME: tensor<i1>
+    tosa.yield %3 : tensor<*xi1>
+  } do {
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  ^bb0(%arg1: tensor<*xi32>):
+    // CHECK:      tosa.while_loop
+    // CHECK-SAME: (tensor<i32>) -> tensor<i32>
+    %1 = tosa.while_loop (%arg2 = %arg1) : (tensor<*xi32>) -> tensor<*xi32> {
+      %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+      // CHECK:       tosa.greater_equal
+      // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+      %4 = tosa.greater_equal %2, %arg2 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+      // CHECK:      tosa.yield
+      // CHECK-SAME: tensor<i1>
+      tosa.yield %4 : tensor<*xi1>
+    } do {
+    // CHECK:      ^bb0
+    // CHECK-SAME: tensor<i32>
+    ^bb0(%arg2: tensor<*xi32>):
+      // CHECK:     tosa.add
+      // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+      %4 = tosa.add %arg2, %arg2 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
+      // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
+      // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+      "use"(%4) : (tensor<*xi32>) -> ()
+      // CHECK:      tosa.yield
+      // CHECK-SAME: tensor<i32>
+      tosa.yield %4 : tensor<*xi32>
+    }
+    // CHECK:      tosa.yield
+    // CHECK-SAME: tensor<i32>
+    tosa.yield %1 : tensor<*xi32>
+  }
+
+  // CHECK: tensor.cast
+  return %1 : tensor<*xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @test_static_rfft2d
 func.func @test_static_rfft2d(%arg0: tensor<5x2x8xf32>) -> () {
   // CHECK: -> (tensor<5x2x5xf32>, tensor<5x2x5xf32>)
@@ -1286,26 +1377,54 @@ func.func @test_tosa_use_def_chain(%arg0: tensor<1x32x32x3xf32>, %arg1: tensor<1
 
 // -----
 
-// CHECK-LABEL: test_rank_size_constant_permutation
-func.func @test_rank_size_constant_permutation() {
-  %c6 = arith.constant 6 : index
-  %cst_26 = arith.constant dense<[0, 2]> : tensor<2xi32>
-  %14 = tensor.empty(%c6) : tensor<?x27xi64>
-  // Fail to infer the shape but not crash.
-  // CHECK: (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
-  %72 = tosa.transpose %14, %cst_26 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
-  return
-}
+// This test locks two bug fixes manifested in the code below.
+//
+// 1. Context
+//
+// When shape propagation hits an operation that does not support shape
+// inference (here 'tensor.expand_shape'), it must revert the currently
+// inferred shape of its consumers back to the originally expected input
+// type to avoid potential op verification errors. This type reversal is
+// done through an additional 'tensor.cast' op.
+//
+//
+// 2. Preserving list of non-inferrable consumers
+//
+// When multiple non-inferrable consumers of a shape-inferred value are found
+// (here, the 2 occurrences of 'tensor.expand_shape' consuming the output of
+// 'tosa.cast'), their input argument ('%0') must be altered to consume the
+// output the new 'tensor.cast' op. While these replacements occur, the use list
+// of the producer ('tosa.cast') is also implicitly altered, invalidating any
+// iterators associated with it. It is therefore necessary to create a copy of
+// this use list ahead of time. Before this bug fix, the second
+// 'tensor.expand_shape' op below was not updated correctly.
+//
+// 3. Guaranteeing def-use order
+//
+// When emitting the 'tensor.cast' op, it is important to guarantee that its
+// output value is defined before all of its consumers (here, both of the
+// 'tensor.expand_shape' ops. In a previous version of the code, this insertion
+// occurred right before the first encountered consumer. Since use lists are
+// saved in reverse order, the 'tensor.cast' op was inserted before the second
+// 'tensor.expand_shape' op, leading to a def-use order violation when the
+// first 'tensor.expand_shape' op was later updated. The current implementation
+// sets the insertion point right after the producer of the last shape-inferred
+// value (here 'tosa.cast'), which guarantees correct def-use order for all
+// future operand updates.
 
-// -----
+// CHECK-LABEL: test_multiple_non_inferrable_consumers
+// CHECK-SAME: %[[ARG:.*]]: tensor<1x2x8xf32>
+func.func @test_multiple_non_inferrable_consumers(%arg0: tensor<1x2x8xf32>) {
+  // CHECK: %[[TOSA_CAST:.*]] = tosa.cast %[[ARG]] : (tensor<1x2x8xf32>) -> tensor<1x2x8xf32>
+  // CHECK: %[[TENSOR_CAST:.*]] = tensor.cast %[[TOSA_CAST]] : tensor<1x2x8xf32> to tensor<?x2x8xf32>
+  %0 = tosa.cast %arg0 : (tensor<1x2x8xf32>) -> tensor<?x2x8xf32>
 
-// CHECK-LABEL: test_large_constant_permutation
-func.func @test_large_constant_permutation() {
-  %c6 = arith.constant 6 : index
-  %cst_26 = arith.constant dense<[1185677355, 332462212]> : tensor<2xi32>
-  %14 = tensor.empty(%c6) : tensor<?x27xi64>
-  // Fail to infer the shape but not crash.
-  // CHECK: (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
-  %72 = tosa.transpose %14, %cst_26 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  %c0 = arith.constant 0 : index
+  %dim = tensor.dim %0, %c0 : tensor<?x2x8xf32>
+
+  // CHECK: tensor.expand_shape %[[TENSOR_CAST]]
+  // CHECK: tensor.expand_shape %[[TENSOR_CAST]]
+  %expanded_0 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 4, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
+  %expanded_1 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 4, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
   return
 }

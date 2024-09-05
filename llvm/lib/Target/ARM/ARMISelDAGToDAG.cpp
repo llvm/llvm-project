@@ -59,12 +59,10 @@ class ARMDAGToDAGISel : public SelectionDAGISel {
   const ARMSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   ARMDAGToDAGISel() = delete;
 
   explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, tm, OptLevel) {}
+      : SelectionDAGISel(tm, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -362,11 +360,19 @@ private:
   /// selected when N would have been selected.
   void replaceDAGValue(const SDValue &N, SDValue M);
 };
+
+class ARMDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  ARMDAGToDAGISelLegacy(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<ARMDAGToDAGISel>(tm, OptLevel)) {}
+};
 }
 
-char ARMDAGToDAGISel::ID = 0;
+char ARMDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(ARMDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(ARMDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -706,7 +712,8 @@ bool ARMDAGToDAGISel::SelectAddrModeImm12(SDValue N,
         Base = CurDAG->getTargetFrameIndex(
             FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
-      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedConstant(RHSC, SDLoc(N), MVT::i32,
+                                         /*isTarget=*/true);
       return true;
     }
   }
@@ -875,7 +882,8 @@ bool ARMDAGToDAGISel::SelectAddrMode2OffsetImmPre(SDNode *Op, SDValue N,
   if (isScaledConstantInRange(N, /*Scale=*/1, 0, 0x1000, Val)) { // 12 bits.
     if (AddSub == ARM_AM::sub) Val *= -1;
     Offset = CurDAG->getRegister(0, MVT::i32);
-    Opc = CurDAG->getTargetConstant(Val, SDLoc(Op), MVT::i32);
+    Opc =
+        CurDAG->getSignedConstant(Val, SDLoc(Op), MVT::i32, /*isTarget*/ true);
     return true;
   }
 
@@ -1179,7 +1187,8 @@ ARMDAGToDAGISel::SelectThumbAddrModeImm5S(SDValue N, unsigned Scale,
   int RHSC;
   if (isScaledConstantInRange(N.getOperand(1), Scale, 0, 32, RHSC)) {
     Base = N.getOperand(0);
-    OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+    OffImm =
+        CurDAG->getSignedConstant(RHSC, SDLoc(N), MVT::i32, /*isTarget=*/true);
     return true;
   }
 
@@ -1241,7 +1250,8 @@ bool ARMDAGToDAGISel::SelectThumbAddrModeSP(SDValue N,
         if (MFI.getObjectAlign(FI) >= Align(4)) {
           Base = CurDAG->getTargetFrameIndex(
               FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-          OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+          OffImm = CurDAG->getSignedConstant(RHSC, SDLoc(N), MVT::i32,
+                                             /*isTarget=*/true);
           return true;
         }
       }
@@ -1261,8 +1271,8 @@ bool ARMDAGToDAGISel::SelectTAddrModeImm7(SDValue N, SDValue &Base,
       Base = N.getOperand(0);
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedConstant(RHSC * (1 << Shift), SDLoc(N),
+                                         MVT::i32, /*isTarget=*/true);
       return true;
     }
   }
@@ -1324,7 +1334,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm12(SDValue N,
         Base = CurDAG->getTargetFrameIndex(
             FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
-      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedConstant(RHSC, SDLoc(N), MVT::i32,
+                                         /*isTarget=*/true);
       return true;
     }
   }
@@ -1351,7 +1362,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8(SDValue N, SDValue &Base,
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
       OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+          CurDAG->getSignedConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32,
+                                    /*isTarget=*/true);
       return true;
     }
   }
@@ -1381,7 +1393,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8(SDValue N,
         Base = CurDAG->getTargetFrameIndex(
             FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
-      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedConstant(RHSC, SDLoc(N), MVT::i32,
+                                         /*isTarget=*/true);
       return true;
     }
   }
@@ -1398,8 +1411,10 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
   int RHSC;
   if (isScaledConstantInRange(N, /*Scale=*/1, 0, 0x100, RHSC)) { // 8 bits.
     OffImm = ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
-      ? CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32)
-      : CurDAG->getTargetConstant(-RHSC, SDLoc(N), MVT::i32);
+                 ? CurDAG->getSignedConstant(RHSC, SDLoc(N), MVT::i32,
+                                             /*isTarget=*/true)
+                 : CurDAG->getSignedConstant(-RHSC, SDLoc(N), MVT::i32,
+                                             /*isTarget=*/true);
     return true;
   }
 
@@ -1422,8 +1437,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7(SDValue N, SDValue &Base,
 
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedConstant(RHSC * (1 << Shift), SDLoc(N),
+                                         MVT::i32, /*isTarget=*/true);
       return true;
     }
   }
@@ -1465,11 +1480,11 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N,
   int RHSC;
   // 7 bit constant, shifted by Shift.
   if (isScaledConstantInRange(N, 1 << Shift, 0, 0x80, RHSC)) {
-    OffImm =
-        ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
-            ? CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32)
-            : CurDAG->getTargetConstant(-RHSC * (1 << Shift), SDLoc(N),
-                                        MVT::i32);
+    OffImm = ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
+                 ? CurDAG->getSignedConstant(RHSC * (1 << Shift), SDLoc(N),
+                                             MVT::i32, /*isTarget=*/true)
+                 : CurDAG->getSignedConstant(-RHSC * (1 << Shift), SDLoc(N),
+                                             MVT::i32, /*isTarget=*/true);
     return true;
   }
   return false;
@@ -1479,7 +1494,8 @@ template <int Min, int Max>
 bool ARMDAGToDAGISel::SelectImmediateInRange(SDValue N, SDValue &OffImm) {
   int Val;
   if (isScaledConstantInRange(N, 1, Min, Max, Val)) {
-    OffImm = CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
+    OffImm =
+        CurDAG->getSignedConstant(Val, SDLoc(N), MVT::i32, /*isTarget=*/true);
     return true;
   }
   return false;
@@ -3855,8 +3871,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
               ConstantMaterializationCost(~Imm, Subtarget)) {
         // The current immediate costs more to materialize than a negated
         // immediate, so negate the immediate and use a BIC.
-        SDValue NewImm =
-          CurDAG->getConstant(~N1C->getZExtValue(), dl, MVT::i32);
+        SDValue NewImm = CurDAG->getConstant(~Imm, dl, MVT::i32);
         // If the new constant didn't exist before, reposition it in the topological
         // ordering so it is just before N. Otherwise, don't touch its location.
         if (NewImm->getNodeId() == -1)
@@ -5886,5 +5901,5 @@ bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
 ///
 FunctionPass *llvm::createARMISelDag(ARMBaseTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new ARMDAGToDAGISel(TM, OptLevel);
+  return new ARMDAGToDAGISelLegacy(TM, OptLevel);
 }

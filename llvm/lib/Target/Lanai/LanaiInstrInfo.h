@@ -49,7 +49,9 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
                    const DebugLoc &DL, MCRegister DestinationRegister,
-                   MCRegister SourceRegister, bool KillSource) const override;
+                   MCRegister SourceRegister, bool KillSource,
+                   bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator Position,
@@ -70,12 +72,12 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, unsigned &Width,
+                                    int64_t &Offset, LocationSize &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   std::pair<unsigned, unsigned>

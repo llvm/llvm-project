@@ -25,7 +25,7 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[ZEXT]], 2147483616
-; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = uitofp nneg i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[DOTCAST]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[IND_END:%.*]] = fadd fast float [[TMP0]], 1.000000e+00
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -201,7 +201,7 @@ define double @external_use_with_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
-; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to double
+; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = uitofp nneg i64 [[N_VEC]] to double
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = fmul fast double [[DOTCAST]], 3.000000e+00
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vector.body:
@@ -309,7 +309,7 @@ define double @external_use_without_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; AUTO_VEC-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.end.unr-lcssa:
-; AUTO_VEC-NEXT:    [[J_LCSSA_PH:%.*]] = phi double [ undef, [[ENTRY:%.*]] ], [ [[J_NEXT_6]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[J_LCSSA_PH:%.*]] = phi double [ poison, [[ENTRY:%.*]] ], [ [[J_NEXT_6]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[I_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[I_NEXT_7]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[J_UNR:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[J_NEXT_7]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
@@ -366,7 +366,7 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 4294967264
-; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = uitofp nneg i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[DOTCAST]], 4.200000e+01
 ; AUTO_VEC-NEXT:    [[IND_END:%.*]] = fadd reassoc float [[TMP1]], 1.000000e+00
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]

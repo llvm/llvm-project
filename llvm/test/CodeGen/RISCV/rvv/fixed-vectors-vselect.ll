@@ -5,8 +5,8 @@
 define void @vselect_vv_v6i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; RV32-LABEL: vselect_vv_v6i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    lbu a2, 0(a2)
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    slli a1, a2, 30
 ; RV32-NEXT:    srli a1, a1, 31
@@ -35,8 +35,8 @@ define void @vselect_vv_v6i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ;
 ; RV64-LABEL: vselect_vv_v6i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    lbu a2, 0(a2)
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a1)
 ; RV64-NEXT:    slli a1, a2, 62
 ; RV64-NEXT:    srli a1, a1, 63
@@ -73,8 +73,8 @@ define void @vselect_vv_v6i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 ; RV32-LABEL: vselect_vx_v6i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    lbu a2, 0(a2)
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    slli a1, a2, 30
 ; RV32-NEXT:    srli a1, a1, 31
@@ -96,16 +96,15 @@ define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 ; RV32-NEXT:    vslidedown.vi v10, v10, 2
 ; RV32-NEXT:    vand.vi v10, v10, 1
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV32-NEXT:    vse32.v v8, (a3)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vselect_vx_v6i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    lbu a2, 0(a2)
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a1)
 ; RV64-NEXT:    slli a1, a2, 62
 ; RV64-NEXT:    srli a1, a1, 63
@@ -127,9 +126,8 @@ define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 ; RV64-NEXT:    vslidedown.vi v10, v10, 2
 ; RV64-NEXT:    vand.vi v10, v10, 1
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    vse32.v v8, (a3)
 ; RV64-NEXT:    ret
   %vb = load <6 x i32>, ptr %b
@@ -144,8 +142,8 @@ define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
 ; RV32-LABEL: vselect_vi_v6i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    slli a0, a1, 30
 ; RV32-NEXT:    srli a0, a0, 31
@@ -167,16 +165,15 @@ define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
 ; RV32-NEXT:    vslidedown.vi v10, v10, 2
 ; RV32-NEXT:    vand.vi v10, v10, 1
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    vse32.v v8, (a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vselect_vi_v6i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    lbu a1, 0(a1)
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    slli a0, a1, 62
 ; RV64-NEXT:    srli a0, a0, 63
@@ -198,16 +195,13 @@ define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
 ; RV64-NEXT:    vslidedown.vi v10, v10, 2
 ; RV64-NEXT:    vand.vi v10, v10, 1
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    vse32.v v8, (a2)
 ; RV64-NEXT:    ret
   %vb = load <6 x i32>, ptr %b
-  %a = insertelement <6 x i32> poison, i32 -1, i32 0
-  %va = shufflevector <6 x i32> %a, <6 x i32> poison, <6 x i32> zeroinitializer
   %vcc = load <6 x i1>, ptr %cc
-  %vsel = select <6 x i1> %vcc, <6 x i32> %va, <6 x i32> %vb
+  %vsel = select <6 x i1> %vcc, <6 x i32> splat (i32 -1), <6 x i32> %vb
   store <6 x i32> %vsel, ptr %z
   ret void
 }
@@ -216,8 +210,8 @@ define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
 define void @vselect_vv_v6f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; RV32-LABEL: vselect_vv_v6f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    lbu a2, 0(a2)
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    slli a1, a2, 30
 ; RV32-NEXT:    srli a1, a1, 31
@@ -246,8 +240,8 @@ define void @vselect_vv_v6f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ;
 ; RV64-LABEL: vselect_vv_v6f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    lbu a2, 0(a2)
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a1)
 ; RV64-NEXT:    slli a1, a2, 62
 ; RV64-NEXT:    srli a1, a1, 63
@@ -284,8 +278,8 @@ define void @vselect_vv_v6f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
 ; RV32-LABEL: vselect_vx_v6f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    slli a0, a1, 30
 ; RV32-NEXT:    srli a0, a0, 31
@@ -307,16 +301,15 @@ define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
 ; RV32-NEXT:    vslidedown.vi v10, v10, 2
 ; RV32-NEXT:    vand.vi v10, v10, 1
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; RV32-NEXT:    vse32.v v8, (a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vselect_vx_v6f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    lbu a1, 0(a1)
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    slli a0, a1, 62
 ; RV64-NEXT:    srli a0, a0, 63
@@ -338,9 +331,8 @@ define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
 ; RV64-NEXT:    vslidedown.vi v10, v10, 2
 ; RV64-NEXT:    vand.vi v10, v10, 1
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; RV64-NEXT:    vse32.v v8, (a2)
 ; RV64-NEXT:    ret
   %vb = load <6 x float>, ptr %b
@@ -355,8 +347,8 @@ define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
 define void @vselect_vfpzero_v6f32(ptr %b, ptr %cc, ptr %z) {
 ; RV32-LABEL: vselect_vfpzero_v6f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    slli a0, a1, 30
 ; RV32-NEXT:    srli a0, a0, 31
@@ -378,16 +370,15 @@ define void @vselect_vfpzero_v6f32(ptr %b, ptr %cc, ptr %z) {
 ; RV32-NEXT:    vslidedown.vi v10, v10, 2
 ; RV32-NEXT:    vand.vi v10, v10, 1
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vim v8, v8, 0, v0
 ; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vmerge.vim v8, v8, 0, v0
 ; RV32-NEXT:    vse32.v v8, (a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vselect_vfpzero_v6f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    lbu a1, 0(a1)
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    slli a0, a1, 62
 ; RV64-NEXT:    srli a0, a0, 63
@@ -409,16 +400,13 @@ define void @vselect_vfpzero_v6f32(ptr %b, ptr %cc, ptr %z) {
 ; RV64-NEXT:    vslidedown.vi v10, v10, 2
 ; RV64-NEXT:    vand.vi v10, v10, 1
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vim v8, v8, 0, v0
 ; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vmerge.vim v8, v8, 0, v0
 ; RV64-NEXT:    vse32.v v8, (a2)
 ; RV64-NEXT:    ret
   %vb = load <6 x float>, ptr %b
-  %a = insertelement <6 x float> poison, float 0.0, i32 0
-  %va = shufflevector <6 x float> %a, <6 x float> poison, <6 x i32> zeroinitializer
   %vcc = load <6 x i1>, ptr %cc
-  %vsel = select <6 x i1> %vcc, <6 x float> %va, <6 x float> %vb
+  %vsel = select <6 x i1> %vcc, <6 x float> splat (float 0.0), <6 x float> %vb
   store <6 x float> %vsel, ptr %z
   ret void
 }
@@ -468,10 +456,8 @@ define void @vselect_vi_v8i32(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <8 x i32>, ptr %b
-  %a = insertelement <8 x i32> poison, i32 -1, i32 0
-  %va = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
   %vcc = load <8 x i1>, ptr %cc
-  %vsel = select <8 x i1> %vcc, <8 x i32> %va, <8 x i32> %vb
+  %vsel = select <8 x i1> %vcc, <8 x i32> splat (i32 -1), <8 x i32> %vb
   store <8 x i32> %vsel, ptr %z
   ret void
 }
@@ -521,10 +507,8 @@ define void @vselect_vfpzero_v8f32(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <8 x float>, ptr %b
-  %a = insertelement <8 x float> poison, float 0.0, i32 0
-  %va = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
   %vcc = load <8 x i1>, ptr %cc
-  %vsel = select <8 x i1> %vcc, <8 x float> %va, <8 x float> %vb
+  %vsel = select <8 x i1> %vcc, <8 x float> splat (float 0.0), <8 x float> %vb
   store <8 x float> %vsel, ptr %z
   ret void
 }
@@ -574,10 +558,8 @@ define void @vselect_vi_v16i16(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <16 x i16>, ptr %b
-  %a = insertelement <16 x i16> poison, i16 4, i32 0
-  %va = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
   %vcc = load <16 x i1>, ptr %cc
-  %vsel = select <16 x i1> %vcc, <16 x i16> %va, <16 x i16> %vb
+  %vsel = select <16 x i1> %vcc, <16 x i16> splat (i16 4), <16 x i16> %vb
   store <16 x i16> %vsel, ptr %z
   ret void
 }
@@ -630,10 +612,8 @@ define void @vselect_vfpzero_v32f16(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <32 x half>, ptr %b
-  %a = insertelement <32 x half> poison, half 0.0, i32 0
-  %va = shufflevector <32 x half> %a, <32 x half> poison, <32 x i32> zeroinitializer
   %vcc = load <32 x i1>, ptr %cc
-  %vsel = select <32 x i1> %vcc, <32 x half> %va, <32 x half> %vb
+  %vsel = select <32 x i1> %vcc, <32 x half> splat (half 0.0), <32 x half> %vb
   store <32 x half> %vsel, ptr %z
   ret void
 }

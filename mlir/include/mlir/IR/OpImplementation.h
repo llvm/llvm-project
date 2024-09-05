@@ -641,6 +641,12 @@ public:
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
 
+  /// Parse a '-' token.
+  virtual ParseResult parseMinus() = 0;
+
+  /// Parse a '-' token if present.
+  virtual ParseResult parseOptionalMinus() = 0;
+
   /// Parse a '*' token.
   virtual ParseResult parseStar() = 0;
 
@@ -700,6 +706,10 @@ public:
   /// Parse a floating point value from the stream.
   virtual ParseResult parseFloat(double &result) = 0;
 
+  /// Parse a floating point value into APFloat from the stream.
+  virtual ParseResult parseFloat(const llvm::fltSemantics &semantics,
+                                 APFloat &result) = 0;
+
   /// Parse an integer value from the stream.
   template <typename IntT>
   ParseResult parseInteger(IntT &result) {
@@ -710,16 +720,27 @@ public:
     return *parseResult;
   }
 
+  /// Parse a decimal integer value from the stream.
+  template <typename IntT>
+  ParseResult parseDecimalInteger(IntT &result) {
+    auto loc = getCurrentLocation();
+    OptionalParseResult parseResult = parseOptionalDecimalInteger(result);
+    if (!parseResult.has_value())
+      return emitError(loc, "expected decimal integer value");
+    return *parseResult;
+  }
+
   /// Parse an optional integer value from the stream.
   virtual OptionalParseResult parseOptionalInteger(APInt &result) = 0;
+  virtual OptionalParseResult parseOptionalDecimalInteger(APInt &result) = 0;
 
-  template <typename IntT>
-  OptionalParseResult parseOptionalInteger(IntT &result) {
+ private:
+  template <typename IntT, typename ParseFn>
+  OptionalParseResult parseOptionalIntegerAndCheck(IntT &result,
+                                                   ParseFn &&parseFn) {
     auto loc = getCurrentLocation();
-
-    // Parse the unsigned variant.
     APInt uintResult;
-    OptionalParseResult parseResult = parseOptionalInteger(uintResult);
+    OptionalParseResult parseResult = parseFn(uintResult);
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
 
@@ -731,6 +752,20 @@ public:
     if (APInt(uintResult.getBitWidth(), result) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
+  }
+
+ public:
+  template <typename IntT>
+  OptionalParseResult parseOptionalInteger(IntT &result) {
+    return parseOptionalIntegerAndCheck(
+        result, [&](APInt &result) { return parseOptionalInteger(result); });
+  }
+
+  template <typename IntT>
+  OptionalParseResult parseOptionalDecimalInteger(IntT &result) {
+    return parseOptionalIntegerAndCheck(result, [&](APInt &result) {
+      return parseOptionalDecimalInteger(result);
+    });
   }
 
   /// These are the supported delimiters around operand lists and region

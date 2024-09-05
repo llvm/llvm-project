@@ -246,6 +246,11 @@ class CommandLineExprCompletionTestCase(TestBase):
             "expr some_expr.Self(). FooNoArgs", "expr some_expr.Self(). FooNoArgsBar()"
         )
 
+        self.complete_from_to("expr myVec.__f", "expr myVec.__func()")
+        self.complete_from_to("expr myVec._F", "expr myVec._Func()")
+        self.complete_from_to("expr myVec.__m", "expr myVec.__mem")
+        self.complete_from_to("expr myVec._M", "expr myVec._Mem")
+
     def test_expr_completion_with_descriptions(self):
         self.build()
         self.main_source = "main.cpp"

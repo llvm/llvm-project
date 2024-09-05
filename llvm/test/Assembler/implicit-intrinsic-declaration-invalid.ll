@@ -1,11 +1,10 @@
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
 
-; Check that intrinsics do not get automatically declared if they are used
-; with different function types.
+; Use of intrinsic without mangling suffix and invalid signature should
+; be rejected.
 
-; CHECK: error: use of undefined value '@llvm.umax'
+; CHECK: error: invalid intrinsic signature
 define void @test() {
-  call i8 @llvm.umax(i8 0, i8 1)
-  call i16 @llvm.umax(i16 0, i16 1)
+  call i8 @llvm.umax(i8 0, i16 1)
   ret void
 }

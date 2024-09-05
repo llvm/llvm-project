@@ -60,7 +60,7 @@
 # CHECK:     PointerToRawData: 0x{{[^0]}}
 # CHECK:     PDBInfo {
 # CHECK:       PDBSignature: 0x53445352
-# CHECK:       PDBGUID: [[GUID:\(([A-Za-z0-9]{2} ?){16}\)]]
+# CHECK:       PDBGUID: [[GUID:\{[A-Za-z0-9\-]{36}\}]]
 # CHECK:       PDBAge: 1
 # CHECK:       PDBFileName: {{.*}}.pdb
 # CHECK:     }
@@ -99,7 +99,7 @@
 # TWOPDBS:     PointerToRawData: 0x{{[^0]}}
 # TWOPDBS:     PDBInfo {
 # TWOPDBS:       PDBSignature: 0x53445352
-# TWOPDBS:       PDBGUID: [[GUID:\(([A-Za-z0-9]{2} ?){16}\)]]
+# TWOPDBS:       PDBGUID: [[GUID:\{[A-Za-z0-9\-]{36}\}]]
 # TWOPDBS:       PDBAge: 1
 # TWOPDBS:       PDBFileName: {{.*}}.pdb
 # TWOPDBS:     }
@@ -182,7 +182,7 @@
 # BUILDID:     PointerToRawData: 0x{{[^0]}}
 # BUILDID:     PDBInfo {
 # BUILDID:       PDBSignature: 0x53445352
-# BUILDID:       PDBGUID: [[GUID:\(([A-Za-z0-9]{2} ?){16}\)]]
+# BUILDID:       PDBGUID: [[GUID:\{[A-Za-z0-9\-]{36}\}]]
 # BUILDID:       PDBAge: 1
 # BUILDID:       PDBFileName:
 # BUILDID:     }

@@ -172,7 +172,7 @@ binImports(COFFLinkerContext &ctx,
 // A chunk for the delay import descriptor table etnry.
 class DelayDirectoryChunk : public NonSectionChunk {
 public:
-  explicit DelayDirectoryChunk(Chunk *n) : dllName(n) {}
+  explicit DelayDirectoryChunk(Chunk *n) : dllName(n) { setAlignment(4); }
 
   size_t getSize() const override {
     return sizeof(delay_import_directory_table_entry);

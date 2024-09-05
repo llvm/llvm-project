@@ -1,5 +1,3 @@
-// REQUIRES: mips-registered-target
-
 // Check frontend and linker invocations on the IMG MIPS toolchain.
 //
 // = Big-endian, mips32r6

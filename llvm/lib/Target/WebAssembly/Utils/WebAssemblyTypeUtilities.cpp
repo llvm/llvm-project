@@ -33,6 +33,7 @@ MVT WebAssembly::parseMVT(StringRef Type) {
       .Case("v2i64", MVT::v2i64)
       .Case("funcref", MVT::funcref)
       .Case("externref", MVT::externref)
+      .Case("exnref", MVT::exnref)
       .Default(MVT::INVALID_SIMPLE_VALUE_TYPE);
 }
 
@@ -50,6 +51,7 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
   case MVT::v8i16:
   case MVT::v4i32:
   case MVT::v2i64:
+  case MVT::v8f16:
   case MVT::v4f32:
   case MVT::v2f64:
     return wasm::ValType::V128;
@@ -57,13 +59,15 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
     return wasm::ValType::FUNCREF;
   case MVT::externref:
     return wasm::ValType::EXTERNREF;
+  case MVT::exnref:
+    return wasm::ValType::EXNREF;
   default:
     llvm_unreachable("unexpected type");
   }
 }
 
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                                    const ArrayRef<MVT> &VTs) {
+                                    ArrayRef<MVT> VTs) {
   assert(!Sym->getType());
 
   // Tables are represented as Arrays in LLVM IR therefore

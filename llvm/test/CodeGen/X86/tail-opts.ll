@@ -300,10 +300,9 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:    cmpl $23, %ecx
 ; CHECK-NEXT:    jne .LBB3_9
 ; CHECK-NEXT:  .LBB3_16: # %lvalue_p.exit4
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB3_9
-; CHECK-NEXT:  # %bb.17: # %lvalue_p.exit4
 ; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    orb %al, %cl
 entry:
   %tmp4 = load i8, ptr null, align 8                  ; <i8> [#uses=3]
   switch i8 %tmp4, label %bb3 [

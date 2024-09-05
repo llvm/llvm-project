@@ -40,6 +40,15 @@ void ValidatorVersionMD::update(VersionTuple ValidatorVer) {
 
 bool ValidatorVersionMD::isEmpty() { return Entry->getNumOperands() == 0; }
 
+VersionTuple ValidatorVersionMD::getAsVersionTuple() {
+  if (isEmpty())
+    return VersionTuple(1, 0);
+  auto *ValVerMD = cast<MDNode>(Entry->getOperand(0));
+  auto *MajorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(0));
+  auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
+  return VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
+}
+
 static StringRef getShortShaderStage(Triple::EnvironmentType Env) {
   switch (Env) {
   case Triple::Pixel:
@@ -78,6 +87,18 @@ void dxil::createShaderModelMD(Module &M) {
   Vals[0] = MDString::get(Ctx, getShortShaderStage(TT.getEnvironment()));
   Vals[1] = ConstantAsMetadata::get(B.getInt32(Ver.getMajor()));
   Vals[2] = ConstantAsMetadata::get(B.getInt32(Ver.getMinor().value_or(0)));
+  Entry->addOperand(MDNode::get(Ctx, Vals));
+}
+
+void dxil::createDXILVersionMD(Module &M) {
+  Triple TT(Triple::normalize(M.getTargetTriple()));
+  VersionTuple Ver = TT.getDXILVersion();
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> B(Ctx);
+  NamedMDNode *Entry = M.getOrInsertNamedMetadata("dx.version");
+  Metadata *Vals[2];
+  Vals[0] = ConstantAsMetadata::get(B.getInt32(Ver.getMajor()));
+  Vals[1] = ConstantAsMetadata::get(B.getInt32(Ver.getMinor().value_or(0)));
   Entry->addOperand(MDNode::get(Ctx, Vals));
 }
 
@@ -262,6 +283,11 @@ void dxil::createEntryMD(Module &M, const uint64_t ShaderFlags) {
       continue;
     EntryList.emplace_back(&F);
   }
+
+  // If there are no entries, do nothing. This is mostly to allow for writing
+  // tests with no actual entry functions.
+  if (EntryList.empty())
+    return;
 
   auto &Ctx = M.getContext();
   // FIXME: generate metadata for resource.

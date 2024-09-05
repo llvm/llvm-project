@@ -107,6 +107,6 @@ elif args.command == "check-permissions":
     sys.exit(1)
 
 if args.command == "create":
-    create_release(llvm_repo, args.release, args.user)
+    create_release(llvm_repo, args.release)
 if args.command == "upload":
     upload_files(llvm_repo, args.release, args.files)

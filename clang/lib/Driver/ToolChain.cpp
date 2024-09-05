@@ -9,6 +9,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
@@ -40,9 +41,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -115,9 +118,18 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
   };
 
   std::string ErrorMessage;
-  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects,
-                                /* SecondsToWait */ 0,
-                                /*MemoryLimit*/ 0, &ErrorMessage))
+  int SecondsToWait = 60;
+  if (std::optional<std::string> Str =
+          llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
+    if (!llvm::to_integer(*Str, SecondsToWait))
+      return llvm::createStringError(std::error_code(),
+                                     "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
+                                     "an integer, got '" +
+                                         *Str + "'");
+    SecondsToWait = std::max(SecondsToWait, 0); // infinite
+  }
+  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
+                                /*MemoryLimit=*/0, &ErrorMessage))
     return llvm::createStringError(std::error_code(),
                                    Executable + ": " + ErrorMessage);
 
@@ -195,13 +207,26 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.PosTargetFeature))
+        MArch.push_back(Ext.UserVisibleName.str());
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
-  MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.NegTargetFeature))
+        MArch.push_back(("no" + Ext.UserVisibleName).str());
+  StringRef ArchName;
+  for (const auto &ArchInfo : AArch64::ArchInfos)
+    if (FeatureSet.contains(ArchInfo->ArchFeature))
+      ArchName = ArchInfo->Name;
+  assert(!ArchName.empty() && "at least one architecture should be found");
+  MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
 }
 
 static void getARMMultilibFlags(const Driver &D,
@@ -216,11 +241,13 @@ static void getARMMultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.Feature))
+        MArch.push_back(Ext.Name.str());
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.NegFeature))
+        MArch.push_back(("no" + Ext.Name).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
 
@@ -247,6 +274,25 @@ static void getARMMultilibFlags(const Driver &D,
   case arm::FloatABI::Invalid:
     llvm_unreachable("Invalid float ABI");
   }
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+}
+
+static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                  const llvm::opt::ArgList &Args,
+                                  Multilib::flags_list &Result) {
+  std::string Arch = riscv::getRISCVArch(Args, Triple);
+  // Canonicalize arch for easier matching
+  auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+      Arch, /*EnableExperimentalExtensions*/ true);
+  if (!llvm::errorToBool(ISAInfo.takeError()))
+    Result.push_back("-march=" + (*ISAInfo)->toString());
+
+  Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
 }
 
 Multilib::flags_list
@@ -268,6 +314,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
     getARMMultilibFlags(D, Triple, Args, Result);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    getRISCVMultilibFlags(D, Triple, Args, Result);
     break;
   default:
     break;
@@ -446,12 +496,6 @@ std::string ToolChain::getInputFilename(const InputInfo &Input) const {
 ToolChain::UnwindTableLevel
 ToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   return UnwindTableLevel::None;
-}
-
-unsigned ToolChain::GetDefaultDwarfVersion() const {
-  // TODO: Remove the RISC-V special case when R_RISCV_SET_ULEB128 linker
-  // support becomes more widely available.
-  return getTriple().isRISCV() ? 4 : 5;
 }
 
 Tool *ToolChain::getClang() const {
@@ -676,19 +720,29 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
   // Check for runtime files in the new layout without the architecture first.
   std::string CRTBasename =
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  SmallString<128> Path;
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);
     llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
       return std::string(P);
+    if (Path.empty())
+      Path = P;
   }
+  if (getTriple().isOSAIX())
+    Path.clear();
 
-  // Fall back to the old expected compiler-rt name if the new one does not
-  // exist.
+  // Check the filename for the old layout if the new one does not exist.
   CRTBasename =
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
-  SmallString<128> Path(getCompilerRTPath());
-  llvm::sys::path::append(Path, CRTBasename);
+  SmallString<128> OldPath(getCompilerRTPath());
+  llvm::sys::path::append(OldPath, CRTBasename);
+  if (Path.empty() || getVFS().exists(OldPath))
+    return std::string(OldPath);
+
+  // If none is found, use a file name from the new layout, which may get
+  // printed in an error message, aiding users in knowing what Clang is
+  // looking for.
   return std::string(Path);
 }
 
@@ -787,12 +841,24 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
 std::optional<std::string> ToolChain::getRuntimePath() const {
   SmallString<128> P(D.ResourceDir);
   llvm::sys::path::append(P, "lib");
-  return getTargetSubDirPath(P);
+  if (auto Ret = getTargetSubDirPath(P))
+    return Ret;
+  // Darwin and AIX does not use per-target runtime directory.
+  if (Triple.isOSDarwin() || Triple.isOSAIX())
+    return {};
+  llvm::sys::path::append(P, Triple.str());
+  return std::string(P);
 }
 
 std::optional<std::string> ToolChain::getStdlibPath() const {
   SmallString<128> P(D.Dir);
   llvm::sys::path::append(P, "..", "lib");
+  return getTargetSubDirPath(P);
+}
+
+std::optional<std::string> ToolChain::getStdlibIncludePath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "include");
   return getTargetSubDirPath(P);
 }
 
@@ -1006,11 +1072,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
+    tools::aarch64::setPAuthABIInTriple(getDriver(), Args, Triple);
     if (!Triple.isOSBinFormatMachO())
-      return getTripleString();
+      return Triple.getTriple();
 
     if (Triple.isArm64e())
-      return getTripleString();
+      return Triple.getTriple();
 
     // FIXME: older versions of ld64 expect the "arm64" component in the actual
     // triple string and query it to determine whether an LTO file can be
@@ -1292,19 +1359,35 @@ void ToolChain::AddCCKextLibArgs(const ArgList &Args,
 
 bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
                                            std::string &Path) const {
+  // Don't implicitly link in mode-changing libraries in a shared library, since
+  // this can have very deleterious effects. See the various links from
+  // https://github.com/llvm/llvm-project/issues/57589 for more information.
+  bool Default = !Args.hasArgNoClaim(options::OPT_shared);
+
   // Do not check for -fno-fast-math or -fno-unsafe-math when -Ofast passed
   // (to keep the linker options consistent with gcc and clang itself).
-  if (!isOptimizationLevelFast(Args)) {
+  if (Default && !isOptimizationLevelFast(Args)) {
     // Check if -ffast-math or -funsafe-math.
-    Arg *A =
-      Args.getLastArg(options::OPT_ffast_math, options::OPT_fno_fast_math,
-                      options::OPT_funsafe_math_optimizations,
-                      options::OPT_fno_unsafe_math_optimizations);
+    Arg *A = Args.getLastArg(
+        options::OPT_ffast_math, options::OPT_fno_fast_math,
+        options::OPT_funsafe_math_optimizations,
+        options::OPT_fno_unsafe_math_optimizations, options::OPT_ffp_model_EQ);
 
     if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
         A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
-      return false;
+      Default = false;
+    if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
+      StringRef Model = A->getValue();
+      if (Model != "fast" && Model != "aggressive")
+        Default = false;
+    }
   }
+
+  // Whatever decision came as a result of the above implicit settings, either
+  // -mdaz-ftz or -mno-daz-ftz is capable of overriding it.
+  if (!Args.hasFlag(options::OPT_mdaz_ftz, options::OPT_mno_daz_ftz, Default))
+    return false;
+
   // If crtfastmath.o exists add it to the arguments.
   Path = GetFilePath("crtfastmath.o");
   return (Path != "crtfastmath.o"); // Not found.
@@ -1339,7 +1422,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::Nullability | SanitizerKind::LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
-      getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
+      getTriple().getArch() == llvm::Triple::arm ||
+      getTriple().getArch() == llvm::Triple::thumb || getTriple().isWasm() ||
       getTriple().isAArch64() || getTriple().isRISCV() ||
       getTriple().isLoongArch64())
     Res |= SanitizerKind::CFIICall;

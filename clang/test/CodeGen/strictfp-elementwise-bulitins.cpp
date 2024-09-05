@@ -57,6 +57,16 @@ float4 strict_elementwise_ceil(float4 a) {
   return __builtin_elementwise_ceil(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_acosDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_ACOS:%.*]] = tail call <4 x float> @llvm.acos.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_ACOS]]
+//
+float4 strict_elementwise_acos(float4 a) {
+  return __builtin_elementwise_acos(a);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_cosDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
@@ -65,6 +75,16 @@ float4 strict_elementwise_ceil(float4 a) {
 //
 float4 strict_elementwise_cos(float4 a) {
   return __builtin_elementwise_cos(a);
+}
+
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_coshDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_COSH:%.*]] = tail call <4 x float> @llvm.cosh.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_COSH]]
+//
+float4 strict_elementwise_cosh(float4 a) {
+  return __builtin_elementwise_cosh(a);
 }
 
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_expDv4_f
@@ -167,6 +187,16 @@ float4 strict_elementwise_nearbyint(float4 a) {
   return __builtin_elementwise_nearbyint(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_asinDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_ASIN:%.*]] = tail call <4 x float> @llvm.asin.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_ASIN]]
+//
+float4 strict_elementwise_asin(float4 a) {
+  return __builtin_elementwise_asin(a);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_sinDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
@@ -177,6 +207,16 @@ float4 strict_elementwise_sin(float4 a) {
   return __builtin_elementwise_sin(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_sinhDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_SINH:%.*]] = tail call <4 x float> @llvm.sinh.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_SINH]]
+//
+float4 strict_elementwise_sinh(float4 a) {
+  return __builtin_elementwise_sinh(a);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_sqrtDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
@@ -185,6 +225,36 @@ float4 strict_elementwise_sin(float4 a) {
 //
 float4 strict_elementwise_sqrt(float4 a) {
   return __builtin_elementwise_sqrt(a);
+}
+
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_atanDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_ATAN:%.*]] = tail call <4 x float> @llvm.atan.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_ATAN]]
+//
+float4 strict_elementwise_atan(float4 a) {
+  return __builtin_elementwise_atan(a);
+}
+
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_tanDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_TAN:%.*]] = tail call <4 x float> @llvm.tan.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_TAN]]
+//
+float4 strict_elementwise_tan(float4 a) {
+  return __builtin_elementwise_tan(a);
+}
+
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_tanhDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_TANH:%.*]] = tail call <4 x float> @llvm.tanh.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_TANH]]
+//
+float4 strict_elementwise_tanh(float4 a) {
+  return __builtin_elementwise_tanh(a);
 }
 
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_truncDv4_f

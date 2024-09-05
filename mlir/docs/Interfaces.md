@@ -299,6 +299,30 @@ owner of the dialect containing the object nor the owner of the interface are
 aware of an interface implementation, which can lead to duplicate or
 diverging implementations.
 
+Forgetting to register an external model can lead to bugs which are hard to
+track down. The `declarePromisedInterface` function can be used to declare that
+an external model implementation for an operation must eventually be provided.
+
+```
+  void MyDialect::initialize() {
+    declarePromisedInterface<SomeInterface, SomeOp>();
+     ...
+  }
+```
+
+Now attempting to use the interface, e.g in a cast, without a prior registration
+of the external model will lead to a runtime error that will look similar to
+this:
+
+```
+LLVM ERROR: checking for an interface (`SomeInterface`) that was promised by dialect 'mydialect' but never implemented. This is generally an indication that the dialect extension implementing the interface was never registered.
+```
+
+If you encounter this error for a dialect and an interface provided by MLIR, you
+may look for a method that will be named like
+`register<Dialect><Interface>ExternalModels(DialectRegistry &registry);` ; try
+to find it with `git grep 'register.*SomeInterface.*Model' mlir`.
+
 #### Dialect Fallback for OpInterface
 
 Some dialects have an open ecosystem and don't register all of the possible

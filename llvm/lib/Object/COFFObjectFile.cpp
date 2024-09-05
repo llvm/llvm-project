@@ -14,18 +14,17 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -295,7 +294,7 @@ COFFObjectFile::getSectionContents(DataRefImpl Ref) const {
   const coff_section *Sec = toSec(Ref);
   ArrayRef<uint8_t> Res;
   if (Error E = getSectionContents(Sec, Res))
-    return std::move(E);
+    return E;
   return Res;
 }
 
@@ -799,6 +798,60 @@ Error COFFObjectFile::initLoadConfigPtr() {
           return E;
       }
     }
+
+    if (Config->Size >=
+        offsetof(coff_load_configuration64, DynamicValueRelocTableSection) +
+            sizeof(Config->DynamicValueRelocTableSection))
+      if (Error E = initDynamicRelocPtr(Config->DynamicValueRelocTableSection,
+                                        Config->DynamicValueRelocTableOffset))
+        return E;
+  } else {
+    auto Config = getLoadConfig32();
+    if (Config->Size >=
+        offsetof(coff_load_configuration32, DynamicValueRelocTableSection) +
+            sizeof(Config->DynamicValueRelocTableSection)) {
+      if (Error E = initDynamicRelocPtr(Config->DynamicValueRelocTableSection,
+                                        Config->DynamicValueRelocTableOffset))
+        return E;
+    }
+  }
+  return Error::success();
+}
+
+Error COFFObjectFile::initDynamicRelocPtr(uint32_t SectionIndex,
+                                          uint32_t SectionOffset) {
+  Expected<const coff_section *> Section = getSection(SectionIndex);
+  if (!Section)
+    return Section.takeError();
+  if (!*Section)
+    return Error::success();
+
+  // Interpret and validate dynamic relocations.
+  ArrayRef<uint8_t> Contents;
+  if (Error E = getSectionContents(*Section, Contents))
+    return E;
+
+  Contents = Contents.drop_front(SectionOffset);
+  if (Contents.size() < sizeof(coff_dynamic_reloc_table))
+    return createStringError(object_error::parse_failed,
+                             "Too large DynamicValueRelocTableOffset (" +
+                                 Twine(SectionOffset) + ")");
+
+  DynamicRelocTable =
+      reinterpret_cast<const coff_dynamic_reloc_table *>(Contents.data());
+
+  if (DynamicRelocTable->Version != 1 && DynamicRelocTable->Version != 2)
+    return createStringError(object_error::parse_failed,
+                             "Unsupported dynamic relocations table version (" +
+                                 Twine(DynamicRelocTable->Version) + ")");
+  if (DynamicRelocTable->Size > Contents.size() - sizeof(*DynamicRelocTable))
+    return createStringError(object_error::parse_failed,
+                             "Indvalid dynamic relocations directory size (" +
+                                 Twine(DynamicRelocTable->Size) + ")");
+
+  for (auto DynReloc : dynamic_relocs()) {
+    if (Error e = DynReloc.validate())
+      return e;
   }
 
   return Error::success();
@@ -808,7 +861,7 @@ Expected<std::unique_ptr<COFFObjectFile>>
 COFFObjectFile::create(MemoryBufferRef Object) {
   std::unique_ptr<COFFObjectFile> Obj(new COFFObjectFile(std::move(Object)));
   if (Error E = Obj->initialize())
-    return std::move(E);
+    return E;
   return std::move(Obj);
 }
 
@@ -1048,6 +1101,19 @@ base_reloc_iterator COFFObjectFile::base_reloc_end() const {
   return base_reloc_iterator(BaseRelocRef(BaseRelocEnd, this));
 }
 
+dynamic_reloc_iterator COFFObjectFile::dynamic_reloc_begin() const {
+  const void *Header = DynamicRelocTable ? DynamicRelocTable + 1 : nullptr;
+  return dynamic_reloc_iterator(DynamicRelocRef(Header, this));
+}
+
+dynamic_reloc_iterator COFFObjectFile::dynamic_reloc_end() const {
+  const void *Header = nullptr;
+  if (DynamicRelocTable)
+    Header = reinterpret_cast<const uint8_t *>(DynamicRelocTable + 1) +
+             DynamicRelocTable->Size;
+  return dynamic_reloc_iterator(DynamicRelocRef(Header, this));
+}
+
 uint8_t COFFObjectFile::getBytesInAddress() const {
   return getArch() == Triple::x86_64 || getArch() == Triple::aarch64 ? 8 : 4;
 }
@@ -1072,20 +1138,7 @@ StringRef COFFObjectFile::getFileFormatName() const {
 }
 
 Triple::ArchType COFFObjectFile::getArch() const {
-  switch (getMachine()) {
-  case COFF::IMAGE_FILE_MACHINE_I386:
-    return Triple::x86;
-  case COFF::IMAGE_FILE_MACHINE_AMD64:
-    return Triple::x86_64;
-  case COFF::IMAGE_FILE_MACHINE_ARMNT:
-    return Triple::thumb;
-  case COFF::IMAGE_FILE_MACHINE_ARM64:
-  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
-  case COFF::IMAGE_FILE_MACHINE_ARM64X:
-    return Triple::aarch64;
-  default:
-    return Triple::UnknownArch;
-  }
+  return getMachineArchType(getMachine());
 }
 
 Expected<uint64_t> COFFObjectFile::getStartAddress() const {
@@ -1112,6 +1165,10 @@ COFFObjectFile::export_directories() const {
 
 iterator_range<base_reloc_iterator> COFFObjectFile::base_relocs() const {
   return make_range(base_reloc_begin(), base_reloc_end());
+}
+
+iterator_range<dynamic_reloc_iterator> COFFObjectFile::dynamic_relocs() const {
+  return make_range(dynamic_reloc_begin(), dynamic_reloc_end());
 }
 
 const data_directory *COFFObjectFile::getDataDirectory(uint32_t Index) const {
@@ -1320,8 +1377,8 @@ COFFObjectFile::getRelocations(const coff_section *Sec) const {
     return #reloc_type;
 
 StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
-  switch (getMachine()) {
-  case COFF::IMAGE_FILE_MACHINE_AMD64:
+  switch (getArch()) {
+  case Triple::x86_64:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR64);
@@ -1344,7 +1401,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
       return "Unknown";
     }
     break;
-  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+  case Triple::thumb:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32);
@@ -1367,9 +1424,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
       return "Unknown";
     }
     break;
-  case COFF::IMAGE_FILE_MACHINE_ARM64:
-  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
-  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+  case Triple::aarch64:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
@@ -1393,7 +1448,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
       return "Unknown";
     }
     break;
-  case COFF::IMAGE_FILE_MACHINE_I386:
+  case Triple::x86:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR16);
@@ -1432,6 +1487,54 @@ StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
   return StringSwitch<StringRef>(Name)
       .Case("eh_fram", "eh_frame")
       .Default(Name);
+}
+
+std::unique_ptr<MemoryBuffer> COFFObjectFile::getHybridObjectView() const {
+  if (getMachine() != COFF::IMAGE_FILE_MACHINE_ARM64X)
+    return nullptr;
+
+  std::unique_ptr<WritableMemoryBuffer> HybridView;
+
+  for (auto DynReloc : dynamic_relocs()) {
+    if (DynReloc.getType() != COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X)
+      continue;
+
+    for (auto reloc : DynReloc.arm64x_relocs()) {
+      if (!HybridView) {
+        HybridView =
+            WritableMemoryBuffer::getNewUninitMemBuffer(Data.getBufferSize());
+        memcpy(HybridView->getBufferStart(), Data.getBufferStart(),
+               Data.getBufferSize());
+      }
+
+      uint32_t RVA = reloc.getRVA();
+      void *Ptr;
+      uintptr_t IntPtr;
+      if (RVA & ~0xfff) {
+        cantFail(getRvaPtr(RVA, IntPtr));
+        Ptr = HybridView->getBufferStart() + IntPtr -
+              reinterpret_cast<uintptr_t>(base());
+      } else {
+        // PE header relocation.
+        Ptr = HybridView->getBufferStart() + RVA;
+      }
+
+      switch (reloc.getType()) {
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+        memset(Ptr, 0, reloc.getSize());
+        break;
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE: {
+        auto Value = static_cast<ulittle64_t>(reloc.getValue());
+        memcpy(Ptr, &Value, reloc.getSize());
+        break;
+      }
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+        *reinterpret_cast<ulittle32_t *>(Ptr) += reloc.getValue();
+        break;
+      }
+    }
+  }
+  return HybridView;
 }
 
 bool ImportDirectoryEntryRef::
@@ -1805,6 +1908,275 @@ Error BaseRelocRef::getRVA(uint32_t &Result) const {
   return Error::success();
 }
 
+bool DynamicRelocRef::operator==(const DynamicRelocRef &Other) const {
+  return Header == Other.Header;
+}
+
+void DynamicRelocRef::moveNext() {
+  switch (Obj->getDynamicRelocTable()->Version) {
+  case 1:
+    if (Obj->is64()) {
+      auto H = reinterpret_cast<const coff_dynamic_relocation64 *>(Header);
+      Header += sizeof(*H) + H->BaseRelocSize;
+    } else {
+      auto H = reinterpret_cast<const coff_dynamic_relocation32 *>(Header);
+      Header += sizeof(*H) + H->BaseRelocSize;
+    }
+    break;
+  case 2:
+    if (Obj->is64()) {
+      auto H = reinterpret_cast<const coff_dynamic_relocation64_v2 *>(Header);
+      Header += H->HeaderSize + H->FixupInfoSize;
+    } else {
+      auto H = reinterpret_cast<const coff_dynamic_relocation32_v2 *>(Header);
+      Header += H->HeaderSize + H->FixupInfoSize;
+    }
+    break;
+  }
+}
+
+uint32_t DynamicRelocRef::getType() const {
+  switch (Obj->getDynamicRelocTable()->Version) {
+  case 1:
+    if (Obj->is64()) {
+      auto H = reinterpret_cast<const coff_dynamic_relocation64 *>(Header);
+      return H->Symbol;
+    } else {
+      auto H = reinterpret_cast<const coff_dynamic_relocation32 *>(Header);
+      return H->Symbol;
+    }
+    break;
+  case 2:
+    if (Obj->is64()) {
+      auto H = reinterpret_cast<const coff_dynamic_relocation64_v2 *>(Header);
+      return H->Symbol;
+    } else {
+      auto H = reinterpret_cast<const coff_dynamic_relocation32_v2 *>(Header);
+      return H->Symbol;
+    }
+    break;
+  default:
+    llvm_unreachable("invalid version");
+  }
+}
+
+void DynamicRelocRef::getContents(ArrayRef<uint8_t> &Ref) const {
+  switch (Obj->getDynamicRelocTable()->Version) {
+  case 1:
+    if (Obj->is64()) {
+      auto H = reinterpret_cast<const coff_dynamic_relocation64 *>(Header);
+      Ref = ArrayRef(Header + sizeof(*H), H->BaseRelocSize);
+    } else {
+      auto H = reinterpret_cast<const coff_dynamic_relocation32 *>(Header);
+      Ref = ArrayRef(Header + sizeof(*H), H->BaseRelocSize);
+    }
+    break;
+  case 2:
+    if (Obj->is64()) {
+      auto H = reinterpret_cast<const coff_dynamic_relocation64_v2 *>(Header);
+      Ref = ArrayRef(Header + H->HeaderSize, H->FixupInfoSize);
+    } else {
+      auto H = reinterpret_cast<const coff_dynamic_relocation32_v2 *>(Header);
+      Ref = ArrayRef(Header + H->HeaderSize, H->FixupInfoSize);
+    }
+    break;
+  }
+}
+
+Error DynamicRelocRef::validate() const {
+  const coff_dynamic_reloc_table *Table = Obj->getDynamicRelocTable();
+  size_t ContentsSize =
+      reinterpret_cast<const uint8_t *>(Table + 1) + Table->Size - Header;
+  size_t HeaderSize;
+  if (Table->Version == 1)
+    HeaderSize = Obj->is64() ? sizeof(coff_dynamic_relocation64)
+                             : sizeof(coff_dynamic_relocation32);
+  else
+    HeaderSize = Obj->is64() ? sizeof(coff_dynamic_relocation64_v2)
+                             : sizeof(coff_dynamic_relocation32_v2);
+  if (HeaderSize > ContentsSize)
+    return createStringError(object_error::parse_failed,
+                             "Unexpected end of dynamic relocations data");
+
+  if (Table->Version == 2) {
+    size_t Size =
+        Obj->is64()
+            ? reinterpret_cast<const coff_dynamic_relocation64_v2 *>(Header)
+                  ->HeaderSize
+            : reinterpret_cast<const coff_dynamic_relocation32_v2 *>(Header)
+                  ->HeaderSize;
+    if (Size < HeaderSize || Size > ContentsSize)
+      return createStringError(object_error::parse_failed,
+                               "Invalid dynamic relocation header size (" +
+                                   Twine(Size) + ")");
+    HeaderSize = Size;
+  }
+
+  ArrayRef<uint8_t> Contents;
+  getContents(Contents);
+  if (Contents.size() > ContentsSize - HeaderSize)
+    return createStringError(object_error::parse_failed,
+                             "Too large dynamic relocation size (" +
+                                 Twine(Contents.size()) + ")");
+
+  switch (getType()) {
+  case COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X:
+    for (auto Reloc : arm64x_relocs()) {
+      if (Error E = Reloc.validate(Obj))
+        return E;
+    }
+    break;
+  }
+
+  return Error::success();
+}
+
+arm64x_reloc_iterator DynamicRelocRef::arm64x_reloc_begin() const {
+  assert(getType() == COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X);
+  ArrayRef<uint8_t> Content;
+  getContents(Content);
+  auto Header =
+      reinterpret_cast<const coff_base_reloc_block_header *>(Content.begin());
+  return arm64x_reloc_iterator(Arm64XRelocRef(Header));
+}
+
+arm64x_reloc_iterator DynamicRelocRef::arm64x_reloc_end() const {
+  assert(getType() == COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X);
+  ArrayRef<uint8_t> Content;
+  getContents(Content);
+  auto Header =
+      reinterpret_cast<const coff_base_reloc_block_header *>(Content.end());
+  return arm64x_reloc_iterator(Arm64XRelocRef(Header, 0));
+}
+
+iterator_range<arm64x_reloc_iterator> DynamicRelocRef::arm64x_relocs() const {
+  return make_range(arm64x_reloc_begin(), arm64x_reloc_end());
+}
+
+bool Arm64XRelocRef::operator==(const Arm64XRelocRef &Other) const {
+  return Header == Other.Header && Index == Other.Index;
+}
+
+uint8_t Arm64XRelocRef::getEntrySize() const {
+  switch (getType()) {
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+    return (1ull << getArg()) / sizeof(uint16_t) + 1;
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+    return 2;
+  default:
+    return 1;
+  }
+}
+
+void Arm64XRelocRef::moveNext() {
+  Index += getEntrySize();
+  if (sizeof(*Header) + Index * sizeof(uint16_t) < Header->BlockSize &&
+      !getReloc())
+    ++Index; // Skip padding
+  if (sizeof(*Header) + Index * sizeof(uint16_t) == Header->BlockSize) {
+    // The end of the block, move to the next one.
+    Header =
+        reinterpret_cast<const coff_base_reloc_block_header *>(&getReloc());
+    Index = 0;
+  }
+}
+
+uint8_t Arm64XRelocRef::getSize() const {
+  switch (getType()) {
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+    return 1 << getArg();
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+    return sizeof(uint32_t);
+  }
+  llvm_unreachable("Unknown Arm64XFixupType enum");
+}
+
+uint64_t Arm64XRelocRef::getValue() const {
+  auto Ptr = reinterpret_cast<const ulittle16_t *>(Header + 1) + Index + 1;
+
+  switch (getType()) {
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE: {
+    ulittle64_t Value(0);
+    memcpy(&Value, Ptr, getSize());
+    return Value;
+  }
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA: {
+    uint16_t arg = getArg();
+    int delta = *Ptr;
+
+    if (arg & 1)
+      delta = -delta;
+    delta *= (arg & 2) ? 8 : 4;
+    return delta;
+  }
+  default:
+    return 0;
+  }
+}
+
+Error Arm64XRelocRef::validate(const COFFObjectFile *Obj) const {
+  if (!Index) {
+    const coff_dynamic_reloc_table *Table = Obj->getDynamicRelocTable();
+    size_t ContentsSize = reinterpret_cast<const uint8_t *>(Table + 1) +
+                          Table->Size -
+                          reinterpret_cast<const uint8_t *>(Header);
+    if (ContentsSize < sizeof(coff_base_reloc_block_header))
+      return createStringError(object_error::parse_failed,
+                               "Unexpected end of ARM64X relocations data");
+    if (Header->BlockSize <= sizeof(*Header))
+      return createStringError(object_error::parse_failed,
+                               "ARM64X relocations block size (" +
+                                   Twine(Header->BlockSize) + ") is too small");
+    if (Header->BlockSize % sizeof(uint32_t))
+      return createStringError(object_error::parse_failed,
+                               "Unaligned ARM64X relocations block size (" +
+                                   Twine(Header->BlockSize) + ")");
+    if (Header->BlockSize > ContentsSize)
+      return createStringError(object_error::parse_failed,
+                               "ARM64X relocations block size (" +
+                                   Twine(Header->BlockSize) + ") is too large");
+    if (Header->PageRVA & 0xfff)
+      return createStringError(object_error::parse_failed,
+                               "Unaligned ARM64X relocations page RVA (" +
+                                   Twine(Header->PageRVA) + ")");
+  }
+
+  switch ((getReloc() >> 12) & 3) {
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+    break;
+  case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+    if (!getArg())
+      return createStringError(object_error::parse_failed,
+                               "Invalid ARM64X relocation value size (0)");
+    break;
+  default:
+    return createStringError(object_error::parse_failed,
+                             "Invalid relocation type");
+  }
+
+  uint32_t RelocsSize =
+      (Header->BlockSize - sizeof(*Header)) / sizeof(uint16_t);
+  uint16_t EntrySize = getEntrySize();
+  if (!getReloc() ||
+      (Index + EntrySize + 1 < RelocsSize && !getReloc(EntrySize)))
+    return createStringError(object_error::parse_failed,
+                             "Unexpected ARM64X relocations terminator");
+  if (Index + EntrySize > RelocsSize)
+    return createStringError(object_error::parse_failed,
+                             "Unexpected end of ARM64X relocations");
+  if (getRVA() % getSize())
+    return createStringError(object_error::parse_failed,
+                             "Unaligned ARM64X relocation RVA (" +
+                                 Twine(getRVA()) + ")");
+  if (Header->PageRVA) {
+    uintptr_t IntPtr;
+    return Obj->getRvaPtr(getRVA() + getSize(), IntPtr, "ARM64X reloc");
+  }
+  return Error::success();
+}
+
 #define RETURN_IF_ERROR(Expr)                                                  \
   do {                                                                         \
     Error E = (Expr);                                                          \
@@ -1941,19 +2313,17 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
     // the expected type.
     const coff_relocation &R = **RelocsForOffset.first;
     uint16_t RVAReloc;
-    switch (Obj->getMachine()) {
-    case COFF::IMAGE_FILE_MACHINE_I386:
+    switch (Obj->getArch()) {
+    case Triple::x86:
       RVAReloc = COFF::IMAGE_REL_I386_DIR32NB;
       break;
-    case COFF::IMAGE_FILE_MACHINE_AMD64:
+    case Triple::x86_64:
       RVAReloc = COFF::IMAGE_REL_AMD64_ADDR32NB;
       break;
-    case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    case Triple::thumb:
       RVAReloc = COFF::IMAGE_REL_ARM_ADDR32NB;
       break;
-    case COFF::IMAGE_FILE_MACHINE_ARM64:
-    case COFF::IMAGE_FILE_MACHINE_ARM64EC:
-    case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    case Triple::aarch64:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:
@@ -1977,7 +2347,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
     uint64_t Offset = Entry.DataRVA + Sym->getValue();
     ArrayRef<uint8_t> Contents;
     if (Error E = Obj->getSectionContents(*Section, Contents))
-      return std::move(E);
+      return E;
     if (Offset + Entry.DataSize > Contents.size())
       return createStringError(object_error::parse_failed,
                                "data outside of section");
@@ -1999,7 +2369,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
         Expected<StringRef> Contents = S.getContents();
         if (!Contents)
           return Contents.takeError();
-        return Contents->slice(Offset, Offset + Entry.DataSize);
+        return Contents->substr(Offset, Entry.DataSize);
       }
     }
     return createStringError(object_error::parse_failed,

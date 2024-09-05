@@ -4,8 +4,10 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   SparseAssembler.cpp
   SparseBufferRewriting.cpp
   SparseGPUCodegen.cpp
+  SparseIterationToScf.cpp
   SparseReinterpretMap.cpp
   SparseStorageSpecifierToLLVM.cpp
+  SparseSpaceCollapse.cpp
   SparseTensorCodegen.cpp
   SparseTensorConversion.cpp
   SparseTensorPasses.cpp
@@ -20,7 +22,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   Utils/IterationGraphSorter.cpp
   Utils/LoopEmitter.cpp
   Utils/SparseTensorDescriptor.cpp
-  Utils/SparseTensorLevel.cpp
+  Utils/SparseTensorIterator.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor
@@ -38,6 +40,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   MLIRLLVMDialect
   MLIRLinalgDialect
   MLIRLinalgTransforms
+  MLIRLLVMCommonConversion
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect

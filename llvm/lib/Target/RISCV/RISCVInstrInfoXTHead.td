@@ -235,13 +235,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV in
+  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
-  let RVVConstraint = WidenV in
+  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
@@ -538,6 +538,8 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 let Predicates = [HasVendorXTHeadBa] in {
 def : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, uimm2:$uimm2)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+def : Pat<(XLenVT (riscv_shl_add GPR:$rs1, uimm2:$uimm2, GPR:$rs2)),
+          (TH_ADDSL GPR:$rs2, GPR:$rs1, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
 def : Pat<(add_non_imm12 sh1add_op:$rs1, (XLenVT GPR:$rs2)),
@@ -547,63 +549,10 @@ def : Pat<(add_non_imm12 sh2add_op:$rs1, (XLenVT GPR:$rs2)),
 def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 1)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 1)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 1)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 3)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 3)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 3)>;
-
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i))), 2)>;
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i))), 3)>;
-
-def : Pat<(mul (XLenVT GPR:$r), C3LeftShift:$i),
-          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 1)),
-                (TrailingZeros C3LeftShift:$i))>;
-def : Pat<(mul (XLenVT GPR:$r), C5LeftShift:$i),
-          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
-                (TrailingZeros C5LeftShift:$i))>;
-def : Pat<(mul (XLenVT GPR:$r), C9LeftShift:$i),
-          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)),
-                (TrailingZeros C9LeftShift:$i))>;
-
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 1)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 1)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 1)), 2)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 2)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
-          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
-                    (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 3)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
-          (TH_ADDSL GPR:$r, (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 3)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
-          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 1)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
-          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 2)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
-          (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)), 3)>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
           (SLLI (XLenVT (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
@@ -895,61 +844,4 @@ defm : StoreUpdatePat<post_truncsti32, TH_SWIA, i64>;
 defm : StoreUpdatePat<pre_truncsti32, TH_SWIB, i64>;
 defm : StoreUpdatePat<post_store, TH_SDIA, i64>;
 defm : StoreUpdatePat<pre_store, TH_SDIB, i64>;
-}
-
-//===----------------------------------------------------------------------===//
-// Experimental RV64 i32 legalization patterns.
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
-defm : StoreUpdatePat<post_truncsti8, TH_SBIA, i32>;
-defm : StoreUpdatePat<pre_truncsti8, TH_SBIB, i32>;
-defm : StoreUpdatePat<post_truncsti16, TH_SHIA, i32>;
-defm : StoreUpdatePat<pre_truncsti16, TH_SHIB, i32>;
-
-defm : StIdxPat<truncstorei8, TH_SRB, GPR, i32>;
-defm : StIdxPat<truncstorei16, TH_SRH, GPR, i32>;
-
-defm : StZextIdxPat<truncstorei8, TH_SURB, GPR, i32>;
-defm : StZextIdxPat<truncstorei16, TH_SURH, GPR, i32>;
-defm : StZextIdxPat<store, TH_SURW, GPR, i32>;
-}
-
-let Predicates = [HasVendorXTHeadCondMov, IsRV64] in {
-def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 GPR:$b)),
-          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
-def : Pat<(select (XLenVT GPR:$cond), (i32 GPR:$a), (i32 0)),
-          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
-def : Pat<(select (XLenVT GPR:$cond), (i32 0), (i32 GPR:$b)),
-          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
-
-def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
-          (TH_MVNEZ GPR:$a, GPR:$b, GPR:$cond)>;
-def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 GPR:$b)),
-          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
-def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
-          (TH_MVNEZ GPR:$a, (XLenVT X0), GPR:$cond)>;
-def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (i32 GPR:$a), (i32 0)),
-          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
-def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (i32 0), (i32 GPR:$b)),
-          (TH_MVEQZ GPR:$b, (XLenVT X0), GPR:$cond)>;
-def : Pat<(select (riscv_setne (XLenVT GPR:$cond)),  (i32 0), (i32 GPR:$b)),
-          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
-} // Predicates = [HasVendorXTHeadCondMov]
-
-let Predicates = [HasVendorXTHeadMac, IsRV64] in {
-// mulaw, mulsw are available only in RV64.
-def : Pat<(i32 (add GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
-          (TH_MULAW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2))),
-          (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-// mulah, mulsh produce a sign-extended result.
-def : Pat<(i32 (add GPR:$rd,
-                    (mul (sexti16i32 (i32 GPR:$rs1)),
-                         (sexti16i32 (i32 GPR:$rs2))))),
-          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sub GPR:$rd,
-                    (mul (sexti16i32 (i32 GPR:$rs1)),
-                         (sexti16i32 (i32 GPR:$rs2))))),
-          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 }

@@ -13,6 +13,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/AddressRangeListImpl.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
@@ -217,6 +218,15 @@ lldb::SBAddress SBBlock::GetRangeEndAddress(uint32_t idx) {
     }
   }
   return sb_addr;
+}
+
+lldb::SBAddressRangeList SBBlock::GetRanges() {
+  LLDB_INSTRUMENT_VA(this);
+
+  lldb::SBAddressRangeList sb_ranges;
+  if (m_opaque_ptr)
+    sb_ranges.m_opaque_up->ref() = m_opaque_ptr->GetRanges();
+  return sb_ranges;
 }
 
 uint32_t SBBlock::GetRangeIndexForBlockAddress(lldb::SBAddress block_addr) {

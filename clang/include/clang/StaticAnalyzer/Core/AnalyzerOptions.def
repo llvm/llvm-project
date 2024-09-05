@@ -184,6 +184,26 @@ ANALYZER_OPTION(bool, ShouldCrosscheckWithZ3, "crosscheck-with-z3",
                 "constraint manager backend.",
                 false)
 
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckEQClassTimeoutThreshold,
+    "crosscheck-with-z3-eqclass-timeout-threshold",
+    "Set a timeout for bug report equivalence classes in milliseconds. "
+    "If we exhaust this threshold, we will drop the bug report eqclass "
+    "instead of doing more Z3 queries. Set 0 for no timeout.", 700)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckTimeoutThreshold,
+    "crosscheck-with-z3-timeout-threshold",
+    "Set a timeout for individual Z3 queries in milliseconds. "
+    "Set 0 for no timeout.", 300)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckRLimitThreshold,
+    "crosscheck-with-z3-rlimit-threshold",
+    "Set the Z3 resource limit threshold. This sets a deterministic cutoff "
+    "point for Z3 queries, as longer queries usually consume more resources. "
+    "Set 0 for unlimited.", 400'000)
+
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
                 "Whether or not the diagnostic report should be always "
@@ -387,6 +407,11 @@ ANALYZER_OPTION(
 ANALYZER_OPTION(unsigned, MaxSymbolComplexity, "max-symbol-complexity",
                 "The maximum complexity of symbolic constraint.", 35)
 
+// HACK:https://discourse.llvm.org/t/rfc-make-istainted-and-complex-symbols-friends/79570
+// Ideally, we should get rid of this option soon.
+ANALYZER_OPTION(unsigned, MaxTaintedSymbolComplexity, "max-tainted-symbol-complexity",
+                "[DEPRECATED] The maximum complexity of a symbol to carry taint", 9)
+
 ANALYZER_OPTION(unsigned, MaxTimesInlineLarge, "max-times-inline-large",
                 "The maximum times a large function could be inlined.", 32)
 
@@ -412,22 +437,6 @@ ANALYZER_OPTION(
     "'ctu-max-nodes-pct'. However, if the number of nodes in single-TU "
     "analysis is too low, it is meaningful to provide a minimum value that "
     "serves as an upper bound instead.", 10000)
-
-ANALYZER_OPTION(
-    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
-    "Controls which functions will be inlined during the first phase of the ctu "
-    "analysis. "
-    "If the value is set to 'all' then all foreign functions are inlinied "
-    "immediately during the first phase, thus rendering the second phase a noop. "
-    "The 'ctu-max-nodes-*' budge has no effect in this case. "
-    "If the value is 'small' then only functions with a linear CFG and with a "
-    "limited number of statements would be inlined during the first phase. The "
-    "long and/or nontrivial functions are handled in the second phase and are "
-    "controlled by the 'ctu-max-nodes-*' budge. "
-    "The value 'none' means that all foreign functions are inlined only in the "
-    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
-    "Value: \"none\", \"small\", \"all\".",
-    "small")
 
 ANALYZER_OPTION(
     unsigned, RegionStoreSmallStructLimit, "region-store-small-struct-limit",
@@ -477,6 +486,22 @@ ANALYZER_OPTION(
     "call site if the called function's body is not available. This is a path "
     "where to look for those alternative implementations (called models).",
     "")
+
+ANALYZER_OPTION(
+    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
+    "Controls which functions will be inlined during the first phase of the ctu "
+    "analysis. "
+    "If the value is set to 'all' then all foreign functions are inlinied "
+    "immediately during the first phase, thus rendering the second phase a noop. "
+    "The 'ctu-max-nodes-*' budge has no effect in this case. "
+    "If the value is 'small' then only functions with a linear CFG and with a "
+    "limited number of statements would be inlined during the first phase. The "
+    "long and/or nontrivial functions are handled in the second phase and are "
+    "controlled by the 'ctu-max-nodes-*' budge. "
+    "The value 'none' means that all foreign functions are inlined only in the "
+    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
+    "Value: \"none\", \"small\", \"all\".",
+    "small")
 
 ANALYZER_OPTION(
     StringRef, CXXMemberInliningMode, "c++-inlining",

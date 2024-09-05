@@ -12,12 +12,13 @@
 #include <stddef.h> // For size_t.
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/mktime.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 enum Month : int {
@@ -91,7 +92,12 @@ extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 
 // POSIX.1-2017 requires this.
 LIBC_INLINE time_t out_of_range() {
+#ifdef EOVERFLOW
+  // For non-POSIX uses of the standard C time functions, where EOVERFLOW is
+  // not defined, it's OK not to set errno at all. The plain C standard doesn't
+  // require it.
   libc_errno = EOVERFLOW;
+#endif
   return TimeConstants::OUT_OF_RANGE_RETURN_VALUE;
 }
 
@@ -151,6 +157,6 @@ LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
 }
 
 } // namespace time_utils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_TIME_UTILS_H

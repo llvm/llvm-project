@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -127,7 +127,20 @@ void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
 
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  tensor::populateRewriteAsConstantPatterns(patterns);
+  ControlFoldFn defaultControlFn = [](OpOperand *fusedOperand) {
+    Operation *producer = fusedOperand->get().getDefiningOp();
+    return producer && producer->hasOneUse();
+  };
+
+  ControlFoldFn aggressiveControlFn = [](OpOperand *fusedOperand) {
+    return true;
+  };
+
+  // Add folding with reshape by expansion patterns.
+  if (getAggressive())
+    tensor::populateRewriteAsConstantPatterns(patterns, aggressiveControlFn);
+  else
+    tensor::populateRewriteAsConstantPatterns(patterns, defaultControlFn);
 }
 
 //===----------------------------------------------------------------------===//
@@ -223,6 +236,8 @@ class TensorTransformDialectExtension
     : public transform::TransformDialectExtension<
           TensorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TensorTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

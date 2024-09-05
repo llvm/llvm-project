@@ -103,6 +103,19 @@ define <4 x i32> @v_dupQ32(i32 %A) nounwind {
   ret <4 x i32> %tmp4
 }
 
+define <4 x i16> @v_dup16_const(i16 %y, ptr %p) {
+; CHECK-LABEL: v_dup16_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi.4h v0, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    strh w8, [x1]
+; CHECK-NEXT:    ret
+    %i = insertelement <4 x i16> undef, i16 10, i32 0
+    %lo = shufflevector <4 x i16> %i, <4 x i16> undef, <4 x i32> zeroinitializer
+    store i16 10, ptr %p
+    ret <4 x i16> %lo
+}
+
 define <4 x float> @v_dupQfloat(float %A) nounwind {
 ; CHECK-LABEL: v_dupQfloat:
 ; CHECK:       // %bb.0:
@@ -321,25 +334,40 @@ entry:
 }
 
 define <2 x i32> @f(i32 %a, i32 %b) nounwind readnone  {
-; CHECK-LABEL: f:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov.s v0[1], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: f:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov.s v0[1], w1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: f:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov.s v0[0], w0
+; CHECK-GI-NEXT:    mov.s v0[1], w1
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
   %vecinit = insertelement <2 x i32> undef, i32 %a, i32 0
   %vecinit1 = insertelement <2 x i32> %vecinit, i32 %b, i32 1
   ret <2 x i32> %vecinit1
 }
 
 define <4 x i32> @g(i32 %a, i32 %b) nounwind readnone  {
-; CHECK-LABEL: g:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov.s v0[1], w1
-; CHECK-NEXT:    mov.s v0[2], w1
-; CHECK-NEXT:    mov.s v0[3], w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: g:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov.s v0[1], w1
+; CHECK-SD-NEXT:    mov.s v0[2], w1
+; CHECK-SD-NEXT:    mov.s v0[3], w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: g:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov.s v0[0], w0
+; CHECK-GI-NEXT:    mov.s v0[1], w1
+; CHECK-GI-NEXT:    mov.s v0[2], w1
+; CHECK-GI-NEXT:    mov.s v0[3], w0
+; CHECK-GI-NEXT:    ret
   %vecinit = insertelement <4 x i32> undef, i32 %a, i32 0
   %vecinit1 = insertelement <4 x i32> %vecinit, i32 %b, i32 1
   %vecinit2 = insertelement <4 x i32> %vecinit1, i32 %b, i32 2
@@ -348,11 +376,17 @@ define <4 x i32> @g(i32 %a, i32 %b) nounwind readnone  {
 }
 
 define <2 x i64> @h(i64 %a, i64 %b) nounwind readnone  {
-; CHECK-LABEL: h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    mov.d v0[1], x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: h:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    mov.d v0[1], x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: h:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov.d v0[0], x0
+; CHECK-GI-NEXT:    mov.d v0[1], x1
+; CHECK-GI-NEXT:    ret
   %vecinit = insertelement <2 x i64> undef, i64 %a, i32 0
   %vecinit1 = insertelement <2 x i64> %vecinit, i64 %b, i32 1
   ret <2 x i64> %vecinit1
@@ -373,11 +407,9 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ;
 ; CHECK-GI-LABEL: test_build_illegal:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.h v1[1], v0[0]
-; CHECK-GI-NEXT:    mov s0, v0[3]
-; CHECK-GI-NEXT:    mov.h v1[2], v0[0]
-; CHECK-GI-NEXT:    mov.h v1[3], v0[0]
-; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    mov.s w8, v0[3]
+; CHECK-GI-NEXT:    mov.h v0[3], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %val = extractelement <4 x i32> %in, i32 3
   %smallval = trunc i32 %val to i16
@@ -422,9 +454,9 @@ define <4 x i16> @test_perfectshuffle_dupext_v4i16(<4 x i16> %a, <4 x i16> %b) n
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI33_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
 ; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI33_0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI34_0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -445,9 +477,9 @@ define <4 x half> @test_perfectshuffle_dupext_v4f16(<4 x half> %a, <4 x half> %b
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
 ; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI34_0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI35_0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -464,9 +496,9 @@ define <4 x i32> @test_perfectshuffle_dupext_v4i32(<4 x i32> %a, <4 x i32> %b) n
 ;
 ; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI35_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
 ; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    ret
@@ -483,9 +515,9 @@ define <4 x float> @test_perfectshuffle_dupext_v4f32(<4 x float> %a, <4 x float>
 ;
 ; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4f32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI37_0
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI37_0]
 ; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    ret
@@ -505,12 +537,12 @@ define void @disguised_dup(<4 x float> %x, ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-LABEL: disguised_dup:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI37_1
+; CHECK-GI-NEXT:    adrp x8, .LCPI38_1
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI37_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI37_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI37_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_0]
 ; CHECK-GI-NEXT:    tbl.16b v2, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    str q2, [x1]
@@ -533,8 +565,8 @@ define <2 x i32> @dup_const2(<2 x i32> %A) nounwind {
 ;
 ; CHECK-GI-LABEL: dup_const2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI38_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI39_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI39_0]
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    ret
   %tmp2 = add <2 x i32> %A, <i32 8421378, i32 8421378>
@@ -552,8 +584,8 @@ define <2 x i32> @dup_const4_ext(<4 x i32> %A) nounwind {
 ;
 ; CHECK-GI-LABEL: dup_const4_ext:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI39_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI39_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI40_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI40_0]
 ; CHECK-GI-NEXT:    add.4s v0, v0, v1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -577,12 +609,12 @@ define <4 x i32> @dup_const24(<2 x i32> %A, <2 x i32> %B, <4 x i32> %C) nounwind
 ;
 ; CHECK-GI-LABEL: dup_const24:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI40_1
+; CHECK-GI-NEXT:    adrp x8, .LCPI41_1
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    ldr d3, [x8, :lo12:.LCPI40_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI40_0
+; CHECK-GI-NEXT:    ldr d3, [x8, :lo12:.LCPI41_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-GI-NEXT:    add.2s v0, v0, v3
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI40_0]
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI41_0]
 ; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GI-NEXT:    add.4s v1, v2, v3
 ; CHECK-GI-NEXT:    eor.16b v0, v1, v0
@@ -689,3 +721,17 @@ define <8 x i16> @bitcast_v2f64_v8i16(<2 x i64> %a) {
   ret <8 x i16> %r
 }
 
+define <4 x i16> @dup_i16_v4i16_constant() {
+; CHECK-SD-LABEL: dup_i16_v4i16_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #9211 // =0x23fb
+; CHECK-SD-NEXT:    dup.4h v0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: dup_i16_v4i16_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI50_0
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI50_0]
+; CHECK-GI-NEXT:    ret
+    ret <4 x i16> <i16 9211, i16 9211, i16 9211, i16 9211>
+}

@@ -34,11 +34,11 @@ define <16 x i8> @mul_by_0_vec(<16 x i8> %a) {
   ret <16 x i8> %b
 }
 
-define <2 x i8> @mul_by_0_vec_undef_elt(<2 x i8> %a) {
-; CHECK-LABEL: @mul_by_0_vec_undef_elt(
+define <2 x i8> @mul_by_0_vec_poison_elt(<2 x i8> %a) {
+; CHECK-LABEL: @mul_by_0_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
-  %b = mul <2 x i8> %a, <i8 undef, i8 0>
+  %b = mul <2 x i8> %a, <i8 poison, i8 0>
   ret <2 x i8> %b
 }
 

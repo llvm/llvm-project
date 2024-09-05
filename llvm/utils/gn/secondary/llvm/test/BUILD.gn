@@ -8,6 +8,7 @@ import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
@@ -59,9 +60,11 @@ write_lit_config("lit_site_cfg") {
     # LLVM_HOST_TRIPLE.)
     "HOST_LDFLAGS=",
 
+    "LLVM_APPEND_VC_REV=0",
     "LLVM_ENABLE_FFI=0",
     "LLVM_ENABLE_HTTPLIB=0",
-    "LLVM_ENABLE_ZSTD=0",
+    "LLVM_FORCE_VC_REVISION=",
+    "LLVM_HAS_LOGF128=0",
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DXIL_TESTS=0",
@@ -208,6 +211,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
   }
 
+  if (llvm_enable_zstd) {
+    extra_values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZSTD=0" ]  # Must be 0.
+  }
+
   if (llvm_enable_libcurl) {
     extra_values += [ "LLVM_ENABLE_CURL=1" ]
   } else {
@@ -256,7 +265,9 @@ group("test") {
     "//llvm/tools/llvm-c-test",
     "//llvm/tools/llvm-cat",
     "//llvm/tools/llvm-cfi-verify",
+    "//llvm/tools/llvm-cgdata",
     "//llvm/tools/llvm-cov",
+    "//llvm/tools/llvm-ctxprof-util",
     "//llvm/tools/llvm-cvtres",
     "//llvm/tools/llvm-cxxdump",
     "//llvm/tools/llvm-cxxfilt",
@@ -334,10 +345,7 @@ group("test") {
     # loadable_modules don't work on Windows.
     # FIXME: In the CMake build, ENABLE_SHARED makes them work somehow
     # (but they're off by default there too).
-    deps += [
-      "//llvm/lib/Transforms/Hello",
-      "//llvm/tools/bugpoint-passes",
-    ]
+    deps += [ "//llvm/tools/bugpoint-passes" ]
   }
 
   # FIXME: llvm_build_examples

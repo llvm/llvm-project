@@ -65,9 +65,8 @@ if.end:                                           ; preds = %if.then, %entry
 define zeroext i1 @test8_0(i8 zeroext %x)  align 2 {
 ; CHECK-LABEL: test8_0:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    add w8, w0, #74
-; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #236
+; CHECK-NEXT:    sub w8, w0, #182
+; CHECK-NEXT:    cmn w8, #20
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
@@ -508,16 +507,17 @@ define i64 @pr58109(i8 signext %0) {
 define i64 @pr58109b(i8 signext %0, i64 %a, i64 %b) {
 ; CHECK-SD-LABEL: pr58109b:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, #1
-; CHECK-SD-NEXT:    tst w8, #0xfe
-; CHECK-SD-NEXT:    csel x0, x1, x2, eq
+; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    sub w8, w8, #255
+; CHECK-SD-NEXT:    cmn w8, #254
+; CHECK-SD-NEXT:    csel x0, x1, x2, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: pr58109b:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, #1
-; CHECK-GI-NEXT:    and w8, w8, #0xff
-; CHECK-GI-NEXT:    cmp w8, #2
+; CHECK-GI-NEXT:    mov w8, #-255 ; =0xffffff01
+; CHECK-GI-NEXT:    add w8, w8, w0, uxtb
+; CHECK-GI-NEXT:    cmn w8, #254
 ; CHECK-GI-NEXT:    csel x0, x1, x2, lo
 ; CHECK-GI-NEXT:    ret
   %2 = add i8 %0, 1
@@ -526,4 +526,56 @@ define i64 @pr58109b(i8 signext %0, i64 %a, i64 %b) {
   ret i64 %4
 }
 
+define i64 @test_2_selects(i8 zeroext %a) {
+; CHECK-LABEL: test_2_selects:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    add w9, w0, #24
+; CHECK-NEXT:    mov w8, #131
+; CHECK-NEXT:    and w9, w9, #0xff
+; CHECK-NEXT:    cmp w9, #81
+; CHECK-NEXT:    mov w9, #57
+; CHECK-NEXT:    csel x8, x8, xzr, lo
+; CHECK-NEXT:    csel x9, xzr, x9, eq
+; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ret
+  %1 = add i8 %a, 24
+  %2 = zext i8 %1 to i64
+  %3 = icmp ult i8 %1, 81
+  %4 = select i1 %3, i64 131, i64 0
+  %5 = icmp eq i8 %1, 81
+  %6 = select i1 %5, i64 0, i64 57
+  %7 = add i64 %4, %6
+  ret i64 %7
+}
+
 declare i8 @llvm.usub.sat.i8(i8, i8) #0
+
+define i64 @and0xffffffff(i64 %a) nounwind ssp {
+; CHECK-LABEL: and0xffffffff:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov w0, w0
+; CHECK-NEXT:    ret
+entry:
+  %b = and i64 %a, u0xffffffff
+  ret i64 %b
+}
+
+define i64 @and0xfffffff0(i64 %a) nounwind ssp {
+; CHECK-LABEL: and0xfffffff0:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    and x0, x0, #0xfffffff0
+; CHECK-NEXT:    ret
+entry:
+  %b = and i64 %a, u0xfffffff0
+  ret i64 %b
+}
+
+define i64 @and0x7fffffff(i64 %a) nounwind ssp {
+; CHECK-LABEL: and0x7fffffff:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    and x0, x0, #0x7fffffff
+; CHECK-NEXT:    ret
+entry:
+  %b = and i64 %a, u0x7fffffff
+  ret i64 %b
+}

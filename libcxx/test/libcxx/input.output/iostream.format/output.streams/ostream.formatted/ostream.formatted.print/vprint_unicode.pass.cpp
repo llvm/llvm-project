@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -7,9 +8,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-filesystem, no-rtti
+// UNSUPPORTED: libcpp-has-no-unicode
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // XFAIL: availability-fp_to_chars-missing
+
+// When std::print is unavailable, we don't rely on an implementation of
+// std::__is_terminal and we always assume a non-unicode and non-terminal
+// output.
+// XFAIL: availability-print-missing
 
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_IS_TERMINAL
 // XFAIL: clang-modules-build

@@ -13,9 +13,9 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <queue>
 
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "taildup"
 

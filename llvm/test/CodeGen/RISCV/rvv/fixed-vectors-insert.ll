@@ -47,7 +47,6 @@ define <32 x i32> @insertelt_v32i32_0(<32 x i32> %a, i32 %y) {
   ret <32 x i32> %b
 }
 
-; FIXME: Should only require an m2 slideup
 define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v32i32_4:
 ; CHECK:       # %bb.0:
@@ -533,11 +532,11 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    li a2, 6
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v12, (a1)
+; CHECK-NEXT:    li a1, 6
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret

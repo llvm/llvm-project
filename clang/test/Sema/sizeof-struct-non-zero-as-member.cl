@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -triple amdgcn -target-cpu verde -S -emit-llvm -o - %s
-// RUN: %clang_cc1 -verify -fsyntax-only -triple amdgcn--opencl -target-cpu verde -S -emit-llvm -o - %s
+// RUN: %clang_cc1 -verify -triple amdgcn -target-cpu verde -emit-llvm -o - %s
+// RUN: %clang_cc1 -verify -triple amdgcn--opencl -target-cpu verde -emit-llvm -o - %s
 // expected-no-diagnostics
 
 // Record lowering was crashing on SI and newer targets, because it

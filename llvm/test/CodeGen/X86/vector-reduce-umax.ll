@@ -210,7 +210,7 @@ define i64 @test_v4i64(<4 x i64> %a0) {
 ; AVX2-LABEL: test_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm4
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3

@@ -1,14 +1,17 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,RW-FLAT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch < %s | FileCheck -check-prefixes=GCN,RO-FLAT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 < %s | FileCheck -check-prefixes=GCN,RO-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -mcpu=gfx900 | FileCheck -check-prefixes=GCN,RW-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=+architected-flat-scratch < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx940 < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; Make sure flat_scratch_init is set
 
 ; GCN-LABEL: {{^}}stack_object_addrspacecast_in_kernel_no_calls:
-; RW-FLAT:     s_add_u32 flat_scratch_lo, s4, s7
-; RW-FLAT:     s_addc_u32 flat_scratch_hi, s5, 0
+; RW-FLAT:     s_add_u32 s0, s0, s7
+; RW-FLAT:     s_addc_u32 s1, s1, 0
 ; RO-FLAT-NOT: flat_scratch
-; GCN:         flat_store_dword
+; RW-FLAT:     buffer_store_dword
+; RO-FLAT:     scratch_store_dword
 ; RO-FLAT-NOT: .amdhsa_user_sgpr_private_segment_buffer
 ; RW-FLAT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; RO-FLAT-NOT: .amdhsa_user_sgpr_flat_scratch_init
@@ -16,7 +19,6 @@
 ; RW-FLAT-NOT: .amdhsa_enable_private_segment
 ; RO-FLAT-NOT: .amdhsa_system_sgpr_private_segment_wavefront_offset
 ; RO-FLAT:     .amdhsa_enable_private_segment 1
-; GCN-NOT:     .amdhsa_reserve_flat_scratch
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
@@ -41,7 +43,6 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; RO-FLAT-NOT: .amdhsa_system_sgpr_private_segment_wavefront_offset
 ; RO-FLAT:     .amdhsa_enable_private_segment 1
 ; RW-FLAT:     .amdhsa_reserve_flat_scratch 0
-; RO-FLAT-NOT: .amdhsa_reserve_flat_scratch
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
@@ -62,7 +63,6 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; RO-FLAT-NOT: .amdhsa_system_sgpr_private_segment_wavefront_offset
 ; RO-FLAT:     .amdhsa_enable_private_segment 0
 ; RW-FLAT:     .amdhsa_reserve_flat_scratch 0
-; RO-FLAT-NOT: .amdhsa_reserve_flat_scratch 0
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 0
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 4
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0

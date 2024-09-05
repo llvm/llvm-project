@@ -245,19 +245,7 @@ public:
                             "Show matching debugger settings and their current "
                             "values.  Defaults to showing all settings.",
                             nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeSettingVariableName;
-    var_name_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
 
   ~CommandObjectSettingsShow() override = default;
@@ -297,19 +285,7 @@ public:
             "current values to a file that can be read in with "
             "\"settings read\". Defaults to writing all settings.",
             nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeSettingVariableName;
-    var_name_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
 
   ~CommandObjectSettingsWrite() override = default;
@@ -997,19 +973,7 @@ public:
             interpreter, "settings clear",
             "Clear a debugger setting array, dictionary, or string. "
             "If '-a' option is specified, it clears all settings.", nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeSettingVariableName;
-    var_name_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeSettingVariableName);
   }
 
   ~CommandObjectSettingsClear() override = default;

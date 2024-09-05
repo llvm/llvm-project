@@ -14,7 +14,6 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP:       # %bb.0:
 ; ILP-NEXT:    movq %rdi, %rax
 ; ILP-NEXT:    leal (%rsi,%rsi), %ecx
-; ILP-NEXT:    addb $3, %cl
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -23,6 +22,7 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; ILP-NEXT:    addb $3, %cl
 ; ILP-NEXT:    movl %ecx, %edx
 ; ILP-NEXT:    shrb $3, %dl
 ; ILP-NEXT:    andb $7, %cl
@@ -236,7 +236,7 @@ define i256 @test2(i256 %a) nounwind {
 ; ILP-NEXT:    andq %rcx, %r9
 ; ILP-NEXT:    bsrq %r9, %rcx
 ; ILP-NEXT:    xorq $63, %rcx
-; ILP-NEXT:    addq $64, %rcx
+; ILP-NEXT:    orq $64, %rcx
 ; ILP-NEXT:    testq %rdi, %rdi
 ; ILP-NEXT:    cmovneq %r8, %rcx
 ; ILP-NEXT:    xorq $63, %rdx
@@ -274,7 +274,7 @@ define i256 @test2(i256 %a) nounwind {
 ; HYBRID-NEXT:    andq %rcx, %r9
 ; HYBRID-NEXT:    bsrq %r9, %rcx
 ; HYBRID-NEXT:    xorq $63, %rcx
-; HYBRID-NEXT:    addq $64, %rcx
+; HYBRID-NEXT:    orq $64, %rcx
 ; HYBRID-NEXT:    testq %rdi, %rdi
 ; HYBRID-NEXT:    cmovneq %r8, %rcx
 ; HYBRID-NEXT:    andq %rdx, %r10
@@ -314,7 +314,7 @@ define i256 @test2(i256 %a) nounwind {
 ; BURR-NEXT:    andq %rcx, %r9
 ; BURR-NEXT:    bsrq %r9, %rcx
 ; BURR-NEXT:    xorq $63, %rcx
-; BURR-NEXT:    addq $64, %rcx
+; BURR-NEXT:    orq $64, %rcx
 ; BURR-NEXT:    testq %rdi, %rdi
 ; BURR-NEXT:    cmovneq %r8, %rcx
 ; BURR-NEXT:    andq %rdx, %r10
@@ -354,7 +354,7 @@ define i256 @test2(i256 %a) nounwind {
 ; SRC-NEXT:    xorq $63, %rcx
 ; SRC-NEXT:    bsrq %r9, %rdx
 ; SRC-NEXT:    xorq $63, %rdx
-; SRC-NEXT:    addq $64, %rdx
+; SRC-NEXT:    orq $64, %rdx
 ; SRC-NEXT:    testq %rdi, %rdi
 ; SRC-NEXT:    cmovneq %rcx, %rdx
 ; SRC-NEXT:    bsrq %r10, %rcx
@@ -402,7 +402,7 @@ define i256 @test2(i256 %a) nounwind {
 ; LIN-NEXT:    andq %rcx, %rdi
 ; LIN-NEXT:    bsrq %rdi, %rcx
 ; LIN-NEXT:    xorq $63, %rcx
-; LIN-NEXT:    addq $64, %rcx
+; LIN-NEXT:    orq $64, %rcx
 ; LIN-NEXT:    sbbq %r8, %rsi
 ; LIN-NEXT:    andq %r8, %rsi
 ; LIN-NEXT:    bsrq %rsi, %r8
@@ -446,7 +446,7 @@ define i256 @test3(i256 %n) nounwind {
 ; ILP-NEXT:    andq %r11, %rcx
 ; ILP-NEXT:    bsrq %rcx, %r10
 ; ILP-NEXT:    xorq $63, %r10
-; ILP-NEXT:    addq $64, %r10
+; ILP-NEXT:    orq $64, %r10
 ; ILP-NEXT:    notq %rsi
 ; ILP-NEXT:    testq %r8, %r8
 ; ILP-NEXT:    cmovneq %rbx, %r10
@@ -489,7 +489,7 @@ define i256 @test3(i256 %n) nounwind {
 ; HYBRID-NEXT:    andq %r11, %rcx
 ; HYBRID-NEXT:    bsrq %rcx, %r9
 ; HYBRID-NEXT:    xorq $63, %r9
-; HYBRID-NEXT:    addq $64, %r9
+; HYBRID-NEXT:    orq $64, %r9
 ; HYBRID-NEXT:    testq %r8, %r8
 ; HYBRID-NEXT:    cmovneq %rbx, %r9
 ; HYBRID-NEXT:    notq %rdx
@@ -535,7 +535,7 @@ define i256 @test3(i256 %n) nounwind {
 ; BURR-NEXT:    andq %r11, %rcx
 ; BURR-NEXT:    bsrq %rcx, %r9
 ; BURR-NEXT:    xorq $63, %r9
-; BURR-NEXT:    addq $64, %r9
+; BURR-NEXT:    orq $64, %r9
 ; BURR-NEXT:    testq %r8, %r8
 ; BURR-NEXT:    cmovneq %rbx, %r9
 ; BURR-NEXT:    notq %rdx
@@ -582,7 +582,7 @@ define i256 @test3(i256 %n) nounwind {
 ; SRC-NEXT:    xorq $63, %rdi
 ; SRC-NEXT:    bsrq %rcx, %r9
 ; SRC-NEXT:    xorq $63, %r9
-; SRC-NEXT:    addq $64, %r9
+; SRC-NEXT:    orq $64, %r9
 ; SRC-NEXT:    testq %r8, %r8
 ; SRC-NEXT:    cmovneq %rdi, %r9
 ; SRC-NEXT:    bsrq %rdx, %rdi
@@ -633,7 +633,7 @@ define i256 @test3(i256 %n) nounwind {
 ; LIN-NEXT:    andq %rdx, %rcx
 ; LIN-NEXT:    bsrq %rcx, %rdx
 ; LIN-NEXT:    xorq $63, %rdx
-; LIN-NEXT:    addq $64, %rdx
+; LIN-NEXT:    orq $64, %rdx
 ; LIN-NEXT:    sbbq %r8, %rdi
 ; LIN-NEXT:    notq %r8
 ; LIN-NEXT:    andq %rdi, %r8
@@ -764,16 +764,16 @@ define i256 @PR25498(i256 %a) nounwind {
 ; ILP-NEXT:    xorq $63, %rcx
 ; ILP-NEXT:    bsrq %r9, %rsi
 ; ILP-NEXT:    xorq $63, %rsi
-; ILP-NEXT:    addq $64, %rsi
+; ILP-NEXT:    orq $64, %rsi
 ; ILP-NEXT:    testq %r10, %r10
 ; ILP-NEXT:    cmovneq %rcx, %rsi
 ; ILP-NEXT:    xorq $63, %rdx
 ; ILP-NEXT:    bsrq %rbx, %rcx
 ; ILP-NEXT:    xorq $63, %rcx
-; ILP-NEXT:    addq $64, %rcx
+; ILP-NEXT:    orq $64, %rcx
 ; ILP-NEXT:    testq %r11, %r11
 ; ILP-NEXT:    cmovneq %rdx, %rcx
-; ILP-NEXT:    subq $-128, %rcx
+; ILP-NEXT:    orq $128, %rcx
 ; ILP-NEXT:    xorl %edi, %edi
 ; ILP-NEXT:    orq %r10, %r9
 ; ILP-NEXT:    cmovneq %rsi, %rcx
@@ -810,17 +810,17 @@ define i256 @PR25498(i256 %a) nounwind {
 ; HYBRID-NEXT:    xorq $63, %rcx
 ; HYBRID-NEXT:    bsrq %r9, %rdx
 ; HYBRID-NEXT:    xorq $63, %rdx
-; HYBRID-NEXT:    addq $64, %rdx
+; HYBRID-NEXT:    orq $64, %rdx
 ; HYBRID-NEXT:    testq %r10, %r10
 ; HYBRID-NEXT:    cmovneq %rcx, %rdx
 ; HYBRID-NEXT:    bsrq %r11, %rsi
 ; HYBRID-NEXT:    xorq $63, %rsi
 ; HYBRID-NEXT:    bsrq %rbx, %rcx
 ; HYBRID-NEXT:    xorq $63, %rcx
-; HYBRID-NEXT:    addq $64, %rcx
+; HYBRID-NEXT:    orq $64, %rcx
 ; HYBRID-NEXT:    testq %r11, %r11
 ; HYBRID-NEXT:    cmovneq %rsi, %rcx
-; HYBRID-NEXT:    subq $-128, %rcx
+; HYBRID-NEXT:    orq $128, %rcx
 ; HYBRID-NEXT:    orq %r10, %r9
 ; HYBRID-NEXT:    cmovneq %rdx, %rcx
 ; HYBRID-NEXT:    xorl %edi, %edi
@@ -857,17 +857,17 @@ define i256 @PR25498(i256 %a) nounwind {
 ; BURR-NEXT:    xorq $63, %rcx
 ; BURR-NEXT:    bsrq %r9, %rdx
 ; BURR-NEXT:    xorq $63, %rdx
-; BURR-NEXT:    addq $64, %rdx
+; BURR-NEXT:    orq $64, %rdx
 ; BURR-NEXT:    testq %r10, %r10
 ; BURR-NEXT:    cmovneq %rcx, %rdx
 ; BURR-NEXT:    bsrq %r11, %rsi
 ; BURR-NEXT:    xorq $63, %rsi
 ; BURR-NEXT:    bsrq %rbx, %rcx
 ; BURR-NEXT:    xorq $63, %rcx
-; BURR-NEXT:    addq $64, %rcx
+; BURR-NEXT:    orq $64, %rcx
 ; BURR-NEXT:    testq %r11, %r11
 ; BURR-NEXT:    cmovneq %rsi, %rcx
-; BURR-NEXT:    subq $-128, %rcx
+; BURR-NEXT:    orq $128, %rcx
 ; BURR-NEXT:    orq %r10, %r9
 ; BURR-NEXT:    cmovneq %rdx, %rcx
 ; BURR-NEXT:    xorl %edi, %edi
@@ -904,17 +904,17 @@ define i256 @PR25498(i256 %a) nounwind {
 ; SRC-NEXT:    xorq $63, %rcx
 ; SRC-NEXT:    bsrq %r9, %rdx
 ; SRC-NEXT:    xorq $63, %rdx
-; SRC-NEXT:    addq $64, %rdx
+; SRC-NEXT:    orq $64, %rdx
 ; SRC-NEXT:    testq %r10, %r10
 ; SRC-NEXT:    cmovneq %rcx, %rdx
 ; SRC-NEXT:    bsrq %r11, %rsi
 ; SRC-NEXT:    xorq $63, %rsi
 ; SRC-NEXT:    bsrq %rbx, %rcx
 ; SRC-NEXT:    xorq $63, %rcx
-; SRC-NEXT:    addq $64, %rcx
+; SRC-NEXT:    orq $64, %rcx
 ; SRC-NEXT:    testq %r11, %r11
 ; SRC-NEXT:    cmovneq %rsi, %rcx
-; SRC-NEXT:    subq $-128, %rcx
+; SRC-NEXT:    orq $128, %rcx
 ; SRC-NEXT:    orq %r10, %r9
 ; SRC-NEXT:    cmovneq %rdx, %rcx
 ; SRC-NEXT:    xorl %edi, %edi
@@ -949,15 +949,15 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-NEXT:  # %bb.2: # %cond.false
 ; LIN-NEXT:    bsrq %rbx, %rcx
 ; LIN-NEXT:    xorq $63, %rcx
-; LIN-NEXT:    addq $64, %rcx
+; LIN-NEXT:    orq $64, %rcx
 ; LIN-NEXT:    bsrq %r11, %rdx
 ; LIN-NEXT:    xorq $63, %rdx
 ; LIN-NEXT:    testq %r11, %r11
 ; LIN-NEXT:    cmoveq %rcx, %rdx
-; LIN-NEXT:    subq $-128, %rdx
+; LIN-NEXT:    orq $128, %rdx
 ; LIN-NEXT:    bsrq %r9, %rsi
 ; LIN-NEXT:    xorq $63, %rsi
-; LIN-NEXT:    addq $64, %rsi
+; LIN-NEXT:    orq $64, %rsi
 ; LIN-NEXT:    bsrq %r10, %rcx
 ; LIN-NEXT:    xorq $63, %rcx
 ; LIN-NEXT:    testq %r10, %r10

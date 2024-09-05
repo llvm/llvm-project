@@ -1,7 +1,7 @@
 # REQUIRES: x86
 ## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
 
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
 # RUN: llvm-readelf -S -r -x .got.plt %t1 | FileCheck --check-prefixes=CHECK,NOAPPLY %s
 # RUN: ld.lld %t.o -o %t1 --apply-dynamic-relocs

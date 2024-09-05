@@ -73,6 +73,9 @@ int ferror(FILE *stream);
 int fileno(FILE *stream);
 int fflush(FILE *stream);
 
+
+int getc(FILE *stream);
+
 size_t strlen(const char *);
 
 char *strcpy(char *restrict, const char *restrict);

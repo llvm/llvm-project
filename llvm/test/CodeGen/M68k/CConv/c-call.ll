@@ -14,7 +14,7 @@ define i32 @test1() nounwind {
 ; CHECK-NEXT:    move.l #2, (4,%sp)
 ; CHECK-NEXT:    move.l #1, (%sp)
 ; CHECK-NEXT:    jsr (test1_callee@PLT,%pc)
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -34,7 +34,7 @@ define i16 @test2() nounwind {
 ; CHECK-NEXT:    move.l #2, (4,%sp)
 ; CHECK-NEXT:    move.l #1, (%sp)
 ; CHECK-NEXT:    jsr (test2_callee@PLT,%pc)
-; CHECK-NEXT:    move.w #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -54,7 +54,7 @@ define i8 @test3() nounwind {
 ; CHECK-NEXT:    move.l #2, (4,%sp)
 ; CHECK-NEXT:    move.l #1, (%sp)
 ; CHECK-NEXT:    jsr (test3_callee@PLT,%pc)
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 entry:

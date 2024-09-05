@@ -8,7 +8,7 @@
 // headers.
 
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/no-undeclared-includes-builtins/libcxx -I %S/Inputs/no-undeclared-includes-builtins/glibc %s
+// RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fbuiltin-headers-in-system-modules -fimplicit-module-maps -I %S/Inputs/no-undeclared-includes-builtins/libcxx -I %S/Inputs/no-undeclared-includes-builtins/glibc %s
 // expected-no-diagnostics
 
 #include <stddef.h>

@@ -4057,10 +4057,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        rbit	z0.d, p7/m, z31.d
 # CHECK-NEXT:  1      2     0.50                        rbit	z0.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.50                        rbit	z0.s, p7/m, z31.s
-# CHECK-NEXT:  1      2     1.00                  U     rdffr	p0.b
-# CHECK-NEXT:  2      3     2.00                  U     rdffr	p0.b, p0/z
-# CHECK-NEXT:  1      2     1.00                  U     rdffr	p15.b
-# CHECK-NEXT:  2      3     2.00                  U     rdffr	p15.b, p15/z
+# CHECK-NEXT:  1      2     1.00    *             U     rdffr	p0.b
+# CHECK-NEXT:  2      3     2.00    *             U     rdffr	p0.b, p0/z
+# CHECK-NEXT:  1      2     1.00    *             U     rdffr	p15.b
+# CHECK-NEXT:  2      3     2.00    *             U     rdffr	p15.b, p15/z
 # CHECK-NEXT:  1      4     0.50                  U     rdffrs	p0.b, p0/z
 # CHECK-NEXT:  1      4     0.50                  U     rdffrs	p15.b, p15/z
 # CHECK-NEXT:  1      2     1.00                        rdvl	x0, #0
@@ -4093,8 +4093,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      12    7.00                        sdiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    7.00                        sdivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    7.00                        sdivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      4     0.50                        sdot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  1      4     0.50                        sdot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                        sdot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  1      4     1.00                        sdot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  1      3     0.50                        sdot	z0.s, z1.b, z31.b
 # CHECK-NEXT:  1      3     0.50                        sdot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  1      2     0.50                        sel	z23.b, p11, z13.b, z8.b
@@ -4569,8 +4569,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      12    7.00                        udiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    7.00                        udivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    7.00                        udivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      4     0.50                        udot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  1      4     0.50                        udot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                        udot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  1      4     1.00                        udot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  1      3     0.50                        udot	z0.s, z1.b, z31.b
 # CHECK-NEXT:  1      3     0.50                        udot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  1      2     0.50                        umax	z0.b, z0.b, #0
@@ -4839,7 +4839,7 @@ zip2	z31.s, z31.s, z31.s
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]
-# CHECK-NEXT:  -      -      -      -     88.67  500.67 500.67 797.50 2.50   92.50  92.50  1250.00 923.00 178.50 181.50
+# CHECK-NEXT:  -      -      -      -     88.67  500.67 500.67 797.50 2.50   92.50  92.50  1252.00 921.00 178.50 181.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]   Instructions:
@@ -6521,8 +6521,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -     sdiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -     sdivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -     sdivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sdot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sdot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     sdot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     sdot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sdot	z0.s, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sdot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sel	z23.b, p11, z13.b, z8.b
@@ -6997,8 +6997,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -     udiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -     udivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -     udivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     udot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     udot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     udot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     udot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     udot	z0.s, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     udot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     umax	z0.b, z0.b, #0

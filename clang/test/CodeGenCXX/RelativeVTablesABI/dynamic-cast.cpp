@@ -1,7 +1,7 @@
 // dynamic_cast
 // Ensure that dynamic casting works normally
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -o - -emit-llvm | FileCheck %s
 
 // CHECK:      define{{.*}} ptr @_Z6upcastP1B(ptr noundef readnone returned %b) local_unnamed_addr
 // CHECK-NEXT: entry:

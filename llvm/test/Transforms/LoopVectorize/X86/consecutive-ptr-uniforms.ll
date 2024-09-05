@@ -76,7 +76,7 @@ attributes #0 = { "target-cpu"="knl" }
 ; CHECK:     LV: Found trip count: 3
 ; CHECK:     LV: Found uniform instruction:   {{%.*}} = icmp eq i32 {{%.*}}, 0
 ; CHECK-NOT: LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
-; CHECK:     LV: Found not uniform being ScalarWithPredication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
+; CHECK:     LV: Found not uniform due to requiring predication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
 ; CHECK:     LV: Found scalar instruction:   {{%.*}} = getelementptr inbounds [3 x i32], ptr @a, i32 0, i32 {{%.*}}
 ;
 ; FORCE-LABEL: @PR40816(

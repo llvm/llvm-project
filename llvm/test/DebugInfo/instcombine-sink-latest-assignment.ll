@@ -3,7 +3,7 @@
 ;
 ; CHECK-LABEL: for.body:
 ; CHECK-NEXT:  %sub.ptr.rhs.cast.i.i = ptrtoint ptr %call2.i.i to i64,
-; CHECK-NEXT:  tail call void @llvm.dbg.value(metadata i64 %sub.ptr.rhs.cast.i.i, metadata !{{[0-9]*}}, metadata !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_constu, 1, DW_OP_minus, DW_OP_stack_value)
+; CHECK-NEXT:  #dbg_value(i64 %sub.ptr.rhs.cast.i.i, !{{[0-9]*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_constu, 1, DW_OP_minus, DW_OP_stack_value)
 ;
 ;; The code below is representative of a common situation: where we've had a
 ;; loop be completely optimised out, leaving dbg.values representing the

@@ -60,6 +60,6 @@ int metadirective1() {
 // CHECK: omp.inner.for.body:
 // CHECK: store atomic {{.*}} monotonic
 // CHECK: omp.loop.exit:
-// CHECK-NEXT: call void @__kmpc_distribute_static_fini
+// CHECK-NEXT: call void @__kmpc_for_static_fini
 // CHECK-NEXT: ret void
 

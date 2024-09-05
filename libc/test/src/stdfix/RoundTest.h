@@ -28,7 +28,7 @@ public:
 
   void testSpecialNumbers(RoundFunc func) {
     EXPECT_EQ(zero, func(zero, FXRep::FRACTION_LEN - 5));
-    EXPECT_EQ(max, func(min, 0));
+    EXPECT_EQ(min, func(min, 0));
     EXPECT_EQ(max, func(max, FXRep::FRACTION_LEN));
 
     EXPECT_EQ(one, func(half, 0));

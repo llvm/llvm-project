@@ -84,6 +84,7 @@ group("test") {
     "//llvm/utils/FileCheck",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
   ]
   if (clangd_build_xpc) {
     deps += [

@@ -83,7 +83,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
       Note: The default implementation merely checks that if the entry block
       exists, it has the same number and type of arguments as the function type.
     }],
-    "::mlir::LogicalResult", "verifyBody", (ins),
+    "::llvm::LogicalResult", "verifyBody", (ins),
     /*methodBody=*/[{}], /*defaultImplementation=*/[{
       if ($_op.isExternal())
         return success();
@@ -114,7 +114,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
       Verify the type attribute of the function for derived op-specific
       invariants.
     }],
-    "::mlir::LogicalResult", "verifyType", (ins),
+    "::llvm::LogicalResult", "verifyType", (ins),
     /*methodBody=*/[{}], /*defaultImplementation=*/[{
       return success();
     }]>,
@@ -131,6 +131,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     static void buildWithEntryBlock(
         OpBuilder &builder, OperationState &state, StringRef name, Type type,
         ArrayRef<NamedAttribute> attrs, TypeRange inputTypes) {
+      OpBuilder::InsertionGuard g(builder);
       state.addAttribute(SymbolTable::getSymbolAttrName(),
                         builder.getStringAttr(name));
       state.addAttribute(ConcreteOp::getFunctionTypeAttrName(state.name),
@@ -139,8 +140,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
 
       // Add the function body.
       Region *bodyRegion = state.addRegion();
-      Block *body = new Block();
-      bodyRegion->push_back(body);
+      Block *body = builder.createBlock(bodyRegion);
       for (Type input : inputTypes)
         body->addArgument(input, state.location);
     }

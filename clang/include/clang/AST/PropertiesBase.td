@@ -117,6 +117,8 @@ def ExtParameterInfo : PropertyType<"FunctionProtoType::ExtParameterInfo">;
 def FixedPointSemantics : PropertyType<"llvm::FixedPointSemantics"> {
   let PassByReference = 1;
 }
+def FunctionEffect : PropertyType<"FunctionEffect">;
+def EffectConditionExpr : PropertyType<"EffectConditionExpr">;
 def Identifier : RefPropertyType<"IdentifierInfo"> { let ConstWhenWriting = 1; }
 def LValuePathEntry : PropertyType<"APValue::LValuePathEntry">;
 def LValuePathSerializationHelper :
@@ -143,6 +145,7 @@ def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
 def VectorKind : EnumPropertyType<"VectorKind">;
+def TypeCoupledDeclRefInfo : PropertyType;
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];

@@ -94,10 +94,6 @@
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X28 < %t %s
 // CHECK-FIXED-X28: "-target-feature" "+reserve-x28"
 
-// RUN: %clang --target=aarch64-none-gnu -ffixed-x30 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X30 < %t %s
-// CHECK-FIXED-X30: "-target-feature" "+reserve-x30"
-
 // Test multiple of reserve-x# options together.
 // RUN: %clang --target=aarch64-none-gnu \
 // RUN: -ffixed-x1 \

@@ -59,24 +59,39 @@ module attributes {gpu.container_module} {
   gpu.module @kernels {
     gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = gpu.thread_id x
+      // CHECK:      thread_id_x
       %tIdY = gpu.thread_id y
+      // CHECK-NEXT: thread_id_y
       %tIdZ = gpu.thread_id z
+      // CHECK-NEXT: thread_id_z
 
       %bDimX = gpu.block_dim x
+      // CHECK-NEXT: block_dim_x
       %bDimY = gpu.block_dim y
+      // CHECK-NEXT: block_dim_y
       %bDimZ = gpu.block_dim z
+      // CHECK-NEXT: block_dim_z
 
       %bIdX = gpu.block_id x
+      // CHECK-NEXT: block_id_x
       %bIdY = gpu.block_id y
+      // CHECK-NEXT: block_id_y
       %bIdZ = gpu.block_id z
+      // CHECK-NEXT: block_id_z
 
       %gDimX = gpu.grid_dim x
+      // CHECK-NEXT: grid_dim_x
       %gDimY = gpu.grid_dim y
+      // CHECK-NEXT: grid_dim_y
       %gDimZ = gpu.grid_dim z
+      // CHECK-NEXT: grid_dim_z
 
       %gIdX = gpu.global_id x
+      // CHECK-NEXT: global_id_x
       %gIdY = gpu.global_id y
+      // CHECK-NEXT: global_id_y
       %gIdZ = gpu.global_id z
+      // CHECK-NEXT: global_id_z
 
       %sgId = gpu.subgroup_id : index
       %numSg = gpu.num_subgroups : index
@@ -212,7 +227,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    // CHECK-LABEL gpu.func @printf_test
+    // CHECK-LABEL: gpu.func @printf_test
     // CHECK: (%[[ARG0:.*]]: i32)
     // CHECK: gpu.printf "Value: %d" %[[ARG0]] : i32
     gpu.func @printf_test(%arg0 : i32) {
@@ -426,3 +441,26 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
 
 gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }
+
+// Test kernel attributes
+gpu.binary @kernel_attrs_1 [
+    #gpu.object<#rocdl.target<chip = "gfx900">,
+      kernels = #gpu.kernel_table<[
+        #gpu.kernel_metadata<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+        #gpu.kernel_metadata<"kernel1", (i32) -> (), arg_attrs = [{llvm.read_only}]>
+      ]>,
+      bin = "BLOB">
+  ]
+
+// Verify the kernels are sorted
+// CHECK-LABEL: gpu.binary @kernel_attrs_2
+gpu.binary @kernel_attrs_2 [
+    // CHECK: [#gpu.kernel_metadata<"a_kernel", () -> ()>, #gpu.kernel_metadata<"m_kernel", () -> ()>, #gpu.kernel_metadata<"z_kernel", () -> ()>]
+    #gpu.object<#rocdl.target<chip = "gfx900">,
+      kernels = #gpu.kernel_table<[
+        #gpu.kernel_metadata<"z_kernel", () -> ()>,
+        #gpu.kernel_metadata<"m_kernel", () -> ()>,
+        #gpu.kernel_metadata<"a_kernel", () -> ()>
+      ]>,
+      bin = "BLOB">
+  ]

@@ -96,17 +96,17 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
-  Plan->getVPValueOrAddLiveIn(&*F->arg_begin());
+  Plan->getOrAddLiveIn(&*F->arg_begin());
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in vp\<%0\> = vector-trip-count\nvp\<%1\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
-    "ph:\l" +
+    "ir-bb\<entry\>:\l" +
     "  EMIT vp\<%1\> = EXPAND SCEV (-1 + %N)\l" +
     "No successors\l"
   ]
@@ -134,6 +134,18 @@ compound=true
   N2 -> N4 [ label="" ltail=cluster_N3]
   N4 [label =
     "middle.block:\l" +
+    "  EMIT vp\<%2\> = icmp eq vp\<%1\>, vp\<%0\>\l" +
+    "  EMIT branch-on-cond vp\<%2\>\l" +
+    "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
+  ]
+  N4 -> N5 [ label="T"]
+  N4 -> N6 [ label="F"]
+  N5 [label =
+    "ir-bb\<for.end\>:\l" +
+    "No successors\l"
+  ]
+  N6 [label =
+    "scalar.ph:\l" +
     "No successors\l"
   ]
 }
@@ -192,9 +204,9 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   auto Iter = VecBB->begin();
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));

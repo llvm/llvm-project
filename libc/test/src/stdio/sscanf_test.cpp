@@ -226,6 +226,7 @@ TEST(LlvmLibcSScanfTest, IntConvNoWriteTests) {
   EXPECT_EQ(result, 0);
 }
 
+#ifndef LIBC_COPT_SCANF_DISABLE_FLOAT
 TEST(LlvmLibcSScanfTest, FloatConvSimple) {
   int ret_val;
   float result = 0;
@@ -322,7 +323,7 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   EXPECT_EQ(ret_val, 1);
 // 1e600 may be larger than the maximum long double (if long double is double).
 // In that case both of these should be evaluated as inf.
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
   EXPECT_FP_EQ(ld_result, d_inf);
 #else
   EXPECT_FP_EQ(ld_result, 1.0e600L);
@@ -580,7 +581,9 @@ TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
   ret_val = LIBC_NAMESPACE::sscanf("Not a float", "%*f", &result);
   EXPECT_EQ(ret_val, 0);
 }
+#endif
 
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSScanfTest, CurPosCombined) {
   int ret_val;
   int result = -1;
@@ -628,6 +631,7 @@ TEST(LlvmLibcSScanfTest, CurPosCombined) {
   EXPECT_EQ(ret_val, 1);
   EXPECT_EQ(result, 320);
 }
+#endif
 
 TEST(LlvmLibcSScanfTest, PointerConvCombined) {
   int ret_val;

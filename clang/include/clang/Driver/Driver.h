@@ -28,8 +28,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
-#include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -159,9 +159,6 @@ public:
 
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
-
-  /// The path to the installed clang directory, if any.
-  std::string InstalledDir;
 
   /// The path to the compiler resource directory.
   std::string ResourceDir;
@@ -382,8 +379,7 @@ public:
 
   /// Takes the path to a binary that's either in bin/ or lib/ and returns
   /// the path to clang's resource directory.
-  static std::string GetResourcesPath(StringRef BinaryPath,
-                                      StringRef CustomResourceDir = "");
+  static std::string GetResourcesPath(StringRef BinaryPath);
 
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
@@ -426,14 +422,6 @@ public:
   const char *getClangProgramPath() const {
     return ClangExecutable.c_str();
   }
-
-  /// Get the path to where the clang executable was installed.
-  const char *getInstalledDir() const {
-    if (!InstalledDir.empty())
-      return InstalledDir.c_str();
-    return Dir.c_str();
-  }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
 
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
@@ -621,6 +609,16 @@ public:
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
+  /// Lookup the path to the Standard library module manifest.
+  ///
+  /// \param C - The compilation.
+  /// \param TC - The tool chain for additional information on
+  /// directories to search.
+  //
+  // FIXME: This should be in CompilationInfo.
+  std::string GetStdModuleManifestPath(const Compilation &C,
+                                       const ToolChain &TC) const;
+
   /// HandleAutocompletions - Handle --autocomplete by searching and printing
   /// possible flags, descriptions, and its arguments.
   void HandleAutocompletions(StringRef PassedFlags) const;
@@ -629,8 +627,9 @@ public:
   /// treated before building actions or binding tools.
   ///
   /// \return Whether any compilation should be built for this
-  /// invocation.
-  bool HandleImmediateArgs(const Compilation &C);
+  /// invocation. The compilation can only be modified when
+  /// this function returns false.
+  bool HandleImmediateArgs(Compilation &C);
 
   /// ConstructAction - Construct the appropriate action to do for
   /// \p Phase on the \p Input, taking in to account arguments
@@ -715,14 +714,16 @@ public:
   ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
 
   /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO(bool IsOffload = false) const {
-    return getLTOMode(IsOffload) != LTOK_None;
-  }
+  bool isUsingLTO() const { return getLTOMode() != LTOK_None; }
 
   /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode(bool IsOffload = false) const {
-    return IsOffload ? OffloadLTOMode : LTOMode;
-  }
+  LTOKind getLTOMode() const { return LTOMode; }
+
+  /// Returns true if we are performing any kind of offload LTO.
+  bool isUsingOffloadLTO() const { return getOffloadLTOMode() != LTOK_None; }
+
+  /// Get the specific kind of offload LTO being performed.
+  LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
 
 private:
 
@@ -844,6 +845,13 @@ bool IsClangCL(StringRef DriverMode);
 llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
+
+/// Apply a space separated list of edits to the input argument lists.
+/// See applyOneOverrideOption.
+void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+                          const char *OverrideOpts,
+                          llvm::StringSet<> &SavedStrings,
+                          raw_ostream *OS = nullptr);
 
 } // end namespace driver
 } // end namespace clang

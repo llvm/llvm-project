@@ -6,21 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cmath>
-#include <memory>
-#include <string>
-
-#include "Assembler.h"
 #include "BenchmarkRunner.h"
+#include "Assembler.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "MmapUtils.h"
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -28,6 +26,9 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include <cmath>
+#include <memory>
+#include <string>
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -278,58 +279,20 @@ private:
     return FD;
   }
 
-  Error createSubProcessAndRunBenchmark(
-      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
-      ArrayRef<const char *> ValidationCounters,
-      SmallVectorImpl<int64_t> &ValidationCounterValues) const {
-    int PipeFiles[2];
-    int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
-    if (PipeSuccessOrErr != 0) {
-      return make_error<Failure>(
-          "Failed to create a pipe for interprocess communication between "
-          "llvm-exegesis and the benchmarking subprocess: " +
-          Twine(strerror(errno)));
-    }
-
-    SubprocessMemory SPMemory;
-    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
-    if (MemoryInitError)
-      return MemoryInitError;
-
-    Error AddMemDefError =
-        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
-    if (AddMemDefError)
-      return AddMemDefError;
-
-    pid_t ParentOrChildPID = fork();
-
-    if (ParentOrChildPID == -1) {
-      return make_error<Failure>("Failed to create child process: " +
-                                 Twine(strerror(errno)));
-    }
-
-    if (ParentOrChildPID == 0) {
-      // We are in the child process, close the write end of the pipe.
-      close(PipeFiles[1]);
-      // Unregister handlers, signal handling is now handled through ptrace in
-      // the host process.
-      sys::unregisterHandlers();
-      prepareAndRunBenchmark(PipeFiles[0], Key);
-      // The child process terminates in the above function, so we should never
-      // get to this point.
-      llvm_unreachable("Child process didn't exit when expected.");
-    }
-
+  Error
+  runParentProcess(pid_t ChildPID, int WriteFD, StringRef CounterName,
+                   SmallVectorImpl<int64_t> &CounterValues,
+                   ArrayRef<const char *> ValidationCounters,
+                   SmallVectorImpl<int64_t> &ValidationCounterValues) const {
+    auto WriteFDClose = make_scope_exit([WriteFD]() { close(WriteFD); });
     const ExegesisTarget &ET = State.getExegesisTarget();
-    auto CounterOrError = ET.createCounter(
-        CounterName, State, ValidationCounters, ParentOrChildPID);
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ValidationCounters, ChildPID);
 
     if (!CounterOrError)
       return CounterOrError.takeError();
 
     pfm::CounterGroup *Counter = CounterOrError.get().get();
-
-    close(PipeFiles[0]);
 
     // Make sure to attach to the process (and wait for the sigstop to be
     // delivered and for the process to continue) before we write to the counter
@@ -338,30 +301,30 @@ private:
     // attach afterwards, the subprocess might exit before we get to the attach
     // call due to effects like scheduler contention, introducing transient
     // failures.
-    if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
+    if (ptrace(PTRACE_ATTACH, ChildPID, NULL, NULL) != 0)
       return make_error<Failure>("Failed to attach to the child process: " +
                                  Twine(strerror(errno)));
 
-    if (wait(NULL) == -1) {
+    if (waitpid(ChildPID, NULL, 0) == -1) {
       return make_error<Failure>(
           "Failed to wait for child process to stop after attaching: " +
           Twine(strerror(errno)));
     }
 
-    if (ptrace(PTRACE_CONT, ParentOrChildPID, NULL, NULL) != 0)
+    if (ptrace(PTRACE_CONT, ChildPID, NULL, NULL) != 0)
       return make_error<Failure>(
           "Failed to continue execution of the child process: " +
           Twine(strerror(errno)));
 
     int CounterFileDescriptor = Counter->getFileDescriptor();
     Error SendError =
-        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
+        sendFileDescriptorThroughSocket(WriteFD, CounterFileDescriptor);
 
     if (SendError)
       return SendError;
 
     int ChildStatus;
-    if (wait(&ChildStatus) == -1) {
+    if (waitpid(ChildPID, &ChildStatus, 0) == -1) {
       return make_error<Failure>(
           "Waiting for the child process to complete failed: " +
           Twine(strerror(errno)));
@@ -395,17 +358,81 @@ private:
 
     // An error was encountered running the snippet, process it
     siginfo_t ChildSignalInfo;
-    if (ptrace(PTRACE_GETSIGINFO, ParentOrChildPID, NULL, &ChildSignalInfo) ==
-        -1) {
+    if (ptrace(PTRACE_GETSIGINFO, ChildPID, NULL, &ChildSignalInfo) == -1) {
       return make_error<Failure>("Getting signal info from the child failed: " +
                                  Twine(strerror(errno)));
     }
 
+    // Send SIGKILL rather than SIGTERM as the child process has no SIGTERM
+    // handlers to run, and calling SIGTERM would mean that ptrace will force
+    // it to block in the signal-delivery-stop for the SIGSEGV/other signals,
+    // and upon exit.
+    if (kill(ChildPID, SIGKILL) == -1)
+      return make_error<Failure>("Failed to kill child benchmarking proces: " +
+                                 Twine(strerror(errno)));
+
+    // Wait for the process to exit so that there are no zombie processes left
+    // around.
+    if (waitpid(ChildPID, NULL, 0) == -1)
+      return make_error<Failure>("Failed to wait for process to die: " +
+                                 Twine(strerror(errno)));
+
     if (ChildSignalInfo.si_signo == SIGSEGV)
       return make_error<SnippetSegmentationFault>(
-          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+          reinterpret_cast<uintptr_t>(ChildSignalInfo.si_addr));
 
     return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
+  }
+
+  Error createSubProcessAndRunBenchmark(
+      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
+      ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const {
+    int PipeFiles[2];
+    int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
+    if (PipeSuccessOrErr != 0) {
+      return make_error<Failure>(
+          "Failed to create a pipe for interprocess communication between "
+          "llvm-exegesis and the benchmarking subprocess: " +
+          Twine(strerror(errno)));
+    }
+
+    SubprocessMemory SPMemory;
+    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
+    if (MemoryInitError)
+      return MemoryInitError;
+
+    Error AddMemDefError =
+        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
+    if (AddMemDefError)
+      return AddMemDefError;
+
+    long ParentTID = SubprocessMemory::getCurrentTID();
+    pid_t ParentOrChildPID = fork();
+
+    if (ParentOrChildPID == -1) {
+      return make_error<Failure>("Failed to create child process: " +
+                                 Twine(strerror(errno)));
+    }
+
+    if (ParentOrChildPID == 0) {
+      // We are in the child process, close the write end of the pipe.
+      close(PipeFiles[1]);
+      // Unregister handlers, signal handling is now handled through ptrace in
+      // the host process.
+      sys::unregisterHandlers();
+      runChildSubprocess(PipeFiles[0], Key, ParentTID);
+      // The child process terminates in the above function, so we should never
+      // get to this point.
+      llvm_unreachable("Child process didn't exit when expected.");
+    }
+
+    // Close the read end of the pipe as we only need to write to the subprocess
+    // from the parent process.
+    close(PipeFiles[0]);
+    return runParentProcess(ParentOrChildPID, PipeFiles[1], CounterName,
+                            CounterValues, ValidationCounters,
+                            ValidationCounterValues);
   }
 
   void disableCoreDumps() const {
@@ -415,8 +442,8 @@ private:
     setrlimit(RLIMIT_CORE, &rlim);
   }
 
-  [[noreturn]] void prepareAndRunBenchmark(int Pipe,
-                                           const BenchmarkKey &Key) const {
+  [[noreturn]] void runChildSubprocess(int Pipe, const BenchmarkKey &Key,
+                                       long ParentTID) const {
     // Disable core dumps in the child process as otherwise everytime we
     // encounter an execution failure like a segmentation fault, we will create
     // a core dump. We report the information directly rather than require the
@@ -439,9 +466,21 @@ private:
 // segfaults in the program. Unregister the rseq region so that we can safely
 // unmap it later
 #ifdef GLIBC_INITS_RSEQ
-    long RseqDisableOutput =
-        syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
-                __rseq_size, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+    unsigned int RseqStructSize = __rseq_size;
+
+    // Glibc v2.40 (the change is also expected to be backported to v2.35)
+    // changes the definition of __rseq_size to be the usable area of the struct
+    // rather than the actual size of the struct. v2.35 uses only 20 bytes of
+    // the 32 byte struct. For now, it should be safe to assume that if the
+    // usable size is less than 32, the actual size of the struct will be 32
+    // bytes given alignment requirements.
+    if (__rseq_size < 32)
+      RseqStructSize = 32;
+
+    long RseqDisableOutput = syscall(
+        SYS_rseq,
+        reinterpret_cast<uintptr_t>(__builtin_thread_pointer()) + __rseq_offset,
+        RseqStructSize, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
     if (RseqDisableOutput != 0)
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ
@@ -464,7 +503,7 @@ private:
     char *FunctionDataCopy =
         (char *)mmap(MapAddress, FunctionDataCopySize, PROT_READ | PROT_WRITE,
                      MapFlags, 0, 0);
-    if ((intptr_t)FunctionDataCopy == -1)
+    if (reinterpret_cast<intptr_t>(FunctionDataCopy) == -1)
       exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
 
     memcpy(FunctionDataCopy, this->Function.FunctionBytes.data(),
@@ -473,12 +512,12 @@ private:
 
     Expected<int> AuxMemFDOrError =
         SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
-            Key.MemoryValues, ParentPID, CounterFileDescriptor);
+            Key.MemoryValues, ParentPID, ParentTID, CounterFileDescriptor);
     if (!AuxMemFDOrError)
       exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
 
-    ((void (*)(size_t, int))(intptr_t)FunctionDataCopy)(FunctionDataCopySize,
-                                                        *AuxMemFDOrError);
+    ((void (*)(size_t, int))(uintptr_t)FunctionDataCopy)(FunctionDataCopySize,
+                                                         *AuxMemFDOrError);
 
     exit(0);
   }

@@ -52,8 +52,8 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   case X86::VCMPPDYrri:
   case X86::VCMPPSrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr: {
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri: {
     switch (MI.getOperand(3).getImm() & 0x7) {
     default:
       return false;
@@ -481,7 +481,8 @@ static bool optimizeToShortImmediateForm(MCInst &MI) {
     return false;
 #include "X86EncodingOptimizationForImmediate.def"
   }
-  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
+  unsigned SkipOperands = X86::isCCMPCC(MI.getOpcode()) ? 2 : 0;
+  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1 - SkipOperands);
   if (LastOp.isExpr()) {
     const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(LastOp.getExpr());
     if (!SRE || SRE->getKind() != MCSymbolRefExpr::VK_X86_ABS8)

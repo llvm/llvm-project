@@ -77,7 +77,7 @@ struct PrintingPolicy {
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true) {}
+        UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -341,6 +341,11 @@ struct PrintingPolicy {
   /// enumerator name or via cast of an integer.
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseEnumerators : 1;
+
+  /// Whether or not we're printing known HLSL code and should print HLSL
+  /// sugared types when possible.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UseHLSLTypes : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

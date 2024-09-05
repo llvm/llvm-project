@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_STRING_H
 #define _LIBCPP___FORMAT_FORMATTER_STRING_H
 
-#include <__availability>
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>
@@ -144,7 +143,32 @@ struct _LIBCPP_TEMPLATE_VIS formatter<basic_string_view<_CharT, _Traits>, _CharT
   }
 };
 
-#endif //_LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<char*> = true;
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<const char*> = true;
+template <size_t _Size>
+inline constexpr bool enable_nonlocking_formatter_optimization<char[_Size]> = true;
+template <class _Traits, class _Allocator>
+inline constexpr bool enable_nonlocking_formatter_optimization<basic_string<char, _Traits, _Allocator>> = true;
+template <class _Traits>
+inline constexpr bool enable_nonlocking_formatter_optimization<basic_string_view<char, _Traits>> = true;
+
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<wchar_t*> = true;
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<const wchar_t*> = true;
+template <size_t _Size>
+inline constexpr bool enable_nonlocking_formatter_optimization<wchar_t[_Size]> = true;
+template <class _Traits, class _Allocator>
+inline constexpr bool enable_nonlocking_formatter_optimization<basic_string<wchar_t, _Traits, _Allocator>> = true;
+template <class _Traits>
+inline constexpr bool enable_nonlocking_formatter_optimization<basic_string_view<wchar_t, _Traits>> = true;
+#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif   // _LIBCPP_STD_VER >= 23
+#endif     // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

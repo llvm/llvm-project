@@ -9,6 +9,7 @@
 #include "SnippetFile.h"
 #include "BenchmarkRunner.h"
 #include "Error.h"
+#include "Target.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -150,8 +151,8 @@ public:
     }
     if (CommentText.consume_front("SNIPPET-ADDRESS")) {
       // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
-      if (!to_integer<intptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
-                                16)) {
+      if (!to_integer<uintptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
+                                 16)) {
         errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
                << CommentText
                << "', expected <ADDRESS> to contain a valid integer in "
@@ -173,6 +174,20 @@ public:
       }
 #endif // __linux__
 
+      return;
+    }
+    if (CommentText.consume_front("LOOP-REGISTER")) {
+      // LLVM-EXEGESIS-LOOP-REGISTER <loop register>
+      unsigned LoopRegister;
+
+      if (!(LoopRegister = findRegisterByName(CommentText.trim()))) {
+        errs() << "unknown register '" << CommentText
+               << "' in 'LLVM-EXEGESIS-LOOP-REGISTER " << CommentText << "'\n";
+        ++InvalidComments;
+        return;
+      }
+
+      Result->Key.LoopRegister = LoopRegister;
       return;
     }
   }
@@ -221,6 +236,11 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
 
   BenchmarkCode Result;
 
+  // Ensure that there is a default loop register value specified.
+  Result.Key.LoopRegister =
+      State.getExegesisTarget().getDefaultLoopCounterRegister(
+          State.getTargetMachine().getTargetTriple());
+
   const TargetMachine &TM = State.getTargetMachine();
   MCContext Context(TM.getTargetTriple(), TM.getMCAsmInfo(),
                     TM.getMCRegisterInfo(), TM.getMCSubtargetInfo());
@@ -240,8 +260,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
           *TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
   // The following call will take care of calling Streamer.setTargetStreamer.
   TM.getTarget().createAsmTargetStreamer(Streamer, InstPrinterOStream,
-                                         InstPrinter.get(),
-                                         TM.Options.MCOptions.AsmVerbose);
+                                         InstPrinter.get());
   if (!Streamer.getTargetStreamer())
     return make_error<Failure>("cannot create target asm streamer");
 

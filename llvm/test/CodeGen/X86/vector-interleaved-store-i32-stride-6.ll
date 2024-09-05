@@ -388,12 +388,11 @@ define void @store_i32_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm4 = ymm6[0,1],ymm4[2,3],ymm6[4,5,6,7]
 ; AVX-NEXT:    vunpckhpd {{.*#+}} ymm5 = ymm8[1],ymm9[1],ymm8[3],ymm9[3]
-; AVX-NEXT:    vshufps {{.*#+}} ymm5 = ymm5[0,2,3,1,4,6,7,5]
 ; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,3],ymm2[3,3],ymm0[7,7],ymm2[7,7]
-; AVX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
-; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm5[0,1],ymm0[2,3,4,5],ymm5[6,7]
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm5[0],ymm0[1],ymm5[2],ymm0[3,4],ymm5[5],ymm0[6],ymm5[7]
+; AVX-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,7,5]
 ; AVX-NEXT:    vmovaps %ymm0, 64(%rax)
 ; AVX-NEXT:    vmovaps %ymm4, 32(%rax)
 ; AVX-NEXT:    vmovaps %ymm10, (%rax)

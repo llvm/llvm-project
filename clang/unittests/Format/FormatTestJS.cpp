@@ -16,10 +16,10 @@
 namespace clang {
 namespace format {
 
-class FormatTestJS : public ::testing::Test {
+class FormatTestJS : public testing::Test {
 protected:
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+  static std::string format(StringRef Code, unsigned Offset, unsigned Length,
+                            const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -34,7 +34,7 @@ protected:
   }
 
   static std::string format(
-      llvm::StringRef Code,
+      StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
     return format(Code, 0, Code.size(), Style);
   }
@@ -46,7 +46,7 @@ protected:
   }
 
   static void verifyFormat(
-      llvm::StringRef Code,
+      StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
     EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
     std::string Result = format(test::messUp(Code), Style);
@@ -54,7 +54,7 @@ protected:
   }
 
   static void verifyFormat(
-      llvm::StringRef Expected, llvm::StringRef Code,
+      StringRef Expected, StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
     EXPECT_EQ(Expected.str(), format(Expected, Style))
         << "Expected code is not stable";
@@ -577,6 +577,14 @@ TEST_F(FormatTestJS, GoogScopes) {
                "var x = 0;\n"
                "// test\n"
                "});");
+}
+
+TEST_F(FormatTestJS, GoogAnonymousClass) {
+  verifyFormat("a = class extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
 }
 
 TEST_F(FormatTestJS, IIFEs) {

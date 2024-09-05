@@ -26,8 +26,7 @@ namespace parallel {
 class DWARFLinkerImpl : public DWARFLinker {
 public:
   DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
-                  MessageHandlerTy WarningHandler,
-                  TranslatorFuncTy StringsTranslator);
+                  MessageHandlerTy WarningHandler);
 
   /// Add object file to be linked. Pre-load compile unit die. Call
   /// \p OnCUDieLoaded for each compile unit die. If specified \p File

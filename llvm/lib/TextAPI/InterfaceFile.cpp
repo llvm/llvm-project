@@ -54,7 +54,7 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
   ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
 }
 
-void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
+void InterfaceFile::addRPath(StringRef RPath, const Target &InputTarget) {
   if (RPath.empty())
     return;
   using RPathEntryT = const std::pair<Target, std::string>;
@@ -87,6 +87,9 @@ void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
                                   const std::shared_ptr<InterfaceFile> &RHS) {
                                  return LHS->InstallName < RHS->InstallName;
                                });
+  assert((Pos == Documents.end() ||
+          (*Pos)->InstallName != Document->InstallName) &&
+         "Unexpected duplicate document added");
   Document->Parent = this;
   Documents.insert(Pos, Document);
 }
@@ -198,9 +201,9 @@ InterfaceFile::merge(const InterfaceFile *O) const {
       IF->addReexportedLibrary(Lib.getInstallName(), Target);
 
   for (const auto &[Target, Path] : rpaths())
-    IF->addRPath(Target, Path);
+    IF->addRPath(Path, Target);
   for (const auto &[Target, Path] : O->rpaths())
-    IF->addRPath(Target, Path);
+    IF->addRPath(Path, Target);
 
   for (const auto *Sym : symbols()) {
     IF->addSymbol(Sym->getKind(), Sym->getName(), Sym->targets(),
@@ -319,7 +322,7 @@ InterfaceFile::extract(Architecture Arch) const {
 
   for (const auto &It : rpaths())
     if (It.first.Arch == Arch)
-      IF->addRPath(It.first, It.second);
+      IF->addRPath(It.second, It.first);
 
   for (const auto &Lib : allowableClients())
     for (const auto &Target : Lib.targets())

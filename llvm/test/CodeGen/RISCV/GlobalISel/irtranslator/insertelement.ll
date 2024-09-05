@@ -18,8 +18,8 @@ define <vscale x 1 x i1> @insertelement_nxv1i1_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 1 x i1> poison, i1 0, i32 0
@@ -40,8 +40,8 @@ define <vscale x 1 x i1> @insertelement_nxv1i1_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
@@ -70,7 +70,8 @@ define <vscale x 1 x i1> @insertelement_nxv1i1_2(i1 %x, i32 %idx) {
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; RV64-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[ZEXT]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 1 x i1> poison, i1 %x, i32 %idx
@@ -91,8 +92,8 @@ define <vscale x 2 x i1> @insertelement_nxv2i1_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 2 x i1> poison, i1 0, i32 1
@@ -113,8 +114,8 @@ define <vscale x 2 x i1> @insertelement_nxv2i1_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -143,7 +144,8 @@ define <vscale x 2 x i1> @insertelement_nxv2i1_2(i1 %x, i32 %idx) {
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; RV64-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[ZEXT]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 2 x i1> poison, i1 %x, i32 %idx
@@ -164,8 +166,8 @@ define <vscale x 4 x i1> @insertelement_nxv4i1_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 4 x i1> poison, i1 0, i32 2
@@ -186,8 +188,8 @@ define <vscale x 4 x i1> @insertelement_nxv4i1_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 4 x i1> poison, i1 -1, i32 0
@@ -214,8 +216,8 @@ define <vscale x 4 x i1> @insertelement_nxv4i1_2(i1 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[C]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 4 x i1> poison, i1 %x, i32 0
@@ -236,8 +238,8 @@ define <vscale x 8 x i1> @insertelement_nxv8i1_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 8 x i1> poison, i1 0, i32 0
@@ -258,8 +260,8 @@ define <vscale x 8 x i1> @insertelement_nxv8i1_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 8 x i1> poison, i1 -1, i32 0
@@ -288,7 +290,8 @@ define <vscale x 8 x i1> @insertelement_nxv8i1_2(i1 %x, i32 %idx) {
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; RV64-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[ZEXT]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 8 x i1> poison, i1 %x, i32 %idx
@@ -309,8 +312,8 @@ define <vscale x 16 x i1> @insertelement_nxv16i1_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 16 x i1> poison, i1 0, i32 15
@@ -331,8 +334,8 @@ define <vscale x 16 x i1> @insertelement_nxv16i1_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s1), [[C1]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 16 x i1> poison, i1 -1, i32 0
@@ -361,7 +364,8 @@ define <vscale x 16 x i1> @insertelement_nxv16i1_2(i1 %x, i32 %idx) {
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; RV64-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[ZEXT]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 16 x i1> poison, i1 %x, i32 %idx
@@ -388,8 +392,8 @@ define <vscale x 4 x i1> @insertelement_nxv4i1_3(<vscale x 4 x i1> %v, i1 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s1>) = COPY $v0
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY1]](s64)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s1), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s1>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s1), [[C]](s64)
   ; RV64-NEXT:   $v0 = COPY [[IVEC]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
   %a = insertelement <vscale x 4 x i1> %v, i1 %x, i32 0
@@ -410,8 +414,8 @@ define <vscale x 1 x i8> @insertelement_nxv1i8_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i8> poison, i8 0, i32 0
@@ -432,8 +436,8 @@ define <vscale x 1 x i8> @insertelement_nxv1i8_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i8> poison, i8 -1, i32 0
@@ -460,8 +464,8 @@ define <vscale x 1 x i8> @insertelement_nxv1i8_2(i8 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i8> poison, i8 %x, i32 0
@@ -482,8 +486,8 @@ define <vscale x 2 x i8> @insertelement_nxv2i8_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i8> poison, i8 0, i32 0
@@ -504,8 +508,8 @@ define <vscale x 2 x i8> @insertelement_nxv2i8_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i8> poison, i8 -1, i32 0
@@ -532,8 +536,8 @@ define <vscale x 2 x i8> @insertelement_nxv2i8_2(i8 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i8> poison, i8 %x, i32 0
@@ -554,8 +558,8 @@ define <vscale x 4 x i8> @insertelement_nxv4i8_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i8> poison, i8 0, i32 0
@@ -576,8 +580,8 @@ define <vscale x 4 x i8> @insertelement_nxv4i8_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i8> poison, i8 -1, i32 0
@@ -604,8 +608,8 @@ define <vscale x 4 x i8> @insertelement_nxv4i8_2(i8 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i8> poison, i8 %x, i32 0
@@ -626,8 +630,8 @@ define <vscale x 8 x i8> @insertelement_nxv8i8_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 8 x i8> poison, i8 0, i32 0
@@ -648,8 +652,8 @@ define <vscale x 8 x i8> @insertelement_nxv8i8_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 8 x i8> poison, i8 -1, i32 0
@@ -676,8 +680,8 @@ define <vscale x 8 x i8> @insertelement_nxv8i8_2(i8 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 8 x i8> poison, i8 %x, i32 0
@@ -689,8 +693,8 @@ define <vscale x 16 x i8> @insertelement_nxv16i8_0() {
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV32-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
+  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; RV32-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
   ; RV32-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 16 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
@@ -720,8 +724,8 @@ define <vscale x 16 x i8> @insertelement_nxv16i8_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s8), [[C1]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 16 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 16 x i8> poison, i8 -1, i32 0
@@ -739,7 +743,8 @@ define <vscale x 16 x i8> @insertelement_nxv16i8_2(i8 %x, i64 %idx) {
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
   ; RV32-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-  ; RV32-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[MV]](s64)
+  ; RV32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[MV]](s64)
+  ; RV32-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s8), [[TRUNC1]](s32)
   ; RV32-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 16 x s8>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
@@ -778,8 +783,8 @@ define <vscale x 4 x i8> @insertelement_nxv4i8_3(<vscale x 4 x i8> %v, i8 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s64)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s8), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s8), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i8> %v, i8 %x, i32 0
@@ -800,8 +805,8 @@ define <vscale x 1 x i16> @insertelement_nxv1i16_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i16> poison, i16 0, i32 0
@@ -822,8 +827,8 @@ define <vscale x 1 x i16> @insertelement_nxv1i16_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i16> poison, i16 -1, i32 0
@@ -850,8 +855,8 @@ define <vscale x 1 x i16> @insertelement_nxv1i16_2(i16 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i16> poison, i16 %x, i32 0
@@ -863,8 +868,8 @@ define <vscale x 2 x i16> @insertelement_nxv2i16_0() {
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; RV32-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
+  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; RV32-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
   ; RV32-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
@@ -894,8 +899,8 @@ define <vscale x 2 x i16> @insertelement_nxv2i16_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i16> poison, i16 -1, i32 0
@@ -922,8 +927,8 @@ define <vscale x 2 x i16> @insertelement_nxv2i16_2(i16 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i16> poison, i16 %x, i32 0
@@ -944,8 +949,8 @@ define <vscale x 4 x i16> @insertelement_nxv4i16_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i16> poison, i16 0, i32 0
@@ -966,8 +971,8 @@ define <vscale x 4 x i16> @insertelement_nxv4i16_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i16> poison, i16 -1, i32 0
@@ -994,8 +999,8 @@ define <vscale x 4 x i16> @insertelement_nxv4i16_2(i16 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i16> poison, i16 %x, i32 0
@@ -1016,8 +1021,8 @@ define <vscale x 8 x i16> @insertelement_nxv8i16_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 8 x i16> poison, i16 0, i32 0
@@ -1038,8 +1043,8 @@ define <vscale x 8 x i16> @insertelement_nxv8i16_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 8 x i16> poison, i16 -1, i32 0
@@ -1066,8 +1071,8 @@ define <vscale x 8 x i16> @insertelement_nxv8i16_2(i16 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 8 x i16> poison, i16 %x, i32 0
@@ -1088,8 +1093,8 @@ define <vscale x 16 x i16> @insertelement_nxv16i16_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 16 x i16> poison, i16 0, i32 0
@@ -1110,8 +1115,8 @@ define <vscale x 16 x i16> @insertelement_nxv16i16_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s16), [[C1]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 16 x i16> poison, i16 -1, i32 0
@@ -1138,8 +1143,8 @@ define <vscale x 16 x i16> @insertelement_nxv16i16_2(i16 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s16), [[C]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 16 x i16> poison, i16 %x, i32 0
@@ -1166,8 +1171,8 @@ define <vscale x 4 x i16> @insertelement_nxv4i16(<vscale x 4 x i16> %v, i16 %x) 
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s64)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s16), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s16), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 4 x i16> %v, i16 %x, i32 0
@@ -1187,7 +1192,8 @@ define <vscale x 1 x i32> @insertelement_nxv1i32_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i32> poison, i32 0, i32 0
@@ -1208,8 +1214,8 @@ define <vscale x 1 x i32> @insertelement_nxv1i32_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i32> poison, i32 -1, i32 0
@@ -1235,8 +1241,8 @@ define <vscale x 1 x i32> @insertelement_nxv1i32_2(i32 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i32> poison, i32 %x, i32 0
@@ -1256,7 +1262,8 @@ define <vscale x 2 x i32> @insertelement_nxv2i32_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i32> poison, i32 0, i32 0
@@ -1277,8 +1284,8 @@ define <vscale x 2 x i32> @insertelement_nxv2i32_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i32> poison, i32 -1, i32 0
@@ -1304,8 +1311,8 @@ define <vscale x 2 x i32> @insertelement_nxv2i32_2(i32 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 2 x i32> poison, i32 %x, i32 0
@@ -1325,7 +1332,8 @@ define <vscale x 4 x i32> @insertelement_nxv4i32_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 4 x i32> poison, i32 0, i32 0
@@ -1346,8 +1354,8 @@ define <vscale x 4 x i32> @insertelement_nxv4i32_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 4 x i32> poison, i32 -1, i32 0
@@ -1373,8 +1381,8 @@ define <vscale x 4 x i32> @insertelement_nxv4i32_2(i32 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
@@ -1394,7 +1402,8 @@ define <vscale x 8 x i32> @insertelement_nxv8i32_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 8 x i32> poison, i32 0, i32 0
@@ -1415,8 +1424,8 @@ define <vscale x 8 x i32> @insertelement_nxv8i32_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 8 x i32> poison, i32 -1, i32 0
@@ -1442,8 +1451,8 @@ define <vscale x 8 x i32> @insertelement_nxv8i32_2(i32 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 8 x i32> poison, i32 %x, i32 0
@@ -1463,7 +1472,8 @@ define <vscale x 16 x i32> @insertelement_nxv16i32_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8m8 = COPY [[IVEC]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = insertelement <vscale x 16 x i32> poison, i32 0, i32 0
@@ -1484,8 +1494,8 @@ define <vscale x 16 x i32> @insertelement_nxv16i32_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s32), [[C1]](s64)
   ; RV64-NEXT:   $v8m8 = COPY [[IVEC]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = insertelement <vscale x 16 x i32> poison, i32 -1, i32 0
@@ -1511,8 +1521,8 @@ define <vscale x 16 x i32> @insertelement_nxv16i32_2(i32 %x) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s32), [[C]](s64)
   ; RV64-NEXT:   $v8m8 = COPY [[IVEC]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = insertelement <vscale x 16 x i32> poison, i32 %x, i32 0
@@ -1538,8 +1548,8 @@ define <vscale x 4 x i32> @insertelement_nxv4i32(<vscale x 4 x i32> %v, i32 %x) 
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v8m2
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s32), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[TRUNC]](s32), [[C]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 4 x i32> %v, i32 %x, i32 0
@@ -1560,8 +1570,7 @@ define <vscale x 1 x i64> @insertelement_nxv1i64_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i64> poison, i64 0, i32 0
@@ -1582,8 +1591,8 @@ define <vscale x 1 x i64> @insertelement_nxv1i64_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i64> poison, i64 -1, i32 0
@@ -1610,8 +1619,8 @@ define <vscale x 1 x i64> @insertelement_nxv1i64_2(i64 %x) {
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 1 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8 = COPY [[IVEC]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
   %a = insertelement <vscale x 1 x i64> poison, i64 %x, i32 0
@@ -1632,8 +1641,7 @@ define <vscale x 2 x i64> @insertelement_nxv2i64_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 2 x i64> poison, i64 0, i32 0
@@ -1654,8 +1662,8 @@ define <vscale x 2 x i64> @insertelement_nxv2i64_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 2 x i64> poison, i64 -1, i32 0
@@ -1682,8 +1690,8 @@ define <vscale x 2 x i64> @insertelement_nxv2i64_2(i64 %x) {
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m2 = COPY [[IVEC]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %a = insertelement <vscale x 2 x i64> poison, i64 %x, i32 0
@@ -1704,8 +1712,7 @@ define <vscale x 4 x i64> @insertelement_nxv4i64_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 4 x i64> poison, i64 0, i32 0
@@ -1726,8 +1733,8 @@ define <vscale x 4 x i64> @insertelement_nxv4i64_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 4 x i64> poison, i64 -1, i32 0
@@ -1754,8 +1761,8 @@ define <vscale x 4 x i64> @insertelement_nxv4i64_2(i64 %x) {
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 4 x i64> poison, i64 %x, i32 0
@@ -1776,8 +1783,7 @@ define <vscale x 8 x i64> @insertelement_nxv8i64_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m8 = COPY [[IVEC]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = insertelement <vscale x 8 x i64> poison, i64 0, i32 0
@@ -1798,8 +1804,8 @@ define <vscale x 8 x i64> @insertelement_nxv8i64_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s64)
   ; RV64-NEXT:   $v8m8 = COPY [[IVEC]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = insertelement <vscale x 8 x i64> poison, i64 -1, i32 0
@@ -1826,8 +1832,8 @@ define <vscale x 8 x i64> @insertelement_nxv8i64_2(i64 %x) {
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 8 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m8 = COPY [[IVEC]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
   %a = insertelement <vscale x 8 x i64> poison, i64 %x, i32 0
@@ -1850,8 +1856,7 @@ define <vscale x 16 x i64> @insertelement_nxv16i64_0() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C]](s64)
   ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[IVEC]](<vscale x 16 x s64>)
   ; RV64-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV64-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
@@ -1876,8 +1881,8 @@ define <vscale x 16 x i64> @insertelement_nxv16i64_1() {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s32)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[C]](s64), [[C1]](s64)
   ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[IVEC]](<vscale x 16 x s64>)
   ; RV64-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV64-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
@@ -1908,8 +1913,8 @@ define <vscale x 16 x i64> @insertelement_nxv16i64_2(i64 %x) {
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 16 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s64)
   ; RV64-NEXT:   [[UV:%[0-9]+]]:_(<vscale x 8 x s64>), [[UV1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_UNMERGE_VALUES [[IVEC]](<vscale x 16 x s64>)
   ; RV64-NEXT:   $v8m8 = COPY [[UV]](<vscale x 8 x s64>)
   ; RV64-NEXT:   $v16m8 = COPY [[UV1]](<vscale x 8 x s64>)
@@ -1938,8 +1943,8 @@ define <vscale x 4 x i64> @insertelement_nxv4i64(<vscale x 4 x i64> %v, i64 %x) 
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v8m4
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s64), [[C]](s32)
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; RV64-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x s64>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s64), [[C]](s64)
   ; RV64-NEXT:   $v8m4 = COPY [[IVEC]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
   %a = insertelement <vscale x 4 x i64> %v, i64 %x, i32 0

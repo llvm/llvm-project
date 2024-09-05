@@ -81,8 +81,8 @@ private:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   llvm::CallingConv::ID getLLVMDefaultCC() const;
   llvm::CallingConv::ID getABIDefaultCC() const;
@@ -141,7 +141,7 @@ public:
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
-        TargetInfo::BranchProtectionInfo BPI;
+        TargetInfo::BranchProtectionInfo BPI{};
         StringRef DiagMsg;
         StringRef Arch =
             Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;
@@ -151,17 +151,8 @@ public:
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
-        } else {
-          static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-          assert(static_cast<unsigned>(BPI.SignReturnAddr) <= 2 &&
-                 "Unexpected SignReturnAddressScopeKind");
-          Fn->addFnAttr(
-              "sign-return-address",
-              SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
-
-          Fn->addFnAttr("branch-target-enforcement",
-                        BPI.BranchTargetEnforcement ? "true" : "false");
-        }
+        } else
+          setBranchProtectionFnAttributes(BPI, (*Fn));
       } else if (CGM.getLangOpts().BranchTargetEnforcement ||
                  CGM.getLangOpts().hasSignReturnAddress()) {
         // If the Branch Protection attribute is missing, validate the target
@@ -173,6 +164,10 @@ public:
               diag::warn_target_unsupported_branch_protection_attribute)
               << Attr.CPU;
       }
+    } else if (CGM.getTarget().isBranchProtectionSupportedArch(
+                   CGM.getTarget().getTargetOpts().CPU)) {
+      TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
+      setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
     const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
@@ -677,7 +672,7 @@ bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
 /// Return true if a type contains any 16-bit floating point vectors
 bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t NElements = AT->getSize().getZExtValue();
+    uint64_t NElements = AT->getZExtSize();
     if (NElements == 0)
       return false;
     return containsAnyFP16Vectors(AT->getElementType());
@@ -759,16 +754,13 @@ bool ARMABIInfo::isEffectivelyAAPCS_VFP(unsigned callConvention,
            (acceptHalf && (getABIKind() == ARMABIKind::AAPCS16_VFP));
 }
 
-Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(4);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
-    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    return Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Slot.asRValue();
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);
   CharUnits TyAlignForABI = getContext().getTypeUnadjustedAlignInChars(Ty);
@@ -804,8 +796,8 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   TypeInfoChars TyInfo(TySize, TyAlignForABI, AlignRequirementKind::None);
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo,
-                          SlotSize, /*AllowHigherAlign*/ true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo, SlotSize,
+                          /*AllowHigherAlign*/ true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

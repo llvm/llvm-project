@@ -38,7 +38,6 @@
 
 using namespace mlir;
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -126,5 +125,3 @@ void mlir::gpu::registerGPUToNVVMPipeline() {
       "code.",
       buildLowerToNVVMPassPipeline);
 }
-
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED

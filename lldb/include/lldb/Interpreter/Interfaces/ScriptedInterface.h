@@ -9,8 +9,9 @@
 #ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 
+#include "ScriptedInterfaceUsages.h"
+
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -35,8 +36,8 @@ public:
   template <typename Ret>
   static Ret ErrorWithMessage(llvm::StringRef caller_name,
                               llvm::StringRef error_msg, Status &error,
-                              LLDBLog log_caterogy = LLDBLog::Process) {
-    LLDB_LOGF(GetLog(log_caterogy), "%s ERROR = %s", caller_name.data(),
+                              LLDBLog log_category = LLDBLog::Process) {
+    LLDB_LOGF(GetLog(log_category), "%s ERROR = %s", caller_name.data(),
               error_msg.data());
     std::string full_error_message =
         llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
@@ -47,12 +48,13 @@ public:
           llvm::Twine(llvm::Twine(" (") + llvm::Twine(detailed_error) +
                       llvm::Twine(")"))
               .str();
-    error.SetErrorString(full_error_message);
+    error = Status(std::move(full_error_message));
     return {};
   }
 
   template <typename T = StructuredData::ObjectSP>
-  bool CheckStructuredDataObject(llvm::StringRef caller, T obj, Status &error) {
+  static bool CheckStructuredDataObject(llvm::StringRef caller, T obj,
+                                        Status &error) {
     if (!obj)
       return ErrorWithMessage<bool>(caller, "Null Structured Data object",
                                     error);
@@ -66,6 +68,11 @@ public:
       return ErrorWithMessage<bool>(caller, error.AsCString(), error);
 
     return true;
+  }
+
+  static bool CreateInstance(lldb::ScriptLanguage language,
+                             ScriptedInterfaceUsages usages) {
+    return false;
   }
 
 protected:

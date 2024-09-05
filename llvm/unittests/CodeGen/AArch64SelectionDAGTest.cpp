@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SourceMgr.h"
@@ -58,14 +61,15 @@ protected:
 
     MachineModuleInfo MMI(TM.get());
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F), 0,
-                                      MMI);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
+                                           MMI.getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
+              nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -726,6 +730,120 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   EXPECT_EQ(DAG->getHeapAllocSite(New.getNode()), MD);
   EXPECT_TRUE(DAG->getNoMergeSiteInfo(New.getNode()));
   EXPECT_EQ(DAG->getPCSections(New.getNode()), MD);
+}
+
+TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_known01) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto Ptr = DAG->getConstant(0, Loc, Int64VT);
+  auto PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG->getMachineFunction(), 0);
+  AAMDNodes AA;
+  MDBuilder MDHelper(*DAG->getContext());
+  MDNode *Range = MDHelper.createRange(APInt(8, 0), APInt(8, 2));
+  MachineMemOperand *MMO = DAG->getMachineFunction().getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8), AA, Range);
+
+  auto ALoad = DAG->getExtLoad(ISD::EXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  KnownBits Known = DAG->computeKnownBits(ALoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xfe));
+  EXPECT_EQ(Known.One, APInt(32, 0));
+
+  auto ZLoad = DAG->getExtLoad(ISD::ZEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(ZLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xfffffffe));
+  EXPECT_EQ(Known.One, APInt(32, 0));
+
+  auto SLoad = DAG->getExtLoad(ISD::SEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(SLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xfffffffe));
+  EXPECT_EQ(Known.One, APInt(32, 0));
+}
+
+TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_knownnegative) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto Ptr = DAG->getConstant(0, Loc, Int64VT);
+  auto PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG->getMachineFunction(), 0);
+  AAMDNodes AA;
+  MDBuilder MDHelper(*DAG->getContext());
+  MDNode *Range = MDHelper.createRange(APInt(8, 0xf0), APInt(8, 0xff));
+  MachineMemOperand *MMO = DAG->getMachineFunction().getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8), AA, Range);
+
+  auto ALoad = DAG->getExtLoad(ISD::EXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  KnownBits Known = DAG->computeKnownBits(ALoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0));
+  EXPECT_EQ(Known.One, APInt(32, 0xf0));
+
+  auto ZLoad = DAG->getExtLoad(ISD::ZEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(ZLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xffffff00));
+  EXPECT_EQ(Known.One, APInt(32, 0x000000f0));
+
+  auto SLoad = DAG->getExtLoad(ISD::SEXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
+                               Ptr, Int8VT, MMO);
+  Known = DAG->computeKnownBits(SLoad);
+  EXPECT_EQ(Known.Zero, APInt(32, 0));
+  EXPECT_EQ(Known.One, APInt(32, 0xfffffff0));
+}
+
+TEST_F(AArch64SelectionDAGTest,
+       computeKnownBits_AVGFLOORU_AVGFLOORS_AVGCEILU_AVGCEILS) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto Int8Vec8VT = EVT::getVectorVT(Context, Int8VT, 8);
+  auto Int16Vec8VT = EVT::getVectorVT(Context, Int16VT, 8);
+
+  SDValue UnknownOp0 = DAG->getRegister(0, Int8Vec8VT);
+  SDValue UnknownOp1 = DAG->getRegister(1, Int8Vec8VT);
+
+  SDValue ZextOp0 =
+      DAG->getNode(ISD::ZERO_EXTEND, Loc, Int16Vec8VT, UnknownOp0);
+  SDValue ZextOp1 =
+      DAG->getNode(ISD::ZERO_EXTEND, Loc, Int16Vec8VT, UnknownOp1);
+  // ZextOp0 = 00000000????????
+  // ZextOp1 = 00000000????????
+  // => (for all AVG* instructions)
+  // Known.Zero = 1111111100000000 (0xFF00)
+  // Known.One  = 0000000000000000 (0x0000)
+  auto Zeroes = APInt(16, 0xFF00);
+  auto Ones = APInt(16, 0x0000);
+
+  SDValue AVGFLOORU =
+      DAG->getNode(ISD::AVGFLOORU, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGFLOORU = DAG->computeKnownBits(AVGFLOORU);
+  EXPECT_EQ(KnownAVGFLOORU.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGFLOORU.One, Ones);
+
+  SDValue AVGFLOORS =
+      DAG->getNode(ISD::AVGFLOORS, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGFLOORS = DAG->computeKnownBits(AVGFLOORS);
+  EXPECT_EQ(KnownAVGFLOORS.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGFLOORS.One, Ones);
+
+  SDValue AVGCEILU =
+      DAG->getNode(ISD::AVGCEILU, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGCEILU = DAG->computeKnownBits(AVGCEILU);
+  EXPECT_EQ(KnownAVGCEILU.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGCEILU.One, Ones);
+
+  SDValue AVGCEILS =
+      DAG->getNode(ISD::AVGCEILS, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGCEILS = DAG->computeKnownBits(AVGCEILS);
+  EXPECT_EQ(KnownAVGCEILS.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGCEILS.One, Ones);
 }
 
 } // end namespace llvm

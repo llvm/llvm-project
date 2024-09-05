@@ -88,7 +88,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_undefined_extent(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}) {
-! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) {uniq_name = "_QMopenacc_boundsFacc_undefined_extentEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {uniq_name = "_QMopenacc_boundsFacc_undefined_extentEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK: %[[UB:.*]] = arith.subi %[[DIMS0]]#1, %c1{{.*}} : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
@@ -105,7 +105,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_multi_strides(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QMopenacc_boundsFacc_multi_stridesEa"} : (!fir.box<!fir.array<?x?x?xf32>>) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
+! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMopenacc_boundsFacc_multi_stridesEa"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
 ! CHECK: %[[BOX_DIMS0:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c0{{.*}} : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 ! CHECK: %[[BOUNDS0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS0]]#1 : index) stride(%[[BOX_DIMS0]]#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[STRIDE1:.*]] = arith.muli %[[BOX_DIMS0]]#2, %[[BOX_DIMS0]]#1 : index
@@ -126,16 +126,10 @@ contains
   
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_data(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a", fir.optional}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<optional, pointer>, uniq_name = "_QMopenacc_boundsFacc_optional_dataEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional, pointer>, uniq_name = "_QMopenacc_boundsFacc_optional_dataEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0_DECL]]#1 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> i1
-! CHECK: %[[BOX:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>) {
-! CHECK:   %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-! CHECK:   fir.result %[[LOAD]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK: } else {
-! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:   fir.result %[[ABSENT]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK: }
 ! CHECK: %[[RES:.*]]:5 = fir.if %[[IS_PRESENT]] -> (index, index, index, index, index) {
+! CHECK:   %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:   fir.result %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : index, index, index, index, index
 ! CHECK: } else {
 ! CHECK:   %[[C0:.*]] = arith.constant 0 : index
@@ -144,7 +138,8 @@ contains
 ! CHECK: }
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[RES]]#0 : index) upperbound(%[[RES]]#1 : index) extent(%[[RES]]#2 : index) stride(%[[RES]]#3 : index) startIdx(%[[RES]]#4 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.ptr<!fir.array<?xf32>>) {
-! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>> 
+! CHECK:   %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:   fir.result %[[ADDR]] : !fir.ptr<!fir.array<?xf32>>
 ! CHECK: } else {
 ! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.ptr<!fir.array<?xf32>>
@@ -162,8 +157,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_data2(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a", fir.optional}, %[[N:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMopenacc_boundsFacc_optional_data2Ea"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
-! CHECK: %[[NO_CREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%10) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMopenacc_boundsFacc_optional_data2Ea"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK: %[[NO_CREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%{{[0-9]+}}) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
 ! CHECK: acc.data dataOperands(%[[NO_CREATE]] : !fir.ref<!fir.array<?xf32>>) {
 
   subroutine acc_optional_data3(a, n)
@@ -175,7 +170,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_data3(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a", fir.optional}, %[[N:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMopenacc_boundsFacc_optional_data3Ea"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMopenacc_boundsFacc_optional_data3Ea"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK: %[[PRES:.*]] = fir.is_present %[[DECL_A]]#1 : (!fir.ref<!fir.array<?xf32>>) -> i1
 ! CHECK: %[[STRIDE:.*]] = fir.if %[[PRES]] -> (index) {
 ! CHECK:   %[[DIMS:.*]]:3 = fir.box_dims %[[DECL_A]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
@@ -184,7 +179,7 @@ contains
 ! CHECK:   fir.result %c0{{.*}} : index
 ! CHECK: }
 ! CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%[[STRIDE]] : index) startIdx(%c1 : index) {strideInBytes = true}
-! CHECK: %[[NOCREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%14) -> !fir.ref<!fir.array<?xf32>> {name = "a(1:n)"}
+! CHECK: %[[NOCREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(1:n)"}
 ! CHECK: acc.data dataOperands(%[[NOCREATE]] : !fir.ref<!fir.array<?xf32>>) {
 
 end module

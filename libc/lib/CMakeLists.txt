@@ -40,22 +40,18 @@ foreach(archive IN ZIP_LISTS
   # Add the offloading version of the library for offloading languages. These
   # are installed in the standard search path separate from the other libraries.
   if(LIBC_TARGET_OS_IS_GPU)
-    set(libc_gpu_archive_target ${archive_1}gpu)
-    set(libc_gpu_archive_name ${archive_0}gpu-${LIBC_TARGET_ARCHITECTURE})
-
-    add_gpu_entrypoint_library(
-      ${libc_gpu_archive_target}
+    add_bitcode_entrypoint_library(
+      ${archive_1}bitcode
+      ${archive_1}
       DEPENDS
         ${${archive_2}}
     )
     set_target_properties(
-      ${libc_gpu_archive_target}
+      ${archive_1}bitcode
       PROPERTIES
-        ARCHIVE_OUTPUT_NAME ${libc_gpu_archive_name}
+        OUTPUT_NAME ${archive_1}.bc
     )
-    set_target_properties(${libc_gpu_archive_target} PROPERTIES 
-                          ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR})
-    list(APPEND added_gpu_archive_targets ${libc_gpu_archive_target})
+    list(APPEND added_bitcode_targets ${archive_1}bitcode)
   endif()
 endforeach()
 
@@ -65,13 +61,13 @@ install(
   COMPONENT libc
 )
 
-if(LIBC_TARGET_OS_IS_GPU)
-  install(
-    TARGETS ${added_gpu_archive_targets}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    COMPONENT libc
+foreach(file ${added_bitcode_targets})
+  install(FILES $<TARGET_FILE:${file}>
+          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+          RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+          COMPONENT libc
   )
-endif()
+endforeach()
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
   # For now we will disable libc-startup installation for baremetal. The
@@ -86,6 +82,7 @@ endif()
 
 add_custom_target(install-libc
                   DEPENDS ${added_archive_targets}
+                          ${added_bitcode_targets}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"
@@ -93,6 +90,7 @@ add_custom_target(install-libc
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
                   DEPENDS ${added_archive_targets}
+                          ${added_bitcode_targets}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"

@@ -1061,7 +1061,7 @@ void initializeNetwork(const ProfiParams &Params, MinCostMaxFlow &Network,
   assert(NumJumps > 0 && "Too few jumps in a function");
 
   // Introducing dummy source/sink pairs to allow flow circulation.
-  // The nodes corresponding to blocks of the function have indicies in
+  // The nodes corresponding to blocks of the function have indices in
   // the range [0 .. 2 * NumBlocks); the dummy sources/sinks are indexed by the
   // next four values.
   uint64_t S = 2 * NumBlocks;

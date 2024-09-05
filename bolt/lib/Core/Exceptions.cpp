@@ -207,7 +207,7 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
                "BOLT-ERROR: cannot find landing pad fragment");
         BC.addInterproceduralReference(this, Fragment->getAddress());
         BC.processInterproceduralReferences();
-        assert(isParentOrChildOf(*Fragment) &&
+        assert(BC.areRelatedFragments(this, Fragment) &&
                "BOLT-ERROR: cannot have landing pads in different functions");
         setHasIndirectTargetToSplitFragment(true);
         BC.addFragmentsToSkip(this);
@@ -408,12 +408,11 @@ void BinaryFunction::updateEHRanges() {
 
         // Same symbol is used for the beginning and the end of the range.
         MCSymbol *EHSymbol;
-        if (MCSymbol *InstrLabel = BC.MIB->getLabel(Instr)) {
+        if (MCSymbol *InstrLabel = BC.MIB->getInstLabel(Instr)) {
           EHSymbol = InstrLabel;
         } else {
           std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
-          EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
-          BC.MIB->setLabel(Instr, EHSymbol);
+          EHSymbol = BC.MIB->getOrCreateInstLabel(Instr, "EH", BC.Ctx.get());
         }
 
         // At this point we could be in one of the following states:

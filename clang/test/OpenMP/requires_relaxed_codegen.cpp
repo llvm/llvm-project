@@ -4,7 +4,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -x c++ -emit-llvm -triple x86_64-apple-darwin10 -o -| FileCheck %s --check-prefix SIMD-ONLY0
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s -triple x86_64-apple-darwin10
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -emit-llvm -x c++ -emit-llvm -triple x86_64-apple-darwin10 -o -| FileCheck %s --check-prefix SIMD-ONLY0
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -x c++ -emit-llvm -triple x86_64-apple-darwin10 -o -| FileCheck %s --check-prefix SIMD-ONLY0
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 

@@ -285,6 +285,30 @@ Register InstrEmitter::getVR(SDValue Op,
   return I->second;
 }
 
+static bool isConvergenceCtrlMachineOp(SDValue Op) {
+  if (Op->isMachineOpcode()) {
+    switch (Op->getMachineOpcode()) {
+    case TargetOpcode::CONVERGENCECTRL_ANCHOR:
+    case TargetOpcode::CONVERGENCECTRL_ENTRY:
+    case TargetOpcode::CONVERGENCECTRL_LOOP:
+    case TargetOpcode::CONVERGENCECTRL_GLUE:
+      return true;
+    }
+    return false;
+  }
+
+  // We can reach here when CopyFromReg is encountered. But rather than making a
+  // special case for that, we just make sure we don't reach here in some
+  // surprising way.
+  switch (Op->getOpcode()) {
+  case ISD::CONVERGENCECTRL_ANCHOR:
+  case ISD::CONVERGENCECTRL_ENTRY:
+  case ISD::CONVERGENCECTRL_LOOP:
+  case ISD::CONVERGENCECTRL_GLUE:
+    llvm_unreachable("Convergence control should have been selected by now.");
+  }
+  return false;
+}
 
 /// AddRegisterOperand - Add the specified register as an operand to the
 /// specified machine instr. Insert register copies if the register is
@@ -346,9 +370,12 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
   // multiple uses.
   // Tied operands are never killed, so we need to check that. And that
   // means we need to determine the index of the operand.
-  bool isKill = Op.hasOneUse() &&
-                Op.getNode()->getOpcode() != ISD::CopyFromReg &&
-                !IsDebug &&
+  // Don't kill convergence control tokens. Initially they are only used in glue
+  // nodes, and the InstrEmitter later adds implicit uses on the users of the
+  // glue node. This can sometimes make it seem like there is only one use,
+  // which is the glue node itself.
+  bool isKill = Op.hasOneUse() && !isConvergenceCtrlMachineOp(Op) &&
+                Op.getNode()->getOpcode() != ISD::CopyFromReg && !IsDebug &&
                 !(IsClone || IsCloned);
   if (isKill) {
     unsigned Idx = MIB->getNumOperands();
@@ -1038,14 +1065,17 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Create the new machine instruction.
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II);
 
+  // Transfer IR flags from the SDNode to the MachineInstr
+  MachineInstr *MI = MIB.getInstr();
+  const SDNodeFlags Flags = Node->getFlags();
+  if (Flags.hasUnpredictable())
+    MI->setFlag(MachineInstr::MIFlag::Unpredictable);
+
   // Add result register values for things that are defined by this
   // instruction.
   if (NumResults) {
     CreateVirtualRegisters(Node, MIB, II, IsClone, IsCloned, VRBaseMap);
 
-    // Transfer any IR flags from the SDNode to the MachineInstr
-    MachineInstr *MI = MIB.getInstr();
-    const SDNodeFlags Flags = Node->getFlags();
     if (Flags.hasNoSignedZeros())
       MI->setFlag(MachineInstr::MIFlag::FmNsz);
 
@@ -1078,9 +1108,6 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasNoFPExcept())
       MI->setFlag(MachineInstr::MIFlag::NoFPExcept);
-
-    if (Flags.hasUnpredictable())
-      MI->setFlag(MachineInstr::MIFlag::Unpredictable);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the
@@ -1155,8 +1182,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       append_range(UsedRegs, MCID.implicit_uses());
       // In addition to declared implicit uses, we must also check for
       // direct RegisterSDNode operands.
-      for (unsigned i = 0, e = F->getNumOperands(); i != e; ++i)
-        if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(F->getOperand(i))) {
+      for (const SDValue &Op : F->op_values())
+        if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(Op)) {
           Register Reg = R->getReg();
           if (Reg.isPhysical())
             UsedRegs.push_back(Reg);
@@ -1188,6 +1215,17 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       if (MI->getOperand(Use).isReg())
         MI->tieOperands(Def++, Use);
       Use = StackMaps::getNextMetaArgIdx(MI, Use);
+    }
+  }
+
+  if (SDNode *GluedNode = Node->getGluedNode()) {
+    // FIXME: Possibly iterate over multiple glue nodes?
+    if (GluedNode->getOpcode() ==
+        ~(unsigned)TargetOpcode::CONVERGENCECTRL_GLUE) {
+      Register VReg = getVR(GluedNode->getOperand(0), VRBaseMap);
+      MachineOperand MO = MachineOperand::CreateReg(VReg, /*isDef=*/false,
+                                                    /*isImp=*/true);
+      MIB->addOperand(MO);
     }
   }
 
@@ -1374,6 +1412,13 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       }
     }
 
+    // Add rounding control registers as implicit def for inline asm.
+    if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
+      ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
+      for (MCPhysReg Reg : RCRegs)
+        MIB.addReg(Reg, RegState::ImplicitDefine);
+    }
+
     // GCC inline assembly allows input operands to also be early-clobber
     // output operands (so long as the operand is written only after it's
     // used), but this does not match the semantics of our early-clobber flag.
@@ -1382,7 +1427,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     for (unsigned Reg : ECRegs) {
       if (MIB->readsRegister(Reg, TRI)) {
         MachineOperand *MO =
-            MIB->findRegisterDefOperand(Reg, false, false, TRI);
+            MIB->findRegisterDefOperand(Reg, TRI, false, false);
         assert(MO && "No def operand for clobbered register?");
         MO->setIsEarlyClobber(false);
       }

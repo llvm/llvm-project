@@ -44,7 +44,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // sensitive in the absence of real_path, since this is the YAMLVFSWriter
   // default.
   UpperDest = Path.upper();
-  if (!sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!sys::fs::real_path(UpperDest, RealDest) && Path == RealDest)
     return false;
   return true;
 }
@@ -281,7 +281,7 @@ public:
   }
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     auto EC = FS->getRealPath(Path, Output);
     if (!EC) {
       Collector->addFile(Path);

@@ -395,6 +395,21 @@ TEST(PointerIterator, Range) {
     EXPECT_EQ(A + I++, P);
 }
 
+namespace rbegin_detail {
+struct WithFreeRBegin {
+  int data[3] = {42, 43, 44};
+};
+
+auto rbegin(const WithFreeRBegin &X) { return std::rbegin(X.data); }
+auto rend(const WithFreeRBegin &X) { return std::rend(X.data); }
+} // namespace rbegin_detail
+
+TEST(ReverseTest, ADL) {
+  // Check that we can find the rbegin/rend functions via ADL.
+  rbegin_detail::WithFreeRBegin Foo;
+  EXPECT_THAT(reverse(Foo), ElementsAre(44, 43, 42));
+}
+
 TEST(ZipIteratorTest, Basic) {
   using namespace std;
   const SmallVector<unsigned, 6> pi{3, 1, 4, 1, 5, 9};

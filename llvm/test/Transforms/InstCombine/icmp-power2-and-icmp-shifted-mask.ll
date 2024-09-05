@@ -448,7 +448,10 @@ define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_splat_poison_2
 ; Vector of 2 reduction with splat containing undef
 define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_splat_undef_2147483648_1610612736_2147483647(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_splat_undef_2147483648_1610612736_2147483647(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T1:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 -2147483648, i32 undef>
+; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[X]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i1> [[T1]], [[T3]]
 ; CHECK-NEXT:    ret <2 x i1> [[T4]]
 ;
   %t1 = icmp ult <2 x i32> %x, <i32 2147483648, i32 undef>
@@ -460,7 +463,10 @@ define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_splat_undef_2147483648
 
 define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_splat_undef_2147483648_1610612736_2147483647(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_splat_undef_2147483648_1610612736_2147483647(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T1:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 -2147483648, i32 undef>
+; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[X]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i1> [[T3]], [[T1]]
 ; CHECK-NEXT:    ret <2 x i1> [[T4]]
 ;
   %t1 = icmp ult <2 x i32> %x, <i32 2147483648, i32 undef>

@@ -38,11 +38,12 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_addr", &addrSection)
                 .Case(".debug_gnu_pubnames", &gnuPubnamesSection)
                 .Case(".debug_gnu_pubtypes", &gnuPubtypesSection)
+                .Case(".debug_line", &lineSection)
                 .Case(".debug_loclists", &loclistsSection)
+                .Case(".debug_names", &namesSection)
                 .Case(".debug_ranges", &rangesSection)
                 .Case(".debug_rnglists", &rnglistsSection)
                 .Case(".debug_str_offsets", &strOffsetsSection)
-                .Case(".debug_line", &lineSection)
                 .Default(nullptr)) {
       m->Data = toStringRef(sec->contentMaybeDecompress());
       m->sec = sec;
@@ -135,7 +136,8 @@ template <class ELFT>
 std::optional<RelocAddrEntry>
 LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s, uint64_t pos) const {
   auto &sec = static_cast<const LLDDWARFSection &>(s);
-  const RelsOrRelas<ELFT> rels = sec.sec->template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rels =
+      sec.sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
   if (rels.areRelocsRel())
     return findAux(*sec.sec, pos, rels.rels);
   return findAux(*sec.sec, pos, rels.relas);

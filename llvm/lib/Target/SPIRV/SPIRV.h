@@ -20,10 +20,13 @@ class InstructionSelector;
 class RegisterBankInfo;
 
 ModulePass *createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM);
+FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerPass();
-FunctionPass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
+FunctionPass *createSPIRVPostLegalizerPass();
+ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
+MachineFunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
 InstructionSelector *
 createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,
@@ -32,7 +35,9 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 void initializeSPIRVModuleAnalysisPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerPass(PassRegistry &);
+void initializeSPIRVPostLegalizerPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
+void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRV_H

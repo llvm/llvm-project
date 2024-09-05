@@ -409,7 +409,7 @@ private:
     // Framework headers are spelled as <FrameworkName/Foo.h>, not
     // "path/FrameworkName.framework/Headers/Foo.h".
     auto &HS = PP->getHeaderSearchInfo();
-    if (const auto *HFI = HS.getExistingFileInfo(*FE, /*WantExternal*/ false))
+    if (const auto *HFI = HS.getExistingFileInfo(*FE))
       if (!HFI->Framework.empty())
         if (auto Spelling =
                 getFrameworkHeaderIncludeSpelling(*FE, HFI->Framework, HS))

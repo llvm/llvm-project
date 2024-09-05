@@ -16,6 +16,7 @@
 // To get the test dialect definition.
 include "TestDialect.td"
 include "TestEnumDefs.td"
+include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -78,6 +79,15 @@ def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
 // The definition of a singleton attribute that has a trait.
 def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
+}
+
+// An attribute of a list of decimal formatted integers in similar format to shapes.
+def TestDecimalShapeAttr : Test_Attr<"TestDecimalShape"> {
+  let mnemonic = "decimal_shape";
+
+  let parameters = (ins ArrayRefParameter<"int64_t">:$shape);
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 // Test support for ElementsAttrInterface.
@@ -260,7 +270,6 @@ def TestOverrideBuilderAttr : Test_Attr<"TestOverrideBuilder"> {
   let assemblyFormat = "`<` $a `>`";
 
   let skipDefaultBuilders = 1;
-  let genVerifyDecl = 1;
   let builders = [AttrBuilder<(ins "int":$a), [{
     return ::mlir::IntegerAttr::get(::mlir::IndexType::get($_ctxt), a);
   }], "::mlir::Attribute">];
@@ -339,5 +348,33 @@ def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
     `<` custom<ConditionalAlias>($value) `>`
   }];
 }
+
+// Test AsmParser::parseFloat(const fltSemnatics&, APFloat&) API through the
+// custom parser and printer.
+def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
+  let mnemonic = "custom_float";
+  let parameters = (ins "mlir::StringAttr":$type_str, APFloatParameter<"">:$value);
+
+  let assemblyFormat = [{
+    `<` custom<CustomFloatAttr>($type_str, $value) `>`
+  }];
+}
+
+def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
+  let mnemonic = "nested_polynomial";
+  let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
+def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
+  let mnemonic = "nested_polynomial2";
+  let parameters = (ins OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">:$poly);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
 
 #endif // TEST_ATTRDEFS

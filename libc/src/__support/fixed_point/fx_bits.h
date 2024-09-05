@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXBITS_H
-#define LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXBITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
+#define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 
@@ -20,7 +21,8 @@
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE::fixed_point {
+namespace LIBC_NAMESPACE_DECL {
+namespace fixed_point {
 
 template <typename T> struct FXBits {
 private:
@@ -126,7 +128,7 @@ bit_not(T x) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
   // For some reason, bit_cast cannot deduce BitType from the input.
-  return cpp::bit_cast<T, BitType>(~x_bit);
+  return cpp::bit_cast<T, BitType>(static_cast<BitType>(~x_bit));
 }
 
 template <typename T> LIBC_INLINE constexpr T abs(T x) {
@@ -161,8 +163,9 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   return bit_and((x + round_bit), rounding_mask);
 }
 
-} // namespace LIBC_NAMESPACE::fixed_point
+} // namespace fixed_point
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FIXEDPOINT_FXBITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H

@@ -89,7 +89,7 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
                   mlir::PatternRewriter &rewriter) const override;
 };
@@ -249,7 +249,7 @@ static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
     auto isPositiveConstant = [](mlir::Value v) -> bool {
       if (auto conOp =
               mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
-        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
+        if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(conOp.getValue()))
           return iattr.getInt() > 0;
       return false;
     };
@@ -465,7 +465,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   return match;
 }
 
-mlir::LogicalResult ElementalAssignBufferization::matchAndRewrite(
+llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
     hlfir::ElementalOp elemental, mlir::PatternRewriter &rewriter) const {
   std::optional<MatchInfo> match = findMatch(elemental);
   if (!match)
@@ -519,12 +519,12 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
+llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   // Since RHS is a scalar and LHS is an array, LHS must be allocated
   // in a conforming Fortran program, and LHS cannot be reallocated
@@ -587,12 +587,12 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
+llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   if (assign.isAllocatableAssignment())
     return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
@@ -601,7 +601,7 @@ mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
   // TODO: ExprType check is here to avoid conflicts with
   // ElementalAssignBufferization pattern. We need to combine
   // these matchers into a single one that applies to AssignOp.
-  if (rhs.getType().isa<hlfir::ExprType>())
+  if (mlir::isa<hlfir::ExprType>(rhs.getType()))
     return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
 
   if (!rhs.isArray())
@@ -702,8 +702,53 @@ static mlir::Value generateReductionLoop(fir::FirOpBuilder &builder,
   return reduction;
 }
 
-/// Given a reduction operation with an elemental mask, attempt to generate a
-/// do-loop to perform the operation inline.
+auto makeMinMaxInitValGenerator(bool isMax) {
+  return [isMax](fir::FirOpBuilder builder, mlir::Location loc,
+                 mlir::Type elementType) -> mlir::Value {
+    if (auto ty = mlir::dyn_cast<mlir::FloatType>(elementType)) {
+      const llvm::fltSemantics &sem = ty.getFloatSemantics();
+      llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
+      return builder.createRealConstant(loc, elementType, limit);
+    }
+    unsigned bits = elementType.getIntOrFloatBitWidth();
+    int64_t limitInt =
+        isMax ? llvm::APInt::getSignedMinValue(bits).getSExtValue()
+              : llvm::APInt::getSignedMaxValue(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, elementType, limitInt);
+  };
+}
+
+mlir::Value generateMinMaxComparison(fir::FirOpBuilder builder,
+                                     mlir::Location loc, mlir::Value elem,
+                                     mlir::Value reduction, bool isMax) {
+  if (mlir::isa<mlir::FloatType>(reduction.getType())) {
+    // For FP reductions we want the first smallest value to be used, that
+    // is not NaN. A OGL/OLT condition will usually work for this unless all
+    // the values are Nan or Inf. This follows the same logic as
+    // NumericCompare for Minloc/Maxlox in extrema.cpp.
+    mlir::Value cmp = builder.create<mlir::arith::CmpFOp>(
+        loc,
+        isMax ? mlir::arith::CmpFPredicate::OGT
+              : mlir::arith::CmpFPredicate::OLT,
+        elem, reduction);
+    mlir::Value cmpNan = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
+    mlir::Value cmpNan2 = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
+    cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
+    return builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
+  } else if (mlir::isa<mlir::IntegerType>(reduction.getType())) {
+    return builder.create<mlir::arith::CmpIOp>(
+        loc,
+        isMax ? mlir::arith::CmpIPredicate::sgt
+              : mlir::arith::CmpIPredicate::slt,
+        elem, reduction);
+  }
+  llvm_unreachable("unsupported type");
+}
+
+/// Given a reduction operation with an elemental/designate source, attempt to
+/// generate a do-loop to perform the operation inline.
 ///   %e = hlfir.elemental %shape unordered
 ///   %r = hlfir.count %e
 /// =>
@@ -712,17 +757,66 @@ static mlir::Value generateReductionLoop(fir::FirOpBuilder &builder,
 ///     %c = <reduce count> %i
 ///     fir.result %c
 template <typename Op>
-class ReductionElementalConversion : public mlir::OpRewritePattern<Op> {
+class ReductionConversion : public mlir::OpRewritePattern<Op> {
 public:
   using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
-    hlfir::ElementalOp elemental =
-        op.getMask().template getDefiningOp<hlfir::ElementalOp>();
-    if (!elemental || op.getDim())
-      return rewriter.notifyMatchFailure(op, "Did not find valid elemental");
+    // Select source and validate its arguments.
+    mlir::Value source;
+    bool valid = false;
+    if constexpr (std::is_same_v<Op, hlfir::AnyOp> ||
+                  std::is_same_v<Op, hlfir::AllOp> ||
+                  std::is_same_v<Op, hlfir::CountOp>) {
+      source = op.getMask();
+      valid = !op.getDim();
+    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
+                         std::is_same_v<Op, hlfir::MinvalOp>) {
+      source = op.getArray();
+      valid = !op.getDim() && !op.getMask();
+    } else if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
+                         std::is_same_v<Op, hlfir::MinlocOp>) {
+      source = op.getArray();
+      valid = !op.getDim() && !op.getMask() && !op.getBack();
+    }
+    if (!valid)
+      return rewriter.notifyMatchFailure(
+          op, "Currently does not accept optional arguments");
+
+    hlfir::ElementalOp elemental;
+    hlfir::DesignateOp designate;
+    mlir::Value shape;
+    if ((elemental = source.template getDefiningOp<hlfir::ElementalOp>())) {
+      shape = elemental.getOperand(0);
+    } else if ((designate =
+                    source.template getDefiningOp<hlfir::DesignateOp>())) {
+      shape = designate.getShape();
+    } else {
+      return rewriter.notifyMatchFailure(op, "Did not find valid argument");
+    }
+
+    auto inlineSource =
+        [elemental, &designate](
+            fir::FirOpBuilder builder, mlir::Location loc,
+            const llvm::SmallVectorImpl<mlir::Value> &indices) -> mlir::Value {
+      if (elemental) {
+        // Inline the elemental and get the value from it.
+        auto yield = inlineElementalOp(loc, builder, elemental, indices);
+        auto tmp = yield.getElementValue();
+        yield->erase();
+        return tmp;
+      }
+      if (designate) {
+        // Create a designator over designator, then load the reference.
+        auto resEntity = hlfir::Entity{designate.getResult()};
+        auto tmp = builder.create<hlfir::DesignateOp>(
+            loc, getVariableElementType(resEntity), designate, indices);
+        return builder.create<fir::LoadOp>(loc, tmp);
+      }
+      llvm_unreachable("unsupported type");
+    };
 
     fir::KindMapping kindMap =
         fir::getKindMapping(op->template getParentOfType<mlir::ModuleOp>());
@@ -732,47 +826,38 @@ public:
     GenBodyFn genBodyFn;
     if constexpr (std::is_same_v<Op, hlfir::AnyOp>) {
       init = builder.createIntegerConstant(loc, builder.getI1Type(), 0);
-      genBodyFn = [elemental](fir::FirOpBuilder builder, mlir::Location loc,
-                              mlir::Value reduction,
-                              const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn =
+          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
+                         mlir::Value reduction,
+                         const llvm::SmallVectorImpl<mlir::Value> &indices)
           -> mlir::Value {
-        // Inline the elemental and get the condition from it.
-        auto yield = inlineElementalOp(loc, builder, elemental, indices);
-        mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), yield.getElementValue());
-        yield->erase();
-
         // Conditionally set the reduction variable.
+        mlir::Value cond = builder.create<fir::ConvertOp>(
+            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
         return builder.create<mlir::arith::OrIOp>(loc, reduction, cond);
       };
     } else if constexpr (std::is_same_v<Op, hlfir::AllOp>) {
       init = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
-      genBodyFn = [elemental](fir::FirOpBuilder builder, mlir::Location loc,
-                              mlir::Value reduction,
-                              const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn =
+          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
+                         mlir::Value reduction,
+                         const llvm::SmallVectorImpl<mlir::Value> &indices)
           -> mlir::Value {
-        // Inline the elemental and get the condition from it.
-        auto yield = inlineElementalOp(loc, builder, elemental, indices);
-        mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), yield.getElementValue());
-        yield->erase();
-
         // Conditionally set the reduction variable.
+        mlir::Value cond = builder.create<fir::ConvertOp>(
+            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
         return builder.create<mlir::arith::AndIOp>(loc, reduction, cond);
       };
     } else if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
       init = builder.createIntegerConstant(loc, op.getType(), 0);
-      genBodyFn = [elemental](fir::FirOpBuilder builder, mlir::Location loc,
-                              mlir::Value reduction,
-                              const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn =
+          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
+                         mlir::Value reduction,
+                         const llvm::SmallVectorImpl<mlir::Value> &indices)
           -> mlir::Value {
-        // Inline the elemental and get the condition from it.
-        auto yield = inlineElementalOp(loc, builder, elemental, indices);
-        mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), yield.getElementValue());
-        yield->erase();
-
         // Conditionally add one to the current value
+        mlir::Value cond = builder.create<fir::ConvertOp>(
+            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
         mlir::Value one =
             builder.createIntegerConstant(loc, reduction.getType(), 1);
         mlir::Value add1 =
@@ -780,29 +865,49 @@ public:
         return builder.create<mlir::arith::SelectOp>(loc, cond, add1,
                                                      reduction);
       };
+    } else if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
+                         std::is_same_v<Op, hlfir::MinlocOp>) {
+      // TODO: implement minloc/maxloc conversion.
+      return rewriter.notifyMatchFailure(
+          op, "Currently minloc/maxloc is not handled");
+    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
+                         std::is_same_v<Op, hlfir::MinvalOp>) {
+      bool isMax = std::is_same_v<Op, hlfir::MaxvalOp>;
+      init = makeMinMaxInitValGenerator(isMax)(builder, loc, op.getType());
+      genBodyFn = [inlineSource,
+                   isMax](fir::FirOpBuilder builder, mlir::Location loc,
+                          mlir::Value reduction,
+                          const llvm::SmallVectorImpl<mlir::Value> &indices)
+          -> mlir::Value {
+        mlir::Value val = inlineSource(builder, loc, indices);
+        mlir::Value cmp =
+            generateMinMaxComparison(builder, loc, val, reduction, isMax);
+        return builder.create<mlir::arith::SelectOp>(loc, cmp, val, reduction);
+      };
     } else {
-      return mlir::failure();
+      llvm_unreachable("unsupported type");
     }
 
-    mlir::Value res = generateReductionLoop(builder, loc, init,
-                                            elemental.getOperand(0), genBodyFn);
+    mlir::Value res =
+        generateReductionLoop(builder, loc, init, shape, genBodyFn);
     if (res.getType() != op.getType())
       res = builder.create<fir::ConvertOp>(loc, op.getType(), res);
 
-    // Check if the op was the only user of the elemental (apart from a
-    // destroy), and remove it if so.
-    mlir::Operation::user_range elemUsers = elemental->getUsers();
-    hlfir::DestroyOp elemDestroy;
-    if (std::distance(elemUsers.begin(), elemUsers.end()) == 2) {
-      elemDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*elemUsers.begin());
-      if (!elemDestroy)
-        elemDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*++elemUsers.begin());
+    // Check if the op was the only user of the source (apart from a destroy),
+    // and remove it if so.
+    mlir::Operation *sourceOp = source.getDefiningOp();
+    mlir::Operation::user_range srcUsers = sourceOp->getUsers();
+    hlfir::DestroyOp srcDestroy;
+    if (std::distance(srcUsers.begin(), srcUsers.end()) == 2) {
+      srcDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*srcUsers.begin());
+      if (!srcDestroy)
+        srcDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*++srcUsers.begin());
     }
 
     rewriter.replaceOp(op, res);
-    if (elemDestroy) {
-      rewriter.eraseOp(elemDestroy);
-      rewriter.eraseOp(elemental);
+    if (srcDestroy) {
+      rewriter.eraseOp(srcDestroy);
+      rewriter.eraseOp(sourceOp);
     }
     return mlir::success();
   }
@@ -813,11 +918,11 @@ public:
 //  %e = hlfir.elemental %shape ({ ... })
 //  %m = hlfir.minloc %array mask %e
 template <typename Op>
-class MinMaxlocElementalConversion : public mlir::OpRewritePattern<Op> {
+class ReductionMaskConversion : public mlir::OpRewritePattern<Op> {
 public:
   using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op mloc, mlir::PatternRewriter &rewriter) const override {
     if (!mloc.getMask() || mloc.getDim() || mloc.getBack())
       return rewriter.notifyMatchFailure(mloc,
@@ -834,7 +939,7 @@ public:
 
     unsigned rank = mlir::cast<hlfir::ExprType>(mloc.getType()).getShape()[0];
     mlir::Type arrayType = array.getType();
-    if (!arrayType.isa<fir::BoxType>())
+    if (!mlir::isa<fir::BoxType>(arrayType))
       return rewriter.notifyMatchFailure(
           mloc, "Currently requires a boxed type input");
     mlir::Type elementType = hlfir::getFortranElementType(arrayType);
@@ -848,19 +953,7 @@ public:
         loc, fir::SequenceType::get(
                  rank, hlfir::getFortranElementType(mloc.getType())));
 
-    auto init = [isMax](fir::FirOpBuilder builder, mlir::Location loc,
-                        mlir::Type elementType) {
-      if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
-        const llvm::fltSemantics &sem = ty.getFloatSemantics();
-        llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
-        return builder.createRealConstant(loc, elementType, limit);
-      }
-      unsigned bits = elementType.getIntOrFloatBitWidth();
-      int64_t limitInt =
-          isMax ? llvm::APInt::getSignedMinValue(bits).getSExtValue()
-                : llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-      return builder.createIntegerConstant(loc, elementType, limitInt);
-    };
+    auto init = makeMinMaxInitValGenerator(isMax);
 
     auto genBodyOp =
         [&rank, &resultArr, &elemental, isMax](
@@ -900,33 +993,8 @@ public:
       mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
 
       // Compare with the max reduction value
-      mlir::Value cmp;
-      if (elementType.isa<mlir::FloatType>()) {
-        // For FP reductions we want the first smallest value to be used, that
-        // is not NaN. A OGL/OLT condition will usually work for this unless all
-        // the values are Nan or Inf. This follows the same logic as
-        // NumericCompare for Minloc/Maxlox in extrema.cpp.
-        cmp = builder.create<mlir::arith::CmpFOp>(
-            loc,
-            isMax ? mlir::arith::CmpFPredicate::OGT
-                  : mlir::arith::CmpFPredicate::OLT,
-            elem, reduction);
-
-        mlir::Value cmpNan = builder.create<mlir::arith::CmpFOp>(
-            loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
-        mlir::Value cmpNan2 = builder.create<mlir::arith::CmpFOp>(
-            loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
-        cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
-        cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
-      } else if (elementType.isa<mlir::IntegerType>()) {
-        cmp = builder.create<mlir::arith::CmpIOp>(
-            loc,
-            isMax ? mlir::arith::CmpIPredicate::sgt
-                  : mlir::arith::CmpIPredicate::slt,
-            elem, reduction);
-      } else {
-        llvm_unreachable("unsupported type");
-      }
+      mlir::Value cmp =
+          generateMinMaxComparison(builder, loc, elem, reduction, isMax);
 
       // The condition used for the loop is isFirst || <the condition above>.
       isFirst = builder.create<fir::ConvertOp>(loc, cmp.getType(), isFirst);
@@ -1038,12 +1106,12 @@ class OptimizedBufferizationPass
           OptimizedBufferizationPass> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
     mlir::MLIRContext *context = &getContext();
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     mlir::RewritePatternSet patterns(context);
     // TODO: right now the patterns are non-conflicting,
@@ -1055,22 +1123,26 @@ public:
     patterns.insert<ElementalAssignBufferization>(context);
     patterns.insert<BroadcastAssignBufferization>(context);
     patterns.insert<VariableAssignBufferization>(context);
-    patterns.insert<ReductionElementalConversion<hlfir::CountOp>>(context);
-    patterns.insert<ReductionElementalConversion<hlfir::AnyOp>>(context);
-    patterns.insert<ReductionElementalConversion<hlfir::AllOp>>(context);
-    patterns.insert<MinMaxlocElementalConversion<hlfir::MinlocOp>>(context);
-    patterns.insert<MinMaxlocElementalConversion<hlfir::MaxlocOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::AllOp>>(context);
+    // TODO: implement basic minloc/maxloc conversion.
+    // patterns.insert<ReductionConversion<hlfir::MaxlocOp>>(context);
+    // patterns.insert<ReductionConversion<hlfir::MinlocOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::MaxvalOp>>(context);
+    patterns.insert<ReductionConversion<hlfir::MinvalOp>>(context);
+    patterns.insert<ReductionMaskConversion<hlfir::MinlocOp>>(context);
+    patterns.insert<ReductionMaskConversion<hlfir::MaxlocOp>>(context);
+    // TODO: implement masked minval/maxval conversion.
+    // patterns.insert<ReductionMaskConversion<hlfir::MaxvalOp>>(context);
+    // patterns.insert<ReductionMaskConversion<hlfir::MinvalOp>>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            func, std::move(patterns), config))) {
-      mlir::emitError(func.getLoc(),
+            getOperation(), std::move(patterns), config))) {
+      mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR optimized bufferization");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createOptimizedBufferizationPass() {
-  return std::make_unique<OptimizedBufferizationPass>();
-}

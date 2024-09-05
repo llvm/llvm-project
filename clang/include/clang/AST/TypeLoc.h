@@ -940,6 +940,25 @@ public:
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
+struct HLSLAttributedResourceLocInfo {
+  SourceRange Range;
+};
+
+/// Type source information for HLSL attributed resource type.
+class HLSLAttributedResourceTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, HLSLAttributedResourceTypeLoc,
+                             HLSLAttributedResourceType,
+                             HLSLAttributedResourceLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+  void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
+  SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setSourceRange(SourceRange());
+  }
+  QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
+};
+
 struct ObjCObjectTypeLocInfo {
   SourceLocation TypeArgsLAngleLoc;
   SourceLocation TypeArgsRAngleLoc;
@@ -1118,6 +1137,32 @@ public:
     setNameLoc(Loc);
     setNameEndLoc(Loc);
   }
+};
+
+struct BoundsAttributedLocInfo {};
+class BoundsAttributedTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, BoundsAttributedTypeLoc,
+                             BoundsAttributedType, BoundsAttributedLocInfo> {
+public:
+  TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
+  QualType getInnerType() const { return getTypePtr()->desugar(); }
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    // nothing to do
+  }
+  // LocalData is empty and TypeLocBuilder doesn't handle DataSize 1.
+  unsigned getLocalDataSize() const { return 0; }
+};
+
+class CountAttributedTypeLoc final
+    : public InheritingConcreteTypeLoc<BoundsAttributedTypeLoc,
+                                       CountAttributedTypeLoc,
+                                       CountAttributedType> {
+public:
+  Expr *getCountExpr() const { return getTypePtr()->getCountExpr(); }
+  bool isCountInBytes() const { return getTypePtr()->isCountInBytes(); }
+  bool isOrNull() const { return getTypePtr()->isOrNull(); }
+
+  SourceRange getLocalSourceRange() const;
 };
 
 struct MacroQualifiedLocInfo {
@@ -1584,6 +1629,11 @@ class ConstantArrayTypeLoc :
                                      ConstantArrayTypeLoc,
                                      ConstantArrayType> {
 };
+
+/// Wrapper for source info for array parameter types.
+class ArrayParameterTypeLoc
+    : public InheritingConcreteTypeLoc<
+          ConstantArrayTypeLoc, ArrayParameterTypeLoc, ArrayParameterType> {};
 
 class IncompleteArrayTypeLoc :
     public InheritingConcreteTypeLoc<ArrayTypeLoc,
@@ -2658,6 +2708,8 @@ inline T TypeLoc::getAsAdjusted() const {
     else if (auto ATL = Cur.getAs<AttributedTypeLoc>())
       Cur = ATL.getModifiedLoc();
     else if (auto ATL = Cur.getAs<BTFTagAttributedTypeLoc>())
+      Cur = ATL.getWrappedLoc();
+    else if (auto ATL = Cur.getAs<HLSLAttributedResourceTypeLoc>())
       Cur = ATL.getWrappedLoc();
     else if (auto ETL = Cur.getAs<ElaboratedTypeLoc>())
       Cur = ETL.getNamedTypeLoc();

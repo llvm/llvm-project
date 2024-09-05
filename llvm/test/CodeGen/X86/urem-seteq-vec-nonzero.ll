@@ -264,7 +264,6 @@ define <4 x i1> @t32_tautological(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]

@@ -135,6 +135,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_SSVE);
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
+  ECase(NT_ARM_FPMR);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
   ECase(NT_SIGINFO);
@@ -546,6 +547,20 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_RISCV_RVE);
     BCase(EF_RISCV_TSO);
     break;
+  case ELF::EM_SPARC32PLUS:
+    BCase(EF_SPARC_32PLUS);
+    BCase(EF_SPARC_SUN_US1);
+    BCase(EF_SPARC_SUN_US3);
+    BCase(EF_SPARC_HAL_R1);
+    break;
+  case ELF::EM_SPARCV9:
+    BCase(EF_SPARC_SUN_US1);
+    BCase(EF_SPARC_SUN_US3);
+    BCase(EF_SPARC_HAL_R1);
+    BCaseMask(EF_SPARCV9_RMO, EF_SPARCV9_MM);
+    BCaseMask(EF_SPARCV9_PSO, EF_SPARCV9_MM);
+    BCaseMask(EF_SPARCV9_TSO, EF_SPARCV9_MM);
+    break;
   case ELF::EM_XTENSA:
     BCase(EF_XTENSA_XT_INSN);
     BCaseMask(EF_XTENSA_MACH_NONE, EF_XTENSA_MACH);
@@ -611,12 +626,14 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1103, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1152, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, EF_AMDGPU_MACH);
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
@@ -686,6 +703,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_GROUP);
   ECase(SHT_SYMTAB_SHNDX);
   ECase(SHT_RELR);
+  ECase(SHT_CREL);
   ECase(SHT_ANDROID_REL);
   ECase(SHT_ANDROID_RELA);
   ECase(SHT_ANDROID_RELR);
@@ -716,6 +734,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     break;
   case ELF::EM_HEXAGON:
     ECase(SHT_HEX_ORDERED);
+    ECase(SHT_HEXAGON_ATTRIBUTES);
     break;
   case ELF::EM_X86_64:
     ECase(SHT_X86_64_UNWIND);
@@ -1619,6 +1638,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     break;
   case ELF::SHT_REL:
   case ELF::SHT_RELA:
+  case ELF::SHT_CREL:
     if (!IO.outputting())
       Section.reset(new ELFYAML::RelocationSection());
     sectionMapping(IO, *cast<ELFYAML::RelocationSection>(Section.get()));

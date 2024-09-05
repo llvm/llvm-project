@@ -212,7 +212,7 @@ struct TypeBuilderImpl {
   }
 
   mlir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::BOZLiteralConstant &) -> mlir::Type {
               return mlir::NoneType::get(context);
@@ -263,10 +263,6 @@ struct TypeBuilderImpl {
         llvm::SmallVector<Fortran::lower::LenParameterTy> params;
         translateLenParameters(params, tySpec->category(), ultimate);
         ty = genFIRType(context, tySpec->category(), kind, params);
-      } else if (type->IsPolymorphic() &&
-                 !converter.getLoweringOptions().getPolymorphicTypeImpl()) {
-        // TODO is kept under experimental flag until feature is complete.
-        TODO(loc, "support for polymorphic types");
       } else if (type->IsUnlimitedPolymorphic()) {
         ty = mlir::NoneType::get(context);
       } else if (const Fortran::semantics::DerivedTypeSpec *tySpec =
@@ -284,10 +280,11 @@ struct TypeBuilderImpl {
     if (ultimate.IsObjectArray()) {
       auto shapeExpr =
           Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      if (!shapeExpr)
-        TODO(loc, "assumed rank symbol type");
       fir::SequenceType::Shape shape;
-      translateShape(shape, std::move(*shapeExpr));
+      // If there is no shapExpr, this is an assumed-rank, and the empty shape
+      // will build the desired fir.array<*:T> type.
+      if (shapeExpr)
+        translateShape(shape, std::move(*shapeExpr));
       ty = fir::SequenceType::get(shape, ty);
     }
     if (Fortran::semantics::IsPointer(symbol))

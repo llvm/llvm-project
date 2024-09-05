@@ -43,6 +43,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
@@ -189,6 +190,11 @@ struct AsmPrinterOptions {
       "mlir-print-value-users", llvm::cl::init(false),
       llvm::cl::desc(
           "Print users of operation results and block arguments as a comment")};
+
+  llvm::cl::opt<bool> printUniqueSSAIDs{
+      "mlir-print-unique-ssa-ids", llvm::cl::init(false),
+      llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
+                     "and naming conflicts across all regions")};
 };
 } // namespace
 
@@ -206,12 +212,15 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false) {
+      printValueUsersFlag(false), printUniqueSSAIDsFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
   if (clOptions->elideElementsAttrIfLarger.getNumOccurrences())
     elementsAttrElementLimit = clOptions->elideElementsAttrIfLarger;
+  if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences())
+    elementsAttrHexElementLimit =
+        clOptions->printElementsAttrWithHexIfLarger.getValue();
   if (clOptions->elideResourceStringsIfLarger.getNumOccurrences())
     resourceStringCharLimit = clOptions->elideResourceStringsIfLarger;
   printDebugInfoFlag = clOptions->printDebugInfoOpt;
@@ -221,6 +230,7 @@ OpPrintingFlags::OpPrintingFlags()
   printLocalScope = clOptions->printLocalScopeOpt;
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
+  printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -230,6 +240,12 @@ OpPrintingFlags::OpPrintingFlags()
 OpPrintingFlags &
 OpPrintingFlags::elideLargeElementsAttrs(int64_t largeElementLimit) {
   elementsAttrElementLimit = largeElementLimit;
+  return *this;
+}
+
+OpPrintingFlags &
+OpPrintingFlags::printLargeElementsAttrWithHex(int64_t largeElementLimit) {
+  elementsAttrHexElementLimit = largeElementLimit;
   return *this;
 }
 
@@ -287,9 +303,22 @@ bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
          !llvm::isa<SplatElementsAttr>(attr);
 }
 
+/// Return if the given ElementsAttr should be printed as hex string.
+bool OpPrintingFlags::shouldPrintElementsAttrWithHex(ElementsAttr attr) const {
+  // -1 is used to disable hex printing.
+  return (elementsAttrHexElementLimit != -1) &&
+         (elementsAttrHexElementLimit < int64_t(attr.getNumElements())) &&
+         !llvm::isa<SplatElementsAttr>(attr);
+}
+
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
+}
+
+/// Return the size limit for printing large ElementsAttr as hex string.
+int64_t OpPrintingFlags::getLargeElementsAttrHexLimit() const {
+  return elementsAttrHexElementLimit;
 }
 
 /// Return the size limit for printing large ElementsAttr.
@@ -328,21 +357,9 @@ bool OpPrintingFlags::shouldPrintValueUsers() const {
   return printValueUsersFlag;
 }
 
-/// Returns true if an ElementsAttr with the given number of elements should be
-/// printed with hex.
-static bool shouldPrintElementsAttrWithHex(int64_t numElements) {
-  // Check to see if a command line option was provided for the limit.
-  if (clOptions.isConstructed()) {
-    if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences()) {
-      // -1 is used to disable hex printing.
-      if (clOptions->printElementsAttrWithHexIfLarger == -1)
-        return false;
-      return numElements > clOptions->printElementsAttrWithHexIfLarger;
-    }
-  }
-
-  // Otherwise, default to printing with hex if the number of elements is >100.
-  return numElements > 100;
+/// Return if the printer should use unique IDs.
+bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
+  return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
 }
 
 //===----------------------------------------------------------------------===//
@@ -983,9 +1000,13 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
                                     bool allowTrailingDigit = true) {
   assert(!name.empty() && "Shouldn't have an empty name here");
 
+  auto validChar = [&](char ch) {
+    return llvm::isAlnum(ch) || allowedPunctChars.contains(ch);
+  };
+
   auto copyNameToBuffer = [&] {
     for (char ch : name) {
-      if (llvm::isAlnum(ch) || allowedPunctChars.contains(ch))
+      if (validChar(ch))
         buffer.push_back(ch);
       else if (ch == ' ')
         buffer.push_back('_');
@@ -997,7 +1018,7 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
   // Check to see if this name is valid. If it starts with a digit, then it
   // could conflict with the autogenerated numeric ID's, so add an underscore
   // prefix to avoid problems.
-  if (isdigit(name[0])) {
+  if (isdigit(name[0]) || (!validChar(name[0]) && name[0] != ' ')) {
     buffer.push_back('_');
     copyNameToBuffer();
     return buffer;
@@ -1013,7 +1034,7 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
 
   // Check to see that the name consists of only valid identifier characters.
   for (char ch : name) {
-    if (!llvm::isAlnum(ch) && !allowedPunctChars.contains(ch)) {
+    if (!validChar(ch)) {
       copyNameToBuffer();
       return buffer;
     }
@@ -1364,8 +1385,14 @@ SSANameState::SSANameState(Operation *op, const OpPrintingFlags &printerFlags)
   while (!nameContext.empty()) {
     Region *region;
     UsedNamesScopeTy *parentScope;
-    std::tie(region, nextValueID, nextArgumentID, nextConflictID, parentScope) =
-        nameContext.pop_back_val();
+
+    if (printerFlags.shouldPrintUniqueSSAIDs())
+      // To print unique SSA IDs, ignore saved ID counts from parent regions
+      std::tie(region, std::ignore, std::ignore, std::ignore, parentScope) =
+          nameContext.pop_back_val();
+    else
+      std::tie(region, nextValueID, nextArgumentID, nextConflictID,
+               parentScope) = nameContext.pop_back_val();
 
     // When we switch from one subtree to another, pop the scopes(needless)
     // until the parent scope.
@@ -1895,9 +1922,6 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
       printerFlags.shouldAssumeVerified())
     return printerFlags;
 
-  LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << ": Verifying operation: "
-                          << op->getName() << "\n");
-
   // Ignore errors emitted by the verifier. We check the thread id to avoid
   // consuming other threads' errors.
   auto parentThreadId = llvm::get_threadid();
@@ -2042,7 +2066,8 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
 
 /// Print a floating point value in a way that the parser will be able to
 /// round-trip losslessly.
-static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
+static void printFloatValue(const APFloat &apValue, raw_ostream &os,
+                            bool *printedHex = nullptr) {
   // We would like to output the FP constant value in exponential notation,
   // but we cannot do this if doing so will lose precision.  Check here to
   // make sure that we only output it in exponential format if we can parse
@@ -2083,6 +2108,8 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
 
   // Print special values in hexadecimal format. The sign bit should be included
   // in the literal.
+  if (printedHex)
+    *printedHex = true;
   SmallVector<char, 16> str;
   APInt apInt = apValue.bitcastToAPInt();
   apInt.toString(str, /*Radix=*/16, /*Signed=*/false,
@@ -2256,10 +2283,12 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       return;
 
   } else if (auto floatAttr = llvm::dyn_cast<FloatAttr>(attr)) {
-    printFloatValue(floatAttr.getValue(), os);
+    bool printedHex = false;
+    printFloatValue(floatAttr.getValue(), os, &printedHex);
 
     // FloatAttr elides the type if F64.
-    if (typeElision == AttrTypeElision::May && floatAttr.getType().isF64())
+    if (typeElision == AttrTypeElision::May && floatAttr.getType().isF64() &&
+        !printedHex)
       return;
 
   } else if (auto strAttr = llvm::dyn_cast<StringAttr>(attr)) {
@@ -2438,9 +2467,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
   auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  auto numElements = type.getNumElements();
-  if (!attr.isSplat() && allowHex &&
-      shouldPrintElementsAttrWithHex(numElements)) {
+  if (allowHex && printerFlags.shouldPrintElementsAttrWithHex(attr)) {
     ArrayRef<char> rawData = attr.getRawData();
     if (llvm::endianness::native == llvm::endianness::big) {
       // Convert endianess in big-endian(BE) machines. `rawData` is BE in BE
@@ -2549,10 +2576,12 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<IndexType>([&](Type) { os << "index"; })
       .Case<Float8E5M2Type>([&](Type) { os << "f8E5M2"; })
+      .Case<Float8E4M3Type>([&](Type) { os << "f8E4M3"; })
       .Case<Float8E4M3FNType>([&](Type) { os << "f8E4M3FN"; })
       .Case<Float8E5M2FNUZType>([&](Type) { os << "f8E5M2FNUZ"; })
       .Case<Float8E4M3FNUZType>([&](Type) { os << "f8E4M3FNUZ"; })
       .Case<Float8E4M3B11FNUZType>([&](Type) { os << "f8E4M3B11FNUZ"; })
+      .Case<Float8E3M4Type>([&](Type) { os << "f8E3M4"; })
       .Case<BFloat16Type>([&](Type) { os << "bf16"; })
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<FloatTF32Type>([&](Type) { os << "tf32"; })
@@ -3965,6 +3994,11 @@ void Block::printAsOperand(raw_ostream &os, bool printType) {
 void Block::printAsOperand(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
   printer.printBlockName(this);
+}
+
+raw_ostream &mlir::operator<<(raw_ostream &os, Block &block) {
+  block.print(os);
+  return os;
 }
 
 //===--------------------------------------------------------------------===//

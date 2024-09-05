@@ -67,8 +67,7 @@ MCSubtargetInfo *createARMMCSubtargetInfo(const Triple &TT, StringRef CPU,
 MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S);
 MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS,
-                                             MCInstPrinter *InstPrint,
-                                             bool isVerboseAsm);
+                                             MCInstPrinter *InstPrint);
 MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
                                                 const MCSubtargetInfo &STI);
 MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S);
@@ -93,9 +92,7 @@ MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
 MCStreamer *createARMWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                     bool RelaxAll,
-                                     bool IncrementalLinkerCompatible);
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter);
 
 /// Construct an ELF Mach-O object writer.
 std::unique_ptr<MCObjectTargetWriter> createARMELFObjectWriter(uint8_t OSABI);

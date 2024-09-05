@@ -1,0 +1,12 @@
+static_library("SandboxIR") {
+  output_name = "LLVMSandboxIR"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "SandboxIR.cpp",
+    "Tracker.cpp",
+    "Type.cpp",
+  ]
+}

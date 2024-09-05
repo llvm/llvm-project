@@ -1,3 +1,23 @@
+set(CLANG_SUPPORTED_VERSION "5.0.0")
+set(GCC_SUPPORTED_VERSION "5.5.0")
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL ${CLANG_SUPPORTED_VERSION})
+    message (WARNING
+      "Unsupported Clang version " ${CMAKE_CXX_COMPILER_VERSION}
+      ". Expected is " ${CLANG_SUPPORTED_VERSION}
+      ". Assembly tests may be broken.")
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL ${GCC_SUPPORTED_VERSION})
+    message (WARNING
+      "Unsupported GCC version " ${CMAKE_CXX_COMPILER_VERSION}
+      ". Expected is " ${GCC_SUPPORTED_VERSION}
+      ". Assembly tests may be broken.")
+  endif()
+else()
+  message (WARNING "Unsupported compiler. Assembly tests may be broken.")
+endif()
 
 include(split_list)
 
@@ -23,6 +43,7 @@ string(TOUPPER "${CMAKE_CXX_COMPILER_ID}" ASM_TEST_COMPILER)
 macro(add_filecheck_test name)
   cmake_parse_arguments(ARG "" "" "CHECK_PREFIXES" ${ARGV})
   add_library(${name} OBJECT ${name}.cc)
+  target_link_libraries(${name} PRIVATE benchmark::benchmark)
   set_target_properties(${name} PROPERTIES COMPILE_FLAGS "-S ${ASM_TEST_FLAGS}")
   set(ASM_OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${name}.s")
   add_custom_target(copy_${name} ALL

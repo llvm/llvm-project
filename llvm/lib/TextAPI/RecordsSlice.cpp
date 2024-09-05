@@ -171,8 +171,8 @@ ObjCIVarRecord *RecordsSlice::findObjCIVar(bool IsScopedName,
 }
 
 GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
-                                      GlobalRecord::Kind GV,
-                                      SymbolFlags Flags) {
+                                      GlobalRecord::Kind GV, SymbolFlags Flags,
+                                      bool Inlined) {
   if (GV == GlobalRecord::Kind::Function)
     Flags |= SymbolFlags::Text;
   else if (GV == GlobalRecord::Kind::Variable)
@@ -182,7 +182,7 @@ GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
   auto Result = Globals.insert({Name, nullptr});
   if (Result.second)
     Result.first->second =
-        std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV);
+        std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV, Inlined);
   else {
     updateLinkage(Result.first->second.get(), Linkage);
     updateFlags(Result.first->second.get(), Flags);
@@ -225,6 +225,7 @@ bool ObjCInterfaceRecord::addObjCCategory(ObjCCategoryRecord *Record) {
 ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
                                                   StringRef Category) {
   Category = copyString(Category);
+  ClassToExtend = copyString(ClassToExtend);
 
   // Add owning record first into record slice.
   auto Result =
@@ -242,16 +243,18 @@ ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
 
 std::vector<ObjCIVarRecord *> ObjCContainerRecord::getObjCIVars() const {
   std::vector<ObjCIVarRecord *> Records;
-  llvm::for_each(IVars,
-                 [&](auto &Record) { Records.push_back(Record.second.get()); });
+  Records.reserve(IVars.size());
+  for (const auto &Record : IVars)
+    Records.push_back(Record.second.get());
   return Records;
 }
 
 std::vector<ObjCCategoryRecord *>
 ObjCInterfaceRecord::getObjCCategories() const {
   std::vector<ObjCCategoryRecord *> Records;
-  llvm::for_each(Categories,
-                 [&](auto &Record) { Records.push_back(Record.second); });
+  Records.reserve(Categories.size());
+  for (const auto &Record : Categories)
+    Records.push_back(Record.second);
   return Records;
 }
 

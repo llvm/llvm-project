@@ -305,6 +305,35 @@ define <4 x float> @combine_vpermilvar_4f32_as_insertps(<4 x float> %a0) {
   ret <4 x float> %2
 }
 
+define <8 x i32> @combine_blend_of_permutes_v8i32(<4 x i64> %a0, <4 x i64> %a1) {
+; AVX1-LABEL: combine_blend_of_permutes_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: combine_blend_of_permutes_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: combine_blend_of_permutes_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [4,21,6,23,16,1,2,19]
+; AVX512-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %s0 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %s1 = shufflevector <4 x i64> %a1, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %x0 = bitcast <4 x i64> %s0 to <8 x i32>
+  %x1 = bitcast <4 x i64> %s1 to <8 x i32>
+  %r = shufflevector <8 x i32> %x0, <8 x i32> %x1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
+  ret <8 x i32> %r
+}
+
 define <2 x double> @constant_fold_vpermilvar_pd() {
 ; CHECK-LABEL: constant_fold_vpermilvar_pd:
 ; CHECK:       # %bb.0:

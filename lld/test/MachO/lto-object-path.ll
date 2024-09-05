@@ -12,11 +12,11 @@
 ; RUN: %lld %t/test-obj.o -o %t/test-obj -object_path_lto %t/lto-temps-obj
 ; RUN: llvm-nm -pa %t/test-obj | FileCheck %s --check-prefixes CHECK,NOLTOFILES -DDIR=%t
 
-; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps
+; RUN: env ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-DIR -DDIR=%t/lto-temps
 
 ;; Ensure object path is still used if the cache is used
-; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps -prune_interval_lto 20 -cache_path_lto %t/cache --thinlto-cache-policy=cache_size_files=1:cache_size_bytes=10
+; RUN: env ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps -prune_interval_lto 20 -cache_path_lto %t/cache --thinlto-cache-policy=cache_size_files=1:cache_size_bytes=10
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-DIR -DDIR=%t/lto-temps
 ;; And that dsymutil can read the result
 ; RUN: dsymutil -f -o - %t/test | llvm-dwarfdump - | FileCheck %s --check-prefix=DSYM
@@ -33,7 +33,7 @@
 
 ;; check that the object path can be an existing file
 ; RUN: touch %t/lto-tmp.o
-; RUN: ZERO_AR_DATE=0 %lld %t/test-nonthin.o -o %t/test -object_path_lto %t/lto-tmp.o
+; RUN: env ZERO_AR_DATE=0 %lld %t/test-nonthin.o -o %t/test -object_path_lto %t/lto-tmp.o
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
 ; RUN: llvm-otool -l %t/lto-tmp.o | FileCheck %s --check-prefixes=MINOS
 

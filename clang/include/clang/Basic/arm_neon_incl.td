@@ -1,4 +1,4 @@
-//===--- arm_neon_incl.td - ARM NEON compiler interface ------------------------===//
+//===--- arm_neon_incl.td - ARM NEON compiler interface -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -265,7 +265,7 @@ class Inst <string n, string p, string t, Operation o> {
   string Prototype = p;
   string Types = t;
   string ArchGuard = "";
-  string TargetGuard = "";
+  string TargetGuard = "neon";
 
   Operation Operation = o;
   bit BigEndianSafe = 0;

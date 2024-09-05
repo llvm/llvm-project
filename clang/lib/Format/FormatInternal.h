@@ -15,7 +15,9 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_FORMATINTERNAL_H
 #define LLVM_CLANG_LIB_FORMAT_FORMATINTERNAL_H
 
-#include "BreakableToken.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Format/Format.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include <utility>
 
 namespace clang {

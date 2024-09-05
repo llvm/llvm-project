@@ -18,3 +18,15 @@
 // CHECK-VERIFY: command-line option '-checks': warning: check glob 'bad*glob' doesn't match any known check [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: unknown check 'llvm-includeorder'; did you mean 'llvm-include-order' [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: unknown check 'my-made-up-check' [-verify-config]
+
+// RUN: echo -e 'Checks: |\n bugprone-argument-comment\n bugprone-assert-side-effect,\n bugprone-bool-pointer-implicit-conversion\n readability-use-anyof*' > %T/MyClangTidyConfig
+// RUN: clang-tidy -verify-config \
+// RUN: --config-file=%T/MyClangTidyConfig | FileCheck %s -check-prefix=CHECK-VERIFY-BLOCK-OK
+// CHECK-VERIFY-BLOCK-OK: No config errors detected.
+
+// RUN: echo -e 'Checks: |\n bugprone-arguments-*\n bugprone-assert-side-effects\n bugprone-bool-pointer-implicit-conversion' > %T/MyClangTidyConfigBad
+// RUN: not clang-tidy -verify-config \
+// RUN: --config-file=%T/MyClangTidyConfigBad 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-BLOCK-BAD
+// CHECK-VERIFY-BLOCK-BAD: command-line option '-config': warning: check glob 'bugprone-arguments-*' doesn't match any known check [-verify-config]
+// CHECK-VERIFY-BLOCK-BAD: command-line option '-config': warning: unknown check 'bugprone-assert-side-effects'; did you mean 'bugprone-assert-side-effect' [-verify-config]
+

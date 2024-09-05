@@ -80,14 +80,14 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
       // iterator. However, that is typically the case for files that have
       // .subsections_via_symbols set.
       insertIt = toIsec->symbols.insert(insertIt, d);
-      d->isec = toIsec;
+      d->originalIsec = toIsec;
       d->value = toOff;
       // We don't want to have more than one unwindEntry at a given address, so
       // drop the redundant ones. We We can safely drop the unwindEntries of
       // the symbols in fromIsec since we will be adding another unwindEntry as
       // we finish parsing toIsec's file. (We can assume that toIsec has its
       // own unwindEntry because of the ODR.)
-      d->unwindEntry = nullptr;
+      d->originalUnwindEntry = nullptr;
     }
     return true;
   });
@@ -121,8 +121,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           // in ObjFile::parseSymbols() such that extern weak symbols appear
           // last, so we don't need to worry about subsequent symbols being
           // added to an already-coalesced section.
-          if (defined->isec)
-            transplantSymbolsAtOffset(concatIsec, defined->isec,
+          if (defined->isec())
+            transplantSymbolsAtOffset(concatIsec, defined->isec(),
                                       /*skip=*/nullptr, value, defined->value);
         }
         return defined;
@@ -130,7 +130,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 
       if (defined->isWeakDef()) {
         if (auto concatIsec =
-                dyn_cast_or_null<ConcatInputSection>(defined->isec)) {
+                dyn_cast_or_null<ConcatInputSection>(defined->isec())) {
           concatIsec->wasCoalesced = true;
           if (isec)
             transplantSymbolsAtOffset(concatIsec, isec, defined, defined->value,
@@ -212,7 +212,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
                                    InputFile *newFile, bool makePrivateExtern) {
   bool isPrivateExtern = makePrivateExtern || src->privateExtern;
-  return addDefined(target, newFile, src->isec, src->value, src->size,
+  return addDefined(target, newFile, src->isec(), src->value, src->size,
                     src->isWeakDef(), isPrivateExtern,
                     src->referencedDynamically, src->noDeadStrip,
                     src->weakDefCanBeHidden);
@@ -377,7 +377,7 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     // live. Marking the isec live ensures an OutputSection is created that the
     // start/end symbol can refer to.
     assert(sym.isLive());
-    isec->live = true;
+    assert(isec->live);
 
     // This runs after gatherInputSections(), so need to explicitly set parent
     // and add to inputSections.

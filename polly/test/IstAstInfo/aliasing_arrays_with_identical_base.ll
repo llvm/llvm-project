@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -disable-output < %s \
 ; RUN:   -polly-invariant-load-hoisting \
 ; RUN:   | FileCheck %s
 

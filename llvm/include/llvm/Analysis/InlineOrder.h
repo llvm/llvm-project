@@ -9,12 +9,12 @@
 #ifndef LLVM_ANALYSIS_INLINEORDER_H
 #define LLVM_ANALYSIS_INLINEORDER_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineCost.h"
 #include <utility>
 
 namespace llvm {
 class CallBase;
+template <typename Fn> class function_ref;
 
 template <typename T> class InlineOrder {
 public:

@@ -1,6 +1,7 @@
 ; Test upgrade of dbg.addr intrinsics into dbg.value with DW_OP_deref appended
 ;
-; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis < %s.bc --write-experimental-debuginfo=false | FileCheck %s
+; RUN: llvm-dis < %s.bc --load-bitcode-into-experimental-debuginfo-iterators --write-experimental-debuginfo=false | FileCheck %s
 ; RUN: verify-uselistorder < %s.bc
 
 define i32 @example(i32 %num) {
@@ -8,7 +9,7 @@ entry:
   %num.addr = alloca i32, align 4
   store i32 %num, ptr %num.addr, align 4
   ; CHECK-NOT: call void @llvm.dbg.addr
-  ; CHECK: call void @llvm.dbg.value(metadata ptr %num.addr, metadata ![[#]], metadata !DIExpression(DW_OP_plus_uconst, 0, DW_OP_deref))
+  ; CHECK: call void @llvm.dbg.value(metadata ptr %num.addr, metadata ![[#]], metadata !DIExpression(DW_OP_deref))
   call void @llvm.dbg.addr(metadata ptr %num.addr, metadata !16, metadata !DIExpression(DW_OP_plus_uconst, 0)), !dbg !17
   %0 = load i32, ptr %num.addr, align 4
   ret i32 %0

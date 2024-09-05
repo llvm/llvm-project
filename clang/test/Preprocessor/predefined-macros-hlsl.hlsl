@@ -1,14 +1,19 @@
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-amplification | FileCheck -match-full-lines %s --check-prefixes=CHECK,AMPLIFICATION
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-compute | FileCheck -match-full-lines %s --check-prefixes=CHECK,COMPUTE
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-domain | FileCheck -match-full-lines %s --check-prefixes=CHECK,DOMAIN
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-geometry | FileCheck -match-full-lines %s --check-prefixes=CHECK,GEOMETRY
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-hull | FileCheck -match-full-lines %s --check-prefixes=CHECK,HULL
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-library | FileCheck -match-full-lines %s --check-prefixes=CHECK,LIBRARY
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-mesh | FileCheck -match-full-lines %s --check-prefixes=CHECK,MESH
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-pixel | FileCheck -match-full-lines %s --check-prefixes=CHECK,PIXEL
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-vertex | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-amplification | FileCheck -match-full-lines %s --check-prefixes=CHECK,AMPLIFICATION,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-compute | FileCheck -match-full-lines %s --check-prefixes=CHECK,COMPUTE,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-domain | FileCheck -match-full-lines %s --check-prefixes=CHECK,DOMAIN,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-geometry | FileCheck -match-full-lines %s --check-prefixes=CHECK,GEOMETRY,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-hull | FileCheck -match-full-lines %s --check-prefixes=CHECK,HULL,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-library | FileCheck -match-full-lines %s --check-prefixes=CHECK,LIBRARY,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-mesh | FileCheck -match-full-lines %s --check-prefixes=CHECK,MESH,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-pixel | FileCheck -match-full-lines %s --check-prefixes=CHECK,PIXEL,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-vertex | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,NOHALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.3-vertex -fnative-half-type | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,HALF
+
+// HALF: #define __HLSL_ENABLE_16_BIT 1
+// NOHALF-NOT: __HLSL_ENABLE_16_BIT
 
 // CHECK: #define __HLSL_VERSION 2021
+
 // CHECK: #define __SHADER_STAGE_AMPLIFICATION 14
 // CHECK: #define __SHADER_STAGE_COMPUTE 5
 // CHECK: #define __SHADER_STAGE_DOMAIN 4

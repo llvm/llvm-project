@@ -1,0 +1,8 @@
+module libc [no_undeclared_includes] {
+  module stddef { header "stddef.h" export * }
+}
+
+module ptrauth {
+  header "ptrauth.h"
+  export *
+}

@@ -11,9 +11,9 @@
 ; being assigned the 'undef' value.
 
 ; CHECK:      @foo
-; CHECK-NEXT: dbg.value(metadata i32 poison, metadata ![[DEADVAR:[0-9]+]],
+; CHECK-NEXT: #dbg_value(i32 poison, ![[DEADVAR:[0-9]+]],
 ; CHECK-NEXT: load
-; CHECK-NEXT: dbg.value(metadata i32 %{{[0-9]+}}, metadata ![[LIVEVAR:[0-9]+]],
+; CHECK-NEXT: #dbg_value(i32 %{{[0-9]+}}, ![[LIVEVAR:[0-9]+]],
 ; CHECK-NEXT: store
 ; CHECK-NEXT: ret
 

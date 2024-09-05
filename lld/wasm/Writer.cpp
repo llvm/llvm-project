@@ -138,6 +138,11 @@ void Writer::calculateCustomSections() {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
         continue;
+      // Ignore empty custom sections.  In particular objcopy/strip will
+      // sometimes replace stripped sections with empty custom sections to
+      // avoid section re-numbering.
+      if (section->getSize() == 0)
+        continue;
       StringRef name = section->name;
       // These custom sections are known the linker and synthesized rather than
       // blindly copied.
@@ -473,6 +478,7 @@ void Writer::layoutMemory() {
     WasmSym::heapEnd->setVA(memoryPtr);
   }
 
+  uint64_t maxMemory = 0;
   if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
@@ -481,20 +487,23 @@ void Writer::layoutMemory() {
     if (config->maxMemory > maxMemorySetting)
       error("maximum memory too large, cannot be greater than " +
             Twine(maxMemorySetting));
+
+    maxMemory = config->maxMemory;
+  } else if (config->noGrowableMemory) {
+    maxMemory = memoryPtr;
   }
 
-  // Check max if explicitly supplied or required by shared memory
-  if (config->maxMemory != 0 || config->sharedMemory) {
-    uint64_t max = config->maxMemory;
-    if (max == 0) {
-      // If no maxMemory config was supplied but we are building with
-      // shared memory, we need to pick a sensible upper limit.
-      if (ctx.isPic)
-        max = maxMemorySetting;
-      else
-        max = memoryPtr;
-    }
-    out.memorySec->maxMemoryPages = max / WasmPageSize;
+  // If no maxMemory config was supplied but we are building with
+  // shared memory, we need to pick a sensible upper limit.
+  if (config->sharedMemory && maxMemory == 0) {
+    if (ctx.isPic)
+      maxMemory = maxMemorySetting;
+    else
+      maxMemory = memoryPtr;
+  }
+
+  if (maxMemory != 0) {
+    out.memorySec->maxMemoryPages = maxMemory / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }
 }
@@ -732,6 +741,8 @@ static bool shouldImport(Symbol *sym) {
   if (config->shared && sym->isWeak() && !sym->isUndefined() &&
       !sym->isHidden())
     return true;
+  if (sym->isShared())
+    return true;
   if (!sym->isUndefined())
     return false;
   if (sym->isWeak() && !config->relocatable && !ctx.isPic)
@@ -789,8 +800,11 @@ void Writer::calculateExports() {
       continue;
     if (!sym->isLive())
       continue;
+    if (isa<SharedFunctionSymbol>(sym) || sym->isShared())
+      continue;
 
     StringRef name = sym->getName();
+    LLVM_DEBUG(dbgs() << "Export: " << name << "\n");
     WasmExport export_;
     if (auto *f = dyn_cast<DefinedFunction>(sym)) {
       if (std::optional<StringRef> exportName = f->function->getExportName()) {
@@ -818,7 +832,6 @@ void Writer::calculateExports() {
       export_ = {name, WASM_EXTERNAL_TABLE, t->getTableNumber()};
     }
 
-    LLVM_DEBUG(dbgs() << "Export: " << name << "\n");
     out.exportSec->exports.push_back(export_);
     out.exportSec->exportedSymbols.push_back(sym);
   }
@@ -829,7 +842,7 @@ void Writer::populateSymtab() {
     return;
 
   for (Symbol *sym : symtab->symbols())
-    if (sym->isUsedInRegularObj && sym->isLive())
+    if (sym->isUsedInRegularObj && sym->isLive() && !sym->isShared())
       out.linkingSec->addToSymtab(sym);
 
   for (ObjFile *file : ctx.objectFiles) {
@@ -935,6 +948,8 @@ static void finalizeIndirectFunctionTable() {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
     limits.Maximum = limits.Minimum;
   }
+  if (config->is64.value_or(false))
+    limits.Flags |= WASM_LIMITS_FLAG_IS_64;
   WasmSym::indirectFunctionTable->setLimits(limits);
 }
 
@@ -1687,12 +1702,8 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic) {
-    if (WasmSym::definedTableBase)
-      WasmSym::definedTableBase->setVA(config->tableBase);
-    if (WasmSym::definedTableBase32)
-      WasmSym::definedTableBase32->setVA(config->tableBase);
-  }
+  if (!ctx.isPic && WasmSym::definedTableBase)
+    WasmSym::definedTableBase->setVA(config->tableBase);
 
   log("-- createOutputSegments");
   createOutputSegments();

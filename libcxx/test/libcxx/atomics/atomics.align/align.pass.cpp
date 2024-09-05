@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++03
-// REQUIRES: has-128-bit-atomics
+// REQUIRES: has-1024-bit-atomics
 // ADDITIONAL_COMPILE_FLAGS: -Wno-psabi
 // ... since C++20 std::__atomic_base initializes, so we get a warning about an
 // ABI change for vector variants since the constructor code for that is
