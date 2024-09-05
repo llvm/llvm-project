@@ -6241,8 +6241,20 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
-  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E))
-    return RValue::get(V);
+  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E, ReturnValue)) {
+    switch (EvalKind) {
+    case TEK_Scalar:
+      if (V->getType()->isVoidTy())
+        return RValue::get(nullptr);
+      return RValue::get(V);
+    case TEK_Aggregate:
+      return RValue::getAggregate(ReturnValue.getAddress(),
+                                  ReturnValue.isVolatile());
+    case TEK_Complex:
+      llvm_unreachable("No current hlsl builtin returns complex");
+    }
+    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
+  }
 
   if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
     return EmitHipStdParUnsupportedBuiltin(this, FD);
@@ -18508,7 +18520,8 @@ Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
-                                            const CallExpr *E) {
+                                            const CallExpr *E,
+					    ReturnValueSlot ReturnValue) {
   if (!getLangOpts().HLSL)
     return nullptr;
 
@@ -18697,45 +18710,20 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   }
   case Builtin::BI__builtin_hlsl_select: {
     Value *OpCond = EmitScalarExpr(E->getArg(0));
-    Value *OpTrue = EmitScalarExpr(E->getArg(1));
-    Value *OpFalse = EmitScalarExpr(E->getArg(2));
-    llvm::Type *TCond = OpCond->getType();
-
-    // if cond is a bool emit a select instruction
-    if (TCond->isIntegerTy(1))
-      return Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");
-
-    // if cond is a vector of bools lower to a shufflevector
-    if (TCond->isVectorTy() &&
-	E->getArg(0)->getType()->getAs<VectorType>()->getElementType()->isBooleanType()) {
-      assert(OpTrue->getType()->isVectorTy() && OpFalse->getType()->isVectorTy() &&
-	     "Select's second and third operands must be vectors if first operand is a vector.");
-
-      auto *VecTyTrue = E->getArg(1)->getType()->getAs<VectorType>();
-      auto *VecTyFalse = E->getArg(2)->getType()->getAs<VectorType>();
-
-      assert(VecTyTrue->getElementType() == VecTyFalse->getElementType() &&
-	     "Select's second and third vectors need the same element types.");
-
-      const unsigned N = VecTyTrue->getNumElements();
-      assert(N == VecTyFalse->getNumElements() &&
-	     N == E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() &&
-	     "Select requires vectors to be of the same size.");
-
-      llvm::Value *Result = llvm::PoisonValue::get(llvm::FixedVectorType::get(IntTy, N));
-      for (unsigned I = 0; I < N; I++) {
-	Value *Index = ConstantInt::get(IntTy, I);
-	Value *IndexBool = Builder.CreateExtractElement(OpCond, Index);
-	Value *TVal = Builder.CreateExtractElement(OpTrue, Index);
-	Value *FVal = Builder.CreateExtractElement(OpFalse, Index);
-	Value *IndexSelect = Builder.CreateSelect(IndexBool, TVal, FVal);
-	Result = Builder.CreateInsertElement(Result, IndexSelect, Index); 
-      }
-
-      return Result;
-    }
+    RValue RValTrue = EmitAnyExpr(E->getArg(1));
+    Value *OpTrue = RValTrue.isScalar() ? RValTrue.getScalarVal()
+      : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
+    RValue RValFalse = EmitAnyExpr(E->getArg(2));
+    Value *OpFalse = RValFalse.isScalar() ? RValFalse.getScalarVal()
+      : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
     
-    llvm_unreachable("Select requires a bool or vector of bools as its first operand.");
+    Value *SelectVal = Builder.CreateSelect(OpCond, OpTrue, OpFalse,
+					    "hlsl.select");
+    if (!RValTrue.isScalar())
+      Builder.CreateStore(SelectVal, ReturnValue.getAddress(),
+			  ReturnValue.isVolatile());
+
+    return SelectVal;
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(

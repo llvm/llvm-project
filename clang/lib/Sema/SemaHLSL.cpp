@@ -1512,7 +1512,24 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
   TheCall->setType(ReturnType);
 }
 
-bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
+static bool CheckScalarOrVector(Sema *S, CallExpr *TheCall, QualType Scalar,
+				unsigned ArgIndex) {
+  assert(TheCall->getNumArgs() >= ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  auto *VTy = ArgType->getAs<VectorType>();
+  // not the scalar or vector<scalar>
+  if (!(S->Context.hasSameUnqualifiedType(ArgType, Scalar) ||
+	(VTy && S->Context.hasSameUnqualifiedType(VTy->getElementType(),
+						  Scalar)))) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+		   diag::err_typecheck_expect_scalar_or_vector)
+	<< ArgType << Scalar;
+    return true;
+  }
+  return false;
+}
+
+static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
   Expr *Arg2 = TheCall->getArg(2);
@@ -1529,11 +1546,11 @@ bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
-bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
+static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
   Expr *Arg2 = TheCall->getArg(2);
-  if(!Arg1->getType()->isVectorType()) {
+  if (!Arg1->getType()->isVectorType()) {
     S->Diag(Arg1->getBeginLoc(),
 	    diag::err_builtin_non_vector_type)
       << "Second" << "__builtin_hlsl_select" << Arg1->getType()
@@ -1541,7 +1558,7 @@ bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
     return true;
   }
   
-  if(!Arg2->getType()->isVectorType()) {
+  if (!Arg2->getType()->isVectorType()) {
     S->Diag(Arg2->getBeginLoc(),
 	    diag::err_builtin_non_vector_type)
       << "Third" << "__builtin_hlsl_select" << Arg2->getType()
@@ -1549,8 +1566,8 @@ bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
     return true;
   }
 
-  if(!S->Context.hasSameUnqualifiedType(Arg1->getType(),
-					Arg2->getType())) {
+  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(),
+					 Arg2->getType())) {
     S->Diag(TheCall->getBeginLoc(),
 	    diag::err_typecheck_call_different_arg_types)
       << Arg1->getType() << Arg2->getType()
@@ -1560,15 +1577,15 @@ bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
 
   // caller has checked that Arg0 is a vector.
   // check all three args have the same length.
-  if(TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements() !=
-     Arg1->getType()->getAs<VectorType>()->getNumElements()) {
+  if (TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements() !=
+      Arg1->getType()->getAs<VectorType>()->getNumElements()) {
     S->Diag(TheCall->getBeginLoc(),
 	    diag::err_typecheck_vector_lengths_not_equal)
       << TheCall->getArg(0)->getType() << Arg1->getType()
       << TheCall->getArg(0)->getSourceRange() << Arg1->getSourceRange();
     return true;
   }
-
+  TheCall->setType(Arg1->getType());
   return false;
 }
 
@@ -1607,25 +1624,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_select: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (ArgTy->isBooleanType()) {
-      if (CheckBoolSelect(&SemaRef, TheCall))
-	return true;
-    } else if (ArgTy->isVectorType() &&
-	       ArgTy->getAs<VectorType>()->getElementType()->isBooleanType()) {
-      if (CheckVectorSelect(&SemaRef, TheCall))
-	return true;
-    } else { // first operand is not a bool or a vector of bools.
-      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-		   diag::err_typecheck_convert_incompatible)
-	<< TheCall->getArg(0)->getType() << getASTContext().BoolTy
-	<< 1 << 0 << 0;
-      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-		   diag::err_builtin_non_vector_type)
-	<< "First" << "__builtin_hlsl_select" << TheCall->getArg(0)->getType()
-	<< TheCall->getArg(0)->getSourceRange();
+    if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
       return true;
-    }
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (ArgTy->isBooleanType() && CheckBoolSelect(&SemaRef, TheCall))
+      return true;
+    auto *VTy = ArgTy->getAs<VectorType>();
+    if (VTy && VTy->getElementType()->isBooleanType() &&
+	CheckVectorSelect(&SemaRef, TheCall))
+      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_saturate:
