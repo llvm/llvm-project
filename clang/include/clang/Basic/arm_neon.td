@@ -2122,7 +2122,7 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
   }
 }
 
-let ArchGuard = "defined(__aarch64__)", TargetGuard = "faminmax" in {
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {
   def FAMIN : WInst<"vamin", "...", "fhQdQfQh">;
   def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
 }

@@ -24,7 +24,6 @@ float16x4_t test_vamin_f16(float16x4_t vn, float16x4_t vm) {
 //
 float16x8_t test_vaminq_f16(float16x8_t vn, float16x8_t vm) {
   return vaminq_f16(vn, vm);
-
 }
 
 // CHECK-LABEL: define dso_local <2 x float> @test_vamin_f32(
@@ -35,7 +34,6 @@ float16x8_t test_vaminq_f16(float16x8_t vn, float16x8_t vm) {
 //
 float32x2_t test_vamin_f32(float32x2_t vn, float32x2_t vm) {
   return vamin_f32(vn, vm);
-
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_vaminq_f32(
@@ -46,7 +44,6 @@ float32x2_t test_vamin_f32(float32x2_t vn, float32x2_t vm) {
 //
 float32x4_t test_vaminq_f32(float32x4_t vn, float32x4_t vm) {
   return vaminq_f32(vn, vm);
-
 }
 
 // CHECK-LABEL: define dso_local <2 x double> @test_vaminq_f64(
@@ -58,7 +55,6 @@ float32x4_t test_vaminq_f32(float32x4_t vn, float32x4_t vm) {
 float64x2_t test_vaminq_f64(float64x2_t vn, float64x2_t vm) {
   return vaminq_f64(vn, vm);
 }
-
 
 // CHECK-LABEL: define dso_local <4 x half> @test_vamax_f16(
 // CHECK-SAME: <4 x half> noundef [[VN:%.*]], <4 x half> noundef [[VM:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -78,7 +74,6 @@ float16x4_t test_vamax_f16(float16x4_t vn, float16x4_t vm) {
 //
 float16x8_t test_vamaxq_f16(float16x8_t vn, float16x8_t vm) {
   return vamaxq_f16(vn, vm);
-
 }
 
 // CHECK-LABEL: define dso_local <2 x float> @test_vamax_f32(
@@ -89,7 +84,6 @@ float16x8_t test_vamaxq_f16(float16x8_t vn, float16x8_t vm) {
 //
 float32x2_t test_vamax_f32(float32x2_t vn, float32x2_t vm) {
   return vamax_f32(vn, vm);
-
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_vamaxq_f32(
@@ -100,7 +94,6 @@ float32x2_t test_vamax_f32(float32x2_t vn, float32x2_t vm) {
 //
 float32x4_t test_vamaxq_f32(float32x4_t vn, float32x4_t vm) {
   return vamaxq_f32(vn, vm);
-
 }
 
 // CHECK-LABEL: define dso_local <2 x double> @test_vamaxq_f64(
