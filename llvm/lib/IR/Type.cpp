@@ -828,13 +828,14 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
   // Opaque types in the AArch64 name space.
   if (TTy->Name == "aarch64.svcount" &&
       (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 0))
-    return createStringError("Target type should have no parameters");
+    return createStringError(
+        "Target type aarch64.svcount should have no parameters");
 
   // Opaque types in the RISC-V name space.
   if (TTy->Name == "riscv.vector.tuple" &&
       (TTy->getNumTypeParameters() != 1 || TTy->getNumIntParameters() != 1))
-    return createStringError(
-        "Target type should have one type parameter and one integer parameter");
+    return createStringError("Target type riscv.vector.tuple should have one "
+                             "type parameter and one integer parameter");
 
   return TTy;
 }
