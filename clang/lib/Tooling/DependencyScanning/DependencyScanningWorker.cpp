@@ -429,6 +429,13 @@ public:
       canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
+      CompilerInstance &ScanInstance = *ScanInstanceStorage;
+      auto reportError = [&ScanInstance](Error &&E) -> bool {
+        ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+            << std::move(E);
+        return false;
+      };
+
       // Scanning runs once for the first -cc1 invocation in a chain of driver
       // jobs. For any dependent jobs, reuse the scanning result and just
       // update the LastCC1Arguments to correspond to the new invocation.
@@ -436,10 +443,11 @@ public:
       if (MDC)
         MDC->applyDiscoveredDependencies(OriginalInvocation);
 
-      // FIXME: caching + multi-job will not work because the consumer will not
-      // apply the changes.
+      if (Error E = Controller.finalize(ScanInstance, OriginalInvocation))
+        return reportError(std::move(E));
 
       LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
+      LastCC1CacheKey = Controller.getCacheKey(OriginalInvocation);
       return true;
     }
 
@@ -642,13 +650,7 @@ public:
       Consumer.handleIncludeTreeID(std::move(ID));
 
     LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
-
-    if (ScanInstance.getFrontendOpts().CacheCompileJob) {
-      auto &CAS = ScanInstance.getOrCreateObjectStore();
-      if (auto Key = createCompileJobCacheKey(
-              CAS, ScanInstance.getDiagnostics(), OriginalInvocation))
-        TUCacheKey = Key->toString();
-    }
+    LastCC1CacheKey = Controller.getCacheKey(OriginalInvocation);
 
     // Propagate the statistics to the parent FileManager.
     DriverFileMgr->AddStats(ScanInstance.getFileManager());
@@ -667,7 +669,11 @@ public:
     return Result;
   }
 
-  const std::optional<std::string> &getTUCacheKey() const { return TUCacheKey; }
+  std::optional<std::string> takeLastCC1CacheKey() {
+    std::optional<std::string> Result;
+    std::swap(Result, LastCC1CacheKey);
+    return Result;
+  }
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> getDepScanFS() {
     if (DepFS) {
@@ -699,7 +705,7 @@ private:
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;
-  std::optional<std::string> TUCacheKey;
+  std::optional<std::string> LastCC1CacheKey;
   bool Scanned = false;
   raw_ostream *VerboseOS;
 };
@@ -823,8 +829,9 @@ static bool createAndRunToolInvocation(
     return false;
 
   std::vector<std::string> Args = Action.takeLastCC1Arguments();
+  std::optional<std::string> CacheKey = Action.takeLastCC1CacheKey();
   Consumer.handleBuildCommand(
-      {std::move(Executable), std::move(Args), Action.getTUCacheKey()});
+      {std::move(Executable), std::move(Args), std::move(CacheKey)});
   return true;
 }
 
@@ -914,7 +921,7 @@ bool DependencyScanningWorker::computeDependencies(
             Consumer.handleBuildCommand(
                 {Cmd.getExecutable(),
                  {Cmd.getArguments().begin(), Cmd.getArguments().end()},
-                 Action.getTUCacheKey()});
+                 {}});
             return true;
           }
 

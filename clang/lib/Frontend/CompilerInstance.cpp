@@ -997,7 +997,8 @@ CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
 void CompilerInstance::initializeDelayedInputFileFromCAS() {
   auto &Opts = Invocation->getFrontendOpts();
   // Return if no need to initialize or already initialized.
-  if (Opts.CASIncludeTreeID.empty() || !Opts.Inputs.empty())
+  if ((Opts.CASIncludeTreeID.empty() && Opts.CASInputFileCASID.empty()) ||
+      !Opts.Inputs.empty())
     return;
 
   // If there is include tree, initialize the inputs from CAS.
@@ -1008,40 +1009,69 @@ void CompilerInstance::initializeDelayedInputFileFromCAS() {
   auto CAS = Invocation->getCASOpts().getOrCreateDatabases(*Diagnostics).first;
   if (!CAS)
     return;
-  auto ID = CAS->parseID(Opts.CASIncludeTreeID);
-  if (!ID)
-    return reportError(ID.takeError());
-  auto Object = CAS->getReference(*ID);
-  if (!Object)
-    return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
-  auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
-  if (!Root)
-    return reportError(Root.takeError());
-  auto MainTree = Root->getMainFileTree();
-  if (!MainTree)
-    return reportError(MainTree.takeError());
-  auto BaseFile = MainTree->getBaseFile();
-  if (!BaseFile)
-    return reportError(BaseFile.takeError());
-  auto FilenameBlob = BaseFile->getFilename();
-  if (!FilenameBlob)
-    return reportError(FilenameBlob.takeError());
+  if (!Opts.CASIncludeTreeID.empty()) {
+    auto ID = CAS->parseID(Opts.CASIncludeTreeID);
+    if (!ID)
+      return reportError(ID.takeError());
+    auto Object = CAS->getReference(*ID);
+    if (!Object)
+      return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
+    auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
+    if (!Root)
+      return reportError(Root.takeError());
+    auto MainTree = Root->getMainFileTree();
+    if (!MainTree)
+      return reportError(MainTree.takeError());
+    auto BaseFile = MainTree->getBaseFile();
+    if (!BaseFile)
+      return reportError(BaseFile.takeError());
+    auto FilenameBlob = BaseFile->getFilename();
+    if (!FilenameBlob)
+      return reportError(FilenameBlob.takeError());
 
-  auto InputFilename = FilenameBlob->getData();
+    auto InputFilename = FilenameBlob->getData();
 
-  if (InputFilename != Module::getModuleInputBufferName()) {
-    Opts.Inputs.emplace_back(Root->getRef(), InputFilename, Opts.DashX,
-                             /*isSystem=*/false);
-  } else {
-    assert(Opts.ProgramAction == frontend::GenerateModule);
+    if (InputFilename != Module::getModuleInputBufferName()) {
+      Opts.Inputs.emplace_back(Root->getRef(), InputFilename, Opts.DashX,
+                               /*isSystem=*/false);
+    } else {
+      assert(Opts.ProgramAction == frontend::GenerateModule);
 
-    auto Kind = Opts.DashX.withFormat(InputKind::Source);
-    auto Contents = BaseFile->getContents();
-    if (!Contents)
-      return reportError(Contents.takeError());
-    auto Buffer = llvm::MemoryBufferRef(Contents->getData(), InputFilename);
-    Opts.Inputs.emplace_back(Root->getRef(), Buffer, Kind,
-                             (bool)Opts.IsSystemModule);
+      auto Kind = Opts.DashX.withFormat(InputKind::Source);
+      auto Contents = BaseFile->getContents();
+      if (!Contents)
+        return reportError(Contents.takeError());
+      auto Buffer = llvm::MemoryBufferRef(Contents->getData(), InputFilename);
+      Opts.Inputs.emplace_back(Root->getRef(), Buffer, Kind,
+                               (bool)Opts.IsSystemModule);
+    }
+    return;
+  }
+  if (!Opts.CASInputFileCASID.empty()) {
+    auto ID = CAS->parseID(Opts.CASInputFileCASID);
+    if (!ID)
+      return reportError(ID.takeError());
+    auto ValueRef = CAS->getReference(*ID);
+    if (!ValueRef)
+      return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
+
+    cas::CompileJobResultSchema Schema(*CAS);
+    auto Result = Schema.load(*ValueRef);
+    if (!Result)
+      return reportError(Result.takeError());
+    auto Output =
+        Result->getOutput(cas::CompileJobCacheResult::OutputKind::MainOutput);
+    if (!Output)
+      return reportError(
+          llvm::createStringError("unable to get the main compilation output"));
+
+    auto OutProxy = CAS->getProxy(Output->Object);
+    if (!OutProxy)
+      return reportError(OutProxy.takeError());
+
+    auto Buff = llvm::MemoryBufferRef(OutProxy->getData(), "<input>");
+    Opts.Inputs.emplace_back(Buff, Opts.DashX, /*IsSystem=*/false);
+    return;
   }
 }
 

@@ -91,6 +91,11 @@ public:
     return llvm::Error::success();
   }
 
+  virtual std::optional<std::string>
+  getCacheKey(const CompilerInvocation &NewInvocation) {
+    return std::nullopt;
+  }
+
   virtual llvm::Error
   initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
     return llvm::Error::success();

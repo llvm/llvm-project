@@ -150,6 +150,8 @@ def err_fe_unable_to_load_include_tree : Error<
   "unable to load the CAS include-tree '%0': '%1'">;
 def err_unable_to_load_include_tree_node : Error<
   "unable to load a node from the CAS include-tree: '%0'">;
+def err_fe_unable_to_load_input_cache_key : Error<
+  "unable to load the input CAS cache key '%0': '%1'">;
 
 def err_fe_unable_to_load_basic_block_sections_file : Error<
     "unable to load basic block sections function list: '%0'">;

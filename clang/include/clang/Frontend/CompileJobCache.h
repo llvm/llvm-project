@@ -105,6 +105,7 @@ private:
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   std::optional<llvm::cas::CASID> ResultCacheKey;
+  std::optional<llvm::cas::CASID> ResultCacheKeyWithInputCacheKeysResolved;
 
   std::unique_ptr<CachingOutputs> CacheBackend;
 };

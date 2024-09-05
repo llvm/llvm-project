@@ -20,8 +20,8 @@ using namespace clang::tooling::dependencies;
 using llvm::Error;
 
 void tooling::dependencies::configureInvocationForCaching(
-    CompilerInvocation &CI, CASOptions CASOpts, std::string RootID,
-    std::string WorkingDir, bool ProduceIncludeTree) {
+    CompilerInvocation &CI, CASOptions CASOpts, std::string InputID,
+    CachingInputKind InputKind, std::string WorkingDir) {
   CI.getCASOpts() = std::move(CASOpts);
   auto &FrontendOpts = CI.getFrontendOpts();
   FrontendOpts.CacheCompileJob = true;
@@ -46,8 +46,9 @@ void tooling::dependencies::configureInvocationForCaching(
 
   // "Fix" the CAS options.
   auto &FileSystemOpts = CI.getFileSystemOpts();
-  if (ProduceIncludeTree) {
-    FrontendOpts.CASIncludeTreeID = std::move(RootID);
+  switch (InputKind) {
+  case CachingInputKind::IncludeTree: {
+    FrontendOpts.CASIncludeTreeID = std::move(InputID);
     FrontendOpts.Inputs.clear();
     FrontendOpts.ModuleMapFiles.clear();
     HeaderSearchOptions OriginalHSOpts;
@@ -91,9 +92,21 @@ void tooling::dependencies::configureInvocationForCaching(
     }
     // Clear APINotes options.
     CI.getAPINotesOpts().ModuleSearchPaths = {};
-  } else {
-    FileSystemOpts.CASFileSystemRootID = std::move(RootID);
+    break;
+  }
+  case CachingInputKind::FileSystemRoot: {
+    FileSystemOpts.CASFileSystemRootID = std::move(InputID);
     FileSystemOpts.CASFileSystemWorkingDirectory = std::move(WorkingDir);
+    break;
+  }
+  case CachingInputKind::CachedCompilation: {
+    FrontendOpts.Inputs.clear();
+    FrontendOpts.CASInputFileCacheKey = std::move(InputID);
+    break;
+  case CachingInputKind::Object: {
+    assert(false && "Object should not be available during scanning");
+  }
+  }
   }
 }
 
@@ -272,7 +285,10 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   Invocation.getDependencyOutputOpts().OutputFile.clear();
 
   configureInvocationForCaching(Invocation, Tool.getCASOpts(), Root->toString(),
-                                WorkingDirectory.str(), ProduceIncludeTree);
+                                ProduceIncludeTree
+                                    ? CachingInputKind::IncludeTree
+                                    : CachingInputKind::FileSystemRoot,
+                                WorkingDirectory.str());
   DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
   return *Root;
 }

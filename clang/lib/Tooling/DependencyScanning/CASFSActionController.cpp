@@ -28,6 +28,8 @@ public:
                          CompilerInvocation &NewInvocation) override;
   llvm::Error finalize(CompilerInstance &ScanInstance,
                        CompilerInvocation &NewInvocation) override;
+  std::optional<std::string>
+  getCacheKey(const CompilerInvocation &NewInvocation) override;
   llvm::Error
   initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
   llvm::Error
@@ -39,6 +41,7 @@ private:
   llvm::cas::CachingOnDiskFileSystem &CacheFS;
   std::optional<llvm::TreePathPrefixMapper> Mapper;
   CASOptions CASOpts;
+  std::optional<std::string> FirstCacheKey;
 };
 } // anonymous namespace
 
@@ -133,13 +136,29 @@ Error CASFSActionController::finalize(CompilerInstance &ScanInstance,
 
   configureInvocationForCaching(NewInvocation, CASOpts,
                                 CASFileSystemRootID->getID().toString(),
-                                CacheFS.getCurrentWorkingDirectory().get(),
-                                /*ProduceIncludeTree=*/false);
+                                CachingInputKind::FileSystemRoot,
+                                CacheFS.getCurrentWorkingDirectory().get());
 
   if (Mapper)
     DepscanPrefixMapping::remapInvocationPaths(NewInvocation, *Mapper);
 
+  // FIXME: This is here just to satisfy existing tests. To support -save-temps
+  // with CASFS, we need to reimplement the same thing we did for include-tree.
+  if (!FirstCacheKey) {
+    auto &CAS = ScanInstance.getOrCreateObjectStore();
+    auto Key = createCompileJobCacheKey(CAS, ScanInstance.getDiagnostics(),
+                                        NewInvocation);
+    assert(Key && "Cannot create compile job cache key for CASFS compile");
+    FirstCacheKey = Key->toString();
+  }
+
   return Error::success();
+}
+
+std::optional<std::string>
+CASFSActionController::getCacheKey(const CompilerInvocation &NewInvocation) {
+  assert(FirstCacheKey);
+  return FirstCacheKey;
 }
 
 Error CASFSActionController::initializeModuleBuild(
@@ -185,8 +204,8 @@ Error CASFSActionController::finalizeModuleInvocation(
 
   if (auto ID = MD.CASFileSystemRootID) {
     configureInvocationForCaching(CI, CASOpts, ID->toString(),
-                                  CacheFS.getCurrentWorkingDirectory().get(),
-                                  /*ProduceIncludeTree=*/false);
+                                  CachingInputKind::FileSystemRoot,
+                                  CacheFS.getCurrentWorkingDirectory().get());
   }
 
   if (Mapper)

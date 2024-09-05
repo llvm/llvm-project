@@ -11,10 +11,12 @@
 #include "clang/Basic/Version.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -23,10 +25,9 @@ using namespace clang::cas;
 using namespace llvm;
 using namespace llvm::cas;
 
-static llvm::cas::CASID
-createCompileJobCacheKeyForArgs(ObjectStore &CAS,
-                                ArrayRef<const char *> CC1Args,
-                                ObjectRef RootRef, bool IsIncludeTree) {
+static llvm::cas::CASID createCompileJobCacheKeyForArgs(
+    ObjectStore &CAS, ArrayRef<const char *> CC1Args, ObjectRef InputRef,
+    CachingInputKind InputKind) {
   assert(!CC1Args.empty() && StringRef(CC1Args[0]) == "-cc1");
   SmallString<256> CommandLine;
   for (StringRef Arg : CC1Args) {
@@ -35,10 +36,21 @@ createCompileJobCacheKeyForArgs(ObjectStore &CAS,
   }
 
   llvm::cas::HierarchicalTreeBuilder Builder;
-  if (IsIncludeTree) {
-    Builder.push(RootRef, llvm::cas::TreeEntry::Regular, "include-tree");
-  } else {
-    Builder.push(RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
+  switch (InputKind) {
+  case CachingInputKind::IncludeTree:
+    Builder.push(InputRef, llvm::cas::TreeEntry::Regular, "include-tree");
+    break;
+  case CachingInputKind::FileSystemRoot:
+    Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "filesystem");
+    break;
+  case CachingInputKind::CachedCompilation:
+    // TODO: Pass a "ref" tree entry kind.
+    Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "cache-key");
+    break;
+  case CachingInputKind::Object:
+    // TODO: Pass a "ref" tree entry kind.
+    Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "object");
+    break;
   }
   Builder.push(
       llvm::cantFail(CAS.storeFromString(std::nullopt, CommandLine)),
@@ -133,26 +145,40 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
   CI.generateCC1CommandLine(
       Argv, [&Saver](const llvm::Twine &T) { return Saver.save(T).data(); });
 
-  bool IsIncludeTree = !CI.getFrontendOpts().CASIncludeTreeID.empty();
-
   // FIXME: currently correct since the main executable is always in the root
   // from scanning, but we should probably make it explicit here...
-  StringRef RootIDString = IsIncludeTree
-                               ? CI.getFrontendOpts().CASIncludeTreeID
-                               : CI.getFileSystemOpts().CASFileSystemRootID;
-  Expected<llvm::cas::CASID> RootID = CAS.parseID(RootIDString);
-  if (!RootID) {
-    llvm::consumeError(RootID.takeError());
-    Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
-    return std::nullopt;
-  }
-  std::optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(*RootID);
-  if (!RootRef) {
-    Diags.Report(diag::err_cas_missing_root_id) << RootIDString;
+  StringRef InputIDString;
+  CachingInputKind InputKind;
+  if (!CI.getFrontendOpts().CASIncludeTreeID.empty()) {
+    InputIDString = CI.getFrontendOpts().CASIncludeTreeID;
+    InputKind = CachingInputKind::IncludeTree;
+  } else if (!CI.getFileSystemOpts().CASFileSystemRootID.empty()) {
+    InputIDString = CI.getFileSystemOpts().CASFileSystemRootID;
+    InputKind = CachingInputKind::FileSystemRoot;
+  } else if (!CI.getFrontendOpts().CASInputFileCacheKey.empty()) {
+    InputIDString = CI.getFrontendOpts().CASInputFileCacheKey;
+    InputKind = CachingInputKind::CachedCompilation;
+  } else if (!CI.getFrontendOpts().CASInputFileCASID.empty()) {
+    InputIDString = CI.getFrontendOpts().CASInputFileCASID;
+    InputKind = CachingInputKind::Object;
+  } else {
+    Diags.Report(diag::err_cas_cannot_parse_root_id) << "";
     return std::nullopt;
   }
 
-  return createCompileJobCacheKeyForArgs(CAS, Argv, *RootRef, IsIncludeTree);
+  Expected<llvm::cas::CASID> InputID = CAS.parseID(InputIDString);
+  if (!InputID) {
+    llvm::consumeError(InputID.takeError());
+    Diags.Report(diag::err_cas_cannot_parse_root_id) << InputIDString;
+    return std::nullopt;
+  }
+  std::optional<llvm::cas::ObjectRef> InputRef = CAS.getReference(*InputID);
+  if (!InputRef) {
+    Diags.Report(diag::err_cas_missing_root_id) << InputIDString;
+    return std::nullopt;
+  }
+
+  return createCompileJobCacheKeyForArgs(CAS, Argv, *InputRef, InputKind);
 }
 
 static CompileJobCachingOptions
@@ -191,11 +217,53 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
   return Opts;
 }
 
-std::optional<llvm::cas::CASID> clang::canonicalizeAndCreateCacheKey(
-    llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
-    CompilerInvocation &Invocation, CompileJobCachingOptions &Opts) {
-  Opts = canonicalizeForCaching(CAS, Diags, Invocation);
-  return createCompileJobCacheKeyImpl(CAS, Diags, Invocation);
+std::optional<std::pair<llvm::cas::CASID, llvm::cas::CASID>>
+clang::canonicalizeAndCreateCacheKeys(ObjectStore &CAS,
+                                      ActionCache &Cache,
+                                      DiagnosticsEngine &Diags,
+                                      CompilerInvocation &CI,
+                                      CompileJobCachingOptions &Opts) {
+  if (!CI.getFrontendOpts().CASInputFileCacheKey.empty()) {
+    Opts = canonicalizeForCaching(CAS, Diags, CI);
+    auto CacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CI);
+    if (!CacheKey)
+      return std::nullopt;
+
+    auto ID = CAS.parseID(CI.getFrontendOpts().CASInputFileCacheKey);
+    if (!ID) {
+      Diags.Report(diag::err_cas_cannot_parse_input_cache_key)
+          << CI.getFrontendOpts().CASInputFileCacheKey;
+      return std::nullopt;
+    }
+    auto Value = Cache.get(*ID);
+    if (!Value) {
+      Diags.Report(diag::err_cas_cannot_lookup_input_cache_key)
+          << Value.takeError();
+      return std::nullopt;
+    }
+    if (!*Value)  {
+      Diags.Report(diag::err_cas_missing_input_cache_entry)
+          << llvm::cas::ObjectStore::createUnknownObjectError(*ID);
+      return std::nullopt;
+    }
+
+    CI.getFrontendOpts().CASInputFileCASID = Value.get()->toString();
+    CI.getFrontendOpts().CASInputFileCacheKey.clear();
+
+    CompilerInvocation CICopy = CI;
+    (void)canonicalizeForCaching(CAS, Diags, CICopy);
+    auto CanonicalCacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CICopy);
+    if (!CanonicalCacheKey)
+      return std::nullopt;
+
+    return std::make_pair(*CacheKey, *CanonicalCacheKey);
+  }
+
+  Opts = canonicalizeForCaching(CAS, Diags, CI);
+  auto CacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CI);
+  if (!CacheKey)
+    return std::nullopt;
+  return std::make_pair(*CacheKey, *CacheKey);
 }
 
 std::optional<llvm::cas::CASID>

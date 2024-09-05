@@ -44,7 +44,8 @@ public:
 
   /// \returns true if result was found and replayed, false otherwise.
   virtual Expected<bool>
-  tryReplayCachedResult(const llvm::cas::CASID &ResultCacheKey) = 0;
+  tryReplayCachedResult(const llvm::cas::CASID &ResultCacheKey,
+                        const llvm::cas::CASID &CanonicalResultCacheKey) = 0;
 
   /// \returns true on failure, false on success.
   virtual bool prepareOutputCollection() = 0;
@@ -59,8 +60,10 @@ public:
   /// Finish writing outputs from a computed result, after a cache miss.
   /// If SkipCache is true, it should not insert the ResultCacheKey into
   /// Cache for future uses.
-  virtual Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
-                                     bool SkipCache) = 0;
+  virtual Error
+  finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
+                       const llvm::cas::CASID &CanonicalResultCacheKey,
+                       bool SkipCache) = 0;
 
 protected:
   StringRef getPathForOutputKind(OutputKind Kind);
@@ -105,14 +108,16 @@ public:
                      bool JustComputedResult);
 
 private:
-  Expected<bool>
-  tryReplayCachedResult(const llvm::cas::CASID &ResultCacheKey) override;
+  Expected<bool> tryReplayCachedResult(
+      const llvm::cas::CASID &ResultCacheKey,
+      const llvm::cas::CASID &CanonicalResultCacheKey) override;
 
   bool prepareOutputCollection() override;
 
   Error addNonVirtualOutputFile(StringRef FilePath) override;
 
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
+                             const llvm::cas::CASID &CanonicalResultCacheKey,
                              bool SkipCache) override;
 
   Expected<llvm::cas::ObjectRef>
@@ -204,14 +209,16 @@ public:
   }
 
 private:
-  Expected<bool>
-  tryReplayCachedResult(const llvm::cas::CASID &ResultCacheKey) override;
+  Expected<bool> tryReplayCachedResult(
+      const llvm::cas::CASID &ResultCacheKey,
+      const llvm::cas::CASID &CanonicalResultCacheKey) override;
 
   bool prepareOutputCollection() override;
 
   Error addNonVirtualOutputFile(StringRef FilePath) override;
 
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
+                             const llvm::cas::CASID &CanonicalResultCacheKey,
                              bool SkipCache) override;
 
   Expected<llvm::cas::remote::KeyValueDBClient::ValueTy>
@@ -293,11 +300,15 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   if (!CAS || !Cache)
     return 1; // Exit with error!
 
+  CompilerInvocation DummyInvocation = Invocation;
+  CompileJobCachingOptions DummyCacheOpts;
+
   CompileJobCachingOptions CacheOpts;
-  ResultCacheKey =
-      canonicalizeAndCreateCacheKey(*CAS, Diags, Invocation, CacheOpts);
-  if (!ResultCacheKey)
+  auto Keys = canonicalizeAndCreateCacheKeys(*CAS, *Cache, Diags, Invocation,
+                                             CacheOpts);
+  if (!Keys)
     return 1; // Exit with error!
+  std::tie(ResultCacheKey, ResultCacheKeyWithInputCacheKeysResolved) = *Keys;
 
   switch (FrontendOpts.ProgramAction) {
   case frontend::GenerateModule:
@@ -368,7 +379,8 @@ CompileJobCache::CachingOutputs::CachingOutputs(CompilerInstance &Clang,
 }
 
 Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
-    const llvm::cas::CASID &ResultCacheKey) {
+    const llvm::cas::CASID &ResultCacheKey,
+    const llvm::cas::CASID &CanonicalResultCacheKey) {
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
   std::optional<llvm::cas::CASID> Result;
@@ -377,8 +389,9 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
       Diags.Report(diag::remark_compile_job_cache_timing_backend_key_query)
           << llvm::format("%.6fs", Seconds);
     });
-    if (Error E =
-            Cache->get(ResultCacheKey, /*Globally=*/true).moveInto(Result))
+    // Asking for the canonical cache key gives us better chances for cache hit.
+    if (Error E = Cache->get(CanonicalResultCacheKey, /*Globally=*/true)
+                      .moveInto(Result))
       return std::move(E);
   }
 
@@ -399,6 +412,13 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
         << ResultCacheKey.toString() << "result not in CAS";
     return false;
   }
+
+  // Tasks depending on this one don't know the canonical cache key. Make sure
+  // the requested key is associated with the result too.
+  if (ResultCacheKey != CanonicalResultCacheKey)
+    if (Error E =
+            Cache->put(ResultCacheKey, *Result, /*Globally=*/true))
+      return std::move(E);
 
   // \c replayCachedResult emits remarks for a cache hit or miss.
   std::optional<int> Status = replayCachedResult(ResultCacheKey, *ResultRef,
@@ -423,7 +443,8 @@ CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
   Expected<bool> ReplayedResult =
       DisableCachedCompileJobReplay
           ? false
-          : CacheBackend->tryReplayCachedResult(*ResultCacheKey);
+          : CacheBackend->tryReplayCachedResult(
+                *ResultCacheKey, *ResultCacheKeyWithInputCacheKeysResolved);
   if (!ReplayedResult)
     return reportCachingBackendError(Clang.getDiagnostics(),
                                      ReplayedResult.takeError());
@@ -552,8 +573,9 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
     }
   }
 
-  if (Error E =
-          CacheBackend->finishComputedResult(*ResultCacheKey, SkipCache)) {
+  if (Error E = CacheBackend->finishComputedResult(
+          *ResultCacheKey, *ResultCacheKeyWithInputCacheKeysResolved,
+          SkipCache)) {
     reportCachingBackendError(Diags, std::move(E));
     return false;
   }
@@ -695,7 +717,8 @@ Error ObjectStoreCachingOutputs::addNonVirtualOutputFile(StringRef FilePath) {
 }
 
 Error ObjectStoreCachingOutputs::finishComputedResult(
-    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
+    const llvm::cas::CASID &ResultCacheKey,
+    const llvm::cas::CASID &CanonicalResultCacheKey, bool SkipCache) {
   Expected<llvm::cas::ObjectRef> Result = writeOutputs(ResultCacheKey);
   if (!Result)
     return Result.takeError();
@@ -707,9 +730,16 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
       Diags.Report(diag::remark_compile_job_cache_timing_backend_key_update)
           << llvm::format("%.6fs", Seconds);
     });
-    if (llvm::Error E =
-            Cache->put(ResultCacheKey, CAS->getID(*Result), /*Globally=*/true))
+    if (llvm::Error E = Cache->put(CanonicalResultCacheKey, CAS->getID(*Result),
+                                   /*Globally=*/true))
       return E;
+    // Tasks depending on this one don't know the canonical cache key. Make sure
+    // the requested key is associated with the result too.
+    if (ResultCacheKey != CanonicalResultCacheKey) {
+      if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result),
+                                     /*Globally=*/true))
+        return E;
+    }
   }
 
   // Replay / decanonicalize as necessary.
@@ -853,7 +883,8 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
 }
 
 Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
-    const llvm::cas::CASID &ResultCacheKey) {
+    const llvm::cas::CASID &ResultCacheKey,
+    const llvm::cas::CASID &CanonicalResultCacheKey) {
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
   std::optional<
@@ -864,7 +895,8 @@ Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
       Diags.Report(diag::remark_compile_job_cache_timing_backend_key_query)
           << llvm::format("%.6fs", Seconds);
     });
-    RemoteKVClient->getValueQueue().getValueAsync(ResultCacheKey.getHash());
+    RemoteKVClient->getValueQueue().getValueAsync(
+        CanonicalResultCacheKey.getHash());
     if (Error E =
             RemoteKVClient->getValueQueue().receiveNext().moveInto(Response))
       return std::move(E);
@@ -873,6 +905,16 @@ Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
     Diags.Report(diag::remark_compile_job_cache_miss)
         << ResultCacheKey.toString();
     return false;
+  }
+
+  // Tasks depending on this one don't know the canonical cache key. Make sure
+  // the requested key is associated with the result too.
+  if (ResultCacheKey != CanonicalResultCacheKey) {
+    RemoteKVClient->putValueQueue().putValueAsync(ResultCacheKey.getHash(),
+                                                  *Response->Value);
+    auto PutResponse = RemoteKVClient->putValueQueue().receiveNext();
+    if (!PutResponse)
+      return PutResponse.takeError();
   }
 
   llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
@@ -1081,7 +1123,8 @@ Error RemoteCachingOutputs::addNonVirtualOutputFile(StringRef FilePath) {
 }
 
 Error RemoteCachingOutputs::finishComputedResult(
-    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
+    const llvm::cas::CASID &ResultCacheKey,
+    const llvm::cas::CASID &CanonicalResultCacheKey, bool SkipCache) {
   if (SkipCache)
     return Error::success();
 
@@ -1100,11 +1143,24 @@ Error RemoteCachingOutputs::finishComputedResult(
         << llvm::format("%.6fs", Seconds);
   });
 
-  RemoteKVClient->putValueQueue().putValueAsync(ResultCacheKey.getHash(),
-                                                *CompResult);
+  RemoteKVClient->putValueQueue().putValueAsync(
+      CanonicalResultCacheKey.getHash(), *CompResult);
+  // Tasks depending on this one don't know the canonical cache key. Make sure
+  // the requested key is associated with the result too.
+  if (ResultCacheKey != CanonicalResultCacheKey)
+    RemoteKVClient->putValueQueue().putValueAsync(ResultCacheKey.getHash(),
+                                                  *CompResult);
+
   auto Response = RemoteKVClient->putValueQueue().receiveNext();
   if (!Response)
     return Response.takeError();
+  // Tasks depending on this one don't know the canonical cache key. Make sure
+  // the requested key is associated with the result too.
+  if (ResultCacheKey != CanonicalResultCacheKey) {
+    auto Response2 = RemoteKVClient->putValueQueue().receiveNext();
+    if (!Response2)
+      return Response2.takeError();
+  }
 
   return Error::success();
 }

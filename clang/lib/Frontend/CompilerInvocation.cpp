@@ -33,6 +33,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
+#include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
@@ -58,6 +59,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
@@ -3080,7 +3082,7 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   // OPT_INPUT has a unique class, generate it directly.
   for (const auto &Input : Opts.Inputs)
-    if (!Input.isIncludeTree())
+    if (!Input.isIncludeTree() && !Input.isBuffer())
       Consumer(Input.getFile());
 }
 
@@ -3329,9 +3331,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   Opts.Inputs.clear();
 
-  if (!Opts.CASIncludeTreeID.empty()) {
+  if (!Opts.CASIncludeTreeID.empty() || !Opts.CASInputFileCacheKey.empty()) {
     if (!Inputs.empty())
-      Diags.Report(diag::err_drv_inputs_and_include_tree);
+      Diags.Report(diag::err_drv_inputs_and_cas_input);
 
     if (DashX.isUnknown()) {
       Diags.Report(diag::err_drv_include_tree_miss_input_kind);
