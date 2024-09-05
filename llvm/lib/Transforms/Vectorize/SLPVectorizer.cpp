@@ -6989,7 +6989,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       ReuseShuffleIndices.clear();
     } else {
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
-      if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
+      if ((UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) ||
+          !llvm::has_single_bit(VL.size())) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
