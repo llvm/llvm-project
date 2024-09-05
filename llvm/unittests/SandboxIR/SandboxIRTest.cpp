@@ -589,6 +589,33 @@ define void @foo(ptr %ptr, {i32, i8} %v1, <2 x i8> %v2) {
   EXPECT_EQ(NewVectorCAZ->getElementCount(), ElementCount::getFixed(4));
 }
 
+TEST_F(SandboxIRTest, ConstantPointerNull) {
+  parseIR(C, R"IR(
+define ptr @foo() {
+  ret ptr null
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof() and creation.
+  auto *CPNull = cast<sandboxir::ConstantPointerNull>(Ret->getReturnValue());
+  // Check get().
+  auto *NewCPNull =
+      sandboxir::ConstantPointerNull::get(sandboxir::PointerType::get(Ctx, 0u));
+  EXPECT_EQ(NewCPNull, CPNull);
+  auto *NewCPNull2 =
+      sandboxir::ConstantPointerNull::get(sandboxir::PointerType::get(Ctx, 1u));
+  EXPECT_NE(NewCPNull2, CPNull);
+  // Check getType().
+  EXPECT_EQ(CPNull->getType(), sandboxir::PointerType::get(Ctx, 0u));
+  EXPECT_EQ(NewCPNull2->getType(), sandboxir::PointerType::get(Ctx, 1u));
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
