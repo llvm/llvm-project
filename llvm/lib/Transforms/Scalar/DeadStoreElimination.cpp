@@ -886,7 +886,7 @@ getIntersectedInitRangeList(const SmallVectorImpl<ArgumentInitInfo> &Args,
     return Args[0].Inits;
 
   ConstantRangeList IntersectedIntervals = Args[0].Inits;
-  for (unsigned I = 1, Count = Args.size(); I < Count; ++I)
+  for (size_t I = 1, Count = Args.size(); I < Count; ++I)
     IntersectedIntervals = IntersectedIntervals.intersectWith(Args[I].Inits);
 
   return IntersectedIntervals;
