@@ -769,20 +769,26 @@ protected:
 private:
   bool GetDefaultFile(Target &target, FileSpec &file,
                       CommandReturnObject &result) {
-    uint32_t default_line;
     // First use the Source Manager's default file. Then use the current stack
     // frame's file.
-    if (!target.GetSourceManager().GetDefaultFileAndLine(file, default_line)) {
+    if (auto maybe_file_and_line =
+            target.GetSourceManager().GetDefaultFileAndLine()) {
+      file = maybe_file_and_line->support_file_sp->GetSpecOnly();
+      return true;
+    }
+
       StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
       if (cur_frame == nullptr) {
         result.AppendError(
             "No selected frame to use to find the default file.");
         return false;
-      } else if (!cur_frame->HasDebugInformation()) {
+      }
+      if (!cur_frame->HasDebugInformation()) {
         result.AppendError("Cannot use the selected frame to find the default "
                            "file, it has no debug info.");
         return false;
-      } else {
+      }
+
         const SymbolContext &sc =
             cur_frame->GetSymbolContext(eSymbolContextLineEntry);
         if (sc.line_entry.GetFile()) {
@@ -791,8 +797,6 @@ private:
           result.AppendError("Can't find the file for the selected frame to "
                              "use as the default file.");
           return false;
-        }
-      }
     }
     return true;
   }
