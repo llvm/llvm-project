@@ -95,6 +95,17 @@ public:
     return getStreamFromDirectory<minidump::ExceptionStream>(Directory);
   }
 
+  /// Returns the first exception stream in the file. An error is returned if
+  /// the associated stream is smaller than the size of the ExceptionStream
+  /// structure. Or the directory supplied is not of kind exception stream.
+  Expected<const minidump::ExceptionStream &>
+  getExceptionStream() const {
+    auto it = getExceptionStreams();
+    if (it.begin() == it.end())
+      return createError("No exception streams");
+    return *it.begin();
+  }
+
   /// Returns the list of descriptors embedded in the MemoryList stream. The
   /// descriptors provide the content of interesting regions of memory at the
   /// time the minidump was taken. An error is returned if the file does not
