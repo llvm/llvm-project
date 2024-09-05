@@ -1695,22 +1695,6 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-StringRef BitcodeFile::saved_symbol(const char *S) {
-  return unique_saver().save(S);
-}
-
-StringRef BitcodeFile::saved_symbol(StringRef S) {
-  return unique_saver().save(S);
-}
-
-StringRef BitcodeFile::saved_symbol(const Twine &S) {
-  return unique_saver().save(S);
-}
-
-StringRef BitcodeFile::saved_symbol(const std::string &S) {
-  return unique_saver().save(S);
-}
-
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, mb) {
@@ -1728,8 +1712,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringRef name = archiveName.empty()
-                       ? saved_symbol(path)
-                       : saved_symbol(archiveName + "(" + path::filename(path) +
+                       ? saver().save(path)
+                       : saver().save(archiveName + "(" + path::filename(path) +
                                       " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
@@ -1760,6 +1744,8 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
+  // Symbols can be duplicated in bitcode files because of '#include' and
+  // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
   if (!sym)
     sym = symtab.insert(unique_saver().save(objSym.getName()));
 
@@ -1813,7 +1799,9 @@ void BitcodeFile::parseLazy() {
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
-      auto *sym = symtab.insert(saved_symbol(irSym.getName()));
+      // Symbols can be duplicated in bitcode files because of '#include' and
+      // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
+      auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }

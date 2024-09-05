@@ -9,8 +9,6 @@
 #ifndef LLD_ELF_INPUT_FILES_H
 #define LLD_ELF_INPUT_FILES_H
 
-#include <string>
-
 #include "Config.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
@@ -25,8 +23,6 @@
 namespace llvm {
 struct DILineInfo;
 class TarWriter;
-class StringRef;
-class Twine;
 namespace lto {
 class InputFile;
 }
@@ -339,12 +335,6 @@ public:
   void postParse();
   std::unique_ptr<llvm::lto::InputFile> obj;
   std::vector<bool> keptComdats;
-
-private:
-  StringRef saved_symbol(const char *S);
-  StringRef saved_symbol(StringRef S);
-  StringRef saved_symbol(const Twine &S);
-  StringRef saved_symbol(const std::string &S);
 };
 
 // .so file.
