@@ -1681,18 +1681,14 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         Stack.pop_back();
         break;
 
+      case WebAssembly::END_TRY: {
+        auto *EHPad = TryToEHPad[EndToBegin[&MI]];
+        EHPadStack.push_back(EHPad);
+        [[fallthrough]];
+      }
       case WebAssembly::END_BLOCK:
         Stack.push_back(std::make_pair(&MBB, &MI));
         break;
-
-      case WebAssembly::END_TRY: {
-        // We handle DELEGATE in the default level, because DELEGATE has
-        // immediate operands to rewrite.
-        Stack.push_back(std::make_pair(&MBB, &MI));
-        auto *EHPad = TryToEHPad[EndToBegin[&MI]];
-        EHPadStack.push_back(EHPad);
-        break;
-      }
 
       case WebAssembly::END_LOOP:
         Stack.push_back(std::make_pair(EndToBegin[&MI]->getParent(), &MI));
@@ -1707,12 +1703,14 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         MI.getOperand(0).setImm(getRethrowDepth(Stack, EHPadStack));
         break;
 
+      case WebAssembly::DELEGATE:
+        RewriteOperands(MI);
+        Stack.push_back(std::make_pair(&MBB, &MI));
+        break;
+
       default:
         if (MI.isTerminator())
           RewriteOperands(MI);
-
-        if (MI.getOpcode() == WebAssembly::DELEGATE)
-          Stack.push_back(std::make_pair(&MBB, &MI));
         break;
       }
     }
