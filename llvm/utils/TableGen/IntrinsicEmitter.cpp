@@ -273,20 +273,47 @@ using TypeSigTy = SmallVector<unsigned char>;
 /// Computes type signature of the intrinsic \p Int.
 static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   TypeSigTy TypeSig;
-  if (const auto *R = Int.TheDef->getValue("TypeSig")) {
-    for (const auto *a : cast<ListInit>(R->getValue())->getValues()) {
-      for (const auto *b : cast<ListInit>(a)->getValues())
-        TypeSig.emplace_back(cast<IntInit>(b)->getValue());
-    }
+  const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
+  const ListInit *OuterList = TypeInfo->getValueAsListInit("TypeSig");
+
+  for (const auto *Outer : OuterList->getValues()) {
+    for (const auto *Inner : cast<ListInit>(Outer)->getValues())
+      TypeSig.emplace_back(cast<IntInit>(Inner)->getValue());
   }
   return TypeSig;
 }
 
+// Pack the type signature into 32-bit fixed encoding word.
+static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
+  if (TypeSig.size() > 8)
+    return std::nullopt;
+
+  uint32_t Result = 0;
+  for (unsigned char C : reverse(TypeSig)) {
+    if (C > 15)
+      return std::nullopt;
+    Result = (Result << 4) | C;
+  }
+  return Result;
+}
+
 void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
                                      raw_ostream &OS) {
-  // If we can compute a 32-bit fixed encoding for this intrinsic, do so and
+  // Note: the code below can be switched to use 32-bit fixed encoding by
+  // flipping the flag below.
+  constexpr bool Use16BitFixedEncoding = true;
+  using FixedEncodingTy =
+      std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
+  constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
+  // Mask with all bits 1 except the most significant bit.
+  const unsigned Mask = (1U << (FixedEncodingBits - 1)) - 1;
+  const unsigned MSBPostion = FixedEncodingBits - 1;
+  StringRef FixedEncodingTypeName =
+      Use16BitFixedEncoding ? "uint16_t" : "uint32_t";
+
+  // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
-  std::vector<unsigned> FixedEncodings;
+  std::vector<FixedEncodingTy> FixedEncodings;
   SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
 
   FixedEncodings.reserve(Ints.size());
@@ -296,69 +323,59 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
     // Get the signature for the intrinsic.
     TypeSigTy TypeSig = ComputeTypeSignature(Int);
 
-    // Check to see if we can encode it into a 32-bit word. We can only encode
-    // 8 nibbles into a 32-bit word.
-    if (TypeSig.size() <= 8) {
-      // Attempt to pack elements of TypeSig into a 32-bit word, starting from
-      // the most significant nibble.
-      unsigned Result = 0;
-      bool Failed = false;
-      for (unsigned char C : reverse(TypeSig)) {
-        if (C > 15) {
-          Failed = true;
-          break;
-        }
-        Result = (Result << 4) | C;
-      }
-
-      // If this could be encoded into a 31-bit word, return it.
-      if (!Failed && (Result >> 31) == 0) {
-        FixedEncodings.push_back(Result);
-        continue;
-      }
+    // Check to see if we can encode it into a 16/32 bit word.
+    std::optional<uint32_t> Result = encodePacked(TypeSig);
+    if (Result && (*Result & Mask) == Result) {
+      FixedEncodings.push_back(static_cast<FixedEncodingTy>(*Result));
+      continue;
     }
 
-    // Otherwise, we're going to unique the sequence into the
-    // LongEncodingTable, and use its offset in the 32-bit table instead.
     LongEncodingTable.add(TypeSig);
 
     // This is a placehold that we'll replace after the table is laid out.
-    FixedEncodings.push_back(~0U);
+    FixedEncodings.push_back(static_cast<FixedEncodingTy>(~0U));
   }
 
   LongEncodingTable.layout();
 
-  OS << R"(// Global intrinsic function declaration type table.
+  OS << formatv(R"(// Global intrinsic function declaration type table.
 #ifdef GET_INTRINSIC_GENERATOR_GLOBAL
-static constexpr unsigned IIT_Table[] = {
-  )";
+static constexpr {0} IIT_Table[] = {{
+  )",
+                FixedEncodingTypeName);
 
+  unsigned MaxOffset = 0;
   for (auto [Idx, FixedEncoding, Int] : enumerate(FixedEncodings, Ints)) {
     if ((Idx & 7) == 7)
       OS << "\n  ";
 
     // If the entry fit in the table, just emit it.
-    if (FixedEncoding != ~0U) {
+    if ((FixedEncoding & Mask) == FixedEncoding) {
       OS << "0x" << Twine::utohexstr(FixedEncoding) << ", ";
       continue;
     }
 
     TypeSigTy TypeSig = ComputeTypeSignature(Int);
+    unsigned Offset = LongEncodingTable.get(TypeSig);
+    MaxOffset = std::max(MaxOffset, Offset);
 
     // Otherwise, emit the offset into the long encoding table.  We emit it this
     // way so that it is easier to read the offset in the .def file.
-    OS << "(1U<<31) | " << LongEncodingTable.get(TypeSig) << ", ";
+    OS << formatv("(1U<<{0}) | {1}, ", MSBPostion, Offset);
   }
 
   OS << "0\n};\n\n";
+
+  // verify that all offsets will fit in 16/32 bits.
+  if ((MaxOffset & Mask) != MaxOffset)
+    PrintFatalError("Offset of long encoding table exceeds encoding bits");
 
   // Emit the shared table of register lists.
   OS << "static constexpr unsigned char IIT_LongEncodingTable[] = {\n";
   if (!LongEncodingTable.empty())
     LongEncodingTable.emit(
         OS, [](raw_ostream &OS, unsigned char C) { OS << (unsigned)C; });
-  OS << "  255\n};\n\n";
-
+  OS << "  255\n};\n";
   OS << "#endif\n\n"; // End of GET_INTRINSIC_GENERATOR_GLOBAL
 }
 

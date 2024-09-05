@@ -221,7 +221,56 @@ exit:
   ret void
 }
 
+; Test case for https://github.com/llvm/llvm-project/issues/107171.
+define i8 @icmp_ops_narrowed_to_i1() #1 {
+; CHECK-LABEL: define i8 @icmp_ops_narrowed_to_i1(
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 96, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 0, 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[EXT]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i8
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TRUNC_LCSSA:%.*]] = phi i8 [ [[TRUNC]], %[[LOOP]] ], [ 0, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i8 [[TRUNC_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %c = icmp eq i8 0, 0
+  %ext = zext i1 %c to i64
+  %shr = lshr i64 %ext, 1
+  %trunc = trunc i64 %shr to i8
+  %iv.next = add i16 %iv, 1
+  %ec = icmp eq i16 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i8 %trunc
+}
+
 attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
+attributes #1 = { "target-features"="+64bit,+v" }
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
@@ -232,4 +281,6 @@ attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
 ;.
