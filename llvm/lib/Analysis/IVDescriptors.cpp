@@ -1035,7 +1035,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
 Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) const {
+                                                   FastMathFlags FMF) {
   switch (K) {
   case RecurKind::Xor:
   case RecurKind::Add:
@@ -1058,21 +1058,21 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
     return ConstantInt::get(Tp,
                             APInt::getSignedMinValue(Tp->getIntegerBitWidth()));
   case RecurKind::FMin:
-    assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP min reduction.");
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
   case RecurKind::FMax:
     assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP max reduction.");
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
+           "nnan, nsz is expected to be set for FP min/max reduction.");
+    [[fallthrough]];
   case RecurKind::FMinimum:
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
-  case RecurKind::FMaximum:
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
+  case RecurKind::FMaximum: {
+    bool Negative = K == RecurKind::FMax || K == RecurKind::FMaximum;
+    const fltSemantics &Semantics = Tp->getFltSemantics();
+    return !FMF.noInfs()
+               ? ConstantFP::getInfinity(Tp, Negative)
+               : ConstantFP::get(Tp, APFloat::getLargest(Semantics, Negative));
+  }
   case RecurKind::IAnyOf:
   case RecurKind::FAnyOf:
-    return getRecurrenceStartValue();
-    break;
+    llvm_unreachable("No meaningful identity for recurrence kind");
   default:
     llvm_unreachable("Unknown recurrence kind");
   }

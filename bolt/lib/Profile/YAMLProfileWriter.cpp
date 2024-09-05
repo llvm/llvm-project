@@ -12,14 +12,12 @@
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
-#include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <deque>
 #include <queue>
 
 #undef  DEBUG_TYPE
@@ -62,6 +60,37 @@ const BinaryFunction *YAMLProfileWriter::setCSIDestination(
   return nullptr;
 }
 
+YAMLProfileWriter::InlineTreeTy
+YAMLProfileWriter::getInlineTree(const MCPseudoProbeDecoder &PseudoProbeDecoder,
+                                 uint64_t GUID) {
+  InlineTreeTy InlineTree;
+  uint32_t ParentId = 0;
+  uint32_t NodeId = 0;
+  std::queue<const MCDecodedPseudoProbeInlineTree *> Worklist;
+  const MCDecodedPseudoProbeInlineTree *DummyRoot =
+      &PseudoProbeDecoder.getDummyInlineRoot();
+  Worklist.push(DummyRoot);
+  while (!Worklist.empty()) {
+    const MCDecodedPseudoProbeInlineTree *Cur = Worklist.front();
+    for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren()) {
+      if (NodeId == 0 && Child.Guid != GUID)
+        continue;
+      uint32_t InlineSite = NodeId ? std::get<1>(Child.getInlineSite()) : 0;
+      yaml::bolt::InlineTreeInfo YamlNode{
+          NodeId, ParentId, InlineSite, Child.Guid,
+          PseudoProbeDecoder.getFuncDescForGUID(Child.Guid)->FuncHash};
+      InlineTree.emplace_back(&Child, YamlNode);
+      Worklist.push(&Child);
+      if (NodeId++ == 0)
+        break;
+    }
+    Worklist.pop();
+    ParentId += Cur != DummyRoot;
+  }
+
+  return InlineTree;
+}
+
 yaml::bolt::BinaryFunctionProfile
 YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
                            const BoltAddressTranslation *BAT) {
@@ -81,6 +110,14 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
+  if (PseudoProbeDecoder && BF.getGUID()) {
+    for (const auto &[InlineTreeNode, YamlInlineTree] :
+         getInlineTree(*PseudoProbeDecoder, BF.getGUID())) {
+      InlineTreeNodeId[InlineTreeNode] = YamlInlineTree.Index;
+      YamlBF.InlineTree.emplace_back(YamlInlineTree);
+    }
+  }
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
@@ -88,40 +125,6 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
 
   const FunctionLayout Layout = BF.getLayout();
   Layout.updateLayoutIndices(Order);
-
-  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
-  if (PseudoProbeDecoder && BF.getGUID()) {
-    std::queue<const MCDecodedPseudoProbeInlineTree *> ITWorklist;
-    // FIXME: faster inline tree lookup by top-level GUID
-    if (const MCDecodedPseudoProbeInlineTree *InlineTree = llvm::find_if(
-            PseudoProbeDecoder->getDummyInlineRoot().getChildren(),
-            [&](const auto &InlineTree) {
-              return InlineTree.Guid == BF.getGUID();
-            })) {
-      ITWorklist.push(InlineTree);
-      InlineTreeNodeId[InlineTree] = 0;
-      auto Hash =
-          PseudoProbeDecoder->getFuncDescForGUID(BF.getGUID())->FuncHash;
-      YamlBF.InlineTree.emplace_back(
-          yaml::bolt::InlineTreeInfo{0, 0, 0, BF.getGUID(), Hash});
-    }
-    uint32_t ParentId = 0;
-    uint32_t NodeId = 1;
-    while (!ITWorklist.empty()) {
-      const MCDecodedPseudoProbeInlineTree *Cur = ITWorklist.front();
-      for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren()) {
-        InlineTreeNodeId[&Child] = NodeId;
-        auto Hash =
-            PseudoProbeDecoder->getFuncDescForGUID(Child.Guid)->FuncHash;
-        YamlBF.InlineTree.emplace_back(yaml::bolt::InlineTreeInfo{
-            NodeId++, ParentId, std::get<1>(Child.getInlineSite()), Child.Guid,
-            Hash});
-        ITWorklist.push(&Child);
-      }
-      ITWorklist.pop();
-      ++ParentId;
-    }
-  }
 
   for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;

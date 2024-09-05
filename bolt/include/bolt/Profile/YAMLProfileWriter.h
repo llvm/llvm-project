@@ -42,6 +42,13 @@ public:
   setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
                     const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
                     uint32_t Offset = 0);
+
+  using InlineTreeTy =
+      std::vector<std::pair<const MCDecodedPseudoProbeInlineTree *,
+                            yaml::bolt::InlineTreeInfo>>;
+  /// Return pseudo probe inline tree for a given top-level GUID.
+  static InlineTreeTy
+  getInlineTree(const MCPseudoProbeDecoder &PseudoProbeDecoder, uint64_t GUID);
 };
 
 } // namespace bolt

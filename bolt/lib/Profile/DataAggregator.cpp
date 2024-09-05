@@ -34,7 +34,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <optional>
-#include <queue>
 #include <unordered_map>
 #include <utility>
 
@@ -2403,43 +2402,17 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
-      DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
-          InlineTreeNodeId;
-      if (PseudoProbeDecoder && BF->getGUID()) {
-        std::queue<const MCDecodedPseudoProbeInlineTree *> ITWorklist;
-        // FIXME: faster inline tree lookup by top-level GUID
-        if (const MCDecodedPseudoProbeInlineTree *InlineTree = llvm::find_if(
-                PseudoProbeDecoder->getDummyInlineRoot().getChildren(),
-                [&](const auto &InlineTree) {
-                  return InlineTree.Guid == BF->getGUID();
-                })) {
-          ITWorklist.push(InlineTree);
-          InlineTreeNodeId[InlineTree] = 0;
-          auto Hash =
-              PseudoProbeDecoder->getFuncDescForGUID(BF->getGUID())->FuncHash;
-          YamlBF.InlineTree.emplace_back(
-              yaml::bolt::InlineTreeInfo{0, 0, 0, BF->getGUID(), Hash});
-        }
-        uint32_t ParentId = 0;
-        uint32_t NodeId = 1;
-        while (!ITWorklist.empty()) {
-          const MCDecodedPseudoProbeInlineTree *Cur = ITWorklist.front();
-          for (const MCDecodedPseudoProbeInlineTree &Child :
-               Cur->getChildren()) {
-            InlineTreeNodeId[&Child] = NodeId;
-            auto Hash =
-                PseudoProbeDecoder->getFuncDescForGUID(Child.Guid)->FuncHash;
-            YamlBF.InlineTree.emplace_back(yaml::bolt::InlineTreeInfo{
-                NodeId++, ParentId, std::get<1>(Child.getInlineSite()),
-                Child.Guid, Hash});
-            ITWorklist.push(&Child);
-          }
-          ITWorklist.pop();
-          ++ParentId;
-        }
-      }
-
       if (PseudoProbeDecoder) {
+        DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
+            InlineTreeNodeId;
+        if (BF->getGUID()) {
+          for (const auto &[InlineTreeNode, YamlInlineTree] :
+               YAMLProfileWriter::getInlineTree(*PseudoProbeDecoder,
+                                                BF->getGUID())) {
+            InlineTreeNodeId[InlineTreeNode] = YamlInlineTree.Index;
+            YamlBF.InlineTree.emplace_back(YamlInlineTree);
+          }
+        }
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();

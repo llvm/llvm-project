@@ -126,6 +126,109 @@ exit:
   ret void
 }
 
+define void @call_scalarized(ptr noalias %src, ptr noalias %dst, double %0) {
+; CHECK-LABEL: define void @call_scalarized(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], double [[TMP0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[CMP295:%.*]] = fcmp ugt double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[CMP299:%.*]] = fcmp ugt double [[L]], 0.000000e+00
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP295]], [[CMP299]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[L]])
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    store double [[SQRT]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 100, %entry ], [ %iv.next, %loop.latch ]
+  %iv.next = add i64 %iv, -1
+  %gep.src = getelementptr double, ptr %src, i64 %iv.next
+  %l = load double, ptr %gep.src, align 8
+  %cmp295 = fcmp ugt double %0, 0.000000e+00
+  %cmp299 = fcmp ugt double %l, 0.000000e+00
+  %or.cond = or i1 %cmp295, %cmp299
+  br i1 %or.cond, label %loop.latch, label %then
+
+then:
+  %sqrt = call double @llvm.sqrt.f64(double %l)
+  %gep.dst = getelementptr double, ptr %dst, i64 %iv.next
+  store double %sqrt, ptr %gep.dst, align 8
+  br label %loop.latch
+
+loop.latch:
+  %tobool.not = icmp eq i64 %iv.next, 0
+  br i1 %tobool.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @call_forced_scalar(ptr %src.1, ptr %src.2, ptr noalias %dst.1, ptr noalias %dst.2) {
+; CHECK-LABEL: define void @call_forced_scalar(
+; CHECK-SAME: ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC_1]], align 4
+; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP0]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = tail call i32 @llvm.umin.i32(i32 [[SMAX]], i32 1)
+; CHECK-NEXT:    [[UMIN_EXT:%.*]] = zext i32 [[UMIN]] to i64
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[UMIN_EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[GEP_SRC_2]], align 1
+; CHECK-NEXT:    [[L_EXT:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 3, [[L_EXT]]
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[DST_1]], align 4
+; CHECK-NEXT:    [[GEP_DST_2:%.*]] = getelementptr i32, ptr [[DST_2]], i64 [[IV]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_DST_2]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %0 = load i32, ptr %src.1, align 4
+  %smax = tail call i32 @llvm.smax.i32(i32 %0, i32 0)
+  %umin = tail call i32 @llvm.umin.i32(i32 %smax, i32 1)
+  %umin.ext = zext i32 %umin to i64
+  %gep.src.2 = getelementptr i8, ptr %src.2, i64 %umin.ext
+  %1 = load i8, ptr %gep.src.2, align 1
+  %l.ext = zext i8 %1 to i32
+  %mul = mul i32 3, %l.ext
+  store i32 %mul, ptr %dst.1, align 4
+  %gep.dst.2 = getelementptr i32, ptr %dst.2, i64 %iv
+  store i32 0, ptr %gep.dst.2, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
+declare double @llvm.sqrt.f64(double)
 declare double @llvm.powi.f64.i32(double, i32)
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 ;.

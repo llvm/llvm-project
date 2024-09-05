@@ -39,7 +39,7 @@ FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
-FunctionPass *createSIShrinkInstructionsPass();
+FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
@@ -166,8 +166,8 @@ extern char &SIFoldOperandsLegacyID;
 void initializeSIPeepholeSDWAPass(PassRegistry &);
 extern char &SIPeepholeSDWAID;
 
-void initializeSIShrinkInstructionsPass(PassRegistry&);
-extern char &SIShrinkInstructionsID;
+void initializeSIShrinkInstructionsLegacyPass(PassRegistry &);
+extern char &SIShrinkInstructionsLegacyID;
 
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
