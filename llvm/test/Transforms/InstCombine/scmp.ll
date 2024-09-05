@@ -358,6 +358,19 @@ define i8 @scmp_from_select_eq_and_gt(i32 %x, i32 %y) {
   ret i8 %r
 }
 
+define <4 x i8> @scmp_from_select_eq_and_gt_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i8> @scmp_from_select_eq_and_gt_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i8> @llvm.scmp.v4i8.v4i32(<4 x i32> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %eq = icmp eq <4 x i32> %x, %y
+  %gt = icmp sgt <4 x i32> %x, %y
+  %sel1 = select <4 x i1> %gt, <4 x i8> splat(i8 1), <4 x i8> splat(i8 -1)
+  %r = select <4 x i1> %eq, <4 x i8> splat(i8 0), <4 x i8> %sel1
+  ret <4 x i8> %r
+}
+
 define i8 @scmp_from_select_eq_and_gt_commuted1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_from_select_eq_and_gt_commuted1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {

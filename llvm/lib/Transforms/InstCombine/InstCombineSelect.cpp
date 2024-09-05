@@ -3575,11 +3575,11 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
 
   // (x == y) ? 0 : (x > y ? 1 : -1)
   ICmpInst::Predicate FalseBranchSelectPredicate;
-  ConstantInt *InnerTV, *InnerFV;
+  const APInt *InnerTV, *InnerFV;
   if (Pred == ICmpInst::ICMP_EQ && match(TV, m_Zero()) &&
       match(FV, m_Select(m_c_ICmp(FalseBranchSelectPredicate, m_Specific(LHS),
                                   m_Specific(RHS)),
-                         m_ConstantInt(InnerTV), m_ConstantInt(InnerFV)))) {
+                         m_APInt(InnerTV), m_APInt(InnerFV)))) {
     if (!ICmpInst::isGT(FalseBranchSelectPredicate)) {
       FalseBranchSelectPredicate =
           ICmpInst::getSwappedPredicate(FalseBranchSelectPredicate);
@@ -3592,7 +3592,7 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
     }
 
     if (ICmpInst::isGT(FalseBranchSelectPredicate) && InnerTV->isOne() &&
-        InnerFV->isAllOnesValue()) {
+        InnerFV->isAllOnes()) {
       IsSigned = ICmpInst::isSigned(FalseBranchSelectPredicate);
       Replace = true;
     }
