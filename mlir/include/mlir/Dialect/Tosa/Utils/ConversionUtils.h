@@ -16,9 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
-#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include <optional>
