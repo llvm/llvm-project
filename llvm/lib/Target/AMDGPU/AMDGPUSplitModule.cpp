@@ -889,10 +889,6 @@ private:
     BitVector Cluster;
   };
 
-  /// Checks if the TotalCost of \p A > \p B, handling the case where the costs
-  /// are identical in a deterministic manner.
-  bool stableGreaterThan(const WorkListEntry &A, const WorkListEntry &B) const;
-
   /// Collects all graph entry points's clusters and sort them so the most
   /// expensive clusters are viewed first. This will merge clusters together if
   /// they share a non-copyable dependency.
@@ -958,36 +954,6 @@ void RecursiveSearchSplitting::run() {
   }
 }
 
-bool RecursiveSearchSplitting::stableGreaterThan(const WorkListEntry &A,
-                                                 const WorkListEntry &B) const {
-  if (A.TotalCost != B.TotalCost)
-    return A.TotalCost > B.TotalCost;
-
-  if (A.CostExcludingGraphEntryPoints != B.CostExcludingGraphEntryPoints)
-    return A.CostExcludingGraphEntryPoints > B.CostExcludingGraphEntryPoints;
-
-  if (A.NumNonEntryNodes != B.NumNonEntryNodes)
-    return A.NumNonEntryNodes > B.NumNonEntryNodes;
-
-  const auto &CA = A.Cluster;
-  const auto &CB = B.Cluster;
-  if (CA.count() != CB.count())
-    return CA.count() > CB.count();
-
-  // If these are identical clusters, which can happen in some glibc checks that
-  // verify the result of A > A for instance, return false to pass the glibc
-  // assert that !(a < a).
-  if (CA == CB)
-    return false;
-
-  // As a last resort, take the first diverging bit between the sets.
-  BitVector Result = CA;
-  Result ^= CB;
-
-  assert(Result.any());
-  return CA.test(*Result.set_bits_begin()) ? true : false;
-}
-
 void RecursiveSearchSplitting::setupWorkList() {
   // e.g. if A and B are two worklist item, and they both call a non copyable
   // dependency C, this does:
@@ -1035,8 +1001,17 @@ void RecursiveSearchSplitting::setupWorkList() {
     }
   }
 
-  sort(WorkList, [this](const WorkListEntry &LHS, const WorkListEntry &RHS) {
-    return stableGreaterThan(LHS, RHS);
+  stable_sort(WorkList, [](const WorkListEntry &A, const WorkListEntry &B) {
+    if (A.TotalCost != B.TotalCost)
+      return A.TotalCost > B.TotalCost;
+
+    if (A.CostExcludingGraphEntryPoints != B.CostExcludingGraphEntryPoints)
+      return A.CostExcludingGraphEntryPoints > B.CostExcludingGraphEntryPoints;
+
+    if (A.NumNonEntryNodes != B.NumNonEntryNodes)
+      return A.NumNonEntryNodes > B.NumNonEntryNodes;
+
+    return A.Cluster.count() > B.Cluster.count();
   });
 
   LLVM_DEBUG({
