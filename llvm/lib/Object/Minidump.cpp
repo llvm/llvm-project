@@ -55,8 +55,8 @@ Expected<std::string> MinidumpFile::getString(size_t Offset) const {
 
 iterator_range<llvm::object::MinidumpFile::ExceptionStreamsIterator>
 MinidumpFile::getExceptionStreams() const {
-  return make_range(ExceptionStreamsIterator::begin(ExceptionStreams, this),
-                    ExceptionStreamsIterator::end());
+  return make_range(ExceptionStreamsIterator(ExceptionStreams, this),
+                    ExceptionStreamsIterator({}, this));
 }
 
 Expected<iterator_range<MinidumpFile::MemoryInfoIterator>>
@@ -167,7 +167,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
   }
 
   return std::unique_ptr<MinidumpFile>(new MinidumpFile(
-      Source, Hdr, *ExpectedStreams, std::move(StreamMap), ExceptionStreams));
+      Source, Hdr, *ExpectedStreams, std::move(StreamMap), std::move(ExceptionStreams)));
 }
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
