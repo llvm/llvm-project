@@ -6839,7 +6839,7 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
     // A deduced template name which deduces the same default arguments already
     // declared in the underlying template is the same template as the
     // underlying template. We need need to note any arguments which differ from
-    // the corresponding declaration. If they are not the same, we must build a
+    // the corresponding declaration. If any argument differs, we must build a
     // deduced template name.
     for (int I = CanonArgs.size() - 1; I >= 0; --I) {
       const TemplateArgument *A = getDefaultTemplateArgumentOrNone(Params[I]);
