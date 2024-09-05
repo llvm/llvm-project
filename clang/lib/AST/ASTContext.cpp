@@ -6837,7 +6837,7 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
         CanonUnderlying.getAsTemplateDecl()->getTemplateParameters()->asArray();
     assert(CanonArgs.size() <= Params.size());
     // A deduced template name which deduces the same default arguments already
-    // declared in the underlying template, is the same template as the
+    // declared in the underlying template is the same template as the
     // underlying template. We need need to note any arguments which differ from
     // the corresponding declaration. If they are not the same, we must build a
     // deduced template name.
