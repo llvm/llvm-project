@@ -268,16 +268,49 @@ define void @foo({i32, i8} %v0) {
 
 TEST_F(SandboxTypeTest, VectorType) {
   parseIR(C, R"IR(
-define void @foo(<2 x i8> %v0) {
+define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   ret void
 }
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-  // Check classof(), creation.
-  [[maybe_unused]] auto *VecTy =
-      cast<sandboxir::VectorType>(F->getArg(0)->getType());
+  // Check classof(), creation, accessors
+  auto *VecTy = cast<sandboxir::VectorType>(F->getArg(0)->getType());
+  EXPECT_TRUE(VecTy->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(VecTy->getElementCount(), ElementCount::getFixed(4));
+
+  auto *FVecTy = cast<sandboxir::VectorType>(F->getArg(1)->getType());
+  EXPECT_TRUE(FVecTy->getElementType()->isFloatTy());
+  auto *IVecTy = sandboxir::VectorType::getInteger(Ctx, FVecTy);
+  EXPECT_TRUE(IVecTy->getElementType()->isIntegerTy(32));
+  EXPECT_EQ(IVecTy->getElementCount(), FVecTy->getElementCount());
+
+  auto *ExtVecTy =
+      sandboxir::VectorType::getExtendedElementVectorType(Ctx, IVecTy);
+  EXPECT_TRUE(ExtVecTy->getElementType()->isIntegerTy(64));
+  EXPECT_EQ(ExtVecTy->getElementCount(), VecTy->getElementCount());
+  auto *TruncVecTy =
+      sandboxir::VectorType::getTruncatedElementVectorType(Ctx, IVecTy);
+  EXPECT_TRUE(TruncVecTy->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(TruncVecTy->getElementCount(), VecTy->getElementCount());
+  auto *SubVecTy =
+      sandboxir::VectorType::getSubdividedVectorType(Ctx, VecTy, 1);
+  EXPECT_TRUE(SubVecTy->getElementType()->isIntegerTy(8));
+  EXPECT_EQ(SubVecTy->getElementCount(), ElementCount::getFixed(8));
+  auto *HalfVecTy =
+      sandboxir::VectorType::getHalfElementsVectorType(Ctx, VecTy);
+  EXPECT_TRUE(HalfVecTy->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(HalfVecTy->getElementCount(), ElementCount::getFixed(2));
+  auto *DoubleVecTy =
+      sandboxir::VectorType::getDoubleElementsVectorType(Ctx, VecTy);
+  EXPECT_TRUE(DoubleVecTy->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(DoubleVecTy->getElementCount(), ElementCount::getFixed(8));
+
+  auto *I8Type = F->getArg(2)->getType();
+  EXPECT_TRUE(I8Type->isIntegerTy());
+  EXPECT_TRUE(sandboxir::VectorType::isValidElementType(Ctx, I8Type));
+  EXPECT_FALSE(sandboxir::VectorType::isValidElementType(Ctx, FVecTy));
 }
 
 TEST_F(SandboxTypeTest, FunctionType) {

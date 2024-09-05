@@ -50,8 +50,8 @@ protected:
   friend class ConstantArray;  // For LLVMTy.
   friend class ConstantStruct; // For LLVMTy.
   friend class ConstantVector; // For LLVMTy.
-  friend class CmpInst; // For LLVMTy. TODO: Cleanup after sandboxir::VectorType
-                        // is more complete.
+  friend class CmpInst;        // For LLVMTy. TODO: Cleanup after
+                               // sandboxir::VectorType is more complete.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
@@ -317,7 +317,32 @@ public:
 class VectorType : public Type {
 public:
   static VectorType *get(Type *ElementType, ElementCount EC);
-  // TODO: add missing functions
+  static VectorType *get(Type *ElementType, unsigned NumElements,
+                         bool Scalable) {
+    return VectorType::get(ElementType,
+                           ElementCount::get(NumElements, Scalable));
+  }
+  // Needs tests
+  Type *getElementType() const;
+
+  static VectorType *get(Type *ElementType, const VectorType *Other) {
+    return VectorType::get(ElementType, Other->getElementCount());
+  }
+
+  inline ElementCount getElementCount() const {
+    return cast<llvm::VectorType>(LLVMTy)->getElementCount();
+  }
+  static VectorType *getInteger(Context &Ctx, VectorType *VTy);
+  static VectorType *getExtendedElementVectorType(Context &Ctx,
+                                                  VectorType *VTy);
+  static VectorType *getTruncatedElementVectorType(Context &Ctx,
+                                                   VectorType *VTy);
+  static VectorType *getSubdividedVectorType(Context &Ctx, VectorType *VTy,
+                                             int NumSubdivs);
+  static VectorType *getHalfElementsVectorType(Context &Ctx, VectorType *VTy);
+  static VectorType *getDoubleElementsVectorType(Context &Ctx, VectorType *VTy);
+  static bool isValidElementType(Context &Ctx, Type *ElemTy);
+
   static bool classof(const Type *From) {
     return isa<llvm::VectorType>(From->LLVMTy);
   }
