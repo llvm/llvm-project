@@ -263,6 +263,84 @@ define <8 x i16> @v8i16_371115(<16 x i8> %a, <16 x i8> %b) {
 }
 
 
+define <8 x i32> @v8i32_0246(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_0246:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_1357(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_1357:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_04812(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_04812:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_15913(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_15913:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_261014(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_261014:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+define <8 x i32> @v8i32_371115(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: v8i32_371115:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %c = shufflevector <16 x i8> %a, <16 x i8> %b, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+  %d = zext <8 x i8> %c to <8 x i32>
+  ret <8 x i32> %d
+}
+
+
 define <8 x i64> @zext_add(<32 x i16> %l) {
 ; CHECK-LABEL: zext_add:
 ; CHECK:       // %bb.0:
