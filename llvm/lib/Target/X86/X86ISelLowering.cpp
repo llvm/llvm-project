@@ -57403,7 +57403,8 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   SDLoc DL(N);
@@ -57481,6 +57482,43 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
         // TODO: Handle BroadcastSizeInBits < SizeInBits when we have test
         // coverage.
       }
+
+  // Check for cases where we've ended up with a scalarized shift, typically
+  // during type legalization.
+  switch (Src.getOpcode()) {
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    if (auto *Amt = dyn_cast<ConstantSDNode>(Src.getOperand(1))) {
+      if (supportedVectorShiftWithImm(VT, Subtarget, Src.getOpcode()) &&
+          Src.hasOneUse()) {
+        SDValue SrcVec =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Src.getOperand(0));
+        unsigned Opc = getTargetVShiftUniformOpcode(Src.getOpcode(), false);
+        return getTargetVShiftByConstNode(Opc, DL, VT.getSimpleVT(), SrcVec,
+                                          Amt->getZExtValue(), DAG);
+      }
+    }
+    break;
+  case ISD::FSHL:
+  case ISD::FSHR:
+    if (auto *Amt = dyn_cast<ConstantSDNode>(Src.getOperand(2))) {
+      if (supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL) &&
+          Src.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Src.getOperand(1).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Src.hasOneUse()) {
+        uint64_t AmtVal =
+            Amt->getAPIntValue().urem(Src.getScalarValueSizeInBits());
+        SDValue SrcVec0 =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Src.getOperand(0));
+        SDValue SrcVec1 =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Src.getOperand(1));
+        return DAG.getNode(Src.getOpcode(), DL, VT, SrcVec0, SrcVec1,
+                           DAG.getConstant(AmtVal, DL, VT));
+      }
+    }
+    break;
+  }
 
   return SDValue();
 }
@@ -58034,7 +58072,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   // clang-format off
   default: break;
   case ISD::SCALAR_TO_VECTOR:
-    return combineScalarToVector(N, DAG);
+    return combineScalarToVector(N, DAG, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
   case X86ISD::PEXTRW:
   case X86ISD::PEXTRB:
