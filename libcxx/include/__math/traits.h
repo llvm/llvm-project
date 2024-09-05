@@ -34,8 +34,30 @@ namespace __math {
 #  define _LIBCPP_SIGNBIT_CONSTEXPR
 #endif
 
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+_LIBCPP_PREFERRED_OVERLOAD
+#endif
+    bool
+    signbit(float __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+_LIBCPP_PREFERRED_OVERLOAD
+#endif
+    bool
+    signbit(double __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+_LIBCPP_PREFERRED_OVERLOAD
+#endif
+    bool
+    signbit(long double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
