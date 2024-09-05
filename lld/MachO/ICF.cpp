@@ -266,7 +266,7 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
     return;
 
   // The standard ICF algorithm will merge all functions in the [begin + 1, end)
-  // range into icfInputs[begin].So, the body of the first function is always
+  // range into icfInputs[begin], so the body of the first function is always
   // kept, even if it is not keepUnique. To make safe_thunks nicely play with
   // this behavior, we ensure that the first function in the range is
   // keepUnique.
@@ -288,31 +288,26 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
   // all thunks will branch to.
   ConcatInputSection *masterIsec = icfInputs[begin];
 
-  static std::mutex thunkInsertionMutex;
   for (size_t i = begin + 1; i < end; ++i) {
     ConcatInputSection *isec = icfInputs[i];
+    // When we're done processing keepUnique entries, we can stop. Sorting
+    // guaratees that all keepUnique will be at the front.
     if (!isec->keepUnique)
-      continue;
+      break;
 
-    // applySafeThunksToRange is called from multiple threads, but
-    // `makeSyntheticInputSection` and `addInputSection` are not thread safe. So
-    // we need to guard them with a mutex.
     ConcatInputSection *thunk;
-    {
-      std::lock_guard<std::mutex> lock(thunkInsertionMutex);
-      thunk = makeSyntheticInputSection(isec->getSegName(), isec->getName());
-      addInputSection(thunk);
-    }
+    thunk = makeSyntheticInputSection(isec->getSegName(), isec->getName());
+    addInputSection(thunk);
 
     target->initICFSafeThunkBody(thunk, masterIsec);
-    thunk->foldIdentical(isec);
+    thunk->foldIdentical(isec, Symbol::ICFFoldKind::Folded_Thunk);
 
     // Since we're folding the target function into a thunk, we need to adjust
     // the symbols that now got relocated from the target function to the thunk.
     // Since the thunk is only one branch, we move all symbols to offset 0 and
     // make sure that the size of all non-zero-size symbols is equal to the size
     // of the branch.
-    for (auto *sym : isec->symbols) {
+    for (auto *sym : thunk->symbols) {
       sym->value = 0;
       if (sym->size != 0)
         sym->size = thunkSize;
@@ -381,6 +376,12 @@ void ICF::run() {
 
   llvm::stable_sort(
       icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
+        // When using safe_thunks, ensure that we first sort by icfEqClass and
+        // then by keepUnique (descending). This guarantees that within an
+        // equivalence class, the keepUnique inputs are always first.
+        if (config->icfLevel == ICFLevel::safe_thunks)
+          if (a->icfEqClass[0] == b->icfEqClass[0])
+            return a->keepUnique > b->keepUnique;
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
   forEachClass([&](size_t begin, size_t end) {
@@ -400,6 +401,14 @@ void ICF::run() {
     log("equalsVariable() called " + Twine(equalsVariableCount) + " times");
   }
 
+  // When using safe_thunks, we need to create thunks for all keepUnique
+  // functions that can be deduplicated. Since we're creating / adding new
+  // InputSections, we can't paralellize this.
+  if (config->icfLevel == ICFLevel::safe_thunks)
+    forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
+      applySafeThunksToRange(begin, end);
+    });
+
   // Fold sections within equivalence classes
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin < 2)
@@ -408,8 +417,6 @@ void ICF::run() {
 
     // For ICF level safe_thunks, replace keepUnique function bodies with
     // thunks. For all other ICF levles, directly merge the functions.
-    if (useSafeThunks)
-      applySafeThunksToRange(begin, end);
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {

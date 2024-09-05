@@ -2,8 +2,9 @@
 
 ; RUN: rm -rf %t; mkdir %t
 ; RUN: llc -filetype=obj %s -O3 -o %t/icf-obj-safe-thunks.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
-; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -o %t/icf-safe.dylib %t/icf-obj-safe-thunks.o
+; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -o %t/icf-safe.dylib -map %t/icf-safe.map %t/icf-obj-safe-thunks.o
 ; RUN: llvm-objdump %t/icf-safe.dylib -d --macho | FileCheck %s --check-prefixes=CHECK-ARM64
+; RUN: cat %t/icf-safe.map | FileCheck %s --check-prefixes=CHECK-ARM64-MAP
 
 ; CHECK-ARM64:        (__TEXT,__text) section
 ; CHECK-ARM64-NEXT:   _func_unique_1:
@@ -33,6 +34,20 @@
 ; CHECK-ARM64-NEXT:        b  _func_3identical_v1
 ; CHECK-ARM64-NEXT:   _func_3identical_v3:
 ; CHECK-ARM64-NEXT:        b  _func_3identical_v1
+
+
+; CHECK-ARM64-MAP:      0x00000010 [  2] _func_unique_1
+; CHECK-ARM64-MAP-NEXT: 0x00000010 [  2] _func_2identical_v1
+; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_unique_2_canmerge
+; CHECK-ARM64-MAP-NEXT: 0x00000010 [  2] _func_3identical_v1
+; CHECK-ARM64-MAP-NEXT: 0x00000010 [  2] _func_3identical_v1_canmerge
+; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v2_canmerge
+; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v3_canmerge
+; CHECK-ARM64-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
+; CHECK-ARM64-MAP-NEXT: 0x00000050 [  2] _take_func_addr
+; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_2identical_v2
+; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_3identical_v2
+; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_3identical_v3
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx11.0.0"
