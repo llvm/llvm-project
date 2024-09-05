@@ -2682,7 +2682,7 @@ Error BitcodeReader::parseTypeTableBody() {
       auto TTy =
           TargetExtType::getOrError(Context, TypeName, TypeParams, IntParams);
       if (auto E = TTy.takeError())
-        return error(toString(std::move(E)));
+        return E;
       ResultTy = *TTy;
       TypeName.clear();
       break;
