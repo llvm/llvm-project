@@ -28,7 +28,7 @@ struct YkBasicBlockTracer : public ModulePass {
   bool runOnModule(Module &M) override {
     LLVMContext &Context = M.getContext();
     // Create externally linked function declaration:
-    //   void yk_trace_basicblock(int functionIndex, int blockIndex)
+    //   void __yk_trace_basicblock(int functionIndex, int blockIndex)
     Type *ReturnType = Type::getVoidTy(Context);
     Type *FunctionIndexArgType = Type::getInt32Ty(Context);
     Type *BlockIndexArgType = Type::getInt32Ty(Context);

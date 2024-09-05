@@ -2,7 +2,7 @@
 ; RUN: llc -stop-after yk-basicblock-tracer-pass --yk-basicblock-tracer < %s  | FileCheck %s
 
 ; CHECK-LABEL: define dso_local noundef i32 @main()
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 0)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 0)
 define dso_local noundef i32 @main() #0 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -13,33 +13,33 @@ define dso_local noundef i32 @main() #0 {
   br label %4
 
 ; CHECK-LABEL: 4:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 1)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 1)
 4:                                                ; preds = %13, %0
   %5 = load i32, i32* %3, align 4
   %6 = icmp slt i32 %5, 43
   br i1 %6, label %7, label %16
 
 ; CHECK-LABEL: 7:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 2)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 2)
 7:                                                ; preds = %4
   %8 = load i32, i32* %3, align 4
   %9 = icmp eq i32 %8, 42
   br i1 %9, label %10, label %12
 
 ; CHECK-LABEL: 10:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 3)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 3)
 10:                                               ; preds = %7
   %11 = load i32, i32* %3, align 4
   store i32 %11, i32* %1, align 4
   br label %17
 
 ; CHECK-LABEL: 12:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 4)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 4)
 12:                                               ; preds = %7
   br label %13
 
 ; CHECK-LABEL: 13:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 5)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 5)
 13:                                               ; preds = %12
   %14 = load i32, i32* %3, align 4
   %15 = add nsw i32 %14, 1
@@ -47,20 +47,20 @@ define dso_local noundef i32 @main() #0 {
   br label %4, !llvm.loop !6
 
 ; CHECK-LABEL: 16:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 6)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 6)
 16:                                               ; preds = %4
   store i32 0, i32* %1, align 4
   br label %17
 
 ; CHECK-LABEL: 17:{{.*}}
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 0, i32 7)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 0, i32 7)
 17:                                               ; preds = %16, %10
   %18 = load i32, i32* %1, align 4
   ret i32 %18
 }
 
 ; CHECK-LABEL: define dso_local noundef i32 @_Z5checki(i32 noundef %0)
-; CHECK-NEXT:  call void @yk_trace_basicblock(i32 1, i32 0)
+; CHECK-NEXT:  call void @__yk_trace_basicblock(i32 1, i32 0)
 define dso_local noundef i32 @_Z5checki(i32 noundef %0) #1 {
   %2 = alloca i32, align 4
   store i32 %0, i32* %2, align 4
